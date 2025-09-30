@@ -1,0 +1,261 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { useWorkerProfile } from "@/hooks/useWorkerProfile";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, User, Loader2, DollarSign, CheckCircle, TrendingUp } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+
+const SERVICES = [
+  { value: "maid", label: "Maid Service" },
+  { value: "cook", label: "Cook Service" },
+  { value: "bathroom_cleaning", label: "Bathroom Cleaning" }
+];
+
+const COMMUNITIES = [
+  "Sobha City",
+  "Prestige Falcon City",
+  "Brigade Orchards",
+  "Purva Venezia",
+  "Other"
+];
+
+export default function Profile() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const { worker, loading: workerLoading, updateWorker } = useWorkerProfile(user?.id);
+  
+  const [fullName, setFullName] = useState("");
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [selectedCommunities, setSelectedCommunities] = useState<string[]>([]);
+  const [updating, setUpdating] = useState(false);
+  
+  // Earnings data
+  const [totalEarnings, setTotalEarnings] = useState(0);
+  const [completedJobs, setCompletedJobs] = useState(0);
+
+  useEffect(() => {
+    if (worker) {
+      setFullName(worker.full_name || "");
+      setSelectedServices(worker.service_types || []);
+      setSelectedCommunities(worker.communities || (worker.community ? [worker.community] : []));
+      setTotalEarnings(worker.total_earnings || 0);
+    }
+  }, [worker]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchEarnings = async () => {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('price_inr')
+        .eq('worker_id', user.id)
+        .eq('status', 'completed');
+
+      if (!error && data) {
+        setCompletedJobs(data.length);
+        const total = data.reduce((sum, b) => sum + (b.price_inr || 0), 0);
+        setTotalEarnings(total);
+      }
+    };
+
+    fetchEarnings();
+  }, [user]);
+
+  const handleUpdate = async () => {
+    if (!fullName.trim()) {
+      toast({ title: "Error", description: "Name is required", variant: "destructive" });
+      return;
+    }
+
+    if (selectedServices.length === 0) {
+      toast({ title: "Error", description: "Select at least one service", variant: "destructive" });
+      return;
+    }
+
+    if (selectedCommunities.length === 0) {
+      toast({ title: "Error", description: "Select at least one community", variant: "destructive" });
+      return;
+    }
+
+    try {
+      setUpdating(true);
+      await updateWorker({
+        full_name: fullName,
+        service_types: selectedServices,
+        communities: selectedCommunities
+      });
+      toast({ title: "Success", description: "Profile updated successfully" });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const toggleService = (service: string) => {
+    setSelectedServices(prev =>
+      prev.includes(service) ? prev.filter(s => s !== service) : [...prev, service]
+    );
+  };
+
+  const toggleCommunity = (community: string) => {
+    setSelectedCommunities(prev =>
+      prev.includes(community) ? prev.filter(c => c !== community) : [...prev, community]
+    );
+  };
+
+  if (workerLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background to-secondary">
+      {/* Header */}
+      <header className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-10 shadow-sm">
+        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/home")}
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h1 className="text-xl font-bold">My Profile</h1>
+            <p className="text-sm text-muted-foreground">Manage your information</p>
+          </div>
+        </div>
+      </header>
+
+      {/* Content */}
+      <main className="max-w-2xl mx-auto p-4 space-y-6">
+        {/* Profile Card */}
+        <Card className="shadow-card">
+          <CardHeader>
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center shadow-pink">
+                <User className="w-8 h-8 text-primary-foreground" />
+              </div>
+              <div>
+                <CardTitle>{worker?.full_name}</CardTitle>
+                <p className="text-sm text-muted-foreground">{worker?.phone}</p>
+                <Badge className="mt-1" variant={worker?.is_active ? "default" : "secondary"}>
+                  {worker?.is_active ? "Active" : "Pending Approval"}
+                </Badge>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+
+        {/* Earnings Summary */}
+        <Card className="shadow-card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-primary" />
+              Earnings Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
+                  <TrendingUp className="w-6 h-6 text-primary" />
+                </div>
+                <p className="text-2xl font-bold text-primary">₹{totalEarnings}</p>
+                <p className="text-sm text-muted-foreground">Total Earned</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-2">
+                  <CheckCircle className="w-6 h-6 text-success" />
+                </div>
+                <p className="text-2xl font-bold">{completedJobs}</p>
+                <p className="text-sm text-muted-foreground">Jobs Done</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-2">
+                  <span className="text-lg font-bold text-purple-700">
+                    {worker?.rating?.toFixed(1) || "N/A"}
+                  </span>
+                </div>
+                <p className="text-2xl font-bold">{worker?.rating?.toFixed(1) || "N/A"}</p>
+                <p className="text-sm text-muted-foreground">Rating</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Edit Profile */}
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle>Edit Profile</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Your full name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Service Types</Label>
+              <div className="flex flex-wrap gap-2">
+                {SERVICES.map(service => (
+                  <Badge
+                    key={service.value}
+                    variant={selectedServices.includes(service.value) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => toggleService(service.value)}
+                  >
+                    {service.label}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Communities</Label>
+              <div className="flex flex-wrap gap-2">
+                {COMMUNITIES.map(community => (
+                  <Badge
+                    key={community}
+                    variant={selectedCommunities.includes(community) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => toggleCommunity(community)}
+                  >
+                    {community}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            <Button
+              onClick={handleUpdate}
+              disabled={updating}
+              className="w-full"
+              size="lg"
+            >
+              {updating ? "Updating..." : "Save Changes"}
+            </Button>
+          </CardContent>
+        </Card>
+      </main>
+    </div>
+  );
+}

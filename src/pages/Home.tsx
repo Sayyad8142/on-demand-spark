@@ -1,0 +1,205 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { useWorkerProfile } from "@/hooks/useWorkerProfile";
+import { useBookingAlerts } from "@/hooks/useBookingAlerts";
+import { useActiveJob } from "@/hooks/useActiveJob";
+import { useToast } from "@/hooks/use-toast";
+import AvailabilityToggle from "@/components/AvailabilityToggle";
+import BookingAlertModal from "@/components/BookingAlertModal";
+import ActiveJobCard from "@/components/ActiveJobCard";
+import { Button } from "@/components/ui/button";
+import { Calendar, User, LogOut, Loader2 } from "lucide-react";
+
+export default function Home() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user, loading: authLoading, signOut } = useAuth();
+  const { worker, loading: workerLoading, updateAvailability } = useWorkerProfile(user?.id);
+  const { pendingBooking, clearAlert } = useBookingAlerts(user?.id, worker?.is_available || false);
+  const { activeJob, updateJobStatus, loading: jobLoading } = useActiveJob(user?.id);
+  const [toggling, setToggling] = useState(false);
+  const [updatingJob, setUpdatingJob] = useState(false);
+
+  if (authLoading || workerLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    navigate("/auth");
+    return null;
+  }
+
+  if (!worker) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center space-y-4">
+          <h2 className="text-2xl font-bold">Worker Profile Not Found</h2>
+          <p className="text-muted-foreground">Please contact support</p>
+          <Button onClick={signOut}>Sign Out</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!worker.is_active) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background to-secondary">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+            <User className="w-10 h-10 text-primary" />
+          </div>
+          <h2 className="text-2xl font-bold">Pending Approval</h2>
+          <p className="text-muted-foreground">
+            Your account is waiting for admin approval. You'll be notified once you're approved to start working.
+          </p>
+          <Button onClick={signOut} variant="outline">Sign Out</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const handleToggleAvailability = async (value: boolean) => {
+    try {
+      setToggling(true);
+      await updateAvailability(value);
+      toast({
+        title: value ? "You're now online" : "You're now offline",
+        description: value ? "You can receive booking alerts" : "You won't receive new bookings"
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setToggling(false);
+    }
+  };
+
+  const handleJobStatusUpdate = async (newStatus: string) => {
+    if (!activeJob) return;
+
+    try {
+      setUpdatingJob(true);
+      await updateJobStatus(activeJob.id, newStatus);
+      
+      if (newStatus === 'completed') {
+        toast({
+          title: "Job completed!",
+          description: `Great work! ₹${activeJob.price_inr} added to your earnings.`
+        });
+      } else {
+        toast({
+          title: "Status updated",
+          description: `Job status changed to ${newStatus.replace('_', ' ')}`
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setUpdatingJob(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-primary-soft">
+      {/* Header */}
+      <header className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-10 shadow-sm">
+        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold">Didi Now</h1>
+            <p className="text-sm text-muted-foreground">Worker App</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/bookings")}
+            >
+              <Calendar className="w-5 h-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/profile")}
+            >
+              <User className="w-5 h-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={signOut}
+            >
+              <LogOut className="w-5 h-5" />
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-2xl mx-auto p-4 space-y-6 pb-24">
+        {/* Welcome */}
+        <div className="text-center py-6">
+          <h2 className="text-2xl font-bold mb-2">Welcome, {worker.full_name}!</h2>
+          <p className="text-muted-foreground">
+            {worker.is_available ? "You're ready to accept jobs" : "Go online to start accepting jobs"}
+          </p>
+        </div>
+
+        {/* Availability Toggle */}
+        <AvailabilityToggle
+          isOnline={worker.is_available || false}
+          onToggle={handleToggleAvailability}
+          disabled={toggling || worker.is_busy}
+        />
+
+        {/* Active Job */}
+        {activeJob && (
+          <ActiveJobCard
+            booking={activeJob}
+            onStatusUpdate={handleJobStatusUpdate}
+            updating={updatingJob}
+          />
+        )}
+
+        {/* Empty State */}
+        {!activeJob && (
+          <div className="text-center py-12">
+            <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+              <Calendar className="w-10 h-10 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">No Active Jobs</h3>
+            <p className="text-muted-foreground mb-4">
+              {worker.is_available 
+                ? "Waiting for new bookings..." 
+                : "Go online to start receiving jobs"}
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/bookings")}
+            >
+              View Booking History
+            </Button>
+          </div>
+        )}
+      </main>
+
+      {/* Booking Alert Modal */}
+      <BookingAlertModal
+        booking={pendingBooking}
+        onAccept={clearAlert}
+        onReject={clearAlert}
+      />
+    </div>
+  );
+}

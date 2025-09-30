@@ -354,6 +354,7 @@ export type Database = {
           maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
           notes: string | null
           pay_enabled_at: string | null
+          payout_amount: number | null
           prealert_sent: boolean
           price_inr: number | null
           scheduled_date: string | null
@@ -396,6 +397,7 @@ export type Database = {
           maid_tasks?: Database["public"]["Enums"]["maid_task"][] | null
           notes?: string | null
           pay_enabled_at?: string | null
+          payout_amount?: number | null
           prealert_sent?: boolean
           price_inr?: number | null
           scheduled_date?: string | null
@@ -438,6 +440,7 @@ export type Database = {
           maid_tasks?: Database["public"]["Enums"]["maid_task"][] | null
           notes?: string | null
           pay_enabled_at?: string | null
+          payout_amount?: number | null
           prealert_sent?: boolean
           price_inr?: number | null
           scheduled_date?: string | null
@@ -1692,6 +1695,7 @@ export type Database = {
       }
       workers: {
         Row: {
+          communities: string[] | null
           community: string | null
           created_at: string
           fcm_token: string | null
@@ -1699,6 +1703,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_available: boolean | null
+          is_busy: boolean | null
           last_active_at: string | null
           phone: string
           photo_url: string | null
@@ -1710,6 +1715,7 @@ export type Database = {
           upi_id: string | null
         }
         Insert: {
+          communities?: string[] | null
           community?: string | null
           created_at?: string
           fcm_token?: string | null
@@ -1717,6 +1723,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_available?: boolean | null
+          is_busy?: boolean | null
           last_active_at?: string | null
           phone: string
           photo_url?: string | null
@@ -1728,6 +1735,7 @@ export type Database = {
           upi_id?: string | null
         }
         Update: {
+          communities?: string[] | null
           community?: string | null
           created_at?: string
           fcm_token?: string | null
@@ -1735,6 +1743,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_available?: boolean | null
+          is_busy?: boolean | null
           last_active_at?: string | null
           phone?: string
           photo_url?: string | null
@@ -1779,9 +1788,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      accept_booking: {
+        Args: { p_booking_id: string }
+        Returns: Json
+      }
       admin_approve_worker_registration: {
         Args: { p_photo_url?: string; p_request_id: string }
         Returns: {
+          communities: string[] | null
           community: string | null
           created_at: string
           fcm_token: string | null
@@ -1789,6 +1803,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_available: boolean | null
+          is_busy: boolean | null
           last_active_at: string | null
           phone: string
           photo_url: string | null
@@ -1847,6 +1862,7 @@ export type Database = {
             }
           | { p_worker: Json }
         Returns: {
+          communities: string[] | null
           community: string | null
           created_at: string
           fcm_token: string | null
@@ -1854,6 +1870,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_available: boolean | null
+          is_busy: boolean | null
           last_active_at: string | null
           phone: string
           photo_url: string | null
@@ -2329,6 +2346,10 @@ export type Database = {
       text_to_bytea: {
         Args: { data: string }
         Returns: string
+      }
+      update_booking_status: {
+        Args: { p_booking_id: string; p_status: string }
+        Returns: Json
       }
       update_expert_availability: {
         Args: {
