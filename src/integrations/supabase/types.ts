@@ -328,6 +328,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          accepted_at: string | null
           assigned_at: string | null
           auto_complete_after_minutes: number | null
           auto_complete_at: string | null
@@ -353,6 +354,7 @@ export type Database = {
           is_demo: boolean
           maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
           notes: string | null
+          on_the_way_at: string | null
           pay_enabled_at: string | null
           payout_amount: number | null
           prealert_sent: boolean
@@ -360,6 +362,7 @@ export type Database = {
           scheduled_date: string | null
           scheduled_time: string | null
           service_type: string
+          started_at: string | null
           status: string
           updated_at: string
           user_id: string
@@ -371,6 +374,7 @@ export type Database = {
           worker_upi: string | null
         }
         Insert: {
+          accepted_at?: string | null
           assigned_at?: string | null
           auto_complete_after_minutes?: number | null
           auto_complete_at?: string | null
@@ -396,6 +400,7 @@ export type Database = {
           is_demo?: boolean
           maid_tasks?: Database["public"]["Enums"]["maid_task"][] | null
           notes?: string | null
+          on_the_way_at?: string | null
           pay_enabled_at?: string | null
           payout_amount?: number | null
           prealert_sent?: boolean
@@ -403,6 +408,7 @@ export type Database = {
           scheduled_date?: string | null
           scheduled_time?: string | null
           service_type: string
+          started_at?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -414,6 +420,7 @@ export type Database = {
           worker_upi?: string | null
         }
         Update: {
+          accepted_at?: string | null
           assigned_at?: string | null
           auto_complete_after_minutes?: number | null
           auto_complete_at?: string | null
@@ -439,6 +446,7 @@ export type Database = {
           is_demo?: boolean
           maid_tasks?: Database["public"]["Enums"]["maid_task"][] | null
           notes?: string | null
+          on_the_way_at?: string | null
           pay_enabled_at?: string | null
           payout_amount?: number | null
           prealert_sent?: boolean
@@ -446,6 +454,7 @@ export type Database = {
           scheduled_date?: string | null
           scheduled_time?: string | null
           service_type?: string
+          started_at?: string | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -2350,6 +2359,7 @@ export type Database = {
       try_accept_booking: {
         Args: { p_booking_id: string }
         Returns: {
+          accepted_at: string | null
           assigned_at: string | null
           auto_complete_after_minutes: number | null
           auto_complete_at: string | null
@@ -2375,6 +2385,7 @@ export type Database = {
           is_demo: boolean
           maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
           notes: string | null
+          on_the_way_at: string | null
           pay_enabled_at: string | null
           payout_amount: number | null
           prealert_sent: boolean
@@ -2382,6 +2393,7 @@ export type Database = {
           scheduled_date: string | null
           scheduled_time: string | null
           service_type: string
+          started_at: string | null
           status: string
           updated_at: string
           user_id: string
@@ -2396,6 +2408,7 @@ export type Database = {
       try_accept_pending: {
         Args: { p_booking_id: string }
         Returns: {
+          accepted_at: string | null
           assigned_at: string | null
           auto_complete_after_minutes: number | null
           auto_complete_at: string | null
@@ -2421,6 +2434,7 @@ export type Database = {
           is_demo: boolean
           maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
           notes: string | null
+          on_the_way_at: string | null
           pay_enabled_at: string | null
           payout_amount: number | null
           prealert_sent: boolean
@@ -2428,6 +2442,7 @@ export type Database = {
           scheduled_date: string | null
           scheduled_time: string | null
           service_type: string
+          started_at: string | null
           status: string
           updated_at: string
           user_id: string
