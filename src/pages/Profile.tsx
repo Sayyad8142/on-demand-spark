@@ -9,8 +9,19 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, User, Loader2, DollarSign, CheckCircle, TrendingUp } from "lucide-react";
+import { ArrowLeft, User, Loader2, DollarSign, CheckCircle, TrendingUp, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const SERVICES = [
   { value: "maid", label: "Maid Service" },
@@ -36,6 +47,7 @@ export default function Profile() {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedCommunities, setSelectedCommunities] = useState<string[]>([]);
   const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   
   // Earnings data
   const [totalEarnings, setTotalEarnings] = useState(0);
@@ -111,6 +123,43 @@ export default function Profile() {
     setSelectedCommunities(prev =>
       prev.includes(community) ? prev.filter(c => c !== community) : [...prev, community]
     );
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+
+    try {
+      setDeleting(true);
+
+      // Delete worker profile and related data
+      const { error: deleteError } = await supabase
+        .from('workers')
+        .delete()
+        .eq('id', user.id);
+
+      if (deleteError) throw deleteError;
+
+      // Delete the auth user account
+      const { error: authError } = await supabase.auth.admin.deleteUser(user.id);
+      
+      // Sign out (even if delete fails, we should sign out)
+      await supabase.auth.signOut();
+
+      toast({ 
+        title: "Account Deleted", 
+        description: "Your account has been permanently deleted" 
+      });
+      
+      navigate("/auth");
+    } catch (error: any) {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to delete account", 
+        variant: "destructive" 
+      });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (workerLoading) {
@@ -253,6 +302,47 @@ export default function Profile() {
             >
               {updating ? "Updating..." : "Save Changes"}
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Delete Account */}
+        <Card className="shadow-card border-destructive/20">
+          <CardHeader>
+            <CardTitle className="text-destructive">Danger Zone</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  size="lg"
+                  disabled={deleting}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  {deleting ? "Deleting..." : "Delete Account"}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete your
+                    account and remove all your data from our servers including your
+                    profile, bookings history, and earnings records.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteAccount}
+                    className="bg-destructive hover:bg-destructive/90"
+                  >
+                    Yes, Delete My Account
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </CardContent>
         </Card>
       </main>
