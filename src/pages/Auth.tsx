@@ -30,6 +30,7 @@ export default function Auth() {
   // Sign Up state
   const [signUpFullName, setSignUpFullName] = useState("");
   const [signUpPhone, setSignUpPhone] = useState("");
+  const [signUpUpiId, setSignUpUpiId] = useState("");
   const [signUpCommunity, setSignUpCommunity] = useState("");
   const [signUpService, setSignUpService] = useState("");
   const [signUpOtp, setSignUpOtp] = useState("");
@@ -137,6 +138,7 @@ export default function Auth() {
         id: data.user.id,
         full_name: signUpFullName,
         phone,
+        upi_id: signUpUpiId || null,
         service_types: [signUpService],
         communities: [signUpCommunity],
         is_active: true, // Auto-approved
@@ -261,6 +263,15 @@ export default function Auth() {
                       value={signUpPhone}
                       onChange={(e) => setSignUpPhone(e.target.value)}
                       type="tel"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="upi-id">UPI ID (Optional)</Label>
+                    <Input
+                      id="upi-id"
+                      placeholder="yourname@paytm"
+                      value={signUpUpiId}
+                      onChange={(e) => setSignUpUpiId(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
