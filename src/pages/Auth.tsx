@@ -132,8 +132,8 @@ export default function Auth() {
       if (error) throw error;
       if (!data.user) throw new Error("No user returned");
 
-      // Create worker profile
-      const { error: workerError } = await supabase.from('workers').insert({
+      // Create worker profile (upsert to handle re-registration)
+      const { error: workerError } = await supabase.from('workers').upsert({
         id: data.user.id,
         full_name: signUpFullName,
         phone,
@@ -142,18 +142,18 @@ export default function Auth() {
         is_active: false, // Requires admin approval
         is_available: false,
         is_busy: false
-      });
+      }, { onConflict: 'id' });
 
       if (workerError) throw workerError;
 
-      // Create profile
-      const { error: profileError } = await supabase.from('profiles').insert({
+      // Create profile (upsert to handle re-registration)
+      const { error: profileError } = await supabase.from('profiles').upsert({
         id: data.user.id,
         full_name: signUpFullName,
         phone,
         community: signUpCommunity,
         flat_no: 'N/A'
-      });
+      }, { onConflict: 'id' });
 
       if (profileError) throw profileError;
 
