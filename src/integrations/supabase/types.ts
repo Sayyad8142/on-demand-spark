@@ -758,44 +758,21 @@ export type Database = {
       }
       fcm_tokens: {
         Row: {
-          created_at: string | null
-          device_id: string | null
-          id: string
-          is_active: boolean | null
-          platform: string | null
           token: string
-          updated_at: string | null
-          worker_id: string
+          updated_at: string
+          user_id: string
         }
         Insert: {
-          created_at?: string | null
-          device_id?: string | null
-          id?: string
-          is_active?: boolean | null
-          platform?: string | null
           token: string
-          updated_at?: string | null
-          worker_id: string
+          updated_at?: string
+          user_id: string
         }
         Update: {
-          created_at?: string | null
-          device_id?: string | null
-          id?: string
-          is_active?: boolean | null
-          platform?: string | null
           token?: string
-          updated_at?: string | null
-          worker_id?: string
+          updated_at?: string
+          user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "fcm_tokens_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "workers"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       feedback: {
         Row: {
