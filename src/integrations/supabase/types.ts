@@ -2470,7 +2470,7 @@ export type Database = {
         Args:
           | { is_available_param: boolean; worker_id_param: string }
           | { p_is_available: boolean }
-        Returns: undefined
+        Returns: Json
       }
       update_worker_fcm_token: {
         Args: { p_fcm_token: string; p_worker_id: string }

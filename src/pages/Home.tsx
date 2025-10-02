@@ -15,7 +15,7 @@ export default function Home() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading: authLoading, signOut } = useAuth();
-  const { worker, loading: workerLoading, updateAvailability } = useWorkerProfile(user?.id);
+  const { worker, loading: workerLoading, updateAvailability, refetch: refetchWorker } = useWorkerProfile(user?.id);
   const { pendingBooking, clearAlert } = useBookingAlerts(user?.id, worker?.is_available || false);
   const { activeJob, updateJobStatus, loading: jobLoading } = useActiveJob(user?.id);
   const [toggling, setToggling] = useState(false);
@@ -73,6 +73,9 @@ export default function Home() {
     try {
       setUpdatingJob(true);
       await updateJobStatus(activeJob.id, newStatus);
+      
+      // Refetch worker profile to ensure UI is in sync (especially is_busy flag)
+      await refetchWorker();
       
       if (newStatus === 'completed') {
         toast({

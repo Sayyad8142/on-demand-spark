@@ -36,11 +36,24 @@ export function useWorkerProfile(userId: string | undefined) {
 
     try {
       // Use RPC function to update availability with proper permissions
-      const { error } = await supabase.rpc('update_worker_availability', {
+      const { data, error } = await supabase.rpc('update_worker_availability', {
         p_is_available: isAvailable
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('RPC error:', error);
+        throw error;
+      }
+
+      // Check the response from the RPC function
+      const result = data as { success: boolean; error?: string; worker_id?: string; is_available?: boolean } | null;
+      
+      if (result && !result.success) {
+        console.error('Update failed:', result.error);
+        throw new Error(result.error || 'Failed to update availability');
+      }
+
+      console.log('Availability updated successfully:', result);
       
       // Refetch to get updated worker data
       await fetchWorker();
