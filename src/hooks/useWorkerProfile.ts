@@ -35,14 +35,15 @@ export function useWorkerProfile(userId: string | undefined) {
     if (!userId) return;
 
     try {
-      const { error } = await supabase
-        .from('workers')
-        .update({ is_available: isAvailable, last_active_at: new Date().toISOString() })
-        .eq('id', userId);
+      // Use RPC function to update availability with proper permissions
+      const { error } = await supabase.rpc('update_worker_availability', {
+        p_is_available: isAvailable
+      });
 
       if (error) throw error;
       
-      setWorker(prev => prev ? { ...prev, is_available: isAvailable } : null);
+      // Refetch to get updated worker data
+      await fetchWorker();
     } catch (error) {
       console.error('Error updating availability:', error);
       throw error;
