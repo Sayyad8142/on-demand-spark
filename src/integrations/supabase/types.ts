@@ -2347,6 +2347,52 @@ export type Database = {
         Args: { data: string }
         Returns: string
       }
+      try_accept_pending: {
+        Args: { p_booking_id: string }
+        Returns: {
+          assigned_at: string | null
+          auto_complete_after_minutes: number | null
+          auto_complete_at: string | null
+          bathroom_count: number | null
+          booking_type: string
+          can_cancel_until: string | null
+          cancel_reason: string | null
+          cancel_source: string | null
+          cancelled_at: string | null
+          community: string
+          completed_at: string | null
+          confirmed_at: string | null
+          cook_cuisine_pref: string | null
+          cook_gender_pref: string | null
+          created_at: string
+          cust_name: string
+          cust_phone: string
+          family_count: number | null
+          flat_no: string
+          flat_size: string | null
+          food_pref: string | null
+          id: string
+          is_demo: boolean
+          maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
+          notes: string | null
+          pay_enabled_at: string | null
+          payout_amount: number | null
+          prealert_sent: boolean
+          price_inr: number | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          service_type: string
+          status: string
+          updated_at: string
+          user_id: string
+          user_marked_paid_at: string | null
+          worker_id: string | null
+          worker_name: string | null
+          worker_phone: string | null
+          worker_photo_url: string | null
+          worker_upi: string | null
+        }
+      }
       update_booking_status: {
         Args: { p_booking_id: string; p_status: string }
         Returns: Json
@@ -2372,6 +2418,10 @@ export type Database = {
       urlencode: {
         Args: { data: Json } | { string: string } | { string: string }
         Returns: string
+      }
+      user_can_see_booking: {
+        Args: { booking_row: Database["public"]["Tables"]["bookings"]["Row"] }
+        Returns: boolean
       }
       user_cancel_booking: {
         Args: { p_booking_id: string; p_reason: string }

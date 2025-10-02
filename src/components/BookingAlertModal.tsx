@@ -47,15 +47,22 @@ export default function BookingAlertModal({ booking, onAccept, onReject }: Booki
 
     try {
       setAccepting(true);
-      const { data, error } = await supabase.rpc('accept_booking', {
+      const { data, error } = await supabase.rpc('try_accept_pending', {
         p_booking_id: booking.id
       });
 
-      if (error) throw error;
-
-      const result = data as { success: boolean; error?: string };
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to accept booking');
+      if (error) {
+        // Handle specific error messages
+        const errorMessage = error.message.toLowerCase();
+        if (errorMessage.includes('already taken')) {
+          throw new Error('This booking has already been accepted by another worker');
+        } else if (errorMessage.includes('not eligible')) {
+          throw new Error('You are not eligible for this booking');
+        } else if (errorMessage.includes('not found') || errorMessage.includes('already being processed')) {
+          throw new Error('This booking is no longer available');
+        } else {
+          throw error;
+        }
       }
 
       toast({
@@ -65,10 +72,11 @@ export default function BookingAlertModal({ booking, onAccept, onReject }: Booki
       onAccept();
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: "Booking not accepted",
         description: error.message,
         variant: "destructive"
       });
+      onReject(); // Auto-dismiss on error
     } finally {
       setAccepting(false);
     }
