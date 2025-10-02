@@ -47,7 +47,7 @@ export default function BookingAlertModal({ booking, onAccept, onReject }: Booki
 
     try {
       setAccepting(true);
-      const { data, error } = await supabase.rpc('try_accept_pending', {
+      const { data, error } = await supabase.rpc('try_accept_booking', {
         p_booking_id: booking.id
       });
 
@@ -60,6 +60,8 @@ export default function BookingAlertModal({ booking, onAccept, onReject }: Booki
           throw new Error('You are not eligible for this booking');
         } else if (errorMessage.includes('not found') || errorMessage.includes('already being processed')) {
           throw new Error('This booking is no longer available');
+        } else if (errorMessage.includes('expired')) {
+          throw new Error('This booking has expired');
         } else {
           throw error;
         }
