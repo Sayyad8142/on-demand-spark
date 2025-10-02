@@ -80,9 +80,42 @@ export default function Auth() {
     try {
       setLoading(true);
       const phone = normalizePhone(signInPhone);
-      const { error } = await supabase.auth.verifyOtp({ phone, token: signInOtp, type: 'sms' });
+      const { data, error } = await supabase.auth.verifyOtp({ phone, token: signInOtp, type: 'sms' });
       
       if (error) throw error;
+      if (!data.user) throw new Error("No user returned");
+
+      // Check if a worker with this phone already exists
+      const { data: existingWorker, error: workerCheckError } = await supabase
+        .from('workers')
+        .select('*')
+        .eq('phone', phone)
+        .maybeSingle();
+
+      if (workerCheckError) {
+        console.error('Error checking worker:', workerCheckError);
+      }
+
+      if (existingWorker) {
+        // Link existing worker to auth user by updating the worker's ID
+        const { error: updateError } = await supabase
+          .from('workers')
+          .update({ id: data.user.id })
+          .eq('phone', phone);
+
+        if (updateError) {
+          console.error('Error linking worker:', updateError);
+        }
+
+        // Also create/update profile
+        await supabase.from('profiles').upsert({
+          id: data.user.id,
+          full_name: existingWorker.full_name,
+          phone,
+          community: existingWorker.community || existingWorker.communities?.[0] || '',
+          flat_no: 'N/A'
+        }, { onConflict: 'id' });
+      }
       
       toast({ title: "Success!", description: "Signed in successfully" });
       navigate("/home");
@@ -133,20 +166,44 @@ export default function Auth() {
       if (error) throw error;
       if (!data.user) throw new Error("No user returned");
 
-      // Create worker profile (upsert to handle re-registration)
-      const { error: workerError } = await supabase.from('workers').upsert({
-        id: data.user.id,
-        full_name: signUpFullName,
-        phone,
-        upi_id: signUpUpiId || null,
-        service_types: [signUpService],
-        communities: [signUpCommunity],
-        is_active: true, // Auto-approved
-        is_available: false,
-        is_busy: false
-      }, { onConflict: 'id' });
+      // Check if worker with this phone already exists
+      const { data: existingWorker } = await supabase
+        .from('workers')
+        .select('*')
+        .eq('phone', phone)
+        .maybeSingle();
 
-      if (workerError) throw workerError;
+      if (existingWorker) {
+        // Update existing worker with new ID and details
+        const { error: workerError } = await supabase.from('workers').upsert({
+          id: data.user.id,
+          full_name: signUpFullName,
+          phone,
+          upi_id: signUpUpiId || existingWorker.upi_id,
+          service_types: [signUpService],
+          communities: [signUpCommunity],
+          is_active: true,
+          is_available: false,
+          is_busy: false
+        }, { onConflict: 'id' });
+
+        if (workerError) throw workerError;
+      } else {
+        // Create new worker profile
+        const { error: workerError } = await supabase.from('workers').insert({
+          id: data.user.id,
+          full_name: signUpFullName,
+          phone,
+          upi_id: signUpUpiId || null,
+          service_types: [signUpService],
+          communities: [signUpCommunity],
+          is_active: true,
+          is_available: false,
+          is_busy: false
+        });
+
+        if (workerError) throw workerError;
+      }
 
       // Create profile (upsert to handle re-registration)
       const { error: profileError } = await supabase.from('profiles').upsert({
