@@ -46,22 +46,7 @@ export default function Home() {
     );
   }
 
-  if (!worker.is_active) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background to-secondary">
-        <div className="text-center space-y-4 max-w-md">
-          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-            <User className="w-10 h-10 text-primary" />
-          </div>
-          <h2 className="text-2xl font-bold">Pending Approval</h2>
-          <p className="text-muted-foreground">
-            Your account is waiting for admin approval. You'll be notified once you're approved to start working.
-          </p>
-          <Button onClick={signOut} variant="outline">Sign Out</Button>
-        </div>
-      </div>
-    );
-  }
+  // Workers are auto-approved on signup
 
   const handleToggleAvailability = async (value: boolean) => {
     try {

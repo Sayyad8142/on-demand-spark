@@ -139,7 +139,7 @@ export default function Auth() {
         phone,
         service_types: [signUpService],
         communities: [signUpCommunity],
-        is_active: false, // Requires admin approval
+        is_active: true, // Auto-approved
         is_available: false,
         is_busy: false
       }, { onConflict: 'id' });
@@ -159,7 +159,7 @@ export default function Auth() {
 
       toast({ 
         title: "Account created!", 
-        description: "Waiting for admin approval. You'll be notified once approved." 
+        description: "Your worker account is now active. Welcome!" 
       });
       navigate("/home");
     } catch (error: any) {
