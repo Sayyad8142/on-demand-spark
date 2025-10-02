@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -16,19 +16,12 @@ const SERVICES = [
   { value: "bathroom_cleaning", label: "Bathroom Cleaning" }
 ];
 
-const COMMUNITIES = [
-  "Sobha City",
-  "Prestige Falcon City",
-  "Brigade Orchards",
-  "Purva Venezia",
-  "Other"
-];
-
 export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
+  const [communities, setCommunities] = useState<Array<{ name: string; value: string }>>([]);
   
   // Sign In state
   const [signInPhone, setSignInPhone] = useState("");
@@ -40,6 +33,25 @@ export default function Auth() {
   const [signUpCommunity, setSignUpCommunity] = useState("");
   const [signUpService, setSignUpService] = useState("");
   const [signUpOtp, setSignUpOtp] = useState("");
+
+  useEffect(() => {
+    const fetchCommunities = async () => {
+      const { data, error } = await supabase
+        .from('communities')
+        .select('name, value')
+        .eq('is_active', true)
+        .order('name');
+      
+      if (error) {
+        console.error('Error fetching communities:', error);
+        return;
+      }
+      
+      setCommunities(data || []);
+    };
+
+    fetchCommunities();
+  }, []);
 
   const normalizePhone = (phone: string) => {
     const cleaned = phone.replace(/\D/g, '');
@@ -258,8 +270,8 @@ export default function Auth() {
                         <SelectValue placeholder="Select community" />
                       </SelectTrigger>
                       <SelectContent>
-                        {COMMUNITIES.map(c => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        {communities.map(c => (
+                          <SelectItem key={c.value} value={c.value}>{c.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
