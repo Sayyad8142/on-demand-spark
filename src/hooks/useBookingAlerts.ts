@@ -32,7 +32,7 @@ export function useBookingAlerts(userId: string | undefined, isOnline: boolean) 
             .eq('id', userId)
             .single();
 
-          if (worker && worker.is_available && !worker.is_busy) {
+          if (worker && worker.is_available) {
             const matchesService = worker.service_types?.includes(booking.service_type);
             const matchesCommunity = 
               worker.communities?.includes(booking.community) ||
