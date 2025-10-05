@@ -4,8 +4,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
 import { useAuth } from "@/hooks/useAuth";
 import { registerNativePush } from "@/native/push";
+import { registerWebPush } from "@/push/webPush";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import Bookings from "./pages/Bookings";
@@ -31,11 +33,35 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 const App = () => {
   const { session } = useAuth();
 
+  // Register push notifications (native or web)
   useEffect(() => {
-    if (session?.user?.id) {
-      registerNativePush(session.user.id);
+    const userId = session?.user?.id;
+    if (!userId) return;
+
+    console.log("Registering push notifications for user:", userId);
+    
+    if (Capacitor.isNativePlatform()) {
+      console.log("Registering native push notifications");
+      registerNativePush(userId);
+    } else {
+      console.log("Registering web push notifications");
+      registerWebPush(userId);
     }
   }, [session?.user?.id]);
+
+  // Listen for push notification messages
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "BOOKING_ALERT" && event.data?.bookingId) {
+        console.log("Received BOOKING_ALERT message:", event.data.bookingId);
+        // The booking alert modal will be triggered by the existing useBookingAlerts hook
+        // which listens to the bookings table and shows the modal automatically
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
