@@ -1,6 +1,14 @@
-import { PushNotifications, Token, ActionPerformed } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
+import { ONESIGNAL_APP_ID } from '@/lib/onesignal';
+
+declare global {
+  interface Window {
+    plugins?: {
+      OneSignal?: any;
+    };
+  }
+}
 
 export async function registerNativePush(userId: string) {
   if (!Capacitor.isNativePlatform()) {
@@ -9,55 +17,52 @@ export async function registerNativePush(userId: string) {
   }
 
   try {
-    // Request permission
-    let permStatus = await PushNotifications.checkPermissions();
-    if (permStatus.receive !== 'granted') {
-      permStatus = await PushNotifications.requestPermissions();
-      if (permStatus.receive !== 'granted') {
-        console.log("Push notification permission not granted");
-        return;
-      }
+    const OneSignal = window.plugins?.OneSignal;
+    if (!OneSignal) {
+      console.error("OneSignal plugin not available");
+      return;
     }
 
-    // Register for push notifications
-    await PushNotifications.register();
-    console.log("Native push registration initiated");
+    // Initialize OneSignal
+    OneSignal.setAppId(ONESIGNAL_APP_ID);
 
-    // Handle token registration
-    PushNotifications.addListener('registration', async (token: Token) => {
-      console.log("Native push token received:", token.value.substring(0, 20) + "...");
-      try {
-        await supabase
-          .from('fcm_tokens')
-          .upsert({ user_id: userId, token: token.value })
-          .throwOnError();
-        console.log("Native push token saved to database");
-      } catch (e) {
-        console.error("Error saving native push token:", e);
+    // Request notification permission
+    OneSignal.promptForPushNotificationsWithUserResponse((accepted: boolean) => {
+      console.log("Push notification permission:", accepted);
+    });
+
+    // Get player ID and save to database
+    OneSignal.getDeviceState(async (state: any) => {
+      if (state.userId) {
+        console.log("OneSignal player ID received:", state.userId.substring(0, 20) + "...");
+        try {
+          await supabase
+            .from('fcm_tokens')
+            .upsert({ user_id: userId, token: state.userId });
+          console.log("OneSignal player ID saved to database");
+        } catch (e) {
+          console.error("Error saving player ID:", e);
+        }
       }
     });
 
-    // Handle registration errors
-    PushNotifications.addListener('registrationError', (error) => {
-      console.error("Native push registration error:", error);
-    });
-
-    // Handle foreground notifications
-    PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      console.log("Foreground notification received:", notification);
-      const bookingId = notification?.data?.bookingId || notification?.data?.booking_id;
+    // Handle notification opened
+    OneSignal.setNotificationOpenedHandler((notification: any) => {
+      const bookingId = notification?.notification?.additionalData?.booking_id || 
+                       notification?.notification?.additionalData?.bookingId;
       if (bookingId) {
         window.postMessage({ type: 'BOOKING_ALERT', bookingId }, '*');
       }
     });
 
-    // Handle notification tap
-    PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
-      console.log("Notification tapped:", action);
-      const bookingId = action?.notification?.data?.bookingId || action?.notification?.data?.booking_id;
+    // Handle notification received while app is in foreground
+    OneSignal.setNotificationWillShowInForegroundHandler((notification: any) => {
+      const bookingId = notification?.notification?.additionalData?.booking_id || 
+                       notification?.notification?.additionalData?.bookingId;
       if (bookingId) {
         window.postMessage({ type: 'BOOKING_ALERT', bookingId }, '*');
       }
+      notification.complete(notification);
     });
   } catch (error) {
     console.error("Error in native push registration:", error);
