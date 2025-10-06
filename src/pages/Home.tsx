@@ -10,7 +10,7 @@ import AvailabilityToggle from "@/components/AvailabilityToggle";
 import BookingAlertModal from "@/components/BookingAlertModal";
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { Button } from "@/components/ui/button";
-import { Calendar, User, LogOut, Loader2 } from "lucide-react";
+import { Calendar, User, LogOut, Loader2, Bell } from "lucide-react";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -21,6 +21,7 @@ export default function Home() {
   const { activeJob, updateJobStatus, loading: jobLoading } = useActiveJob(user?.id);
   const [toggling, setToggling] = useState(false);
   const [updatingJob, setUpdatingJob] = useState(false);
+  const [sendingTestNotification, setSendingTestNotification] = useState(false);
 
   // Listen for push notification messages (from service worker or foreground)
 
@@ -102,6 +103,48 @@ export default function Home() {
     }
   };
 
+  const handleTestNotification = async () => {
+    if (!user) return;
+
+    try {
+      setSendingTestNotification(true);
+      console.log('🔔 Sending test notification to user:', user.id);
+
+      const { data, error } = await supabase.functions.invoke('send-onesignal', {
+        body: {
+          externalUserIds: [user.id],
+          headings: { en: 'Test Push from OneSignal 🔔' },
+          contents: { en: 'This is a test notification to verify integration.' },
+          data: { type: 'TEST_NOTIFICATION', time: new Date().toISOString() },
+        },
+      });
+
+      if (error) {
+        console.error('❌ Test notification error:', error);
+        toast({
+          title: "❌ Failed to send notification",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else {
+        console.log('✅ Test notification sent successfully:', data);
+        toast({
+          title: "✅ Test notification sent!",
+          description: "Check your device for the notification"
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Test notification exception:', error);
+      toast({
+        title: "❌ Failed to send notification",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setSendingTestNotification(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-primary-soft">
       {/* Header */}
@@ -153,6 +196,37 @@ export default function Home() {
           onToggle={handleToggleAvailability}
           disabled={toggling || worker.is_busy}
         />
+
+        {/* Test Notification Button (Debug) */}
+        <div className="bg-yellow-50 dark:bg-yellow-950 border-2 border-yellow-300 dark:border-yellow-700 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Bell className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+              <h3 className="font-semibold text-yellow-900 dark:text-yellow-100">Debug: Test Notification</h3>
+            </div>
+          </div>
+          <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-3">
+            Send a test OneSignal notification to verify push integration
+          </p>
+          <Button
+            onClick={handleTestNotification}
+            disabled={sendingTestNotification}
+            variant="outline"
+            className="w-full border-yellow-400 hover:bg-yellow-100 dark:border-yellow-600 dark:hover:bg-yellow-900"
+          >
+            {sendingTestNotification ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                <Bell className="w-4 h-4 mr-2" />
+                Send Test Notification
+              </>
+            )}
+          </Button>
+        </div>
 
         {/* Active Job */}
         {activeJob && (
