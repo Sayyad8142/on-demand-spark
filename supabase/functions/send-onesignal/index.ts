@@ -1,72 +1,68 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const ONESIGNAL_APP_ID = Deno.env.get("ONESIGNAL_APP_ID");
-const ONESIGNAL_REST_API_KEY = Deno.env.get("ONESIGNAL_REST_API_KEY");
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { token, title, body, data } = await req.json();
+    const body = await req.json();
+    const APP_ID = Deno.env.get('ONESIGNAL_APP_ID');
+    const API_KEY = Deno.env.get('ONESIGNAL_REST_API_KEY');
 
-    if (!token) {
+    if (!APP_ID || !API_KEY) {
       return new Response(
-        JSON.stringify({ error: "Missing token" }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ ok: false, error: 'OneSignal credentials not configured' }), 
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
       );
     }
 
-    if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
-      console.error("OneSignal credentials not configured");
-      return new Response(
-        JSON.stringify({ error: "OneSignal not configured" }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Build OneSignal notification payload
+    const payload = {
+      app_id: APP_ID,
+      include_external_user_ids: body.externalUserIds ?? body.userIds ?? [],
+      target_channel: 'push',
+      headings: body.headings ?? { en: 'New Booking' },
+      contents: body.contents ?? { en: 'Tap to view/accept' },
+      data: body.data ?? {},
+    };
 
-    // Send notification via OneSignal REST API
-    const response = await fetch('https://onesignal.com/api/v1/notifications', {
+    const res = await fetch('https://api.onesignal.com/notifications', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}`,
+        'Authorization': `Basic ${API_KEY}`,
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        app_id: ONESIGNAL_APP_ID,
-        include_player_ids: [token],
-        headings: { en: title || "New Notification" },
-        contents: { en: body || "You have a new notification" },
-        data: data || {},
-      }),
+      body: JSON.stringify(payload)
     });
 
-    const result = await response.json();
-    
-    if (!response.ok) {
-      console.error("OneSignal API error:", result);
+    if (!res.ok) {
+      const err = await res.text();
+      console.error('OneSignal API error:', err);
       return new Response(
-        JSON.stringify({ error: "Failed to send notification", details: result }),
-        { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ ok: false, error: err }), 
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
       );
     }
 
-    console.log("Notification sent successfully:", result);
+    const json = await res.json();
+    console.log('OneSignal notification sent successfully:', json);
+    
     return new Response(
-      JSON.stringify({ success: true, result }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ ok: true, result: json }), 
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
     );
-  } catch (error) {
-    console.error("Error sending notification:", error);
+  } catch (e) {
+    console.error('Error sending OneSignal notification:', e);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ ok: false, error: String(e) }), 
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
     );
   }
 });

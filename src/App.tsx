@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { useAuth } from "@/hooks/useAuth";
-import { registerNativePush } from "@/native/push";
+import { initOneSignal } from "@/lib/onesignal";
 import { registerWebPush } from "@/push/webPush";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
@@ -41,8 +41,8 @@ const App = () => {
     console.log("Registering push notifications for user:", userId);
     
     if (Capacitor.isNativePlatform()) {
-      console.log("Registering native push notifications");
-      registerNativePush(userId);
+      console.log("Initializing OneSignal for native platform");
+      initOneSignal(userId);
     } else {
       console.log("Registering web push notifications");
       registerWebPush(userId);
