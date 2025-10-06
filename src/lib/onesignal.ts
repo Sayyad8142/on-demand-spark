@@ -1,8 +1,9 @@
 import OneSignal from 'onesignal-cordova-plugin';
 import { Capacitor } from '@capacitor/core';
 
-// Export APP_ID for web push usage
-export const ONESIGNAL_APP_ID = import.meta.env.SECRET_ONESIGNAL_APP_ID || (window as any).ONESIGNAL_APP_ID || '';
+// Replace with your actual OneSignal App ID from OneSignal dashboard
+// This is a public identifier (not a secret) - safe to hardcode
+export const ONESIGNAL_APP_ID = 'YOUR_ONESIGNAL_APP_ID';
 
 export function initOneSignal(userId?: string) {
   if (!Capacitor.isNativePlatform()) {
@@ -10,8 +11,8 @@ export function initOneSignal(userId?: string) {
     return;
   }
   
-  if (!ONESIGNAL_APP_ID) { 
-    console.warn('OneSignal APP ID missing'); 
+  if (!ONESIGNAL_APP_ID || ONESIGNAL_APP_ID === 'YOUR_ONESIGNAL_APP_ID') { 
+    console.warn('OneSignal APP ID not configured - please update ONESIGNAL_APP_ID in src/lib/onesignal.ts'); 
     return; 
   }
 
