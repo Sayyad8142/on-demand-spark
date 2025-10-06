@@ -1,5 +1,4 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.0";
 
 const SUPABASE_URL = "https://paywwbuqycovjopryele.supabase.co";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -7,7 +6,7 @@ const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   try {
     const { booking_id } = await req.json();
     if (!booking_id) return new Response("missing booking_id", { status: 400 });
@@ -33,22 +32,30 @@ serve(async (req) => {
 
     const workerIds = workers.map((w) => w.id);
 
-    // Call send-onesignal edge function
-    const sendResult = await supabase.functions.invoke("send-onesignal", {
-      body: {
+    // Call send-onesignal edge function via HTTP
+    const oneSignalUrl = `${SUPABASE_URL}/functions/v1/send-onesignal`;
+    const sendResponse = await fetch(oneSignalUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${ANON_KEY}`,
+      },
+      body: JSON.stringify({
         externalUserIds: workerIds,
         headings: { en: "New Booking Alert!" },
         contents: { en: `${b.service_type} booking in ${b.community}. Tap to accept.` },
         data: { bookingId: booking_id, type: "BOOKING_ALERT" },
-      },
+      }),
     });
 
-    if (sendResult.error) {
-      console.error("OneSignal send error:", sendResult.error);
-      return new Response(JSON.stringify({ error: sendResult.error }), { status: 500 });
+    if (!sendResponse.ok) {
+      const error = await sendResponse.text();
+      console.error("OneSignal send error:", error);
+      return new Response(JSON.stringify({ error }), { status: 500 });
     }
 
-    return new Response(JSON.stringify({ sent: workerIds.length, result: sendResult.data }), { status: 200 });
+    const result = await sendResponse.json();
+    return new Response(JSON.stringify({ sent: workerIds.length, result }), { status: 200 });
   } catch (e) {
     return new Response(`err:${(e as Error)?.message ?? e}`, { status: 500 });
   }
