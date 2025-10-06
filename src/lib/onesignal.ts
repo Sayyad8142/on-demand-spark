@@ -11,8 +11,8 @@ export function initOneSignal(userId?: string) {
     return;
   }
   
-  if (!ONESIGNAL_APP_ID || ONESIGNAL_APP_ID === 'YOUR_ONESIGNAL_APP_ID') { 
-    console.warn('OneSignal APP ID not configured - please update ONESIGNAL_APP_ID in src/lib/onesignal.ts'); 
+  if (!ONESIGNAL_APP_ID) { 
+    console.warn('OneSignal APP ID not configured'); 
     return; 
   }
 
