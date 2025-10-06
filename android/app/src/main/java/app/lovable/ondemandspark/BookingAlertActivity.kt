@@ -6,8 +6,20 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.net.HttpURLConnection
+import java.net.URL
+import org.json.JSONObject
 
 class BookingAlertActivity : Activity() {
+    companion object {
+        private const val SUPABASE_URL = "https://paywwbuqycovjopryele.supabase.co"
+        private const val SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheXd3YnVxeWNvdmpvcHJ5ZWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkyNjksImV4cCI6MjA3MDc0NTI2OX0.js1MaTBkjuGlaDfQjrZpZ9_G8Jy9ygNAB8KpNDiQg8o"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -32,23 +44,73 @@ class BookingAlertActivity : Activity() {
         findViewById<TextView>(R.id.alertService).text = "Service: $serviceType"
 
         findViewById<Button>(R.id.btnAccept).setOnClickListener {
-            // Send message to WebView to handle acceptance
-            Toast.makeText(this, "Opening app to accept booking...", Toast.LENGTH_SHORT).show()
-            
-            // Launch main activity with booking data
-            val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
-            launchIntent?.apply {
-                putExtra("bookingId", bookingId)
-                putExtra("action", "accept")
-                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (bookingId.isNotEmpty()) {
+                acceptBooking(bookingId)
+            } else {
+                Toast.makeText(this, "Error: No booking ID", Toast.LENGTH_SHORT).show()
+                finish()
             }
-            startActivity(launchIntent)
-            finish()
         }
 
         findViewById<Button>(R.id.btnReject).setOnClickListener {
             Toast.makeText(this, "Booking rejected", Toast.LENGTH_SHORT).show()
             finish()
+        }
+    }
+
+    private fun acceptBooking(bookingId: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val url = URL("$SUPABASE_URL/rest/v1/bookings?id=eq.$bookingId")
+                val connection = url.openConnection() as HttpURLConnection
+                
+                connection.apply {
+                    requestMethod = "PATCH"
+                    doOutput = true
+                    setRequestProperty("Content-Type", "application/json")
+                    setRequestProperty("apikey", SUPABASE_ANON_KEY)
+                    setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
+                    setRequestProperty("Prefer", "return=minimal")
+                }
+
+                val jsonBody = JSONObject().apply {
+                    put("status", "accepted")
+                    put("accepted_at", System.currentTimeMillis() / 1000)
+                }
+
+                connection.outputStream.use { os ->
+                    os.write(jsonBody.toString().toByteArray())
+                }
+
+                val responseCode = connection.responseCode
+                
+                withContext(Dispatchers.Main) {
+                    if (responseCode in 200..299) {
+                        Toast.makeText(
+                            this@BookingAlertActivity,
+                            "Booking accepted!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        finish()
+                    } else {
+                        Toast.makeText(
+                            this@BookingAlertActivity,
+                            "Error accepting booking (Code: $responseCode)",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+                
+                connection.disconnect()
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@BookingAlertActivity,
+                        "Error accepting booking: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
         }
     }
 }
