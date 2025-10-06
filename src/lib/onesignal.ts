@@ -23,12 +23,19 @@ export function initOneSignal(userId?: string) {
   OneSignal.Debug.setLogLevel(6);
 
   if (userId) {
-    OneSignal.login(userId);        // ties device to the Supabase user id
-    OneSignal.User.addTag('role', 'worker');
+    try {
+      OneSignal.login(userId);        // ties device to the Supabase user id
+      OneSignal.User.addTag('role', 'worker');
+      console.log('✅ OneSignal linked with user: ' + userId);
+    } catch (error) {
+      console.error('❌ OneSignal link failed:', error);
+    }
   }
 
   OneSignal.Notifications.requestPermission(true).then((granted) => {
     console.log('OneSignal permission:', granted);
+  }).catch((error) => {
+    console.error('❌ OneSignal permission request failed:', error);
   });
 
   OneSignal.Notifications.addEventListener('click', (ev: any) => {
