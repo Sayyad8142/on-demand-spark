@@ -2126,7 +2126,7 @@ export type Database = {
       initiate_booking_assignment: {
         Args: {
           p_booking_id: string
-          p_community?: string
+          p_community: string
           p_service_type: string
         }
         Returns: Json
