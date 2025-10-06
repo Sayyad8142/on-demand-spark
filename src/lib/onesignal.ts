@@ -3,7 +3,7 @@ import { Capacitor } from '@capacitor/core';
 
 // Replace with your actual OneSignal App ID from OneSignal dashboard
 // This is a public identifier (not a secret) - safe to hardcode
-export const ONESIGNAL_APP_ID = 'YOUR_ONESIGNAL_APP_ID';
+export const ONESIGNAL_APP_ID = '28bd7e2d-e437-4b45-b454-e276dd2d4e52';
 
 export function initOneSignal(userId?: string) {
   if (!Capacitor.isNativePlatform()) {
