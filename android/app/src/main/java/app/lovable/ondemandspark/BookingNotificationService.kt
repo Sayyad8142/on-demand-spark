@@ -26,7 +26,7 @@ class BookingNotificationService : INotificationServiceExtension {
             return
         }
 
-        // This is a booking alert - show full screen intent
+        // This is a booking alert - show system-wide overlay
         val bookingId = additionalData.optString("bookingId", "")
         val customer = additionalData.optString("customer", "")
         val community = additionalData.optString("community", "")
@@ -35,7 +35,17 @@ class BookingNotificationService : INotificationServiceExtension {
         // Create notification channel with HIGH importance
         createNotificationChannel(event.context)
 
-        val intent = Intent(event.context, BookingAlertActivity::class.java).apply {
+        // Start overlay service to show alert on top of all apps
+        val overlayIntent = Intent(event.context, BookingOverlayService::class.java).apply {
+            putExtra("bookingId", bookingId)
+            putExtra("customer", customer)
+            putExtra("community", community)
+            putExtra("serviceType", serviceType)
+        }
+        event.context.startService(overlayIntent)
+
+        // Also create a fallback notification with full screen intent
+        val activityIntent = Intent(event.context, BookingAlertActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("bookingId", bookingId)
             putExtra("customer", customer)
@@ -47,7 +57,7 @@ class BookingNotificationService : INotificationServiceExtension {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         else PendingIntent.FLAG_UPDATE_CURRENT
 
-        val fullScreenPI = PendingIntent.getActivity(event.context, 0, intent, piFlags)
+        val fullScreenPI = PendingIntent.getActivity(event.context, 0, activityIntent, piFlags)
 
         // Create high-priority notification with full screen intent
         val notificationManager = event.context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

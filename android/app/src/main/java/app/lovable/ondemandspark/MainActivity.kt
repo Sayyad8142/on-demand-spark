@@ -1,5 +1,6 @@
 package app.lovable.ondemandspark
 
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -46,5 +47,8 @@ class MainActivity : BridgeActivity() {
         
         // Request battery optimization exemption to keep foreground service running
         BatteryOptimizationHelper.showBatteryDialog(this)
+        
+        // Request overlay permission to show booking alerts over other apps
+        OverlayPermissionHelper.showOverlayPermissionDialog(this)
     }
 }
