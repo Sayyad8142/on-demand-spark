@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
     // Load booking; only proceed for pending
     const { data: b, error: be } = await supabase
       .from("bookings")
-      .select("id, status, service_type, community")
+      .select("id, status, service_type, community, customer_name, location_address")
       .eq("id", booking_id)
       .single();
     if (be || !b || b.status !== "pending") return new Response("skip", { status: 200 });
@@ -44,7 +44,14 @@ Deno.serve(async (req) => {
         externalUserIds: workerIds,
         headings: { en: "New Booking Alert!" },
         contents: { en: `${b.service_type} booking in ${b.community}. Tap to accept.` },
-        data: { bookingId: booking_id, type: "BOOKING_ALERT" },
+        data: { 
+          type: "BOOKING_ALERT",
+          bookingId: booking_id, 
+          customer: b.customer_name || "New Customer",
+          community: b.community,
+          serviceType: b.service_type,
+          location: b.location_address || ""
+        },
       }),
     });
 
