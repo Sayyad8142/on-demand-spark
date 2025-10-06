@@ -9,6 +9,7 @@ import OneSignal from "onesignal-cordova-plugin";
 import { useAuth } from "@/hooks/useAuth";
 import { initOneSignal, ONESIGNAL_APP_ID } from "@/lib/onesignal";
 import { registerWebPush } from "@/push/webPush";
+import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import Bookings from "./pages/Bookings";
@@ -84,6 +85,23 @@ const App = () => {
       registerWebPush(userId);
     }
   }, [session?.user?.id]);
+
+  // Start/stop foreground service based on login state
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
+      return;
+    }
+
+    if (session?.user) {
+      // User is logged in - start foreground service
+      console.log("User logged in, starting foreground service");
+      startForegroundService();
+    } else {
+      // User is logged out - stop foreground service
+      console.log("User logged out, stopping foreground service");
+      stopForegroundService();
+    }
+  }, [session?.user]);
 
   // Listen for push notification messages
   useEffect(() => {

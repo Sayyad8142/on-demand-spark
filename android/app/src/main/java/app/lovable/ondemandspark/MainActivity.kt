@@ -1,0 +1,37 @@
+package app.lovable.ondemandspark
+
+import android.content.Intent
+import android.os.Build
+import android.os.Bundle
+import androidx.core.content.ContextCompat
+import com.getcapacitor.BridgeActivity
+import com.getcapacitor.Plugin
+import com.getcapacitor.annotation.CapacitorPlugin
+
+@CapacitorPlugin(name = "ForegroundService")
+class ForegroundServicePlugin : Plugin() {
+    @com.getcapacitor.PluginMethod
+    fun start(call: com.getcapacitor.PluginCall) {
+        val intent = Intent(context, BookingForegroundService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent)
+        } else {
+            context.startService(intent)
+        }
+        call.resolve()
+    }
+
+    @com.getcapacitor.PluginMethod
+    fun stop(call: com.getcapacitor.PluginCall) {
+        val intent = Intent(context, BookingForegroundService::class.java)
+        context.stopService(intent)
+        call.resolve()
+    }
+}
+
+class MainActivity : BridgeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        registerPlugin(ForegroundServicePlugin::class.java)
+    }
+}
