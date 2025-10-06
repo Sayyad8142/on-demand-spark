@@ -5,8 +5,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
+import OneSignal from "onesignal-cordova-plugin";
 import { useAuth } from "@/hooks/useAuth";
-import { initOneSignal } from "@/lib/onesignal";
+import { initOneSignal, ONESIGNAL_APP_ID } from "@/lib/onesignal";
 import { registerWebPush } from "@/push/webPush";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
@@ -32,6 +33,41 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 const App = () => {
   const { session } = useAuth();
+
+  // Request OneSignal notification permission on first app launch (Android)
+  useEffect(() => {
+    const requestInitialPermission = async () => {
+      if (!Capacitor.isNativePlatform()) return;
+      
+      const permissionRequested = localStorage.getItem('onesignal_permission_requested');
+      if (permissionRequested) return;
+
+      if (!ONESIGNAL_APP_ID) return;
+
+      try {
+        // Initialize OneSignal first
+        OneSignal.initialize(ONESIGNAL_APP_ID);
+        OneSignal.Debug.setLogLevel(6);
+
+        // Request permission
+        const granted = await OneSignal.Notifications.requestPermission(true);
+        
+        if (granted) {
+          console.log("✅ Notification permission granted");
+        } else {
+          console.log("❌ Notification permission denied");
+        }
+
+        // Mark as requested to avoid asking again
+        localStorage.setItem('onesignal_permission_requested', 'true');
+      } catch (error) {
+        console.error("Error requesting notification permission:", error);
+        localStorage.setItem('onesignal_permission_requested', 'true');
+      }
+    };
+
+    requestInitialPermission();
+  }, []);
 
   // Register push notifications (native or web)
   useEffect(() => {
