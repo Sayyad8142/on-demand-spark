@@ -33,5 +33,8 @@ class MainActivity : BridgeActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         registerPlugin(ForegroundServicePlugin::class.java)
+        
+        // Request battery optimization exemption to keep foreground service running
+        BatteryOptimizationHelper.showBatteryDialog(this)
     }
 }
