@@ -35,9 +35,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 const App = () => {
   const { session } = useAuth();
 
-  // Request OneSignal notification permission on first app launch (Android)
+  // Request notification permission after login
   useEffect(() => {
-    const requestInitialPermission = async () => {
+    const requestPermissionAfterLogin = async () => {
+      if (!session?.user?.id) return;
       if (!Capacitor.isNativePlatform()) return;
       
       const permissionRequested = localStorage.getItem('onesignal_permission_requested');
@@ -49,6 +50,9 @@ const App = () => {
         // Initialize OneSignal first
         OneSignal.initialize(ONESIGNAL_APP_ID);
         OneSignal.Debug.setLogLevel(6);
+
+        // Small delay to ensure app is ready
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         // Request permission
         const granted = await OneSignal.Notifications.requestPermission(true);
@@ -67,8 +71,8 @@ const App = () => {
       }
     };
 
-    requestInitialPermission();
-  }, []);
+    requestPermissionAfterLogin();
+  }, [session?.user?.id]);
 
   // Register push notifications (native or web)
   useEffect(() => {
