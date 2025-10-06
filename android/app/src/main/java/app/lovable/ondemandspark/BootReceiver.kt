@@ -11,13 +11,20 @@ class BootReceiver : BroadcastReceiver() {
         if (intent?.action == Intent.ACTION_BOOT_COMPLETED || 
             intent?.action == "android.intent.action.QUICKBOOT_POWERON") {
             
-            Log.d("BootReceiver", "Device booted, restarting BookingForegroundService")
+            // Check if user was logged in before reboot
+            val prefs = context.getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
+            val wasLoggedIn = prefs.getBoolean("is_logged_in", false)
             
-            val serviceIntent = Intent(context, BookingForegroundService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(serviceIntent)
-            } else {
-                context.startService(serviceIntent)
+            Log.d("BootReceiver", "Device booted, was logged in: $wasLoggedIn")
+            
+            if (wasLoggedIn) {
+                val serviceIntent = Intent(context, BookingForegroundService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(serviceIntent)
+                } else {
+                    context.startService(serviceIntent)
+                }
+                Log.d("BootReceiver", "BookingForegroundService restarted after boot")
             }
         }
     }

@@ -18,6 +18,11 @@ class ForegroundServicePlugin : Plugin() {
         } else {
             context.startService(intent)
         }
+        
+        // Save login state to persist across reboots
+        val prefs = context.getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("is_logged_in", true).apply()
+        
         call.resolve()
     }
 
@@ -25,6 +30,11 @@ class ForegroundServicePlugin : Plugin() {
     fun stop(call: com.getcapacitor.PluginCall) {
         val intent = Intent(context, BookingForegroundService::class.java)
         context.stopService(intent)
+        
+        // Clear login state
+        val prefs = context.getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("is_logged_in", false).apply()
+        
         call.resolve()
     }
 }
