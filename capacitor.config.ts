@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.759fb1e247be4ebf9bb7b8afd005a404',
+  appId: 'app.lovable.ondemandspark',
   appName: 'on-demand-spark',
   webDir: 'dist',
   server: {
