@@ -101,46 +101,100 @@ class BookingOverlayService : Service() {
         }
     }
 
-    private fun updateBooking(bookingId: String, status: String) {
+    private fun updateBooking(bookingId: String, action: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val supabaseUrl = "https://paywwbuqycovjopryele.supabase.co"
-                val supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheXd3YnVxeWNvdmpvcHJ5ZWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkyNjksImV4cCI6MjA3MDc0NTI2OX0.js1MaTBkjuGlaDfQjrZpZ9_G8Jy9ygNAB8KpNDiQg8o"
+                android.util.Log.d("BookingOverlay", "📤 Updating booking $bookingId with action: $action")
                 
-                val url = URL("$supabaseUrl/rest/v1/bookings?id=eq.$bookingId")
-                val connection = url.openConnection() as HttpURLConnection
-                
-                connection.requestMethod = "PATCH"
-                connection.setRequestProperty("apikey", supabaseKey)
-                connection.setRequestProperty("Authorization", "Bearer $supabaseKey")
-                connection.setRequestProperty("Content-Type", "application/json")
-                connection.setRequestProperty("Prefer", "return=minimal")
-                connection.doOutput = true
+                if (action == "accepted") {
+                    // Call try_accept_booking RPC for accepting
+                    val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/try_accept_booking")
+                    val connection = rpcUrl.openConnection() as HttpURLConnection
+                    
+                    connection.requestMethod = "POST"
+                    connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+                    connection.setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
+                    connection.setRequestProperty("Content-Type", "application/json")
+                    connection.doOutput = true
 
-                val jsonPayload = """{"status":"$status"}"""
-                connection.outputStream.use { os ->
-                    os.write(jsonPayload.toByteArray())
-                }
+                    val jsonPayload = """{"p_booking_id":"$bookingId"}"""
+                    connection.outputStream.use { os ->
+                        os.write(jsonPayload.toByteArray())
+                    }
 
-                val responseCode = connection.responseCode
-                connection.disconnect()
+                    val responseCode = connection.responseCode
+                    val responseBody = connection.inputStream.bufferedReader().use { it.readText() }
+                    connection.disconnect()
 
-                withContext(Dispatchers.Main) {
-                    if (responseCode in 200..299) {
-                        Toast.makeText(
-                            this@BookingOverlayService,
-                            "Booking ${if (status == "accepted") "accepted" else "rejected"} successfully",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    } else {
-                        Toast.makeText(
-                            this@BookingOverlayService,
-                            "Failed to update booking",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                    android.util.Log.d("BookingOverlay", "✅ RPC response: $responseCode - $responseBody")
+
+                    withContext(Dispatchers.Main) {
+                        if (responseCode in 200..299) {
+                            val json = JSONObject(responseBody)
+                            val success = json.optBoolean("success", false)
+                            
+                            if (success) {
+                                Toast.makeText(
+                                    this@BookingOverlayService,
+                                    "✅ Booking accepted successfully!",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            } else {
+                                val error = json.optString("error", "Unknown error")
+                                Toast.makeText(
+                                    this@BookingOverlayService,
+                                    "❌ $error",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        } else {
+                            Toast.makeText(
+                                this@BookingOverlayService,
+                                "❌ Failed to accept booking (HTTP $responseCode)",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                } else {
+                    // For reject, just update status directly
+                    val url = URL("$SUPABASE_URL/rest/v1/bookings?id=eq.$bookingId")
+                    val connection = url.openConnection() as HttpURLConnection
+                    
+                    connection.requestMethod = "PATCH"
+                    connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+                    connection.setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
+                    connection.setRequestProperty("Content-Type", "application/json")
+                    connection.setRequestProperty("Prefer", "return=minimal")
+                    connection.doOutput = true
+
+                    val jsonPayload = """{"status":"cancelled"}"""
+                    connection.outputStream.use { os ->
+                        os.write(jsonPayload.toByteArray())
+                    }
+
+                    val responseCode = connection.responseCode
+                    connection.disconnect()
+
+                    android.util.Log.d("BookingOverlay", "✅ Reject response: $responseCode")
+
+                    withContext(Dispatchers.Main) {
+                        if (responseCode in 200..299) {
+                            Toast.makeText(
+                                this@BookingOverlayService,
+                                "Booking rejected",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            Toast.makeText(
+                                this@BookingOverlayService,
+                                "Failed to reject booking",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     }
                 }
             } catch (e: Exception) {
+                android.util.Log.e("BookingOverlay", "❌ Error updating booking", e)
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         this@BookingOverlayService,
