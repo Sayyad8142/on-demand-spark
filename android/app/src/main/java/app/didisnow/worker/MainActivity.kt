@@ -45,10 +45,15 @@ class MainActivity : BridgeActivity() {
         super.onCreate(savedInstanceState)
         registerPlugin(ForegroundServicePlugin::class.java)
         
+        android.util.Log.d("MainActivity", "🚀 App starting - checking permissions")
+        
         // Request battery optimization exemption to keep foreground service running
         BatteryOptimizationHelper.showBatteryDialog(this)
         
-        // Request overlay permission to show booking alerts over other apps
-        OverlayPermissionHelper.showOverlayPermissionDialog(this)
+        // Delay overlay permission dialog slightly so it doesn't conflict with battery dialog
+        android.os.Handler(mainLooper).postDelayed({
+            android.util.Log.d("MainActivity", "📱 Requesting overlay permission")
+            OverlayPermissionHelper.showOverlayPermissionDialog(this)
+        }, 1500)
     }
 }

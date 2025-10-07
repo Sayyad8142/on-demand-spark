@@ -21,31 +21,35 @@ export function initOneSignal(userId?: string) {
   // Initialize OneSignal with App ID
   OneSignal.initialize(ONESIGNAL_APP_ID);
 
-  // Enable debug logging
+  // Enable verbose debug logging
   OneSignal.Debug.setLogLevel(6);
 
-  // Link user to device using external user ID (Supabase user.id)
-  if (userId) {
-    try {
-      console.log('🔗 Linking OneSignal to user:', userId);
-      
-      // For Cordova plugin, use login to set external user ID
-      OneSignal.login(userId);
-      
-      // Add worker role tag
-      OneSignal.User.addTag('role', 'worker');
-      
-      console.log('✅ OneSignal linked with user:', userId);
-    } catch (error) {
-      console.error('❌ OneSignal user link failed:', error);
-    }
-  } else {
-    console.warn('⚠️ No userId provided for OneSignal linking');
-  }
-
-  // Request notification permissions
-  OneSignal.Notifications.requestPermission(true).then((granted) => {
+  // Request notification permissions FIRST before login
+  OneSignal.Notifications.requestPermission(true).then(async (granted) => {
     console.log('🔔 OneSignal permission granted:', granted);
+    
+    if (granted && userId) {
+      // Small delay to ensure SDK is ready
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      try {
+        console.log('🔗 Logging in OneSignal user:', userId);
+        
+        // Login to OneSignal - this subscribes the user
+        await OneSignal.login(userId);
+        
+        // Add worker role tag
+        OneSignal.User.addTag('role', 'worker');
+        
+        console.log('✅ OneSignal user logged in and subscribed:', userId);
+      } catch (error) {
+        console.error('❌ OneSignal login failed:', error);
+      }
+    } else if (!granted) {
+      console.warn('⚠️ OneSignal permission denied - cannot subscribe');
+    } else {
+      console.warn('⚠️ No userId provided for OneSignal login');
+    }
   }).catch((error) => {
     console.error('❌ OneSignal permission request failed:', error);
   });

@@ -27,16 +27,22 @@ object OverlayPermissionHelper {
 
     fun showOverlayPermissionDialog(activity: Activity) {
         if (canDraw(activity)) {
+            android.util.Log.d("OverlayPermission", "✅ Overlay permission already granted")
             return // Already has permission
         }
+
+        android.util.Log.d("OverlayPermission", "📱 Showing overlay permission dialog")
 
         AlertDialog.Builder(activity)
             .setTitle("Display Over Other Apps")
             .setMessage("To ensure you never miss a booking, please allow On-Demand Spark to display alerts over other apps (including YouTube, WhatsApp, etc.).\n\nThis is required for urgent booking notifications.")
             .setPositiveButton("Allow") { _, _ ->
+                android.util.Log.d("OverlayPermission", "🔓 User clicked Allow - requesting permission")
                 request(activity)
             }
-            .setNegativeButton("Later", null)
+            .setNegativeButton("Later") { _, _ ->
+                android.util.Log.d("OverlayPermission", "⏭️ User clicked Later")
+            }
             .setCancelable(false)
             .show()
     }
