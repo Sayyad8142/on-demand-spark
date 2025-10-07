@@ -1,4 +1,4 @@
-package app.didisnow.worker
+package app.lovable.ondemandspark
 
 import android.app.Activity
 import android.os.Bundle

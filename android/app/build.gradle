@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "app.didisnow.worker"
+    namespace "app.lovable.on_demand_spark"
     compileSdkVersion rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "app.didisnow.worker"
+        applicationId "app.lovable.759fb1e247be4ebf9bb7b8afd005a404"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

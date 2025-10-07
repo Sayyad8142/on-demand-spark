@@ -1,4 +1,4 @@
-package app.didisnow.worker
+package app.lovable.ondemandspark
 
 import android.app.NotificationChannel
 import android.app.NotificationManager

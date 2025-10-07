@@ -1,4 +1,4 @@
-package app.didisnow.worker
+package app.lovable.ondemandspark
 
 import android.content.Context
 import android.content.Intent
