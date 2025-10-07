@@ -48,7 +48,7 @@ class BookingOverlayService : Service() {
 
         // Inflate the overlay layout
         val inflater = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
-        overlayView = inflater.inflate(R.layout.activity_booking_alert, null)
+        overlayView = inflater.inflate(R.layout.overlay_booking_alert, null)
 
         // Set overlay window parameters
         val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -72,15 +72,14 @@ class BookingOverlayService : Service() {
         }
 
         // Set booking details
-        overlayView?.findViewById<TextView>(R.id.alertTitle)?.text = "🔔 New Booking Request!"
-        overlayView?.findViewById<TextView>(R.id.alertCustomer)?.text = "Customer: $customer"
-        overlayView?.findViewById<TextView>(R.id.alertCommunity)?.text = "Community: $community"
-        overlayView?.findViewById<TextView>(R.id.alertService)?.text = "Service: $serviceType"
+        overlayView?.findViewById<TextView>(R.id.title)?.text = "New Booking: $serviceType"
+        overlayView?.findViewById<TextView>(R.id.subtitle)?.text = "$customer • $community"
 
         // Handle Accept button
         overlayView?.findViewById<Button>(R.id.btnAccept)?.setOnClickListener {
             if (bookingId.isNotEmpty()) {
-                acceptBooking(bookingId)
+                updateBooking(bookingId, "accepted")
+                closeOverlay()
             } else {
                 Toast.makeText(this, "Error: No booking ID", Toast.LENGTH_SHORT).show()
                 closeOverlay()
@@ -89,7 +88,7 @@ class BookingOverlayService : Service() {
 
         // Handle Reject button
         overlayView?.findViewById<Button>(R.id.btnReject)?.setOnClickListener {
-            Toast.makeText(this, "Booking rejected", Toast.LENGTH_SHORT).show()
+            updateBooking(bookingId, "rejected")
             closeOverlay()
         }
 
@@ -102,58 +101,52 @@ class BookingOverlayService : Service() {
         }
     }
 
-    private fun acceptBooking(bookingId: String) {
+    private fun updateBooking(bookingId: String, status: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val url = URL("$SUPABASE_URL/rest/v1/bookings?id=eq.$bookingId")
+                val supabaseUrl = "https://paywwbuqycovjopryele.supabase.co"
+                val supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheXd3YnVxeWNvdmpvcHJ5ZWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkyNjksImV4cCI6MjA3MDc0NTI2OX0.js1MaTBkjuGlaDfQjrZpZ9_G8Jy9ygNAB8KpNDiQg8o"
+                
+                val url = URL("$supabaseUrl/rest/v1/bookings?id=eq.$bookingId")
                 val connection = url.openConnection() as HttpURLConnection
                 
-                connection.apply {
-                    requestMethod = "PATCH"
-                    doOutput = true
-                    setRequestProperty("Content-Type", "application/json")
-                    setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                    setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
-                    setRequestProperty("Prefer", "return=minimal")
-                }
+                connection.requestMethod = "PATCH"
+                connection.setRequestProperty("apikey", supabaseKey)
+                connection.setRequestProperty("Authorization", "Bearer $supabaseKey")
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.setRequestProperty("Prefer", "return=minimal")
+                connection.doOutput = true
 
-                val jsonBody = JSONObject().apply {
-                    put("status", "accepted")
-                    put("accepted_at", System.currentTimeMillis() / 1000)
-                }
-
+                val jsonPayload = """{"status":"$status"}"""
                 connection.outputStream.use { os ->
-                    os.write(jsonBody.toString().toByteArray())
+                    os.write(jsonPayload.toByteArray())
                 }
 
                 val responseCode = connection.responseCode
-                
+                connection.disconnect()
+
                 withContext(Dispatchers.Main) {
                     if (responseCode in 200..299) {
                         Toast.makeText(
                             this@BookingOverlayService,
-                            "✅ Booking accepted!",
+                            "Booking ${if (status == "accepted") "accepted" else "rejected"} successfully",
                             Toast.LENGTH_SHORT
                         ).show()
                     } else {
                         Toast.makeText(
                             this@BookingOverlayService,
-                            "❌ Error accepting booking (Code: $responseCode)",
+                            "Failed to update booking",
                             Toast.LENGTH_SHORT
                         ).show()
                     }
-                    closeOverlay()
                 }
-                
-                connection.disconnect()
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         this@BookingOverlayService,
-                        "❌ Error: ${e.message}",
+                        "Error: ${e.message}",
                         Toast.LENGTH_SHORT
                     ).show()
-                    closeOverlay()
                 }
             }
         }

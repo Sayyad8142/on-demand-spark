@@ -9,27 +9,24 @@ import android.provider.Settings
 import androidx.appcompat.app.AlertDialog
 
 object OverlayPermissionHelper {
-    fun canDrawOverlays(context: Context): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Settings.canDrawOverlays(context)
-        } else {
-            true // Permission not required for older versions
-        }
-    }
+    fun canDraw(activity: Activity): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+            Settings.canDrawOverlays(activity)
+        else true
 
-    fun requestOverlayPermission(activity: Activity) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+    fun request(activity: Activity, requestCode: Int = 9911) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+            !Settings.canDrawOverlays(activity)) {
             val intent = Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                 Uri.parse("package:${activity.packageName}")
             )
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            activity.startActivity(intent)
+            activity.startActivityForResult(intent, requestCode)
         }
     }
 
     fun showOverlayPermissionDialog(activity: Activity) {
-        if (canDrawOverlays(activity)) {
+        if (canDraw(activity)) {
             return // Already has permission
         }
 
@@ -37,7 +34,7 @@ object OverlayPermissionHelper {
             .setTitle("Display Over Other Apps")
             .setMessage("To ensure you never miss a booking, please allow On-Demand Spark to display alerts over other apps (including YouTube, WhatsApp, etc.).\n\nThis is required for urgent booking notifications.")
             .setPositiveButton("Allow") { _, _ ->
-                requestOverlayPermission(activity)
+                request(activity)
             }
             .setNegativeButton("Later", null)
             .setCancelable(false)

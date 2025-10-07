@@ -9,6 +9,7 @@ import OneSignal from "onesignal-cordova-plugin";
 import { useAuth } from "@/hooks/useAuth";
 import { initOneSignal, ONESIGNAL_APP_ID } from "@/lib/onesignal";
 import { registerWebPush } from "@/push/webPush";
+import { requestAndroidOverlay } from "@/lib/androidOverlay";
 import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
@@ -84,6 +85,11 @@ const App = () => {
     if (Capacitor.isNativePlatform()) {
       console.log("Initializing OneSignal for native platform");
       initOneSignal(userId);
+      
+      // Request overlay permission on Android after login
+      if (Capacitor.getPlatform() === 'android') {
+        requestAndroidOverlay();
+      }
     } else {
       console.log("Registering web push notifications");
       registerWebPush(userId);
