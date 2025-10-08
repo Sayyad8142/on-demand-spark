@@ -1,13 +1,18 @@
 import OneSignal from 'onesignal-cordova-plugin';
 import { Capacitor } from '@capacitor/core';
 
-// Replace with your actual OneSignal App ID from OneSignal dashboard
-// This is a public identifier (not a secret) - safe to hardcode
 export const ONESIGNAL_APP_ID = '28bd7e2d-e437-4b45-b454-e276dd2d4e52';
 
-export function initOneSignal(userId?: string) {
+let osInitialized = false;
+
+export function initOneSignal() {
   if (!Capacitor.isNativePlatform()) {
-    console.log('OneSignal: not native platform, skipping native initialization');
+    console.log('OneSignal: not native platform, skipping');
+    return;
+  }
+  
+  if (osInitialized) {
+    console.log('OneSignal: already initialized');
     return;
   }
   
@@ -16,67 +21,54 @@ export function initOneSignal(userId?: string) {
     return; 
   }
 
-  console.log('🔔 Initializing OneSignal for native platform...');
+  console.log('🔔 Initializing OneSignal...');
   
-  // Initialize OneSignal with App ID
   OneSignal.initialize(ONESIGNAL_APP_ID);
-
-  // Enable verbose debug logging
   OneSignal.Debug.setLogLevel(6);
-
-  // Request notification permissions FIRST before login
-  OneSignal.Notifications.requestPermission(true).then(async (granted) => {
-    console.log('🔔 OneSignal permission granted:', granted);
-    
-    if (granted && userId) {
-      // Small delay to ensure SDK is ready
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      try {
-        console.log('🔗 Logging in OneSignal user:', userId);
-        
-        // Login to OneSignal - this subscribes the user
-        await OneSignal.login(userId);
-        
-        // Add worker role tag
-        OneSignal.User.addTag('role', 'worker');
-        
-        console.log('✅ OneSignal user logged in and subscribed:', userId);
-      } catch (error) {
-        console.error('❌ OneSignal login failed:', error);
-      }
-    } else if (!granted) {
-      console.warn('⚠️ OneSignal permission denied - cannot subscribe');
-    } else {
-      console.warn('⚠️ No userId provided for OneSignal login');
-    }
-  }).catch((error) => {
-    console.error('❌ OneSignal permission request failed:', error);
-  });
-
-  // Handle notification clicks (when app is closed/background)
+  
+  // Request notification permission
+  OneSignal.Notifications.requestPermission(true);
+  
+  // Handle notification clicks
   OneSignal.Notifications.addEventListener('click', (ev: any) => {
-    console.log('🔔 OneSignal notification clicked:', ev);
+    console.log('🔔 Notification clicked:', ev);
     const additionalData = ev?.notification?.additionalData || {};
     const bookingId = additionalData.bookingId || additionalData.booking_id;
     
     if (bookingId) {
-      console.log('📬 Booking alert detected, posting message:', bookingId);
+      console.log('📬 Booking alert clicked:', bookingId);
       window.postMessage({ type: 'BOOKING_ALERT', bookingId }, '*');
     }
   });
 
   // Handle foreground notifications
   OneSignal.Notifications.addEventListener('foregroundWillDisplay', (ev: any) => {
-    console.log('🔔 OneSignal foreground notification:', ev);
+    console.log('🔔 Foreground notification:', ev);
     const additionalData = ev?.getNotification?.()?.additionalData || {};
     const bookingId = additionalData.bookingId || additionalData.booking_id;
     
     if (bookingId) {
-      console.log('📬 Foreground booking alert, posting message:', bookingId);
+      console.log('📬 Foreground booking alert:', bookingId);
       window.postMessage({ type: 'BOOKING_ALERT', bookingId }, '*');
     }
   });
 
-  console.log('✅ OneSignal initialization complete');
+  osInitialized = true;
+  console.log('✅ OneSignal initialized');
+}
+
+export async function loginOneSignal(userId: string) {
+  if (!Capacitor.isNativePlatform()) {
+    console.log('OneSignal: not native platform, skipping login');
+    return;
+  }
+  
+  try {
+    console.log('🔗 Logging in OneSignal user:', userId);
+    await OneSignal.login(userId);
+    await OneSignal.User.addTag('role', 'worker');
+    console.log('✅ OneSignal user logged in:', userId);
+  } catch (error) {
+    console.error('❌ OneSignal login error:', error);
+  }
 }

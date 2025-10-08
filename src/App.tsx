@@ -5,9 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
-import OneSignal from "onesignal-cordova-plugin";
 import { useAuth } from "@/hooks/useAuth";
-import { initOneSignal, ONESIGNAL_APP_ID } from "@/lib/onesignal";
+import { initOneSignal, loginOneSignal } from "@/lib/onesignal";
 import { registerWebPush } from "@/push/webPush";
 import { requestAndroidOverlay } from "@/lib/androidOverlay";
 import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
@@ -36,20 +35,26 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 const App = () => {
   const { session } = useAuth();
 
-  // OneSignal will handle permission in initOneSignal - no need for duplicate logic
+  // Initialize OneSignal once on app start
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      console.log("Initializing OneSignal");
+      initOneSignal();
+    }
+  }, []);
 
-  // Register push notifications (native or web)
+  // Login to OneSignal when we have a session
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId) return;
 
-    console.log("Registering push notifications for user:", userId);
+    console.log("User logged in:", userId);
     
     if (Capacitor.isNativePlatform()) {
-      console.log("Initializing OneSignal for native platform");
-      initOneSignal(userId);
+      console.log("Logging in to OneSignal with user ID");
+      loginOneSignal(userId);
       
-      // Request overlay permission on Android after login
+      // Request overlay permission on Android
       if (Capacitor.getPlatform() === 'android') {
         requestAndroidOverlay();
       }
