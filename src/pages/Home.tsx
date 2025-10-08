@@ -18,7 +18,7 @@ export default function Home() {
   const { user, loading: authLoading, signOut } = useAuth();
   const { worker, loading: workerLoading, updateAvailability, refetch: refetchWorker } = useWorkerProfile(user?.id);
   const { pendingBooking, clearAlert } = useBookingAlerts(user?.id, worker?.is_available || false);
-  const { activeJob, updateJobStatus, loading: jobLoading } = useActiveJob(user?.id);
+  const { activeJob, updateJobStatus, loading: jobLoading, refetch: refetchActiveJob } = useActiveJob(user?.id);
   const [toggling, setToggling] = useState(false);
   const [updatingJob, setUpdatingJob] = useState(false);
   const [sendingTestNotification, setSendingTestNotification] = useState(false);
@@ -101,6 +101,12 @@ export default function Home() {
     } finally {
       setUpdatingJob(false);
     }
+  };
+
+  const handleBookingAccept = async () => {
+    clearAlert();
+    // Refetch active job immediately after accepting
+    await refetchActiveJob();
   };
 
   const handleTestNotification = async () => {
@@ -269,7 +275,7 @@ export default function Home() {
       {/* Booking Alert Modal - from realtime subscription */}
       <BookingAlertModal
         booking={pendingBooking}
-        onAccept={clearAlert}
+        onAccept={handleBookingAccept}
         onReject={clearAlert}
       />
     </div>
