@@ -61,23 +61,24 @@ Deno.serve(async (req) => {
     const workerIds = workers.map((w) => w.id);
     console.log(`✅ Found ${workers.length} eligible workers:`, workers.map(w => w.full_name).join(", "));
 
-    // Call send-onesignal edge function via HTTP
-    const oneSignalUrl = `${SUPABASE_URL}/functions/v1/send-onesignal`;
-    console.log("📤 Calling send-onesignal for workers:", workerIds);
+    // Call send-fcm edge function via HTTP
+    const fcmUrl = `${SUPABASE_URL}/functions/v1/send-fcm`;
+    console.log("📤 Calling send-fcm for workers:", workerIds);
     
-    const sendResponse = await fetch(oneSignalUrl, {
+    const sendResponse = await fetch(fcmUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${ANON_KEY}`,
       },
       body: JSON.stringify({
-        externalUserIds: workerIds,
-        headings: { en: "New Booking Alert!" },
-        contents: { en: `${b.service_type.replace('_', ' ')} in ${b.community}. Tap to accept!` },
+        workerIds: workerIds,
+        title: "New Booking Alert!",
+        body: `${b.service_type.replace('_', ' ')} in ${b.community}. Tap to accept!`,
         data: { 
           type: "BOOKING_ALERT",
           bookingId: booking_id, 
+          booking_id: booking_id,
           customer: b.cust_name || "New Customer",
           community: b.community,
           serviceType: b.service_type,
@@ -88,12 +89,12 @@ Deno.serve(async (req) => {
 
     if (!sendResponse.ok) {
       const error = await sendResponse.text();
-      console.error("❌ OneSignal send error:", error);
+      console.error("❌ FCM send error:", error);
       return new Response(JSON.stringify({ error }), { status: 500 });
     }
 
     const result = await sendResponse.json();
-    console.log("✅ OneSignal notifications sent successfully:", result);
+    console.log("✅ FCM notifications sent successfully:", result);
     
     return new Response(
       JSON.stringify({ 

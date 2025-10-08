@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { useAuth } from "@/hooks/useAuth";
-import { initOneSignal, loginOneSignal } from "@/lib/onesignal";
+import { initFCM, saveFCMToken } from "@/lib/fcm";
 import { registerWebPush } from "@/push/webPush";
 import { requestAndroidOverlay } from "@/lib/androidOverlay";
 import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
@@ -35,15 +35,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 const App = () => {
   const { session } = useAuth();
 
-  // Initialize OneSignal once on app start
+  // Initialize FCM once on app start
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
-      console.log("Initializing OneSignal");
-      initOneSignal();
+      console.log("🔔 Initializing FCM...");
+      initFCM();
     }
   }, []);
 
-  // Login to OneSignal when we have a session
+  // Save FCM token when we have a session
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId) return;
@@ -51,8 +51,8 @@ const App = () => {
     console.log("User logged in:", userId);
     
     if (Capacitor.isNativePlatform()) {
-      console.log("Logging in to OneSignal with user ID");
-      loginOneSignal(userId);
+      console.log("💾 Saving FCM token for user:", userId);
+      saveFCMToken(userId);
       
       // Request overlay permission on Android
       if (Capacitor.getPlatform() === 'android') {
