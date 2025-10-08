@@ -67,7 +67,17 @@ export async function loginOneSignal(userId: string) {
     console.log('🔗 Logging in OneSignal user:', userId);
     await OneSignal.login(userId);
     await OneSignal.User.addTag('role', 'worker');
+    
+    // Check subscription status
+    const pushSubscriptionId = await OneSignal.User.pushSubscription.id;
+    const optedIn = await OneSignal.User.pushSubscription.optedIn;
     console.log('✅ OneSignal user logged in:', userId);
+    console.log('📱 Push subscription ID:', pushSubscriptionId);
+    console.log('🔔 Opted in:', optedIn);
+    
+    if (!optedIn) {
+      console.warn('⚠️ User not opted in to push notifications. Check permissions.');
+    }
   } catch (error) {
     console.error('❌ OneSignal login error:', error);
   }

@@ -71,6 +71,7 @@ export async function registerWebPush(userId: string) {
       }
     });
   } catch (error) {
-    console.error("Error registering web push:", error);
+    // Silently fail if OneSignal not configured for web (mobile-only app)
+    console.log("Web push not available:", error instanceof Error ? error.message : error);
   }
 }
