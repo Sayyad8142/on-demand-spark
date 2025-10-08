@@ -1,0 +1,206 @@
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Smartphone, Battery, Power, Bell, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+
+export default function Troubleshoot() {
+  const navigate = useNavigate();
+
+  const openBatterySettings = () => {
+    // Open settings - implementation depends on native plugin if needed
+    console.log('Open battery settings');
+  };
+
+  const openAutoStartSettings = () => {
+    // Open settings - implementation depends on native plugin if needed
+    console.log('Open auto-start settings');
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-primary-soft">
+      {/* Header */}
+      <header className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-10 shadow-sm">
+        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(-1)}
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h1 className="text-xl font-bold">Troubleshooting</h1>
+            <p className="text-sm text-muted-foreground">Fix common issues</p>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-2xl mx-auto p-4 space-y-4">
+        {/* Warning Card */}
+        <Card className="p-6 bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800">
+          <div className="flex gap-3">
+            <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="font-semibold mb-2 text-yellow-900 dark:text-yellow-100">
+                Important for reliable notifications
+              </h3>
+              <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                Some phone manufacturers restrict background apps. Follow these steps to ensure you never miss a booking.
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        {/* Battery Optimization */}
+        <Card className="p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900 flex items-center justify-center flex-shrink-0">
+              <Battery className="w-6 h-6 text-red-600 dark:text-red-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold mb-1">Disable Battery Optimization</h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                Allow Didi Now to run in the background without restrictions
+              </p>
+              <Button onClick={openBatterySettings} variant="outline" className="w-full">
+                Open Battery Settings
+              </Button>
+              <div className="mt-3 p-3 bg-muted rounded-lg">
+                <p className="text-xs font-medium mb-2">Manual Steps:</p>
+                <ol className="text-xs text-muted-foreground space-y-1">
+                  <li>1. Go to Settings → Apps → Didi Now</li>
+                  <li>2. Tap "Battery" or "Battery Usage"</li>
+                  <li>3. Select "Unrestricted" or "Don't optimize"</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Auto-start */}
+        <Card className="p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
+              <Power className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold mb-1">Enable Auto-start</h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                Allow Didi Now to start automatically when your phone restarts
+              </p>
+              <Button onClick={openAutoStartSettings} variant="outline" className="w-full">
+                Open Auto-start Settings
+              </Button>
+              <div className="mt-3 p-3 bg-muted rounded-lg">
+                <p className="text-xs font-medium mb-2">Manual Steps (varies by brand):</p>
+                <ol className="text-xs text-muted-foreground space-y-1">
+                  <li><strong>Xiaomi/Redmi:</strong> Security → Permissions → Autostart</li>
+                  <li><strong>Huawei:</strong> Settings → Apps → App launch</li>
+                  <li><strong>Oppo/Realme:</strong> Settings → App Management → Startup Manager</li>
+                  <li><strong>Vivo:</strong> Settings → Apps → Autostart</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Notifications */}
+        <Card className="p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900 flex items-center justify-center flex-shrink-0">
+              <Bell className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold mb-1">Enable Notifications</h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                Ensure notification permissions are granted
+              </p>
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-xs font-medium mb-2">Steps:</p>
+                <ol className="text-xs text-muted-foreground space-y-1">
+                  <li>1. Go to Settings → Apps → Didi Now</li>
+                  <li>2. Tap "Notifications"</li>
+                  <li>3. Enable "Allow notifications"</li>
+                  <li>4. Enable all notification categories</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Device-specific Issues */}
+        <Card className="p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900 flex items-center justify-center flex-shrink-0">
+              <Smartphone className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold mb-2">Device-Specific Settings</h3>
+              <div className="space-y-3">
+                <details className="p-3 bg-muted rounded-lg">
+                  <summary className="text-sm font-medium cursor-pointer">Xiaomi / Redmi / POCO</summary>
+                  <ul className="text-xs text-muted-foreground mt-2 space-y-1 pl-4">
+                    <li>• Security → Permissions → Autostart → Enable for Didi Now</li>
+                    <li>• Battery & Performance → Choose apps → Didi Now → No restrictions</li>
+                    <li>• Settings → Notifications → Didi Now → Enable all</li>
+                  </ul>
+                </details>
+                
+                <details className="p-3 bg-muted rounded-lg">
+                  <summary className="text-sm font-medium cursor-pointer">Huawei / Honor</summary>
+                  <ul className="text-xs text-muted-foreground mt-2 space-y-1 pl-4">
+                    <li>• Settings → Apps → App launch → Didi Now → Manage manually</li>
+                    <li>• Settings → Battery → App launch → Didi Now → Enable all</li>
+                    <li>• Phone Manager → Protected apps → Enable Didi Now</li>
+                  </ul>
+                </details>
+                
+                <details className="p-3 bg-muted rounded-lg">
+                  <summary className="text-sm font-medium cursor-pointer">Oppo / Realme</summary>
+                  <ul className="text-xs text-muted-foreground mt-2 space-y-1 pl-4">
+                    <li>• Settings → Battery → App Battery Management → Didi Now → Don't optimize</li>
+                    <li>• Settings → App Management → Startup Manager → Enable Didi Now</li>
+                    <li>• Settings → Privacy → Permission Manager → Enable all for Didi Now</li>
+                  </ul>
+                </details>
+                
+                <details className="p-3 bg-muted rounded-lg">
+                  <summary className="text-sm font-medium cursor-pointer">Vivo</summary>
+                  <ul className="text-xs text-muted-foreground mt-2 space-y-1 pl-4">
+                    <li>• Settings → Battery → Background power consumption management → Didi Now → Allow</li>
+                    <li>• Settings → More Settings → Applications → Autostart → Enable Didi Now</li>
+                    <li>• iManager → App Manager → App list → Didi Now → High background power consumption → Allow</li>
+                  </ul>
+                </details>
+                
+                <details className="p-3 bg-muted rounded-lg">
+                  <summary className="text-sm font-medium cursor-pointer">Samsung</summary>
+                  <ul className="text-xs text-muted-foreground mt-2 space-y-1 pl-4">
+                    <li>• Settings → Apps → Didi Now → Battery → Optimize battery usage → All → Didi Now → Disable</li>
+                    <li>• Settings → Apps → Didi Now → Mobile data → Allow background data usage</li>
+                  </ul>
+                </details>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Still Having Issues */}
+        <Card className="p-6 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+          <h3 className="font-semibold mb-2 text-blue-900 dark:text-blue-100">
+            Still having issues?
+          </h3>
+          <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+            Make sure you've completed all the steps above. If notifications still don't work:
+          </p>
+          <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+            <li>• Restart your phone after changing settings</li>
+            <li>• Check if you're online in the app</li>
+            <li>• Verify your internet connection</li>
+            <li>• Contact support if issues persist</li>
+          </ul>
+        </Card>
+      </main>
+    </div>
+  );
+}

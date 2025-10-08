@@ -14,6 +14,8 @@ import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import Bookings from "./pages/Bookings";
 import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
+import Troubleshoot from "./pages/Troubleshoot";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -124,6 +126,22 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/troubleshoot"
+              element={
+                <ProtectedRoute>
+                  <Troubleshoot />
                 </ProtectedRoute>
               }
             />

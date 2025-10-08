@@ -10,7 +10,7 @@ import AvailabilityToggle from "@/components/AvailabilityToggle";
 import BookingAlertModal from "@/components/BookingAlertModal";
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { Button } from "@/components/ui/button";
-import { Calendar, User, LogOut, Loader2, Bell } from "lucide-react";
+import { Calendar, User, LogOut, Loader2, Bell, Settings as SettingsIcon } from "lucide-react";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -155,6 +155,13 @@ export default function Home() {
             <p className="text-sm text-muted-foreground">Worker App</p>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/settings")}
+            >
+              <SettingsIcon className="w-5 h-5" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"

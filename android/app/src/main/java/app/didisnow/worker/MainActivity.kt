@@ -44,6 +44,7 @@ class MainActivity : BridgeActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         registerPlugin(ForegroundServicePlugin::class.java)
+        registerPlugin(OverlayPlugin::class.java)
         
         android.util.Log.d("MainActivity", "🚀 App starting - checking permissions")
         

@@ -33,17 +33,18 @@ class BookingOverlayService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val bookingId = intent?.getStringExtra("bookingId") ?: ""
-        val customer = intent?.getStringExtra("customer") ?: "New Customer"
+        val bookingId = intent?.getStringExtra("booking_id") ?: ""
+        val customer = intent?.getStringExtra("customer_name") ?: "New Customer"
         val community = intent?.getStringExtra("community") ?: ""
-        val serviceType = intent?.getStringExtra("serviceType") ?: ""
+        val serviceType = intent?.getStringExtra("service_type") ?: ""
+        val price = intent?.getIntExtra("price", 0) ?: 0
 
-        showOverlay(bookingId, customer, community, serviceType)
+        showOverlay(bookingId, customer, community, serviceType, price)
         
         return START_NOT_STICKY
     }
 
-    private fun showOverlay(bookingId: String, customer: String, community: String, serviceType: String) {
+    private fun showOverlay(bookingId: String, customer: String, community: String, serviceType: String, price: Int) {
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
         // Inflate the overlay layout
@@ -74,9 +75,29 @@ class BookingOverlayService : Service() {
         // Set booking details
         overlayView?.findViewById<TextView>(R.id.title)?.text = "New Booking: $serviceType"
         overlayView?.findViewById<TextView>(R.id.subtitle)?.text = "$customer • $community"
+        overlayView?.findViewById<TextView>(R.id.price)?.text = "₹$price"
+        
+        // Start 30-second countdown
+        val countdownText = overlayView?.findViewById<TextView>(R.id.countdown)
+        var secondsLeft = 30
+        val handler = android.os.Handler(mainLooper)
+        val countdown = object : Runnable {
+            override fun run() {
+                if (secondsLeft > 0) {
+                    countdownText?.text = "${secondsLeft}s"
+                    secondsLeft--
+                    handler.postDelayed(this, 1000)
+                } else {
+                    // Auto-reject after 30 seconds
+                    closeOverlay()
+                }
+            }
+        }
+        handler.post(countdown)
 
         // Handle Accept button
         overlayView?.findViewById<Button>(R.id.btnAccept)?.setOnClickListener {
+            handler.removeCallbacks(countdown)
             if (bookingId.isNotEmpty()) {
                 updateBooking(bookingId, "accepted")
                 closeOverlay()
@@ -88,6 +109,7 @@ class BookingOverlayService : Service() {
 
         // Handle Reject button
         overlayView?.findViewById<Button>(R.id.btnReject)?.setOnClickListener {
+            handler.removeCallbacks(countdown)
             updateBooking(bookingId, "rejected")
             closeOverlay()
         }

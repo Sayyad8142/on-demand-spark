@@ -59,8 +59,8 @@ class BookingForegroundService : Service() {
         )
 
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Didi Now Worker")
-            .setContentText("Waiting for new bookings…")
+            .setContentTitle("Didi Now – booking alerts active")
+            .setContentText("Ready to receive booking alerts")
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(pendingIntent)
             .setOngoing(true)

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
+import { showBookingOverlay, isOverlayModeEnabled } from "@/lib/overlay";
+import { Capacitor } from "@capacitor/core";
 
 type Booking = Database["public"]["Tables"]["bookings"]["Row"];
 
@@ -39,6 +41,13 @@ export function useBookingAlerts(userId: string | undefined, isOnline: boolean) 
               worker.community === booking.community;
 
             if (matchesService && matchesCommunity) {
+              // Show overlay if enabled and on Android
+              if (Capacitor.getPlatform() === 'android' && isOverlayModeEnabled()) {
+                console.log('📱 Showing booking overlay for:', booking.id);
+                showBookingOverlay(booking);
+              }
+              
+              // Also set in state for web fallback
               setPendingBooking(booking);
             }
           }

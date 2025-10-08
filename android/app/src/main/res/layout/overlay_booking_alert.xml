@@ -2,45 +2,83 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:background="#CC000000"
-    android:padding="16dp"
+    android:padding="24dp"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:gravity="center">
 
     <TextView
         android:id="@+id/title"
         android:text="New Booking"
         android:textColor="@android:color/white"
-        android:textSize="20sp"
+        android:textSize="24sp"
         android:textStyle="bold"
-        android:layout_width="wrap_content"
+        android:gravity="center"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
 
     <TextView
         android:id="@+id/subtitle"
         android:text="Booking details"
         android:textColor="@android:color/white"
-        android:layout_marginTop="4dp"
-        android:layout_width="wrap_content"
+        android:textSize="16sp"
+        android:gravity="center"
+        android:layout_marginTop="8dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <TextView
+        android:id="@+id/price"
+        android:text="₹0"
+        android:textColor="#4ADE80"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginTop="16dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <TextView
+        android:id="@+id/countdown"
+        android:text="30s"
+        android:textColor="#F59E0B"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginTop="12dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
 
     <LinearLayout
         android:orientation="horizontal"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="24dp"
+        android:gravity="center"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
         <Button
-            android:id="@+id/btnAccept"
-            android:text="Accept"
+            android:id="@+id/btnReject"
+            android:text="Reject"
+            android:textColor="@android:color/white"
+            android:backgroundTint="#EF4444"
             android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:paddingVertical="16dp"
+            android:textSize="16sp"
+            android:textStyle="bold"
             android:layout_width="0dp"
             android:layout_height="wrap_content"/>
 
         <Button
-            android:id="@+id/btnReject"
-            android:text="Reject"
+            android:id="@+id/btnAccept"
+            android:text="Accept"
+            android:textColor="@android:color/white"
+            android:backgroundTint="#22C55E"
             android:layout_weight="1"
             android:layout_marginStart="8dp"
+            android:paddingVertical="16dp"
+            android:textSize="16sp"
+            android:textStyle="bold"
             android:layout_width="0dp"
             android:layout_height="wrap_content"/>
     </LinearLayout>
