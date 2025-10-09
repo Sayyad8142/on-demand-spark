@@ -64,25 +64,35 @@ export function useActiveJob(userId: string | undefined) {
 
   const updateJobStatus = async (bookingId: string, newStatus: string) => {
     try {
+      console.log('🔄 Updating job status:', bookingId, 'to', newStatus);
+      
       const { error } = await supabase.rpc('worker_set_booking_status', {
         booking_id_param: bookingId,
         new_status_param: newStatus
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error from worker_set_booking_status:', error);
+        throw error;
+      }
+
+      console.log('✅ Status update successful');
 
       // If completed, immediately clear the active job for instant UI update
       if (newStatus === 'completed') {
+        console.log('🎉 Clearing active job immediately');
         setActiveJob(null);
       }
       
       // Wait for database transaction to commit before refetching
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log('🔄 Refetching active job after delay');
       await fetchActiveJob();
       
       return true;
     } catch (error) {
-      console.error('Error updating job status:', error);
+      console.error('❌ Error updating job status:', error);
       throw error;
     }
   };

@@ -22,8 +22,13 @@ const STATUS_COLORS = {
 export default function ActiveJobCard({ booking, onStatusUpdate, updating }: ActiveJobCardProps) {
   const statusColor = STATUS_COLORS[booking.status as keyof typeof STATUS_COLORS] || 'bg-secondary';
 
-  // Only show for active bookings (assigned, accepted, on_the_way, started)
-  if (!['assigned', 'accepted', 'on_the_way', 'started'].includes(booking.status)) return null;
+  // Don't show for completed or cancelled bookings
+  if (!['assigned', 'accepted', 'on_the_way', 'started'].includes(booking.status)) {
+    console.log('🚫 ActiveJobCard: Not showing card, status is:', booking.status);
+    return null;
+  }
+
+  console.log('✅ ActiveJobCard: Showing card, status is:', booking.status);
 
   return (
     <Card className="shadow-card overflow-hidden">
