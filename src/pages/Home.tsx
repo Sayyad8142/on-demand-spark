@@ -110,8 +110,10 @@ export default function Home() {
 
   const handleBookingAccept = async () => {
     clearAlert();
-    // Refetch active job immediately after accepting
-    await refetchActiveJob();
+    // Wait for database transaction to complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+    // Refetch both active job and worker profile to ensure UI is in sync
+    await Promise.all([refetchActiveJob(), refetchWorker()]);
   };
 
   const handleTestNotification = async () => {
