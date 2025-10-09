@@ -13,6 +13,7 @@ interface ActiveJobCardProps {
 }
 
 const STATUS_COLORS = {
+  'assigned': 'bg-blue-100 text-blue-700 border-blue-200',
   'accepted': 'bg-blue-100 text-blue-700 border-blue-200',
   'on_the_way': 'bg-purple-100 text-purple-700 border-purple-200',
   'started': 'bg-green-100 text-green-700 border-green-200'
@@ -21,8 +22,8 @@ const STATUS_COLORS = {
 export default function ActiveJobCard({ booking, onStatusUpdate, updating }: ActiveJobCardProps) {
   const statusColor = STATUS_COLORS[booking.status as keyof typeof STATUS_COLORS] || 'bg-secondary';
 
-  // Only show for active bookings (accepted, on_the_way, started)
-  if (!['accepted', 'on_the_way', 'started'].includes(booking.status)) return null;
+  // Only show for active bookings (assigned, accepted, on_the_way, started)
+  if (!['assigned', 'accepted', 'on_the_way', 'started'].includes(booking.status)) return null;
 
   return (
     <Card className="shadow-card overflow-hidden">

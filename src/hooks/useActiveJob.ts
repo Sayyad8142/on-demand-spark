@@ -17,7 +17,7 @@ export function useActiveJob(userId: string | undefined) {
         .from('bookings')
         .select('*')
         .eq('worker_id', userId)
-        .in('status', ['accepted', 'on_the_way', 'started'])
+        .in('status', ['assigned', 'accepted', 'on_the_way', 'started'])
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -48,7 +48,7 @@ export function useActiveJob(userId: string | undefined) {
         },
         (payload) => {
           const booking = payload.new as Booking;
-          if (['accepted', 'on_the_way', 'started'].includes(booking.status)) {
+          if (['assigned', 'accepted', 'on_the_way', 'started'].includes(booking.status)) {
             setActiveJob(booking);
           } else {
             setActiveJob(null);
