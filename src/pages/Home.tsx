@@ -109,11 +109,20 @@ export default function Home() {
   };
 
   const handleBookingAccept = async () => {
+    console.log('📋 Booking accepted, preparing to fetch active job...');
     clearAlert();
-    // Wait for database transaction to complete
-    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Wait longer for database transaction to fully commit
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    console.log('🔄 Refetching active job and worker profile...');
     // Refetch both active job and worker profile to ensure UI is in sync
-    await Promise.all([refetchActiveJob(), refetchWorker()]);
+    try {
+      await Promise.all([refetchActiveJob(), refetchWorker()]);
+      console.log('✅ Active job refetched successfully');
+    } catch (error) {
+      console.error('❌ Error refetching active job:', error);
+    }
   };
 
   const handleTestNotification = async () => {

@@ -12,6 +12,7 @@ export function useActiveJob(userId: string | undefined) {
     if (!userId) return;
 
     try {
+      console.log('🔍 Fetching active job for worker:', userId);
       const { data, error } = await supabase
         .from('bookings')
         .select('*')
@@ -22,9 +23,10 @@ export function useActiveJob(userId: string | undefined) {
         .maybeSingle();
 
       if (error) throw error;
+      console.log('📦 Active job fetched:', data ? `Found booking ${data.id}` : 'No active job');
       setActiveJob(data);
     } catch (error) {
-      console.error('Error fetching active job:', error);
+      console.error('❌ Error fetching active job:', error);
     } finally {
       setLoading(false);
     }
