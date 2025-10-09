@@ -71,7 +71,15 @@ export function useActiveJob(userId: string | undefined) {
 
       if (error) throw error;
 
+      // If completed, immediately clear the active job for instant UI update
+      if (newStatus === 'completed') {
+        setActiveJob(null);
+      }
+      
+      // Wait for database transaction to commit before refetching
+      await new Promise(resolve => setTimeout(resolve, 500));
       await fetchActiveJob();
+      
       return true;
     } catch (error) {
       console.error('Error updating job status:', error);
