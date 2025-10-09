@@ -25,6 +25,12 @@ export default function Home() {
 
   // Listen for push notification messages (from service worker or foreground)
 
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth");
+    }
+  }, [authLoading, user, navigate]);
+
   if (authLoading || workerLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -34,7 +40,6 @@ export default function Home() {
   }
 
   if (!user) {
-    navigate("/auth");
     return null;
   }
 
