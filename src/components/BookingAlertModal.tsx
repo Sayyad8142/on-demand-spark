@@ -121,16 +121,16 @@ export default function BookingAlertModal({ booking, onAccept, onReject }: Booki
       {booking && (
         <div className="alert-overlay-backdrop">
           <div className="alert-overlay-card">
-            <h2 className="text-2xl font-bold mb-4" style={{ color: 'hsl(var(--primary))' }}>
+            <h2 className="text-3xl font-bold mb-2 text-primary">
               🔔 New Booking Alert!
             </h2>
 
             {/* Timer */}
-            <div className="text-center mb-4">
-              <div className="alert-overlay-timer" style={{ color: 'hsl(var(--primary))' }}>
+            <div className="text-center mb-6">
+              <div className="alert-overlay-timer text-primary">
                 {timeLeft}s
               </div>
-              <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Time to respond</p>
+              <p className="text-sm text-muted-foreground">Time to respond</p>
             </div>
 
             {/* Sound Enable Button */}
@@ -147,58 +147,58 @@ export default function BookingAlertModal({ booking, onAccept, onReject }: Booki
             )}
 
             {/* Booking Details */}
-            <div className="space-y-3 rounded-2xl p-4" style={{ background: 'hsl(var(--secondary))' }}>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'hsl(var(--primary) / 0.1)' }}>
-                  <User className="w-5 h-5" style={{ color: 'hsl(var(--primary))' }} />
+            <div className="flex-1 flex flex-col justify-center space-y-4 rounded-3xl p-6 bg-secondary">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center bg-primary/10">
+                  <User className="w-8 h-8 text-primary" />
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="font-semibold">{booking.cust_name}</p>
-                  <div className="flex items-center gap-1 text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                    <Phone className="w-3 h-3" />
+                  <p className="text-xl font-semibold">{booking.cust_name}</p>
+                  <div className="flex items-center gap-2 text-base text-muted-foreground">
+                    <Phone className="w-4 h-4" />
                     {booking.cust_phone}
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-start gap-2 text-sm text-left">
-                <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: 'hsl(var(--primary))' }} />
+              <div className="flex items-start gap-3 text-base text-left">
+                <MapPin className="w-5 h-5 mt-0.5 flex-shrink-0 text-primary" />
                 <div>
-                  <p className="font-medium">{booking.community}</p>
-                  <p style={{ color: 'hsl(var(--muted-foreground))' }}>{booking.flat_no}</p>
+                  <p className="text-lg font-medium">{booking.community}</p>
+                  <p className="text-muted-foreground">{booking.flat_no}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Home className="w-4 h-4" style={{ color: 'hsl(var(--primary))' }} />
-                <Badge variant="outline" className="font-medium">
+              <div className="flex items-center gap-3 flex-wrap">
+                <Home className="w-5 h-5 text-primary" />
+                <Badge variant="outline" className="text-base font-medium px-4 py-1">
                   {booking.service_type.replace('_', ' ').toUpperCase()}
                 </Badge>
                 {booking.booking_type === 'scheduled' && booking.scheduled_time && (
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="text-base px-4 py-1">
                     {booking.scheduled_time}
                   </Badge>
                 )}
               </div>
 
               {booking.price_inr && (
-                <div className="pt-2 border-t">
+                <div className="pt-4 border-t border-border">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Your earnings</span>
-                    <span className="text-lg font-bold" style={{ color: 'hsl(var(--primary))' }}>₹{booking.price_inr}</span>
+                    <span className="text-lg text-muted-foreground">Your earnings</span>
+                    <span className="text-3xl font-bold text-primary">₹{booking.price_inr}</span>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Actions */}
-            <div className="grid grid-cols-2 gap-3 pt-4">
+            <div className="grid grid-cols-2 gap-4 pt-6 mt-auto">
               <Button
                 variant="outline"
                 size="lg"
                 onClick={handleReject}
                 disabled={accepting}
-                className="h-14 text-base font-semibold"
+                className="h-16 text-xl font-semibold bg-white hover:bg-gray-100"
               >
                 Reject
               </Button>
@@ -206,8 +206,7 @@ export default function BookingAlertModal({ booking, onAccept, onReject }: Booki
                 size="lg"
                 onClick={handleAccept}
                 disabled={accepting}
-                className="h-14 text-base font-semibold"
-                style={{ background: 'hsl(var(--primary))' }}
+                className="h-16 text-xl font-semibold bg-primary hover:bg-primary/90"
               >
                 {accepting ? "Accepting..." : "Accept"}
               </Button>
