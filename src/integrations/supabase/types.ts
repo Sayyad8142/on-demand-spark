@@ -1918,6 +1918,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      create_admin_email_user: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       delete_my_data: {
         Args: Record<PropertyKey, never>
         Returns: undefined
