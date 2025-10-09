@@ -64,17 +64,12 @@ export function useActiveJob(userId: string | undefined) {
 
   const updateJobStatus = async (bookingId: string, newStatus: string) => {
     try {
-      const { data, error } = await supabase.rpc('update_booking_status', {
-        p_booking_id: bookingId,
-        p_status: newStatus
+      const { error } = await supabase.rpc('worker_set_booking_status', {
+        booking_id_param: bookingId,
+        new_status_param: newStatus
       });
 
       if (error) throw error;
-      
-      const result = data as { success: boolean; error?: string };
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to update booking status');
-      }
 
       await fetchActiveJob();
       return true;
