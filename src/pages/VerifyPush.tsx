@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { ensureServiceWorker, subscribeWebPush, getCurrentSubscription, unsubscribeWebPush } from "@/push/webPush";
 
-const supabase = createClient(import.meta.env.VITE_SUPABASE_URL!, import.meta.env.VITE_SUPABASE_ANON_KEY!);
 const VAPID_PUBLIC = import.meta.env.VITE_VAPID_PUBLIC_KEY as string;
 
 export default function VerifyPush() {
