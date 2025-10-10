@@ -48,8 +48,25 @@ jobs:
             npx cap add android
           fi
           npx cap sync android
+          echo "---- list android tree ----"
           ls -la android || true
           ls -la android/app || true
+
+      # 🔧 Force a minimal, valid settings.gradle that *includes :app* and Capacitor
+      - name: Fix settings.gradle (must include :app)
+        run: |
+          printf "rootProject.name='android'\ninclude ':app'\napply from: 'capacitor.settings.gradle'\n" > android/settings.gradle
+          # Remove any leftover Cordova bridge reference from build files
+          sed -i "/capacitor-cordova-android-plugins/d" android/settings.gradle || true
+          for F in android/build.gradle android/app/build.gradle; do
+            if [ -f "$F" ]; then
+              sed -i "/capacitor-cordova-android-plugins/d" "$F" || true
+              # Drop any empty/invalid flatDir blocks that cause 'You must specify at least one directory'
+              perl -0777 -pe "s/[ \t]*flatDir[ \t]*\{[^}]*\}\n//g" -i "$F"
+            fi
+          done
+          echo "---- android/settings.gradle ----"
+          cat android/settings.gradle
 
       - name: Inject google-services.json (optional)
         if: ${{ env.GOOGLE_SERVICES_JSON != '' }}
@@ -57,32 +74,6 @@ jobs:
           mkdir -p android/app
           echo "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
           ls -la android/app/google-services.json || true
-
-      - name: Remove Cordova bridge & flatDir if absent
-        run: |
-          CORDOVA_DIR="android/capacitor-cordova-android-plugins"
-
-          # settings.gradle: drop any cordova bridge include
-          if [ -f android/settings.gradle ]; then
-            sed -i "/capacitor-cordova-android-plugins/d" android/settings.gradle || true
-          fi
-
-          # If the cordova bridge folder doesn't exist, purge flatDir blocks and references
-          if [ ! -d "$CORDOVA_DIR" ]; then
-            for F in android/build.gradle android/app/build.gradle; do
-              if [ -f "$F" ]; then
-                # delete any flatDir { ... } block
-                perl -0777 -pe "s/[ \t]*flatDir[ \t]*\{[^}]*\}\n//g" -i "$F"
-                # remove leftover text mentions
-                sed -i "/capacitor-cordova-android-plugins/d" "$F" || true
-              fi
-            done
-          fi
-
-          echo "---- android/settings.gradle ----"
-          cat android/settings.gradle || true
-          echo "---- android/app/build.gradle (first 200 lines) ----"
-          sed -n '1,200p' android/app/build.gradle || true
 
       - name: Ensure Gradle wrapper
         run: |
