@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Smartphone, Battery, Power, Bell, AlertTriangle, TestTube } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -145,9 +145,13 @@ export default function Troubleshoot() {
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div>
+          <div className="flex-1">
             <h1 className="text-xl font-bold">Troubleshooting</h1>
             <p className="text-sm text-muted-foreground">Fix common issues</p>
+            <div className="flex gap-2 mt-1">
+              <Link to="/verify-push" className="text-xs underline hover:opacity-80">Verify Push</Link>
+              <Link to="/dev-cache-reset" className="text-xs underline hover:opacity-80">Dev Cache Reset</Link>
+            </div>
           </div>
         </div>
       </header>
