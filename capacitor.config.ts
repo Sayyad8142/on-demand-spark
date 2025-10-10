@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'app.didisnow.worker',
-  appName: 'on-demand-spark',
+  appName: 'Didi Now Worker',
   webDir: 'dist'
 };
 
