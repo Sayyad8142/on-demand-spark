@@ -1,13 +1,5 @@
 import { Capacitor } from '@capacitor/core';
-
-interface OverlayPlugin {
-  requestOverlayPermission(): Promise<{ granted: boolean }>;
-  showBookingOverlay(options: { booking: string }): Promise<void>;
-  hideOverlay(): Promise<void>;
-  checkOverlayPermission(): Promise<{ granted: boolean }>;
-}
-
-const Overlay = Capacitor.registerPlugin<OverlayPlugin>('Overlay');
+import { requestAndroidOverlay, showBookingOverlayNative } from '@/native/overlay';
 
 export async function requestPermission(): Promise<boolean> {
   if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
@@ -16,7 +8,8 @@ export async function requestPermission(): Promise<boolean> {
   }
 
   try {
-    const { granted } = await Overlay.requestOverlayPermission();
+    const result = await requestAndroidOverlay();
+    const granted = result?.granted || false;
     console.log('✅ Overlay permission granted:', granted);
     return granted;
   } catch (error) {
@@ -31,8 +24,13 @@ export async function checkPermission(): Promise<boolean> {
   }
 
   try {
-    const { granted } = await Overlay.checkOverlayPermission();
-    return granted;
+    // @ts-ignore - Custom plugin
+    const { OverlayPlugin } = (window as any).Capacitor?.Plugins || {};
+    if (OverlayPlugin && OverlayPlugin.checkPermission) {
+      const { granted } = await OverlayPlugin.checkPermission();
+      return granted;
+    }
+    return false;
   } catch (error) {
     console.error('❌ Error checking overlay permission:', error);
     return false;
@@ -65,9 +63,13 @@ export async function showBookingOverlay(booking: any): Promise<void> {
   }
 
   try {
-    await Overlay.showBookingOverlay({
-      booking: JSON.stringify(booking)
-    });
+    const payload = {
+      bookingId: booking.id || '',
+      title: `New ${booking.service_type || 'Booking'}`,
+      body: `${booking.community || ''} • ${booking.flat_no || ''} • ₹${booking.price_inr || 0}`
+    };
+    
+    await showBookingOverlayNative(payload);
     console.log('✅ Booking overlay shown');
   } catch (error) {
     console.error('❌ Error showing booking overlay:', error);
@@ -80,8 +82,8 @@ export async function hideOverlay(): Promise<void> {
   }
 
   try {
-    await Overlay.hideOverlay();
-    console.log('✅ Overlay hidden');
+    // The Android service will handle hiding the overlay
+    console.log('✅ Overlay hide requested');
   } catch (error) {
     console.error('❌ Error hiding overlay:', error);
   }

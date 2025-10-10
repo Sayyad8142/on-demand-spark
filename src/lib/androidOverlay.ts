@@ -1,13 +1,11 @@
-// Requests Android overlay permission for displaying booking alerts over other apps
+import { Capacitor } from '@capacitor/core';
+import { requestAndroidOverlay as requestOverlayPermission } from '@/native/overlay';
+
 export async function requestAndroidOverlay() {
-  // @ts-ignore - Check if native Android bridge is available
-  if ((window as any).AndroidOverlay?.request) {
-    // If we add a native bridge later, call it
-    await (window as any).AndroidOverlay.request();
+  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
     return;
   }
   
-  // Fallback: Alert users to manually enable in Settings
-  // This will be handled by the native MainActivity on app launch
-  console.log('Overlay permission request - handled natively on Android');
+  console.log('📱 Requesting Android overlay permission...');
+  await requestOverlayPermission();
 }
