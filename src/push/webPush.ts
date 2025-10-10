@@ -34,3 +34,20 @@ function urlBase64ToUint8Array(base64String: string) {
   for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
   return outputArray;
 }
+
+export async function getCurrentSubscription(): Promise<PushSubscription | null> {
+  if (!("serviceWorker" in navigator)) return null;
+  const reg = await navigator.serviceWorker.ready;
+  return reg.pushManager.getSubscription();
+}
+
+export async function unsubscribeWebPush(): Promise<boolean> {
+  const sub = await getCurrentSubscription();
+  if (!sub) return true;
+  try {
+    const ok = await sub.unsubscribe();
+    return ok;
+  } catch {
+    return false;
+  }
+}

@@ -15,6 +15,7 @@ import Bookings from "./pages/Bookings";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import Troubleshoot from "./pages/Troubleshoot";
+import VerifyPush from "./pages/VerifyPush";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -139,6 +140,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <Troubleshoot />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/verify-push"
+              element={
+                <ProtectedRoute>
+                  <VerifyPush />
                 </ProtectedRoute>
               }
             />
