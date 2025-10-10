@@ -84,12 +84,8 @@ jobs:
             chmod +x android/gradlew
           fi
 
-      # ✅ NEW official Gradle setup action
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-        with:
-          gradle-home-cache-cleanup: true
-
+      # ✅ Fix empty/invalid flatDir repositories that cause:
+      # "You must specify at least one directory for a flat directory repository."
       - name: Fix flatDir repositories in app/build.gradle
         run: |
           APP=android/app/build.gradle
@@ -97,8 +93,8 @@ jobs:
             echo "❌ $APP not found"; exit 1
           fi
 
-          # If there is a repositories { flatDir { ... } } block that is empty,
-          # replace it with a valid one. Otherwise append a safe block.
+          # If app/build.gradle has an empty flatDir, replace it with a safe one.
+          # Otherwise append a valid repositories block (harmless if duplicates exist).
           if grep -q "repositories[[:space:]]*{[[:space:]]*flatDir" "$APP"; then
             perl -0777 -pe "s/repositories\s*{\s*flatDir\s*{[^}]*}\s*}/repositories {\n    google()\n    mavenCentral()\n    flatDir {\n        dirs project(':capacitor-android').file('libs')\n    }\n}/s" -i "$APP"
           else
@@ -114,7 +110,14 @@ repositories {
 EOF
           fi
 
-          echo "✅ repositories block normalized in android/app/build.gradle"
+          echo "----- repositories block in app/build.gradle -----"
+          awk '/repositories *{/,/}/' "$APP" | sed -n '1,200p'
+
+      # ✅ Official Gradle setup (caches Gradle & configures env)
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-home-cache-cleanup: true
 
       - name: Build debug APK
         working-directory: android
