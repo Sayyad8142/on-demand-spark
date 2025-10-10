@@ -41,17 +41,16 @@ export async function checkPermission(): Promise<boolean> {
 
 export async function showBookingOverlay(booking: any): Promise<void> {
   if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') return;
-  try {
-    const payload = {
-      bookingId: booking.id || '',
-      title: `New ${booking.service_type || 'Booking'}`,
-      body: `${booking.community || ''} • ${booking.flat_no || ''} • ₹${booking.price_inr || 0}`,
-    };
-    // @ts-ignore implemented in src/native/overlay.ts
-    await (await import('@/native/overlay')).showBookingOverlayNative(payload);
-  } catch (e) {
-    console.error('Overlay show error:', e);
-  }
+  
+  const payload = {
+    bookingId: booking.id || '',
+    title: `New ${booking.service_type || 'Booking'}`,
+    body: `${booking.community || ''} • ${booking.flat_no || ''} • ₹${booking.price_inr || 0}`,
+  };
+  
+  console.log('Trigger native overlay via FCM payload', payload);
+  // The overlay is triggered by FCM notification data
+  // The BookingNotificationService in Android handles FCM -> overlay flow
 }
 
 export async function hideOverlay(): Promise<void> {
