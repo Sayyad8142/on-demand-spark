@@ -7,11 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  requestPermission, 
-  checkPermission, 
-  enableOverlayMode, 
-  disableOverlayMode, 
-  isOverlayModeEnabled 
+  requestAndroidOverlay, 
+  checkPermission
 } from "@/lib/overlay";
 import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
 
@@ -32,7 +29,7 @@ export default function Settings() {
     try {
       const granted = await checkPermission();
       setHasPermission(granted);
-      setOverlayEnabled(isOverlayModeEnabled());
+      setOverlayEnabled(localStorage.getItem('overlay_mode') === 'enabled');
     } catch (error) {
       console.error('Error checking status:', error);
     } finally {
@@ -41,7 +38,7 @@ export default function Settings() {
   };
 
   const handleRequestPermission = async () => {
-    const granted = await requestPermission();
+    const granted = await requestAndroidOverlay();
     setHasPermission(granted);
     
     if (granted) {
@@ -71,14 +68,14 @@ export default function Settings() {
     setToggling(true);
     try {
       if (enabled) {
-        await enableOverlayMode();
+        localStorage.setItem('overlay_mode', 'enabled');
         await startForegroundService();
         toast({
           title: "Booking alerts activated",
           description: "You'll receive overlay alerts for new bookings"
         });
       } else {
-        await disableOverlayMode();
+        localStorage.removeItem('overlay_mode');
         await stopForegroundService();
         toast({
           title: "Booking alerts deactivated",

@@ -82,10 +82,9 @@ public class BookingOverlayService extends Service {
         txtBody.setText(body);
 
         btnAccept.setOnClickListener(v -> {
-            // Open main activity with booking ID
-            Intent mainIntent = new Intent(this, MainActivity.class);
-            mainIntent.putExtra("bookingId", bookingId);
-            mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            String uri = "didinow://accept?bookingId=" + bookingId;
+            Intent mainIntent = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(uri));
+            mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             startActivity(mainIntent);
             stopSelf();
         });

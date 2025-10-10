@@ -5,10 +5,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
+import { App as CapApp } from "@capacitor/app";
 import { useAuth } from "@/hooks/useAuth";
 import { initNativePush } from "@/native/push";
-import { requestAndroidOverlay } from "@/lib/androidOverlay";
+import { requestAndroidOverlay } from "@/lib/overlay";
 import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
+import { tryAccept } from "@/lib/bookingActions";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import Bookings from "./pages/Bookings";
@@ -73,6 +75,28 @@ const App = () => {
       stopForegroundService();
     }
   }, [session?.user]);
+
+  // Handle deep links for booking acceptance
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    
+    const sub = CapApp.addListener('appUrlOpen', async (data) => {
+      try {
+        const url = new URL(data.url);
+        if (url.protocol === 'didinow:' && url.hostname === 'accept') {
+          const bookingId = url.searchParams.get('bookingId') || '';
+          if (bookingId) {
+            console.log('🔗 Deep link accept for bookingId:', bookingId);
+            const ok = await tryAccept(bookingId);
+            if (!ok) console.warn('Booking already taken or accept failed');
+          }
+        }
+      } catch (e) {
+        console.error('appUrlOpen parse error', e);
+      }
+    });
+    return () => { sub.then(s => s.remove()); };
+  }, []);
 
   // Listen for push notification messages
   useEffect(() => {
