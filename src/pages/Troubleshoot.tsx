@@ -1,10 +1,20 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Smartphone, Battery, Power, Bell, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { ensureServiceWorker, subscribeWebPush } from "@/push/webPush";
+
+// VAPID public key - generate with web-push library and add to Supabase secrets
+const VAPID_PUBLIC = "BNEWm3Ql5F8K5xB_5vZ1-5kQ3h5X5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j";
 
 export default function Troubleshoot() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [enabling, setEnabling] = useState(false);
 
   const openBatterySettings = () => {
     // Open settings - implementation depends on native plugin if needed
@@ -14,6 +24,57 @@ export default function Troubleshoot() {
   const openAutoStartSettings = () => {
     // Open settings - implementation depends on native plugin if needed
     console.log('Open auto-start settings');
+  };
+
+  const setupWebPush = async () => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "Please sign in first",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setEnabling(true);
+      
+      const supported = await ensureServiceWorker();
+      if (!supported) {
+        toast({
+          title: "Not Supported",
+          description: "Web Push is not supported on this browser",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        toast({
+          title: "Permission Denied",
+          description: "Please allow notifications to enable Web Push",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      await subscribeWebPush(user.id, VAPID_PUBLIC);
+      
+      toast({
+        title: "Success",
+        description: "Web Push notifications enabled successfully!"
+      });
+    } catch (error: any) {
+      console.error("Web Push setup error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to enable Web Push",
+        variant: "destructive"
+      });
+    } finally {
+      setEnabling(false);
+    }
   };
 
   return (
@@ -100,6 +161,31 @@ export default function Troubleshoot() {
                   <li><strong>Vivo:</strong> Settings → Apps → Autostart</li>
                 </ol>
               </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Web Push Notifications */}
+        <Card className="p-6 bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900 flex items-center justify-center flex-shrink-0">
+              <Bell className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold mb-1 text-green-900 dark:text-green-100">Enable Web Push (Browser)</h3>
+              <p className="text-sm text-green-700 dark:text-green-300 mb-3">
+                Get booking alerts even when the tab is in the background
+              </p>
+              <Button 
+                onClick={setupWebPush} 
+                disabled={enabling}
+                className="w-full bg-green-600 hover:bg-green-700 text-white"
+              >
+                {enabling ? "Enabling..." : "Enable Web Push"}
+              </Button>
+              <p className="text-xs text-green-600 dark:text-green-400 mt-2">
+                This allows notifications to work even when the browser tab is not focused
+              </p>
             </div>
           </div>
         </Card>

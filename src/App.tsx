@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { useAuth } from "@/hooks/useAuth";
 import { initFCM, saveFCMToken } from "@/lib/fcm";
-import { registerWebPush } from "@/push/webPush";
 import { requestAndroidOverlay } from "@/lib/androidOverlay";
 import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
 import Auth from "./pages/Auth";
@@ -60,10 +59,8 @@ const App = () => {
       if (Capacitor.getPlatform() === 'android') {
         requestAndroidOverlay();
       }
-    } else {
-      console.log("Registering web push notifications");
-      registerWebPush(userId);
     }
+    // Web push registration is now done manually via /troubleshoot page
   }, [session?.user?.id]);
 
   // Start/stop foreground service based on login state

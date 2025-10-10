@@ -1,17 +1,36 @@
 import { supabase } from "@/integrations/supabase/client";
 
-// Firebase web config - replace with your Firebase project values
-const FIREBASE_CONFIG = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
+export async function ensureServiceWorker() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return false;
+  await navigator.serviceWorker.register("/sw.js");
+  return true;
+}
 
-export async function registerWebPush(userId: string) {
-  console.log("Web FCM not yet implemented - mobile only for now");
-  // TODO: Implement Firebase web push when needed
-  // For now, this app is mobile-focused with native FCM
+export async function subscribeWebPush(userId: string, vapidPublicKey: string) {
+  const reg = await navigator.serviceWorker.ready;
+  const sub = await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+  });
+
+  const key = sub.getKey("p256dh");
+  const auth = sub.getKey("auth");
+
+  await supabase.from("web_push_subscriptions").upsert({
+    user_id: userId,
+    endpoint: sub.endpoint,
+    p256dh: key ? btoa(String.fromCharCode(...new Uint8Array(key))) : "",
+    auth: auth ? btoa(String.fromCharCode(...new Uint8Array(auth))) : "",
+  });
+
+  return true;
+}
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/\-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
 }
