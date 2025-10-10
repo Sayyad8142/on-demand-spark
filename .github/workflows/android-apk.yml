@@ -27,11 +27,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Ensure Capacitor Android deps
+        run: |
+          # Make sure @capacitor/android and core plugins are present
+          npm i -D @capacitor/cli
+          npm i @capacitor/android @capacitor/app @capacitor/device @capacitor/preferences @capacitor/push-notifications --no-audit --no-fund
+
       - name: Build web assets
         run: npm run build
-
-      - name: Install Capacitor CLI
-        run: npm i -D @capacitor/cli
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -42,22 +45,34 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # --- Ensure Android project & module exist ---
+      # --- Create/sync Android project ---
       - name: Ensure Android project exists
         run: |
           if [ ! -d "android" ]; then
             npx cap add android
           fi
           npx cap sync android
+          echo "---- tree android ----"
           ls -la android || true
+          echo "---- tree android/app ----"
           ls -la android/app || true
 
-      - name: Ensure Gradle settings include :app
+      # --- Make sure settings.gradle includes Capacitor includes ---
+      - name: Ensure settings.gradle includes Capacitor
         run: |
-          if [ ! -f android/settings.gradle ]; then
-            echo "include ':app'" > android/settings.gradle
-          elif ! grep -q "include ':app'" android/settings.gradle; then
-            echo "include ':app'" >> android/settings.gradle
+          SETTINGS=android/settings.gradle
+          if [ ! -f "$SETTINGS" ]; then
+            cat > "$SETTINGS" <<'EOF'
+include ':app'
+apply from: 'capacitor.settings.gradle'
+apply from: '../capacitor-cordova-android-plugins/settings.gradle'
+EOF
+          else
+            grep -q "apply from: 'capacitor.settings.gradle'" "$SETTINGS" || \
+              echo "apply from: 'capacitor.settings.gradle'" >> "$SETTINGS"
+            grep -q "apply from: '../capacitor-cordova-android-plugins/settings.gradle'" "$SETTINGS" || \
+              echo "apply from: '../capacitor-cordova-android-plugins/settings.gradle'" >> "$SETTINGS"
+            grep -q "include ':app'" "$SETTINGS" || echo "include ':app'" >> "$SETTINGS"
           fi
           echo "----- settings.gradle -----"
           cat android/settings.gradle
@@ -88,14 +103,15 @@ jobs:
         with:
           gradle-home-cache-cleanup: true
 
-      # --- Build APK ---
-      - name: Show Gradle projects (debug aid)
+      # --- Sanity check: list Gradle projects ---
+      - name: Show Gradle projects (debug)
         working-directory: android
         run: ./gradlew projects
 
+      # --- Build APK ---
       - name: Build debug APK
         working-directory: android
-        run: ./gradlew :app:assembleDebug
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
