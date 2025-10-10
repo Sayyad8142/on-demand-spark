@@ -1589,6 +1589,30 @@ export type Database = {
         }
         Relationships: []
       }
+      web_push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string | null
+          endpoint: string
+          p256dh: string
+          user_id: string | null
+        }
+        Insert: {
+          auth: string
+          created_at?: string | null
+          endpoint: string
+          p256dh: string
+          user_id?: string | null
+        }
+        Update: {
+          auth?: string
+          created_at?: string | null
+          endpoint?: string
+          p256dh?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       worker_ratings: {
         Row: {
           booking_id: string
