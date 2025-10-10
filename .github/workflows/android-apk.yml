@@ -42,6 +42,7 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      # --- Ensure Android project & module exist ---
       - name: Ensure Android project exists
         run: |
           if [ ! -d "android" ]; then
@@ -49,19 +50,33 @@ jobs:
           fi
           npx cap sync android
           ls -la android || true
+          ls -la android/app || true
 
+      - name: Ensure Gradle settings include :app
+        run: |
+          if [ ! -f android/settings.gradle ]; then
+            echo "include ':app'" > android/settings.gradle
+          elif ! grep -q "include ':app'" android/settings.gradle; then
+            echo "include ':app'" >> android/settings.gradle
+          fi
+          echo "----- settings.gradle -----"
+          cat android/settings.gradle
+
+      # --- Optional Firebase config via secret ---
       - name: Inject google-services.json (optional)
         if: ${{ env.GOOGLE_SERVICES_JSON != '' }}
         run: |
           mkdir -p android/app
           echo "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
+          ls -la android/app/google-services.json || true
 
-      - name: Make gradlew executable
+      # --- Gradle wrapper & cache ---
+      - name: Make gradlew executable (or create wrapper)
         run: |
           if [ -f "android/gradlew" ]; then
             chmod +x android/gradlew
           else
-            echo "⚠️ gradlew not found! Creating Gradle wrapper..."
+            echo "⚠️ gradlew not found! Creating Gradle wrapper…"
             cd android
             gradle wrapper
             chmod +x gradlew
@@ -72,6 +87,11 @@ jobs:
         uses: gradle/gradle-build-action@v3
         with:
           gradle-home-cache-cleanup: true
+
+      # --- Build APK ---
+      - name: Show Gradle projects (debug aid)
+        working-directory: android
+        run: ./gradlew projects
 
       - name: Build debug APK
         working-directory: android
