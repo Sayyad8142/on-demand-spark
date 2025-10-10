@@ -50,16 +50,15 @@ jobs:
             npx cap add android
           fi
           npx cap sync android
-          echo "---- tree android ----"
+          echo "---- android tree ----"
           ls -la android || true
-          echo "---- tree android/app ----"
+          echo "---- android/app tree ----"
           ls -la android/app || true
 
-      # ✅ No heredoc. Always write a clean settings.gradle with required includes.
-      - name: Force settings.gradle to include Capacitor
+      - name: Force valid settings.gradle (no broken includes)
         run: |
-          printf "include ':app'\napply from: 'capacitor.settings.gradle'\napply from: '../capacitor-cordova-android-plugins/settings.gradle'\n" > android/settings.gradle
-          echo "----- settings.gradle -----"
+          printf "include ':app'\napply from: 'capacitor.settings.gradle'\n" > android/settings.gradle
+          echo "✅ Updated android/settings.gradle:"
           cat android/settings.gradle
 
       - name: Inject google-services.json (optional)
@@ -85,10 +84,6 @@ jobs:
         uses: gradle/gradle-build-action@v3
         with:
           gradle-home-cache-cleanup: true
-
-      - name: Show Gradle projects (debug)
-        working-directory: android
-        run: ./gradlew projects
 
       - name: Build debug APK
         working-directory: android
