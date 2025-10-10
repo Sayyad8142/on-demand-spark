@@ -9,6 +9,8 @@ import android.content.Intent;
 import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.IBinder;
+import android.provider.Settings;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -30,6 +32,13 @@ public class BookingOverlayService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // Check overlay permission first
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+            Log.e("BookingOverlayService", "❌ Missing overlay permission. Cannot draw.");
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+        
         createNotificationChannel();
         
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)

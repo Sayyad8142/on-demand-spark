@@ -35,3 +35,16 @@ export async function showBookingOverlayNative(payload: {
   // This function is here for future direct overlay triggers if needed
   // The BookingNotificationService in Android handles FCM -> overlay flow
 }
+
+export async function openAndroidOverlaySettings(): Promise<void> {
+  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
+    console.log('Not Android platform, skipping overlay settings');
+    return;
+  }
+  
+  // @ts-ignore - Custom plugin
+  const { OverlayPlugin } = (window as any).Capacitor?.Plugins || {};
+  if (OverlayPlugin?.openOverlaySettings) {
+    await OverlayPlugin.openOverlaySettings();
+  }
+}

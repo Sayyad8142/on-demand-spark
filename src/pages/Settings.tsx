@@ -10,6 +10,7 @@ import {
   requestAndroidOverlay, 
   checkPermission
 } from "@/lib/overlay";
+import { openAndroidOverlaySettings } from "@/native/overlay";
 import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
 
 export default function Settings() {
@@ -141,10 +142,19 @@ export default function Settings() {
                 }
               </p>
               {!hasPermission && (
-                <Button onClick={handleRequestPermission} className="w-full">
-                  <Smartphone className="w-4 h-4 mr-2" />
-                  Grant Permission
-                </Button>
+                <div className="space-y-2">
+                  <Button onClick={handleRequestPermission} className="w-full">
+                    <Smartphone className="w-4 h-4 mr-2" />
+                    Grant Permission
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={openAndroidOverlaySettings} 
+                    className="w-full"
+                  >
+                    Open Overlay Settings
+                  </Button>
+                </div>
               )}
             </div>
           </div>

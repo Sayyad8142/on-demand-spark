@@ -14,11 +14,11 @@ import com.getcapacitor.annotation.PluginMethod;
 
 import org.json.JSONObject;
 
-@CapacitorPlugin(name = "Overlay")
+@CapacitorPlugin(name = "OverlayPlugin")
 public class OverlayPlugin extends Plugin {
 
     @PluginMethod
-    public void requestOverlayPermission(PluginCall call) {
+    public void requestPermission(PluginCall call) {
         try {
             if (getActivity() == null) {
                 call.reject("Activity not available");
@@ -43,7 +43,7 @@ public class OverlayPlugin extends Plugin {
     }
 
     @PluginMethod
-    public void checkOverlayPermission(PluginCall call) {
+    public void checkPermission(PluginCall call) {
         try {
             boolean granted = Build.VERSION.SDK_INT < Build.VERSION_CODES.M
                     || Settings.canDrawOverlays(getContext());
@@ -124,6 +124,25 @@ public class OverlayPlugin extends Plugin {
             call.resolve();
         } catch (Exception e) {
             call.reject("Hide overlay error: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void openOverlaySettings(PluginCall call) {
+        try {
+            if (getActivity() == null) {
+                call.reject("Activity not available");
+                return;
+            }
+            Intent intent = new Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + getActivity().getPackageName())
+            );
+            getActivity().startActivity(intent);
+            JSObject ret = new JSObject().put("opened", true);
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("Open settings error: " + e.getMessage());
         }
     }
 }
