@@ -15,7 +15,7 @@ jobs:
       GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON || '' }}
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Node
@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Ensure Capacitor Android deps
+      - name: Ensure Capacitor Android dependencies
         run: |
           npm i -D @capacitor/cli
           npm i @capacitor/android @capacitor/app @capacitor/device @capacitor/preferences @capacitor/push-notifications --no-audit --no-fund
@@ -50,31 +50,21 @@ jobs:
             npx cap add android
           fi
           npx cap sync android
-          echo "---- android tree ----"
-          ls -la android || true
-          echo "---- android/app tree ----"
-          ls -la android/app || true
+          echo "✅ Android project synced successfully"
 
-      # Write a simple, valid settings.gradle (no Cordova include)
-      - name: Force valid settings.gradle
+      - name: Fix settings.gradle
         run: |
           printf "include ':app'\napply from: 'capacitor.settings.gradle'\n" > android/settings.gradle
-          echo "----- settings.gradle -----"
+          echo "✅ android/settings.gradle updated:"
           cat android/settings.gradle
 
-      # If the Cordova module isn't present, remove its dependency from app/build.gradle
-      - name: Remove Cordova module reference when absent
+      - name: Remove Cordova reference if not found
         run: |
           if [ ! -d "capacitor-cordova-android-plugins" ]; then
-            echo "Cordova plugins module not found; cleaning app/build.gradle reference…"
             sed -i.bak "/capacitor-cordova-android-plugins/d" android/app/build.gradle || true
-            echo "Remaining references (should be none):"
-            grep -n "capacitor-cordova-android-plugins" android/app/build.gradle || echo "✅ none"
-          else
-            echo "Cordova plugins module exists — keeping reference."
+            echo "✅ Removed unused Cordova references"
           fi
 
-      # Optional Firebase config
       - name: Inject google-services.json (optional)
         if: ${{ env.GOOGLE_SERVICES_JSON != '' }}
         run: |
@@ -82,20 +72,21 @@ jobs:
           echo "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
           ls -la android/app/google-services.json || true
 
-      - name: Make gradlew executable (or create wrapper)
+      - name: Create Gradle wrapper if missing
         run: |
-          if [ -f "android/gradlew" ]; then
-            chmod +x android/gradlew
-          else
-            echo "gradlew not found — creating wrapper"
+          if [ ! -f "android/gradlew" ]; then
+            echo "⚙️ Creating Gradle wrapper..."
             cd android
             gradle wrapper
             chmod +x gradlew
             cd ..
+          else
+            chmod +x android/gradlew
           fi
 
-      - name: Cache Gradle
-        uses: gradle/gradle-build-action@v3
+      # ✅ NEW official Gradle setup action
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
         with:
           gradle-home-cache-cleanup: true
 
