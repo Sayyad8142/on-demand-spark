@@ -1,8 +1,6 @@
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(import.meta.env.VITE_SUPABASE_URL!, import.meta.env.VITE_SUPABASE_ANON_KEY!);
+import { supabase } from '@/integrations/supabase/client';
 
 export async function initNativePush(userId?: string) {
   if (!Capacitor.isNativePlatform()) return;
