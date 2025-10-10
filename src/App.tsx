@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { useAuth } from "@/hooks/useAuth";
-import { initFCM, saveFCMToken } from "@/lib/fcm";
+import { initNativePush } from "@/native/push";
 import { requestAndroidOverlay } from "@/lib/androidOverlay";
 import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
 import Auth from "./pages/Auth";
@@ -38,15 +38,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 const App = () => {
   const { session } = useAuth();
 
-  // Initialize FCM once on app start
-  useEffect(() => {
-    if (Capacitor.isNativePlatform()) {
-      console.log("🔔 Initializing FCM...");
-      initFCM();
-    }
-  }, []);
-
-  // Save FCM token when we have a session
+  // Initialize native push notifications when we have a session
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId) return;
@@ -54,15 +46,15 @@ const App = () => {
     console.log("User logged in:", userId);
     
     if (Capacitor.isNativePlatform()) {
-      console.log("💾 Saving FCM token for user:", userId);
-      saveFCMToken(userId);
+      console.log("🔔 Initializing native push for user:", userId);
+      initNativePush(userId);
       
       // Request overlay permission on Android
       if (Capacitor.getPlatform() === 'android') {
         requestAndroidOverlay();
       }
     }
-    // Web push registration is now done manually via /troubleshoot page
+    // Web push registration is now done manually via /troubleshoot or /verify-push pages
   }, [session?.user?.id]);
 
   // Start/stop foreground service based on login state

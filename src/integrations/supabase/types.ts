@@ -592,6 +592,27 @@ export type Database = {
         }
         Relationships: []
       }
+      device_tokens: {
+        Row: {
+          created_at: string | null
+          platform: string
+          token: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          platform: string
+          token: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          platform?: string
+          token?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       expert_schedules: {
         Row: {
           created_at: string | null
