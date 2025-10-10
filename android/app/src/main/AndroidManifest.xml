@@ -44,6 +44,15 @@
             android:exported="false"
             android:foregroundServiceType="mediaProjection|phoneCall|dataSync" />
 
+        <!-- Firebase Messaging Service -->
+        <service
+            android:name=".MyFirebaseService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT"/>
+            </intent-filter>
+        </service>
+
         <!-- Notification Receiver -->
         <receiver
             android:name=".NotificationReceiver"
