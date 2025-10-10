@@ -55,12 +55,26 @@ jobs:
           echo "---- android/app tree ----"
           ls -la android/app || true
 
-      - name: Force valid settings.gradle (no broken includes)
+      # Write a simple, valid settings.gradle (no Cordova include)
+      - name: Force valid settings.gradle
         run: |
           printf "include ':app'\napply from: 'capacitor.settings.gradle'\n" > android/settings.gradle
-          echo "✅ Updated android/settings.gradle:"
+          echo "----- settings.gradle -----"
           cat android/settings.gradle
 
+      # If the Cordova module isn't present, remove its dependency from app/build.gradle
+      - name: Remove Cordova module reference when absent
+        run: |
+          if [ ! -d "capacitor-cordova-android-plugins" ]; then
+            echo "Cordova plugins module not found; cleaning app/build.gradle reference…"
+            sed -i.bak "/capacitor-cordova-android-plugins/d" android/app/build.gradle || true
+            echo "Remaining references (should be none):"
+            grep -n "capacitor-cordova-android-plugins" android/app/build.gradle || echo "✅ none"
+          else
+            echo "Cordova plugins module exists — keeping reference."
+          fi
+
+      # Optional Firebase config
       - name: Inject google-services.json (optional)
         if: ${{ env.GOOGLE_SERVICES_JSON != '' }}
         run: |
