@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Smartphone, Battery, Power, Bell, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Smartphone, Battery, Power, Bell, AlertTriangle, TestTube } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
+import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { ensureServiceWorker, subscribeWebPush } from "@/push/webPush";
 
 // VAPID public key - generate with web-push library and add to Supabase secrets
@@ -13,8 +15,10 @@ const VAPID_PUBLIC = "BNEWm3Ql5F8K5xB_5vZ1-5kQ3h5X5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K
 export default function Troubleshoot() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { worker } = useWorkerProfile(user?.id);
   const { toast } = useToast();
   const [enabling, setEnabling] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   const openBatterySettings = () => {
     // Open settings - implementation depends on native plugin if needed
@@ -74,6 +78,58 @@ export default function Troubleshoot() {
       });
     } finally {
       setEnabling(false);
+    }
+  };
+
+  const createTestBooking = async () => {
+    if (!user || !worker) {
+      toast({
+        title: "Error",
+        description: "Worker profile not found",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setTesting(true);
+
+      // Get first service type from worker
+      const serviceType = worker.service_types?.[0] || 'maid';
+      const community = worker.community || 'prestige-high-fields';
+
+      const { data, error } = await supabase
+        .from('bookings')
+        .insert({
+          user_id: user.id,
+          status: 'pending',
+          service_type: serviceType,
+          booking_type: 'instant',
+          community: community,
+          flat_no: 'Test-101',
+          cust_name: 'Test Customer',
+          cust_phone: '9999999999',
+          price_inr: 500,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      console.log('✅ Test booking created:', data);
+      toast({
+        title: "Test Booking Created",
+        description: "Modal should appear within ~1 second if you're online. Check for Web Push notification if tab is unfocused."
+      });
+    } catch (error: any) {
+      console.error('❌ Failed to create test booking:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create test booking",
+        variant: "destructive"
+      });
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -160,6 +216,36 @@ export default function Troubleshoot() {
                   <li><strong>Oppo/Realme:</strong> Settings → App Management → Startup Manager</li>
                   <li><strong>Vivo:</strong> Settings → Apps → Autostart</li>
                 </ol>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Test Booking */}
+        <Card className="p-6 bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900 flex items-center justify-center flex-shrink-0">
+              <TestTube className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold mb-1 text-orange-900 dark:text-orange-100">Test Booking Alert</h3>
+              <p className="text-sm text-orange-700 dark:text-orange-300 mb-3">
+                Create a test booking to verify notification system works
+              </p>
+              <Button 
+                onClick={createTestBooking} 
+                disabled={testing || !worker}
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+              >
+                {testing ? "Creating..." : "Create Test Booking"}
+              </Button>
+              <div className="mt-3 p-3 bg-orange-100 dark:bg-orange-900 rounded-lg">
+                <p className="text-xs font-medium mb-2 text-orange-900 dark:text-orange-100">What to verify:</p>
+                <ul className="text-xs text-orange-700 dark:text-orange-300 space-y-1">
+                  <li>✓ Modal appears within ~1 second when you're Online</li>
+                  <li>✓ Web Push notification appears if tab is unfocused</li>
+                  <li>✓ Sound plays (if enabled)</li>
+                </ul>
               </div>
             </div>
           </div>
