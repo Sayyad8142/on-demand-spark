@@ -8,9 +8,7 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-
     env:
-      WEB_DIR: dist
       JAVA_VERSION: '17'
       GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON || '' }}
 
@@ -27,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Ensure Capacitor Android dependencies
+      - name: Ensure Capacitor deps
         run: |
           npm i -D @capacitor/cli
           npm i @capacitor/android @capacitor/app @capacitor/device @capacitor/preferences @capacitor/push-notifications --no-audit --no-fund
@@ -44,26 +42,14 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Ensure Android project exists
+      - name: Ensure Android project
         run: |
           if [ ! -d "android" ]; then
             npx cap add android
           fi
           npx cap sync android
-          echo "✅ Android project synced successfully"
-
-      - name: Fix settings.gradle
-        run: |
-          printf "include ':app'\napply from: 'capacitor.settings.gradle'\n" > android/settings.gradle
-          echo "✅ android/settings.gradle updated:"
-          cat android/settings.gradle
-
-      - name: Remove Cordova reference if not found
-        run: |
-          if [ ! -d "capacitor-cordova-android-plugins" ]; then
-            sed -i.bak "/capacitor-cordova-android-plugins/d" android/app/build.gradle || true
-            echo "✅ Removed unused Cordova references"
-          fi
+          ls -la android || true
+          ls -la android/app || true
 
       - name: Inject google-services.json (optional)
         if: ${{ env.GOOGLE_SERVICES_JSON != '' }}
@@ -72,10 +58,36 @@ jobs:
           echo "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
           ls -la android/app/google-services.json || true
 
-      - name: Create Gradle wrapper if missing
+      - name: Remove Cordova bridge & flatDir if absent
+        run: |
+          CORDOVA_DIR="android/capacitor-cordova-android-plugins"
+
+          # settings.gradle: drop any cordova bridge include
+          if [ -f android/settings.gradle ]; then
+            sed -i "/capacitor-cordova-android-plugins/d" android/settings.gradle || true
+          fi
+
+          # If the cordova bridge folder doesn't exist, purge flatDir blocks and references
+          if [ ! -d "$CORDOVA_DIR" ]; then
+            for F in android/build.gradle android/app/build.gradle; do
+              if [ -f "$F" ]; then
+                # delete any flatDir { ... } block
+                perl -0777 -pe "s/[ \t]*flatDir[ \t]*\{[^}]*\}\n//g" -i "$F"
+                # remove leftover text mentions
+                sed -i "/capacitor-cordova-android-plugins/d" "$F" || true
+              fi
+            done
+          fi
+
+          echo "---- android/settings.gradle ----"
+          cat android/settings.gradle || true
+          echo "---- android/app/build.gradle (first 200 lines) ----"
+          sed -n '1,200p' android/app/build.gradle || true
+
+      - name: Ensure Gradle wrapper
         run: |
           if [ ! -f "android/gradlew" ]; then
-            echo "⚙️ Creating Gradle wrapper..."
+            echo "gradlew not found — creating wrapper"
             cd android
             gradle wrapper
             chmod +x gradlew
@@ -84,36 +96,6 @@ jobs:
             chmod +x android/gradlew
           fi
 
-      # ✅ Fix empty/invalid flatDir repositories that cause:
-      # "You must specify at least one directory for a flat directory repository."
-      - name: Fix flatDir repositories in app/build.gradle
-        run: |
-          APP=android/app/build.gradle
-          if [ ! -f "$APP" ]; then
-            echo "❌ $APP not found"; exit 1
-          fi
-
-          # If app/build.gradle has an empty flatDir, replace it with a safe one.
-          # Otherwise append a valid repositories block (harmless if duplicates exist).
-          if grep -q "repositories[[:space:]]*{[[:space:]]*flatDir" "$APP"; then
-            perl -0777 -pe "s/repositories\s*{\s*flatDir\s*{[^}]*}\s*}/repositories {\n    google()\n    mavenCentral()\n    flatDir {\n        dirs project(':capacitor-android').file('libs')\n    }\n}/s" -i "$APP"
-          else
-            cat >> "$APP" <<'EOF'
-
-repositories {
-    google()
-    mavenCentral()
-    flatDir {
-        dirs project(':capacitor-android').file('libs')
-    }
-}
-EOF
-          fi
-
-          echo "----- repositories block in app/build.gradle -----"
-          awk '/repositories *{/,/}/' "$APP" | sed -n '1,200p'
-
-      # ✅ Official Gradle setup (caches Gradle & configures env)
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
         with:
