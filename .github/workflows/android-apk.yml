@@ -55,20 +55,10 @@ jobs:
           echo "---- tree android/app ----"
           ls -la android/app || true
 
-      - name: Ensure settings.gradle includes Capacitor
+      # ✅ No heredoc. Always write a clean settings.gradle with required includes.
+      - name: Force settings.gradle to include Capacitor
         run: |
-          SETTINGS=android/settings.gradle
-          if [ ! -f "$SETTINGS" ]; then
-            cat > "$SETTINGS" <<'EOF'
-include ':app'
-apply from: 'capacitor.settings.gradle'
-apply from: '../capacitor-cordova-android-plugins/settings.gradle'
-EOF
-          else
-            grep -q "apply from: 'capacitor.settings.gradle'" "$SETTINGS" || echo "apply from: 'capacitor.settings.gradle'" >> "$SETTINGS"
-            grep -q "apply from: '../capacitor-cordova-android-plugins/settings.gradle'" "$SETTINGS" || echo "apply from: '../capacitor-cordova-android-plugins/settings.gradle'" >> "$SETTINGS"
-            grep -q "include ':app'" "$SETTINGS" || echo "include ':app'" >> "$SETTINGS"
-          fi
+          printf "include ':app'\napply from: 'capacitor.settings.gradle'\napply from: '../capacitor-cordova-android-plugins/settings.gradle'\n" > android/settings.gradle
           echo "----- settings.gradle -----"
           cat android/settings.gradle
 
