@@ -16,6 +16,7 @@ import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import Troubleshoot from "./pages/Troubleshoot";
 import VerifyPush from "./pages/VerifyPush";
+import DevCacheReset from "./pages/DevCacheReset";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -148,6 +149,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <VerifyPush />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dev-cache-reset"
+              element={
+                <ProtectedRoute>
+                  <DevCacheReset />
                 </ProtectedRoute>
               }
             />
