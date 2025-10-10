@@ -23,11 +23,14 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Set VAPID details for web-push
+    // Set VAPID details for web-push (read from Supabase secrets)
+    const VAPID_PUBLIC = Deno.env.get("VAPID_PUBLIC_KEY")!;
+    const VAPID_PRIVATE = Deno.env.get("VAPID_PRIVATE_KEY")!;
+    
     webpush.setVapidDetails(
       "mailto:support@didisnow.com",
-      Deno.env.get("VAPID_PUBLIC_KEY")!,
-      Deno.env.get("VAPID_PRIVATE_KEY")!
+      VAPID_PUBLIC,
+      VAPID_PRIVATE
     );
 
     // Get all subscriptions for the specified workers

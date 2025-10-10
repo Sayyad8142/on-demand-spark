@@ -9,8 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureServiceWorker, subscribeWebPush } from "@/push/webPush";
 
-// VAPID public key - generate with web-push library and add to Supabase secrets
-const VAPID_PUBLIC = "BNEWm3Ql5F8K5xB_5vZ1-5kQ3h5X5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j5K5j";
+// VAPID public key from environment variable
+const VAPID_PUBLIC = import.meta.env.VITE_VAPID_PUBLIC_KEY as string;
 
 export default function Troubleshoot() {
   const navigate = useNavigate();
