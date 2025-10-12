@@ -1,5 +1,7 @@
 package app.didisnow.worker
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -13,6 +15,7 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -28,23 +31,56 @@ class BookingOverlayService : Service() {
     companion object {
         private const val SUPABASE_URL = "https://paywwbuqycovjopryele.supabase.co"
         private const val SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheXd3YnVxeWNvdmpvcHJ5ZWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkyNjksImV4cCI6MjA3MDc0NTI2OX0.js1MaTBkjuGlaDfQjrZpZ9_G8Jy9ygNAB8KpNDiQg8o"
+        private const val NOTIFICATION_CHANNEL_ID = "booking_overlay_channel"
+        private const val NOTIFICATION_ID = 9001
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Create notification channel and start foreground
+        createNotificationChannel()
+        startForegroundService()
+        
         val bookingId = intent?.getStringExtra("booking_id") ?: ""
         val customer = intent?.getStringExtra("customer_name") ?: "New Customer"
         val community = intent?.getStringExtra("community") ?: ""
         val serviceType = intent?.getStringExtra("service_type") ?: ""
-        val price = intent?.getIntExtra("price", 0) ?: 0
+        val flatNo = intent?.getStringExtra("flat_no") ?: ""
+        val price = intent?.getIntExtra("price_inr", 0)
 
-        showOverlay(bookingId, customer, community, serviceType, price)
+        showOverlay(bookingId, customer, community, serviceType, flatNo, price)
         
         return START_NOT_STICKY
     }
 
-    private fun showOverlay(bookingId: String, customer: String, community: String, serviceType: String, price: Int) {
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                NOTIFICATION_CHANNEL_ID,
+                "Booking Overlay",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Shows booking overlay alerts"
+            }
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager?.createNotificationChannel(channel)
+        }
+    }
+
+    private fun startForegroundService() {
+        val notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+            .setContentTitle("Booking Alert Active")
+            .setContentText("Ready to receive booking notifications")
+            .setSmallIcon(R.drawable.ic_notification)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+            .build()
+
+        startForeground(NOTIFICATION_ID, notification)
+    }
+
+    private fun showOverlay(bookingId: String, customer: String, community: String, serviceType: String, flatNo: String, price: Int) {
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
         // Inflate the overlay layout
@@ -74,7 +110,8 @@ class BookingOverlayService : Service() {
 
         // Set booking details
         overlayView?.findViewById<TextView>(R.id.title)?.text = "New Booking: $serviceType"
-        overlayView?.findViewById<TextView>(R.id.subtitle)?.text = "$customer • $community"
+        val subtitle = if (flatNo.isNotEmpty()) "$community • $flatNo" else "$customer • $community"
+        overlayView?.findViewById<TextView>(R.id.subtitle)?.text = subtitle
         overlayView?.findViewById<TextView>(R.id.price)?.text = "₹$price"
         
         // Start 30-second countdown
