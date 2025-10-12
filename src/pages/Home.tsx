@@ -10,6 +10,7 @@ import AvailabilityToggle from "@/components/AvailabilityToggle";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Bell, X } from "lucide-react";
+import { showBookingOverlay } from "@/lib/overlay";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -59,8 +60,28 @@ export default function Home() {
     await Promise.all([refetchActiveJob(), refetchWorker()]);
   };
 
+  const testOverlay = async () => {
+    await showBookingOverlay({
+      id: "test-123",
+      service_type: "Maid",
+      cust_name: "Test User",
+      community: "Prestige High Fields",
+      flat_no: "1011",
+      price_inr: 150,
+    });
+  };
+
   return (
     <div className="p-4 space-y-4">
+      {/* Temporary Test Button */}
+      <Card className="p-4 bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800">
+        <Button 
+          onClick={testOverlay}
+          className="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
+        >
+          Test Overlay
+        </Button>
+      </Card>
       {/* Web Push Banner */}
       {showWebPushBanner && (
         <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 relative">
