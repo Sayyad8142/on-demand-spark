@@ -1,17 +1,20 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ShieldAlert, Smartphone, Loader2 } from "lucide-react";
+import { ArrowLeft, ShieldAlert, Smartphone, Loader2, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { Capacitor } from "@capacitor/core";
 import { 
   requestAndroidOverlay, 
   checkPermission
 } from "@/lib/overlay";
 import { openAndroidOverlaySettings } from "@/native/overlay";
 import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
+import { usePushRegister } from "@/hooks/usePushRegister";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -20,6 +23,9 @@ export default function Settings() {
   const [overlayEnabled, setOverlayEnabled] = useState(false);
   const [checking, setChecking] = useState(true);
   const [toggling, setToggling] = useState(false);
+  const [showToken, setShowToken] = useState(false);
+  const { registerPush, registeredToken, isRegistering } = usePushRegister();
+  const isNative = Capacitor.isNativePlatform();
 
   useEffect(() => {
     checkStatus();
@@ -92,6 +98,24 @@ export default function Settings() {
       });
     } finally {
       setToggling(false);
+    }
+  };
+
+  const handleRegisterPush = async () => {
+    try {
+      const token = await registerPush();
+      toast({
+        title: "Notifications enabled",
+        description: "Push notifications registered successfully"
+      });
+      console.log('FCM Token:', token);
+    } catch (error: any) {
+      toast({
+        title: "Registration failed",
+        description: error.message,
+        variant: "destructive"
+      });
+      console.error('Push registration error:', error);
     }
   };
 
@@ -191,6 +215,63 @@ export default function Settings() {
             <li>• Background service keeps you connected</li>
             <li>• Works even when screen is off</li>
           </ul>
+        </Card>
+
+        {/* Push Notifications */}
+        <Card className="p-6">
+          <div className="flex items-start gap-4 mb-4">
+            <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+              <Bell className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold mb-1">Push Notifications</h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                Register for booking alerts and updates
+              </p>
+              
+              {!isNative && (
+                <p className="text-xs text-muted-foreground mb-3 italic">
+                  Use the installed Android app to enable notifications.
+                </p>
+              )}
+
+              <Button 
+                onClick={handleRegisterPush}
+                disabled={!isNative || isRegistering}
+                className="w-full mb-2"
+              >
+                {isRegistering ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Registering...
+                  </>
+                ) : (
+                  "Register Push Notifications"
+                )}
+              </Button>
+
+              {registeredToken && (
+                <div className="space-y-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowToken(!showToken)}
+                    className="w-full"
+                  >
+                    {showToken ? "Hide Token" : "View My Token"}
+                  </Button>
+                  
+                  {showToken && (
+                    <Input 
+                      value={registeredToken}
+                      readOnly
+                      className="text-xs font-mono"
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </Card>
 
         {/* Troubleshoot Link */}
