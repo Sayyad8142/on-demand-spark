@@ -9,10 +9,10 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Capacitor } from "@capacitor/core";
 import { 
-  requestAndroidOverlay, 
-  checkPermission
-} from "@/lib/overlay";
-import { openAndroidOverlaySettings } from "@/native/overlay";
+  requestOverlayPermission, 
+  checkOverlayPermission,
+  openAndroidOverlaySettings 
+} from "@/native/overlay";
 import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
 import { usePushRegister } from "@/hooks/usePushRegister";
 
@@ -34,7 +34,7 @@ export default function Settings() {
   const checkStatus = async () => {
     setChecking(true);
     try {
-      const granted = await checkPermission();
+      const granted = await checkOverlayPermission();
       setHasPermission(granted);
       setOverlayEnabled(localStorage.getItem('overlay_mode') === 'enabled');
     } catch (error) {
@@ -45,7 +45,7 @@ export default function Settings() {
   };
 
   const handleRequestPermission = async () => {
-    const granted = await requestAndroidOverlay();
+    const granted = await requestOverlayPermission();
     setHasPermission(granted);
     
     if (granted) {

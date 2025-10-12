@@ -1,22 +1,41 @@
 import { Capacitor } from '@capacitor/core';
 
-export async function requestAndroidOverlay() {
-  if (!Capacitor.isNativePlatform()) return;
-  
-  // @ts-ignore - Custom plugin
-  const { OverlayPlugin } = (window as any).Capacitor?.Plugins || {};
-  if (!OverlayPlugin) {
-    console.warn('OverlayPlugin not available');
-    return;
-  }
-  
+type OverlayPermissionResult = { granted: boolean };
+
+function getPlugin(): any | null {
+  // @ts-ignore
+  return (window as any)?.Capacitor?.Plugins?.OverlayPlugin || null;
+}
+
+export async function checkOverlayPermission(): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) return false;
+  const plugin = getPlugin();
+  if (!plugin || !plugin.checkPermission) return false;
   try {
-    const result = await OverlayPlugin.requestPermission();
-    console.log('Overlay permission result:', result);
-    return result;
+    const res = (await plugin.checkPermission()) as OverlayPermissionResult;
+    return !!res?.granted;
+  } catch (error) {
+    console.error('Error checking overlay permission:', error);
+    return false;
+  }
+}
+
+export async function requestOverlayPermission(): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) return false;
+  const plugin = getPlugin();
+  if (!plugin || !plugin.requestPermission) return false;
+  try {
+    const res = (await plugin.requestPermission()) as OverlayPermissionResult;
+    return !!res?.granted;
   } catch (error) {
     console.error('Error requesting overlay permission:', error);
+    return false;
   }
+}
+
+// Legacy function name for backward compatibility
+export async function requestAndroidOverlay(): Promise<boolean> {
+  return requestOverlayPermission();
 }
 
 export async function showBookingOverlayNative(payload: { 
