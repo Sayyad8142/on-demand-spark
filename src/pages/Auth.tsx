@@ -9,12 +9,33 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Phone } from "lucide-react";
+import { z } from "zod";
 
 const SERVICES = [
   { value: "maid", label: "Maid Service" },
   { value: "cook", label: "Cook Service" },
   { value: "bathroom_cleaning", label: "Bathroom Cleaning" }
 ];
+
+// SECURITY: Input validation schemas
+const phoneSchema = z.string()
+  .regex(/^[6-9]\d{9}$/, 'Invalid phone number. Must be 10 digits starting with 6-9')
+  .length(10, 'Phone number must be exactly 10 digits');
+
+const nameSchema = z.string()
+  .trim()
+  .min(2, 'Name must be at least 2 characters')
+  .max(100, 'Name must not exceed 100 characters')
+  .regex(/^[a-zA-Z\s]+$/, 'Name can only contain letters and spaces');
+
+const upiSchema = z.string()
+  .regex(/^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/, 'Invalid UPI ID format (e.g., name@bank)')
+  .optional()
+  .or(z.literal(''));
+
+const otpSchema = z.string()
+  .regex(/^\d{6}$/, 'OTP must be exactly 6 digits')
+  .length(6);
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -60,6 +81,22 @@ export default function Auth() {
   };
 
   const handleSignInSendOtp = async () => {
+    if (!signInPhone) {
+      toast({ title: "Please enter your phone number", variant: "destructive" });
+      return;
+    }
+
+    // SECURITY: Validate phone number format
+    const validation = phoneSchema.safeParse(signInPhone);
+    if (!validation.success) {
+      toast({ 
+        title: "Invalid phone number", 
+        description: validation.error.errors[0].message,
+        variant: "destructive" 
+      });
+      return;
+    }
+
     try {
       setLoading(true);
       const phone = normalizePhone(signInPhone);
@@ -77,6 +114,22 @@ export default function Auth() {
   };
 
   const handleSignInVerifyOtp = async () => {
+    if (!signInPhone || !signInOtp) {
+      toast({ title: "Please enter phone and OTP", variant: "destructive" });
+      return;
+    }
+
+    // SECURITY: Validate OTP format
+    const validation = otpSchema.safeParse(signInOtp);
+    if (!validation.success) {
+      toast({ 
+        title: "Invalid OTP", 
+        description: "OTP must be 6 digits",
+        variant: "destructive" 
+      });
+      return;
+    }
+
     try {
       setLoading(true);
       const phone = normalizePhone(signInPhone);
@@ -98,25 +151,9 @@ export default function Auth() {
 
       if (existingWorker) {
         // Link existing worker to auth user by updating the worker's ID
-        const { error: updateError } = await supabase
-          .from('workers')
-          .update({ id: data.user.id })
-          .eq('phone', phone);
-
-        if (updateError) {
-          console.error('Error linking worker:', updateError);
-        }
-
-        // Also create/update profile
-        await supabase.from('profiles').upsert({
-          id: data.user.id,
-          full_name: existingWorker.full_name,
-          phone,
-          community: existingWorker.community || existingWorker.communities?.[0] || '',
-          flat_no: 'N/A'
-        }, { onConflict: 'id' });
+        await supabase.from('workers').update({ id: data.user.id }).eq('phone', phone);
       }
-      
+
       toast({ title: "Success!", description: "Signed in successfully" });
       navigate("/home");
     } catch (error: any) {
@@ -128,8 +165,41 @@ export default function Auth() {
 
   const handleSignUpSendOtp = async () => {
     if (!signUpFullName || !signUpPhone || !signUpCommunity || !signUpService) {
-      toast({ title: "Error", description: "Please fill all fields", variant: "destructive" });
+      toast({ title: "Please fill all required fields", variant: "destructive" });
       return;
+    }
+
+    // SECURITY: Validate all inputs
+    const nameValidation = nameSchema.safeParse(signUpFullName);
+    if (!nameValidation.success) {
+      toast({ 
+        title: "Invalid name", 
+        description: nameValidation.error.errors[0].message,
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    const phoneValidation = phoneSchema.safeParse(signUpPhone);
+    if (!phoneValidation.success) {
+      toast({ 
+        title: "Invalid phone number", 
+        description: phoneValidation.error.errors[0].message,
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    if (signUpUpiId) {
+      const upiValidation = upiSchema.safeParse(signUpUpiId);
+      if (!upiValidation.success) {
+        toast({ 
+          title: "Invalid UPI ID", 
+          description: upiValidation.error.errors[0].message,
+          variant: "destructive" 
+        });
+        return;
+      }
     }
 
     try {
@@ -139,9 +209,10 @@ export default function Auth() {
         phone,
         options: {
           data: {
-            full_name: signUpFullName,
-            community: signUpCommunity,
-            service_type: signUpService
+            full_name: signUpFullName.trim(),
+            upi_id: signUpUpiId?.trim() || null,
+            service_types: [signUpService],
+            communities: [signUpCommunity]
           }
         }
       });
@@ -158,6 +229,22 @@ export default function Auth() {
   };
 
   const handleSignUpVerifyOtp = async () => {
+    if (!signUpPhone || !signUpOtp) {
+      toast({ title: "Please enter phone and OTP", variant: "destructive" });
+      return;
+    }
+
+    // SECURITY: Validate OTP format
+    const validation = otpSchema.safeParse(signUpOtp);
+    if (!validation.success) {
+      toast({ 
+        title: "Invalid OTP", 
+        description: "OTP must be 6 digits",
+        variant: "destructive" 
+      });
+      return;
+    }
+
     try {
       setLoading(true);
       const phone = normalizePhone(signUpPhone);
@@ -177,9 +264,9 @@ export default function Auth() {
         // Update existing worker with new ID and details
         const { error: workerError } = await supabase.from('workers').upsert({
           id: data.user.id,
-          full_name: signUpFullName,
+          full_name: signUpFullName.trim(),
           phone,
-          upi_id: signUpUpiId || existingWorker.upi_id,
+          upi_id: signUpUpiId?.trim() || existingWorker.upi_id,
           service_types: [signUpService],
           communities: [signUpCommunity],
           is_active: true,
@@ -192,9 +279,9 @@ export default function Auth() {
         // Create new worker profile
         const { error: workerError } = await supabase.from('workers').insert({
           id: data.user.id,
-          full_name: signUpFullName,
+          full_name: signUpFullName.trim(),
           phone,
-          upi_id: signUpUpiId || null,
+          upi_id: signUpUpiId?.trim() || null,
           service_types: [signUpService],
           communities: [signUpCommunity],
           is_active: true,
@@ -205,21 +292,7 @@ export default function Auth() {
         if (workerError) throw workerError;
       }
 
-      // Create profile (upsert to handle re-registration)
-      const { error: profileError } = await supabase.from('profiles').upsert({
-        id: data.user.id,
-        full_name: signUpFullName,
-        phone,
-        community: signUpCommunity,
-        flat_no: 'N/A'
-      }, { onConflict: 'id' });
-
-      if (profileError) throw profileError;
-
-      toast({ 
-        title: "Account created!", 
-        description: "Your worker account is now active. Welcome!" 
-      });
+      toast({ title: "Success!", description: "Account created successfully" });
       navigate("/home");
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -229,16 +302,16 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-secondary to-primary-soft">
-      <Card className="w-full max-w-md shadow-card">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 p-4">
+      <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center shadow-pink">
-              <Phone className="w-8 h-8 text-primary-foreground" />
-            </div>
+            <Phone className="h-12 w-12 text-primary" />
           </div>
-          <CardTitle className="text-2xl text-center font-bold">Didi Now Worker</CardTitle>
-          <CardDescription className="text-center">Sign in or create your worker account</CardDescription>
+          <CardTitle className="text-2xl text-center">Worker Portal</CardTitle>
+          <CardDescription className="text-center">
+            Sign in or create an account to get started
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="signin" className="w-full">
@@ -247,153 +320,165 @@ export default function Auth() {
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
 
+            {/* Sign In Tab */}
             <TabsContent value="signin" className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="signin-phone">Phone Number</Label>
+                <Input
+                  id="signin-phone"
+                  type="tel"
+                  placeholder="10-digit phone number"
+                  value={signInPhone}
+                  onChange={(e) => setSignInPhone(e.target.value)}
+                  maxLength={10}
+                  disabled={otpSent || loading}
+                />
+              </div>
+
+              {otpSent && (
+                <div className="space-y-2">
+                  <Label htmlFor="signin-otp">OTP</Label>
+                  <Input
+                    id="signin-otp"
+                    type="text"
+                    placeholder="6-digit OTP"
+                    value={signInOtp}
+                    onChange={(e) => setSignInOtp(e.target.value)}
+                    maxLength={6}
+                    disabled={loading}
+                  />
+                </div>
+              )}
+
               {!otpSent ? (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-phone">Phone Number</Label>
-                    <Input
-                      id="signin-phone"
-                      placeholder="9876543210"
-                      value={signInPhone}
-                      onChange={(e) => setSignInPhone(e.target.value)}
-                      type="tel"
-                    />
-                  </div>
-                  <Button 
-                    onClick={handleSignInSendOtp} 
-                    disabled={loading || !signInPhone}
-                    className="w-full"
-                  >
-                    Send OTP
-                  </Button>
-                </>
+                <Button 
+                  onClick={handleSignInSendOtp} 
+                  disabled={loading || !signInPhone}
+                  className="w-full"
+                >
+                  {loading ? "Sending..." : "Send OTP"}
+                </Button>
               ) : (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-otp">Enter OTP</Label>
-                    <Input
-                      id="signin-otp"
-                      placeholder="123456"
-                      value={signInOtp}
-                      onChange={(e) => setSignInOtp(e.target.value)}
-                      maxLength={6}
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={() => setOtpSent(false)} 
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      Back
-                    </Button>
-                    <Button 
-                      onClick={handleSignInVerifyOtp} 
-                      disabled={loading || !signInOtp}
-                      className="flex-1"
-                    >
-                      Verify
-                    </Button>
-                  </div>
-                </>
+                <Button 
+                  onClick={handleSignInVerifyOtp} 
+                  disabled={loading || !signInOtp}
+                  className="w-full"
+                >
+                  {loading ? "Verifying..." : "Verify OTP"}
+                </Button>
               )}
             </TabsContent>
 
+            {/* Sign Up Tab */}
             <TabsContent value="signup" className="space-y-4">
-              {!otpSent ? (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="fullname">Full Name</Label>
-                    <Input
-                      id="fullname"
-                      placeholder="Your full name"
-                      value={signUpFullName}
-                      onChange={(e) => setSignUpFullName(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-phone">Phone Number</Label>
-                    <Input
-                      id="signup-phone"
-                      placeholder="9876543210"
-                      value={signUpPhone}
-                      onChange={(e) => setSignUpPhone(e.target.value)}
-                      type="tel"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="upi-id">UPI ID (Optional)</Label>
-                    <Input
-                      id="upi-id"
-                      placeholder="yourname@paytm"
-                      value={signUpUpiId}
-                      onChange={(e) => setSignUpUpiId(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="community">Community</Label>
-                    <Select value={signUpCommunity} onValueChange={setSignUpCommunity}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select community" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {communities.map(c => (
-                          <SelectItem key={c.value} value={c.value}>{c.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="service">Service Type</Label>
-                    <Select value={signUpService} onValueChange={setSignUpService}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select service" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SERVICES.map(s => (
-                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button 
-                    onClick={handleSignUpSendOtp} 
+              <div className="space-y-2">
+                <Label htmlFor="signup-name">Full Name *</Label>
+                <Input
+                  id="signup-name"
+                  type="text"
+                  placeholder="Your full name"
+                  value={signUpFullName}
+                  onChange={(e) => setSignUpFullName(e.target.value)}
+                  disabled={otpSent || loading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="signup-phone">Phone Number *</Label>
+                <Input
+                  id="signup-phone"
+                  type="tel"
+                  placeholder="10-digit phone number"
+                  value={signUpPhone}
+                  onChange={(e) => setSignUpPhone(e.target.value)}
+                  maxLength={10}
+                  disabled={otpSent || loading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="signup-upi">UPI ID (Optional)</Label>
+                <Input
+                  id="signup-upi"
+                  type="text"
+                  placeholder="yourname@bank"
+                  value={signUpUpiId}
+                  onChange={(e) => setSignUpUpiId(e.target.value)}
+                  disabled={otpSent || loading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="signup-community">Community *</Label>
+                <Select 
+                  value={signUpCommunity} 
+                  onValueChange={setSignUpCommunity}
+                  disabled={otpSent || loading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your community" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {communities.map((community) => (
+                      <SelectItem key={community.value} value={community.value}>
+                        {community.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="signup-service">Service Type *</Label>
+                <Select 
+                  value={signUpService} 
+                  onValueChange={setSignUpService}
+                  disabled={otpSent || loading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select service type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SERVICES.map((service) => (
+                      <SelectItem key={service.value} value={service.value}>
+                        {service.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {otpSent && (
+                <div className="space-y-2">
+                  <Label htmlFor="signup-otp">OTP</Label>
+                  <Input
+                    id="signup-otp"
+                    type="text"
+                    placeholder="6-digit OTP"
+                    value={signUpOtp}
+                    onChange={(e) => setSignUpOtp(e.target.value)}
+                    maxLength={6}
                     disabled={loading}
-                    className="w-full"
-                  >
-                    Send OTP
-                  </Button>
-                </>
+                  />
+                </div>
+              )}
+
+              {!otpSent ? (
+                <Button 
+                  onClick={handleSignUpSendOtp} 
+                  disabled={loading || !signUpFullName || !signUpPhone || !signUpCommunity || !signUpService}
+                  className="w-full"
+                >
+                  {loading ? "Sending..." : "Send OTP"}
+                </Button>
               ) : (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-otp">Enter OTP</Label>
-                    <Input
-                      id="signup-otp"
-                      placeholder="123456"
-                      value={signUpOtp}
-                      onChange={(e) => setSignUpOtp(e.target.value)}
-                      maxLength={6}
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={() => setOtpSent(false)} 
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      Back
-                    </Button>
-                    <Button 
-                      onClick={handleSignUpVerifyOtp} 
-                      disabled={loading || !signUpOtp}
-                      className="flex-1"
-                    >
-                      Create Account
-                    </Button>
-                  </div>
-                </>
+                <Button 
+                  onClick={handleSignUpVerifyOtp} 
+                  disabled={loading || !signUpOtp}
+                  className="w-full"
+                >
+                  {loading ? "Creating Account..." : "Create Account"}
+                </Button>
               )}
             </TabsContent>
           </Tabs>

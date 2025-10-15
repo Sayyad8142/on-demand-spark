@@ -1580,6 +1580,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           created_at: string | null
@@ -1633,6 +1654,38 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      worker_contact_access_log: {
+        Row: {
+          accessed_at: string
+          accessed_by: string | null
+          booking_id: string | null
+          id: string
+          ip_address: string | null
+        }
+        Insert: {
+          accessed_at?: string
+          accessed_by?: string | null
+          booking_id?: string | null
+          id?: string
+          ip_address?: string | null
+        }
+        Update: {
+          accessed_at?: string
+          accessed_by?: string | null
+          booking_id?: string | null
+          id?: string
+          ip_address?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_contact_access_log_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       worker_ratings: {
         Row: {
@@ -2066,6 +2119,10 @@ export type Database = {
         Args: { p_default: number; p_key: string }
         Returns: number
       }
+      get_worker_contact: {
+        Args: { p_booking_id: string }
+        Returns: Json
+      }
       gtrgm_compress: {
         Args: { "": unknown }
         Returns: unknown
@@ -2120,6 +2177,13 @@ export type Database = {
           p_worker_id: string
         }
         Returns: Json
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
       }
       http: {
         Args: { request: Database["public"]["CompositeTypes"]["http_request"] }
@@ -2483,6 +2547,7 @@ export type Database = {
       }
     }
     Enums: {
+      app_role: "admin" | "worker" | "customer"
       maid_task: "floor_cleaning" | "dish_washing"
       payment_status: "pending" | "paid" | "partial" | "overdue" | "cancelled"
       user_role: "admin" | "staff" | "landlord"
@@ -2629,6 +2694,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "worker", "customer"],
       maid_task: ["floor_cleaning", "dish_washing"],
       payment_status: ["pending", "paid", "partial", "overdue", "cancelled"],
       user_role: ["admin", "staff", "landlord"],

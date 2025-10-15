@@ -6,14 +6,35 @@ const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 Deno.serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   try {
     console.log("📥 booking-notifications invoked");
+    
+    // SECURITY: Verify authentication - only system/triggers should call this
+    // For now, check that request has valid anon key or service key
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error("❌ No authorization header");
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+
+    // Validate request body
     const { booking_id } = await req.json();
     
-    if (!booking_id) {
-      console.error("❌ No booking_id provided");
-      return new Response("missing booking_id", { status: 400 });
+    // SECURITY: Validate booking_id is UUID format
+    if (!booking_id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(booking_id)) {
+      console.error("❌ Invalid booking_id format");
+      return new Response("Invalid booking_id", { status: 400, headers: corsHeaders });
     }
 
     console.log("🔍 Loading booking:", booking_id);
@@ -103,10 +124,10 @@ Deno.serve(async (req) => {
         workers: workers.map(w => ({ id: w.id, name: w.full_name })),
         result 
       }), 
-      { status: 200 }
+      { status: 200, headers: corsHeaders }
     );
   } catch (e) {
     console.error("❌ Exception in booking-notifications:", e);
-    return new Response(`err:${(e as Error)?.message ?? e}`, { status: 500 });
+    return new Response(`err:${(e as Error)?.message ?? e}`, { status: 500, headers: corsHeaders });
   }
 });

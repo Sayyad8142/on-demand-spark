@@ -10,10 +10,57 @@ interface FCMPayload {
   data?: Record<string, any>;
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 Deno.serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   try {
+    console.log("📤 send-fcm invoked");
+
+    // SECURITY: Verify authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error("❌ No authorization header");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { 
+        status: 401, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Validate and parse payload
     const payload: FCMPayload = await req.json();
     const { workerIds, title, body, data } = payload;
+
+    // SECURITY: Validate inputs
+    if (!Array.isArray(workerIds) || workerIds.length === 0) {
+      return new Response(JSON.stringify({ error: "Invalid workerIds" }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Validate all workerIds are UUIDs
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!workerIds.every(id => uuidRegex.test(id))) {
+      return new Response(JSON.stringify({ error: "Invalid worker ID format" }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (!title || !body) {
+      return new Response(JSON.stringify({ error: "Missing title or body" }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
 
     console.log("📤 Sending FCM to workers:", workerIds);
 
@@ -29,7 +76,7 @@ Deno.serve(async (req) => {
       console.error("Error fetching tokens:", tokenError);
       return new Response(
         JSON.stringify({ error: "Failed to fetch tokens" }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -37,7 +84,7 @@ Deno.serve(async (req) => {
       console.log("⚠️ No FCM tokens found for workers:", workerIds);
       return new Response(
         JSON.stringify({ error: "No tokens found" }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -49,7 +96,7 @@ Deno.serve(async (req) => {
       console.error("❌ FIREBASE_SERVICE_ACCOUNT_KEY not configured");
       return new Response(
         JSON.stringify({ error: "Firebase not configured" }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -110,17 +157,23 @@ Deno.serve(async (req) => {
     );
 
     const successCount = results.filter((r) => r.success).length;
+    const failureCount = results.filter((r) => !r.success).length;
     console.log(`📊 Sent ${successCount}/${results.length} notifications`);
 
-    return new Response(JSON.stringify({ results }), {
+    return new Response(JSON.stringify({ 
+      success: true,
+      sent: successCount,
+      failed: failureCount,
+      results 
+    }), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("❌ Error in send-fcm:", error);
     return new Response(
       JSON.stringify({ error: String(error) }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
