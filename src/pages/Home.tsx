@@ -13,6 +13,7 @@ import { Bell, X } from "lucide-react";
 import { showBookingOverlay } from "@/lib/overlay";
 import { toast } from "sonner";
 import { Capacitor } from "@capacitor/core";
+import { initNativePush } from "@/native/push";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -24,6 +25,16 @@ export default function Home() {
   const [showWebPushBanner, setShowWebPushBanner] = useState(false);
   
   const isOnline = !!worker?.is_available;
+
+  // Initialize FCM push notifications on native platform
+  useEffect(() => {
+    if (user?.id) {
+      console.log('🚀 Initializing push notifications for user:', user.id);
+      initNativePush(user.id).catch(err => {
+        console.error('❌ Failed to init push:', err);
+      });
+    }
+  }, [user?.id]);
 
   // Check if notification permission is default (not granted or denied)
   useEffect(() => {

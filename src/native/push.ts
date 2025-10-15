@@ -15,13 +15,14 @@ export async function initNativePush(userId?: string) {
 
   PushNotifications.addListener('registration', async (token) => {
     try {
-      await supabase.from('device_tokens').upsert(
-        { user_id: userId, token: token.value, platform: 'android' },
-        { onConflict: 'token' }
+      // Save to fcm_tokens table (used by edge function)
+      await supabase.from('fcm_tokens').upsert(
+        { user_id: userId, token: token.value },
+        { onConflict: 'user_id' }
       );
-      console.log('FCM token saved:', token.value);
+      console.log('✅ FCM token saved to fcm_tokens:', token.value);
     } catch (e) {
-      console.error('Failed to save FCM token', e);
+      console.error('❌ Failed to save FCM token', e);
     }
   });
 
