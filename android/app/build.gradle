@@ -64,8 +64,8 @@ dependencies {
     implementation project(':capacitor-cordova-android-plugins')
     
     // Firebase
-    implementation platform('com.google.firebase:firebase-bom:33.3.0')
-    implementation 'com.google.firebase:firebase-messaging:23.4.1'
+    implementation platform('com.google.firebase:firebase-bom:33.6.0')
+    implementation 'com.google.firebase:firebase-messaging'
 }
 
 apply from: 'capacitor.build.gradle'
