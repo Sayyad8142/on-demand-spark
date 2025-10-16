@@ -63,10 +63,6 @@ dependencies {
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
     
-    // Capacitor annotations
-    implementation "com.getcapacitor:core:7.4.3"
-    annotationProcessor "com.getcapacitor:core:7.4.3"
-    
     // Firebase
     implementation platform('com.google.firebase:firebase-bom:33.6.0')
     implementation 'com.google.firebase:firebase-messaging'
