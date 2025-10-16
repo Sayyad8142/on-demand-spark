@@ -38,6 +38,9 @@ class BookingOverlayService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        android.util.Log.d("BookingOverlay", "🚀 BookingOverlayService.onStartCommand called")
+        android.util.Log.d("BookingOverlay", "📦 Intent extras: ${intent?.extras}")
+        
         // Create notification channel and start foreground
         createNotificationChannel()
         startForegroundService()
@@ -48,6 +51,8 @@ class BookingOverlayService : Service() {
         val serviceType = intent?.getStringExtra("service_type") ?: ""
         val flatNo = intent?.getStringExtra("flat_no") ?: ""
         val price = intent?.getIntExtra("price_inr", 0) ?: 0
+
+        android.util.Log.d("BookingOverlay", "📋 Booking details - ID: $bookingId, Service: $serviceType, Community: $community")
 
         showOverlay(bookingId, customer, community, serviceType, flatNo, price)
         
@@ -81,11 +86,26 @@ class BookingOverlayService : Service() {
     }
 
     private fun showOverlay(bookingId: String, customer: String, community: String, serviceType: String, flatNo: String, price: Int) {
+        android.util.Log.d("BookingOverlay", "🖼️ showOverlay called")
+        
+        // Check overlay permission
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!android.provider.Settings.canDrawOverlays(this)) {
+                android.util.Log.e("BookingOverlay", "❌ No overlay permission! Cannot show overlay.")
+                Toast.makeText(this, "Overlay permission required", Toast.LENGTH_LONG).show()
+                stopSelf()
+                return
+            }
+            android.util.Log.d("BookingOverlay", "✅ Overlay permission granted")
+        }
+        
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        android.util.Log.d("BookingOverlay", "📱 WindowManager obtained")
 
         // Inflate the overlay layout
         val inflater = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
         overlayView = inflater.inflate(R.layout.overlay_booking_alert, null)
+        android.util.Log.d("BookingOverlay", "📄 Overlay layout inflated")
 
         // Set overlay window parameters
         val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -153,9 +173,13 @@ class BookingOverlayService : Service() {
 
         // Add overlay to window
         try {
+            android.util.Log.d("BookingOverlay", "➕ Adding overlay to window manager...")
             windowManager?.addView(overlayView, params)
+            android.util.Log.d("BookingOverlay", "✅ Overlay added successfully! Should be visible now.")
         } catch (e: Exception) {
+            android.util.Log.e("BookingOverlay", "❌ Failed to add overlay to window", e)
             e.printStackTrace()
+            Toast.makeText(this, "Failed to show overlay: ${e.message}", Toast.LENGTH_LONG).show()
             stopSelf()
         }
     }
@@ -266,14 +290,18 @@ class BookingOverlayService : Service() {
     }
 
     private fun closeOverlay() {
+        android.util.Log.d("BookingOverlay", "🔚 closeOverlay called")
         try {
             if (overlayView != null && overlayView?.windowToken != null) {
+                android.util.Log.d("BookingOverlay", "➖ Removing overlay from window")
                 windowManager?.removeView(overlayView)
             }
         } catch (e: Exception) {
+            android.util.Log.e("BookingOverlay", "❌ Error removing overlay", e)
             e.printStackTrace()
         } finally {
             overlayView = null
+            android.util.Log.d("BookingOverlay", "🛑 Stopping service")
             stopSelf()
         }
     }

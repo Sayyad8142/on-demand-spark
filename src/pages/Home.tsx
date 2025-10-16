@@ -26,15 +26,7 @@ export default function Home() {
   
   const isOnline = !!worker?.is_available;
 
-  // Initialize FCM push notifications on native platform
-  useEffect(() => {
-    if (user?.id) {
-      console.log('🚀 Initializing push notifications for user:', user.id);
-      initNativePush(user.id).catch(err => {
-        console.error('❌ Failed to init push:', err);
-      });
-    }
-  }, [user?.id]);
+  // Note: FCM initialization is handled in App.tsx, no need to duplicate here
 
   // Check if notification permission is default (not granted or denied)
   useEffect(() => {

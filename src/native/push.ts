@@ -3,26 +3,52 @@ import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 
 export async function initNativePush(userId?: string) {
-  if (!Capacitor.isNativePlatform()) return;
+  if (!Capacitor.isNativePlatform()) {
+    console.log('⏭️ Not native platform, skipping push init');
+    return;
+  }
+
+  console.log('🔔 initNativePush called for user:', userId);
 
   let permStatus = await PushNotifications.checkPermissions();
+  console.log('📱 Current permission status:', permStatus);
+  
   if (permStatus.receive !== 'granted') {
+    console.log('🔐 Requesting push permissions...');
     permStatus = await PushNotifications.requestPermissions();
+    console.log('📱 Permission result:', permStatus);
   }
-  if (permStatus.receive !== 'granted') return;
+  
+  if (permStatus.receive !== 'granted') {
+    console.warn('⚠️ Push permission not granted');
+    return;
+  }
 
+  console.log('📝 Registering for push notifications...');
   await PushNotifications.register();
 
   PushNotifications.addListener('registration', async (token) => {
+    console.log('🎯 FCM token received:', token.value.substring(0, 30) + '...');
+    
     try {
-      // Save to fcm_tokens table (used by edge function)
-      await supabase.from('fcm_tokens').upsert(
+      if (!userId) {
+        console.error('❌ No userId provided, cannot save token');
+        return;
+      }
+      
+      console.log('💾 Saving FCM token for user:', userId);
+      const { data, error } = await supabase.from('fcm_tokens').upsert(
         { user_id: userId, token: token.value },
         { onConflict: 'user_id' }
       );
-      console.log('✅ FCM token saved to fcm_tokens:', token.value);
+      
+      if (error) {
+        console.error('❌ Failed to save FCM token:', error);
+      } else {
+        console.log('✅ FCM token saved successfully to database');
+      }
     } catch (e) {
-      console.error('❌ Failed to save FCM token', e);
+      console.error('❌ Exception saving FCM token:', e);
     }
   });
 
