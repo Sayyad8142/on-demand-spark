@@ -47,7 +47,7 @@ class BookingOverlayService : Service() {
         val community = intent?.getStringExtra("community") ?: ""
         val serviceType = intent?.getStringExtra("service_type") ?: ""
         val flatNo = intent?.getStringExtra("flat_no") ?: ""
-        val price = intent?.getIntExtra("price_inr", 0)
+        val price = intent?.getIntExtra("price_inr", 0) ?: 0
 
         showOverlay(bookingId, customer, community, serviceType, flatNo, price)
         
