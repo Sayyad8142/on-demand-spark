@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     console.log("🔍 Finding eligible workers...");
     const { data: workers, error: we } = await supabase
       .from("workers")
-      .select("id, full_name, user_id")
+      .select("id, full_name")
       .eq("is_active", true)
       .eq("is_available", true)
       .eq("is_busy", false)
@@ -79,15 +79,14 @@ Deno.serve(async (req) => {
       return new Response("no-workers", { status: 200 });
     }
 
-    // CRITICAL: Use user_id not worker.id for FCM token lookup
-    const userIds = workers.map((w) => w.user_id).filter(Boolean);
+    // worker.id IS the user_id for FCM token lookup
+    const workerIds = workers.map((w) => w.id);
     console.log(`✅ Found ${workers.length} eligible workers:`, workers.map(w => w.full_name).join(", "));
-    console.log(`📋 Worker IDs:`, workers.map(w => w.id));
-    console.log(`🔑 User IDs (for FCM):`, userIds);
+    console.log(`🔑 Worker IDs (for FCM):`, workerIds);
 
     // Call send-fcm edge function via HTTP
     const fcmUrl = `${SUPABASE_URL}/functions/v1/send-fcm`;
-    console.log("📤 Calling send-fcm for user IDs:", userIds);
+    console.log("📤 Calling send-fcm for worker IDs:", workerIds);
     
     const sendResponse = await fetch(fcmUrl, {
       method: "POST",
@@ -96,7 +95,7 @@ Deno.serve(async (req) => {
         "Authorization": `Bearer ${ANON_KEY}`,
       },
       body: JSON.stringify({
-        workerIds: userIds,
+        workerIds: workerIds,
         title: "New Booking Alert!",
         body: `${b.service_type.replace('_', ' ')} in ${b.community}. Tap to accept!`,
         data: { 
@@ -123,8 +122,8 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true,
-        sent: userIds.length, 
-        workers: workers.map(w => ({ id: w.id, user_id: w.user_id, name: w.full_name })),
+        sent: workerIds.length, 
+        workers: workers.map(w => ({ id: w.id, name: w.full_name })),
         result 
       }), 
       { status: 200, headers: corsHeaders }
