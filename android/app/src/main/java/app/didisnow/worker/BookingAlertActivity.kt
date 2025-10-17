@@ -53,60 +53,124 @@ class BookingAlertActivity : Activity() {
         }
 
         findViewById<Button>(R.id.btnReject).setOnClickListener {
-            Toast.makeText(this, "Booking rejected", Toast.LENGTH_SHORT).show()
-            finish()
+            if (bookingId.isNotEmpty()) {
+                rejectBooking(bookingId)
+            } else {
+                Toast.makeText(this, "Booking rejected", Toast.LENGTH_SHORT).show()
+                finish()
+            }
         }
     }
-
-    private fun acceptBooking(bookingId: String) {
+    
+    private fun rejectBooking(bookingId: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val url = URL("$SUPABASE_URL/rest/v1/bookings?id=eq.$bookingId")
                 val connection = url.openConnection() as HttpURLConnection
                 
-                connection.apply {
-                    requestMethod = "PATCH"
-                    doOutput = true
-                    setRequestProperty("Content-Type", "application/json")
-                    setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                    setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
-                    setRequestProperty("Prefer", "return=minimal")
-                }
+                connection.requestMethod = "PATCH"
+                connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+                connection.setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.setRequestProperty("Prefer", "return=minimal")
+                connection.doOutput = true
 
-                val jsonBody = JSONObject().apply {
-                    put("status", "accepted")
-                    put("accepted_at", System.currentTimeMillis() / 1000)
-                }
-
+                val jsonPayload = """{"status":"cancelled"}"""
                 connection.outputStream.use { os ->
-                    os.write(jsonBody.toString().toByteArray())
+                    os.write(jsonPayload.toByteArray())
                 }
 
                 val responseCode = connection.responseCode
-                
+                connection.disconnect()
+
                 withContext(Dispatchers.Main) {
                     if (responseCode in 200..299) {
                         Toast.makeText(
                             this@BookingAlertActivity,
-                            "Booking accepted!",
+                            "Booking rejected",
                             Toast.LENGTH_SHORT
                         ).show()
-                        finish()
                     } else {
                         Toast.makeText(
                             this@BookingAlertActivity,
-                            "Error accepting booking (Code: $responseCode)",
+                            "Failed to reject booking",
                             Toast.LENGTH_SHORT
                         ).show()
                     }
+                    finish()
                 }
-                
-                connection.disconnect()
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         this@BookingAlertActivity,
-                        "Error accepting booking: ${e.message}",
+                        "Error: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    finish()
+                }
+            }
+    }
+
+    private fun acceptBooking(bookingId: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                android.util.Log.d("BookingAlert", "📤 Accepting booking $bookingId")
+                
+                // Call try_accept_booking RPC
+                val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/try_accept_booking")
+                val connection = rpcUrl.openConnection() as HttpURLConnection
+                
+                connection.requestMethod = "POST"
+                connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+                connection.setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.doOutput = true
+
+                val jsonPayload = """{"p_booking_id":"$bookingId"}"""
+                connection.outputStream.use { os ->
+                    os.write(jsonPayload.toByteArray())
+                }
+
+                val responseCode = connection.responseCode
+                val responseBody = connection.inputStream.bufferedReader().use { it.readText() }
+                connection.disconnect()
+
+                android.util.Log.d("BookingAlert", "✅ RPC response: $responseCode - $responseBody")
+
+                withContext(Dispatchers.Main) {
+                    if (responseCode in 200..299) {
+                        val json = JSONObject(responseBody)
+                        val success = json.optBoolean("success", false)
+                        
+                        if (success) {
+                            Toast.makeText(
+                                this@BookingAlertActivity,
+                                "✅ Booking accepted successfully!",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            finish()
+                        } else {
+                            val error = json.optString("error", "Unknown error")
+                            Toast.makeText(
+                                this@BookingAlertActivity,
+                                "❌ $error",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    } else {
+                        Toast.makeText(
+                            this@BookingAlertActivity,
+                            "❌ Failed to accept booking (HTTP $responseCode)",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("BookingAlert", "❌ Error accepting booking", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@BookingAlertActivity,
+                        "Error: ${e.message}",
                         Toast.LENGTH_SHORT
                     ).show()
                 }

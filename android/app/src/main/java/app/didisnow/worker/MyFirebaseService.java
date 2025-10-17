@@ -23,14 +23,12 @@ public class MyFirebaseService extends FirebaseMessagingService {
     Log.d(TAG, "🏷️ Message type: " + type);
     
     if ("BOOKING_ALERT".equals(type)) {
-      Log.d(TAG, "🚨 BOOKING_ALERT detected! Starting overlay service...");
+      Log.d(TAG, "🚨 BOOKING_ALERT detected! Launching full-screen alert activity...");
       
-      Intent svc = new Intent(this, BookingOverlayService.class);
-      
-      // Map FCM data payload to service intent extras
+      // Get booking data
       String bookingId = message.getData().get("bookingId");
       if (bookingId == null) {
-        bookingId = message.getData().get("booking_id"); // fallback
+        bookingId = message.getData().get("booking_id");
       }
       String customer = message.getData().get("customer");
       String community = message.getData().get("community");
@@ -44,39 +42,21 @@ public class MyFirebaseService extends FirebaseMessagingService {
       Log.d(TAG, "   serviceType: " + serviceType);
       Log.d(TAG, "   location: " + location);
       
-      svc.putExtra("booking_id", bookingId);
-      svc.putExtra("customer_name", customer != null ? customer : "New Customer");
-      svc.putExtra("community", community != null ? community : "");
-      svc.putExtra("service_type", serviceType != null ? serviceType : "Service");
-      svc.putExtra("flat_no", location != null ? location : "");
-      svc.putExtra("price_inr", 0); // Price not available in FCM payload
+      // Create intent for full-screen activity
+      Intent fullScreenIntent = new Intent(this, BookingAlertActivity.class);
+      fullScreenIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+      fullScreenIntent.putExtra("bookingId", bookingId);
+      fullScreenIntent.putExtra("customer", customer != null ? customer : "New Customer");
+      fullScreenIntent.putExtra("community", community != null ? community : "");
+      fullScreenIntent.putExtra("serviceType", serviceType != null ? serviceType : "Service");
+      fullScreenIntent.putExtra("location", location != null ? location : "");
       
-      // Get title and body from notification payload if available
-      String title = "New Booking";
-      String body = "";
+      // Start the activity directly
+      startActivity(fullScreenIntent);
       
-      if (message.getNotification() != null) {
-        if (message.getNotification().getTitle() != null) {
-          title = message.getNotification().getTitle();
-        }
-        if (message.getNotification().getBody() != null) {
-          body = message.getNotification().getBody();
-        }
-      }
-      
-      Log.d(TAG, "📬 Notification: " + title + " - " + body);
-      
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        Log.d(TAG, "📲 Starting foreground service (Android O+)");
-        startForegroundService(svc);
-      } else {
-        Log.d(TAG, "📲 Starting service (pre-O)");
-        startService(svc);
-      }
-      
-      Log.d(TAG, "✅ Overlay service start command sent successfully");
+      Log.d(TAG, "✅ Full-screen alert activity launched");
     } else {
-      Log.d(TAG, "⏭️ Not a BOOKING_ALERT, type: " + type + " - skipping overlay");
+      Log.d(TAG, "⏭️ Not a BOOKING_ALERT, type: " + type + " - skipping");
     }
   }
 
