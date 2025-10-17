@@ -1,85 +1,93 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    android:background="#CC000000"
-    android:padding="24dp"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:gravity="center">
-
-    <TextView
-        android:id="@+id/title"
-        android:text="New Booking"
-        android:textColor="@android:color/white"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:gravity="center"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
-
-    <TextView
-        android:id="@+id/subtitle"
-        android:text="Booking details"
-        android:textColor="@android:color/white"
-        android:textSize="16sp"
-        android:gravity="center"
-        android:layout_marginTop="8dp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
-
-    <TextView
-        android:id="@+id/price"
-        android:text="₹0"
-        android:textColor="#4ADE80"
-        android:textSize="32sp"
-        android:textStyle="bold"
-        android:gravity="center"
-        android:layout_marginTop="16dp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
-
-    <TextView
-        android:id="@+id/countdown"
-        android:text="30s"
-        android:textColor="#F59E0B"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:gravity="center"
-        android:layout_marginTop="12dp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
-
+    android:layout_height="match_parent"
+    android:background="#E6000000">
+    
     <LinearLayout
-        android:orientation="horizontal"
-        android:layout_marginTop="24dp"
-        android:gravity="center"
+        android:orientation="vertical"
+        android:background="@android:color/white"
+        android:padding="32dp"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_margin="24dp"
+        android:elevation="8dp">
 
-        <Button
-            android:id="@+id/btnReject"
-            android:text="Reject"
-            android:textColor="@android:color/white"
-            android:backgroundTint="#EF4444"
-            android:layout_weight="1"
-            android:layout_marginEnd="8dp"
-            android:paddingVertical="16dp"
-            android:textSize="16sp"
+        <TextView
+            android:id="@+id/title"
+            android:text="New Booking"
+            android:textColor="#000000"
+            android:textSize="28sp"
             android:textStyle="bold"
-            android:layout_width="0dp"
+            android:gravity="center"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"/>
 
-        <Button
-            android:id="@+id/btnAccept"
-            android:text="Accept"
-            android:textColor="@android:color/white"
-            android:backgroundTint="#22C55E"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:paddingVertical="16dp"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:layout_width="0dp"
+        <TextView
+            android:id="@+id/subtitle"
+            android:text="Booking details"
+            android:textColor="#666666"
+            android:textSize="18sp"
+            android:gravity="center"
+            android:layout_marginTop="12dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"/>
+
+        <TextView
+            android:id="@+id/price"
+            android:text="₹0"
+            android:textColor="#22C55E"
+            android:textSize="48sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginTop="24dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <TextView
+            android:id="@+id/countdown"
+            android:text="30s"
+            android:textColor="#F59E0B"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginTop="16dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_marginTop="32dp"
+            android:gravity="center"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <Button
+                android:id="@+id/btnReject"
+                android:text="Reject"
+                android:textColor="@android:color/white"
+                android:backgroundTint="#EF4444"
+                android:layout_weight="1"
+                android:layout_marginEnd="12dp"
+                android:paddingVertical="20dp"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"/>
+
+            <Button
+                android:id="@+id/btnAccept"
+                android:text="Accept"
+                android:textColor="@android:color/white"
+                android:backgroundTint="#22C55E"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:paddingVertical="20dp"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
     </LinearLayout>
-</LinearLayout>
+</FrameLayout>

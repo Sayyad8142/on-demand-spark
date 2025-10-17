@@ -110,20 +110,31 @@ Deno.serve(async (req) => {
     const results = await Promise.all(
       tokens.map(async ({ token, user_id }) => {
         try {
+          // For BOOKING_ALERT: send ONLY data (no notification) so onMessageReceived fires even when app is in background
+          const isBookingAlert = data?.type === "BOOKING_ALERT";
+          
           const message = {
             message: {
               token,
-              notification: {
-                title,
+              ...(isBookingAlert ? {} : {
+                notification: {
+                  title,
+                  body,
+                },
+              }),
+              data: {
+                ...(data || {}),
+                title, // Include title/body in data for overlay display
                 body,
               },
-              data: data || {},
               android: {
                 priority: "high",
-                notification: {
-                  sound: "default",
-                  channel_id: "booking_alerts",
-                },
+                ...(isBookingAlert ? {} : {
+                  notification: {
+                    sound: "default",
+                    channel_id: "booking_alerts",
+                  },
+                }),
               },
             },
           };
