@@ -109,6 +109,7 @@ class BookingAlertActivity : Activity() {
                     finish()
                 }
             }
+        }
     }
 
     private fun acceptBooking(bookingId: String) {
