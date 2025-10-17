@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     console.log("🔍 Finding eligible workers...");
     const { data: workers, error: we } = await supabase
       .from("workers")
-      .select("id, full_name")
+      .select("id, full_name, user_id")
       .eq("is_active", true)
       .eq("is_available", true)
       .eq("is_busy", false)
@@ -79,14 +79,23 @@ Deno.serve(async (req) => {
       return new Response("no-workers", { status: 200 });
     }
 
-    // worker.id IS the user_id for FCM token lookup
-    const workerIds = workers.map((w) => w.id);
+    // Use user_id for FCM token lookup (workers are now linked to auth users)
+    const userIds = workers
+      .map((w) => w.user_id || w.id) // Fallback to worker.id for legacy workers
+      .filter(Boolean);
+    
     console.log(`✅ Found ${workers.length} eligible workers:`, workers.map(w => w.full_name).join(", "));
-    console.log(`🔑 Worker IDs (for FCM):`, workerIds);
+    console.log(`🔑 User IDs (for FCM):`, userIds);
+    console.log(`📋 Worker details:`, workers.map(w => ({ name: w.full_name, worker_id: w.id, user_id: w.user_id })));
+
+    if (userIds.length === 0) {
+      console.log("⚠️ No user_ids found for workers - they may need to log in to link their accounts");
+      return new Response("no-user-ids", { status: 200 });
+    }
 
     // Call send-fcm edge function via HTTP
     const fcmUrl = `${SUPABASE_URL}/functions/v1/send-fcm`;
-    console.log("📤 Calling send-fcm for worker IDs:", workerIds);
+    console.log("📤 Calling send-fcm for user IDs:", userIds);
     
     const sendResponse = await fetch(fcmUrl, {
       method: "POST",
@@ -95,7 +104,7 @@ Deno.serve(async (req) => {
         "Authorization": `Bearer ${ANON_KEY}`,
       },
       body: JSON.stringify({
-        workerIds: workerIds,
+        workerIds: userIds, // Now using auth user IDs for FCM token lookup
         title: "New Booking Alert!",
         body: `${b.service_type.replace('_', ' ')} in ${b.community}. Tap to accept!`,
         data: { 
@@ -122,8 +131,13 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true,
-        sent: workerIds.length, 
-        workers: workers.map(w => ({ id: w.id, name: w.full_name })),
+        sent: userIds.length, 
+        workers: workers.map(w => ({ 
+          id: w.id, 
+          name: w.full_name, 
+          user_id: w.user_id,
+          fcm_lookup_id: w.user_id || w.id 
+        })),
         result 
       }), 
       { status: 200, headers: corsHeaders }

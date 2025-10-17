@@ -1797,6 +1797,7 @@ export type Database = {
           total_ratings: number | null
           updated_at: string
           upi_id: string | null
+          user_id: string | null
         }
         Insert: {
           communities?: string[] | null
@@ -1817,6 +1818,7 @@ export type Database = {
           total_ratings?: number | null
           updated_at?: string
           upi_id?: string | null
+          user_id?: string | null
         }
         Update: {
           communities?: string[] | null
@@ -1837,6 +1839,7 @@ export type Database = {
           total_ratings?: number | null
           updated_at?: string
           upi_id?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1897,6 +1900,7 @@ export type Database = {
           total_ratings: number | null
           updated_at: string
           upi_id: string | null
+          user_id: string | null
         }
       }
       admin_cancel_booking: {
@@ -1964,6 +1968,7 @@ export type Database = {
           total_ratings: number | null
           updated_at: string
           upi_id: string | null
+          user_id: string | null
         }
       }
       assign_booking_to_next_worker: {
