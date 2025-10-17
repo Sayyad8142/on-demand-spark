@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       .eq("is_available", true)
       .eq("is_busy", false)
       .contains("service_types", [b.service_type])
-      .contains("communities", [b.community]);
+      .or(`community.eq.${b.community},community.is.null`);
       
     if (we) {
       console.error("❌ Workers load error:", we);

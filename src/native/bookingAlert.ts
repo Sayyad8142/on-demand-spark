@@ -2,7 +2,8 @@ import { Capacitor } from '@capacitor/core';
 
 /**
  * Show a full-screen booking alert (Android only)
- * This directly launches the BookingAlertActivity for testing
+ * Note: This function is a placeholder. The actual booking alerts
+ * are triggered by FCM push notifications from the backend.
  */
 export async function showTestBookingAlert() {
   if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
@@ -10,29 +11,13 @@ export async function showTestBookingAlert() {
     return { success: false, error: 'Not Android platform' };
   }
 
-  try {
-    // Call the native plugin to show test alert
-    const { App } = Capacitor.Plugins;
-    
-    // Use intent to launch BookingAlertActivity directly
-    // This is a workaround since we don't have a dedicated plugin for this
-    const testData = {
-      bookingId: 'test-' + Date.now(),
-      customer: 'Test Customer',
-      community: 'Test Community',
-      serviceType: 'Test Service',
-      location: 'Test Location'
-    };
-    
-    console.log('📱 Attempting to show test booking alert with data:', testData);
-    
-    // The activity will be launched via the FCM service normally
-    // For testing, we'll just return success
-    return { success: true, message: 'Test alert triggered (requires FCM)' };
-  } catch (error) {
-    console.error('Failed to show test booking alert:', error);
-    return { success: false, error: String(error) };
-  }
+  console.log('📱 Test booking alert requested');
+  console.log('⚠️  Real alerts are triggered by FCM notifications from the backend');
+  
+  return { 
+    success: true, 
+    message: 'Test overlay feature requires actual FCM notification from backend' 
+  };
 }
 
 /**
@@ -44,8 +29,7 @@ export async function checkBookingAlertPermission(): Promise<boolean> {
   }
 
   try {
-    // @ts-ignore - Custom plugin
-    const { OverlayPlugin } = (window as any).Capacitor?.Plugins || {};
+    const { OverlayPlugin } = (window as any);
     if (OverlayPlugin?.checkPermission) {
       const result = await OverlayPlugin.checkPermission();
       return !!result?.granted;
@@ -66,8 +50,7 @@ export async function requestBookingAlertPermission(): Promise<boolean> {
   }
 
   try {
-    // @ts-ignore - Custom plugin
-    const { OverlayPlugin } = (window as any).Capacitor?.Plugins || {};
+    const { OverlayPlugin } = (window as any);
     if (OverlayPlugin?.requestPermission) {
       const result = await OverlayPlugin.requestPermission();
       return !!result?.granted;
