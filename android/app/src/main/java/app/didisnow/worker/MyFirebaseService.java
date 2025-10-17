@@ -23,7 +23,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
     Log.d(TAG, "🏷️ Message type: " + type);
     
     if ("BOOKING_ALERT".equals(type)) {
-      Log.d(TAG, "🚨 BOOKING_ALERT detected! Launching full-screen alert activity...");
+      Log.d(TAG, "🚨 BOOKING_ALERT detected! Starting BookingOverlayService...");
       
       // Get booking data
       String bookingId = message.getData().get("bookingId");
@@ -42,19 +42,25 @@ public class MyFirebaseService extends FirebaseMessagingService {
       Log.d(TAG, "   serviceType: " + serviceType);
       Log.d(TAG, "   location: " + location);
       
-      // Create intent for full-screen activity
-      Intent fullScreenIntent = new Intent(this, BookingAlertActivity.class);
-      fullScreenIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-      fullScreenIntent.putExtra("bookingId", bookingId);
-      fullScreenIntent.putExtra("customer", customer != null ? customer : "New Customer");
-      fullScreenIntent.putExtra("community", community != null ? community : "");
-      fullScreenIntent.putExtra("serviceType", serviceType != null ? serviceType : "Service");
-      fullScreenIntent.putExtra("location", location != null ? location : "");
+      // Create intent for BookingOverlayService (foreground service)
+      Intent serviceIntent = new Intent(this, BookingOverlayService.class);
+      serviceIntent.putExtra("booking_id", bookingId);
+      serviceIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
+      serviceIntent.putExtra("community", community != null ? community : "");
+      serviceIntent.putExtra("service_type", serviceType != null ? serviceType : "Service");
+      serviceIntent.putExtra("flat_no", location != null ? location : "");
+      serviceIntent.putExtra("price_inr", 0);
       
-      // Start the activity directly
-      startActivity(fullScreenIntent);
+      // Start the foreground service
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        Log.d(TAG, "📱 Starting foreground service (Android O+)");
+        startForegroundService(serviceIntent);
+      } else {
+        Log.d(TAG, "📱 Starting service (pre Android O)");
+        startService(serviceIntent);
+      }
       
-      Log.d(TAG, "✅ Full-screen alert activity launched");
+      Log.d(TAG, "✅ BookingOverlayService started - overlay should appear");
     } else {
       Log.d(TAG, "⏭️ Not a BOOKING_ALERT, type: " + type + " - skipping");
     }
