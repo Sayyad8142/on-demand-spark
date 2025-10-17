@@ -121,6 +121,12 @@ Deno.serve(async (req) => {
               },
               data: {
                 ...(data || {}),
+                type: data?.type || "",
+                bookingId: data?.bookingId || data?.booking_id || "",
+                customer: data?.customer || "",
+                community: data?.community || "",
+                serviceType: data?.serviceType || data?.service_type || "",
+                location: data?.location || "",
                 title,
                 body,
               },

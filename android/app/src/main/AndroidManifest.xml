@@ -42,6 +42,16 @@
 
         </activity>
 
+        <!-- Booking Alert Activity (Full-screen booking alerts) -->
+        <activity
+            android:name=".BookingAlertActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+            android:launchMode="singleTop" />
+
         <!-- Foreground Service for booking alerts -->
         <service
             android:name=".BookingForegroundService"
