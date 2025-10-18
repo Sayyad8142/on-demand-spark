@@ -1,18 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:background="@android:color/white"
+    android:padding="48dp"
+    android:gravity="center"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#E6000000">
-    
-    <LinearLayout
-        android:orientation="vertical"
-        android:background="@android:color/white"
-        android:padding="32dp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:layout_margin="24dp"
-        android:elevation="8dp">
+    android:layout_height="match_parent">
 
         <TextView
             android:id="@+id/title"
@@ -89,5 +82,4 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"/>
         </LinearLayout>
-    </LinearLayout>
-</FrameLayout>
+</LinearLayout>
