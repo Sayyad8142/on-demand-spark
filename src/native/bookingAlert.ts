@@ -2,8 +2,7 @@ import { Capacitor } from '@capacitor/core';
 
 /**
  * Show a full-screen booking alert (Android only)
- * Note: This function is a placeholder. The actual booking alerts
- * are triggered by FCM push notifications from the backend.
+ * This triggers the native overlay service with test data
  */
 export async function showTestBookingAlert() {
   if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
@@ -11,13 +10,41 @@ export async function showTestBookingAlert() {
     return { success: false, error: 'Not Android platform' };
   }
 
-  console.log('📱 Test booking alert requested');
-  console.log('⚠️  Real alerts are triggered by FCM notifications from the backend');
+  console.log('📱 Test booking alert requested - triggering native overlay');
   
-  return { 
-    success: true, 
-    message: 'Test overlay feature requires actual FCM notification from backend' 
-  };
+  try {
+    const { OverlayPlugin } = (window as any).Capacitor?.Plugins || {};
+    
+    if (!OverlayPlugin?.showBookingOverlay) {
+      console.error('❌ OverlayPlugin.showBookingOverlay not available');
+      return { success: false, error: 'OverlayPlugin not available' };
+    }
+
+    // Trigger the native overlay with test booking data
+    const testBookingData = {
+      bookingId: 'test-' + Date.now(),
+      customer: 'Test Customer',
+      community: 'Test Community',
+      serviceType: 'Snow Removal',
+      location: 'A-101',
+      price: 50
+    };
+
+    console.log('🚀 Calling OverlayPlugin.showBookingOverlay with data:', testBookingData);
+    await OverlayPlugin.showBookingOverlay(testBookingData);
+    
+    console.log('✅ Overlay triggered successfully');
+    return { 
+      success: true, 
+      message: 'Test overlay triggered - check your device screen' 
+    };
+  } catch (error) {
+    console.error('❌ Error triggering test overlay:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
 }
 
 /**
