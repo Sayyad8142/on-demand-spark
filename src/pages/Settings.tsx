@@ -265,13 +265,24 @@ export default function Settings() {
 
               {registeredToken && (
                 <div className="space-y-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <Badge variant="outline" className="bg-green-50 dark:bg-green-900 text-green-700 dark:text-green-300">
+                      Registered
+                    </Badge>
+                    {lastSyncTime && (
+                      <span className="text-xs text-muted-foreground">
+                        Last sync: {lastSyncTime.toLocaleTimeString()}
+                      </span>
+                    )}
+                  </div>
+                  
                   <Button 
                     variant="outline" 
                     size="sm"
                     onClick={() => setShowToken(!showToken)}
                     className="w-full"
                   >
-                    {showToken ? "Hide Token" : "View My Token"}
+                    {showToken ? "Hide Token" : "View FCM Token"}
                   </Button>
                   
                   {showToken && (
@@ -283,6 +294,45 @@ export default function Settings() {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+        </Card>
+
+        {/* Debug Tools */}
+        <Card className="p-6 bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800">
+          <div className="flex items-start gap-4 mb-4">
+            <div className="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+              <Bug className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold mb-1">Debug Tools</h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                Test push notifications and check worker status
+              </p>
+              
+              <div className="space-y-2 mb-3 text-xs font-mono bg-orange-100 dark:bg-orange-900/50 p-3 rounded">
+                <div><strong>User ID:</strong> {user?.id?.slice(0, 8)}...</div>
+                <div><strong>Worker ID:</strong> {worker?.id?.slice(0, 8)}...</div>
+                <div><strong>Community:</strong> {worker?.community || 'N/A'}</div>
+                <div><strong>Services:</strong> {worker?.service_types?.join(', ') || 'N/A'}</div>
+                <div><strong>FCM Token:</strong> {worker?.fcm_token ? '✅ Set' : '❌ Not set'}</div>
+              </div>
+
+              <Button 
+                variant="outline" 
+                onClick={handleRegisterPush}
+                disabled={isRegistering}
+                className="w-full"
+              >
+                {isRegistering ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Re-registering...
+                  </>
+                ) : (
+                  "Re-register Push Token"
+                )}
+              </Button>
             </div>
           </div>
         </Card>

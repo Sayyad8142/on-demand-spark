@@ -47,10 +47,24 @@ export function usePushRegister() {
 
       console.log('💾 Saving token to database...');
 
-      // Register token with backend
+      // Register token with backend (saves to fcm_tokens table)
       await pushService.registerToken(token, user.id);
 
-      console.log('✅ Token registered successfully');
+      // Also save to workers table
+      const { error: workerError } = await supabase
+        .from('workers')
+        .update({
+          fcm_token: token,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id);
+
+      if (workerError) {
+        console.error('❌ Failed to save token to workers table:', workerError);
+        throw new Error('Failed to save token to workers table');
+      }
+
+      console.log('✅ Token registered successfully in both tables');
 
       setRegisteredToken(token);
       setLastSyncTime(new Date());
@@ -74,6 +88,20 @@ export function usePushRegister() {
         return { isRegistered: false, token: null };
       }
 
+      // Check workers table first (primary source)
+      const { data: workerData, error: workerError } = await supabase
+        .from('workers')
+        .select('fcm_token, updated_at')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!workerError && workerData?.fcm_token) {
+        setRegisteredToken(workerData.fcm_token);
+        setLastSyncTime(new Date(workerData.updated_at));
+        return { isRegistered: true, token: workerData.fcm_token };
+      }
+
+      // Fallback to fcm_tokens table
       const { data, error } = await supabase
         .from('fcm_tokens')
         .select('token, updated_at')

@@ -37,15 +37,32 @@ export async function initNativePush(userId?: string) {
       }
       
       console.log('💾 Saving FCM token for user:', userId);
-      const { data, error } = await supabase.from('fcm_tokens').upsert(
+      
+      // Save to fcm_tokens table (legacy)
+      const { error: fcmError } = await supabase.from('fcm_tokens').upsert(
         { user_id: userId, token: token.value },
         { onConflict: 'user_id' }
       );
       
-      if (error) {
-        console.error('❌ Failed to save FCM token:', error);
+      if (fcmError) {
+        console.error('❌ Failed to save FCM token to fcm_tokens:', fcmError);
       } else {
-        console.log('✅ FCM token saved successfully to database');
+        console.log('✅ FCM token saved to fcm_tokens table');
+      }
+
+      // Save to workers table
+      const { error: workerError } = await supabase
+        .from('workers')
+        .update({
+          fcm_token: token.value,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId);
+
+      if (workerError) {
+        console.error('❌ Failed to save FCM token to workers:', workerError);
+      } else {
+        console.log('✅ FCM token saved to workers table');
       }
     } catch (e) {
       console.error('❌ Exception saving FCM token:', e);
