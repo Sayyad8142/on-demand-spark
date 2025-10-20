@@ -1,12 +1,16 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ShieldAlert, Smartphone, Loader2, Bell } from "lucide-react";
+import { ArrowLeft, ShieldAlert, Smartphone, Loader2, Bell, Bug, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { Capacitor } from "@capacitor/core";
 import { 
   requestOverlayPermission, 
@@ -15,21 +19,30 @@ import {
 } from "@/native/overlay";
 import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
 import { usePushRegister } from "@/hooks/usePushRegister";
+import { supabase } from "@/integrations/supabase/client";
+import { SimulatedOverlayModal } from "@/components/SimulatedOverlayModal";
 
 export default function Settings() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { worker } = useWorkerProfile(user?.id);
+  const { registerPush, checkRegistrationStatus, registeredToken, isRegistering, lastSyncTime } = usePushRegister();
   const [hasPermission, setHasPermission] = useState(false);
   const [overlayEnabled, setOverlayEnabled] = useState(false);
   const [checking, setChecking] = useState(true);
   const [toggling, setToggling] = useState(false);
   const [showToken, setShowToken] = useState(false);
-  const { registerPush, registeredToken, isRegistering } = usePushRegister();
+  const [testingServerPush, setTestingServerPush] = useState(false);
+  const [simulatedBooking, setSimulatedBooking] = useState<any>(null);
   const isNative = Capacitor.isNativePlatform();
 
   useEffect(() => {
     checkStatus();
-  }, []);
+    if (user?.id) {
+      checkRegistrationStatus();
+    }
+  }, [user?.id, checkRegistrationStatus]);
 
   const checkStatus = async () => {
     setChecking(true);
