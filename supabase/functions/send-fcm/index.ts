@@ -135,7 +135,6 @@ Deno.serve(async (req) => {
                 notification: {
                   sound: "default",
                   channelId: "booking_alerts",
-                  priority: "max",
                   defaultVibrateTimings: true,
                 },
               },
