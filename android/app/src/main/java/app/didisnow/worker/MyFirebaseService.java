@@ -30,7 +30,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
     Log.d(TAG, "🏷️ Message type: " + type);
     
     if ("BOOKING_ALERT".equals(type)) {
-      Log.d(TAG, "🚨 BOOKING_ALERT detected! Starting BookingOverlayService...");
+      Log.d(TAG, "🚨 BOOKING_ALERT detected! Launching BookingAlertActivity...");
       
       // Get booking data
       String bookingId = message.getData().get("bookingId");
@@ -52,9 +52,11 @@ public class MyFirebaseService extends FirebaseMessagingService {
       // Create notification channel for Android O+
       createNotificationChannel();
       
-      // Create intent for BookingAlertActivity
+      // Create intent for BookingAlertActivity with direct launch
       Intent activityIntent = new Intent(this, BookingAlertActivity.class);
-      activityIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+      activityIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | 
+                              Intent.FLAG_ACTIVITY_CLEAR_TOP | 
+                              Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
       activityIntent.putExtra("booking_id", bookingId);
       activityIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
       activityIntent.putExtra("community", community != null ? community : "");
@@ -62,7 +64,15 @@ public class MyFirebaseService extends FirebaseMessagingService {
       activityIntent.putExtra("flat_no", location != null ? location : "");
       activityIntent.putExtra("price_inr", 0);
       
-      // Create pending intent for full-screen notification
+      // Launch activity immediately (works even when app is in background)
+      try {
+        startActivity(activityIntent);
+        Log.d(TAG, "✅ BookingAlertActivity launched directly");
+      } catch (Exception e) {
+        Log.e(TAG, "❌ Failed to launch activity directly: " + e.getMessage());
+      }
+      
+      // Also create full-screen notification as backup
       PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(
         this,
         0,
@@ -70,7 +80,6 @@ public class MyFirebaseService extends FirebaseMessagingService {
         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
       );
       
-      // Build full-screen notification
       String title = "New Booking Request!";
       String text = customer + " • " + community + " • " + serviceType;
       
@@ -87,9 +96,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
       NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
       if (notificationManager != null) {
         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
-        Log.d(TAG, "✅ Full-screen notification sent - booking alert should appear");
-      } else {
-        Log.e(TAG, "❌ NotificationManager is null");
+        Log.d(TAG, "✅ Full-screen notification also sent as backup");
       }
     } else {
       Log.d(TAG, "⏭️ Not a BOOKING_ALERT, type: " + type + " - skipping");
