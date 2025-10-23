@@ -100,17 +100,20 @@ export class NativeOverlayBridge implements OverlayBridge {
 
       console.log('🚀 Showing booking overlay with payload:', payload);
       
-      // Transform payload to match native expectations
-      const nativePayload = {
-        bookingId: payload.bookingId,
-        customer: payload.customer,
-        community: payload.location, // Using location as community
-        serviceType: payload.service,
-        location: payload.location,
-        price: payload.price
+      // Transform payload to match OverlayPlugin expectations (JSON string format)
+      const bookingData = {
+        id: payload.bookingId,
+        cust_name: payload.customer,
+        community: payload.location,
+        service_type: payload.service,
+        flat_no: payload.location,
+        price_inr: payload.price
       };
 
-      await plugin.showBookingOverlay(nativePayload);
+      const bookingJson = JSON.stringify(bookingData);
+      console.log('📦 Sending booking JSON to native:', bookingJson);
+
+      await plugin.showBookingOverlay({ booking: bookingJson });
       console.log('✅ Overlay shown successfully');
     } catch (error) {
       console.error('❌ Error showing overlay:', error);

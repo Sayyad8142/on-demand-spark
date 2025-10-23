@@ -30,71 +30,41 @@ public class MyFirebaseService extends FirebaseMessagingService {
     Log.d(TAG, "🏷️ Message type: " + type);
     
     if ("BOOKING_ALERT".equals(type)) {
-      Log.d(TAG, "🚨 BOOKING_ALERT detected! Creating full-screen notification...");
+      Log.d(TAG, "🚨 BOOKING_ALERT detected! Starting BookingOverlayService...");
       
       // Get booking data
       String bookingId = message.getData().get("bookingId");
-      if (bookingId == null) {
-        bookingId = message.getData().get("booking_id");
-      }
       String customer = message.getData().get("customer");
       String community = message.getData().get("community");
       String serviceType = message.getData().get("serviceType");
       String location = message.getData().get("location");
       
-      Log.d(TAG, "📋 Booking details from FCM:");
-      Log.d(TAG, "   bookingId: " + bookingId);
-      Log.d(TAG, "   customer: " + customer);
-      Log.d(TAG, "   community: " + community);
-      Log.d(TAG, "   serviceType: " + serviceType);
-      Log.d(TAG, "   location: " + location);
+      Log.d(TAG, "📋 Booking details:");
+      Log.d(TAG, "  ID: " + bookingId);
+      Log.d(TAG, "  Customer: " + customer);
+      Log.d(TAG, "  Community: " + community);
+      Log.d(TAG, "  Service: " + serviceType);
+      Log.d(TAG, "  Location: " + location);
       
-      // Create notification channel for Android O+
-      createNotificationChannel();
+      // Start BookingOverlayService to show system overlay
+      Intent serviceIntent = new Intent(this, BookingOverlayService.class);
+      serviceIntent.putExtra("booking_id", bookingId);
+      serviceIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
+      serviceIntent.putExtra("community", community != null ? community : "");
+      serviceIntent.putExtra("service_type", serviceType != null ? serviceType : "Service");
+      serviceIntent.putExtra("flat_no", location != null ? location : "");
+      serviceIntent.putExtra("price_inr", 0);
       
-      // Create intent for BookingAlertActivity
-      Intent activityIntent = new Intent(this, BookingAlertActivity.class);
-      activityIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | 
-                              Intent.FLAG_ACTIVITY_CLEAR_TOP);
-      activityIntent.putExtra("booking_id", bookingId);
-      activityIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
-      activityIntent.putExtra("community", community != null ? community : "");
-      activityIntent.putExtra("service_type", serviceType != null ? serviceType : "Service");
-      activityIntent.putExtra("flat_no", location != null ? location : "");
-      activityIntent.putExtra("price_inr", 0);
-      
-      // Create PendingIntent for full-screen notification
-      PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(
-        this,
-        (int) System.currentTimeMillis(), // Unique request code
-        activityIntent,
-        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-      );
-      
-      String title = "New Booking Request!";
-      String text = (customer != null ? customer : "Customer") + " • " + 
-                    (community != null ? community : "Community") + " • " + 
-                    (serviceType != null ? serviceType : "Service");
-      
-      // Build high-priority full-screen notification
-      NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
-        .setSmallIcon(R.drawable.ic_notification)
-        .setContentTitle(title)
-        .setContentText(text)
-        .setPriority(NotificationCompat.PRIORITY_MAX)
-        .setCategory(NotificationCompat.CATEGORY_CALL)
-        .setAutoCancel(true)
-        .setOngoing(false)
-        .setFullScreenIntent(fullScreenPendingIntent, true)
-        .setContentIntent(fullScreenPendingIntent)
-        .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
-      
-      NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-      if (notificationManager != null) {
-        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
-        Log.d(TAG, "✅ Full-screen notification created and sent");
-      } else {
-        Log.e(TAG, "❌ NotificationManager is null");
+      try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+          startForegroundService(serviceIntent);
+        } else {
+          startService(serviceIntent);
+        }
+        Log.d(TAG, "✅ BookingOverlayService started successfully");
+      } catch (Exception e) {
+        Log.e(TAG, "❌ Failed to start BookingOverlayService: " + e.getMessage());
+        e.printStackTrace();
       }
     } else {
       Log.d(TAG, "⏭️ Not a BOOKING_ALERT, type: " + type + " - skipping");
