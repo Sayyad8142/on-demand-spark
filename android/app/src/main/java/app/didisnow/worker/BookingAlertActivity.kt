@@ -33,10 +33,12 @@ class BookingAlertActivity : Activity() {
 
         setContentView(R.layout.activity_booking_alert)
 
-        val bookingId = intent.getStringExtra("bookingId") ?: ""
-        val customer = intent.getStringExtra("customer") ?: "New Customer"
+        val bookingId = intent.getStringExtra("booking_id") ?: ""
+        val customer = intent.getStringExtra("customer_name") ?: "New Customer"
         val community = intent.getStringExtra("community") ?: ""
-        val serviceType = intent.getStringExtra("serviceType") ?: ""
+        val serviceType = intent.getStringExtra("service_type") ?: ""
+        val flatNo = intent.getStringExtra("flat_no") ?: ""
+        val price = intent.getIntExtra("price_inr", 0)
 
         findViewById<TextView>(R.id.alertTitle).text = "New Booking Request!"
         findViewById<TextView>(R.id.alertCustomer).text = "Customer: $customer"
