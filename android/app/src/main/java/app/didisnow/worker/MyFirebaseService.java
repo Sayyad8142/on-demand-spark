@@ -32,11 +32,18 @@ public class MyFirebaseService extends FirebaseMessagingService {
     if ("BOOKING_ALERT".equals(type)) {
       Log.d(TAG, "🚨 BOOKING_ALERT detected! Starting BookingOverlayService...");
       
-      // Get booking data
+      // Get booking data - try both field names for compatibility
       String bookingId = message.getData().get("bookingId");
+      if (bookingId == null || bookingId.isEmpty()) {
+        bookingId = message.getData().get("booking_id");
+      }
+      
       String customer = message.getData().get("customer");
       String community = message.getData().get("community");
       String serviceType = message.getData().get("serviceType");
+      if (serviceType == null || serviceType.isEmpty()) {
+        serviceType = message.getData().get("service_type");
+      }
       String location = message.getData().get("location");
       
       Log.d(TAG, "📋 Booking details:");
@@ -45,6 +52,24 @@ public class MyFirebaseService extends FirebaseMessagingService {
       Log.d(TAG, "  Community: " + community);
       Log.d(TAG, "  Service: " + serviceType);
       Log.d(TAG, "  Location: " + location);
+      
+      // Validate critical data
+      if (bookingId == null || bookingId.isEmpty()) {
+        Log.e(TAG, "❌ CRITICAL: No bookingId in FCM payload! Cannot show overlay.");
+        Log.e(TAG, "❌ Full data payload: " + message.getData().toString());
+        return;
+      }
+      
+      // Check overlay permission
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        if (!android.provider.Settings.canDrawOverlays(this)) {
+          Log.e(TAG, "❌ CRITICAL: No overlay permission! User must grant permission in Settings.");
+          showPermissionNotification();
+          return;
+        } else {
+          Log.d(TAG, "✅ Overlay permission granted");
+        }
+      }
       
       // Start BookingOverlayService to show system overlay
       Intent serviceIntent = new Intent(this, BookingOverlayService.class);
@@ -55,6 +80,8 @@ public class MyFirebaseService extends FirebaseMessagingService {
       serviceIntent.putExtra("service_type", serviceType != null ? serviceType : "Service");
       serviceIntent.putExtra("flat_no", location != null ? location : "");
       serviceIntent.putExtra("price_inr", 0);
+      
+      Log.d(TAG, "🚀 Starting BookingOverlayService with mode=show...");
       
       try {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -95,6 +122,28 @@ public class MyFirebaseService extends FirebaseMessagingService {
         notificationManager.createNotificationChannel(channel);
         Log.d(TAG, "✅ Notification channel created with HIGH importance");
       }
+    }
+  }
+  
+  private void showPermissionNotification() {
+    createNotificationChannel();
+    
+    Intent intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+    PendingIntent pendingIntent = PendingIntent.getActivity(
+      this, 0, intent, PendingIntent.FLAG_IMMUTABLE
+    );
+    
+    NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+      .setSmallIcon(R.drawable.ic_notification)
+      .setContentTitle("⚠️ Overlay Permission Required")
+      .setContentText("Enable 'Display over other apps' to receive booking alerts")
+      .setPriority(NotificationCompat.PRIORITY_HIGH)
+      .setAutoCancel(true)
+      .setContentIntent(pendingIntent);
+    
+    NotificationManager notificationManager = getSystemService(NotificationManager.class);
+    if (notificationManager != null) {
+      notificationManager.notify(NOTIFICATION_ID + 1, builder.build());
     }
   }
 }
