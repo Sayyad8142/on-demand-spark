@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { Capacitor } from '@capacitor/core';
+
+// @ts-ignore - Capacitor bridge
+const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -17,10 +21,28 @@ export function useAuth() {
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        
+        // Save JWT token for native overlay service
+        if (session?.access_token && AuthBridge && Capacitor.isNativePlatform()) {
+          try {
+            await AuthBridge.saveToken({ token: session.access_token });
+            console.log('✅ Saved JWT to native bridge');
+          } catch (error) {
+            console.error('❌ Failed to save JWT:', error);
+          }
+        } else if (!session && AuthBridge && Capacitor.isNativePlatform()) {
+          // Clear token on logout
+          try {
+            await AuthBridge.clearToken();
+            console.log('🗑️ Cleared JWT from native bridge');
+          } catch (error) {
+            console.error('❌ Failed to clear JWT:', error);
+          }
+        }
       }
     );
 

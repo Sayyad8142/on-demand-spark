@@ -225,14 +225,30 @@ class BookingOverlayService : Service() {
             try {
                 android.util.Log.d("BookingOverlay", "📤 Updating booking $bookingId with action: $action")
                 
+                // Get the stored JWT token
+                val jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE)
+                    .getString("supabase_jwt", null)
+                
+                if (jwt == null) {
+                    android.util.Log.w("BookingOverlay", "⚠️ No Supabase JWT in prefs — cannot accept")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@BookingOverlayService,
+                            "Please log in again (token missing)",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    return@launch
+                }
+                
                 if (action == "accepted") {
-                    // Call try_accept_booking RPC for accepting
+                    // Call try_accept_booking RPC with user JWT
                     val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/try_accept_booking")
                     val connection = rpcUrl.openConnection() as HttpURLConnection
                     
                     connection.requestMethod = "POST"
                     connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                    connection.setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
+                    connection.setRequestProperty("Authorization", "Bearer $jwt")
                     connection.setRequestProperty("Content-Type", "application/json")
                     connection.doOutput = true
 
@@ -275,13 +291,13 @@ class BookingOverlayService : Service() {
                         }
                     }
                 } else {
-                    // For reject, just update status directly
+                    // For reject, update status directly with user JWT
                     val url = URL("$SUPABASE_URL/rest/v1/bookings?id=eq.$bookingId")
                     val connection = url.openConnection() as HttpURLConnection
                     
                     connection.requestMethod = "PATCH"
                     connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                    connection.setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
+                    connection.setRequestProperty("Authorization", "Bearer $jwt")
                     connection.setRequestProperty("Content-Type", "application/json")
                     connection.setRequestProperty("Prefer", "return=minimal")
                     connection.doOutput = true
