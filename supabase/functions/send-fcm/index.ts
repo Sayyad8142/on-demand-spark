@@ -112,34 +112,42 @@ Deno.serve(async (req) => {
         try {
           const isBookingAlert = data?.type === "BOOKING_ALERT";
           
-          const message = {
-            message: {
-              token,
-              notification: {
-                title,
-                body,
-              },
-              data: {
-                ...(data || {}),
-                type: data?.type || "",
-                bookingId: data?.bookingId || data?.booking_id || "",
-                customer: data?.customer || "",
-                community: data?.community || "",
-                serviceType: data?.serviceType || data?.service_type || "",
-                location: data?.location || "",
-                title,
-                body,
-              },
-              android: {
-                priority: "high",
-                notification: {
-                  sound: "default",
-                  channelId: "booking_alerts",
-                  defaultVibrateTimings: true,
-                },
-              },
-            },
+          const baseData = {
+            ...(data || {}),
+            type: data?.type || "",
+            bookingId: data?.bookingId || data?.booking_id || "",
+            customer: data?.customer || "",
+            community: data?.community || "",
+            serviceType: data?.serviceType || data?.service_type || "",
+            location: data?.location || "",
+            title,
+            body,
           };
+
+          const message = isBookingAlert
+            ? {
+                // ✅ Data-only payload ensures MyFirebaseService.onMessageReceived() runs
+                message: {
+                  token,
+                  android: {
+                    priority: "HIGH",
+                    ttl: "60s",
+                  },
+                  data: baseData,
+                },
+              }
+            : {
+                // Keep visible notification for other push types
+                message: {
+                  token,
+                  notification: { title, body },
+                  android: {
+                    priority: "HIGH",
+                    ttl: "60s",
+                  },
+                  data: baseData,
+                },
+              };
 
           const response = await fetch(
             `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
