@@ -1,13 +1,20 @@
 package app.didisnow.worker;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.util.Log;
+import androidx.core.app.NotificationCompat;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
 public class MyFirebaseService extends FirebaseMessagingService {
   private static final String TAG = "MyFirebaseService";
+  private static final String CHANNEL_ID = "booking_alerts";
+  private static final int NOTIFICATION_ID = 12345;
 
   @Override
   public void onMessageReceived(RemoteMessage message) {
@@ -42,11 +49,12 @@ public class MyFirebaseService extends FirebaseMessagingService {
       Log.d(TAG, "   serviceType: " + serviceType);
       Log.d(TAG, "   location: " + location);
       
-      // Use full-screen activity for reliable background alerts
+      // Create notification channel for Android O+
+      createNotificationChannel();
+      
+      // Create intent for BookingAlertActivity
       Intent activityIntent = new Intent(this, BookingAlertActivity.class);
-      activityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | 
-                              Intent.FLAG_ACTIVITY_CLEAR_TOP |
-                              Intent.FLAG_ACTIVITY_SINGLE_TOP);
+      activityIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
       activityIntent.putExtra("booking_id", bookingId);
       activityIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
       activityIntent.putExtra("community", community != null ? community : "");
@@ -54,10 +62,35 @@ public class MyFirebaseService extends FirebaseMessagingService {
       activityIntent.putExtra("flat_no", location != null ? location : "");
       activityIntent.putExtra("price_inr", 0);
       
-      Log.d(TAG, "🚀 Starting BookingAlertActivity for full-screen alert");
-      startActivity(activityIntent);
+      // Create pending intent for full-screen notification
+      PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(
+        this,
+        0,
+        activityIntent,
+        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+      );
       
-      Log.d(TAG, "✅ BookingAlertActivity started - full-screen alert should appear");
+      // Build full-screen notification
+      String title = "New Booking Request!";
+      String text = customer + " • " + community + " • " + serviceType;
+      
+      NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
+        .setSmallIcon(R.drawable.ic_notification)
+        .setContentTitle(title)
+        .setContentText(text)
+        .setPriority(NotificationCompat.PRIORITY_MAX)
+        .setCategory(NotificationCompat.CATEGORY_CALL)
+        .setAutoCancel(true)
+        .setFullScreenIntent(fullScreenPendingIntent, true)
+        .setContentIntent(fullScreenPendingIntent);
+      
+      NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+      if (notificationManager != null) {
+        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+        Log.d(TAG, "✅ Full-screen notification sent - booking alert should appear");
+      } else {
+        Log.e(TAG, "❌ NotificationManager is null");
+      }
     } else {
       Log.d(TAG, "⏭️ Not a BOOKING_ALERT, type: " + type + " - skipping");
     }
@@ -68,5 +101,20 @@ public class MyFirebaseService extends FirebaseMessagingService {
     Log.d(TAG, "🔑 New FCM token received: " + token.substring(0, Math.min(30, token.length())) + "...");
     Log.d(TAG, "💡 Token should be saved by Capacitor PushNotifications plugin");
     // Token is already handled by Capacitor PushNotifications plugin
+  }
+  
+  private void createNotificationChannel() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      CharSequence name = "Booking Alerts";
+      String description = "Urgent booking notifications";
+      int importance = NotificationManager.IMPORTANCE_HIGH;
+      NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
+      channel.setDescription(description);
+      
+      NotificationManager notificationManager = getSystemService(NotificationManager.class);
+      if (notificationManager != null) {
+        notificationManager.createNotificationChannel(channel);
+      }
+    }
   }
 }
