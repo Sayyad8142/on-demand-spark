@@ -30,7 +30,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
     Log.d(TAG, "🏷️ Message type: " + type);
     
     if ("BOOKING_ALERT".equals(type)) {
-      Log.d(TAG, "🚨 BOOKING_ALERT detected! Launching BookingAlertActivity...");
+      Log.d(TAG, "🚨 BOOKING_ALERT detected! Creating full-screen notification...");
       
       // Get booking data
       String bookingId = message.getData().get("bookingId");
@@ -52,11 +52,10 @@ public class MyFirebaseService extends FirebaseMessagingService {
       // Create notification channel for Android O+
       createNotificationChannel();
       
-      // Create intent for BookingAlertActivity with direct launch
+      // Create intent for BookingAlertActivity
       Intent activityIntent = new Intent(this, BookingAlertActivity.class);
       activityIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | 
-                              Intent.FLAG_ACTIVITY_CLEAR_TOP | 
-                              Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+                              Intent.FLAG_ACTIVITY_CLEAR_TOP);
       activityIntent.putExtra("booking_id", bookingId);
       activityIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
       activityIntent.putExtra("community", community != null ? community : "");
@@ -64,25 +63,20 @@ public class MyFirebaseService extends FirebaseMessagingService {
       activityIntent.putExtra("flat_no", location != null ? location : "");
       activityIntent.putExtra("price_inr", 0);
       
-      // Launch activity immediately (works even when app is in background)
-      try {
-        startActivity(activityIntent);
-        Log.d(TAG, "✅ BookingAlertActivity launched directly");
-      } catch (Exception e) {
-        Log.e(TAG, "❌ Failed to launch activity directly: " + e.getMessage());
-      }
-      
-      // Also create full-screen notification as backup
+      // Create PendingIntent for full-screen notification
       PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(
         this,
-        0,
+        (int) System.currentTimeMillis(), // Unique request code
         activityIntent,
         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
       );
       
       String title = "New Booking Request!";
-      String text = customer + " • " + community + " • " + serviceType;
+      String text = (customer != null ? customer : "Customer") + " • " + 
+                    (community != null ? community : "Community") + " • " + 
+                    (serviceType != null ? serviceType : "Service");
       
+      // Build high-priority full-screen notification
       NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
         .setSmallIcon(R.drawable.ic_notification)
         .setContentTitle(title)
@@ -90,13 +84,17 @@ public class MyFirebaseService extends FirebaseMessagingService {
         .setPriority(NotificationCompat.PRIORITY_MAX)
         .setCategory(NotificationCompat.CATEGORY_CALL)
         .setAutoCancel(true)
+        .setOngoing(false)
         .setFullScreenIntent(fullScreenPendingIntent, true)
-        .setContentIntent(fullScreenPendingIntent);
+        .setContentIntent(fullScreenPendingIntent)
+        .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
       
       NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
       if (notificationManager != null) {
         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
-        Log.d(TAG, "✅ Full-screen notification also sent as backup");
+        Log.d(TAG, "✅ Full-screen notification created and sent");
+      } else {
+        Log.e(TAG, "❌ NotificationManager is null");
       }
     } else {
       Log.d(TAG, "⏭️ Not a BOOKING_ALERT, type: " + type + " - skipping");
@@ -117,10 +115,14 @@ public class MyFirebaseService extends FirebaseMessagingService {
       int importance = NotificationManager.IMPORTANCE_HIGH;
       NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
       channel.setDescription(description);
+      channel.setLockscreenVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+      channel.enableVibration(true);
+      channel.setBypassDnd(true);
       
       NotificationManager notificationManager = getSystemService(NotificationManager.class);
       if (notificationManager != null) {
         notificationManager.createNotificationChannel(channel);
+        Log.d(TAG, "✅ Notification channel created with HIGH importance");
       }
     }
   }
