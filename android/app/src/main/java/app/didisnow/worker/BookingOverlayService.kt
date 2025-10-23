@@ -41,44 +41,57 @@ class BookingOverlayService : Service() {
         android.util.Log.d("BookingOverlay", "🚀 BookingOverlayService.onStartCommand called")
         android.util.Log.d("BookingOverlay", "📦 Intent extras: ${intent?.extras}")
         
-        // Create notification channel and start foreground
-        createNotificationChannel()
-        startForegroundService()
-        
-        val mode = intent?.getStringExtra("mode") ?: "show"
-        android.util.Log.d("BookingOverlay", "🎯 Mode: $mode")
-        
-        when (mode) {
-            "hide" -> {
-                android.util.Log.d("BookingOverlay", "🔚 Hide mode - closing overlay")
-                closeOverlay()
-                return START_NOT_STICKY
-            }
-            "idle" -> {
-                android.util.Log.d("BookingOverlay", "⏸️ Idle mode - service running in background")
-                return START_STICKY
-            }
-            "show" -> {
-                val bookingId = intent?.getStringExtra("booking_id") ?: ""
-                val customer = intent?.getStringExtra("customer_name") ?: "New Customer"
-                val community = intent?.getStringExtra("community") ?: ""
-                val serviceType = intent?.getStringExtra("service_type") ?: ""
-                val flatNo = intent?.getStringExtra("flat_no") ?: ""
-                val price = intent?.getIntExtra("price_inr", 0) ?: 0
-
-                android.util.Log.d("BookingOverlay", "📋 Booking details - ID: $bookingId, Service: $serviceType, Community: $community")
-                
-                if (bookingId.isEmpty()) {
-                    android.util.Log.e("BookingOverlay", "❌ No booking ID provided, cannot show overlay")
-                    stopSelf()
+        try {
+            // Create notification channel and start foreground
+            createNotificationChannel()
+            startForegroundService()
+            
+            val mode = intent?.getStringExtra("mode") ?: "show"
+            android.util.Log.d("BookingOverlay", "🎯 Mode: $mode")
+            
+            when (mode) {
+                "hide" -> {
+                    android.util.Log.d("BookingOverlay", "🔚 Hide mode - closing overlay")
+                    closeOverlay()
                     return START_NOT_STICKY
                 }
+                "idle" -> {
+                    android.util.Log.d("BookingOverlay", "⏸️ Idle mode - service running in background")
+                    return START_STICKY
+                }
+                "show" -> {
+                    val bookingId = intent?.getStringExtra("booking_id") ?: ""
+                    val customer = intent?.getStringExtra("customer_name") ?: "New Customer"
+                    val community = intent?.getStringExtra("community") ?: ""
+                    val serviceType = intent?.getStringExtra("service_type") ?: ""
+                    val flatNo = intent?.getStringExtra("flat_no") ?: ""
+                    val price = intent?.getIntExtra("price_inr", 0) ?: 0
 
-                showOverlay(bookingId, customer, community, serviceType, flatNo, price)
+                    android.util.Log.d("BookingOverlay", "📋 Booking details - ID: $bookingId, Service: $serviceType, Community: $community")
+                    
+                    if (bookingId.isEmpty()) {
+                        android.util.Log.e("BookingOverlay", "❌ No booking ID provided, cannot show overlay")
+                        stopSelf()
+                        return START_NOT_STICKY
+                    }
+
+                    try {
+                        showOverlay(bookingId, customer, community, serviceType, flatNo, price)
+                    } catch (e: Exception) {
+                        android.util.Log.e("BookingOverlay", "❌ showOverlay failed, falling back to activity", e)
+                        fallbackToActivity(intent)
+                        stopSelf()
+                    }
+                }
             }
+            
+            return START_NOT_STICKY
+        } catch (e: Exception) {
+            android.util.Log.e("BookingOverlay", "❌ onStartCommand failed", e)
+            fallbackToActivity(intent)
+            stopSelf()
+            return START_NOT_STICKY
         }
-        
-        return START_NOT_STICKY
     }
 
     private fun createNotificationChannel() {
@@ -326,6 +339,19 @@ class BookingOverlayService : Service() {
             overlayView = null
             android.util.Log.d("BookingOverlay", "🛑 Stopping service")
             stopSelf()
+        }
+    }
+
+    private fun fallbackToActivity(intent: Intent?) {
+        android.util.Log.d("BookingOverlay", "🔄 Falling back to BookingAlertActivity")
+        try {
+            val activityIntent = Intent(this, BookingAlertActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                intent?.extras?.let { putExtras(it) }
+            }
+            startActivity(activityIntent)
+        } catch (e: Exception) {
+            android.util.Log.e("BookingOverlay", "❌ Failed to start fallback activity", e)
         }
     }
 

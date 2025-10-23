@@ -29,73 +29,80 @@ public class MyFirebaseService extends FirebaseMessagingService {
     String type = message.getData().get("type");
     Log.d(TAG, "🏷️ Message type: " + type);
     
-    if ("BOOKING_ALERT".equals(type)) {
-      Log.d(TAG, "🚨 BOOKING_ALERT detected! Starting BookingOverlayService...");
-      
-      // Get booking data - try both field names for compatibility
-      String bookingId = message.getData().get("bookingId");
-      if (bookingId == null || bookingId.isEmpty()) {
-        bookingId = message.getData().get("booking_id");
-      }
-      
-      String customer = message.getData().get("customer");
-      String community = message.getData().get("community");
-      String serviceType = message.getData().get("serviceType");
-      if (serviceType == null || serviceType.isEmpty()) {
-        serviceType = message.getData().get("service_type");
-      }
-      String location = message.getData().get("location");
-      
-      Log.d(TAG, "📋 Booking details:");
-      Log.d(TAG, "  ID: " + bookingId);
-      Log.d(TAG, "  Customer: " + customer);
-      Log.d(TAG, "  Community: " + community);
-      Log.d(TAG, "  Service: " + serviceType);
-      Log.d(TAG, "  Location: " + location);
-      
-      // Validate critical data
-      if (bookingId == null || bookingId.isEmpty()) {
-        Log.e(TAG, "❌ CRITICAL: No bookingId in FCM payload! Cannot show overlay.");
-        Log.e(TAG, "❌ Full data payload: " + message.getData().toString());
-        return;
-      }
-      
-      // Check overlay permission
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        if (!android.provider.Settings.canDrawOverlays(this)) {
-          Log.e(TAG, "❌ CRITICAL: No overlay permission! User must grant permission in Settings.");
-          showPermissionNotification();
+    try {
+      if ("BOOKING_ALERT".equals(type)) {
+        Log.d(TAG, "🚨 BOOKING_ALERT detected! Starting BookingOverlayService...");
+        
+        // Get booking data - try both field names for compatibility
+        String bookingId = message.getData().get("bookingId");
+        if (bookingId == null || bookingId.isEmpty()) {
+          bookingId = message.getData().get("booking_id");
+        }
+        
+        String customer = message.getData().get("customer");
+        String community = message.getData().get("community");
+        String serviceType = message.getData().get("serviceType");
+        if (serviceType == null || serviceType.isEmpty()) {
+          serviceType = message.getData().get("service_type");
+        }
+        String location = message.getData().get("location");
+        
+        Log.d(TAG, "📋 Booking details:");
+        Log.d(TAG, "  ID: " + bookingId);
+        Log.d(TAG, "  Customer: " + customer);
+        Log.d(TAG, "  Community: " + community);
+        Log.d(TAG, "  Service: " + serviceType);
+        Log.d(TAG, "  Location: " + location);
+        
+        // Validate critical data
+        if (bookingId == null || bookingId.isEmpty()) {
+          Log.e(TAG, "❌ CRITICAL: No bookingId in FCM payload! Cannot show overlay.");
+          Log.e(TAG, "❌ Full data payload: " + message.getData().toString());
           return;
-        } else {
-          Log.d(TAG, "✅ Overlay permission granted");
         }
-      }
-      
-      // Start BookingOverlayService to show system overlay
-      Intent serviceIntent = new Intent(this, BookingOverlayService.class);
-      serviceIntent.putExtra("mode", "show");
-      serviceIntent.putExtra("booking_id", bookingId);
-      serviceIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
-      serviceIntent.putExtra("community", community != null ? community : "");
-      serviceIntent.putExtra("service_type", serviceType != null ? serviceType : "Service");
-      serviceIntent.putExtra("flat_no", location != null ? location : "");
-      serviceIntent.putExtra("price_inr", 0);
-      
-      Log.d(TAG, "🚀 Starting BookingOverlayService with mode=show...");
-      
-      try {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-          startForegroundService(serviceIntent);
-        } else {
-          startService(serviceIntent);
+        
+        // Check overlay permission
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+          if (!android.provider.Settings.canDrawOverlays(this)) {
+            Log.e(TAG, "❌ CRITICAL: No overlay permission! User must grant permission in Settings.");
+            showPermissionNotification();
+            return;
+          } else {
+            Log.d(TAG, "✅ Overlay permission granted");
+          }
         }
-        Log.d(TAG, "✅ BookingOverlayService started successfully");
-      } catch (Exception e) {
-        Log.e(TAG, "❌ Failed to start BookingOverlayService: " + e.getMessage());
-        e.printStackTrace();
+        
+        // Start BookingOverlayService to show system overlay
+        Intent serviceIntent = new Intent(this, BookingOverlayService.class);
+        serviceIntent.putExtra("mode", "show");
+        serviceIntent.putExtra("booking_id", bookingId);
+        serviceIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
+        serviceIntent.putExtra("community", community != null ? community : "");
+        serviceIntent.putExtra("service_type", serviceType != null ? serviceType : "Service");
+        serviceIntent.putExtra("flat_no", location != null ? location : "");
+        serviceIntent.putExtra("price_inr", 0);
+        
+        Log.d(TAG, "🚀 Starting BookingOverlayService with mode=show...");
+        
+        try {
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            androidx.core.content.ContextCompat.startForegroundService(this, serviceIntent);
+          } else {
+            startService(serviceIntent);
+          }
+          Log.d(TAG, "✅ BookingOverlayService started successfully");
+        } catch (Exception se) {
+          Log.e(TAG, "❌ startForegroundService failed, falling back to BookingAlertActivity", se);
+          Intent activityIntent = new Intent(this, BookingAlertActivity.class)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+          activityIntent.putExtras(serviceIntent);
+          startActivity(activityIntent);
+        }
+      } else {
+        Log.d(TAG, "⏭️ Not a BOOKING_ALERT, type: " + type + " - skipping");
       }
-    } else {
-      Log.d(TAG, "⏭️ Not a BOOKING_ALERT, type: " + type + " - skipping");
+    } catch (Exception e) {
+      Log.e(TAG, "❌ BOOKING_ALERT handling failed", e);
     }
   }
 
