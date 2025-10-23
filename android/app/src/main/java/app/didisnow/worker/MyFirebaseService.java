@@ -48,6 +48,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
       
       // Start BookingOverlayService to show system overlay
       Intent serviceIntent = new Intent(this, BookingOverlayService.class);
+      serviceIntent.putExtra("mode", "show");
       serviceIntent.putExtra("booking_id", bookingId);
       serviceIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
       serviceIntent.putExtra("community", community != null ? community : "");

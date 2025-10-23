@@ -45,16 +45,38 @@ class BookingOverlayService : Service() {
         createNotificationChannel()
         startForegroundService()
         
-        val bookingId = intent?.getStringExtra("booking_id") ?: ""
-        val customer = intent?.getStringExtra("customer_name") ?: "New Customer"
-        val community = intent?.getStringExtra("community") ?: ""
-        val serviceType = intent?.getStringExtra("service_type") ?: ""
-        val flatNo = intent?.getStringExtra("flat_no") ?: ""
-        val price = intent?.getIntExtra("price_inr", 0) ?: 0
+        val mode = intent?.getStringExtra("mode") ?: "show"
+        android.util.Log.d("BookingOverlay", "🎯 Mode: $mode")
+        
+        when (mode) {
+            "hide" -> {
+                android.util.Log.d("BookingOverlay", "🔚 Hide mode - closing overlay")
+                closeOverlay()
+                return START_NOT_STICKY
+            }
+            "idle" -> {
+                android.util.Log.d("BookingOverlay", "⏸️ Idle mode - service running in background")
+                return START_STICKY
+            }
+            "show" -> {
+                val bookingId = intent?.getStringExtra("booking_id") ?: ""
+                val customer = intent?.getStringExtra("customer_name") ?: "New Customer"
+                val community = intent?.getStringExtra("community") ?: ""
+                val serviceType = intent?.getStringExtra("service_type") ?: ""
+                val flatNo = intent?.getStringExtra("flat_no") ?: ""
+                val price = intent?.getIntExtra("price_inr", 0) ?: 0
 
-        android.util.Log.d("BookingOverlay", "📋 Booking details - ID: $bookingId, Service: $serviceType, Community: $community")
+                android.util.Log.d("BookingOverlay", "📋 Booking details - ID: $bookingId, Service: $serviceType, Community: $community")
+                
+                if (bookingId.isEmpty()) {
+                    android.util.Log.e("BookingOverlay", "❌ No booking ID provided, cannot show overlay")
+                    stopSelf()
+                    return START_NOT_STICKY
+                }
 
-        showOverlay(bookingId, customer, community, serviceType, flatNo, price)
+                showOverlay(bookingId, customer, community, serviceType, flatNo, price)
+            }
+        }
         
         return START_NOT_STICKY
     }
