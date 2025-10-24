@@ -613,6 +613,36 @@ export type Database = {
         }
         Relationships: []
       }
+      events_ingestion: {
+        Row: {
+          error_count: number | null
+          event_time: string | null
+          id: string
+          new_count: number | null
+          notes: string | null
+          source: string
+          updated_count: number | null
+        }
+        Insert: {
+          error_count?: number | null
+          event_time?: string | null
+          id?: string
+          new_count?: number | null
+          notes?: string | null
+          source: string
+          updated_count?: number | null
+        }
+        Update: {
+          error_count?: number | null
+          event_time?: string | null
+          id?: string
+          new_count?: number | null
+          notes?: string | null
+          source?: string
+          updated_count?: number | null
+        }
+        Relationships: []
+      }
       expert_schedules: {
         Row: {
           created_at: string | null
@@ -992,6 +1022,155 @@ export type Database = {
           },
         ]
       }
+      listings: {
+        Row: {
+          address_raw: string | null
+          amenities: Json | null
+          bathrooms: number | null
+          bedrooms: number | null
+          bhk: number | null
+          carpet_sqft: number | null
+          city: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string | null
+          deposit_amount_inr: number | null
+          description: string | null
+          first_seen_at: string | null
+          floor_no: number | null
+          furnishing: string | null
+          id: string
+          images: Json | null
+          last_seen_at: string | null
+          lat: number | null
+          listing_date: string | null
+          locality: string | null
+          lon: number | null
+          maintenance_inr: number | null
+          parking: boolean | null
+          pets_allowed: boolean | null
+          pincode: string | null
+          quality_score: number | null
+          rent_amount_inr: number | null
+          source: string
+          source_url: string
+          status: string | null
+          super_builtup_sqft: number | null
+          title: string | null
+          total_floors: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          address_raw?: string | null
+          amenities?: Json | null
+          bathrooms?: number | null
+          bedrooms?: number | null
+          bhk?: number | null
+          carpet_sqft?: number | null
+          city?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          deposit_amount_inr?: number | null
+          description?: string | null
+          first_seen_at?: string | null
+          floor_no?: number | null
+          furnishing?: string | null
+          id?: string
+          images?: Json | null
+          last_seen_at?: string | null
+          lat?: number | null
+          listing_date?: string | null
+          locality?: string | null
+          lon?: number | null
+          maintenance_inr?: number | null
+          parking?: boolean | null
+          pets_allowed?: boolean | null
+          pincode?: string | null
+          quality_score?: number | null
+          rent_amount_inr?: number | null
+          source: string
+          source_url: string
+          status?: string | null
+          super_builtup_sqft?: number | null
+          title?: string | null
+          total_floors?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          address_raw?: string | null
+          amenities?: Json | null
+          bathrooms?: number | null
+          bedrooms?: number | null
+          bhk?: number | null
+          carpet_sqft?: number | null
+          city?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          deposit_amount_inr?: number | null
+          description?: string | null
+          first_seen_at?: string | null
+          floor_no?: number | null
+          furnishing?: string | null
+          id?: string
+          images?: Json | null
+          last_seen_at?: string | null
+          lat?: number | null
+          listing_date?: string | null
+          locality?: string | null
+          lon?: number | null
+          maintenance_inr?: number | null
+          parking?: boolean | null
+          pets_allowed?: boolean | null
+          pincode?: string | null
+          quality_score?: number | null
+          rent_amount_inr?: number | null
+          source?: string
+          source_url?: string
+          status?: string | null
+          super_builtup_sqft?: number | null
+          title?: string | null
+          total_floors?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      listings_hashes: {
+        Row: {
+          address_norm_hash: string | null
+          created_at: string | null
+          id: string
+          image_phash: string | null
+          listing_id: string | null
+          url_hash: string | null
+        }
+        Insert: {
+          address_norm_hash?: string | null
+          created_at?: string | null
+          id?: string
+          image_phash?: string | null
+          listing_id?: string | null
+          url_hash?: string | null
+        }
+        Update: {
+          address_norm_hash?: string | null
+          created_at?: string | null
+          id?: string
+          image_phash?: string | null
+          listing_id?: string | null
+          url_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listings_hashes_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       maid_pricing_tasks: {
         Row: {
           active: boolean
@@ -1366,6 +1545,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      search_queries: {
+        Row: {
+          bhk: number | null
+          city: string | null
+          created_at: string | null
+          email_alerts: boolean | null
+          furnishing: string | null
+          has_parking: boolean | null
+          id: string
+          last_sent_at: string | null
+          locality: string[] | null
+          max_distance_m: number | null
+          max_rent: number | null
+          min_rent: number | null
+          pets_allowed: boolean | null
+          schedule: string | null
+          telegram_alerts: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          bhk?: number | null
+          city?: string | null
+          created_at?: string | null
+          email_alerts?: boolean | null
+          furnishing?: string | null
+          has_parking?: boolean | null
+          id?: string
+          last_sent_at?: string | null
+          locality?: string[] | null
+          max_distance_m?: number | null
+          max_rent?: number | null
+          min_rent?: number | null
+          pets_allowed?: boolean | null
+          schedule?: string | null
+          telegram_alerts?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          bhk?: number | null
+          city?: string | null
+          created_at?: string | null
+          email_alerts?: boolean | null
+          furnishing?: string | null
+          has_parking?: boolean | null
+          id?: string
+          last_sent_at?: string | null
+          locality?: string[] | null
+          max_distance_m?: number | null
+          max_rent?: number | null
+          min_rent?: number | null
+          pets_allowed?: boolean | null
+          schedule?: string | null
+          telegram_alerts?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       services: {
         Row: {
@@ -1867,18 +2103,9 @@ export type Database = {
         Args: { default_val: number; k: string }
         Returns: number
       }
-      _is_admin_message: {
-        Args: { rec: unknown }
-        Returns: boolean
-      }
-      _sla_core_work: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      accept_booking: {
-        Args: { p_booking_id: string }
-        Returns: Json
-      }
+      _is_admin_message: { Args: { rec: unknown }; Returns: boolean }
+      _sla_core_work: { Args: never; Returns: undefined }
+      accept_booking: { Args: { p_booking_id: string }; Returns: Json }
       admin_approve_worker_registration: {
         Args: { p_photo_url?: string; p_request_id: string }
         Returns: {
@@ -1902,20 +2129,26 @@ export type Database = {
           upi_id: string | null
           user_id: string | null
         }
+        SetofOptions: {
+          from: "*"
+          to: "workers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       admin_cancel_booking: {
         Args: { p_booking_id: string; p_reason: string }
         Returns: undefined
       }
       admin_get_legal_pdfs: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           privacy_url: string
           terms_url: string
         }[]
       }
       admin_get_web_version: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           force: boolean
           web_version: string
@@ -1937,9 +2170,39 @@ export type Database = {
         Args: { force?: boolean; new_version: string }
         Returns: undefined
       }
-      admin_upsert_worker: {
-        Args:
-          | {
+      admin_upsert_worker:
+        | {
+            Args: { p_worker: Json }
+            Returns: {
+              communities: string[] | null
+              community: string | null
+              created_at: string
+              fcm_token: string | null
+              full_name: string
+              id: string
+              is_active: boolean
+              is_available: boolean | null
+              is_busy: boolean | null
+              last_active_at: string | null
+              phone: string
+              photo_url: string | null
+              rating: number | null
+              service_types: string[]
+              total_earnings: number | null
+              total_ratings: number | null
+              updated_at: string
+              upi_id: string | null
+              user_id: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "workers"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
               p_community: string
               p_full_name: string
               p_is_active?: boolean
@@ -1948,29 +2211,34 @@ export type Database = {
               p_service_types: string[]
               p_upi_id: string
             }
-          | { p_worker: Json }
-        Returns: {
-          communities: string[] | null
-          community: string | null
-          created_at: string
-          fcm_token: string | null
-          full_name: string
-          id: string
-          is_active: boolean
-          is_available: boolean | null
-          is_busy: boolean | null
-          last_active_at: string | null
-          phone: string
-          photo_url: string | null
-          rating: number | null
-          service_types: string[]
-          total_earnings: number | null
-          total_ratings: number | null
-          updated_at: string
-          upi_id: string | null
-          user_id: string | null
-        }
-      }
+            Returns: {
+              communities: string[] | null
+              community: string | null
+              created_at: string
+              fcm_token: string | null
+              full_name: string
+              id: string
+              is_active: boolean
+              is_available: boolean | null
+              is_busy: boolean | null
+              last_active_at: string | null
+              phone: string
+              photo_url: string | null
+              rating: number | null
+              service_types: string[]
+              total_earnings: number | null
+              total_ratings: number | null
+              updated_at: string
+              upi_id: string | null
+              user_id: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "workers"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       assign_booking_to_next_worker: {
         Args: { p_booking_id: string }
         Returns: {
@@ -1983,64 +2251,85 @@ export type Database = {
           worker_phone: string
         }[]
       }
-      assign_to_next_worker: {
-        Args: { p_booking_id: string }
-        Returns: Json
-      }
+      assign_to_next_worker: { Args: { p_booking_id: string }; Returns: Json }
       assign_worker: {
         Args: { p_booking_id: string; p_worker_id: string }
         Returns: undefined
       }
-      assign_worker_to_booking: {
-        Args:
-          | {
+      assign_worker_to_booking:
+        | { Args: { p_booking_id: string; p_worker_id: string }; Returns: Json }
+        | {
+            Args: {
               p_assigned_by?: string
               p_booking_id: string
               p_worker_id: string
             }
-          | { p_booking_id: string; p_worker_id: string }
-        Returns: Json
-      }
-      auto_complete_assigned: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      auto_handle_overdue_bookings: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+            Returns: {
+              accepted_at: string | null
+              assigned_at: string | null
+              auto_complete_after_minutes: number | null
+              auto_complete_at: string | null
+              bathroom_count: number | null
+              booking_type: string
+              can_cancel_until: string | null
+              cancel_reason: string | null
+              cancel_source: string | null
+              cancelled_at: string | null
+              community: string
+              completed_at: string | null
+              confirmed_at: string | null
+              cook_cuisine_pref: string | null
+              cook_gender_pref: string | null
+              created_at: string
+              cust_name: string
+              cust_phone: string
+              family_count: number | null
+              flat_no: string
+              flat_size: string | null
+              food_pref: string | null
+              id: string
+              is_demo: boolean
+              maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
+              notes: string | null
+              on_the_way_at: string | null
+              pay_enabled_at: string | null
+              payout_amount: number | null
+              prealert_sent: boolean
+              price_inr: number | null
+              scheduled_date: string | null
+              scheduled_time: string | null
+              service_type: string
+              started_at: string | null
+              status: string
+              updated_at: string
+              user_id: string
+              user_marked_paid_at: string | null
+              worker_id: string | null
+              worker_name: string | null
+              worker_phone: string | null
+              worker_photo_url: string | null
+              worker_upi: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "bookings"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+      auto_complete_assigned: { Args: never; Returns: undefined }
+      auto_handle_overdue_bookings: { Args: never; Returns: number }
       bath_total_price: {
         Args: { p_community?: string; p_count: number }
         Returns: number
       }
-      bytea_to_text: {
-        Args: { data: string }
-        Returns: string
-      }
-      check_expired_assignments: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      create_admin_email_user: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      delete_my_data: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      escalate_overdue_bookings: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      export_my_data: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      get_app_setting: {
-        Args: { k: string }
-        Returns: string
-      }
+      bytea_to_text: { Args: { data: string }; Returns: string }
+      check_expired_assignments: { Args: never; Returns: Json }
+      create_admin_email_user: { Args: never; Returns: undefined }
+      delete_my_data: { Args: never; Returns: undefined }
+      escalate_overdue_bookings: { Args: never; Returns: undefined }
+      export_my_data: { Args: never; Returns: Json }
+      get_app_setting: { Args: { k: string }; Returns: string }
       get_assigned_worker_info: {
         Args: { booking_id: string }
         Returns: {
@@ -2101,21 +2390,15 @@ export type Database = {
         Args: { p_booking_id: string }
         Returns: Json
       }
-      get_booking_status: {
-        Args: { p_booking_id: string }
-        Returns: Json
-      }
+      get_booking_status: { Args: { p_booking_id: string }; Returns: Json }
       get_legal_pdfs: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           privacy_url: string
           terms_url: string
         }[]
       }
-      get_ops_setting: {
-        Args: { p_key: string }
-        Returns: string
-      }
+      get_ops_setting: { Args: { p_key: string }; Returns: string }
       get_setting: {
         Args: { p_default: string; p_key: string }
         Returns: string
@@ -2124,38 +2407,12 @@ export type Database = {
         Args: { p_default: number; p_key: string }
         Returns: number
       }
-      get_worker_contact: {
-        Args: { p_booking_id: string }
-        Returns: Json
-      }
-      gtrgm_compress: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_decompress: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_in: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_options: {
-        Args: { "": unknown }
-        Returns: undefined
-      }
-      gtrgm_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
+      get_worker_contact: { Args: { p_booking_id: string }; Returns: Json }
       handle_assignment_timeout: {
         Args: { p_assignment_id: string }
         Returns: Json
       }
-      handle_assignment_timeouts: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      handle_assignment_timeouts: { Args: never; Returns: Json }
       handle_expert_booking_response: {
         Args: {
           p_assignment_id: string
@@ -2165,7 +2422,7 @@ export type Database = {
         Returns: Json
       }
       handle_expired_assignments: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           booking_id: string
           expired_worker_id: string
@@ -2193,27 +2450,77 @@ export type Database = {
       http: {
         Args: { request: Database["public"]["CompositeTypes"]["http_request"] }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "http_request"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      http_delete: {
-        Args:
-          | { content: string; content_type: string; uri: string }
-          | { uri: string }
-        Returns: Database["public"]["CompositeTypes"]["http_response"]
-      }
-      http_get: {
-        Args: { data: Json; uri: string } | { uri: string }
-        Returns: Database["public"]["CompositeTypes"]["http_response"]
-      }
+      http_delete:
+        | {
+            Args: { uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: { content: string; content_type: string; uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+      http_get:
+        | {
+            Args: { uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: { data: Json; uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       http_head: {
         Args: { uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "*"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       http_header: {
         Args: { field: string; value: string }
         Returns: Database["public"]["CompositeTypes"]["http_header"]
+        SetofOptions: {
+          from: "*"
+          to: "http_header"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       http_list_curlopt: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           curlopt: string
           value: string
@@ -2222,21 +2529,45 @@ export type Database = {
       http_patch: {
         Args: { content: string; content_type: string; uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "*"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      http_post: {
-        Args:
-          | { content: string; content_type: string; uri: string }
-          | { data: Json; uri: string }
-        Returns: Database["public"]["CompositeTypes"]["http_response"]
-      }
+      http_post:
+        | {
+            Args: { content: string; content_type: string; uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: { data: Json; uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       http_put: {
         Args: { content: string; content_type: string; uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "*"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      http_reset_curlopt: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      http_reset_curlopt: { Args: never; Returns: boolean }
       http_set_curlopt: {
         Args: { curlopt: string; value: string }
         Returns: boolean
@@ -2249,10 +2580,7 @@ export type Database = {
         }
         Returns: Json
       }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      is_admin: { Args: never; Returns: boolean }
       maid_total_price: {
         Args: {
           p_community?: string
@@ -2265,21 +2593,12 @@ export type Database = {
         Args: { p_thread_id: string }
         Returns: undefined
       }
-      norm_phone: {
-        Args: { p: string }
-        Returns: string
-      }
-      notify_next_worker: {
-        Args: { p_booking_id: string }
-        Returns: Json
-      }
-      pending_sla_minutes: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      pushcut_notify_support: {
-        Args:
-          | {
+      norm_phone: { Args: { p: string }; Returns: string }
+      notify_next_worker: { Args: { p_booking_id: string }; Returns: Json }
+      pending_sla_minutes: { Args: never; Returns: number }
+      pushcut_notify_support:
+        | {
+            Args: {
               p_community: string
               p_message_id: number
               p_preview: string
@@ -2288,7 +2607,10 @@ export type Database = {
               p_user_name: string
               p_user_phone: string
             }
-          | {
+            Returns: undefined
+          }
+        | {
+            Args: {
               p_community: string
               p_message_id: string
               p_preview: string
@@ -2297,8 +2619,8 @@ export type Database = {
               p_user_name: string
               p_user_phone: string
             }
-        Returns: undefined
-      }
+            Returns: undefined
+          }
       pushcut_notify_support_direct: {
         Args: {
           p_message_id: string
@@ -2342,10 +2664,7 @@ export type Database = {
         Args: { p_window_minutes?: number }
         Returns: undefined
       }
-      run_sla_with_secret: {
-        Args: { p_secret: string }
-        Returns: undefined
-      }
+      run_sla_with_secret: { Args: { p_secret: string }; Returns: undefined }
       schedule_assignment_timeout: {
         Args: { p_assignment_id: string; p_expires_at: string }
         Returns: undefined
@@ -2382,18 +2701,8 @@ export type Database = {
         }
         Returns: Json
       }
-      set_limit: {
-        Args: { "": number }
-        Returns: number
-      }
-      show_limit: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      show_trgm: {
-        Args: { "": string }
-        Returns: string[]
-      }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       simple_assign_to_next_worker: {
         Args: { p_booking_id: string }
         Returns: Json
@@ -2409,11 +2718,14 @@ export type Database = {
           updated_at: string
           user_id: string
         }
+        SetofOptions: {
+          from: "*"
+          to: "support_threads"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      support_mark_seen: {
-        Args: { p_thread: string }
-        Returns: undefined
-      }
+      support_mark_seen: { Args: { p_thread: string }; Returns: undefined }
       test_booking_assignment_system: {
         Args: {
           p_community?: string
@@ -2447,14 +2759,8 @@ export type Database = {
           worker_name: string
         }[]
       }
-      text_to_bytea: {
-        Args: { data: string }
-        Returns: string
-      }
-      try_accept_booking: {
-        Args: { p_booking_id: string }
-        Returns: Json
-      }
+      text_to_bytea: { Args: { data: string }; Returns: string }
+      try_accept_booking: { Args: { p_booking_id: string }; Returns: Json }
       try_accept_pending: {
         Args: { p_booking_id: string }
         Returns: {
@@ -2503,6 +2809,12 @@ export type Database = {
           worker_photo_url: string | null
           worker_upi: string | null
         }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       update_booking_status: {
         Args: { p_booking_id: string; p_status: string }
@@ -2516,20 +2828,30 @@ export type Database = {
         }
         Returns: Json
       }
-      update_worker_availability: {
-        Args:
-          | { is_available_param: boolean; worker_id_param: string }
-          | { p_is_available: boolean }
-        Returns: Json
-      }
+      update_worker_availability:
+        | { Args: { p_is_available: boolean }; Returns: Json }
+        | {
+            Args: { is_available_param: boolean; worker_id_param: string }
+            Returns: boolean
+          }
       update_worker_fcm_token: {
         Args: { p_fcm_token: string; p_worker_id: string }
         Returns: Json
       }
-      urlencode: {
-        Args: { data: Json } | { string: string } | { string: string }
-        Returns: string
-      }
+      urlencode:
+        | { Args: { data: Json }; Returns: string }
+        | {
+            Args: { string: string }
+            Returns: {
+              error: true
+            } & "Could not choose the best candidate function between: public.urlencode(string => bytea), public.urlencode(string => varchar). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+          }
+        | {
+            Args: { string: string }
+            Returns: {
+              error: true
+            } & "Could not choose the best candidate function between: public.urlencode(string => bytea), public.urlencode(string => varchar). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+          }
       user_can_see_booking: {
         Args: { booking_row: Database["public"]["Tables"]["bookings"]["Row"] }
         Returns: boolean
@@ -2563,7 +2885,7 @@ export type Database = {
         value: string | null
       }
       http_request: {
-        method: unknown | null
+        method: unknown
         uri: string | null
         headers: Database["public"]["CompositeTypes"]["http_header"][] | null
         content_type: string | null
