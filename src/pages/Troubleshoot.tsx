@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Smartphone, Battery, Power, Bell, AlertTriangle, TestTube } from "lucide-react";
+import { ArrowLeft, Smartphone, Battery, Power, Bell, AlertTriangle, TestTube, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,17 +8,43 @@ import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureServiceWorker, subscribeWebPush } from "@/push/webPush";
+import { Capacitor } from '@capacitor/core';
 
 // VAPID public key from environment variable
 const VAPID_PUBLIC = import.meta.env.VITE_VAPID_PUBLIC_KEY as string;
 
 export default function Troubleshoot() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { worker } = useWorkerProfile(user?.id);
   const { toast } = useToast();
   const [enabling, setEnabling] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [tokenStatus, setTokenStatus] = useState<{saved: boolean, preview?: string} | null>(null);
+
+  // Check if JWT is saved (Android only)
+  useEffect(() => {
+    const checkToken = async () => {
+      if (!Capacitor.isNativePlatform()) return;
+      
+      try {
+        // @ts-ignore - Capacitor bridge
+        const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+        if (AuthBridge) {
+          const result = await AuthBridge.getToken();
+          const token = result?.token;
+          setTokenStatus({
+            saved: !!token,
+            preview: token ? `${token.substring(0, 20)}...` : undefined
+          });
+        }
+      } catch (error) {
+        console.error('Failed to check token:', error);
+      }
+    };
+
+    checkToken();
+  }, [user]);
 
   const openBatterySettings = () => {
     // Open settings - implementation depends on native plugin if needed
@@ -157,6 +183,41 @@ export default function Troubleshoot() {
       </header>
 
       <main className="max-w-2xl mx-auto p-4 space-y-4">
+        {/* Auth Token Status (Android only) */}
+        {Capacitor.isNativePlatform() && (
+          <Card className="p-6 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+            <div className="flex gap-3">
+              <Key className="w-6 h-6 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-1" />
+              <div className="flex-1">
+                <h3 className="font-semibold mb-2 text-blue-900 dark:text-blue-100">
+                  Authentication Token Status
+                </h3>
+                {tokenStatus === null ? (
+                  <p className="text-sm text-blue-700 dark:text-blue-300">Checking...</p>
+                ) : tokenStatus.saved ? (
+                  <div>
+                    <p className="text-sm text-green-700 dark:text-green-300 mb-2">
+                      ✅ JWT token is saved and ready
+                    </p>
+                    <p className="text-xs font-mono bg-blue-100 dark:bg-blue-900 p-2 rounded text-blue-800 dark:text-blue-200">
+                      {tokenStatus.preview}
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-sm text-red-700 dark:text-red-300 mb-2">
+                      ❌ No JWT token saved - overlay accept will fail
+                    </p>
+                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                      Try logging out and logging back in to save your token
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Warning Card */}
         <Card className="p-6 bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800">
           <div className="flex gap-3">

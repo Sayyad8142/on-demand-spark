@@ -229,12 +229,17 @@ class BookingOverlayService : Service() {
                 val jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE)
                     .getString("supabase_jwt", null)
                 
-                if (jwt == null) {
-                    android.util.Log.w("BookingOverlay", "⚠️ No Supabase JWT in prefs — cannot accept")
+                android.util.Log.d("BookingOverlay", "🔑 JWT token present: ${jwt != null}")
+                if (jwt != null) {
+                    android.util.Log.d("BookingOverlay", "🔑 JWT preview: ${jwt.take(50)}...")
+                }
+                
+                if (jwt == null || jwt.isEmpty()) {
+                    android.util.Log.w("BookingOverlay", "⚠️ No Supabase JWT in prefs — cannot proceed")
                     withContext(Dispatchers.Main) {
                         Toast.makeText(
                             this@BookingOverlayService,
-                            "Please log in again (token missing)",
+                            "❌ Not authenticated - Please log in",
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -258,10 +263,16 @@ class BookingOverlayService : Service() {
                     }
 
                     val responseCode = connection.responseCode
-                    val responseBody = connection.inputStream.bufferedReader().use { it.readText() }
+                    android.util.Log.d("BookingOverlay", "📡 RPC Response Code: $responseCode")
+                    
+                    val responseBody = if (responseCode in 200..299) {
+                        connection.inputStream.bufferedReader().use { it.readText() }
+                    } else {
+                        connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
+                    }
                     connection.disconnect()
 
-                    android.util.Log.d("BookingOverlay", "✅ RPC response: $responseCode - $responseBody")
+                    android.util.Log.d("BookingOverlay", "📄 RPC Response Body: $responseBody")
 
                     withContext(Dispatchers.Main) {
                         if (responseCode in 200..299) {
@@ -283,10 +294,18 @@ class BookingOverlayService : Service() {
                                 ).show()
                             }
                         } else {
+                            // Show detailed error
+                            val errorMsg = try {
+                                val json = JSONObject(responseBody)
+                                json.optString("message", json.optString("error", "HTTP $responseCode"))
+                            } catch (e: Exception) {
+                                "HTTP $responseCode: $responseBody"
+                            }
+                            android.util.Log.e("BookingOverlay", "❌ Accept failed: $errorMsg")
                             Toast.makeText(
                                 this@BookingOverlayService,
-                                "❌ Failed to accept booking (HTTP $responseCode)",
-                                Toast.LENGTH_SHORT
+                                "❌ $errorMsg",
+                                Toast.LENGTH_LONG
                             ).show()
                         }
                     }
