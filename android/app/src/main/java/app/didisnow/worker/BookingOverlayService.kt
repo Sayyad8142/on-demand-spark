@@ -185,7 +185,7 @@ class BookingOverlayService : Service() {
             android.util.Log.w("BookingOverlay", "⚠️ No JWT found, showing not authenticated status")
         }
         
-        // Start 30-second countdown
+        // Prepare countdown handler (will start after view is added)
         val countdownText = overlayView?.findViewById<TextView>(R.id.countdown)
         var secondsLeft = 30
         val handler = android.os.Handler(mainLooper)
@@ -193,18 +193,20 @@ class BookingOverlayService : Service() {
             override fun run() {
                 if (secondsLeft > 0) {
                     countdownText?.text = "${secondsLeft}s"
+                    android.util.Log.d("BookingOverlay", "⏱️ Countdown: ${secondsLeft}s")
                     secondsLeft--
                     handler.postDelayed(this, 1000)
                 } else {
+                    android.util.Log.d("BookingOverlay", "⏱️ Countdown finished - auto closing")
                     // Auto-reject after 30 seconds
                     closeOverlay()
                 }
             }
         }
-        handler.post(countdown)
 
         // Handle Accept button
         overlayView?.findViewById<Button>(R.id.btnAccept)?.setOnClickListener {
+            android.util.Log.d("BookingOverlay", "✅ Accept button clicked")
             handler.removeCallbacks(countdown)
             if (bookingId.isNotEmpty()) {
                 updateBooking(bookingId, "accepted")
@@ -217,6 +219,7 @@ class BookingOverlayService : Service() {
 
         // Handle Reject button
         overlayView?.findViewById<Button>(R.id.btnReject)?.setOnClickListener {
+            android.util.Log.d("BookingOverlay", "❌ Reject button clicked")
             handler.removeCallbacks(countdown)
             updateBooking(bookingId, "rejected")
             closeOverlay()
@@ -226,7 +229,10 @@ class BookingOverlayService : Service() {
         try {
             android.util.Log.d("BookingOverlay", "➕ Adding overlay to window manager...")
             windowManager?.addView(overlayView, params)
-            android.util.Log.d("BookingOverlay", "✅ Overlay added successfully! Should be visible now.")
+            android.util.Log.d("BookingOverlay", "✅ Overlay added successfully! Starting countdown...")
+            
+            // Start countdown AFTER view is added to window
+            handler.post(countdown)
         } catch (e: Exception) {
             android.util.Log.e("BookingOverlay", "❌ Failed to add overlay to window", e)
             e.printStackTrace()
