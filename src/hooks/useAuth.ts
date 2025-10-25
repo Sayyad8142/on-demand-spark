@@ -13,10 +13,20 @@ export function useAuth() {
 
   useEffect(() => {
     // Get initial session first
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      // CRITICAL: Save JWT token immediately on app startup if session exists
+      if (session?.access_token && AuthBridge && Capacitor.isNativePlatform()) {
+        try {
+          await AuthBridge.saveToken({ token: session.access_token });
+          console.log('✅ Initial JWT saved to native bridge on startup');
+        } catch (error) {
+          console.error('❌ Failed to save initial JWT:', error);
+        }
+      }
     });
 
     // Set up auth state listener
@@ -30,7 +40,7 @@ export function useAuth() {
         if (session?.access_token && AuthBridge && Capacitor.isNativePlatform()) {
           try {
             await AuthBridge.saveToken({ token: session.access_token });
-            console.log('✅ Saved JWT to native bridge');
+            console.log('✅ JWT saved to native bridge (auth state change)');
           } catch (error) {
             console.error('❌ Failed to save JWT:', error);
           }
