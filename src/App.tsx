@@ -21,10 +21,11 @@ import Troubleshoot from "./pages/Troubleshoot";
 import VerifyPush from "./pages/VerifyPush";
 import DevCacheReset from "./pages/DevCacheReset";
 import NotFound from "./pages/NotFound";
+import BottomNav from "./components/BottomNav";
 
 const queryClient = new QueryClient();
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({ children, showNav = false }: { children: React.ReactNode; showNav?: boolean }) {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -35,7 +36,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/auth" replace />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <div className={showNav ? "pb-16" : ""}>
+        {children}
+      </div>
+      {showNav && <BottomNav />}
+    </>
+  );
 }
 
 const App = () => {
@@ -125,7 +133,7 @@ const App = () => {
             <Route
               path="/home"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute showNav={true}>
                   <Home />
                 </ProtectedRoute>
               }
@@ -133,7 +141,7 @@ const App = () => {
             <Route
               path="/bookings"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute showNav={true}>
                   <Bookings />
                 </ProtectedRoute>
               }
@@ -141,7 +149,7 @@ const App = () => {
             <Route
               path="/profile"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute showNav={true}>
                   <Profile />
                 </ProtectedRoute>
               }
