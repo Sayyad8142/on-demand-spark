@@ -11,6 +11,21 @@ export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Helper function to save JWT
+  const saveJWT = async (token: string) => {
+    if (AuthBridge && Capacitor.isNativePlatform()) {
+      try {
+        await AuthBridge.saveToken({ token });
+        console.log('✅ JWT saved to native bridge');
+        return true;
+      } catch (error) {
+        console.error('❌ Failed to save JWT:', error);
+        return false;
+      }
+    }
+    return false;
+  };
+
   useEffect(() => {
     // Get initial session first
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -19,13 +34,8 @@ export function useAuth() {
       setLoading(false);
       
       // CRITICAL: Save JWT token immediately on app startup if session exists
-      if (session?.access_token && AuthBridge && Capacitor.isNativePlatform()) {
-        try {
-          await AuthBridge.saveToken({ token: session.access_token });
-          console.log('✅ Initial JWT saved to native bridge on startup');
-        } catch (error) {
-          console.error('❌ Failed to save initial JWT:', error);
-        }
+      if (session?.access_token) {
+        await saveJWT(session.access_token);
       }
     });
 
@@ -36,15 +46,10 @@ export function useAuth() {
         setUser(session?.user ?? null);
         setLoading(false);
         
-        // Save JWT token for native overlay service
-        if (session?.access_token && AuthBridge && Capacitor.isNativePlatform()) {
-          try {
-            await AuthBridge.saveToken({ token: session.access_token });
-            console.log('✅ JWT saved to native bridge (auth state change)');
-          } catch (error) {
-            console.error('❌ Failed to save JWT:', error);
-          }
-        } else if (!session && AuthBridge && Capacitor.isNativePlatform()) {
+        // Save or clear JWT token
+        if (session?.access_token) {
+          await saveJWT(session.access_token);
+        } else if (AuthBridge && Capacitor.isNativePlatform()) {
           // Clear token on logout
           try {
             await AuthBridge.clearToken();
@@ -56,7 +61,19 @@ export function useAuth() {
       }
     );
 
-    return () => subscription.unsubscribe();
+    // Periodic JWT refresh - save token every 5 minutes if session exists
+    const intervalId = setInterval(async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token && Capacitor.isNativePlatform()) {
+        await saveJWT(session.access_token);
+        console.log('🔄 Periodic JWT refresh completed');
+      }
+    }, 5 * 60 * 1000); // Every 5 minutes
+
+    return () => {
+      subscription.unsubscribe();
+      clearInterval(intervalId);
+    };
   }, []);
 
   const signOut = async () => {
