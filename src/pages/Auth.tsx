@@ -8,9 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Phone, Bell } from "lucide-react";
+import { Phone } from "lucide-react";
 import { z } from "zod";
-import { showTestBookingAlert } from "@/native/bookingAlert";
 
 const SERVICES = [
   { value: "maid", label: "Maid Service" },
@@ -302,21 +301,6 @@ export default function Auth() {
     }
   };
 
-  const handleTestPushNotification = async () => {
-    const result = await showTestBookingAlert();
-    if (result.success) {
-      toast({ 
-        title: "Test Alert Triggered", 
-        description: result.message 
-      });
-    } else {
-      toast({ 
-        title: "Test Failed", 
-        description: result.error || "Could not trigger test alert",
-        variant: "destructive" 
-      });
-    }
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 p-4">
@@ -499,17 +483,6 @@ export default function Auth() {
               )}
             </TabsContent>
           </Tabs>
-
-          <div className="mt-6 pt-6 border-t">
-            <Button 
-              onClick={handleTestPushNotification}
-              variant="outline"
-              className="w-full"
-            >
-              <Bell className="mr-2 h-4 w-4" />
-              Test Push Notification
-            </Button>
-          </div>
         </CardContent>
       </Card>
     </div>
