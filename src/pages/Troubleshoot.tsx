@@ -215,20 +215,33 @@ export default function Troubleshoot() {
                       size="sm"
                       onClick={async () => {
                         try {
+                          console.log('💾 Manual JWT save triggered');
                           const { data: { session } } = await supabase.auth.getSession();
                           if (session?.access_token) {
+                            console.log('🔑 Token found:', session.access_token.substring(0, 30) + '...');
                             // @ts-ignore - Capacitor bridge
                             const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
                             await AuthBridge.saveToken({ token: session.access_token });
-                            setTokenStatus({
-                              saved: true,
-                              preview: `${session.access_token.substring(0, 20)}...`
-                            });
-                            toast({ title: "✅ JWT Saved", description: "Token saved successfully" });
+                            
+                            // Verify it was saved
+                            const verify = await AuthBridge.getToken();
+                            if (verify?.token === session.access_token) {
+                              console.log('✅ JWT saved and verified');
+                              setTokenStatus({
+                                saved: true,
+                                preview: `${session.access_token.substring(0, 20)}...`
+                              });
+                              toast({ title: "✅ JWT Saved", description: "Token saved and verified successfully" });
+                            } else {
+                              console.error('❌ JWT verification failed after save');
+                              toast({ title: "⚠️ Verification failed", description: "Token saved but verification failed", variant: "destructive" });
+                            }
                           } else {
+                            console.error('❌ No session found');
                             toast({ title: "❌ Not logged in", description: "Please log in first", variant: "destructive" });
                           }
                         } catch (error) {
+                          console.error('❌ JWT save error:', error);
                           toast({ title: "Error", description: String(error), variant: "destructive" });
                         }
                       }}

@@ -291,32 +291,43 @@ class BookingOverlayService : Service() {
 
                     withContext(Dispatchers.Main) {
                         if (responseCode in 200..299) {
-                            val json = JSONObject(responseBody)
-                            val success = json.optBoolean("success", false)
-                            
-                            if (success) {
+                            try {
+                                // Response is the JSONB object directly, not in an array
+                                val json = JSONObject(responseBody)
+                                val success = json.optBoolean("success", false)
+                                
+                                if (success) {
+                                    Toast.makeText(
+                                        this@BookingOverlayService,
+                                        "✅ Booking accepted successfully!",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                } else {
+                                    val error = json.optString("error", "Unknown error")
+                                    android.util.Log.e("BookingOverlay", "❌ RPC returned success=false: $error")
+                                    Toast.makeText(
+                                        this@BookingOverlayService,
+                                        "❌ $error",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.e("BookingOverlay", "❌ Failed to parse success response", e)
                                 Toast.makeText(
                                     this@BookingOverlayService,
-                                    "✅ Booking accepted successfully!",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            } else {
-                                val error = json.optString("error", "Unknown error")
-                                Toast.makeText(
-                                    this@BookingOverlayService,
-                                    "❌ $error",
+                                    "❌ Parse error: ${e.message}",
                                     Toast.LENGTH_LONG
                                 ).show()
                             }
                         } else {
-                            // Show detailed error
+                            // Show detailed error from HTTP error response
                             val errorMsg = try {
                                 val json = JSONObject(responseBody)
-                                json.optString("message", json.optString("error", "HTTP $responseCode"))
+                                json.optString("message", json.optString("error", json.optString("msg", "HTTP $responseCode")))
                             } catch (e: Exception) {
-                                "HTTP $responseCode: $responseBody"
+                                "HTTP $responseCode: ${responseBody.take(200)}"
                             }
-                            android.util.Log.e("BookingOverlay", "❌ Accept failed: $errorMsg")
+                            android.util.Log.e("BookingOverlay", "❌ Accept failed HTTP $responseCode: $errorMsg")
                             Toast.makeText(
                                 this@BookingOverlayService,
                                 "❌ $errorMsg",
