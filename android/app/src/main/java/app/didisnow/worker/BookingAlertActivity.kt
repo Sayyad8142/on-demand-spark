@@ -20,6 +20,9 @@ class BookingAlertActivity : Activity() {
         private const val SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheXd3YnVxeWNvdmpvcHJ5ZWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkyNjksImV4cCI6MjA3MDc0NTI2OX0.js1MaTBkjuGlaDfQjrZpZ9_G8Jy9ygNAB8KpNDiQg8o"
     }
 
+    private var countdownHandler: android.os.Handler? = null
+    private var countdownRunnable: Runnable? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -44,8 +47,50 @@ class BookingAlertActivity : Activity() {
         findViewById<TextView>(R.id.alertCustomer).text = "Customer: $customer"
         findViewById<TextView>(R.id.alertCommunity).text = "Community: $community"
         findViewById<TextView>(R.id.alertService).text = "Service: $serviceType"
+        findViewById<TextView>(R.id.alertPrice).text = "₹$price"
+
+        // Check and display authentication status
+        val jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE).getString("supabase_jwt", null)
+        val authStatusView = findViewById<TextView>(R.id.authStatus)
+        if (jwt != null && jwt.isNotEmpty()) {
+            authStatusView.text = "✅ Authenticated"
+            authStatusView.setTextColor(android.graphics.Color.parseColor("#22C55E"))
+            authStatusView.setBackgroundColor(android.graphics.Color.parseColor("#F0FDF4"))
+            android.util.Log.d("BookingAlert", "✅ JWT found, showing authenticated status")
+        } else {
+            authStatusView.text = "❌ Not authenticated"
+            authStatusView.setTextColor(android.graphics.Color.parseColor("#EF4444"))
+            authStatusView.setBackgroundColor(android.graphics.Color.parseColor("#FEF2F2"))
+            android.util.Log.w("BookingAlert", "⚠️ No JWT found, showing not authenticated status")
+        }
+
+        // Start 30-second countdown timer
+        val countdownText = findViewById<TextView>(R.id.countdown)
+        var secondsLeft = 30
+        countdownHandler = android.os.Handler(mainLooper)
+        countdownRunnable = object : Runnable {
+            override fun run() {
+                if (secondsLeft > 0) {
+                    countdownText.text = "${secondsLeft}s"
+                    android.util.Log.d("BookingAlert", "⏱️ Countdown: ${secondsLeft}s")
+                    secondsLeft--
+                    countdownHandler?.postDelayed(this, 1000)
+                } else {
+                    android.util.Log.d("BookingAlert", "⏱️ Countdown finished - auto rejecting")
+                    // Auto-reject after 30 seconds
+                    if (bookingId.isNotEmpty()) {
+                        rejectBooking(bookingId)
+                    } else {
+                        finish()
+                    }
+                }
+            }
+        }
+        countdownHandler?.post(countdownRunnable!!)
 
         findViewById<Button>(R.id.btnAccept).setOnClickListener {
+            android.util.Log.d("BookingAlert", "✅ Accept button clicked")
+            countdownHandler?.removeCallbacks(countdownRunnable!!)
             if (bookingId.isNotEmpty()) {
                 acceptBooking(bookingId)
             } else {
@@ -55,6 +100,8 @@ class BookingAlertActivity : Activity() {
         }
 
         findViewById<Button>(R.id.btnReject).setOnClickListener {
+            android.util.Log.d("BookingAlert", "❌ Reject button clicked")
+            countdownHandler?.removeCallbacks(countdownRunnable!!)
             if (bookingId.isNotEmpty()) {
                 rejectBooking(bookingId)
             } else {
@@ -63,16 +110,25 @@ class BookingAlertActivity : Activity() {
             }
         }
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        countdownHandler?.removeCallbacks(countdownRunnable!!)
+    }
     
     private fun rejectBooking(bookingId: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                // Get the stored JWT token
+                val jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE)
+                    .getString("supabase_jwt", null)
+                
                 val url = URL("$SUPABASE_URL/rest/v1/bookings?id=eq.$bookingId")
                 val connection = url.openConnection() as HttpURLConnection
                 
                 connection.requestMethod = "PATCH"
                 connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                connection.setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
+                connection.setRequestProperty("Authorization", "Bearer ${jwt ?: SUPABASE_ANON_KEY}")  // Use JWT if available
                 connection.setRequestProperty("Content-Type", "application/json")
                 connection.setRequestProperty("Prefer", "return=minimal")
                 connection.doOutput = true
@@ -83,6 +139,7 @@ class BookingAlertActivity : Activity() {
                 }
 
                 val responseCode = connection.responseCode
+                android.util.Log.d("BookingAlert", "✅ Reject response: $responseCode")
                 connection.disconnect()
 
                 withContext(Dispatchers.Main) {
@@ -102,6 +159,7 @@ class BookingAlertActivity : Activity() {
                     finish()
                 }
             } catch (e: Exception) {
+                android.util.Log.e("BookingAlert", "❌ Error rejecting booking", e)
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         this@BookingAlertActivity,
@@ -119,13 +177,30 @@ class BookingAlertActivity : Activity() {
             try {
                 android.util.Log.d("BookingAlert", "📤 Accepting booking $bookingId")
                 
-                // Call try_accept_booking RPC
+                // Get the stored JWT token
+                val jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE)
+                    .getString("supabase_jwt", null)
+                
+                if (jwt == null || jwt.isEmpty()) {
+                    android.util.Log.w("BookingAlert", "⚠️ No Supabase JWT — cannot accept")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@BookingAlertActivity,
+                            "❌ Not authenticated - Please log in",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        finish()
+                    }
+                    return@launch
+                }
+                
+                // Call try_accept_booking RPC with user JWT
                 val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/try_accept_booking")
                 val connection = rpcUrl.openConnection() as HttpURLConnection
                 
                 connection.requestMethod = "POST"
                 connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                connection.setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
+                connection.setRequestProperty("Authorization", "Bearer $jwt")  // Use JWT
                 connection.setRequestProperty("Content-Type", "application/json")
                 connection.doOutput = true
 
@@ -135,36 +210,59 @@ class BookingAlertActivity : Activity() {
                 }
 
                 val responseCode = connection.responseCode
-                val responseBody = connection.inputStream.bufferedReader().use { it.readText() }
+                android.util.Log.d("BookingAlert", "📡 RPC Response Code: $responseCode")
+                
+                val responseBody = if (responseCode in 200..299) {
+                    connection.inputStream.bufferedReader().use { it.readText() }
+                } else {
+                    connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
+                }
                 connection.disconnect()
 
-                android.util.Log.d("BookingAlert", "✅ RPC response: $responseCode - $responseBody")
+                android.util.Log.d("BookingAlert", "📄 RPC Response Body: $responseBody")
 
                 withContext(Dispatchers.Main) {
                     if (responseCode in 200..299) {
-                        val json = JSONObject(responseBody)
-                        val success = json.optBoolean("success", false)
-                        
-                        if (success) {
+                        try {
+                            val json = JSONObject(responseBody)
+                            val success = json.optBoolean("success", false)
+                            
+                            if (success) {
+                                Toast.makeText(
+                                    this@BookingAlertActivity,
+                                    "✅ Booking accepted successfully!",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                finish()
+                            } else {
+                                val error = json.optString("error", "Unknown error")
+                                android.util.Log.e("BookingAlert", "❌ RPC returned success=false: $error")
+                                Toast.makeText(
+                                    this@BookingAlertActivity,
+                                    "❌ $error",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e("BookingAlert", "❌ Failed to parse response", e)
                             Toast.makeText(
                                 this@BookingAlertActivity,
-                                "✅ Booking accepted successfully!",
-                                Toast.LENGTH_LONG
-                            ).show()
-                            finish()
-                        } else {
-                            val error = json.optString("error", "Unknown error")
-                            Toast.makeText(
-                                this@BookingAlertActivity,
-                                "❌ $error",
+                                "❌ Parse error: ${e.message}",
                                 Toast.LENGTH_LONG
                             ).show()
                         }
                     } else {
+                        val errorMsg = try {
+                            val json = JSONObject(responseBody)
+                            json.optString("message", json.optString("error", "HTTP $responseCode"))
+                        } catch (e: Exception) {
+                            "HTTP $responseCode: ${responseBody.take(200)}"
+                        }
+                        android.util.Log.e("BookingAlert", "❌ Accept failed: $errorMsg")
                         Toast.makeText(
                             this@BookingAlertActivity,
-                            "❌ Failed to accept booking (HTTP $responseCode)",
-                            Toast.LENGTH_SHORT
+                            "❌ $errorMsg",
+                            Toast.LENGTH_LONG
                         ).show()
                     }
                 }
