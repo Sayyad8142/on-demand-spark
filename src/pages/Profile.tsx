@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, User, Loader2, DollarSign, CheckCircle, TrendingUp, Trash2 } from "lucide-react";
+import { ArrowLeft, User, Loader2, DollarSign, CheckCircle, TrendingUp, Trash2, LogOut } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -123,6 +123,23 @@ export default function Profile() {
     setSelectedCommunities(prev =>
       prev.includes(community) ? prev.filter(c => c !== community) : [...prev, community]
     );
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({ 
+        title: "Logged Out", 
+        description: "You have been successfully logged out" 
+      });
+      navigate("/auth");
+    } catch (error: any) {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to log out", 
+        variant: "destructive" 
+      });
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -301,6 +318,21 @@ export default function Profile() {
               size="lg"
             >
               {updating ? "Updating..." : "Save Changes"}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Logout */}
+        <Card className="shadow-card">
+          <CardContent className="pt-6">
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              className="w-full"
+              size="lg"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
             </Button>
           </CardContent>
         </Card>
