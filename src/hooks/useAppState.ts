@@ -25,11 +25,21 @@ export function useAppState() {
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.access_token && AuthBridge) {
             try {
+              console.log('💾 Saving JWT on foreground:', session.access_token.substring(0, 30) + '...');
               await AuthBridge.saveToken({ token: session.access_token });
-              console.log('✅ JWT refreshed on app foreground');
+              
+              // Verify it was actually saved
+              const verify = await AuthBridge.getToken();
+              if (verify?.token === session.access_token) {
+                console.log('✅ JWT refreshed and verified on app foreground');
+              } else {
+                console.error('❌ JWT verification failed after foreground save');
+              }
             } catch (error) {
               console.error('❌ Failed to refresh JWT on foreground:', error);
             }
+          } else {
+            console.warn('⚠️ No session or AuthBridge when app came to foreground');
           }
         }
       });

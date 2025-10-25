@@ -11,13 +11,22 @@ export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Helper function to save JWT
+  // Helper function to save JWT with verification
   const saveJWT = async (token: string) => {
     if (AuthBridge && Capacitor.isNativePlatform()) {
       try {
+        console.log('💾 Saving JWT...', token.substring(0, 30) + '...');
         await AuthBridge.saveToken({ token });
-        console.log('✅ JWT saved to native bridge');
-        return true;
+        
+        // Verify it was actually saved
+        const verify = await AuthBridge.getToken();
+        if (verify?.token === token) {
+          console.log('✅ JWT saved and verified in native storage');
+          return true;
+        } else {
+          console.error('❌ JWT save verification failed - token mismatch!');
+          return false;
+        }
       } catch (error) {
         console.error('❌ Failed to save JWT:', error);
         return false;
@@ -61,14 +70,14 @@ export function useAuth() {
       }
     );
 
-    // Periodic JWT refresh - save token every 5 minutes if session exists
+    // Aggressive JWT refresh - save token every 2 minutes if session exists
     const intervalId = setInterval(async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.access_token && Capacitor.isNativePlatform()) {
-        await saveJWT(session.access_token);
-        console.log('🔄 Periodic JWT refresh completed');
+        const saved = await saveJWT(session.access_token);
+        console.log('🔄 Periodic JWT refresh:', saved ? 'success' : 'failed');
       }
-    }, 5 * 60 * 1000); // Every 5 minutes
+    }, 2 * 60 * 1000); // Every 2 minutes
 
     return () => {
       subscription.unsubscribe();
