@@ -7,6 +7,7 @@ import { useActiveJob } from "@/hooks/useActiveJob";
 import { BookingAlertModal } from "@/components/BookingAlertModal";
 import ActiveJobCard from "@/components/ActiveJobCard";
 import AvailabilityToggle from "@/components/AvailabilityToggle";
+import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Bell, X } from "lucide-react";
@@ -62,7 +63,12 @@ export default function Home() {
   };
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="min-h-screen flex flex-col">
+      <Header 
+        workerName={worker?.full_name} 
+        communityName={worker?.community}
+      />
+      <div className="flex-1 p-4 space-y-4">
       {/* Web Push Banner */}
       {showWebPushBanner && (
         <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 relative">
@@ -105,6 +111,7 @@ export default function Home() {
         onReject={reject}
         onClose={clearAlert}
       />
+      </div>
     </div>
   );
 }
