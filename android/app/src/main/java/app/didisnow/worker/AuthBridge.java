@@ -21,10 +21,27 @@ public class AuthBridge extends Plugin {
             call.reject("missing token");
             return;
         }
-        prefs().edit().putString("supabase_jwt", token).apply();
-        android.util.Log.d("AuthBridge", "✅ Saved JWT token");
-        ret.put("ok", true);
-        call.resolve(ret);
+        
+        // Use commit() instead of apply() for SYNCHRONOUS write
+        // This ensures JWT is written to disk immediately
+        boolean success = prefs().edit().putString("supabase_jwt", token).commit();
+        
+        if (success) {
+            // Verify it was saved by reading it back
+            String savedToken = prefs().getString("supabase_jwt", null);
+            if (token.equals(savedToken)) {
+                android.util.Log.d("AuthBridge", "✅ JWT token saved and verified");
+                android.util.Log.d("AuthBridge", "🔑 Token preview: " + token.substring(0, Math.min(50, token.length())) + "...");
+                ret.put("ok", true);
+                call.resolve(ret);
+            } else {
+                android.util.Log.e("AuthBridge", "❌ JWT verification failed after save!");
+                call.reject("verification_failed");
+            }
+        } else {
+            android.util.Log.e("AuthBridge", "❌ Failed to commit JWT to SharedPreferences");
+            call.reject("commit_failed");
+        }
     }
 
     @PluginMethod
@@ -37,10 +54,14 @@ public class AuthBridge extends Plugin {
 
     @PluginMethod
     public void clearToken(PluginCall call) {
-        prefs().edit().remove("supabase_jwt").apply();
-        android.util.Log.d("AuthBridge", "🗑️ Cleared JWT token");
+        boolean success = prefs().edit().remove("supabase_jwt").commit();
+        if (success) {
+            android.util.Log.d("AuthBridge", "🗑️ Cleared JWT token");
+        } else {
+            android.util.Log.e("AuthBridge", "❌ Failed to clear JWT token");
+        }
         JSObject ret = new JSObject();
-        ret.put("ok", true);
+        ret.put("ok", success);
         call.resolve(ret);
     }
 }

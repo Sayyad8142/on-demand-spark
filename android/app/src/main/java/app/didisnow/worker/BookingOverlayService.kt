@@ -170,6 +170,21 @@ class BookingOverlayService : Service() {
         overlayView?.findViewById<TextView>(R.id.subtitle)?.text = subtitle
         overlayView?.findViewById<TextView>(R.id.price)?.text = "₹$price"
         
+        // Check and display authentication status
+        val jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE).getString("supabase_jwt", null)
+        val authStatusView = overlayView?.findViewById<TextView>(R.id.authStatus)
+        if (jwt != null && jwt.isNotEmpty()) {
+            authStatusView?.text = "✅ Authenticated"
+            authStatusView?.setTextColor(android.graphics.Color.parseColor("#22C55E"))
+            authStatusView?.setBackgroundColor(android.graphics.Color.parseColor("#F0FDF4"))
+            android.util.Log.d("BookingOverlay", "✅ JWT found, showing authenticated status")
+        } else {
+            authStatusView?.text = "❌ Not authenticated"
+            authStatusView?.setTextColor(android.graphics.Color.parseColor("#EF4444"))
+            authStatusView?.setBackgroundColor(android.graphics.Color.parseColor("#FEF2F2"))
+            android.util.Log.w("BookingOverlay", "⚠️ No JWT found, showing not authenticated status")
+        }
+        
         // Start 30-second countdown
         val countdownText = overlayView?.findViewById<TextView>(R.id.countdown)
         var secondsLeft = 30

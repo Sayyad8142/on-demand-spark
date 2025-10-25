@@ -82,4 +82,17 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"/>
         </LinearLayout>
+
+        <TextView
+            android:id="@+id/authStatus"
+            android:text="✅ Authenticated"
+            android:textColor="#22C55E"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:layout_marginTop="24dp"
+            android:padding="8dp"
+            android:background="#F0FDF4"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"/>
 </LinearLayout>
