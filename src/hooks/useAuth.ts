@@ -36,35 +36,74 @@ export function useAuth() {
   };
 
   useEffect(() => {
-    // Get initial session first
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      
-      // CRITICAL: Save JWT token immediately on app startup if session exists
-      if (session?.access_token) {
-        await saveJWT(session.access_token);
+    let mounted = true;
+    
+    const initAuth = async () => {
+      try {
+        console.log('🔐 Initializing auth...');
+        
+        // Get initial session with retry logic
+        let retryCount = 0;
+        let session = null;
+        
+        while (retryCount < 3 && !session && mounted) {
+          const { data, error } = await supabase.auth.getSession();
+          if (error) {
+            console.error('❌ Error getting session:', error);
+            retryCount++;
+            await new Promise(resolve => setTimeout(resolve, 500));
+            continue;
+          }
+          session = data.session;
+          break;
+        }
+        
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+          
+          if (session) {
+            console.log('✅ Session restored successfully');
+            // Save JWT token immediately on app startup if session exists
+            if (session.access_token) {
+              await saveJWT(session.access_token);
+            }
+          } else {
+            console.log('ℹ️ No session found');
+          }
+        }
+      } catch (error) {
+        console.error('❌ Auth initialization error:', error);
+        if (mounted) {
+          setLoading(false);
+        }
       }
-    });
+    };
+
+    initAuth();
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+      async (event, session) => {
+        console.log('🔄 Auth state changed:', event);
         
-        // Save or clear JWT token
-        if (session?.access_token) {
-          await saveJWT(session.access_token);
-        } else if (AuthBridge && Capacitor.isNativePlatform()) {
-          // Clear token on logout
-          try {
-            await AuthBridge.clearToken();
-            console.log('🗑️ Cleared JWT from native bridge');
-          } catch (error) {
-            console.error('❌ Failed to clear JWT:', error);
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+          
+          // Save or clear JWT token
+          if (session?.access_token) {
+            await saveJWT(session.access_token);
+          } else if (AuthBridge && Capacitor.isNativePlatform()) {
+            // Clear token on logout
+            try {
+              await AuthBridge.clearToken();
+              console.log('🗑️ Cleared JWT from native bridge');
+            } catch (error) {
+              console.error('❌ Failed to clear JWT:', error);
+            }
           }
         }
       }
@@ -72,6 +111,8 @@ export function useAuth() {
 
     // Aggressive JWT refresh - save token every 2 minutes if session exists
     const intervalId = setInterval(async () => {
+      if (!mounted) return;
+      
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.access_token && Capacitor.isNativePlatform()) {
         const saved = await saveJWT(session.access_token);
@@ -80,6 +121,7 @@ export function useAuth() {
     }, 2 * 60 * 1000); // Every 2 minutes
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
       clearInterval(intervalId);
     };
