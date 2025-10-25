@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, User, Loader2, DollarSign, CheckCircle, TrendingUp, Trash2, LogOut } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,13 +29,12 @@ const SERVICES = [
   { value: "bathroom_cleaning", label: "Bathroom Cleaning" }
 ];
 
-const COMMUNITIES = [
-  "Sobha City",
-  "Prestige Falcon City",
-  "Brigade Orchards",
-  "Purva Venezia",
-  "Other"
-];
+interface Community {
+  id: string;
+  name: string;
+  value: string;
+  is_active: boolean;
+}
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -46,12 +45,51 @@ export default function Profile() {
   const [fullName, setFullName] = useState("");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedCommunities, setSelectedCommunities] = useState<string[]>([]);
+  const [communities, setCommunities] = useState<Community[]>([]);
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   
   // Earnings data
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [completedJobs, setCompletedJobs] = useState(0);
+
+  // Fetch communities from Supabase with real-time updates
+  useEffect(() => {
+    const fetchCommunities = async () => {
+      const { data } = await supabase
+        .from('communities')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      
+      if (data) {
+        setCommunities(data);
+      }
+    };
+
+    fetchCommunities();
+
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('communities-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'communities'
+        },
+        (payload) => {
+          console.log('Communities changed:', payload);
+          fetchCommunities();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   useEffect(() => {
     if (worker) {
@@ -113,17 +151,6 @@ export default function Profile() {
     }
   };
 
-  const toggleService = (service: string) => {
-    setSelectedServices(prev =>
-      prev.includes(service) ? prev.filter(s => s !== service) : [...prev, service]
-    );
-  };
-
-  const toggleCommunity = (community: string) => {
-    setSelectedCommunities(prev =>
-      prev.includes(community) ? prev.filter(c => c !== community) : [...prev, community]
-    );
-  };
 
   const handleLogout = async () => {
     try {
@@ -279,36 +306,46 @@ export default function Profile() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Service Types</Label>
-              <div className="flex flex-wrap gap-2">
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Service Types</Label>
+              <ToggleGroup 
+                type="multiple" 
+                value={selectedServices}
+                onValueChange={setSelectedServices}
+                className="justify-start flex-wrap"
+              >
                 {SERVICES.map(service => (
-                  <Badge
+                  <ToggleGroupItem
                     key={service.value}
-                    variant={selectedServices.includes(service.value) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => toggleService(service.value)}
+                    value={service.value}
+                    aria-label={service.label}
+                    className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
                   >
                     {service.label}
-                  </Badge>
+                  </ToggleGroupItem>
                 ))}
-              </div>
+              </ToggleGroup>
             </div>
 
-            <div className="space-y-2">
-              <Label>Communities</Label>
-              <div className="flex flex-wrap gap-2">
-                {COMMUNITIES.map(community => (
-                  <Badge
-                    key={community}
-                    variant={selectedCommunities.includes(community) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => toggleCommunity(community)}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Communities</Label>
+              <ToggleGroup 
+                type="multiple" 
+                value={selectedCommunities}
+                onValueChange={setSelectedCommunities}
+                className="justify-start flex-wrap"
+              >
+                {communities.map(community => (
+                  <ToggleGroupItem
+                    key={community.id}
+                    value={community.value}
+                    aria-label={community.name}
+                    className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
                   >
-                    {community}
-                  </Badge>
+                    {community.name}
+                  </ToggleGroupItem>
                 ))}
-              </div>
+              </ToggleGroup>
             </div>
 
             <Button
