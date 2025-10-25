@@ -1,6 +1,10 @@
 package app.didisnow.worker
 
 import android.app.Activity
+import android.media.AudioAttributes
+import android.media.MediaPlayer
+import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Bundle
 import android.view.WindowManager
 import android.widget.Button
@@ -22,6 +26,7 @@ class BookingAlertActivity : Activity() {
 
     private var countdownHandler: android.os.Handler? = null
     private var countdownRunnable: Runnable? = null
+    private var mediaPlayer: MediaPlayer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,6 +40,9 @@ class BookingAlertActivity : Activity() {
         )
 
         setContentView(R.layout.activity_booking_alert)
+
+        // Play loud siren sound
+        playAlertSound()
 
         val bookingId = intent.getStringExtra("booking_id") ?: ""
         val customer = intent.getStringExtra("customer_name") ?: "New Customer"
@@ -90,6 +98,7 @@ class BookingAlertActivity : Activity() {
 
         findViewById<Button>(R.id.btnAccept).setOnClickListener {
             android.util.Log.d("BookingAlert", "✅ Accept button clicked")
+            stopAlertSound() // Stop sound immediately
             countdownHandler?.removeCallbacks(countdownRunnable!!)
             if (bookingId.isNotEmpty()) {
                 acceptBooking(bookingId)
@@ -101,6 +110,7 @@ class BookingAlertActivity : Activity() {
 
         findViewById<Button>(R.id.btnReject).setOnClickListener {
             android.util.Log.d("BookingAlert", "❌ Reject button clicked")
+            stopAlertSound() // Stop sound immediately
             countdownHandler?.removeCallbacks(countdownRunnable!!)
             if (bookingId.isNotEmpty()) {
                 rejectBooking(bookingId)
@@ -114,6 +124,51 @@ class BookingAlertActivity : Activity() {
     override fun onDestroy() {
         super.onDestroy()
         countdownHandler?.removeCallbacks(countdownRunnable!!)
+        stopAlertSound()
+    }
+
+    private fun playAlertSound() {
+        try {
+            // Stop any existing sound
+            stopAlertSound()
+            
+            // Use the default alarm sound (loud siren-like sound)
+            val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+            
+            mediaPlayer = MediaPlayer().apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .build()
+                )
+                setDataSource(this@BookingAlertActivity, alarmUri)
+                isLooping = true // Loop the alarm sound
+                setVolume(1.0f, 1.0f) // Max volume
+                prepare()
+                start()
+            }
+            
+            android.util.Log.d("BookingAlert", "🔊 Alert sound started")
+        } catch (e: Exception) {
+            android.util.Log.e("BookingAlert", "❌ Failed to play alert sound", e)
+        }
+    }
+
+    private fun stopAlertSound() {
+        try {
+            mediaPlayer?.apply {
+                if (isPlaying) {
+                    stop()
+                }
+                release()
+            }
+            mediaPlayer = null
+            android.util.Log.d("BookingAlert", "🔇 Alert sound stopped")
+        } catch (e: Exception) {
+            android.util.Log.e("BookingAlert", "❌ Failed to stop alert sound", e)
+        }
     }
     
     private fun rejectBooking(bookingId: String) {
@@ -144,18 +199,11 @@ class BookingAlertActivity : Activity() {
 
                 withContext(Dispatchers.Main) {
                     if (responseCode in 200..299) {
-                        Toast.makeText(
-                            this@BookingAlertActivity,
-                            "Booking rejected",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        android.util.Log.d("BookingAlert", "✅ Booking rejected successfully")
                     } else {
-                        Toast.makeText(
-                            this@BookingAlertActivity,
-                            "Failed to reject booking",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        android.util.Log.e("BookingAlert", "❌ Failed to reject booking: $responseCode")
                     }
+                    // Just finish without opening app or showing toast
                     finish()
                 }
             } catch (e: Exception) {
@@ -224,46 +272,47 @@ class BookingAlertActivity : Activity() {
                 withContext(Dispatchers.Main) {
                     if (responseCode in 200..299) {
                         try {
-                            val json = JSONObject(responseBody)
-                            val success = json.optBoolean("success", false)
+                            // Check if response indicates success
+                            val success = if (responseBody.isNotEmpty() && responseBody != "null") {
+                                val json = JSONObject(responseBody)
+                                json.optBoolean("success", true) // Default to true if not specified
+                            } else {
+                                true // Empty response means success
+                            }
                             
                             if (success) {
-                                Toast.makeText(
-                                    this@BookingAlertActivity,
-                                    "✅ Booking accepted successfully!",
-                                    Toast.LENGTH_LONG
-                                ).show()
+                                android.util.Log.d("BookingAlert", "✅ Booking accepted successfully!")
+                                // Just finish without showing toast or opening app
                                 finish()
                             } else {
-                                val error = json.optString("error", "Unknown error")
-                                android.util.Log.e("BookingAlert", "❌ RPC returned success=false: $error")
+                                val error = JSONObject(responseBody).optString("error", "Could not accept booking")
+                                android.util.Log.e("BookingAlert", "❌ Accept failed: $error")
                                 Toast.makeText(
                                     this@BookingAlertActivity,
                                     "❌ $error",
-                                    Toast.LENGTH_LONG
+                                    Toast.LENGTH_SHORT
                                 ).show()
+                                finish()
                             }
                         } catch (e: Exception) {
-                            android.util.Log.e("BookingAlert", "❌ Failed to parse response", e)
-                            Toast.makeText(
-                                this@BookingAlertActivity,
-                                "❌ Parse error: ${e.message}",
-                                Toast.LENGTH_LONG
-                            ).show()
+                            android.util.Log.e("BookingAlert", "❌ Response parse error", e)
+                            // Assume success if response code is 2xx
+                            finish()
                         }
                     } else {
                         val errorMsg = try {
                             val json = JSONObject(responseBody)
                             json.optString("message", json.optString("error", "HTTP $responseCode"))
                         } catch (e: Exception) {
-                            "HTTP $responseCode: ${responseBody.take(200)}"
+                            "Failed to accept (HTTP $responseCode)"
                         }
                         android.util.Log.e("BookingAlert", "❌ Accept failed: $errorMsg")
                         Toast.makeText(
                             this@BookingAlertActivity,
                             "❌ $errorMsg",
-                            Toast.LENGTH_LONG
+                            Toast.LENGTH_SHORT
                         ).show()
+                        finish()
                     }
                 }
             } catch (e: Exception) {
@@ -274,6 +323,7 @@ class BookingAlertActivity : Activity() {
                         "Error: ${e.message}",
                         Toast.LENGTH_SHORT
                     ).show()
+                    finish()
                 }
             }
         }

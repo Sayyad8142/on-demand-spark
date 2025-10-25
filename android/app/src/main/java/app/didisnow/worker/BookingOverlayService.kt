@@ -6,6 +6,9 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
+import android.media.AudioAttributes
+import android.media.MediaPlayer
+import android.media.RingtoneManager
 import android.os.Build
 import android.os.IBinder
 import android.view.Gravity
@@ -27,6 +30,7 @@ import org.json.JSONObject
 class BookingOverlayService : Service() {
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
+    private var mediaPlayer: MediaPlayer? = null
     
     companion object {
         private const val SUPABASE_URL = "https://paywwbuqycovjopryele.supabase.co"
@@ -123,6 +127,9 @@ class BookingOverlayService : Service() {
     private fun showOverlay(bookingId: String, customer: String, community: String, serviceType: String, flatNo: String, price: Int) {
         android.util.Log.d("BookingOverlay", "🖼️ showOverlay called")
         
+        // Play loud siren sound
+        playAlertSound()
+        
         // Check overlay permission
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (!android.provider.Settings.canDrawOverlays(this)) {
@@ -207,6 +214,7 @@ class BookingOverlayService : Service() {
         // Handle Accept button
         overlayView?.findViewById<Button>(R.id.btnAccept)?.setOnClickListener {
             android.util.Log.d("BookingOverlay", "✅ Accept button clicked")
+            stopAlertSound() // Stop sound immediately
             handler.removeCallbacks(countdown)
             if (bookingId.isNotEmpty()) {
                 updateBooking(bookingId, "accepted")
@@ -220,6 +228,7 @@ class BookingOverlayService : Service() {
         // Handle Reject button
         overlayView?.findViewById<Button>(R.id.btnReject)?.setOnClickListener {
             android.util.Log.d("BookingOverlay", "❌ Reject button clicked")
+            stopAlertSound() // Stop sound immediately
             handler.removeCallbacks(countdown)
             updateBooking(bookingId, "rejected")
             closeOverlay()
@@ -394,6 +403,7 @@ class BookingOverlayService : Service() {
 
     private fun closeOverlay() {
         android.util.Log.d("BookingOverlay", "🔚 closeOverlay called")
+        stopAlertSound() // Stop sound when closing
         try {
             if (overlayView != null && overlayView?.windowToken != null) {
                 android.util.Log.d("BookingOverlay", "➖ Removing overlay from window")
@@ -406,6 +416,50 @@ class BookingOverlayService : Service() {
             overlayView = null
             android.util.Log.d("BookingOverlay", "🛑 Stopping service")
             stopSelf()
+        }
+    }
+
+    private fun playAlertSound() {
+        try {
+            // Stop any existing sound
+            stopAlertSound()
+            
+            // Use the default alarm sound (loud siren-like sound)
+            val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+            
+            mediaPlayer = MediaPlayer().apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .build()
+                )
+                setDataSource(this@BookingOverlayService, alarmUri)
+                isLooping = true // Loop the alarm sound
+                setVolume(1.0f, 1.0f) // Max volume
+                prepare()
+                start()
+            }
+            
+            android.util.Log.d("BookingOverlay", "🔊 Alert sound started")
+        } catch (e: Exception) {
+            android.util.Log.e("BookingOverlay", "❌ Failed to play alert sound", e)
+        }
+    }
+
+    private fun stopAlertSound() {
+        try {
+            mediaPlayer?.apply {
+                if (isPlaying) {
+                    stop()
+                }
+                release()
+            }
+            mediaPlayer = null
+            android.util.Log.d("BookingOverlay", "🔇 Alert sound stopped")
+        } catch (e: Exception) {
+            android.util.Log.e("BookingOverlay", "❌ Failed to stop alert sound", e)
         }
     }
 
