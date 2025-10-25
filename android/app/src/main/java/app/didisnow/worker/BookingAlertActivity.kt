@@ -51,10 +51,9 @@ class BookingAlertActivity : Activity() {
         val flatNo = intent.getStringExtra("flat_no") ?: ""
         val price = intent.getIntExtra("price_inr", 0)
 
-        findViewById<TextView>(R.id.alertTitle).text = "New Booking Request!"
-        findViewById<TextView>(R.id.alertCustomer).text = "Customer: $customer"
-        findViewById<TextView>(R.id.alertCommunity).text = "Community: $community"
-        findViewById<TextView>(R.id.alertService).text = "Service: $serviceType"
+        findViewById<TextView>(R.id.alertTitle).text = "New Booking"
+        findViewById<TextView>(R.id.alertService).text = serviceType
+        findViewById<TextView>(R.id.alertLocation).text = "Flat: $flatNo"
         findViewById<TextView>(R.id.alertPrice).text = "₹$price"
 
         // Check and display authentication status
@@ -86,7 +85,15 @@ class BookingAlertActivity : Activity() {
         countdownRunnable = object : Runnable {
             override fun run() {
                 if (secondsLeft > 0) {
-                    countdownText.text = "${secondsLeft}s"
+                    countdownText.text = "$secondsLeft"
+                    
+                    // Change color based on time remaining
+                    when {
+                        secondsLeft > 15 -> countdownText.setTextColor(android.graphics.Color.parseColor("#22C55E")) // Green
+                        secondsLeft > 5 -> countdownText.setTextColor(android.graphics.Color.parseColor("#F59E0B")) // Orange
+                        else -> countdownText.setTextColor(android.graphics.Color.parseColor("#EF4444")) // Red
+                    }
+                    
                     android.util.Log.d("BookingAlert", "⏱️ Countdown: ${secondsLeft}s")
                     secondsLeft--
                     countdownHandler?.postDelayed(this, 1000)
