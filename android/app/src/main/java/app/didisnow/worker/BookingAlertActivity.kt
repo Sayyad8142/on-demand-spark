@@ -60,15 +60,22 @@ class BookingAlertActivity : Activity() {
         // Check and display authentication status
         val jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE).getString("supabase_jwt", null)
         val authStatusView = findViewById<TextView>(R.id.authStatus)
-        if (jwt != null && jwt.isNotEmpty()) {
+        val acceptButton = findViewById<Button>(R.id.btnAccept)
+        
+        val isAuthenticated = jwt != null && jwt.isNotEmpty()
+        
+        if (isAuthenticated) {
             authStatusView.text = "✅ Authenticated"
             authStatusView.setTextColor(android.graphics.Color.parseColor("#22C55E"))
             authStatusView.setBackgroundColor(android.graphics.Color.parseColor("#F0FDF4"))
+            acceptButton.isEnabled = true
             android.util.Log.d("BookingAlert", "✅ JWT found, showing authenticated status")
         } else {
-            authStatusView.text = "❌ Not authenticated"
+            authStatusView.text = "❌ Please log in to accept bookings"
             authStatusView.setTextColor(android.graphics.Color.parseColor("#EF4444"))
             authStatusView.setBackgroundColor(android.graphics.Color.parseColor("#FEF2F2"))
+            acceptButton.isEnabled = false
+            acceptButton.alpha = 0.5f
             android.util.Log.w("BookingAlert", "⚠️ No JWT found, showing not authenticated status")
         }
 
@@ -96,10 +103,22 @@ class BookingAlertActivity : Activity() {
         }
         countdownHandler?.post(countdownRunnable!!)
 
-        findViewById<Button>(R.id.btnAccept).setOnClickListener {
+        acceptButton.setOnClickListener {
             android.util.Log.d("BookingAlert", "✅ Accept button clicked")
             stopAlertSound() // Stop sound immediately
             countdownHandler?.removeCallbacks(countdownRunnable!!)
+            
+            // Check authentication again when clicking
+            if (!isAuthenticated) {
+                // Open app to login screen
+                Toast.makeText(this, "Opening app to log in...", Toast.LENGTH_SHORT).show()
+                val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+                launchIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                startActivity(launchIntent)
+                finish()
+                return@setOnClickListener
+            }
+            
             if (bookingId.isNotEmpty()) {
                 acceptBooking(bookingId)
             } else {
