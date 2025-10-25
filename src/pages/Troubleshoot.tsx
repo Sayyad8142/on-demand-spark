@@ -208,9 +208,34 @@ export default function Troubleshoot() {
                     <p className="text-sm text-red-700 dark:text-red-300 mb-2">
                       ❌ No JWT token saved - overlay accept will fail
                     </p>
-                    <p className="text-xs text-blue-700 dark:text-blue-300">
-                      Try logging out and logging back in to save your token
+                    <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
+                      Click below to save your token now:
                     </p>
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const { data: { session } } = await supabase.auth.getSession();
+                          if (session?.access_token) {
+                            // @ts-ignore - Capacitor bridge
+                            const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+                            await AuthBridge.saveToken({ token: session.access_token });
+                            setTokenStatus({
+                              saved: true,
+                              preview: `${session.access_token.substring(0, 20)}...`
+                            });
+                            toast({ title: "✅ JWT Saved", description: "Token saved successfully" });
+                          } else {
+                            toast({ title: "❌ Not logged in", description: "Please log in first", variant: "destructive" });
+                          }
+                        } catch (error) {
+                          toast({ title: "Error", description: String(error), variant: "destructive" });
+                        }
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      Save JWT Now
+                    </Button>
                   </div>
                 )}
               </div>
