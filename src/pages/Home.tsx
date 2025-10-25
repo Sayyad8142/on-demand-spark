@@ -10,10 +10,6 @@ import AvailabilityToggle from "@/components/AvailabilityToggle";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Bell, X } from "lucide-react";
-import { showBookingOverlay } from "@/lib/overlay";
-import { toast } from "sonner";
-import { Capacitor } from "@capacitor/core";
-import { initNativePush } from "@/native/push";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -65,55 +61,8 @@ export default function Home() {
     await Promise.all([refetchActiveJob(), refetchWorker()]);
   };
 
-  const testOverlay = async () => {
-    console.log('🧪 Test Overlay button clicked');
-    
-    if (!Capacitor.isNativePlatform()) {
-      toast.error("Overlay only works on Android devices", {
-        description: "Build the APK and test on a physical device or emulator"
-      });
-      console.log('❌ Not a native platform');
-      return;
-    }
-    
-    if (Capacitor.getPlatform() !== 'android') {
-      toast.error("Overlay only works on Android", {
-        description: "This feature requires Android"
-      });
-      console.log('❌ Not Android platform');
-      return;
-    }
-    
-    toast.info("Triggering overlay...");
-    console.log('📱 Calling showBookingOverlay');
-    
-    try {
-      await showBookingOverlay({
-        id: "test-123",
-        service_type: "Maid",
-        cust_name: "Test User",
-        community: "Prestige High Fields",
-        flat_no: "1011",
-        price_inr: 150,
-      });
-      toast.success("Overlay triggered successfully");
-    } catch (error) {
-      toast.error("Failed to show overlay");
-      console.error('❌ Error:', error);
-    }
-  };
-
   return (
     <div className="p-4 space-y-4">
-      {/* Temporary Test Button */}
-      <Card className="p-4 bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800">
-        <Button 
-          onClick={testOverlay}
-          className="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
-        >
-          Test Overlay
-        </Button>
-      </Card>
       {/* Web Push Banner */}
       {showWebPushBanner && (
         <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 relative">
