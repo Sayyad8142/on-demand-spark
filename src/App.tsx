@@ -17,6 +17,7 @@ import Home from "./pages/Home";
 import Bookings from "./pages/Bookings";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
+import TestBooking from "./pages/TestBooking";
 import Troubleshoot from "./pages/Troubleshoot";
 import VerifyPush from "./pages/VerifyPush";
 import DevCacheReset from "./pages/DevCacheReset";
@@ -159,6 +160,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/test-booking"
+              element={
+                <ProtectedRoute>
+                  <TestBooking />
                 </ProtectedRoute>
               }
             />
