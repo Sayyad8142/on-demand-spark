@@ -2,136 +2,245 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:background="#FFFFFF"
-    android:gravity="center"
-    android:padding="32dp"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- Header Section -->
+    <LinearLayout
+        android:orientation="horizontal"
+        android:padding="24dp"
+        android:gravity="center_vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:text="New Booking Request"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="#1A1A1A"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:text="Respond within 30 seconds"
+                android:textSize="14sp"
+                android:textColor="#666666"
+                android:layout_marginTop="4dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <RelativeLayout
+            android:layout_width="80dp"
+            android:layout_height="80dp">
+
+            <ProgressBar
+                android:id="@+id/countdownCircle"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:max="30"
+                android:progress="30"
+                android:progressDrawable="@drawable/circular_progress"
+                android:progressTint="#22C55E"
+                android:rotation="-90" />
+
+            <TextView
+                android:id="@+id/countdown"
+                android:text="30s"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="#22C55E"
+                android:gravity="center"
+                android:layout_centerInParent="true"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </RelativeLayout>
+    </LinearLayout>
+
+    <View
+        android:background="#E5E5E5"
+        android:layout_width="match_parent"
+        android:layout_height="1dp" />
+
+    <!-- Service Image -->
+    <ImageView
+        android:id="@+id/alertServiceImage"
+        android:layout_width="match_parent"
+        android:layout_height="240dp"
+        android:scaleType="centerCrop"
+        android:src="@drawable/maid_dishes"
+        android:contentDescription="Service Image" />
+
+    <!-- Service Title -->
     <TextView
-        android:id="@+id/alertTitle"
-        android:text="New Booking"
-        android:textSize="32sp"
+        android:id="@+id/alertService"
+        android:text="Maid Service"
+        android:textSize="28sp"
         android:textStyle="bold"
         android:textColor="#1A1A1A"
         android:gravity="center"
-        android:layout_marginBottom="48dp"
-        android:layout_width="wrap_content"
+        android:layout_marginTop="24dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
-    <LinearLayout
-        android:orientation="vertical"
+    <!-- Service Subtitle -->
+    <TextView
+        android:id="@+id/alertServiceSubtitle"
+        android:text="Includes: Dishes & Jhaadu/Pocha"
+        android:textSize="16sp"
+        android:textColor="#666666"
         android:gravity="center"
-        android:layout_marginBottom="40dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="24dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <!-- Price and Tower Cards -->
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginBottom="24dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <ImageView
-            android:id="@+id/alertServiceIcon"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:src="@drawable/ic_service_default"
-            android:layout_marginBottom="16dp"
-            android:contentDescription="Service Icon" />
+        <!-- Price Card -->
+        <LinearLayout
+            android:orientation="vertical"
+            android:background="#F5F5F5"
+            android:padding="20dp"
+            android:gravity="center"
+            android:layout_weight="1"
+            android:layout_marginEnd="12dp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:text="Price"
+                android:textSize="14sp"
+                android:textColor="#666666"
+                android:layout_marginBottom="8dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:id="@+id/alertPrice"
+                android:text="₹0"
+                android:textSize="32sp"
+                android:textStyle="bold"
+                android:textColor="#1A1A1A"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <!-- Tower Card -->
+        <LinearLayout
+            android:orientation="vertical"
+            android:background="#F5F5F5"
+            android:padding="20dp"
+            android:gravity="center"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:text="Tower No."
+                android:textSize="14sp"
+                android:textColor="#666666"
+                android:layout_marginBottom="8dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:id="@+id/alertTower"
+                android:text="—"
+                android:textSize="32sp"
+                android:textStyle="bold"
+                android:textColor="#1A1A1A"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Community Card -->
+    <LinearLayout
+        android:orientation="vertical"
+        android:background="#F5F5F5"
+        android:padding="20dp"
+        android:gravity="center"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginBottom="32dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
 
         <TextView
-            android:id="@+id/alertService"
-            android:text="Snow Removal"
-            android:textSize="24sp"
+            android:text="Community"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="8dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/alertCommunity"
+            android:text="Prestige High Fields"
+            android:textSize="20sp"
             android:textStyle="bold"
             android:textColor="#1A1A1A"
-            android:gravity="center"
-            android:layout_marginBottom="16dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-
-        <TextView
-            android:id="@+id/alertLocation"
-            android:text="Flat: A-101"
-            android:textSize="20sp"
-            android:textColor="#666666"
-            android:gravity="center"
-            android:layout_marginBottom="24dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-
-        <TextView
-            android:id="@+id/alertPrice"
-            android:text="₹500"
-            android:textSize="48sp"
-            android:textStyle="bold"
-            android:textColor="#22C55E"
-            android:gravity="center"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
     </LinearLayout>
 
+    <View
+        android:layout_weight="1"
+        android:layout_width="match_parent"
+        android:layout_height="0dp" />
+
+    <!-- Action Buttons -->
     <LinearLayout
-        android:orientation="vertical"
-        android:gravity="center"
-        android:layout_marginBottom="48dp"
+        android:orientation="horizontal"
+        android:layout_margin="24dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
-
-        <TextView
-            android:id="@+id/countdown"
-            android:text="30"
-            android:textSize="72sp"
-            android:textStyle="bold"
-            android:textColor="#22C55E"
-            android:layout_marginBottom="16dp"
-            android:gravity="center"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-
-        <ProgressBar
-            android:id="@+id/countdownProgressBar"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="12dp"
-            android:max="30"
-            android:progress="30"
-            android:progressTint="#22C55E"
-            android:layout_marginHorizontal="32dp" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:orientation="vertical"
-        android:gravity="center"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-
-        <Button
-            android:id="@+id/btnAccept"
-            android:text="ACCEPT"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:textColor="#FFFFFF"
-            android:backgroundTint="#22C55E"
-            android:layout_marginBottom="16dp"
-            android:paddingVertical="20dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
 
         <Button
             android:id="@+id/btnReject"
-            android:text="REJECT"
-            android:textSize="24sp"
+            android:text="Reject"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#1A1A1A"
+            android:background="@drawable/btn_outline"
+            android:layout_weight="1"
+            android:layout_marginEnd="12dp"
+            android:paddingVertical="16dp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content" />
+
+        <Button
+            android:id="@+id/btnAccept"
+            android:text="Accept"
+            android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="#FFFFFF"
-            android:backgroundTint="#EF4444"
-            android:paddingVertical="20dp"
-            android:layout_width="match_parent"
+            android:backgroundTint="#22C55E"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:paddingVertical="16dp"
+            android:layout_width="0dp"
             android:layout_height="wrap_content" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/authStatus"
-        android:text=""
-        android:textColor="#666666"
-        android:textSize="12sp"
-        android:gravity="center"
-        android:layout_marginTop="32dp"
+    <ProgressBar
+        android:id="@+id/loadingIndicator"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_gravity="center"
         android:visibility="gone" />
 </LinearLayout>

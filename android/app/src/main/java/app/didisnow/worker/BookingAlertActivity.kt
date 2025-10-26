@@ -46,23 +46,50 @@ class BookingAlertActivity : AppCompatActivity() {
         val flatNo = intent.getStringExtra("flat_no") ?: ""
         val priceInr = intent.getIntExtra("price_inr", 0)
 
-        findViewById<TextView>(R.id.alertTitle).text = "New Booking"
-        findViewById<TextView>(R.id.alertService).text = serviceType
-        findViewById<TextView>(R.id.alertLocation).text = "Flat: $flatNo"
-        findViewById<TextView>(R.id.alertPrice).text = "₹$priceInr"
-        
-        // Set service icon based on service type
-        val serviceIcon = findViewById<ImageView>(R.id.alertServiceIcon)
-        val iconResource = when (serviceType.lowercase()) {
-            "maid" -> R.drawable.ic_service_maid
-            "cook" -> R.drawable.ic_service_cook
-            "bathroom cleaning", "bathroom" -> R.drawable.ic_service_bathroom
-            else -> R.drawable.ic_service_default
+        // Set service details
+        val serviceText = findViewById<TextView>(R.id.alertService)
+        val serviceSubtitle = findViewById<TextView>(R.id.alertServiceSubtitle)
+        val serviceImage = findViewById<ImageView>(R.id.alertServiceImage)
+        val priceText = findViewById<TextView>(R.id.alertPrice)
+        val towerText = findViewById<TextView>(R.id.alertTower)
+        val communityText = findViewById<TextView>(R.id.alertCommunity)
+
+        when (serviceType.lowercase()) {
+            "maid" -> {
+                serviceText.text = "Maid Service"
+                serviceSubtitle.text = "Includes: Dishes & Jhaadu/Pocha"
+                serviceImage.setImageResource(R.drawable.maid_dishes)
+            }
+            "cook" -> {
+                serviceText.text = "Cook Service"
+                serviceSubtitle.text = "Includes: Meal Preparation"
+                serviceImage.setImageResource(R.drawable.ic_service_cook)
+            }
+            "bathroom cleaning", "bathroom" -> {
+                serviceText.text = "Bathroom Cleaning"
+                serviceSubtitle.text = "Includes: Complete Bathroom Cleaning"
+                serviceImage.setImageResource(R.drawable.ic_service_bathroom)
+            }
+            else -> {
+                serviceText.text = serviceType
+                serviceSubtitle.text = "Service details"
+                serviceImage.setImageResource(R.drawable.ic_service_default)
+            }
         }
-        serviceIcon.setImageResource(iconResource)
+
+        priceText.text = "₹$priceInr"
+        
+        // Derive Tower No from first digit of flat number
+        val towerNo = if (flatNo.isNotBlank()) {
+            flatNo.firstOrNull { it.isDigit() }?.toString() ?: "—"
+        } else {
+            "—"
+        }
+        towerText.text = towerNo
+        communityText.text = "Prestige High Fields"
 
         val countdownText = findViewById<TextView>(R.id.countdown)
-        val countdownProgressBar = findViewById<ProgressBar>(R.id.countdownProgressBar)
+        val countdownCircle = findViewById<ProgressBar>(R.id.countdownCircle)
         val btnAccept = findViewById<Button>(R.id.btnAccept)
         val btnReject = findViewById<Button>(R.id.btnReject)
 
@@ -71,17 +98,17 @@ class BookingAlertActivity : AppCompatActivity() {
         countdownRunnable = object : Runnable {
             override fun run() {
                 if (secondsLeft > 0) {
-                    countdownText.text = "$secondsLeft"
-                    countdownProgressBar.progress = secondsLeft
+                    countdownText.text = "${secondsLeft}s"
+                    countdownCircle.progress = secondsLeft
                     
                     // Change color based on time remaining
                     val color = when {
                         secondsLeft > 15 -> "#22C55E" // Green
-                        secondsLeft > 5 -> "#F59E0B" // Orange
+                        secondsLeft > 10 -> "#F59E0B" // Orange
                         else -> "#EF4444" // Red
                     }
                     countdownText.setTextColor(Color.parseColor(color))
-                    countdownProgressBar.progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor(color))
+                    countdownCircle.progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor(color))
                     
                     Log.d("BookingAlert", "⏱️ Countdown: ${secondsLeft}s")
                     secondsLeft--
