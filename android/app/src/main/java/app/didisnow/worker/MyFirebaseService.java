@@ -33,23 +33,26 @@ public class MyFirebaseService extends FirebaseMessagingService {
       if ("BOOKING_ALERT".equals(type)) {
         Log.d(TAG, "🚨 BOOKING_ALERT detected! Starting BookingOverlayService...");
         
-        // Get booking data with unified keys
-        String bookingId = message.getData().get("booking_id");
-        String serviceType = message.getData().get("service_type");
-        String flatNumber = message.getData().get("flat_number");
-        String priceInr = message.getData().get("price_inr");
-        String notes = message.getData().get("notes");
+        // Get booking data - try both field names for compatibility
+        String bookingId = message.getData().get("bookingId");
+        if (bookingId == null || bookingId.isEmpty()) {
+          bookingId = message.getData().get("booking_id");
+        }
+        
+        String customer = message.getData().get("customer");
         String community = message.getData().get("community");
-        String imageUrl = message.getData().get("image_url");
+        String serviceType = message.getData().get("serviceType");
+        if (serviceType == null || serviceType.isEmpty()) {
+          serviceType = message.getData().get("service_type");
+        }
+        String location = message.getData().get("location");
         
         Log.d(TAG, "📋 Booking details:");
-        Log.d(TAG, "  booking_id: " + bookingId);
-        Log.d(TAG, "  service_type: " + serviceType);
-        Log.d(TAG, "  flat_number: " + flatNumber);
-        Log.d(TAG, "  price_inr: " + priceInr);
-        Log.d(TAG, "  community: " + community);
-        Log.d(TAG, "  notes: " + notes);
-        Log.d(TAG, "  image_url: " + imageUrl);
+        Log.d(TAG, "  ID: " + bookingId);
+        Log.d(TAG, "  Customer: " + customer);
+        Log.d(TAG, "  Community: " + community);
+        Log.d(TAG, "  Service: " + serviceType);
+        Log.d(TAG, "  Location: " + location);
         
         // Validate critical data
         if (bookingId == null || bookingId.isEmpty()) {
@@ -69,24 +72,31 @@ public class MyFirebaseService extends FirebaseMessagingService {
           }
         }
         
-        // Start BookingAlertActivity with unified keys
-        Intent activityIntent = new Intent(this, BookingAlertActivity.class);
-        activityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        activityIntent.putExtra("booking_id", bookingId != null ? bookingId : "");
-        activityIntent.putExtra("service_type", serviceType != null ? serviceType : "");
-        activityIntent.putExtra("flat_number", flatNumber != null ? flatNumber : "");
-        activityIntent.putExtra("price_inr", priceInr != null ? priceInr : "0");
-        activityIntent.putExtra("notes", notes != null ? notes : "");
-        activityIntent.putExtra("community", community != null ? community : "Prestige High Fields");
-        activityIntent.putExtra("image_url", imageUrl != null ? imageUrl : "");
+        // Start BookingOverlayService to show system overlay
+        Intent serviceIntent = new Intent(this, BookingOverlayService.class);
+        serviceIntent.putExtra("mode", "show");
+        serviceIntent.putExtra("booking_id", bookingId);
+        serviceIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
+        serviceIntent.putExtra("community", community != null ? community : "");
+        serviceIntent.putExtra("service_type", serviceType != null ? serviceType : "Service");
+        serviceIntent.putExtra("flat_no", location != null ? location : "");
+        serviceIntent.putExtra("price_inr", 0);
         
-        Log.d(TAG, "🚀 Starting BookingAlertActivity...");
+        Log.d(TAG, "🚀 Starting BookingOverlayService with mode=show...");
         
         try {
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            androidx.core.content.ContextCompat.startForegroundService(this, serviceIntent);
+          } else {
+            startService(serviceIntent);
+          }
+          Log.d(TAG, "✅ BookingOverlayService started successfully");
+        } catch (Exception se) {
+          Log.e(TAG, "❌ startForegroundService failed, falling back to BookingAlertActivity", se);
+          Intent activityIntent = new Intent(this, BookingAlertActivity.class)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+          activityIntent.putExtras(serviceIntent);
           startActivity(activityIntent);
-          Log.d(TAG, "✅ BookingAlertActivity started successfully");
-        } catch (Exception e) {
-          Log.e(TAG, "❌ Failed to start BookingAlertActivity", e);
         }
       } else {
         Log.d(TAG, "⏭️ Not a BOOKING_ALERT, type: " + type + " - skipping");

@@ -12,7 +12,6 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:allowBackup="true"
@@ -48,11 +47,11 @@
         <activity
             android:name=".BookingAlertActivity"
             android:excludeFromRecents="true"
-            android:exported="true"
+            android:exported="false"
             android:showOnLockScreen="true"
             android:turnScreenOn="true"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"
-            android:launchMode="singleTask" />
+            android:launchMode="singleTop" />
 
         <!-- Foreground Service for booking alerts -->
         <service

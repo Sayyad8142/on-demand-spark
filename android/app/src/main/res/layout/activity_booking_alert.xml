@@ -1,294 +1,137 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:background="#FFFFFF"
+    android:gravity="center"
+    android:padding="32dp"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#F5F5F5"
-    android:fillViewport="true">
+    android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/alertTitle"
+        android:text="New Booking"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:textColor="#1A1A1A"
+        android:gravity="center"
+        android:layout_marginBottom="48dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
 
     <LinearLayout
         android:orientation="vertical"
+        android:gravity="center"
+        android:layout_marginBottom="40dp"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="24dp">
+        android:layout_height="wrap_content">
 
-        <!-- Header with Title and Countdown -->
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp">
-
-            <LinearLayout
-                android:orientation="vertical"
-                android:layout_alignParentStart="true"
-                android:layout_centerVertical="true"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content">
-
-                <TextView
-                    android:text="New Booking Request"
-                    android:textSize="24sp"
-                    android:textStyle="bold"
-                    android:textColor="#1A1A1A"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-
-                <TextView
-                    android:text="Respond within 30 seconds"
-                    android:textSize="14sp"
-                    android:textColor="#666666"
-                    android:layout_marginTop="4dp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-            </LinearLayout>
-
-            <!-- Circular Countdown -->
-            <RelativeLayout
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:layout_width="80dp"
-                android:layout_height="80dp">
-
-                <ProgressBar
-                    android:id="@+id/countdownCircle"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="80dp"
-                    android:layout_height="80dp"
-                    android:indeterminate="false"
-                    android:max="30"
-                    android:progress="30"
-                    android:progressDrawable="@drawable/circular_progress"
-                    android:rotation="-90" />
-
-                <TextView
-                    android:id="@+id/countdown"
-                    android:text="30s"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:textColor="#16A34A"
-                    android:gravity="center"
-                    android:layout_centerInParent="true"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-            </RelativeLayout>
-        </RelativeLayout>
-
-        <!-- Service Image Card -->
-        <androidx.cardview.widget.CardView
-            xmlns:app="http://schemas.android.com/apk/res-auto"
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
+        <ImageView
+            android:id="@+id/alertServiceIcon"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:src="@drawable/ic_service_default"
             android:layout_marginBottom="16dp"
-            app:cardElevation="4dp"
-            app:cardCornerRadius="16dp">
+            android:contentDescription="Service Icon" />
 
-            <ImageView
-                android:id="@+id/alertServiceIcon"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scaleType="centerCrop"
-                android:src="@drawable/ic_service_default"
-                android:contentDescription="Service Image" />
-        </androidx.cardview.widget.CardView>
-
-        <!-- Service Title -->
         <TextView
             android:id="@+id/alertService"
-            android:text="Maid Service"
-            android:textSize="28sp"
+            android:text="Snow Removal"
+            android:textSize="24sp"
             android:textStyle="bold"
             android:textColor="#1A1A1A"
             android:gravity="center"
-            android:layout_marginBottom="8dp"
-            android:layout_width="match_parent"
+            android:layout_marginBottom="16dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
 
-        <!-- Service Subtitle -->
         <TextView
-            android:id="@+id/alertServiceSubtitle"
-            android:text="Includes: Dishes &amp; Jhaadu/Pocha"
-            android:textSize="16sp"
+            android:id="@+id/alertLocation"
+            android:text="Flat: A-101"
+            android:textSize="20sp"
             android:textColor="#666666"
             android:gravity="center"
             android:layout_marginBottom="24dp"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
 
-        <!-- Info Cards Row -->
-        <LinearLayout
-            android:orientation="horizontal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:weightSum="2">
-
-            <!-- Price Card -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="8dp"
-                android:elevation="2dp"
-                android:radius="12dp">
-
-                <LinearLayout
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:padding="16dp"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
-
-                    <TextView
-                        android:text="Price"
-                        android:textSize="14sp"
-                        android:textColor="#666666"
-                        android:layout_marginBottom="4dp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-
-                    <TextView
-                        android:id="@+id/alertPrice"
-                        android:text="₹0"
-                        android:textSize="24sp"
-                        android:textStyle="bold"
-                        android:textColor="#1A1A1A"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-
-            <!-- Tower Card -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                android:elevation="2dp"
-                android:radius="12dp">
-
-                <LinearLayout
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:padding="16dp"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
-
-                    <TextView
-                        android:text="Tower No."
-                        android:textSize="14sp"
-                        android:textColor="#666666"
-                        android:layout_marginBottom="4dp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-
-                    <TextView
-                        android:id="@+id/alertTower"
-                        android:text="—"
-                        android:textSize="24sp"
-                        android:textStyle="bold"
-                        android:textColor="#1A1A1A"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-        </LinearLayout>
-
-        <!-- Community Card -->
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:elevation="2dp"
-            android:radius="12dp">
-
-            <LinearLayout
-                android:orientation="vertical"
-                android:gravity="center"
-                android:padding="16dp"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <TextView
-                    android:text="Community"
-                    android:textSize="14sp"
-                    android:textColor="#666666"
-                    android:layout_marginBottom="4dp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-
-                <TextView
-                    android:id="@+id/alertCommunity"
-                    android:text="Prestige High Fields"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="#1A1A1A"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
-
-        <!-- Notes (Optional) -->
         <TextView
-            android:id="@+id/alertNotes"
-            android:text=""
-            android:textSize="14sp"
-            android:textColor="#666666"
+            android:id="@+id/alertPrice"
+            android:text="₹500"
+            android:textSize="48sp"
+            android:textStyle="bold"
+            android:textColor="#22C55E"
             android:gravity="center"
-            android:layout_marginBottom="24dp"
-            android:visibility="gone"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:gravity="center"
+        android:layout_marginBottom="48dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:id="@+id/countdown"
+            android:text="30"
+            android:textSize="72sp"
+            android:textStyle="bold"
+            android:textColor="#22C55E"
+            android:layout_marginBottom="16dp"
+            android:gravity="center"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
 
-        <!-- Progress Bar -->
         <ProgressBar
             android:id="@+id/countdownProgressBar"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
-            android:layout_height="8dp"
+            android:layout_height="12dp"
             android:max="30"
             android:progress="30"
-            android:progressTint="#16A34A"
-            android:layout_marginBottom="24dp" />
-
-        <!-- Action Buttons -->
-        <LinearLayout
-            android:orientation="horizontal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:weightSum="2">
-
-            <Button
-                android:id="@+id/btnReject"
-                android:text="Reject"
-                android:textSize="18sp"
-                android:textColor="#666666"
-                android:background="@drawable/btn_outline"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="56dp"
-                android:layout_marginEnd="8dp"
-                android:textAllCaps="false" />
-
-            <Button
-                android:id="@+id/btnAccept"
-                android:text="Accept"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="#FFFFFF"
-                android:backgroundTint="#16A34A"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="56dp"
-                android:layout_marginStart="8dp"
-                android:textAllCaps="false" />
-        </LinearLayout>
-
-        <!-- Loading Indicator -->
-        <ProgressBar
-            android:id="@+id/loadingIndicator"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginTop="16dp"
-            android:visibility="gone" />
+            android:progressTint="#22C55E"
+            android:layout_marginHorizontal="32dp" />
     </LinearLayout>
-</ScrollView>
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:gravity="center"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <Button
+            android:id="@+id/btnAccept"
+            android:text="ACCEPT"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#22C55E"
+            android:layout_marginBottom="16dp"
+            android:paddingVertical="20dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <Button
+            android:id="@+id/btnReject"
+            android:text="REJECT"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#EF4444"
+            android:paddingVertical="20dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/authStatus"
+        android:text=""
+        android:textColor="#666666"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:layout_marginTop="32dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone" />
+</LinearLayout>
