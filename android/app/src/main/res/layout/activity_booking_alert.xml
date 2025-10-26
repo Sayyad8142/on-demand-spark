@@ -36,31 +36,35 @@
                 android:layout_height="wrap_content" />
         </LinearLayout>
 
-        <RelativeLayout
-            android:layout_width="80dp"
-            android:layout_height="80dp">
-
-            <ProgressBar
-                android:id="@+id/countdownCircle"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:max="30"
-                android:progress="30"
-                android:progressTint="#22C55E"
-                android:rotation="-90" />
+        <LinearLayout
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="#22C55E"
+            android:padding="12dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
 
             <TextView
                 android:id="@+id/countdown"
                 android:text="30s"
-                android:textSize="20sp"
+                android:textSize="32sp"
                 android:textStyle="bold"
-                android:textColor="#22C55E"
+                android:textColor="#FFFFFF"
                 android:gravity="center"
-                android:layout_centerInParent="true"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
-        </RelativeLayout>
+
+            <ProgressBar
+                android:id="@+id/countdownCircle"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="60dp"
+                android:layout_height="4dp"
+                android:layout_marginTop="4dp"
+                android:max="30"
+                android:progress="30"
+                android:progressTint="#FFFFFF"
+                android:progressBackgroundTint="#FFFFFF66" />
+        </LinearLayout>
     </LinearLayout>
 
     <View
@@ -72,7 +76,7 @@
     <ImageView
         android:id="@+id/alertServiceImage"
         android:layout_width="match_parent"
-        android:layout_height="240dp"
+        android:layout_height="160dp"
         android:scaleType="centerCrop"
         android:src="@drawable/maid_dishes"
         android:contentDescription="Service Image" />
@@ -81,11 +85,11 @@
     <TextView
         android:id="@+id/alertService"
         android:text="Maid Service"
-        android:textSize="28sp"
+        android:textSize="24sp"
         android:textStyle="bold"
         android:textColor="#1A1A1A"
         android:gravity="center"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="16dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
@@ -93,11 +97,11 @@
     <TextView
         android:id="@+id/alertServiceSubtitle"
         android:text="Includes: Dishes &amp; Jhaadu/Pocha"
-        android:textSize="16sp"
+        android:textSize="14sp"
         android:textColor="#666666"
         android:gravity="center"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="24dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="16dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
@@ -105,7 +109,7 @@
     <LinearLayout
         android:orientation="horizontal"
         android:layout_marginHorizontal="24dp"
-        android:layout_marginBottom="24dp"
+        android:layout_marginBottom="16dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
@@ -172,10 +176,10 @@
     <LinearLayout
         android:orientation="vertical"
         android:background="#F5F5F5"
-        android:padding="20dp"
+        android:padding="16dp"
         android:gravity="center"
         android:layout_marginHorizontal="24dp"
-        android:layout_marginBottom="32dp"
+        android:layout_marginBottom="16dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
@@ -196,11 +200,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
     </LinearLayout>
-
-    <View
-        android:layout_weight="1"
-        android:layout_width="match_parent"
-        android:layout_height="0dp" />
 
     <!-- Action Buttons -->
     <LinearLayout

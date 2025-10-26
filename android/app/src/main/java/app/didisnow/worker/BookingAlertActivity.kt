@@ -101,14 +101,17 @@ class BookingAlertActivity : AppCompatActivity() {
                     countdownText.text = "${secondsLeft}s"
                     countdownCircle.progress = secondsLeft
                     
-                    // Change color based on time remaining
-                    val color = when {
+                    // Change countdown box color based on time remaining
+                    val bgColor = when {
                         secondsLeft > 15 -> "#22C55E" // Green
                         secondsLeft > 10 -> "#F59E0B" // Orange
                         else -> "#EF4444" // Red
                     }
-                    countdownText.setTextColor(Color.parseColor(color))
-                    countdownCircle.progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor(color))
+                    countdownText.parent?.let { parent ->
+                        if (parent is android.view.View) {
+                            parent.setBackgroundColor(Color.parseColor(bgColor))
+                        }
+                    }
                     
                     Log.d("BookingAlert", "⏱️ Countdown: ${secondsLeft}s")
                     secondsLeft--
