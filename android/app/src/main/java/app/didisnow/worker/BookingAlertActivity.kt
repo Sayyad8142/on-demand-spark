@@ -11,6 +11,7 @@ import android.os.Looper
 import android.util.Log
 import android.view.WindowManager
 import android.widget.Button
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -50,6 +51,7 @@ class BookingAlertActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.alertPrice).text = "₹$priceInr"
 
         val countdownText = findViewById<TextView>(R.id.countdown)
+        val countdownProgressBar = findViewById<ProgressBar>(R.id.countdownProgressBar)
         val btnAccept = findViewById<Button>(R.id.btnAccept)
         val btnReject = findViewById<Button>(R.id.btnReject)
 
@@ -59,13 +61,16 @@ class BookingAlertActivity : AppCompatActivity() {
             override fun run() {
                 if (secondsLeft > 0) {
                     countdownText.text = "$secondsLeft"
+                    countdownProgressBar.progress = secondsLeft
                     
                     // Change color based on time remaining
-                    when {
-                        secondsLeft > 15 -> countdownText.setTextColor(Color.parseColor("#22C55E")) // Green
-                        secondsLeft > 5 -> countdownText.setTextColor(Color.parseColor("#F59E0B")) // Orange
-                        else -> countdownText.setTextColor(Color.parseColor("#EF4444")) // Red
+                    val color = when {
+                        secondsLeft > 15 -> "#22C55E" // Green
+                        secondsLeft > 5 -> "#F59E0B" // Orange
+                        else -> "#EF4444" // Red
                     }
+                    countdownText.setTextColor(Color.parseColor(color))
+                    countdownProgressBar.progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor(color))
                     
                     Log.d("BookingAlert", "⏱️ Countdown: ${secondsLeft}s")
                     secondsLeft--
