@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Capacitor } from '@capacitor/core';
+import { saveSessionToNative, clearSessionFromNative } from "@/native/auth-bridge";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -84,17 +85,15 @@ export function useAuth() {
           if (session) {
             console.log('✅ Session restored successfully');
             console.log('👤 User ID:', session.user?.id);
-            // Save JWT token immediately on app startup if session exists
-            if (session.access_token) {
-              console.log('🔐 Saving access token on app startup...');
-              const saved = await saveJWT(session.access_token);
-              if (saved) {
-                console.log('✅ JWT successfully saved on startup');
-              } else {
-                console.error('❌ Failed to save JWT on startup - booking acceptance may not work!');
-              }
-            } else {
-              console.error('❌ No access token in session!');
+            
+            // Save full session to native for overlay authentication
+            if (session.access_token && session.refresh_token && session.user?.id) {
+              await saveSessionToNative({
+                accessToken: session.access_token,
+                refreshToken: session.refresh_token,
+                userId: session.user.id,
+                expiresAt: session.expires_at ? Math.floor(session.expires_at) : Math.floor(Date.now() / 1000 + 3600)
+              });
             }
           } else {
             console.log('ℹ️ No session found');
@@ -120,37 +119,36 @@ export function useAuth() {
           setUser(session?.user ?? null);
           setLoading(false);
           
-          // Save or clear JWT token
-          if (session?.access_token) {
-            console.log('🔐 Auth state changed - saving new JWT token...');
-            const saved = await saveJWT(session.access_token);
-            if (saved) {
-              console.log('✅ JWT successfully saved after auth state change');
-            } else {
-              console.error('❌ Failed to save JWT after auth state change');
-            }
-          } else if (AuthBridge && Capacitor.isNativePlatform()) {
-            // Clear token on logout
-            try {
-              await AuthBridge.clearToken();
-              console.log('🗑️ Cleared JWT from native bridge');
-            } catch (error) {
-              console.error('❌ Failed to clear JWT:', error);
-            }
+          // Save or clear session to native
+          if (session?.access_token && session?.refresh_token && session?.user?.id) {
+            console.log('🔐 Auth state changed - saving session to native...');
+            await saveSessionToNative({
+              accessToken: session.access_token,
+              refreshToken: session.refresh_token,
+              userId: session.user.id,
+              expiresAt: session.expires_at ? Math.floor(session.expires_at) : Math.floor(Date.now() / 1000 + 3600)
+            });
+          } else if (Capacitor.isNativePlatform()) {
+            // Clear session on logout
+            await clearSessionFromNative();
           }
         }
       }
     );
 
-    // Aggressive JWT refresh - save token every 1 minute if session exists
+    // Periodic session refresh - save session every 1 minute if exists
     const intervalId = setInterval(async () => {
       if (!mounted) return;
       
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token && Capacitor.isNativePlatform()) {
-        console.log('🔄 Periodic JWT refresh starting...');
-        const saved = await saveJWT(session.access_token);
-        console.log('🔄 Periodic JWT refresh:', saved ? '✅ success' : '❌ failed');
+      if (session?.access_token && session?.refresh_token && session?.user?.id && Capacitor.isNativePlatform()) {
+        console.log('🔄 Periodic session refresh...');
+        await saveSessionToNative({
+          accessToken: session.access_token,
+          refreshToken: session.refresh_token,
+          userId: session.user.id,
+          expiresAt: session.expires_at ? Math.floor(session.expires_at) : Math.floor(Date.now() / 1000 + 3600)
+        });
       }
     }, 1 * 60 * 1000); // Every 1 minute
 

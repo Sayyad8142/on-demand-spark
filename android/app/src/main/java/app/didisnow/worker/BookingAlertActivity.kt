@@ -39,7 +39,14 @@ class BookingAlertActivity : AppCompatActivity() {
     companion object {
         private const val SUPABASE_URL = "https://paywwbuqycovjopryele.supabase.co"
         private const val SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheXd3YnVxeWNvdmpvcHJ5ZWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkyNjksImV4cCI6MjA3MDc0NTI2OX0.js1MaTBkjuGlaDfQjrZpZ9_G8Jy9ygNAB8KpNDiQg8o"
+        private const val ACCEPT_FUNCTION_URL = "$SUPABASE_URL/functions/v1/worker-accept-booking"
     }
+    
+    // Helper methods to access stored session
+    private fun getAccessToken(): String = OverlayAuthPlugin.getAccessToken(this)
+    private fun getRefreshToken(): String = OverlayAuthPlugin.getRefreshToken(this)
+    private fun getUserId(): String = OverlayAuthPlugin.getUserId(this)
+    private fun getExpiresAt(): Long = OverlayAuthPlugin.getExpiresAt(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -268,18 +275,26 @@ class BookingAlertActivity : AppCompatActivity() {
             try {
                 Log.d("BookingAlert", "📤 Updating booking $bookingId with action: $action")
                 
-                // Get the stored JWT token
-                val jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE)
-                    .getString("supabase_jwt", null)
+                // Get access token from OverlayAuthPlugin
+                var accessToken = getAccessToken()
+                val expiresAt = getExpiresAt()
+                val now = System.currentTimeMillis() / 1000
                 
-                Log.d("BookingAlert", "🔑 JWT token present: ${jwt != null}")
+                Log.d("BookingAlert", "🔑 Access token present: ${accessToken.isNotEmpty()}")
+                Log.d("BookingAlert", "⏰ Token expires at: $expiresAt, now: $now")
                 
-                if (jwt == null || jwt.isEmpty()) {
-                    Log.w("BookingAlert", "⚠️ No Supabase JWT - cannot proceed")
+                // Check if token needs refresh
+                if (accessToken.isNotEmpty() && expiresAt > 0 && now >= (expiresAt - 30)) {
+                    Log.d("BookingAlert", "🔄 Token expired or expiring soon, attempting refresh...")
+                    accessToken = refreshToken() ?: accessToken
+                }
+                
+                if (accessToken.isEmpty()) {
+                    Log.w("BookingAlert", "⚠️ No access token available")
                     withContext(Dispatchers.Main) {
                         Toast.makeText(
                             this@BookingAlertActivity,
-                            "❌ Not authenticated - Please log in",
+                            "❌ Not authenticated - Please log in to the app first",
                             Toast.LENGTH_LONG
                         ).show()
                         finish()
@@ -288,23 +303,23 @@ class BookingAlertActivity : AppCompatActivity() {
                 }
                 
                 if (action == "accepted") {
-                    // Call try_accept_booking RPC
-                    val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/try_accept_booking")
-                    val connection = rpcUrl.openConnection() as HttpURLConnection
+                    // Call worker-accept-booking Edge Function
+                    Log.d("BookingAlert", "📡 Calling accept booking function...")
+                    val functionUrl = URL(ACCEPT_FUNCTION_URL)
+                    val connection = functionUrl.openConnection() as HttpURLConnection
                     
                     connection.requestMethod = "POST"
-                    connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                    connection.setRequestProperty("Authorization", "Bearer $jwt")
+                    connection.setRequestProperty("Authorization", "Bearer $accessToken")
                     connection.setRequestProperty("Content-Type", "application/json")
                     connection.doOutput = true
 
-                    val jsonPayload = """{"p_booking_id":"$bookingId"}"""
+                    val jsonPayload = """{"booking_id":"$bookingId"}"""
                     connection.outputStream.use { os ->
                         os.write(jsonPayload.toByteArray())
                     }
 
                     val responseCode = connection.responseCode
-                    Log.d("BookingAlert", "📡 RPC Response Code: $responseCode")
+                    Log.d("BookingAlert", "📡 Function Response Code: $responseCode")
                     
                     val responseBody = if (responseCode in 200..299) {
                         connection.inputStream.bufferedReader().use { it.readText() }
@@ -313,42 +328,37 @@ class BookingAlertActivity : AppCompatActivity() {
                     }
                     connection.disconnect()
 
-                    Log.d("BookingAlert", "📄 RPC Response Body: $responseBody")
+                    Log.d("BookingAlert", "📄 Function Response: $responseBody")
 
                     withContext(Dispatchers.Main) {
                         if (responseCode in 200..299) {
-                            try {
-                                val jsonResponse = JSONObject(responseBody)
-                                val success = jsonResponse.optBoolean("success", false)
-                                
-                                if (success) {
-                                    Toast.makeText(
-                                        this@BookingAlertActivity,
-                                        "✅ Booking accepted successfully!",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    Log.d("BookingAlert", "✅ Booking accepted successfully")
-                                } else {
-                                    val message = jsonResponse.optString("message", "Already taken")
-                                    Toast.makeText(
-                                        this@BookingAlertActivity,
-                                        "⚠️ $message",
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                    Log.w("BookingAlert", "⚠️ Accept failed: $message")
-                                }
-                            } catch (e: Exception) {
-                                Log.e("BookingAlert", "❌ Error parsing response", e)
-                                Toast.makeText(
-                                    this@BookingAlertActivity,
-                                    "✅ Booking accepted",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
+                            Toast.makeText(
+                                this@BookingAlertActivity,
+                                "✅ Booking accepted successfully!",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            Log.d("BookingAlert", "✅ Booking accepted successfully")
+                            
+                            // Broadcast success to update app UI
+                            sendBroadcast(Intent("BOOKING_ACCEPTED").putExtra("booking_id", bookingId))
+                        } else if (responseCode == 409) {
+                            Toast.makeText(
+                                this@BookingAlertActivity,
+                                "⚠️ Booking already accepted by another worker",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            Log.w("BookingAlert", "⚠️ Booking already taken")
+                        } else if (responseCode == 401) {
+                            Toast.makeText(
+                                this@BookingAlertActivity,
+                                "❌ Not authenticated - Please log in again",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            Log.e("BookingAlert", "❌ Auth error: $responseBody")
                         } else {
                             Toast.makeText(
                                 this@BookingAlertActivity,
-                                "❌ Failed to accept booking (Code: $responseCode)",
+                                "❌ Failed to accept booking",
                                 Toast.LENGTH_LONG
                             ).show()
                             Log.e("BookingAlert", "❌ HTTP Error: $responseCode - $responseBody")
@@ -356,13 +366,13 @@ class BookingAlertActivity : AppCompatActivity() {
                         finish()
                     }
                 } else if (action == "rejected") {
-                    // Update booking to cancelled status
+                    // Update booking to cancelled status via REST API
                     val updateUrl = URL("$SUPABASE_URL/rest/v1/bookings?id=eq.$bookingId")
                     val connection = updateUrl.openConnection() as HttpURLConnection
                     
                     connection.requestMethod = "PATCH"
                     connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                    connection.setRequestProperty("Authorization", "Bearer $jwt")
+                    connection.setRequestProperty("Authorization", "Bearer $accessToken")
                     connection.setRequestProperty("Content-Type", "application/json")
                     connection.setRequestProperty("Prefer", "return=minimal")
                     connection.doOutput = true
@@ -406,6 +416,60 @@ class BookingAlertActivity : AppCompatActivity() {
                     finish()
                 }
             }
+        }
+    }
+    
+    /**
+     * Refresh the access token using the refresh token
+     */
+    private suspend fun refreshToken(): String? {
+        return try {
+            val refreshToken = getRefreshToken()
+            if (refreshToken.isEmpty()) {
+                Log.w("BookingAlert", "⚠️ No refresh token available")
+                return null
+            }
+            
+            Log.d("BookingAlert", "🔄 Refreshing token...")
+            val url = URL("$SUPABASE_URL/auth/v1/token?grant_type=refresh_token")
+            val connection = url.openConnection() as HttpURLConnection
+            
+            connection.requestMethod = "POST"
+            connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+            connection.setRequestProperty("Content-Type", "application/json")
+            connection.doOutput = true
+            
+            val body = """{"refresh_token":"$refreshToken"}"""
+            connection.outputStream.use { os ->
+                os.write(body.toByteArray())
+            }
+            
+            val responseCode = connection.responseCode
+            if (responseCode in 200..299) {
+                val responseBody = connection.inputStream.bufferedReader().use { it.readText() }
+                val json = JSONObject(responseBody)
+                val newAccessToken = json.getString("access_token")
+                val expiresIn = json.optInt("expires_in", 3600)
+                
+                // Save the new token
+                val newExpiresAt = System.currentTimeMillis() / 1000 + expiresIn
+                getSharedPreferences("supabase_session_shared", MODE_PRIVATE).edit()
+                    .putString("accessToken", newAccessToken)
+                    .putLong("expiresAt", newExpiresAt)
+                    .apply()
+                
+                Log.d("BookingAlert", "✅ Token refreshed successfully")
+                connection.disconnect()
+                return newAccessToken
+            } else {
+                val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() }
+                Log.e("BookingAlert", "❌ Token refresh failed: $responseCode - $errorBody")
+                connection.disconnect()
+                return null
+            }
+        } catch (e: Exception) {
+            Log.e("BookingAlert", "❌ Error refreshing token", e)
+            return null
         }
     }
 }
