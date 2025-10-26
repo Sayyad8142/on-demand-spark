@@ -93,7 +93,7 @@
     <!-- Service Subtitle -->
     <TextView
         android:id="@+id/alertServiceSubtitle"
-        android:text="Includes: Dishes & Jhaadu/Pocha"
+        android:text="Includes: Dishes &amp; Jhaadu/Pocha"
         android:textSize="16sp"
         android:textColor="#666666"
         android:gravity="center"
