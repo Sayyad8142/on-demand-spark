@@ -47,21 +47,8 @@ function ProtectedRoute({ children, showNav = false }: { children: React.ReactNo
 }
 
 const App = () => {
-  const { session, user, loading } = useAuth();
+  const { session } = useAuth();
   useAppState(); // Refresh JWT when app comes to foreground
-
-  // Log authentication status for debugging
-  useEffect(() => {
-    console.log('🔐 App auth state:', {
-      loading,
-      hasSession: !!session,
-      hasUser: !!user,
-      userId: user?.id,
-      hasAccessToken: !!session?.access_token,
-      platform: Capacitor.getPlatform(),
-      isNative: Capacitor.isNativePlatform()
-    });
-  }, [session, user, loading]);
 
   // Initialize native push notifications when we have a session
   useEffect(() => {
