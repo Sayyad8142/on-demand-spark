@@ -1,5 +1,6 @@
 package app.didisnow.worker
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.media.AudioAttributes
@@ -8,6 +9,8 @@ import android.media.RingtoneManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.util.Log
 import android.view.WindowManager
 import android.widget.Button
@@ -31,6 +34,7 @@ class BookingAlertActivity : AppCompatActivity() {
     private lateinit var countdownRunnable: Runnable
     private var secondsLeft = 30
     private var mediaPlayer: MediaPlayer? = null
+    private var vibrator: Vibrator? = null
     
     companion object {
         private const val SUPABASE_URL = "https://paywwbuqycovjopryele.supabase.co"
@@ -50,8 +54,9 @@ class BookingAlertActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_booking_alert)
 
-        // Play loud siren sound
+        // Play loud siren sound and vibrate
         playAlertSound()
+        startVibration()
 
         val bookingId = intent.getStringExtra("booking_id") ?: ""
         val serviceType = intent.getStringExtra("service_type") ?: ""
@@ -140,6 +145,7 @@ class BookingAlertActivity : AppCompatActivity() {
         btnAccept.setOnClickListener {
             Log.d("BookingAlert", "✅ Accept button clicked")
             stopAlertSound()
+            stopVibration()
             countdownHandler?.removeCallbacks(countdownRunnable)
             
             if (bookingId.isBlank()) {
@@ -159,6 +165,7 @@ class BookingAlertActivity : AppCompatActivity() {
         btnReject.setOnClickListener {
             Log.d("BookingAlert", "❌ Reject button clicked")
             stopAlertSound()
+            stopVibration()
             countdownHandler?.removeCallbacks(countdownRunnable)
             
             // Disable buttons to prevent double-click
@@ -173,6 +180,7 @@ class BookingAlertActivity : AppCompatActivity() {
     override fun onDestroy() {
         countdownHandler?.removeCallbacks(countdownRunnable)
         stopAlertSound()
+        stopVibration()
         super.onDestroy()
     }
 
@@ -181,10 +189,7 @@ class BookingAlertActivity : AppCompatActivity() {
             // Stop any existing sound
             stopAlertSound()
             
-            // Use the default alarm sound (loud siren-like sound)
-            val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-            
+            // Use the custom loud ringtone from raw resources
             mediaPlayer = MediaPlayer().apply {
                 setAudioAttributes(
                     AudioAttributes.Builder()
@@ -192,16 +197,19 @@ class BookingAlertActivity : AppCompatActivity() {
                         .setUsage(AudioAttributes.USAGE_ALARM)
                         .build()
                 )
-                setDataSource(this@BookingAlertActivity, alarmUri)
+                setDataSource(
+                    this@BookingAlertActivity,
+                    android.net.Uri.parse("android.resource://${packageName}/${R.raw.new_loud_ringtone}")
+                )
                 isLooping = true
                 setVolume(1.0f, 1.0f)
                 prepare()
                 start()
             }
             
-            Log.d("BookingAlert", "🔊 Alert sound started")
+            Log.d("BookingAlert", "🔊 Custom alert sound started")
         } catch (e: Exception) {
-            Log.e("BookingAlert", "❌ Failed to play alert sound", e)
+            Log.e("BookingAlert", "❌ Failed to play custom alert sound", e)
         }
     }
 
@@ -217,6 +225,41 @@ class BookingAlertActivity : AppCompatActivity() {
             Log.d("BookingAlert", "🔇 Alert sound stopped")
         } catch (e: Exception) {
             Log.e("BookingAlert", "❌ Failed to stop alert sound", e)
+        }
+    }
+    
+    private fun startVibration() {
+        try {
+            vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            
+            // Create a strong vibration pattern: [delay, vibrate, pause, vibrate, ...]
+            // Pattern: wait 0ms, vibrate 1000ms, pause 500ms, repeat
+            val pattern = longArrayOf(0, 1000, 500, 1000, 500)
+            
+            vibrator?.let {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    // For Android O and above, use VibrationEffect
+                    val vibrationEffect = VibrationEffect.createWaveform(pattern, 0) // 0 = repeat from start
+                    it.vibrate(vibrationEffect)
+                } else {
+                    // For older versions
+                    @Suppress("DEPRECATION")
+                    it.vibrate(pattern, 0)
+                }
+                Log.d("BookingAlert", "📳 Vibration started")
+            }
+        } catch (e: Exception) {
+            Log.e("BookingAlert", "❌ Failed to start vibration", e)
+        }
+    }
+    
+    private fun stopVibration() {
+        try {
+            vibrator?.cancel()
+            vibrator = null
+            Log.d("BookingAlert", "📳 Vibration stopped")
+        } catch (e: Exception) {
+            Log.e("BookingAlert", "❌ Failed to stop vibration", e)
         }
     }
     
