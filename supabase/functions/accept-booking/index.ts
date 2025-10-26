@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     const { error: updateError } = await supabase
       .from('bookings')
       .update({
-        status: 'assigned',
+        status: 'accepted',
         assigned_at: new Date().toISOString(),
         confirmed_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -99,7 +99,8 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error('Error in accept-booking:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

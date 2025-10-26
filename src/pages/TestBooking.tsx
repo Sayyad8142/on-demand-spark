@@ -11,7 +11,7 @@ export default function TestBooking() {
   const [bookingData, setBookingData] = useState({
     service_type: "maid",
     flat_number: "9198",
-    price: "150",
+    price_inr: "150",
     notes: "Dishes + Jhaadu/Pocha",
   });
 
@@ -84,13 +84,13 @@ export default function TestBooking() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="price">Price (₹)</Label>
+              <Label htmlFor="price_inr">Price (₹)</Label>
               <Input
-                id="price"
+                id="price_inr"
                 type="number"
-                value={bookingData.price}
+                value={bookingData.price_inr}
                 onChange={(e) =>
-                  setBookingData((prev) => ({ ...prev, price: e.target.value }))
+                  setBookingData((prev) => ({ ...prev, price_inr: e.target.value }))
                 }
                 placeholder="150"
               />
@@ -117,7 +117,7 @@ export default function TestBooking() {
               <ul className="space-y-1">
                 <li>• Service: {bookingData.service_type}</li>
                 <li>• Tower No: {bookingData.flat_number.trim()[0] || "—"}</li>
-                <li>• Price: ₹{bookingData.price}</li>
+                <li>• Price: ₹{bookingData.price_inr}</li>
                 <li>• Community: Prestige High Fields</li>
               </ul>
             </div>

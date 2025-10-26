@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
               booking_id: booking.id,
               service_type: booking.service_type,
               flat_number: booking.flat_no,
-              price: String(booking.price_inr || 0),
+              price_inr: String(booking.price_inr || 0),
               notes: booking.notes || '',
               community: booking.community || 'Prestige High Fields',
             },
@@ -136,7 +136,8 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error('Error in reassign-booking:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
