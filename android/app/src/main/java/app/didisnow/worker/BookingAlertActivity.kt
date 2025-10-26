@@ -11,6 +11,7 @@ import android.os.Looper
 import android.util.Log
 import android.view.WindowManager
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -49,6 +50,16 @@ class BookingAlertActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.alertService).text = serviceType
         findViewById<TextView>(R.id.alertLocation).text = "Flat: $flatNo"
         findViewById<TextView>(R.id.alertPrice).text = "₹$priceInr"
+        
+        // Set service icon based on service type
+        val serviceIcon = findViewById<ImageView>(R.id.alertServiceIcon)
+        val iconResource = when (serviceType.lowercase()) {
+            "maid" -> R.drawable.ic_service_maid
+            "cook" -> R.drawable.ic_service_cook
+            "bathroom cleaning", "bathroom" -> R.drawable.ic_service_bathroom
+            else -> R.drawable.ic_service_default
+        }
+        serviceIcon.setImageResource(iconResource)
 
         val countdownText = findViewById<TextView>(R.id.countdown)
         val countdownProgressBar = findViewById<ProgressBar>(R.id.countdownProgressBar)

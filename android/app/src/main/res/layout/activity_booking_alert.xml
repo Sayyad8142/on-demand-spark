@@ -25,6 +25,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
+        <ImageView
+            android:id="@+id/alertServiceIcon"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:src="@drawable/ic_service_default"
+            android:layout_marginBottom="16dp"
+            android:contentDescription="Service Icon" />
+
         <TextView
             android:id="@+id/alertService"
             android:text="Snow Removal"
