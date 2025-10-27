@@ -268,24 +268,49 @@ class BookingAlertActivity : AppCompatActivity() {
             try {
                 Log.d("BookingAlert", "📤 Updating booking $bookingId with action: $action")
                 
-                // Get the stored JWT token
-                val jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE)
-                    .getString("supabase_jwt", null)
+                // Get session from AuthBridge
+                val accessToken = AuthBridge.getAccessToken(this@BookingAlertActivity)
+                val expiresAt = AuthBridge.getExpiresAt(this@BookingAlertActivity)
+                val now = System.currentTimeMillis()
                 
-                Log.d("BookingAlert", "🔑 JWT token present: ${jwt != null}")
+                Log.d("BookingAlert", "🔑 Access token present: ${accessToken.isNotEmpty()}")
+                Log.d("BookingAlert", "⏰ Token expires at: $expiresAt, now: $now, expired: ${now >= expiresAt}")
                 
-                if (jwt == null || jwt.isEmpty()) {
-                    Log.w("BookingAlert", "⚠️ No Supabase JWT - cannot proceed")
+                if (accessToken.isEmpty()) {
+                    Log.w("BookingAlert", "⚠️ No access token - user needs to log in")
                     withContext(Dispatchers.Main) {
                         Toast.makeText(
                             this@BookingAlertActivity,
-                            "❌ Not authenticated - Please log in",
+                            "❌ Session expired. Please open the app and log in.",
                             Toast.LENGTH_LONG
                         ).show()
+                        // Open the app for login
+                        val intent = Intent(this@BookingAlertActivity, MainActivity::class.java)
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        startActivity(intent)
                         finish()
                     }
                     return@launch
                 }
+                
+                // Check if token is expired (with 30-second buffer)
+                if (now >= (expiresAt - 30000)) {
+                    Log.w("BookingAlert", "⚠️ Access token expired or expiring soon")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@BookingAlertActivity,
+                            "⚠️ Session expired. Please open the app to refresh.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        val intent = Intent(this@BookingAlertActivity, MainActivity::class.java)
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        startActivity(intent)
+                        finish()
+                    }
+                    return@launch
+                }
+                
+                val jwt = accessToken
                 
                 if (action == "accepted") {
                     // Call try_accept_booking RPC
