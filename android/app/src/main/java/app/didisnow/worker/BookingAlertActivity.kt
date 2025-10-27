@@ -279,10 +279,17 @@ class BookingAlertActivity : AppCompatActivity() {
                 // Get session from AuthBridge (expires_at_ms is in milliseconds)
                 val accessToken = AuthBridge.getAccessToken(this@BookingAlertActivity)
                 val expiresAtMs = AuthBridge.getExpiresAt(this@BookingAlertActivity)
+                val userId = AuthBridge.getUserId(this@BookingAlertActivity)
                 val now = System.currentTimeMillis()
+                val hoursUntilExpiry = (expiresAtMs - now) / (1000.0 * 60 * 60)
                 
-                Log.d("BookingAlert", "🔑 Access token present: ${accessToken.isNotEmpty()}, length: ${accessToken.length}")
-                Log.d("BookingAlert", "⏰ Token expiresAtMs: $expiresAtMs, now: $now, expired: ${now >= expiresAtMs}")
+                Log.d("BookingAlert", "🔑 Reading session from AuthBridge:")
+                Log.d("BookingAlert", "   - userId: $userId")
+                Log.d("BookingAlert", "   - accessToken length: ${accessToken.length}")
+                Log.d("BookingAlert", "   - expiresAtMs: $expiresAtMs")
+                Log.d("BookingAlert", "   - now: $now")
+                Log.d("BookingAlert", "   - hours until expiry: $hoursUntilExpiry")
+                Log.d("BookingAlert", "   - is expired: ${now >= expiresAtMs}")
                 
                 if (accessToken.isEmpty()) {
                     Log.w("BookingAlert", "⚠️ No access token - user needs to log in")

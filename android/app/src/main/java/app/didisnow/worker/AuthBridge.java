@@ -30,14 +30,31 @@ public class AuthBridge extends Plugin {
         Long expiresAt = call.getLong("expiresAt");  // EXPECTS milliseconds
         String userId = call.getString("userId", "");
 
-        Log.d(TAG, "💾 Saving session - userId: " + userId + ", token length: " + accessToken.length() + ", expiresAtMs: " + expiresAt);
+        long expiresAtMs = expiresAt != null ? expiresAt : 0L;
+        long now = System.currentTimeMillis();
+        long hoursUntilExpiry = (expiresAtMs - now) / (1000 * 60 * 60);
+
+        Log.d(TAG, "💾 setSession called:");
+        Log.d(TAG, "   - userId: " + userId);
+        Log.d(TAG, "   - accessToken length: " + accessToken.length());
+        Log.d(TAG, "   - refreshToken length: " + refreshToken.length());
+        Log.d(TAG, "   - expiresAtMs: " + expiresAtMs);
+        Log.d(TAG, "   - now: " + now);
+        Log.d(TAG, "   - hours until expiry: " + hoursUntilExpiry);
 
         getPrefs().edit()
             .putString(KEY_ACCESS_TOKEN, accessToken)
             .putString(KEY_REFRESH_TOKEN, refreshToken)
-            .putLong(KEY_EXPIRES_AT_MS, expiresAt != null ? expiresAt : 0L)
+            .putLong(KEY_EXPIRES_AT_MS, expiresAtMs)
             .putString(KEY_USER_ID, userId)
             .commit(); // Use commit for immediate write
+
+        // Verify the values were written correctly
+        String savedToken = getPrefs().getString(KEY_ACCESS_TOKEN, "");
+        long savedExpiresAt = getPrefs().getLong(KEY_EXPIRES_AT_MS, 0L);
+        Log.d(TAG, "✅ Session saved and verified:");
+        Log.d(TAG, "   - saved token length: " + savedToken.length());
+        Log.d(TAG, "   - saved expiresAtMs: " + savedExpiresAt);
 
         JSObject ret = new JSObject();
         ret.put("success", true);

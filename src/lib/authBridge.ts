@@ -49,18 +49,27 @@ export async function saveSessionToNative(session: Session | null) {
     userId: session.user?.id ?? "",
   };
 
-  console.log("🔐 Saving session to native bridge:");
+  console.log("🔐 WEB → Saving session to native bridge:");
   console.log("   - userId:", sessionData.userId);
+  console.log("   - accessToken (first 20 chars):", sessionData.accessToken.substring(0, 20) + "...");
   console.log("   - token length:", sessionData.accessToken.length);
   console.log("   - expiresAtMs:", expiresAtMs);
   console.log("   - now:", now);
   console.log("   - expires in:", hoursUntilExpiry, "hours");
+  console.log("   - Supabase session.expires_at (seconds):", session.expires_at);
   
   try {
-    await bridge.setSession(sessionData);
-    console.log("✅ Session saved to native successfully");
+    const result = await bridge.setSession(sessionData);
+    console.log("✅ WEB → Session saved to native successfully:", result);
+    
+    // Verify by reading back
+    const verification = await bridge.getSession();
+    console.log("🔍 WEB → Verifying saved session:");
+    console.log("   - returned userId:", verification.userId);
+    console.log("   - returned token length:", verification.accessToken?.length ?? 0);
+    console.log("   - returned expiresAt:", verification.expiresAt);
   } catch (error) {
-    console.error("❌ Failed to save session to native:", error);
+    console.error("❌ WEB → Failed to save session to native:", error);
   }
 }
 
