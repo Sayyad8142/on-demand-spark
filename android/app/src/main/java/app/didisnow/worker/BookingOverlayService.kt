@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.graphics.PixelFormat
 import android.media.AudioAttributes
 import android.media.MediaPlayer
@@ -121,7 +122,18 @@ class BookingOverlayService : Service() {
             .setOngoing(true)
             .build()
 
-        startForeground(NOTIFICATION_ID, notification)
+        // Use API-aware start to avoid SecurityException
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE /* 34 */) {
+            startForeground(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+            android.util.Log.d("BookingOverlay", "✅ Started foreground with DATA_SYNC type (Android 14+)")
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+            android.util.Log.d("BookingOverlay", "✅ Started foreground (pre-Android 14)")
+        }
     }
 
     private fun showOverlay(bookingId: String, customer: String, community: String, serviceType: String, flatNo: String, price: Int) {
@@ -255,26 +267,45 @@ class BookingOverlayService : Service() {
             try {
                 android.util.Log.d("BookingOverlay", "📤 Updating booking $bookingId with action: $action")
                 
-                // Get the stored JWT token
-                val jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE)
-                    .getString("supabase_jwt", null)
+                // Get session from AuthBridge (expires_at_ms is in milliseconds)
+                val accessToken = AuthBridge.getAccessToken(this@BookingOverlayService)
+                val expiresAtMs = AuthBridge.getExpiresAt(this@BookingOverlayService)
+                val userId = AuthBridge.getUserId(this@BookingOverlayService)
+                val now = System.currentTimeMillis()
+                val hoursUntilExpiry = (expiresAtMs - now) / (1000.0 * 60 * 60)
                 
-                android.util.Log.d("BookingOverlay", "🔑 JWT token present: ${jwt != null}")
-                if (jwt != null) {
-                    android.util.Log.d("BookingOverlay", "🔑 JWT preview: ${jwt.take(50)}...")
-                }
+                android.util.Log.d("BookingOverlay", "🔑 Reading session from AuthBridge:")
+                android.util.Log.d("BookingOverlay", "   - userId: $userId")
+                android.util.Log.d("BookingOverlay", "   - TokenLen=${accessToken.length}, expMs=$expiresAtMs, now=$now")
+                android.util.Log.d("BookingOverlay", "   - hours until expiry: $hoursUntilExpiry")
+                android.util.Log.d("BookingOverlay", "   - is expired: ${now >= expiresAtMs}")
                 
-                if (jwt == null || jwt.isEmpty()) {
-                    android.util.Log.w("BookingOverlay", "⚠️ No Supabase JWT in prefs — cannot proceed")
+                if (accessToken.isEmpty()) {
+                    android.util.Log.w("BookingOverlay", "⚠️ No access token - user needs to log in")
                     withContext(Dispatchers.Main) {
                         Toast.makeText(
                             this@BookingOverlayService,
-                            "❌ Not authenticated - Please log in",
+                            "❌ Session expired. Please open the app and log in.",
                             Toast.LENGTH_LONG
                         ).show()
                     }
                     return@launch
                 }
+                
+                // Check if token is expired (with 30-second buffer)
+                if (expiresAtMs <= 0L || now >= (expiresAtMs - 30000)) {
+                    android.util.Log.w("BookingOverlay", "⚠️ Access token expired or expiring soon (expiresAtMs: $expiresAtMs, now: $now)")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@BookingOverlayService,
+                            "⚠️ Session expired. Please open the app to refresh.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    return@launch
+                }
+                
+                val jwt = accessToken
                 
                 if (action == "accepted") {
                     // Call try_accept_booking RPC with user JWT
