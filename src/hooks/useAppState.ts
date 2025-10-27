@@ -13,6 +13,7 @@ export function useAppState() {
     if (!Capacitor.isNativePlatform()) return;
     
     let listener: any;
+    let syncListener: any;
     
     const setupListener = async () => {
       listener = await CapApp.addListener('appStateChange', async ({ isActive }) => {
@@ -30,6 +31,22 @@ export function useAppState() {
           }
         }
       });
+      
+      // Listen for sync requests from native overlay
+      const handleSyncSession = async () => {
+        console.log('📡 Received ACTION_SYNC_SESSION from native - syncing session to native');
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          await saveSessionToNative(session);
+          console.log('✅ Session synced to native on demand (from overlay)');
+        } else {
+          console.log('⚠️ No session available for on-demand sync');
+        }
+      };
+      
+      // @ts-ignore - Custom event from native Android
+      window.addEventListener('app.didisnow.worker.ACTION_SYNC_SESSION', handleSyncSession);
+      syncListener = () => window.removeEventListener('app.didisnow.worker.ACTION_SYNC_SESSION', handleSyncSession);
     };
     
     setupListener();
@@ -37,6 +54,9 @@ export function useAppState() {
     return () => {
       if (listener) {
         listener.remove();
+      }
+      if (syncListener) {
+        syncListener();
       }
     };
   }, []);

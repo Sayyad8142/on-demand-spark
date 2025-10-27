@@ -22,6 +22,7 @@ import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
@@ -280,29 +281,35 @@ class BookingOverlayService : Service() {
                 android.util.Log.d("BookingOverlay", "   - hours until expiry: $hoursUntilExpiry")
                 android.util.Log.d("BookingOverlay", "   - is expired: ${now >= expiresAtMs}")
                 
-                if (accessToken.isEmpty()) {
-                    android.util.Log.w("BookingOverlay", "⚠️ No access token - user needs to log in")
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(
-                            this@BookingOverlayService,
-                            "❌ Session expired. Please open the app and log in.",
-                            Toast.LENGTH_LONG
-                        ).show()
+                // Check if token is stale or missing - if so, request web to resync
+                if (accessToken.isEmpty() || expiresAtMs <= 0L || now >= (expiresAtMs - 30000)) {
+                    android.util.Log.w("BookingOverlay", "⚠️ Token stale or missing - requesting web to resync session")
+                    
+                    // Ask web side to resync session via broadcast
+                    val intent = Intent("app.didisnow.worker.ACTION_SYNC_SESSION")
+                    sendBroadcast(intent)
+                    delay(800) // Give web time to sync
+                    
+                    // Re-read session after sync attempt
+                    val accessToken2 = AuthBridge.getAccessToken(this@BookingOverlayService)
+                    val expiresAtMs2 = AuthBridge.getExpiresAt(this@BookingOverlayService)
+                    val now2 = System.currentTimeMillis()
+                    
+                    android.util.Log.d("BookingOverlay", "🔄 After resync - TokenLen=${accessToken2.length}, expMs=$expiresAtMs2, now=$now2")
+                    
+                    if (accessToken2.isEmpty() || expiresAtMs2 <= 0L || now2 >= (expiresAtMs2 - 30000)) {
+                        android.util.Log.e("BookingOverlay", "❌ Session still invalid after resync attempt")
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                this@BookingOverlayService,
+                                "⚠️ Session expired. Please open the app to refresh.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                        return@launch
+                    } else {
+                        android.util.Log.d("BookingOverlay", "✅ Session resynced successfully via ACTION_SYNC_SESSION")
                     }
-                    return@launch
-                }
-                
-                // Check if token is expired (with 30-second buffer)
-                if (expiresAtMs <= 0L || now >= (expiresAtMs - 30000)) {
-                    android.util.Log.w("BookingOverlay", "⚠️ Access token expired or expiring soon (expiresAtMs: $expiresAtMs, now: $now)")
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(
-                            this@BookingOverlayService,
-                            "⚠️ Session expired. Please open the app to refresh.",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-                    return@launch
                 }
                 
                 val jwt = accessToken
