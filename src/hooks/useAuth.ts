@@ -11,7 +11,12 @@ export function useAuth() {
   // Sync session to native platform for overlay access
   const syncSessionToNative = async (session: Session | null) => {
     try {
-      await saveSessionToNative(session);
+      const success = await saveSessionToNative(session);
+      if (success) {
+        console.log("✅ Session successfully synced to native");
+      } else {
+        console.error("❌ Session sync to native failed verification");
+      }
     } catch (error) {
       console.error("❌ Failed to sync session to native:", error);
     }

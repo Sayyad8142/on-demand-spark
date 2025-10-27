@@ -25,13 +25,13 @@ export async function saveSessionToNative(session: Session | null) {
   const bridge = getAuthBridge();
   if (!bridge) {
     console.warn("⚠️ AuthBridge not available, session NOT saved to native");
-    return;
+    return false;
   }
 
   if (!session?.access_token) {
     console.log("🔐 No session to save, clearing native session");
     await bridge.clearSession();
-    return;
+    return false;
   }
 
   // Convert Supabase seconds → milliseconds
@@ -62,14 +62,32 @@ export async function saveSessionToNative(session: Session | null) {
     const result = await bridge.setSession(sessionData);
     console.log("✅ WEB → Session saved to native successfully:", result);
     
-    // Verify by reading back
+    // CRITICAL: Wait a moment for SharedPreferences to persist
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Verify by reading back immediately
     const verification = await bridge.getSession();
     console.log("🔍 WEB → Verifying saved session:");
     console.log("   - returned userId:", verification.userId);
     console.log("   - returned token length:", verification.accessToken?.length ?? 0);
     console.log("   - returned expiresAt:", verification.expiresAt);
+    
+    // Verify token matches
+    if (verification.accessToken !== sessionData.accessToken) {
+      console.error("❌ CRITICAL: Token mismatch after save! Saved length:", sessionData.accessToken.length, "Read length:", verification.accessToken?.length);
+      return false;
+    }
+    
+    if (!verification.userId || !verification.accessToken || verification.expiresAt === 0) {
+      console.error("❌ CRITICAL: Session verification failed! Data not persisted correctly.");
+      return false;
+    }
+    
+    console.log("✅ Session verification PASSED");
+    return true;
   } catch (error) {
     console.error("❌ WEB → Failed to save session to native:", error);
+    return false;
   }
 }
 

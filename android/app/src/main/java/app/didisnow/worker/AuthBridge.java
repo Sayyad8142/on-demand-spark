@@ -65,11 +65,20 @@ public class AuthBridge extends Plugin {
     public void getSession(PluginCall call) {
         SharedPreferences prefs = getPrefs();
         
+        String accessToken = prefs.getString(KEY_ACCESS_TOKEN, "");
+        long expiresAt = prefs.getLong(KEY_EXPIRES_AT_MS, 0L);
+        String userId = prefs.getString(KEY_USER_ID, "");
+        
+        Log.d(TAG, "📖 getSession called:");
+        Log.d(TAG, "   - userId: " + userId);
+        Log.d(TAG, "   - accessToken length: " + accessToken.length());
+        Log.d(TAG, "   - expiresAt: " + expiresAt);
+        
         JSObject ret = new JSObject();
-        ret.put("accessToken", prefs.getString(KEY_ACCESS_TOKEN, ""));
+        ret.put("accessToken", accessToken);
         ret.put("refreshToken", prefs.getString(KEY_REFRESH_TOKEN, ""));
-        ret.put("expiresAt", prefs.getLong(KEY_EXPIRES_AT_MS, 0L));  // Return milliseconds
-        ret.put("userId", prefs.getString(KEY_USER_ID, ""));
+        ret.put("expiresAt", expiresAt);
+        ret.put("userId", userId);
         
         call.resolve(ret);
     }
