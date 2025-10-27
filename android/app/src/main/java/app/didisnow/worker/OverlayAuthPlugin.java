@@ -2,10 +2,11 @@ package app.didisnow.worker;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import com.getcapacitor.Plugin;
-import com.getcapacitor.annotation.CapacitorPlugin;
+
 import com.getcapacitor.JSObject;
+import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
+import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.PluginMethod;
 
 /**
@@ -27,19 +28,19 @@ public class OverlayAuthPlugin extends Plugin {
 
     @PluginMethod
     public void saveSession(PluginCall call) {
-        String at = call.getString("accessToken", "");
-        String rt = call.getString("refreshToken", "");
-        String uid = call.getString("userId", "");
-        long exp = call.getLong("expiresAt", 0L);
+    String at = call.getString("accessToken", "");
+    String rt = call.getString("refreshToken", "");
+    String uid = call.getString("userId", "");
+    Long exp = call.getLong("expiresAt");
 
-        android.util.Log.d("OverlayAuth", "Saving session - userId: " + uid + ", expiresAt: " + exp);
+    android.util.Log.d("OverlayAuth", "Saving session - userId: " + uid + ", expiresAt: " + exp);
         
-        prefs().edit()
-            .putString(KEY_AT, at)
-            .putString(KEY_RT, rt)
-            .putString(KEY_UID, uid)
-            .putLong(KEY_EXP, exp)
-            .apply();
+    prefs().edit()
+        .putString(KEY_AT, at)
+        .putString(KEY_RT, rt)
+        .putString(KEY_UID, uid)
+        .putLong(KEY_EXP, exp != null ? exp : 0L)
+        .apply();
 
         android.util.Log.d("OverlayAuth", "✅ Session saved successfully");
         

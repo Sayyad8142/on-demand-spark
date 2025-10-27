@@ -8,6 +8,15 @@ type SessionPayload = {
 };
 
 /**
+ * Get OverlayAuth plugin from Capacitor bridge
+ */
+function getOverlayAuth() {
+  // Capacitor v6/7 exposes via window.Capacitor.Plugins or direct window access
+  // @ts-ignore
+  return (window?.Capacitor?.Plugins?.OverlayAuth) || (window as any)?.OverlayAuth;
+}
+
+/**
  * Save Supabase session to native Android storage
  * This allows the native overlay to access auth tokens
  */
@@ -18,8 +27,7 @@ export async function saveSessionToNative(payload: SessionPayload) {
   }
 
   try {
-    // @ts-ignore - OverlayAuth plugin method
-    const OverlayAuth = (window as any)?.OverlayAuth;
+    const OverlayAuth = getOverlayAuth();
     
     if (!OverlayAuth?.saveSession) {
       console.error('❌ OverlayAuth plugin not available');
@@ -48,8 +56,7 @@ export async function clearSessionFromNative() {
   if (!Capacitor.isNativePlatform()) return;
 
   try {
-    // @ts-ignore - OverlayAuth plugin method
-    const OverlayAuth = (window as any)?.OverlayAuth;
+    const OverlayAuth = getOverlayAuth();
     
     if (OverlayAuth?.clearSession) {
       await OverlayAuth.clearSession();
