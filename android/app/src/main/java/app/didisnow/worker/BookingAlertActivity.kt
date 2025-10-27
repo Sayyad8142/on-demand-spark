@@ -52,13 +52,21 @@ class BookingAlertActivity : AppCompatActivity() {
             WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
         )
 
+        val bookingId = intent.getStringExtra("booking_id") ?: ""
+        
+        // ✅ FIX: Silently finish if no booking ID - prevents inappropriate session checks
+        if (bookingId.isBlank()) {
+            Log.d("BookingAlert", "⚠️ No booking ID provided - finishing silently")
+            finish()
+            return
+        }
+        
         setContentView(R.layout.activity_booking_alert)
 
         // Play loud siren sound and vibrate
         playAlertSound()
         startVibration()
 
-        val bookingId = intent.getStringExtra("booking_id") ?: ""
         val serviceType = intent.getStringExtra("service_type") ?: ""
         val flatNo = intent.getStringExtra("flat_no") ?: ""
         val priceInr = intent.getIntExtra("price_inr", 0)
