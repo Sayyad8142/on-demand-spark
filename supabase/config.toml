@@ -1,4 +1,1 @@
 project_id = "paywwbuqycovjopryele"
-
-[functions.worker-accept-booking]
-verify_jwt = true
