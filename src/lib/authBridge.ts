@@ -24,14 +24,18 @@ export async function saveSessionToNative(session: Session | null) {
     return;
   }
 
+  // Convert Supabase seconds → milliseconds
+  const expiresAtSec = session.expires_at ?? Math.floor(Date.now() / 1000) + 3600;
+  const expiresAtMs = expiresAtSec * 1000;  // ✅ Convert to milliseconds
+
   const sessionData: SessionData = {
     accessToken: session.access_token,
     refreshToken: session.refresh_token ?? "",
-    expiresAt: (session.expires_at ?? Math.floor(Date.now() / 1000) + 3600) * 1000, // Convert to milliseconds
+    expiresAt: expiresAtMs,  // ✅ Store milliseconds
     userId: session.user?.id ?? "",
   };
 
-  console.log("🔐 Saving session to native bridge - userId:", sessionData.userId);
+  console.log("🔐 Saving session to native bridge - userId:", sessionData.userId, "expiresAtMs:", expiresAtMs);
   await bridge.setSession(sessionData);
 }
 

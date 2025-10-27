@@ -268,13 +268,13 @@ class BookingAlertActivity : AppCompatActivity() {
             try {
                 Log.d("BookingAlert", "📤 Updating booking $bookingId with action: $action")
                 
-                // Get session from AuthBridge
+                // Get session from AuthBridge (expires_at_ms is in milliseconds)
                 val accessToken = AuthBridge.getAccessToken(this@BookingAlertActivity)
-                val expiresAt = AuthBridge.getExpiresAt(this@BookingAlertActivity)
+                val expiresAtMs = AuthBridge.getExpiresAt(this@BookingAlertActivity)
                 val now = System.currentTimeMillis()
                 
-                Log.d("BookingAlert", "🔑 Access token present: ${accessToken.isNotEmpty()}")
-                Log.d("BookingAlert", "⏰ Token expires at: $expiresAt, now: $now, expired: ${now >= expiresAt}")
+                Log.d("BookingAlert", "🔑 Access token present: ${accessToken.isNotEmpty()}, length: ${accessToken.length}")
+                Log.d("BookingAlert", "⏰ Token expiresAtMs: $expiresAtMs, now: $now, expired: ${now >= expiresAtMs}")
                 
                 if (accessToken.isEmpty()) {
                     Log.w("BookingAlert", "⚠️ No access token - user needs to log in")
@@ -294,8 +294,8 @@ class BookingAlertActivity : AppCompatActivity() {
                 }
                 
                 // Check if token is expired (with 30-second buffer)
-                if (now >= (expiresAt - 30000)) {
-                    Log.w("BookingAlert", "⚠️ Access token expired or expiring soon")
+                if (expiresAtMs <= 0L || now >= (expiresAtMs - 30000)) {
+                    Log.w("BookingAlert", "⚠️ Access token expired or expiring soon (expiresAtMs: $expiresAtMs, now: $now)")
                     withContext(Dispatchers.Main) {
                         Toast.makeText(
                             this@BookingAlertActivity,

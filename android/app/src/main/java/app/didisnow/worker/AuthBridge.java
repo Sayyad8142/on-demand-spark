@@ -16,7 +16,7 @@ public class AuthBridge extends Plugin {
     private static final String PREF_NAME = "didi_session";
     private static final String KEY_ACCESS_TOKEN = "access_token";
     private static final String KEY_REFRESH_TOKEN = "refresh_token";
-    private static final String KEY_EXPIRES_AT = "expires_at";
+    private static final String KEY_EXPIRES_AT_MS = "expires_at_ms";  // Store in MILLISECONDS
     private static final String KEY_USER_ID = "user_id";
 
     private SharedPreferences getPrefs() {
@@ -27,15 +27,15 @@ public class AuthBridge extends Plugin {
     public void setSession(PluginCall call) {
         String accessToken = call.getString("accessToken", "");
         String refreshToken = call.getString("refreshToken", "");
-        Long expiresAt = call.getLong("expiresAt");
+        Long expiresAt = call.getLong("expiresAt");  // EXPECTS milliseconds
         String userId = call.getString("userId", "");
 
-        Log.d(TAG, "💾 Saving session - userId: " + userId + ", token length: " + accessToken.length());
+        Log.d(TAG, "💾 Saving session - userId: " + userId + ", token length: " + accessToken.length() + ", expiresAtMs: " + expiresAt);
 
         getPrefs().edit()
             .putString(KEY_ACCESS_TOKEN, accessToken)
             .putString(KEY_REFRESH_TOKEN, refreshToken)
-            .putLong(KEY_EXPIRES_AT, expiresAt != null ? expiresAt : 0L)
+            .putLong(KEY_EXPIRES_AT_MS, expiresAt != null ? expiresAt : 0L)
             .putString(KEY_USER_ID, userId)
             .commit(); // Use commit for immediate write
 
@@ -51,7 +51,7 @@ public class AuthBridge extends Plugin {
         JSObject ret = new JSObject();
         ret.put("accessToken", prefs.getString(KEY_ACCESS_TOKEN, ""));
         ret.put("refreshToken", prefs.getString(KEY_REFRESH_TOKEN, ""));
-        ret.put("expiresAt", prefs.getLong(KEY_EXPIRES_AT, 0L));
+        ret.put("expiresAt", prefs.getLong(KEY_EXPIRES_AT_MS, 0L));  // Return milliseconds
         ret.put("userId", prefs.getString(KEY_USER_ID, ""));
         
         call.resolve(ret);
@@ -81,7 +81,7 @@ public class AuthBridge extends Plugin {
 
     public static long getExpiresAt(Context ctx) {
         return ctx.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-            .getLong(KEY_EXPIRES_AT, 0L);
+            .getLong(KEY_EXPIRES_AT_MS, 0L);  // Return milliseconds
     }
 
     public static String getUserId(Context ctx) {
