@@ -2,51 +2,61 @@ import { useEffect } from 'react';
 import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
-import { saveSessionToNative } from '@/lib/authBridge';
 
 /**
  * Hook to handle app lifecycle events (foreground/background)
- * Syncs Supabase session to native when app comes to foreground
+ * Ensures JWT token is refreshed when app comes to foreground
  */
 export function useAppState() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
+
+    // @ts-ignore - Capacitor bridge
+    const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
     
     let listener: any;
-    let syncListener: any;
     
     const setupListener = async () => {
       listener = await CapApp.addListener('appStateChange', async ({ isActive }) => {
         if (isActive) {
-          console.log('📱 App became active - syncing session to native...');
+          console.log('📱 App became active, refreshing JWT...');
           
+          // Refresh session and save JWT when app comes to foreground
           const { data: { session } } = await supabase.auth.getSession();
-          
-          if (session) {
-            console.log('🔐 Syncing session to native on app resume...');
-            await saveSessionToNative(session);
-            console.log('✅ Session synced to native on app resume');
+          if (session?.access_token && AuthBridge) {
+            // Retry up to 3 times
+            for (let attempt = 1; attempt <= 3; attempt++) {
+              try {
+                console.log(`💾 [Foreground - Attempt ${attempt}/3] Saving JWT...`);
+                console.log('🔑 Token preview:', session.access_token.substring(0, 50) + '...');
+                
+                await AuthBridge.saveToken({ token: session.access_token });
+                
+                // Wait a bit for the write to complete
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Verify it was actually saved
+                const verify = await AuthBridge.getToken();
+                if (verify?.token === session.access_token) {
+                  console.log(`✅ JWT refreshed and verified on foreground (attempt ${attempt})`);
+                  break; // Success, exit loop
+                } else {
+                  console.error(`❌ JWT verification failed on foreground (attempt ${attempt})`);
+                }
+              } catch (error) {
+                console.error(`❌ Failed to refresh JWT on foreground (attempt ${attempt}):`, error);
+              }
+
+              // Wait before retry (except on last attempt)
+              if (attempt < 3) {
+                await new Promise(resolve => setTimeout(resolve, 300));
+              }
+            }
           } else {
-            console.log('⚠️ No session available on app resume');
+            console.warn('⚠️ No session or AuthBridge when app came to foreground');
           }
         }
       });
-      
-      // Listen for sync requests from native overlay
-      const handleSyncSession = async () => {
-        console.log('📡 Received ACTION_SYNC_SESSION from native - syncing session to native');
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          await saveSessionToNative(session);
-          console.log('✅ Session synced to native on demand (from overlay)');
-        } else {
-          console.log('⚠️ No session available for on-demand sync');
-        }
-      };
-      
-      // @ts-ignore - Custom event from native Android
-      window.addEventListener('app.didisnow.worker.ACTION_SYNC_SESSION', handleSyncSession);
-      syncListener = () => window.removeEventListener('app.didisnow.worker.ACTION_SYNC_SESSION', handleSyncSession);
     };
     
     setupListener();
@@ -54,9 +64,6 @@ export function useAppState() {
     return () => {
       if (listener) {
         listener.remove();
-      }
-      if (syncListener) {
-        syncListener();
       }
     };
   }, []);

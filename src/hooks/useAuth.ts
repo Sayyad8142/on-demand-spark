@@ -1,25 +1,56 @@
 import { useEffect, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { saveSessionToNative, clearSessionFromNative } from "@/lib/authBridge";
+import { Capacitor } from '@capacitor/core';
+
+// @ts-ignore - Capacitor bridge
+const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Sync session to native platform for overlay access
-  const syncSessionToNative = async (session: Session | null) => {
-    try {
-      const success = await saveSessionToNative(session);
-      if (success) {
-        console.log("✅ Session successfully synced to native");
-      } else {
-        console.error("❌ Session sync to native failed verification");
-      }
-    } catch (error) {
-      console.error("❌ Failed to sync session to native:", error);
+  // Helper function to save JWT with verification and retry logic
+  const saveJWT = async (token: string) => {
+    if (!AuthBridge || !Capacitor.isNativePlatform()) {
+      console.log('⚠️ AuthBridge not available or not on native platform');
+      return false;
     }
+
+    // Retry up to 3 times with delays
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        console.log(`💾 [Attempt ${attempt}/3] Saving JWT to native storage...`);
+        console.log('🔑 Token preview:', token.substring(0, 50) + '...');
+        
+        await AuthBridge.saveToken({ token });
+        
+        // Wait a bit for the write to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Verify it was actually saved
+        const verify = await AuthBridge.getToken();
+        if (verify?.token === token) {
+          console.log(`✅ JWT saved and verified successfully on attempt ${attempt}`);
+          return true;
+        } else {
+          console.error(`❌ JWT verification failed on attempt ${attempt} - token mismatch!`);
+          console.log('Expected:', token.substring(0, 50) + '...');
+          console.log('Got:', verify?.token ? verify.token.substring(0, 50) + '...' : 'null');
+        }
+      } catch (error) {
+        console.error(`❌ Failed to save JWT on attempt ${attempt}:`, error);
+      }
+
+      // Wait before retry (except on last attempt)
+      if (attempt < 3) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    }
+    
+    console.error('❌ Failed to save JWT after 3 attempts');
+    return false;
   };
 
   useEffect(() => {
@@ -53,11 +84,20 @@ export function useAuth() {
           if (session) {
             console.log('✅ Session restored successfully');
             console.log('👤 User ID:', session.user?.id);
-            // Sync session to native for overlay access
-            await syncSessionToNative(session);
+            // Save JWT token immediately on app startup if session exists
+            if (session.access_token) {
+              console.log('🔐 Saving access token on app startup...');
+              const saved = await saveJWT(session.access_token);
+              if (saved) {
+                console.log('✅ JWT successfully saved on startup');
+              } else {
+                console.error('❌ Failed to save JWT on startup - booking acceptance may not work!');
+              }
+            } else {
+              console.error('❌ No access token in session!');
+            }
           } else {
             console.log('ℹ️ No session found');
-            await clearSessionFromNative();
           }
         }
       } catch (error) {
@@ -80,22 +120,39 @@ export function useAuth() {
           setUser(session?.user ?? null);
           setLoading(false);
           
-          // Sync session to native
-          await syncSessionToNative(session);
+          // Save or clear JWT token
+          if (session?.access_token) {
+            console.log('🔐 Auth state changed - saving new JWT token...');
+            const saved = await saveJWT(session.access_token);
+            if (saved) {
+              console.log('✅ JWT successfully saved after auth state change');
+            } else {
+              console.error('❌ Failed to save JWT after auth state change');
+            }
+          } else if (AuthBridge && Capacitor.isNativePlatform()) {
+            // Clear token on logout
+            try {
+              await AuthBridge.clearToken();
+              console.log('🗑️ Cleared JWT from native bridge');
+            } catch (error) {
+              console.error('❌ Failed to clear JWT:', error);
+            }
+          }
         }
       }
     );
 
-    // Periodic session sync - every 5 minutes to ensure native has fresh token
+    // Aggressive JWT refresh - save token every 1 minute if session exists
     const intervalId = setInterval(async () => {
       if (!mounted) return;
       
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        console.log('🔄 Periodic session sync to native...');
-        await syncSessionToNative(session);
+      if (session?.access_token && Capacitor.isNativePlatform()) {
+        console.log('🔄 Periodic JWT refresh starting...');
+        const saved = await saveJWT(session.access_token);
+        console.log('🔄 Periodic JWT refresh:', saved ? '✅ success' : '❌ failed');
       }
-    }, 5 * 60 * 1000); // Every 5 minutes
+    }, 1 * 60 * 1000); // Every 1 minute
 
     return () => {
       mounted = false;
