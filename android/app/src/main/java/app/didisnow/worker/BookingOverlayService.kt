@@ -79,6 +79,25 @@ class BookingOverlayService : Service() {
                         return START_NOT_STICKY
                     }
 
+                    // Check if JWT exists BEFORE showing overlay
+                    val jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE)
+                        .getString("supabase_jwt", null)
+                    
+                    android.util.Log.d("BookingOverlay", "🔍 JWT check: ${if (jwt != null) "✅ Found (${jwt.take(30)}...)" else "❌ Not found"}")
+                    
+                    if (jwt.isNullOrEmpty()) {
+                        android.util.Log.e("BookingOverlay", "❌ No JWT found! User must log in through the app first")
+                        Toast.makeText(
+                            this,
+                            "⚠️ Please log in through the app to accept bookings",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        stopSelf()
+                        return START_NOT_STICKY
+                    }
+                    
+                    android.util.Log.d("BookingOverlay", "✅ JWT verified - proceeding to show overlay")
+
                     try {
                         showOverlay(bookingId, customer, community, serviceType, flatNo, price)
                     } catch (e: Exception) {
@@ -265,13 +284,15 @@ class BookingOverlayService : Service() {
                 }
                 
                 if (jwt == null || jwt.isEmpty()) {
-                    android.util.Log.w("BookingOverlay", "⚠️ No Supabase JWT in prefs — cannot proceed")
+                    android.util.Log.e("BookingOverlay", "❌ CRITICAL: JWT disappeared between service start and button click!")
+                    android.util.Log.e("BookingOverlay", "This indicates the user logged out or JWT was cleared")
                     withContext(Dispatchers.Main) {
                         Toast.makeText(
                             this@BookingOverlayService,
-                            "❌ Not authenticated - Please log in",
+                            "❌ Session expired - Please log in through the app",
                             Toast.LENGTH_LONG
                         ).show()
+                        closeOverlay()
                     }
                     return@launch
                 }
