@@ -218,7 +218,7 @@ class BookingOverlayService : Service() {
             handler.removeCallbacks(countdown)
             if (bookingId.isNotEmpty()) {
                 updateBooking(bookingId, "accepted")
-                closeOverlay()
+                // closeOverlay will be called after network request completes
             } else {
                 Toast.makeText(this, "Error: No booking ID", Toast.LENGTH_SHORT).show()
                 closeOverlay()
@@ -231,7 +231,7 @@ class BookingOverlayService : Service() {
             stopAlertSound() // Stop sound immediately
             handler.removeCallbacks(countdown)
             updateBooking(bookingId, "rejected")
-            closeOverlay()
+            // closeOverlay will be called after network request completes
         }
 
         // Add overlay to window
@@ -349,6 +349,7 @@ class BookingOverlayService : Service() {
                                 Toast.LENGTH_LONG
                             ).show()
                         }
+                        closeOverlay()
                     }
                 } else {
                     // For reject, update status directly with user JWT
@@ -386,6 +387,7 @@ class BookingOverlayService : Service() {
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
+                        closeOverlay()
                     }
                 }
             } catch (e: Exception) {
@@ -396,6 +398,7 @@ class BookingOverlayService : Service() {
                         "Error: ${e.message}",
                         Toast.LENGTH_SHORT
                     ).show()
+                    closeOverlay()
                 }
             }
         }
