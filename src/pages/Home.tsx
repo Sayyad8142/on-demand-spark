@@ -11,10 +11,15 @@ import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Bell, X } from "lucide-react";
+import { Capacitor } from '@capacitor/core';
+import { supabase } from "@/integrations/supabase/client";
+
+// @ts-ignore - Capacitor bridge
+const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
 
 export default function Home() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { worker, updateAvailability, refetch: refetchWorker } = useWorkerProfile(user?.id);
   const { activeJob, updateJobStatus, refetch: refetchActiveJob } = useActiveJob(user?.id);
   const [toggling, setToggling] = useState(false);
@@ -24,6 +29,54 @@ export default function Home() {
   const isOnline = !!worker?.is_available;
 
   // Note: FCM initialization is handled in App.tsx, no need to duplicate here
+
+  // CRITICAL: Ensure JWT is saved on native platform for overlay functionality
+  useEffect(() => {
+    const ensureJWTSaved = async () => {
+      if (!Capacitor.isNativePlatform() || !AuthBridge) {
+        console.log('⚠️ Not native platform or AuthBridge unavailable');
+        return;
+      }
+
+      if (!session?.access_token) {
+        console.log('⚠️ No session or access token available');
+        return;
+      }
+
+      try {
+        console.log('🔐 [Home] Verifying JWT in native storage...');
+        
+        // Check if JWT exists and matches current session
+        const stored = await AuthBridge.getToken();
+        
+        if (stored?.token === session.access_token) {
+          console.log('✅ [Home] JWT already saved correctly');
+          return;
+        }
+
+        console.log('🔐 [Home] JWT missing or outdated, saving now...');
+        
+        // Save with retry logic
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          await AuthBridge.saveToken({ token: session.access_token });
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          const verify = await AuthBridge.getToken();
+          if (verify?.token === session.access_token) {
+            console.log(`✅ [Home] JWT saved successfully on attempt ${attempt}`);
+            return;
+          }
+          console.warn(`❌ [Home] JWT verification failed on attempt ${attempt}`);
+        }
+        
+        console.error('❌ [Home] Failed to save JWT after 3 attempts');
+      } catch (error) {
+        console.error('❌ [Home] Error ensuring JWT saved:', error);
+      }
+    };
+
+    ensureJWTSaved();
+  }, [session]);
 
   // Check if notification permission is default (not granted or denied)
   useEffect(() => {
