@@ -8,8 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { Phone } from "lucide-react";
 import { z } from "zod";
+import { Capacitor } from '@capacitor/core';
+
+// @ts-ignore - Capacitor bridge
+const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
 
 const SERVICES = [
   { value: "maid", label: "Maid Service" },
@@ -40,9 +45,18 @@ const otpSchema = z.string()
 export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [communities, setCommunities] = useState<Array<{ name: string; value: string }>>([]);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      console.log('👤 User already logged in, redirecting to home');
+      navigate("/home", { replace: true });
+    }
+  }, [user, authLoading, navigate]);
   
   // Sign In state
   const [signInPhone, setSignInPhone] = useState("");
@@ -152,6 +166,22 @@ export default function Auth() {
       if (existingWorker) {
         // Link existing worker to auth user by updating the worker's ID
         await supabase.from('workers').update({ id: data.user.id }).eq('phone', phone);
+      }
+
+      // CRITICAL: Save JWT to native storage immediately for overlay functionality
+      if (Capacitor.isNativePlatform() && AuthBridge && data.session?.access_token) {
+        console.log('🔐 [Auth Page] Saving JWT immediately after sign-in...');
+        try {
+          await AuthBridge.saveToken({ token: data.session.access_token });
+          const verify = await AuthBridge.getToken();
+          if (verify?.token === data.session.access_token) {
+            console.log('✅ [Auth Page] JWT saved and verified successfully');
+          } else {
+            console.error('❌ [Auth Page] JWT verification failed!');
+          }
+        } catch (err) {
+          console.error('❌ [Auth Page] Failed to save JWT:', err);
+        }
       }
 
       toast({ title: "Success!", description: "Signed in successfully" });
@@ -290,6 +320,22 @@ export default function Auth() {
         });
 
         if (workerError) throw workerError;
+      }
+
+      // CRITICAL: Save JWT to native storage immediately for overlay functionality
+      if (Capacitor.isNativePlatform() && AuthBridge && data.session?.access_token) {
+        console.log('🔐 [Auth Page] Saving JWT immediately after sign-up...');
+        try {
+          await AuthBridge.saveToken({ token: data.session.access_token });
+          const verify = await AuthBridge.getToken();
+          if (verify?.token === data.session.access_token) {
+            console.log('✅ [Auth Page] JWT saved and verified successfully');
+          } else {
+            console.error('❌ [Auth Page] JWT verification failed!');
+          }
+        } catch (err) {
+          console.error('❌ [Auth Page] Failed to save JWT:', err);
+        }
       }
 
       toast({ title: "Success!", description: "Account created successfully" });
