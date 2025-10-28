@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ServiceInfo
 import android.graphics.PixelFormat
 import android.media.AudioAttributes
 import android.media.MediaPlayer
@@ -32,12 +31,8 @@ class BookingOverlayService : Service() {
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
     private var mediaPlayer: MediaPlayer? = null
-    private var accepting = false
-    private var countdownHandler: android.os.Handler? = null
-    private var countdownRunnable: Runnable? = null
     
     companion object {
-        private const val TAG = "BookingOverlay"
         private const val SUPABASE_URL = "https://paywwbuqycovjopryele.supabase.co"
         private const val SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheXd3YnVxeWNvdmpvcHJ5ZWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkyNjksImV4cCI6MjA3MDc0NTI2OX0.js1MaTBkjuGlaDfQjrZpZ9_G8Jy9ygNAB8KpNDiQg8o"
         private const val NOTIFICATION_CHANNEL_ID = "booking_overlay_channel"
@@ -126,13 +121,7 @@ class BookingOverlayService : Service() {
             .setOngoing(true)
             .build()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-            android.util.Log.d(TAG, "✅ Started foreground with DATA_SYNC type (Android 14+)")
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
-            android.util.Log.d(TAG, "✅ Started foreground (pre-Android 14)")
-        }
+        startForeground(NOTIFICATION_ID, notification)
     }
 
     private fun showOverlay(bookingId: String, customer: String, community: String, serviceType: String, flatNo: String, price: Int) {
@@ -206,162 +195,58 @@ class BookingOverlayService : Service() {
         // Prepare countdown handler (will start after view is added)
         val countdownText = overlayView?.findViewById<TextView>(R.id.countdown)
         var secondsLeft = 30
-        countdownHandler = android.os.Handler(mainLooper)
-        countdownRunnable = object : Runnable {
+        val handler = android.os.Handler(mainLooper)
+        val countdown = object : Runnable {
             override fun run() {
                 if (secondsLeft > 0) {
                     countdownText?.text = "${secondsLeft}s"
-                    android.util.Log.d(TAG, "⏱️ Countdown: ${secondsLeft}s")
+                    android.util.Log.d("BookingOverlay", "⏱️ Countdown: ${secondsLeft}s")
                     secondsLeft--
-                    countdownHandler?.postDelayed(this, 1000)
+                    handler.postDelayed(this, 1000)
                 } else {
-                    android.util.Log.d(TAG, "⏱️ Countdown finished - auto closing")
+                    android.util.Log.d("BookingOverlay", "⏱️ Countdown finished - auto closing")
                     // Auto-reject after 30 seconds
                     closeOverlay()
                 }
             }
         }
 
-        val acceptButton = overlayView?.findViewById<Button>(R.id.btnAccept)
-        val rejectButton = overlayView?.findViewById<Button>(R.id.btnReject)
-
         // Handle Accept button
-        acceptButton?.setOnClickListener {
-            if (accepting) {
-                android.util.Log.d(TAG, "⚠️ Already processing accept, ignoring duplicate click")
-                return@setOnClickListener
-            }
-            
-            accepting = true
-            android.util.Log.d(TAG, "✅ Accept button clicked")
-            stopAlertSound()
-            
-            // Cancel countdown and disable buttons
-            countdownRunnable?.let { countdownHandler?.removeCallbacks(it) }
-            acceptButton.isEnabled = false
-            rejectButton?.isEnabled = false
-            
-            // Get JWT token
-            val jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE)
-                .getString("supabase_jwt", null)
-            
-            if (jwt.isNullOrBlank()) {
-                android.util.Log.w(TAG, "❌ No JWT found")
-                Toast.makeText(this, "Please log in again", Toast.LENGTH_LONG).show()
-                accepting = false
+        overlayView?.findViewById<Button>(R.id.btnAccept)?.setOnClickListener {
+            android.util.Log.d("BookingOverlay", "✅ Accept button clicked")
+            stopAlertSound() // Stop sound immediately
+            handler.removeCallbacks(countdown)
+            if (bookingId.isNotEmpty()) {
+                updateBooking(bookingId, "accepted")
                 closeOverlay()
-                return@setOnClickListener
-            }
-            
-            android.util.Log.d(TAG, "🔑 JWT found, length: ${jwt.length}")
-            
-            // Perform network call in background
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    val success = tryAcceptBooking(bookingId, jwt)
-                    withContext(Dispatchers.Main) {
-                        if (success) {
-                            Toast.makeText(
-                                this@BookingOverlayService,
-                                "✅ Booking accepted!",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        } else {
-                            Toast.makeText(
-                                this@BookingOverlayService,
-                                "⚠️ Already taken or failed",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
-                        closeOverlay()
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e(TAG, "❌ Accept failed", e)
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(
-                            this@BookingOverlayService,
-                            "❌ Network error: ${e.message}",
-                            Toast.LENGTH_LONG
-                        ).show()
-                        closeOverlay()
-                    }
-                } finally {
-                    accepting = false
-                }
+            } else {
+                Toast.makeText(this, "Error: No booking ID", Toast.LENGTH_SHORT).show()
+                closeOverlay()
             }
         }
 
         // Handle Reject button
-        rejectButton?.setOnClickListener {
-            android.util.Log.d(TAG, "❌ Reject button clicked")
-            stopAlertSound()
-            countdownRunnable?.let { countdownHandler?.removeCallbacks(it) }
-            acceptButton?.isEnabled = false
-            rejectButton.isEnabled = false
+        overlayView?.findViewById<Button>(R.id.btnReject)?.setOnClickListener {
+            android.util.Log.d("BookingOverlay", "❌ Reject button clicked")
+            stopAlertSound() // Stop sound immediately
+            handler.removeCallbacks(countdown)
             updateBooking(bookingId, "rejected")
             closeOverlay()
         }
 
         // Add overlay to window
         try {
-            android.util.Log.d(TAG, "➕ Adding overlay to window manager...")
+            android.util.Log.d("BookingOverlay", "➕ Adding overlay to window manager...")
             windowManager?.addView(overlayView, params)
-            android.util.Log.d(TAG, "✅ Overlay added successfully! Starting countdown...")
+            android.util.Log.d("BookingOverlay", "✅ Overlay added successfully! Starting countdown...")
             
             // Start countdown AFTER view is added to window
-            countdownRunnable?.let { countdownHandler?.post(it) }
+            handler.post(countdown)
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "❌ Failed to add overlay to window", e)
+            android.util.Log.e("BookingOverlay", "❌ Failed to add overlay to window", e)
             e.printStackTrace()
             Toast.makeText(this, "Failed to show overlay: ${e.message}", Toast.LENGTH_LONG).show()
             stopSelf()
-        }
-    }
-    
-    private fun tryAcceptBooking(bookingId: String, jwt: String): Boolean {
-        return try {
-            android.util.Log.d(TAG, "📤 Calling try_accept_booking RPC for $bookingId")
-            
-            val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/try_accept_booking")
-            val connection = rpcUrl.openConnection() as HttpURLConnection
-            
-            connection.requestMethod = "POST"
-            connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-            connection.setRequestProperty("Authorization", "Bearer $jwt")
-            connection.setRequestProperty("Content-Type", "application/json")
-            connection.connectTimeout = 10000
-            connection.readTimeout = 10000
-            connection.doOutput = true
-
-            val jsonPayload = """{"p_booking_id":"$bookingId"}"""
-            connection.outputStream.use { os ->
-                os.write(jsonPayload.toByteArray())
-            }
-
-            val responseCode = connection.responseCode
-            android.util.Log.d(TAG, "📡 RPC Response Code: $responseCode")
-            
-            val responseBody = if (responseCode in 200..299) {
-                connection.inputStream.bufferedReader().use { it.readText() }
-            } else {
-                connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
-            }
-            connection.disconnect()
-
-            android.util.Log.d(TAG, "📄 RPC Response: $responseBody")
-
-            if (responseCode in 200..299) {
-                val json = JSONObject(responseBody)
-                val success = json.optBoolean("success", false)
-                android.util.Log.d(TAG, if (success) "✅ Accept successful" else "⚠️ Accept returned success=false")
-                success
-            } else {
-                android.util.Log.e(TAG, "❌ HTTP $responseCode: $responseBody")
-                false
-            }
-        } catch (e: Exception) {
-            android.util.Log.e(TAG, "❌ tryAcceptBooking exception", e)
-            false
         }
     }
 
