@@ -79,14 +79,14 @@ class BookingOverlayService : Service() {
                         return START_NOT_STICKY
                     }
 
-                    // Check if JWT exists BEFORE showing overlay
-                    val jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE)
-                        .getString("supabase_jwt", null)
+                    // Check if session exists BEFORE showing overlay
+                    val sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
+                        .getString("didi-worker-session", null)
                     
-                    android.util.Log.d("BookingOverlay", "🔍 JWT check: ${if (jwt != null) "✅ Found (${jwt.take(30)}...)" else "❌ Not found"}")
+                    android.util.Log.d("BookingOverlay", "🔍 Session check: ${if (sessionJson != null) "✅ Found" else "❌ Not found"}")
                     
-                    if (jwt.isNullOrEmpty()) {
-                        android.util.Log.e("BookingOverlay", "❌ No JWT found! User must log in through the app first")
+                    if (sessionJson.isNullOrEmpty()) {
+                        android.util.Log.e("BookingOverlay", "❌ No session found! User must log in through the app first")
                         Toast.makeText(
                             this,
                             "⚠️ Please log in through the app to accept bookings",
@@ -96,7 +96,31 @@ class BookingOverlayService : Service() {
                         return START_NOT_STICKY
                     }
                     
-                    android.util.Log.d("BookingOverlay", "✅ JWT verified - proceeding to show overlay")
+                    // Parse session to verify access_token exists
+                    try {
+                        val session = JSONObject(sessionJson)
+                        val accessToken = session.optString("access_token", "")
+                        if (accessToken.isEmpty()) {
+                            android.util.Log.e("BookingOverlay", "❌ No access_token in session!")
+                            Toast.makeText(
+                                this,
+                                "⚠️ Invalid session - Please log in again",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            stopSelf()
+                            return START_NOT_STICKY
+                        }
+                        android.util.Log.d("BookingOverlay", "✅ Access token verified (${accessToken.take(30)}...) - proceeding to show overlay")
+                    } catch (e: Exception) {
+                        android.util.Log.e("BookingOverlay", "❌ Failed to parse session JSON", e)
+                        Toast.makeText(
+                            this,
+                            "⚠️ Session error - Please log in again",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        stopSelf()
+                        return START_NOT_STICKY
+                    }
 
                     try {
                         showOverlay(bookingId, customer, community, serviceType, flatNo, price)
@@ -197,18 +221,34 @@ class BookingOverlayService : Service() {
         overlayView?.findViewById<TextView>(R.id.price)?.text = "₹$price"
         
         // Check and display authentication status
-        val jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE).getString("supabase_jwt", null)
+        val sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE).getString("didi-worker-session", null)
         val authStatusView = overlayView?.findViewById<TextView>(R.id.authStatus)
-        if (jwt != null && jwt.isNotEmpty()) {
-            authStatusView?.text = "✅ Authenticated"
-            authStatusView?.setTextColor(android.graphics.Color.parseColor("#22C55E"))
-            authStatusView?.setBackgroundColor(android.graphics.Color.parseColor("#F0FDF4"))
-            android.util.Log.d("BookingOverlay", "✅ JWT found, showing authenticated status")
+        if (!sessionJson.isNullOrEmpty()) {
+            try {
+                val session = JSONObject(sessionJson)
+                val accessToken = session.optString("access_token", "")
+                if (accessToken.isNotEmpty()) {
+                    authStatusView?.text = "✅ Authenticated"
+                    authStatusView?.setTextColor(android.graphics.Color.parseColor("#22C55E"))
+                    authStatusView?.setBackgroundColor(android.graphics.Color.parseColor("#F0FDF4"))
+                    android.util.Log.d("BookingOverlay", "✅ Session token loaded, showing authenticated status")
+                } else {
+                    authStatusView?.text = "❌ No access token"
+                    authStatusView?.setTextColor(android.graphics.Color.parseColor("#EF4444"))
+                    authStatusView?.setBackgroundColor(android.graphics.Color.parseColor("#FEF2F2"))
+                    android.util.Log.w("BookingOverlay", "⚠️ Session found but no access token")
+                }
+            } catch (e: Exception) {
+                authStatusView?.text = "❌ Session error"
+                authStatusView?.setTextColor(android.graphics.Color.parseColor("#EF4444"))
+                authStatusView?.setBackgroundColor(android.graphics.Color.parseColor("#FEF2F2"))
+                android.util.Log.e("BookingOverlay", "❌ Failed to parse session", e)
+            }
         } else {
             authStatusView?.text = "❌ Not authenticated"
             authStatusView?.setTextColor(android.graphics.Color.parseColor("#EF4444"))
             authStatusView?.setBackgroundColor(android.graphics.Color.parseColor("#FEF2F2"))
-            android.util.Log.w("BookingOverlay", "⚠️ No JWT found, showing not authenticated status")
+            android.util.Log.w("BookingOverlay", "⚠️ No session found, showing not authenticated status")
         }
         
         // Prepare countdown handler (will start after view is added)
@@ -274,22 +314,50 @@ class BookingOverlayService : Service() {
             try {
                 android.util.Log.d("BookingOverlay", "📤 Updating booking $bookingId with action: $action")
                 
-                // Get the stored JWT token
-                val jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE)
-                    .getString("supabase_jwt", null)
+                // Get the stored session from Capacitor Preferences
+                val sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
+                    .getString("didi-worker-session", null)
                 
-                android.util.Log.d("BookingOverlay", "🔑 JWT token present: ${jwt != null}")
-                if (jwt != null) {
-                    android.util.Log.d("BookingOverlay", "🔑 JWT preview: ${jwt.take(50)}...")
-                }
+                android.util.Log.d("BookingOverlay", "🔑 Session present: ${sessionJson != null}")
                 
-                if (jwt == null || jwt.isEmpty()) {
-                    android.util.Log.e("BookingOverlay", "❌ CRITICAL: JWT disappeared between service start and button click!")
-                    android.util.Log.e("BookingOverlay", "This indicates the user logged out or JWT was cleared")
+                if (sessionJson.isNullOrEmpty()) {
+                    android.util.Log.e("BookingOverlay", "❌ CRITICAL: Session disappeared between service start and button click!")
+                    android.util.Log.e("BookingOverlay", "This indicates the user logged out or session was cleared")
                     withContext(Dispatchers.Main) {
                         Toast.makeText(
                             this@BookingOverlayService,
                             "❌ Session expired - Please log in through the app",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        closeOverlay()
+                    }
+                    return@launch
+                }
+                
+                // Parse session JSON to extract access_token
+                val jwt = try {
+                    val session = JSONObject(sessionJson)
+                    val accessToken = session.optString("access_token", "")
+                    if (accessToken.isEmpty()) {
+                        android.util.Log.e("BookingOverlay", "❌ No access_token in session!")
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                this@BookingOverlayService,
+                                "❌ Invalid session - Please log in again",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            closeOverlay()
+                        }
+                        return@launch
+                    }
+                    android.util.Log.d("BookingOverlay", "🔑 Access token extracted: ${accessToken.take(50)}...")
+                    accessToken
+                } catch (e: Exception) {
+                    android.util.Log.e("BookingOverlay", "❌ Failed to parse session JSON", e)
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@BookingOverlayService,
+                            "❌ Session error - Please log in again",
                             Toast.LENGTH_LONG
                         ).show()
                         closeOverlay()
