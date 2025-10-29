@@ -10,6 +10,7 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -19,6 +20,7 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -31,6 +33,10 @@ class BookingOverlayService : Service() {
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
     private var mediaPlayer: MediaPlayer? = null
+    private var isShuttingDown = false
+    private var countdownHandler: Handler? = null
+    private var countdownRunnable: Runnable? = null
+    private var currentAccessToken: String? = null
     
     companion object {
         private const val SUPABASE_URL = "https://paywwbuqycovjopryele.supabase.co"
@@ -269,43 +275,51 @@ class BookingOverlayService : Service() {
         // Prepare countdown handler (will start after view is added)
         val countdownText = overlayView?.findViewById<TextView>(R.id.countdown)
         var secondsLeft = 30
-        val handler = android.os.Handler(mainLooper)
-        val countdown = object : Runnable {
+        countdownHandler = Handler(mainLooper)
+        countdownRunnable = object : Runnable {
             override fun run() {
+                if (isShuttingDown) {
+                    android.util.Log.d("BookingOverlay", "🧹 Countdown cancelled - service shutting down")
+                    return
+                }
                 if (secondsLeft > 0) {
                     countdownText?.text = "${secondsLeft}s"
                     android.util.Log.d("BookingOverlay", "⏱️ Countdown: ${secondsLeft}s")
                     secondsLeft--
-                    handler.postDelayed(this, 1000)
+                    countdownHandler?.postDelayed(this, 1000)
                 } else {
                     android.util.Log.d("BookingOverlay", "⏱️ Countdown finished - auto closing")
                     // Auto-reject after 30 seconds
-                    closeOverlay()
+                    closeOverlayAndStop("countdown_expired")
                 }
             }
         }
 
         // Handle Accept button
         overlayView?.findViewById<Button>(R.id.btnAccept)?.setOnClickListener {
+            if (isShuttingDown) return@setOnClickListener
             android.util.Log.d("BookingOverlay", "✅ Accept button clicked")
             stopAlertSound() // Stop sound immediately
-            handler.removeCallbacks(countdown)
+            countdownHandler?.removeCallbacks(countdownRunnable!!)
+            android.util.Log.d("BookingOverlay", "🧹 Countdown cancelled")
             if (bookingId.isNotEmpty()) {
                 updateBooking(bookingId, "accepted")
-                // closeOverlay will be called after network request completes
+                // closeOverlayAndStop will be called after network request completes
             } else {
                 Toast.makeText(this, "Error: No booking ID", Toast.LENGTH_SHORT).show()
-                closeOverlay()
+                closeOverlayAndStop("no_booking_id")
             }
         }
 
         // Handle Reject button
         overlayView?.findViewById<Button>(R.id.btnReject)?.setOnClickListener {
+            if (isShuttingDown) return@setOnClickListener
             android.util.Log.d("BookingOverlay", "❌ Reject button clicked")
             stopAlertSound() // Stop sound immediately
-            handler.removeCallbacks(countdown)
+            countdownHandler?.removeCallbacks(countdownRunnable!!)
+            android.util.Log.d("BookingOverlay", "🧹 Countdown cancelled")
             updateBooking(bookingId, "rejected")
-            // closeOverlay will be called after network request completes
+            // closeOverlayAndStop will be called after network request completes
         }
 
         // Add overlay to window
@@ -315,7 +329,7 @@ class BookingOverlayService : Service() {
             android.util.Log.d("BookingOverlay", "✅ Overlay added successfully! Starting countdown...")
             
             // Start countdown AFTER view is added to window
-            handler.post(countdown)
+            countdownHandler?.post(countdownRunnable!!)
         } catch (e: Exception) {
             android.util.Log.e("BookingOverlay", "❌ Failed to add overlay to window", e)
             e.printStackTrace()
@@ -323,8 +337,6 @@ class BookingOverlayService : Service() {
             stopSelf()
         }
     }
-
-    private var currentAccessToken: String? = null
     
     private fun updateBooking(bookingId: String, action: String) {
         CoroutineScope(Dispatchers.IO).launch {
@@ -401,19 +413,41 @@ class BookingOverlayService : Service() {
                                 val success = json.optBoolean("success", false)
                                 
                                 if (success) {
+                                    android.util.Log.d("BookingOverlay", "✅ RPC success, beginning teardown")
+                                    
+                                    // Disable buttons to avoid double taps
+                                    if (!isShuttingDown) {
+                                        overlayView?.findViewById<Button>(R.id.btnAccept)?.isEnabled = false
+                                        overlayView?.findViewById<Button>(R.id.btnReject)?.isEnabled = false
+                                    }
+                                    
                                     Toast.makeText(
                                         this@BookingOverlayService,
-                                        "✅ Booking accepted successfully!",
+                                        "✅ Booking accepted!",
                                         Toast.LENGTH_LONG
                                     ).show()
+                                    
+                                    // Send local broadcast to React UI
+                                    val intent = Intent("DIDI_BOOKING_ACCEPTED").apply {
+                                        putExtra("booking_id", bookingId)
+                                    }
+                                    LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
+                                    android.util.Log.d("BookingOverlay", "📡 Broadcast sent: DIDI_BOOKING_ACCEPTED")
+                                    
+                                    // Clean shutdown
+                                    closeOverlayAndStop("accept_success")
                                 } else {
                                     val error = json.optString("error", "Unknown error")
                                     android.util.Log.e("BookingOverlay", "❌ RPC returned success=false: $error")
+                                    
                                     Toast.makeText(
                                         this@BookingOverlayService,
                                         "❌ $error",
                                         Toast.LENGTH_LONG
                                     ).show()
+                                    
+                                    // Clean shutdown on failure (e.g., already taken)
+                                    closeOverlayAndStop("accept_failed_already_taken")
                                 }
                             } catch (e: Exception) {
                                 android.util.Log.e("BookingOverlay", "❌ Failed to parse success response", e)
@@ -422,6 +456,7 @@ class BookingOverlayService : Service() {
                                     "❌ Parse error: ${e.message}",
                                     Toast.LENGTH_LONG
                                 ).show()
+                                closeOverlayAndStop("parse_error")
                             }
                         } else {
                             // Show detailed error from HTTP error response
@@ -437,8 +472,8 @@ class BookingOverlayService : Service() {
                                 "❌ $errorMsg",
                                 Toast.LENGTH_LONG
                             ).show()
+                            closeOverlayAndStop("http_error_$responseCode")
                         }
-                        closeOverlay()
                     }
                 } else {
                     // For reject, update status directly with user JWT
@@ -469,14 +504,15 @@ class BookingOverlayService : Service() {
                                 "Booking rejected",
                                 Toast.LENGTH_SHORT
                             ).show()
+                            closeOverlayAndStop("reject_success")
                         } else {
                             Toast.makeText(
                                 this@BookingOverlayService,
                                 "Failed to reject booking",
                                 Toast.LENGTH_SHORT
                             ).show()
+                            closeOverlayAndStop("reject_failed")
                         }
-                        closeOverlay()
                     }
                 }
             } catch (e: Exception) {
@@ -487,28 +523,71 @@ class BookingOverlayService : Service() {
                         "Error: ${e.message}",
                         Toast.LENGTH_SHORT
                     ).show()
-                    closeOverlay()
+                    closeOverlayAndStop("network_error")
                 }
             }
         }
     }
 
-    private fun closeOverlay() {
-        android.util.Log.d("BookingOverlay", "🔚 closeOverlay called")
-        stopAlertSound() // Stop sound when closing
+    private fun closeOverlayAndStop(reason: String) {
+        if (isShuttingDown) {
+            android.util.Log.d("BookingOverlay", "⚠️ closeOverlayAndStop already called, skipping")
+            return
+        }
+        
+        isShuttingDown = true
+        android.util.Log.d("BookingOverlay", "🔚 Closed overlay & stopped service: $reason")
+        
+        // Stop alert sound
         try {
-            if (overlayView != null && overlayView?.windowToken != null) {
-                android.util.Log.d("BookingOverlay", "➖ Removing overlay from window")
-                windowManager?.removeView(overlayView)
+            mediaPlayer?.stop()
+            mediaPlayer?.release()
+            mediaPlayer = null
+            android.util.Log.d("BookingOverlay", "🔇 Alert sound stopped")
+        } catch (e: Exception) {
+            android.util.Log.e("BookingOverlay", "❌ Error stopping sound", e)
+        }
+        
+        // Cancel countdown
+        try {
+            countdownHandler?.removeCallbacks(countdownRunnable!!)
+            countdownHandler = null
+            countdownRunnable = null
+            android.util.Log.d("BookingOverlay", "🧹 Countdown cancelled")
+        } catch (e: Exception) {
+            android.util.Log.e("BookingOverlay", "❌ Error cancelling countdown", e)
+        }
+        
+        // Remove overlay view
+        try {
+            if (overlayView?.windowToken != null) {
+                windowManager?.removeViewImmediate(overlayView)
+                android.util.Log.d("BookingOverlay", "🪟 Overlay removed")
             }
+            overlayView = null
         } catch (e: Exception) {
             android.util.Log.e("BookingOverlay", "❌ Error removing overlay", e)
-            e.printStackTrace()
-        } finally {
-            overlayView = null
-            android.util.Log.d("BookingOverlay", "🛑 Stopping service")
-            stopSelf()
         }
+        
+        // Stop foreground service
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
+            android.util.Log.d("BookingOverlay", "🛑 FGS stopped")
+        } catch (e: Exception) {
+            android.util.Log.e("BookingOverlay", "❌ Error stopping foreground", e)
+        }
+        
+        stopSelf()
+    }
+
+    private fun closeOverlay() {
+        // Legacy method - redirect to new closeOverlayAndStop
+        closeOverlayAndStop("legacy_closeOverlay")
     }
 
     private fun playAlertSound() {
@@ -570,6 +649,9 @@ class BookingOverlayService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        closeOverlay()
+        android.util.Log.d("BookingOverlay", "🧹 onDestroy called")
+        if (!isShuttingDown) {
+            closeOverlayAndStop("onDestroy")
+        }
     }
 }
