@@ -664,8 +664,8 @@ class BookingOverlayService : Service() {
             android.util.Log.e("BookingOverlay", "❌ Error cancelling countdown", e)
         }
         
-        // Remove overlay view on main thread - only if attached
-        ui {
+        // Remove overlay view on main thread - DON'T use ui() helper since isShuttingDown is already true
+        val cleanupRunnable = Runnable {
             try {
                 if (overlayView?.windowToken != null && overlayAdded) {
                     windowManager?.removeViewImmediate(overlayView)
@@ -692,6 +692,13 @@ class BookingOverlayService : Service() {
             
             stopSelf()
             android.util.Log.d("BookingOverlay", "✅ Clean shutdown: $reason")
+        }
+        
+        // Run on main thread immediately if already there, otherwise post
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            cleanupRunnable.run()
+        } else {
+            Handler(mainLooper).post(cleanupRunnable)
         }
     }
 
