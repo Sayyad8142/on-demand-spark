@@ -82,6 +82,26 @@ public class MyFirebaseService extends FirebaseMessagingService {
         serviceIntent.putExtra("flat_no", location != null ? location : "");
         serviceIntent.putExtra("price_inr", 0);
         
+        // Try to get access token from SharedPreferences to pass via Intent
+        try {
+          String sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
+              .getString("didi_session", null);
+          if (sessionJson != null && !sessionJson.isEmpty()) {
+            org.json.JSONObject session = new org.json.JSONObject(sessionJson);
+            String accessToken = session.optString("accessToken", "");
+            if (!accessToken.isEmpty()) {
+              serviceIntent.putExtra("ACCESS_TOKEN", accessToken);
+              Log.d(TAG, "✅ Access token loaded and will be passed to overlay service");
+            } else {
+              Log.w(TAG, "⚠️ No accessToken in session JSON");
+            }
+          } else {
+            Log.w(TAG, "⚠️ No session found in SharedPreferences");
+          }
+        } catch (Exception e) {
+          Log.e(TAG, "❌ Failed to read session for token", e);
+        }
+        
         Log.d(TAG, "🚀 Starting BookingOverlayService with mode=show...");
         
         try {

@@ -64,7 +64,7 @@
         <service
             android:name=".BookingOverlayService"
             android:exported="false"
-            android:foregroundServiceType="mediaProjection|phoneCall|dataSync" />
+            android:foregroundServiceType="dataSync" />
 
         <!-- Firebase Messaging Service -->
         <service

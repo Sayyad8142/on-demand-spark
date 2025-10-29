@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Capacitor } from '@capacitor/core';
+import { capacitorStorage } from '@/lib/capacitorStorage';
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -10,6 +11,30 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Save full session to Capacitor storage (for native overlay access)
+  const saveSession = async (session: Session | null) => {
+    if (!Capacitor.isNativePlatform() || !session) {
+      return false;
+    }
+
+    try {
+      console.log('💾 Saving session to native storage...');
+      
+      const sessionData = {
+        accessToken: session.access_token,
+        refreshToken: session.refresh_token,
+        expiresAt: session.expires_at
+      };
+      
+      await capacitorStorage.setItem('didi_session', JSON.stringify(sessionData));
+      console.log('✅ Session saved successfully to didi_session key');
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to save session:', error);
+      return false;
+    }
+  };
 
   // Helper function to save JWT with verification and retry logic
   const saveJWT = async (token: string) => {
@@ -84,6 +109,10 @@ export function useAuth() {
           if (session) {
             console.log('✅ Session restored successfully');
             console.log('👤 User ID:', session.user?.id);
+            
+            // Save full session for native overlay
+            await saveSession(session);
+            
             // Save JWT token immediately on app startup if session exists
             if (session.access_token) {
               console.log('🔐 Saving access token on app startup...');
@@ -120,37 +149,48 @@ export function useAuth() {
           setUser(session?.user ?? null);
           setLoading(false);
           
-          // Save or clear JWT token
+          // Save or clear session and JWT token
           if (session?.access_token) {
-            console.log('🔐 Auth state changed - saving new JWT token...');
+            console.log('🔐 Auth state changed - saving session and JWT...');
+            
+            // Save full session for native overlay
+            await saveSession(session);
+            
+            // Save JWT for AuthBridge
             const saved = await saveJWT(session.access_token);
             if (saved) {
-              console.log('✅ JWT successfully saved after auth state change');
+              console.log('✅ Session and JWT successfully saved after auth state change');
             } else {
               console.error('❌ Failed to save JWT after auth state change');
             }
-          } else if (AuthBridge && Capacitor.isNativePlatform()) {
-            // Clear token on logout
+          } else if (Capacitor.isNativePlatform()) {
+            // Clear tokens on logout
             try {
-              await AuthBridge.clearToken();
-              console.log('🗑️ Cleared JWT from native bridge');
+              await capacitorStorage.removeItem('didi_session');
+              if (AuthBridge) {
+                await AuthBridge.clearToken();
+              }
+              console.log('🗑️ Cleared session from native storage');
             } catch (error) {
-              console.error('❌ Failed to clear JWT:', error);
+              console.error('❌ Failed to clear session:', error);
             }
           }
         }
       }
     );
 
-    // Aggressive JWT refresh - save token every 1 minute if session exists
+    // Aggressive session refresh - save session every 1 minute if exists
     const intervalId = setInterval(async () => {
       if (!mounted) return;
       
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token && Capacitor.isNativePlatform()) {
-        console.log('🔄 Periodic JWT refresh starting...');
-        const saved = await saveJWT(session.access_token);
-        console.log('🔄 Periodic JWT refresh:', saved ? '✅ success' : '❌ failed');
+      if (session && Capacitor.isNativePlatform()) {
+        console.log('🔄 Periodic session refresh starting...');
+        await saveSession(session);
+        if (session.access_token) {
+          const saved = await saveJWT(session.access_token);
+          console.log('🔄 Periodic refresh:', saved ? '✅ success' : '❌ failed');
+        }
       }
     }, 1 * 60 * 1000); // Every 1 minute
 
