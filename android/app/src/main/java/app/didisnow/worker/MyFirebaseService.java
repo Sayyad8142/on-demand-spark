@@ -46,6 +46,15 @@ public class MyFirebaseService extends FirebaseMessagingService {
           serviceType = message.getData().get("service_type");
         }
         String location = message.getData().get("location");
+        String priceStr = message.getData().get("price");
+        int price = 0;
+        try {
+          if (priceStr != null && !priceStr.isEmpty()) {
+            price = Integer.parseInt(priceStr);
+          }
+        } catch (NumberFormatException e) {
+          Log.w(TAG, "⚠️ Failed to parse price: " + priceStr, e);
+        }
         
         Log.d(TAG, "📋 Booking details:");
         Log.d(TAG, "  ID: " + bookingId);
@@ -53,6 +62,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
         Log.d(TAG, "  Community: " + community);
         Log.d(TAG, "  Service: " + serviceType);
         Log.d(TAG, "  Location: " + location);
+        Log.d(TAG, "  Price: ₹" + price);
         
         // Validate critical data
         if (bookingId == null || bookingId.isEmpty()) {
@@ -80,7 +90,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
         serviceIntent.putExtra("community", community != null ? community : "");
         serviceIntent.putExtra("service_type", serviceType != null ? serviceType : "Service");
         serviceIntent.putExtra("flat_no", location != null ? location : "");
-        serviceIntent.putExtra("price_inr", 0);
+        serviceIntent.putExtra("price_inr", price);
         
         // Try to get access token from SharedPreferences to pass via Intent
         try {

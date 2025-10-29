@@ -39,10 +39,10 @@ Deno.serve(async (req) => {
 
     console.log("🔍 Loading booking:", booking_id);
     
-    // Load booking with cust_name field
+    // Load booking with cust_name field and price_inr
     const { data: b, error: be } = await supabase
       .from("bookings")
-      .select("id, status, service_type, community, cust_name, cust_phone, flat_no")
+      .select("id, status, service_type, community, cust_name, cust_phone, flat_no, price_inr")
       .eq("id", booking_id)
       .single();
       
@@ -114,7 +114,8 @@ Deno.serve(async (req) => {
           customer: b.cust_name || "New Customer",
           community: b.community,
           serviceType: b.service_type,
-          location: b.flat_no || ""
+          location: b.flat_no || "",
+          price: String(b.price_inr || 0)
         },
       }),
     });
