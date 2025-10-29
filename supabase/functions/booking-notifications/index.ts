@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
       return new Response("skip - not pending", { status: 200 });
     }
 
-    console.log("✅ Booking loaded:", { service_type: b.service_type, community: b.community });
+    console.log("✅ Booking loaded:", { service_type: b.service_type, community: b.community, price_inr: b.price_inr });
 
     // Eligible workers: active, available, not busy, matching service & community
     console.log("🔍 Finding eligible workers...");

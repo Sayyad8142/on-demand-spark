@@ -120,9 +120,16 @@ Deno.serve(async (req) => {
             community: data?.community || "",
             serviceType: data?.serviceType || data?.service_type || "",
             location: data?.location || "",
+            price: data?.price || "0",
             title,
             body,
           };
+          
+          console.log(`📦 FCM payload for ${user_id}:`, { 
+            type: baseData.type, 
+            bookingId: baseData.bookingId,
+            price: baseData.price 
+          });
 
           const message = isBookingAlert
             ? {
