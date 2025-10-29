@@ -640,15 +640,7 @@ class BookingOverlayService : Service() {
         isShuttingDown = true
         android.util.Log.d("BookingOverlay", "🔚 Starting shutdown: $reason")
         
-        // Cancel all coroutines immediately to stop any ongoing network calls
-        try {
-            serviceJob.cancel()
-            android.util.Log.d("BookingOverlay", "🚫 Service coroutines cancelled")
-        } catch (e: Exception) {
-            android.util.Log.e("BookingOverlay", "❌ Error cancelling coroutines", e)
-        }
-        
-        // Stop alert sound
+        // Stop alert sound immediately
         try {
             mediaPlayer?.apply {
                 if (isPlaying) stop()
@@ -672,40 +664,40 @@ class BookingOverlayService : Service() {
             android.util.Log.e("BookingOverlay", "❌ Error cancelling countdown", e)
         }
         
-        // CRITICAL: Force cleanup on main thread with proper view removal
+        // Run cleanup on main thread immediately - no delay needed
         val cleanupRunnable = Runnable {
-            android.util.Log.d("BookingOverlay", "🧹 Cleanup runnable executing on main thread")
+            android.util.Log.d("BookingOverlay", "🧹 Cleanup executing on main thread")
             
-            // Remove overlay view - try both methods for robustness
+            // Remove overlay view with proper parent check
             try {
-                if (overlayView != null && overlayAdded) {
-                    android.util.Log.d("BookingOverlay", "🪟 Attempting to remove overlay view...")
+                val viewToRemove = overlayView
+                val wmInstance = windowManager
+                
+                if (viewToRemove != null && wmInstance != null && overlayAdded) {
+                    android.util.Log.d("BookingOverlay", "🪟 Removing overlay view...")
                     
-                    // First try gentle removeView
-                    try {
-                        windowManager?.removeView(overlayView)
-                        android.util.Log.d("BookingOverlay", "✅ Overlay removed with removeView()")
-                    } catch (e: IllegalArgumentException) {
-                        // View not attached, that's fine
-                        android.util.Log.d("BookingOverlay", "ℹ️ View not attached (already removed)")
-                    } catch (e: Exception) {
-                        // If gentle removal fails, force it
-                        android.util.Log.w("BookingOverlay", "⚠️ removeView failed, trying removeViewImmediate: ${e.message}")
+                    // Check if view is actually attached using windowToken
+                    if (viewToRemove.windowToken != null) {
                         try {
-                            windowManager?.removeViewImmediate(overlayView)
-                            android.util.Log.d("BookingOverlay", "✅ Overlay force-removed with removeViewImmediate()")
-                        } catch (e2: Exception) {
-                            android.util.Log.e("BookingOverlay", "❌ Both removal methods failed", e2)
+                            wmInstance.removeView(viewToRemove)
+                            android.util.Log.d("BookingOverlay", "✅ Overlay removed successfully")
+                        } catch (e: IllegalArgumentException) {
+                            android.util.Log.d("BookingOverlay", "ℹ️ View already detached")
+                        } catch (e: Exception) {
+                            android.util.Log.e("BookingOverlay", "❌ Error removing view: ${e.message}", e)
                         }
+                    } else {
+                        android.util.Log.d("BookingOverlay", "ℹ️ View not attached to window, skip removal")
                     }
                 }
+                
+                // Always nullify references
                 overlayAdded = false
                 overlayView = null
                 windowManager = null
-                android.util.Log.d("BookingOverlay", "🪟 Overlay cleanup complete")
+                android.util.Log.d("BookingOverlay", "🪟 Overlay references cleared")
             } catch (e: Exception) {
-                android.util.Log.e("BookingOverlay", "❌ Error removing overlay", e)
-                // Force nullify even if removal failed to prevent future attempts
+                android.util.Log.e("BookingOverlay", "❌ Error during overlay cleanup", e)
                 overlayAdded = false
                 overlayView = null
                 windowManager = null
@@ -719,23 +711,26 @@ class BookingOverlayService : Service() {
                     @Suppress("DEPRECATION")
                     stopForeground(true)
                 }
-                android.util.Log.d("BookingOverlay", "🛑 FGS stopped")
+                android.util.Log.d("BookingOverlay", "🛑 Foreground service stopped")
             } catch (e: Exception) {
                 android.util.Log.e("BookingOverlay", "❌ Error stopping foreground", e)
             }
             
-            // Force stop service
+            // Stop service - this allows natural cleanup
             try {
                 stopSelf()
-                android.util.Log.d("BookingOverlay", "✅ Clean shutdown completed: $reason")
+                android.util.Log.d("BookingOverlay", "✅ Service stop requested: $reason")
             } catch (e: Exception) {
                 android.util.Log.e("BookingOverlay", "❌ Error stopping service", e)
             }
         }
         
-        // ALWAYS post to main thread handler with small delay to ensure any pending UI updates finish
-        Handler(mainLooper).postDelayed(cleanupRunnable, 50)
-        android.util.Log.d("BookingOverlay", "⏱️ Cleanup scheduled in 50ms")
+        // Post to main thread WITHOUT delay - immediate execution
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            cleanupRunnable.run()
+        } else {
+            Handler(mainLooper).post(cleanupRunnable)
+        }
     }
 
     @Deprecated("Use closeOverlayAndStop instead", ReplaceWith("closeOverlayAndStop(\"legacy\")"))
@@ -804,13 +799,18 @@ class BookingOverlayService : Service() {
     override fun onDestroy() {
         android.util.Log.d("BookingOverlay", "🧹 onDestroy called")
         
-        // Use centralized shutdown if not already done
+        // Cancel coroutines FIRST to prevent any pending work from trying to update closed views
+        try {
+            serviceJob.cancel()
+            android.util.Log.d("BookingOverlay", "🚫 Coroutines cancelled in onDestroy")
+        } catch (e: Exception) {
+            android.util.Log.e("BookingOverlay", "❌ Error cancelling coroutines", e)
+        }
+        
+        // Then cleanup if not already done
         if (!isShuttingDown) {
             closeOverlayAndStop("onDestroy")
         }
-        
-        // Cancel all ongoing coroutines
-        serviceJob.cancel()
         
         super.onDestroy()
         android.util.Log.d("BookingOverlay", "✅ onDestroy complete")
