@@ -157,13 +157,17 @@ export default function Home() {
       
       <AvailabilityToggle isOnline={isOnline} onToggle={handleToggle} disabled={toggling} />
       {activeJob && <ActiveJobCard booking={activeJob} onStatusUpdate={handleStatusUpdate} updating={updating} />}
-      <BookingAlertModal
-        open={!!pending}
-        booking={pending}
-        onAccept={handleAccept}
-        onReject={reject}
-        onClose={clearAlert}
-      />
+      
+      {/* Only show in-app modal on web platform; Android uses native overlay */}
+      {!Capacitor.isNativePlatform() && (
+        <BookingAlertModal
+          open={!!pending}
+          booking={pending}
+          onAccept={handleAccept}
+          onReject={reject}
+          onClose={clearAlert}
+        />
+      )}
       </div>
     </div>
   );
