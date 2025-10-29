@@ -106,7 +106,7 @@ class BookingOverlayService : Service() {
                         try {
                             val session = JSONObject(sessionJson)
                             accessToken = session.optString("accessToken", "")
-                            if (accessToken.isEmpty()) {
+                            if (accessToken.isNullOrEmpty()) {
                                 android.util.Log.e("BookingOverlay", "❌ No accessToken in session!")
                                 Toast.makeText(
                                     this,
@@ -116,7 +116,7 @@ class BookingOverlayService : Service() {
                                 stopSelf()
                                 return START_NOT_STICKY
                             }
-                            android.util.Log.d("BookingOverlay", "✅ Access token from SharedPreferences: ${accessToken.take(12)}...")
+                            android.util.Log.d("BookingOverlay", "✅ Access token from SharedPreferences: ${accessToken?.take(12)}...")
                         } catch (e: Exception) {
                             android.util.Log.e("BookingOverlay", "❌ Failed to parse session JSON", e)
                             Toast.makeText(
@@ -132,7 +132,7 @@ class BookingOverlayService : Service() {
                     }
                     
                     // Final validation
-                    if (accessToken.isEmpty()) {
+                    if (accessToken.isNullOrEmpty()) {
                         android.util.Log.e("BookingOverlay", "❌ No valid access token found!")
                         Toast.makeText(
                             this,
@@ -145,7 +145,7 @@ class BookingOverlayService : Service() {
                     
                     // Store token for use in updateBooking
                     currentAccessToken = accessToken
-                    android.util.Log.d("BookingOverlay", "✅ Token validated and cached (${accessToken.take(12)}...) - proceeding to show overlay")
+                    android.util.Log.d("BookingOverlay", "✅ Token validated and cached (${accessToken?.take(12)}...) - proceeding to show overlay")
 
                     try {
                         showOverlay(bookingId, customer, community, serviceType, flatNo, price)
@@ -363,7 +363,7 @@ class BookingOverlayService : Service() {
                     return@launch
                 }
                 
-                android.util.Log.d("BookingOverlay", "✅ Using token: ${jwt.take(12)}...")
+                android.util.Log.d("BookingOverlay", "✅ Using token: ${jwt?.take(12)}...")
                 
                 if (action == "accepted") {
                     // Call try_accept_booking RPC with user JWT
