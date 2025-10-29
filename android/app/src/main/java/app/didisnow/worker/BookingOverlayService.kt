@@ -26,6 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import android.os.Looper
 import java.net.HttpURLConnection
 import java.net.URL
@@ -337,8 +338,10 @@ class BookingOverlayService : Service() {
             android.util.Log.d("BookingOverlay", "✅ Accept button clicked")
             
             // Disable buttons immediately to prevent double taps
-            overlayView?.findViewById<Button>(R.id.btnAccept)?.isEnabled = false
-            overlayView?.findViewById<Button>(R.id.btnReject)?.isEnabled = false
+            val acceptBtn = overlayView?.findViewById<Button>(R.id.btnAccept)
+            val rejectBtn = overlayView?.findViewById<Button>(R.id.btnReject)
+            acceptBtn?.isEnabled = false
+            rejectBtn?.isEnabled = false
             
             stopAlertSound()
             
@@ -348,12 +351,37 @@ class BookingOverlayService : Service() {
                 android.util.Log.d("BookingOverlay", "🧹 Countdown cancelled")
             }
             
-            if (bookingId.isNotEmpty()) {
-                serviceScope.launch { updateBooking(bookingId, "accepted") }
-            } else {
+            if (bookingId.isEmpty()) {
                 ui { Toast.makeText(this, "Error: No booking ID", Toast.LENGTH_SHORT).show() }
                 acceptInFlight = false
                 closeOverlayAndStop("no_booking_id")
+                return@setOnClickListener
+            }
+            
+            // Wrap entire flow with 12s watchdog timeout
+            serviceScope.launch {
+                var outcome = "unknown"
+                try {
+                    val finished = withTimeoutOrNull(12_000) {
+                        updateBooking(bookingId, "accepted")
+                        true
+                    }
+                    outcome = if (finished == true) "accept_success" else "accept_timeout"
+                    if (finished != true) {
+                        ui { Toast.makeText(this@BookingOverlayService, "Network slow. Will refresh.", Toast.LENGTH_SHORT).show() }
+                    }
+                } catch (t: Throwable) {
+                    android.util.Log.e("BookingOverlay", "❌ Accept flow crashed", t)
+                    outcome = "accept_exception"
+                    ui { Toast.makeText(this@BookingOverlayService, "Accept failed", Toast.LENGTH_SHORT).show() }
+                } finally {
+                    // Always close overlay and stop service
+                    acceptInFlight = false
+                    closeOverlayAndStop(outcome)
+                    // Tell React layer to refresh either way (it will fetch latest state)
+                    LocalBroadcastManager.getInstance(applicationContext)
+                        .sendBroadcast(Intent("DIDI_BOOKING_REFRESH").apply { putExtra("booking_id", bookingId) })
+                }
             }
         }
 
@@ -374,8 +402,10 @@ class BookingOverlayService : Service() {
             android.util.Log.d("BookingOverlay", "❌ Reject button clicked")
             
             // Disable buttons immediately
-            overlayView?.findViewById<Button>(R.id.btnAccept)?.isEnabled = false
-            overlayView?.findViewById<Button>(R.id.btnReject)?.isEnabled = false
+            val acceptBtn = overlayView?.findViewById<Button>(R.id.btnAccept)
+            val rejectBtn = overlayView?.findViewById<Button>(R.id.btnReject)
+            acceptBtn?.isEnabled = false
+            rejectBtn?.isEnabled = false
             
             stopAlertSound()
             
@@ -385,7 +415,38 @@ class BookingOverlayService : Service() {
                 android.util.Log.d("BookingOverlay", "🧹 Countdown cancelled")
             }
             
-            serviceScope.launch { updateBooking(bookingId, "rejected") }
+            if (bookingId.isEmpty()) {
+                ui { Toast.makeText(this, "Error: No booking ID", Toast.LENGTH_SHORT).show() }
+                acceptInFlight = false
+                closeOverlayAndStop("no_booking_id")
+                return@setOnClickListener
+            }
+            
+            // Wrap entire flow with 12s watchdog timeout
+            serviceScope.launch {
+                var outcome = "unknown"
+                try {
+                    val finished = withTimeoutOrNull(12_000) {
+                        updateBooking(bookingId, "rejected")
+                        true
+                    }
+                    outcome = if (finished == true) "reject_success" else "reject_timeout"
+                    if (finished != true) {
+                        ui { Toast.makeText(this@BookingOverlayService, "Network slow. Will refresh.", Toast.LENGTH_SHORT).show() }
+                    }
+                } catch (t: Throwable) {
+                    android.util.Log.e("BookingOverlay", "❌ Reject flow crashed", t)
+                    outcome = "reject_exception"
+                    ui { Toast.makeText(this@BookingOverlayService, "Reject failed", Toast.LENGTH_SHORT).show() }
+                } finally {
+                    // Always close overlay and stop service
+                    acceptInFlight = false
+                    closeOverlayAndStop(outcome)
+                    // Tell React layer to refresh either way (it will fetch latest state)
+                    LocalBroadcastManager.getInstance(applicationContext)
+                        .sendBroadcast(Intent("DIDI_BOOKING_REFRESH").apply { putExtra("booking_id", bookingId) })
+                }
+            }
         }
 
         // Add overlay to window
@@ -407,221 +468,146 @@ class BookingOverlayService : Service() {
     
     private suspend fun updateBooking(bookingId: String, action: String) {
         withContext(Dispatchers.IO) {
-            try {
-                android.util.Log.d("BookingOverlay", "📤 Updating booking $bookingId with action: $action")
+            android.util.Log.d("BookingOverlay", "📤 Updating booking $bookingId with action: $action")
+            
+            // Get access token - try multiple sources
+            var jwt = currentAccessToken
+            
+            if (jwt.isNullOrEmpty()) {
+                android.util.Log.d("BookingOverlay", "🔍 No cached token, checking SharedPreferences...")
+                val sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
+                    .getString("didi_session", null)
                 
-                // Get access token - try multiple sources
-                var jwt = currentAccessToken
-                
-                if (jwt.isNullOrEmpty()) {
-                    android.util.Log.d("BookingOverlay", "🔍 No cached token, checking SharedPreferences...")
-                    val sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
-                        .getString("didi_session", null)
-                    
-                    if (!sessionJson.isNullOrEmpty()) {
-                        try {
-                            val session = JSONObject(sessionJson)
-                            jwt = session.optString("accessToken", "")
-                            android.util.Log.d("BookingOverlay", "🔑 Token from SharedPreferences: ${jwt?.take(12)}...")
-                        } catch (e: Exception) {
-                            android.util.Log.e("BookingOverlay", "❌ Failed to parse session", e)
-                        }
-                    }
-                }
-                
-                if (jwt.isNullOrEmpty()) {
-                    android.util.Log.e("BookingOverlay", "❌ No access token available!")
-                    withContext(Dispatchers.Main) {
-                        if (isShuttingDown) return@withContext
-                        ui {
-                            Toast.makeText(
-                                this@BookingOverlayService,
-                                "❌ Please log in to accept bookings",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
-                        acceptInFlight = false
-                        closeOverlayAndStop("no_token")
-                    }
-                    return@withContext
-                }
-                
-                android.util.Log.d("BookingOverlay", "✅ Using token: ${jwt?.take(12)}...")
-                
-                if (action == "accepted") {
-                    // Call try_accept_booking RPC with user JWT
-                    val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/try_accept_booking")
-                    val connection = rpcUrl.openConnection() as HttpURLConnection
-                    
+                if (!sessionJson.isNullOrEmpty()) {
                     try {
-                        connection.requestMethod = "POST"
-                        connection.connectTimeout = 8000
-                        connection.readTimeout = 8000
-                        connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                        connection.setRequestProperty("Authorization", "Bearer $jwt")
-                        connection.setRequestProperty("Content-Type", "application/json")
-                        connection.doOutput = true
+                        val session = JSONObject(sessionJson)
+                        jwt = session.optString("accessToken", "")
+                        android.util.Log.d("BookingOverlay", "🔑 Token from SharedPreferences: ${jwt?.take(12)}...")
+                    } catch (e: Exception) {
+                        android.util.Log.e("BookingOverlay", "❌ Failed to parse session", e)
+                    }
+                }
+            }
+            
+            if (jwt.isNullOrEmpty()) {
+                android.util.Log.e("BookingOverlay", "❌ No access token available!")
+                throw IllegalStateException("No access token available")
+            }
+            
+            android.util.Log.d("BookingOverlay", "✅ Using token: ${jwt?.take(12)}...")
+            
+            if (action == "accepted") {
+                // Call try_accept_booking RPC with user JWT
+                val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/try_accept_booking")
+                val connection = rpcUrl.openConnection() as HttpURLConnection
+                
+                try {
+                    connection.requestMethod = "POST"
+                    connection.connectTimeout = 8000
+                    connection.readTimeout = 8000
+                    connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+                    connection.setRequestProperty("Authorization", "Bearer $jwt")
+                    connection.setRequestProperty("Content-Type", "application/json")
+                    connection.doOutput = true
 
-                        val jsonPayload = """{"p_booking_id":"$bookingId"}"""
-                        connection.outputStream.use { os ->
-                            os.write(jsonPayload.toByteArray())
-                        }
+                    val jsonPayload = """{"p_booking_id":"$bookingId"}"""
+                    connection.outputStream.use { os ->
+                        os.write(jsonPayload.toByteArray())
+                    }
 
-                        val responseCode = connection.responseCode
-                        android.util.Log.d("BookingOverlay", "📡 RPC code: $responseCode")
+                    val responseCode = connection.responseCode
+                    android.util.Log.d("BookingOverlay", "📡 RPC code: $responseCode")
+                
+                    val responseBody = if (responseCode in 200..299) {
+                        connection.inputStream.bufferedReader().use { it.readText() }
+                    } else {
+                        connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
+                    }
+
+                    android.util.Log.d("BookingOverlay", "📄 RPC Response Body: $responseBody")
                     
-                        val responseBody = if (responseCode in 200..299) {
-                            connection.inputStream.bufferedReader().use { it.readText() }
+                    if (responseCode in 200..299) {
+                        // Response is the JSONB object directly, not in an array
+                        val json = JSONObject(responseBody.ifEmpty { "{}" })
+                        val success = json.optBoolean("success", false)
+                        
+                        if (success) {
+                            android.util.Log.d("BookingOverlay", "✅ Accept success")
+                            withContext(Dispatchers.Main) {
+                                ui {
+                                    Toast.makeText(
+                                        this@BookingOverlayService,
+                                        "✅ Booking accepted!",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                            // Send local broadcast to React UI
+                            val intent = Intent("DIDI_BOOKING_ACCEPTED").apply {
+                                putExtra("booking_id", bookingId)
+                            }
+                            LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
+                            android.util.Log.d("BookingOverlay", "📡 Broadcast sent: DIDI_BOOKING_ACCEPTED")
                         } else {
-                            connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
+                            val error = json.optString("error", "Unknown error")
+                            android.util.Log.d("BookingOverlay", "❌ Accept failed: $error")
+                            throw IllegalStateException("Server rejected: $error")
                         }
-
-                        android.util.Log.d("BookingOverlay", "📄 RPC Response Body: $responseBody")
-
-                        withContext(Dispatchers.Main) {
-                            if (isShuttingDown) return@withContext
-                            
-                            if (responseCode in 200..299) {
-                                try {
-                                    // Response is the JSONB object directly, not in an array
-                                    val json = JSONObject(responseBody)
-                                    val success = json.optBoolean("success", false)
-                                    
-                                    if (success) {
-                                        android.util.Log.d("BookingOverlay", "✅ Accept success -> shutting down")
-                                        
-                                        ui {
-                                            Toast.makeText(
-                                                this@BookingOverlayService,
-                                                "✅ Booking accepted!",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                        
-                                        // Send local broadcast to React UI
-                                        val intent = Intent("DIDI_BOOKING_ACCEPTED").apply {
-                                            putExtra("booking_id", bookingId)
-                                        }
-                                        LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
-                                        android.util.Log.d("BookingOverlay", "📡 Broadcast sent: DIDI_BOOKING_ACCEPTED")
-                                        
-                                        acceptInFlight = false
-                                        closeOverlayAndStop("accept_success")
-                                    } else {
-                                        val error = json.optString("error", "Unknown error")
-                                        android.util.Log.d("BookingOverlay", "❌ Accept failed ($error) -> shutting down")
-                                        
-                                        ui {
-                                            Toast.makeText(
-                                                this@BookingOverlayService,
-                                                "❌ $error",
-                                                Toast.LENGTH_LONG
-                                            ).show()
-                                        }
-                                        
-                                        acceptInFlight = false
-                                        closeOverlayAndStop("accept_failed_${error.replace(" ", "_")}")
-                                    }
-                                } catch (e: Exception) {
-                                    android.util.Log.e("BookingOverlay", "❌ Failed to parse success response", e)
-                                    ui {
-                                        Toast.makeText(
-                                            this@BookingOverlayService,
-                                            "❌ Parse error: ${e.message}",
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                    }
-                                    acceptInFlight = false
-                                    closeOverlayAndStop("parse_error")
-                                }
-                            } else {
-                                // Show detailed error from HTTP error response
-                                val errorMsg = try {
-                                    val json = JSONObject(responseBody)
-                                    json.optString("message", json.optString("error", json.optString("msg", "HTTP $responseCode")))
-                                } catch (e: Exception) {
-                                    "HTTP $responseCode: ${responseBody.take(200)}"
-                                }
-                                android.util.Log.d("BookingOverlay", "❌ Accept failed (HTTP $responseCode: $errorMsg) -> shutting down")
-                                ui {
-                                    Toast.makeText(
-                                        this@BookingOverlayService,
-                                        "❌ $errorMsg",
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                }
-                                acceptInFlight = false
-                                closeOverlayAndStop("http_error_$responseCode")
-                            }
+                    } else {
+                        // HTTP error - throw with details
+                        val errorMsg = try {
+                            val json = JSONObject(responseBody)
+                            json.optString("message", json.optString("error", json.optString("msg", "HTTP $responseCode")))
+                        } catch (e: Exception) {
+                            "HTTP $responseCode: ${responseBody.take(200)}"
                         }
-                    } finally {
-                        connection.disconnect()
+                        android.util.Log.d("BookingOverlay", "❌ Accept failed: $errorMsg")
+                        throw IllegalStateException(errorMsg)
                     }
-                } else {
-                    // For reject, update status directly with user JWT
-                    val url = URL("$SUPABASE_URL/rest/v1/bookings?id=eq.$bookingId")
-                    val connection = url.openConnection() as HttpURLConnection
-                    
-                    try {
-                        connection.requestMethod = "PATCH"
-                        connection.connectTimeout = 8000
-                        connection.readTimeout = 8000
-                        connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                        connection.setRequestProperty("Authorization", "Bearer $jwt")
-                        connection.setRequestProperty("Content-Type", "application/json")
-                        connection.setRequestProperty("Prefer", "return=minimal")
-                        connection.doOutput = true
-
-                        val jsonPayload = """{"status":"cancelled"}"""
-                        connection.outputStream.use { os ->
-                            os.write(jsonPayload.toByteArray())
-                        }
-
-                        val responseCode = connection.responseCode
-                        android.util.Log.d("BookingOverlay", "📡 RPC code: $responseCode")
-
-                        withContext(Dispatchers.Main) {
-                            if (isShuttingDown) return@withContext
-                            
-                            if (responseCode in 200..299) {
-                                ui {
-                                    Toast.makeText(
-                                        this@BookingOverlayService,
-                                        "Booking rejected",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                                acceptInFlight = false
-                                closeOverlayAndStop("reject_success")
-                            } else {
-                                ui {
-                                    Toast.makeText(
-                                        this@BookingOverlayService,
-                                        "Failed to reject booking",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                                acceptInFlight = false
-                                closeOverlayAndStop("reject_failed")
-                            }
-                        }
-                    } finally {
-                        connection.disconnect()
-                    }
+                } finally {
+                    connection.disconnect()
                 }
-            } catch (e: Exception) {
-                android.util.Log.e("BookingOverlay", "❌ Error updating booking", e)
-                withContext(Dispatchers.Main) {
-                    if (isShuttingDown) return@withContext
-                    ui {
-                        Toast.makeText(
-                            this@BookingOverlayService,
-                            "Error: ${e.message}",
-                            Toast.LENGTH_SHORT
-                        ).show()
+            } else {
+                // For reject, update status directly with user JWT
+                val url = URL("$SUPABASE_URL/rest/v1/bookings?id=eq.$bookingId")
+                val connection = url.openConnection() as HttpURLConnection
+                
+                try {
+                    connection.requestMethod = "PATCH"
+                    connection.connectTimeout = 8000
+                    connection.readTimeout = 8000
+                    connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+                    connection.setRequestProperty("Authorization", "Bearer $jwt")
+                    connection.setRequestProperty("Content-Type", "application/json")
+                    connection.setRequestProperty("Prefer", "return=minimal")
+                    connection.doOutput = true
+
+                    val jsonPayload = """{"status":"cancelled"}"""
+                    connection.outputStream.use { os ->
+                        os.write(jsonPayload.toByteArray())
                     }
-                    acceptInFlight = false
-                    closeOverlayAndStop("network_error")
+
+                    val responseCode = connection.responseCode
+                    android.util.Log.d("BookingOverlay", "📡 PATCH code: $responseCode")
+                    
+                    if (responseCode in 200..299) {
+                        android.util.Log.d("BookingOverlay", "✅ Reject success")
+                        withContext(Dispatchers.Main) {
+                            ui {
+                                Toast.makeText(
+                                    this@BookingOverlayService,
+                                    "Booking rejected",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    } else {
+                        val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
+                        android.util.Log.d("BookingOverlay", "❌ Reject failed: HTTP $responseCode: $errorBody")
+                        throw IllegalStateException("HTTP $responseCode: $errorBody")
+                    }
+                } finally {
+                    connection.disconnect()
                 }
             }
         }
