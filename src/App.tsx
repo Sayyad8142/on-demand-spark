@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,6 +44,32 @@ function ProtectedRoute({ children, showNav = false }: { children: React.ReactNo
       {showNav && <BottomNav />}
     </>
   );
+}
+
+// Component to handle native navigation events (must be inside BrowserRouter)
+function NativeNavigationHandler() {
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    const handleNativeNavigation = (event: CustomEvent) => {
+      console.log("📱 Native navigation event received:", event.detail);
+      
+      const { navigateTo, bookingId } = event.detail || {};
+      
+      if (navigateTo === "home") {
+        console.log("🏠 Navigating to home screen", bookingId ? `with booking ${bookingId}` : "");
+        navigate("/home");
+      }
+    };
+    
+    window.addEventListener("nativeNavigation", handleNativeNavigation as EventListener);
+    
+    return () => {
+      window.removeEventListener("nativeNavigation", handleNativeNavigation as EventListener);
+    };
+  }, [navigate]);
+  
+  return null;
 }
 
 const App = () => {
@@ -128,6 +154,7 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <NativeNavigationHandler />
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route

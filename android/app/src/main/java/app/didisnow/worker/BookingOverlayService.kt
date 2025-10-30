@@ -414,6 +414,22 @@ class BookingOverlayService : Service() {
                     // Tell React layer to refresh either way (it will fetch latest state)
                     LocalBroadcastManager.getInstance(applicationContext)
                         .sendBroadcast(Intent("DIDI_BOOKING_REFRESH").apply { putExtra("booking_id", bookingId) })
+                    
+                    // Launch MainActivity to bring app to foreground showing the accepted booking
+                    if (outcome == "accept_success") {
+                        try {
+                            val appIntent = Intent(this@BookingOverlayService, MainActivity::class.java).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                putExtra("navigate_to", "home")
+                                putExtra("booking_id", bookingId)
+                            }
+                            startActivity(appIntent)
+                            android.util.Log.d("BookingOverlay", "✅ Launched MainActivity with booking: $bookingId")
+                        } catch (e: Exception) {
+                            android.util.Log.e("BookingOverlay", "❌ Failed to launch MainActivity", e)
+                        }
+                    }
+                    
                     finishAndStop(outcome)
                 }
             }

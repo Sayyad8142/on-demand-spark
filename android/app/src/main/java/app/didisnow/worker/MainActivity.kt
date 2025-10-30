@@ -57,5 +57,47 @@ class MainActivity : BridgeActivity() {
             android.util.Log.d("MainActivity", "📱 Requesting overlay permission")
             OverlayPermissionHelper.showOverlayPermissionDialog(this)
         }, 1500)
+        
+        // Handle intent if launched from overlay
+        handleNavigationIntent(intent)
+    }
+    
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        android.util.Log.d("MainActivity", "📬 onNewIntent called")
+        // Handle navigation when app is brought to foreground
+        intent?.let { handleNavigationIntent(it) }
+    }
+    
+    private fun handleNavigationIntent(intent: Intent) {
+        val navigateTo = intent.getStringExtra("navigate_to")
+        val bookingId = intent.getStringExtra("booking_id")
+        
+        android.util.Log.d("MainActivity", "🧭 Navigation intent: navigateTo=$navigateTo, bookingId=$bookingId")
+        
+        if (navigateTo != null) {
+            // Wait a bit for the bridge to be ready, then send navigation event to React
+            android.os.Handler(mainLooper).postDelayed({
+                try {
+                    val data = """
+                        {
+                            "navigateTo": "$navigateTo",
+                            "bookingId": ${if (bookingId != null) "\"$bookingId\"" else "null"}
+                        }
+                    """.trimIndent()
+                    
+                    // Send event to web layer via JavaScript
+                    bridge.eval("""
+                        window.dispatchEvent(new CustomEvent('nativeNavigation', { 
+                            detail: $data 
+                        }));
+                    """.trimIndent(), null)
+                    
+                    android.util.Log.d("MainActivity", "✅ Navigation event dispatched to web layer")
+                } catch (e: Exception) {
+                    android.util.Log.e("MainActivity", "❌ Failed to dispatch navigation event", e)
+                }
+            }, 500)
+        }
     }
 }
