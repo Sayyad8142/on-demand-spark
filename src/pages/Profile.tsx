@@ -8,9 +8,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, User, Loader2, Trash2, LogOut } from "lucide-react";
+import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -286,44 +293,104 @@ export default function Profile() {
 
             <div className="space-y-2">
               <Label>Service Types</Label>
-              <ToggleGroup 
-                type="multiple" 
-                value={selectedServices}
-                onValueChange={setSelectedServices}
-                className="justify-start flex-wrap gap-2"
-              >
-                {SERVICES.map(service => (
-                  <ToggleGroupItem
-                    key={service.value}
-                    value={service.value}
-                    aria-label={service.label}
-                    className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-                  >
-                    {service.label}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    <span className="text-muted-foreground">
+                      {selectedServices.length > 0 
+                        ? `${selectedServices.length} selected` 
+                        : "Select services"}
+                    </span>
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-full">
+                  <DropdownMenuLabel>Select Services</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {SERVICES.map(service => (
+                    <DropdownMenuCheckboxItem
+                      key={service.value}
+                      checked={selectedServices.includes(service.value)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedServices([...selectedServices, service.value]);
+                        } else {
+                          setSelectedServices(selectedServices.filter(s => s !== service.value));
+                        }
+                      }}
+                    >
+                      {service.label}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {selectedServices.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedServices.map(serviceValue => {
+                    const service = SERVICES.find(s => s.value === serviceValue);
+                    return (
+                      <Badge key={serviceValue} variant="secondary" className="gap-1">
+                        {service?.label}
+                        <X 
+                          className="h-3 w-3 cursor-pointer" 
+                          onClick={() => setSelectedServices(selectedServices.filter(s => s !== serviceValue))}
+                        />
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
               <Label>Communities</Label>
-              <ToggleGroup 
-                type="multiple" 
-                value={selectedCommunities}
-                onValueChange={setSelectedCommunities}
-                className="justify-start flex-wrap gap-2"
-              >
-                {communities.map(community => (
-                  <ToggleGroupItem
-                    key={community.id}
-                    value={community.value}
-                    aria-label={community.name}
-                    className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-                  >
-                    {community.name}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    <span className="text-muted-foreground">
+                      {selectedCommunities.length > 0 
+                        ? `${selectedCommunities.length} selected` 
+                        : "Select communities"}
+                    </span>
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-full">
+                  <DropdownMenuLabel>Select Communities</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {communities.map(community => (
+                    <DropdownMenuCheckboxItem
+                      key={community.id}
+                      checked={selectedCommunities.includes(community.value)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedCommunities([...selectedCommunities, community.value]);
+                        } else {
+                          setSelectedCommunities(selectedCommunities.filter(c => c !== community.value));
+                        }
+                      }}
+                    >
+                      {community.name}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {selectedCommunities.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedCommunities.map(communityValue => {
+                    const community = communities.find(c => c.value === communityValue);
+                    return (
+                      <Badge key={communityValue} variant="secondary" className="gap-1">
+                        {community?.name}
+                        <X 
+                          className="h-3 w-3 cursor-pointer" 
+                          onClick={() => setSelectedCommunities(selectedCommunities.filter(c => c !== communityValue))}
+                        />
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <Button
