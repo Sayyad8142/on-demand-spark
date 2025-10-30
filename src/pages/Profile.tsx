@@ -8,8 +8,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X } from "lucide-react";
+import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -55,6 +63,9 @@ export default function Profile() {
   const [communities, setCommunities] = useState<Community[]>([]);
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [upiId, setUpiId] = useState("");
   
   // Earnings data
   const [totalEarnings, setTotalEarnings] = useState(0);
@@ -101,6 +112,8 @@ export default function Profile() {
   useEffect(() => {
     if (worker) {
       setFullName(worker.full_name || "");
+      setPhone(worker.phone || "");
+      setUpiId(worker.upi_id || "");
       setSelectedServices(worker.service_types || []);
       setSelectedCommunities(worker.communities || (worker.community ? [worker.community] : []));
       setTotalEarnings(worker.total_earnings || 0);
@@ -147,10 +160,13 @@ export default function Profile() {
       setUpdating(true);
       await updateWorker({
         full_name: fullName,
+        phone: phone,
+        upi_id: upiId,
         service_types: selectedServices,
         communities: selectedCommunities
       });
       toast({ title: "Success", description: "Profile updated successfully" });
+      setEditDialogOpen(false);
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -251,9 +267,167 @@ export default function Profile() {
               <div className="flex-1">
                 <h2 className="text-xl font-semibold">{worker?.full_name}</h2>
                 <p className="text-muted-foreground">{worker?.phone}</p>
-                <Badge className="mt-2" variant={worker?.is_active ? "default" : "secondary"}>
-                  {worker?.is_active ? "Active" : "Pending Approval"}
-                </Badge>
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge variant={worker?.is_active ? "default" : "secondary"}>
+                    {worker?.is_active ? "Active" : "Pending Approval"}
+                  </Badge>
+                  <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>Edit Profile</DialogTitle>
+                        <DialogDescription>
+                          Update your profile information
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-name">Full Name</Label>
+                          <Input
+                            id="edit-name"
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            placeholder="Your full name"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-phone">Mobile Number</Label>
+                          <Input
+                            id="edit-phone"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="Your mobile number"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-upi">UPI ID</Label>
+                          <Input
+                            id="edit-upi"
+                            value={upiId}
+                            onChange={(e) => setUpiId(e.target.value)}
+                            placeholder="Your UPI ID"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Service Types</Label>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" className="w-full justify-between">
+                                <span className="text-muted-foreground">
+                                  {selectedServices.length > 0 
+                                    ? `${selectedServices.length} selected` 
+                                    : "Select services"}
+                                </span>
+                                <ChevronDown className="h-4 w-4 opacity-50" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-full">
+                              <DropdownMenuLabel>Select Services</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              {SERVICES.map(service => (
+                                <DropdownMenuCheckboxItem
+                                  key={service.value}
+                                  checked={selectedServices.includes(service.value)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setSelectedServices([...selectedServices, service.value]);
+                                    } else {
+                                      setSelectedServices(selectedServices.filter(s => s !== service.value));
+                                    }
+                                  }}
+                                >
+                                  {service.label}
+                                </DropdownMenuCheckboxItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          {selectedServices.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {selectedServices.map(serviceValue => {
+                                const service = SERVICES.find(s => s.value === serviceValue);
+                                return (
+                                  <Badge key={serviceValue} variant="secondary" className="gap-1">
+                                    {service?.label}
+                                    <X 
+                                      className="h-3 w-3 cursor-pointer" 
+                                      onClick={() => setSelectedServices(selectedServices.filter(s => s !== serviceValue))}
+                                    />
+                                  </Badge>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Communities</Label>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" className="w-full justify-between">
+                                <span className="text-muted-foreground">
+                                  {selectedCommunities.length > 0 
+                                    ? `${selectedCommunities.length} selected` 
+                                    : "Select communities"}
+                                </span>
+                                <ChevronDown className="h-4 w-4 opacity-50" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-full">
+                              <DropdownMenuLabel>Select Communities</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              {communities.map(community => (
+                                <DropdownMenuCheckboxItem
+                                  key={community.id}
+                                  checked={selectedCommunities.includes(community.value)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setSelectedCommunities([...selectedCommunities, community.value]);
+                                    } else {
+                                      setSelectedCommunities(selectedCommunities.filter(c => c !== community.value));
+                                    }
+                                  }}
+                                >
+                                  {community.name}
+                                </DropdownMenuCheckboxItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          {selectedCommunities.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {selectedCommunities.map(communityValue => {
+                                const community = communities.find(c => c.value === communityValue);
+                                return (
+                                  <Badge key={communityValue} variant="secondary" className="gap-1">
+                                    {community?.name}
+                                    <X 
+                                      className="h-3 w-3 cursor-pointer" 
+                                      onClick={() => setSelectedCommunities(selectedCommunities.filter(c => c !== communityValue))}
+                                    />
+                                  </Badge>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        <Button
+                          onClick={handleUpdate}
+                          disabled={updating}
+                          className="w-full"
+                        >
+                          {updating ? "Saving..." : "Save Changes"}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </div>
             </div>
 
@@ -272,134 +446,6 @@ export default function Profile() {
                 <p className="text-sm text-muted-foreground mt-1">Rating</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Edit Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Edit Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Your full name"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Service Types</Label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between">
-                    <span className="text-muted-foreground">
-                      {selectedServices.length > 0 
-                        ? `${selectedServices.length} selected` 
-                        : "Select services"}
-                    </span>
-                    <ChevronDown className="h-4 w-4 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-full">
-                  <DropdownMenuLabel>Select Services</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {SERVICES.map(service => (
-                    <DropdownMenuCheckboxItem
-                      key={service.value}
-                      checked={selectedServices.includes(service.value)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedServices([...selectedServices, service.value]);
-                        } else {
-                          setSelectedServices(selectedServices.filter(s => s !== service.value));
-                        }
-                      }}
-                    >
-                      {service.label}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              {selectedServices.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {selectedServices.map(serviceValue => {
-                    const service = SERVICES.find(s => s.value === serviceValue);
-                    return (
-                      <Badge key={serviceValue} variant="secondary" className="gap-1">
-                        {service?.label}
-                        <X 
-                          className="h-3 w-3 cursor-pointer" 
-                          onClick={() => setSelectedServices(selectedServices.filter(s => s !== serviceValue))}
-                        />
-                      </Badge>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label>Communities</Label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between">
-                    <span className="text-muted-foreground">
-                      {selectedCommunities.length > 0 
-                        ? `${selectedCommunities.length} selected` 
-                        : "Select communities"}
-                    </span>
-                    <ChevronDown className="h-4 w-4 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-full">
-                  <DropdownMenuLabel>Select Communities</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {communities.map(community => (
-                    <DropdownMenuCheckboxItem
-                      key={community.id}
-                      checked={selectedCommunities.includes(community.value)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedCommunities([...selectedCommunities, community.value]);
-                        } else {
-                          setSelectedCommunities(selectedCommunities.filter(c => c !== community.value));
-                        }
-                      }}
-                    >
-                      {community.name}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              {selectedCommunities.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {selectedCommunities.map(communityValue => {
-                    const community = communities.find(c => c.value === communityValue);
-                    return (
-                      <Badge key={communityValue} variant="secondary" className="gap-1">
-                        {community?.name}
-                        <X 
-                          className="h-3 w-3 cursor-pointer" 
-                          onClick={() => setSelectedCommunities(selectedCommunities.filter(c => c !== communityValue))}
-                        />
-                      </Badge>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <Button
-              onClick={handleUpdate}
-              disabled={updating}
-              className="w-full"
-            >
-              {updating ? "Saving..." : "Save Changes"}
-            </Button>
           </CardContent>
         </Card>
 
