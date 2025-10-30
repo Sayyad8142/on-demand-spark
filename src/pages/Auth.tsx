@@ -114,6 +114,28 @@ export default function Auth() {
     try {
       setLoading(true);
       const phone = normalizePhone(signInPhone);
+      
+      // Check if worker exists with this phone number
+      const { data: existingWorker, error: workerCheckError } = await supabase
+        .from('workers')
+        .select('id')
+        .eq('phone', phone)
+        .maybeSingle();
+
+      if (workerCheckError) {
+        throw workerCheckError;
+      }
+
+      if (!existingWorker) {
+        toast({ 
+          title: "Account not registered", 
+          description: "Please sign up first",
+          variant: "destructive" 
+        });
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase.auth.signInWithOtp({ phone });
       
       if (error) throw error;
