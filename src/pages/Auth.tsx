@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
-import maidImage from "@/assets/maid-auth.jpg";
+import appLogo from "@/assets/app-logo.png";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -375,7 +375,7 @@ export default function Auth() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <img src={maidImage} alt="Maid Service" className="h-20 w-20 rounded-full object-cover" />
+            <img src={appLogo} alt="Didi Now Worker" className="h-24 w-24 rounded-2xl object-cover" />
           </div>
           <CardTitle className="text-2xl text-center">Worker Portal</CardTitle>
           <CardDescription className="text-center">
