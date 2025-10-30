@@ -428,13 +428,26 @@ export default function Auth() {
                   {loading ? "Sending..." : "Send OTP"}
                 </Button>
               ) : (
-                <Button 
-                  onClick={handleSignInVerifyOtp} 
-                  disabled={loading || !signInOtp}
-                  className="w-full"
-                >
-                  {loading ? "Verifying..." : "Verify OTP"}
-                </Button>
+                <>
+                  <Button 
+                    onClick={handleSignInVerifyOtp} 
+                    disabled={loading || !signInOtp}
+                    className="w-full"
+                  >
+                    {loading ? "Verifying..." : "Verify OTP"}
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setOtpSent(false);
+                      setSignInOtp("");
+                    }}
+                    disabled={loading}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Change Phone Number
+                  </Button>
+                </>
               )}
             </TabsContent>
 
@@ -541,13 +554,26 @@ export default function Auth() {
                   {loading ? "Sending..." : "Send OTP"}
                 </Button>
               ) : (
-                <Button 
-                  onClick={handleSignUpVerifyOtp} 
-                  disabled={loading || !signUpOtp}
-                  className="w-full"
-                >
-                  {loading ? "Creating Account..." : "Create Account"}
-                </Button>
+                <>
+                  <Button 
+                    onClick={handleSignUpVerifyOtp} 
+                    disabled={loading || !signUpOtp}
+                    className="w-full"
+                  >
+                    {loading ? "Creating Account..." : "Create Account"}
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setOtpSent(false);
+                      setSignUpOtp("");
+                    }}
+                    disabled={loading}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Change Phone Number
+                  </Button>
+                </>
               )}
             </TabsContent>
           </Tabs>
