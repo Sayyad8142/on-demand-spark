@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, User, Loader2, DollarSign, CheckCircle, TrendingUp, Trash2, LogOut } from "lucide-react";
+import { ArrowLeft, User, Loader2, Trash2, LogOut } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -215,10 +215,10 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-10 shadow-sm">
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-4">
+      <header className="bg-card border-b">
+        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
@@ -227,73 +227,51 @@ export default function Profile() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold">My Profile</h1>
-            <p className="text-sm text-muted-foreground">Manage your information</p>
+            <h1 className="text-xl font-semibold">Profile</h1>
           </div>
         </div>
       </header>
 
       {/* Content */}
-      <main className="max-w-2xl mx-auto p-4 space-y-6">
-        {/* Profile Card */}
-        <Card className="shadow-card">
-          <CardHeader>
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center shadow-pink">
-                <User className="w-8 h-8 text-primary-foreground" />
+      <main className="max-w-2xl mx-auto p-4 space-y-4 pb-24">
+        {/* Profile Info */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center">
+                <User className="w-10 h-10 text-primary-foreground" />
               </div>
-              <div>
-                <CardTitle>{worker?.full_name}</CardTitle>
-                <p className="text-sm text-muted-foreground">{worker?.phone}</p>
-                <Badge className="mt-1" variant={worker?.is_active ? "default" : "secondary"}>
+              <div className="flex-1">
+                <h2 className="text-xl font-semibold">{worker?.full_name}</h2>
+                <p className="text-muted-foreground">{worker?.phone}</p>
+                <Badge className="mt-2" variant={worker?.is_active ? "default" : "secondary"}>
                   {worker?.is_active ? "Active" : "Pending Approval"}
                 </Badge>
               </div>
             </div>
-          </CardHeader>
-        </Card>
 
-        {/* Earnings Summary */}
-        <Card className="shadow-card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-primary" />
-              Earnings Summary
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4">
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-4 pt-4 border-t">
               <div className="text-center">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
-                  <TrendingUp className="w-6 h-6 text-primary" />
-                </div>
                 <p className="text-2xl font-bold text-primary">₹{totalEarnings}</p>
-                <p className="text-sm text-muted-foreground">Total Earned</p>
+                <p className="text-sm text-muted-foreground mt-1">Earned</p>
               </div>
               <div className="text-center">
-                <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-2">
-                  <CheckCircle className="w-6 h-6 text-success" />
-                </div>
                 <p className="text-2xl font-bold">{completedJobs}</p>
-                <p className="text-sm text-muted-foreground">Jobs Done</p>
+                <p className="text-sm text-muted-foreground mt-1">Jobs</p>
               </div>
               <div className="text-center">
-                <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-2">
-                  <span className="text-lg font-bold text-purple-700">
-                    {worker?.rating?.toFixed(1) || "N/A"}
-                  </span>
-                </div>
-                <p className="text-2xl font-bold">{worker?.rating?.toFixed(1) || "N/A"}</p>
-                <p className="text-sm text-muted-foreground">Rating</p>
+                <p className="text-2xl font-bold">{worker?.rating?.toFixed(1) || "0.0"}</p>
+                <p className="text-sm text-muted-foreground mt-1">Rating</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Edit Profile */}
-        <Card className="shadow-card">
+        {/* Edit Details */}
+        <Card>
           <CardHeader>
-            <CardTitle>Edit Profile</CardTitle>
+            <CardTitle className="text-lg">Edit Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -306,13 +284,13 @@ export default function Profile() {
               />
             </div>
 
-            <div className="space-y-3">
-              <Label className="text-base font-semibold">Service Types</Label>
+            <div className="space-y-2">
+              <Label>Service Types</Label>
               <ToggleGroup 
                 type="multiple" 
                 value={selectedServices}
                 onValueChange={setSelectedServices}
-                className="justify-start flex-wrap"
+                className="justify-start flex-wrap gap-2"
               >
                 {SERVICES.map(service => (
                   <ToggleGroupItem
@@ -327,13 +305,13 @@ export default function Profile() {
               </ToggleGroup>
             </div>
 
-            <div className="space-y-3">
-              <Label className="text-base font-semibold">Communities</Label>
+            <div className="space-y-2">
+              <Label>Communities</Label>
               <ToggleGroup 
                 type="multiple" 
                 value={selectedCommunities}
                 onValueChange={setSelectedCommunities}
-                className="justify-start flex-wrap"
+                className="justify-start flex-wrap gap-2"
               >
                 {communities.map(community => (
                   <ToggleGroupItem
@@ -352,40 +330,29 @@ export default function Profile() {
               onClick={handleUpdate}
               disabled={updating}
               className="w-full"
-              size="lg"
             >
-              {updating ? "Updating..." : "Save Changes"}
+              {updating ? "Saving..." : "Save Changes"}
             </Button>
           </CardContent>
         </Card>
 
-        {/* Logout */}
-        <Card className="shadow-card">
-          <CardContent className="pt-6">
+        {/* Actions */}
+        <Card>
+          <CardContent className="pt-6 space-y-3">
             <Button
               onClick={handleLogout}
               variant="outline"
               className="w-full"
-              size="lg"
             >
               <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Button>
-          </CardContent>
-        </Card>
 
-        {/* Delete Account */}
-        <Card className="shadow-card border-destructive/20">
-          <CardHeader>
-            <CardTitle className="text-destructive">Danger Zone</CardTitle>
-          </CardHeader>
-          <CardContent>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
                   variant="destructive"
                   className="w-full"
-                  size="lg"
                   disabled={deleting}
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
@@ -394,11 +361,9 @@ export default function Profile() {
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogTitle>Delete Account?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete your
-                    account and remove all your data from our servers including your
-                    profile, bookings history, and earnings records.
+                    This will permanently delete your account and all data. This action cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -407,7 +372,7 @@ export default function Profile() {
                     onClick={handleDeleteAccount}
                     className="bg-destructive hover:bg-destructive/90"
                   >
-                    Yes, Delete My Account
+                    Delete
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
