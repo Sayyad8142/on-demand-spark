@@ -12,6 +12,8 @@ import android.media.RingtoneManager
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -44,6 +46,7 @@ class BookingOverlayService : Service() {
     private var overlayView: View? = null
     private var overlayAdded = false
     private var mediaPlayer: MediaPlayer? = null
+    private var vibrator: Vibrator? = null
     private var isShuttingDown = false
     private var countdownHandler: Handler? = null
     private var countdownRunnable: Runnable? = null
@@ -264,8 +267,9 @@ class BookingOverlayService : Service() {
     private fun showOverlay(bookingId: String, customer: String, community: String, serviceType: String, flatNo: String, price: Int) {
         android.util.Log.d("BookingOverlay", "🖼️ showOverlay called")
         
-        // Play loud siren sound
+        // Play loud siren sound and start vibration
         playAlertSound()
+        startContinuousVibration()
         
         // Check overlay permission
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -373,6 +377,7 @@ class BookingOverlayService : Service() {
             rejectBtn?.isEnabled = false
             
             stopAlertSound()
+            stopVibration()
             
             // Cancel countdown safely
             countdownRunnable?.let { r -> 
@@ -443,6 +448,7 @@ class BookingOverlayService : Service() {
             rejectBtn?.isEnabled = false
             
             stopAlertSound()
+            stopVibration()
             
             // Cancel countdown safely
             countdownRunnable?.let { r ->
@@ -686,11 +692,12 @@ class BookingOverlayService : Service() {
         isShuttingDown = true
         android.util.Log.d("BookingOverlay", "🛑 finishAndStop: $reason")
         
-        // Stop sound
+        // Stop sound and vibration
         try {
             stopAlertSound()
+            stopVibration()
         } catch (e: Throwable) {
-            android.util.Log.e("BookingOverlay", "❌ Error stopping sound", e)
+            android.util.Log.e("BookingOverlay", "❌ Error stopping sound/vibration", e)
         }
         
         // Cancel countdown
@@ -741,10 +748,7 @@ class BookingOverlayService : Service() {
             // Stop any existing sound
             stopAlertSound()
             
-            // Use the default alarm sound (loud siren-like sound)
-            val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-            
+            // Use custom loud ringtone from raw resources
             mediaPlayer = MediaPlayer().apply {
                 setAudioAttributes(
                     AudioAttributes.Builder()
@@ -752,16 +756,56 @@ class BookingOverlayService : Service() {
                         .setUsage(AudioAttributes.USAGE_ALARM)
                         .build()
                 )
-                setDataSource(this@BookingOverlayService, alarmUri)
+                setDataSource(
+                    this@BookingOverlayService,
+                    android.net.Uri.parse("android.resource://${packageName}/${R.raw.new_loud_ringtone}")
+                )
                 isLooping = true // Loop the alarm sound
                 setVolume(1.0f, 1.0f) // Max volume
                 prepare()
                 start()
             }
             
-            android.util.Log.d("BookingOverlay", "🔊 Alert sound started")
+            android.util.Log.d("BookingOverlay", "🔊 Alert sound started (custom ringtone)")
         } catch (e: Exception) {
             android.util.Log.e("BookingOverlay", "❌ Failed to play alert sound", e)
+        }
+    }
+    
+    private fun startContinuousVibration() {
+        try {
+            vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            
+            if (vibrator?.hasVibrator() == true) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    // Android 8.0+: Use VibrationEffect for continuous pattern
+                    // Pattern: [delay, vibrate, pause, vibrate, ...]
+                    val pattern = longArrayOf(0, 500, 200, 500, 200) // 500ms vibrate, 200ms pause, repeat
+                    val effect = VibrationEffect.createWaveform(pattern, 0) // 0 = repeat from index 0
+                    vibrator?.vibrate(effect)
+                } else {
+                    // Older Android: Use deprecated pattern method
+                    @Suppress("DEPRECATION")
+                    val pattern = longArrayOf(0, 500, 200, 500, 200)
+                    @Suppress("DEPRECATION")
+                    vibrator?.vibrate(pattern, 0) // 0 = repeat from index 0
+                }
+                android.util.Log.d("BookingOverlay", "📳 Continuous vibration started")
+            } else {
+                android.util.Log.w("BookingOverlay", "⚠️ Vibrator not available")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("BookingOverlay", "❌ Failed to start vibration", e)
+        }
+    }
+    
+    private fun stopVibration() {
+        try {
+            vibrator?.cancel()
+            vibrator = null
+            android.util.Log.d("BookingOverlay", "🛑 Vibration stopped")
+        } catch (e: Exception) {
+            android.util.Log.e("BookingOverlay", "❌ Failed to stop vibration", e)
         }
     }
 
