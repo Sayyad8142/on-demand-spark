@@ -453,108 +453,108 @@ export default function Auth() {
 
             {/* Sign Up Tab */}
             <TabsContent value="signup" className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="signup-name">Full Name *</Label>
-                <Input
-                  id="signup-name"
-                  type="text"
-                  placeholder="Your full name"
-                  value={signUpFullName}
-                  onChange={(e) => setSignUpFullName(e.target.value)}
-                  disabled={otpSent || loading}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="signup-phone">Phone Number *</Label>
-                <Input
-                  id="signup-phone"
-                  type="tel"
-                  placeholder="10-digit phone number"
-                  value={signUpPhone}
-                  onChange={(e) => setSignUpPhone(e.target.value)}
-                  maxLength={10}
-                  disabled={otpSent || loading}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="signup-upi">UPI ID (Optional)</Label>
-                <Input
-                  id="signup-upi"
-                  type="text"
-                  placeholder="yourname@bank"
-                  value={signUpUpiId}
-                  onChange={(e) => setSignUpUpiId(e.target.value)}
-                  disabled={otpSent || loading}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="signup-community">Community *</Label>
-                <Select 
-                  value={signUpCommunity} 
-                  onValueChange={setSignUpCommunity}
-                  disabled={otpSent || loading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your community" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {communities.map((community) => (
-                      <SelectItem key={community.value} value={community.value}>
-                        {community.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="signup-service">Service Type *</Label>
-                <Select 
-                  value={signUpService} 
-                  onValueChange={setSignUpService}
-                  disabled={otpSent || loading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select service type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SERVICES.map((service) => (
-                      <SelectItem key={service.value} value={service.value}>
-                        {service.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {otpSent && (
-                <div className="space-y-2">
-                  <Label htmlFor="signup-otp">OTP</Label>
-                  <Input
-                    id="signup-otp"
-                    type="text"
-                    placeholder="6-digit OTP"
-                    value={signUpOtp}
-                    onChange={(e) => setSignUpOtp(e.target.value)}
-                    maxLength={6}
-                    disabled={loading}
-                  />
-                </div>
-              )}
-
               {!otpSent ? (
-                <Button 
-                  onClick={handleSignUpSendOtp} 
-                  disabled={loading || !signUpFullName || !signUpPhone || !signUpCommunity || !signUpService}
-                  className="w-full"
-                >
-                  {loading ? "Sending..." : "Send OTP"}
-                </Button>
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-name">Full Name *</Label>
+                    <Input
+                      id="signup-name"
+                      type="text"
+                      placeholder="Your full name"
+                      value={signUpFullName}
+                      onChange={(e) => setSignUpFullName(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-phone">Phone Number *</Label>
+                    <Input
+                      id="signup-phone"
+                      type="tel"
+                      placeholder="10-digit phone number"
+                      value={signUpPhone}
+                      onChange={(e) => setSignUpPhone(e.target.value)}
+                      maxLength={10}
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-upi">UPI ID (Optional)</Label>
+                    <Input
+                      id="signup-upi"
+                      type="text"
+                      placeholder="yourname@bank"
+                      value={signUpUpiId}
+                      onChange={(e) => setSignUpUpiId(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-community">Community *</Label>
+                    <Select 
+                      value={signUpCommunity} 
+                      onValueChange={setSignUpCommunity}
+                      disabled={loading}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your community" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {communities.map((community) => (
+                          <SelectItem key={community.value} value={community.value}>
+                            {community.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-service">Service Type *</Label>
+                    <Select 
+                      value={signUpService} 
+                      onValueChange={setSignUpService}
+                      disabled={loading}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select service type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SERVICES.map((service) => (
+                          <SelectItem key={service.value} value={service.value}>
+                            {service.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Button 
+                    onClick={handleSignUpSendOtp} 
+                    disabled={loading || !signUpFullName || !signUpPhone || !signUpCommunity || !signUpService}
+                    className="w-full"
+                  >
+                    {loading ? "Sending..." : "Send OTP"}
+                  </Button>
+                </>
               ) : (
                 <>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-otp">OTP</Label>
+                    <Input
+                      id="signup-otp"
+                      type="text"
+                      placeholder="6-digit OTP"
+                      value={signUpOtp}
+                      onChange={(e) => setSignUpOtp(e.target.value)}
+                      maxLength={6}
+                      disabled={loading}
+                    />
+                  </div>
+
                   <Button 
                     onClick={handleSignUpVerifyOtp} 
                     disabled={loading || !signUpOtp}
