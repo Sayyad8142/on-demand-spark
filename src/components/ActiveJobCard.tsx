@@ -56,13 +56,16 @@ export default function ActiveJobCard({ booking, onStatusUpdate, updating }: Act
         </div>
 
         {/* Location */}
-        <div className="bg-secondary rounded-xl p-3">
-          <div className="flex items-start gap-2">
-            <MapPin className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="font-semibold">{booking.community}</p>
-              <p className="text-sm text-muted-foreground">{booking.flat_no}</p>
-            </div>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 mb-2">
+            <MapPin className="w-5 h-5 text-primary" />
+            <p className="font-semibold">{booking.community}</p>
+          </div>
+          
+          {/* Flat Number Display */}
+          <div className="bg-card border-2 border-primary/20 rounded-xl p-3 text-center">
+            <p className="text-xs font-medium text-muted-foreground mb-1">FLAT NO :</p>
+            <p className="text-2xl font-bold text-foreground">{booking.flat_no}</p>
           </div>
         </div>
 
