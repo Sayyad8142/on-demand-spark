@@ -1,0 +1,114 @@
+{
+  "app": {
+    "name": "दीदी नाउ वर्कर"
+  },
+  "auth": {
+    "title": "वर्कर पोर्टल",
+    "description": "शुरू करने के लिए साइन इन करें या खाता बनाएं",
+    "enterPhone": "अपना फोन नंबर दर्ज करें",
+    "phoneLabel": "फोन नंबर",
+    "phonePlaceholder": "+91 1234567890",
+    "continue": "जारी रखें",
+    "verifyOtp": "OTP सत्यापित करें",
+    "otpDescription": "भेजे गए 6 अंकों का कोड दर्ज करें",
+    "otpPlaceholder": "000000",
+    "verify": "सत्यापित करें",
+    "resend": "कोड फिर से भेजें",
+    "newWorker": "नए वर्कर? अपनी प्रोफ़ाइल पूरी करें",
+    "fullName": "पूरा नाम",
+    "namePlaceholder": "अपना पूरा नाम दर्ज करें",
+    "selectCommunity": "समुदाय चुनें",
+    "selectService": "सेवा चुनें",
+    "completeProfile": "प्रोफ़ाइल पूरी करें",
+    "back": "वापस"
+  },
+  "home": {
+    "welcome": "स्वागत है",
+    "availabilityTitle": "उपलब्धता स्थिति",
+    "goOnline": "ऑनलाइन जाएं",
+    "goOffline": "ऑफलाइन जाएं",
+    "onlineDesc": "आपको बुकिंग अलर्ट मिलेंगे",
+    "offlineDesc": "आपको कोई बुकिंग नहीं मिलेगी",
+    "activeJob": "सक्रिय काम",
+    "noActiveJob": "इस समय कोई सक्रिय काम नहीं"
+  },
+  "bookings": {
+    "title": "मेरी बुकिंग",
+    "search": "बुकिंग खोजें...",
+    "upcoming": "आने वाली",
+    "history": "इतिहास",
+    "noUpcoming": "कोई आने वाली बुकिंग नहीं",
+    "noHistory": "अभी तक कोई पूरी बुकिंग नहीं",
+    "status": {
+      "pending": "लंबित",
+      "accepted": "स्वीकृत",
+      "on_the_way": "रास्ते में",
+      "in_progress": "प्रगति में",
+      "completed": "पूर्ण",
+      "rejected": "अस्वीकृत",
+      "cancelled": "रद्द"
+    }
+  },
+  "profile": {
+    "title": "मेरी प्रोफ़ाइल",
+    "edit": "प्रोफ़ाइल संपादित करें",
+    "earnings": "कमाई",
+    "totalEarned": "कुल कमाई",
+    "completedJobs": "पूर्ण काम",
+    "rating": "रेटिंग",
+    "status": {
+      "active": "सक्रिय",
+      "inactive": "निष्क्रिय",
+      "pending": "अनुमोदन लंबित"
+    },
+    "profileInfo": "प्रोफ़ाइल जानकारी",
+    "name": "पूरा नाम",
+    "phone": "फोन नंबर",
+    "communities": "समुदाय",
+    "services": "सेवाएं",
+    "updateProfile": "प्रोफ़ाइल अपडेट करें",
+    "logout": "लॉगआउट",
+    "deleteAccount": "खाता हटाएं",
+    "logoutConfirm": "क्या आप वाकई लॉगआउट करना चाहते हैं?",
+    "deleteConfirm": "क्या आप वाकई अपना खाता हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।",
+    "cancel": "रद्द करें",
+    "language": "भाषा",
+    "selectLanguage": "भाषा चुनें"
+  },
+  "settings": {
+    "title": "सेटिंग्स",
+    "notifications": "सूचनाएं",
+    "preferences": "प्राथमिकताएं"
+  },
+  "activeJob": {
+    "flatNo": "फ्लैट नं.",
+    "customer": "ग्राहक",
+    "service": "सेवा",
+    "scheduledFor": "के लिए निर्धारित",
+    "startWork": "काम शुरू करें",
+    "onTheWay": "रास्ते में",
+    "completeJob": "काम पूरा करें"
+  },
+  "bookingAlert": {
+    "newBooking": "नई बुकिंग अलर्ट!",
+    "accept": "स्वीकार करें",
+    "reject": "अस्वीकार करें",
+    "expiresIn": "समाप्त होता है"
+  },
+  "nav": {
+    "home": "होम",
+    "bookings": "बुकिंग",
+    "profile": "प्रोफ़ाइल",
+    "settings": "सेटिंग्स"
+  },
+  "common": {
+    "loading": "लोड हो रहा है...",
+    "error": "त्रुटि",
+    "success": "सफलता",
+    "save": "सहेजें",
+    "cancel": "रद्द करें",
+    "delete": "हटाएं",
+    "edit": "संपादित करें",
+    "confirm": "पुष्टि करें"
+  }
+}

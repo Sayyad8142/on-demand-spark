@@ -1,0 +1,114 @@
+{
+  "app": {
+    "name": "Didi Now Worker"
+  },
+  "auth": {
+    "title": "Worker Portal",
+    "description": "Sign in or create an account to get started",
+    "enterPhone": "Enter your phone number",
+    "phoneLabel": "Phone Number",
+    "phonePlaceholder": "+91 1234567890",
+    "continue": "Continue",
+    "verifyOtp": "Verify OTP",
+    "otpDescription": "Enter the 6-digit code sent to",
+    "otpPlaceholder": "000000",
+    "verify": "Verify",
+    "resend": "Resend Code",
+    "newWorker": "New Worker? Complete your profile",
+    "fullName": "Full Name",
+    "namePlaceholder": "Enter your full name",
+    "selectCommunity": "Select Community",
+    "selectService": "Select Service",
+    "completeProfile": "Complete Profile",
+    "back": "Back"
+  },
+  "home": {
+    "welcome": "Welcome",
+    "availabilityTitle": "Availability Status",
+    "goOnline": "Go Online",
+    "goOffline": "Go Offline",
+    "onlineDesc": "You will receive booking alerts",
+    "offlineDesc": "You won't receive any bookings",
+    "activeJob": "Active Job",
+    "noActiveJob": "No active jobs at the moment"
+  },
+  "bookings": {
+    "title": "My Bookings",
+    "search": "Search bookings...",
+    "upcoming": "Upcoming",
+    "history": "History",
+    "noUpcoming": "No upcoming bookings",
+    "noHistory": "No completed bookings yet",
+    "status": {
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "on_the_way": "On the Way",
+      "in_progress": "In Progress",
+      "completed": "Completed",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled"
+    }
+  },
+  "profile": {
+    "title": "My Profile",
+    "edit": "Edit Profile",
+    "earnings": "Earnings",
+    "totalEarned": "Total Earned",
+    "completedJobs": "Completed Jobs",
+    "rating": "Rating",
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "pending": "Pending Approval"
+    },
+    "profileInfo": "Profile Information",
+    "name": "Full Name",
+    "phone": "Phone Number",
+    "communities": "Communities",
+    "services": "Services",
+    "updateProfile": "Update Profile",
+    "logout": "Logout",
+    "deleteAccount": "Delete Account",
+    "logoutConfirm": "Are you sure you want to logout?",
+    "deleteConfirm": "Are you sure you want to delete your account? This action cannot be undone.",
+    "cancel": "Cancel",
+    "language": "Language",
+    "selectLanguage": "Select Language"
+  },
+  "settings": {
+    "title": "Settings",
+    "notifications": "Notifications",
+    "preferences": "Preferences"
+  },
+  "activeJob": {
+    "flatNo": "Flat No.",
+    "customer": "Customer",
+    "service": "Service",
+    "scheduledFor": "Scheduled For",
+    "startWork": "Start Work",
+    "onTheWay": "On the Way",
+    "completeJob": "Complete Job"
+  },
+  "bookingAlert": {
+    "newBooking": "New Booking Alert!",
+    "accept": "Accept",
+    "reject": "Reject",
+    "expiresIn": "Expires in"
+  },
+  "nav": {
+    "home": "Home",
+    "bookings": "Bookings",
+    "profile": "Profile",
+    "settings": "Settings"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "confirm": "Confirm"
+  }
+}

@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X, Pencil } from "lucide-react";
+import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X, Pencil, Languages } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -56,6 +57,7 @@ export default function Profile() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { worker, loading: workerLoading, updateWorker } = useWorkerProfile(user?.id);
+  const { t, i18n } = useTranslation();
   
   const [fullName, setFullName] = useState("");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -266,7 +268,7 @@ export default function Profile() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-semibold">Profile</h1>
+            <h1 className="text-xl font-semibold">{t('profile.title')}</h1>
           </div>
         </div>
       </header>
@@ -285,7 +287,7 @@ export default function Profile() {
                 <p className="text-muted-foreground">{worker?.phone}</p>
                 <div className="flex items-center gap-2 mt-2">
                   <Badge variant={worker?.is_active ? "default" : "secondary"}>
-                    {worker?.is_active ? "Active" : "Pending Approval"}
+                    {worker?.is_active ? t('profile.status.active') : t('profile.status.pending')}
                   </Badge>
                   <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
                     <DialogTrigger asChild>
@@ -295,24 +297,24 @@ export default function Profile() {
                     </DialogTrigger>
                     <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                       <DialogHeader>
-                        <DialogTitle>Edit Profile</DialogTitle>
+                        <DialogTitle>{t('profile.edit')}</DialogTitle>
                         <DialogDescription>
-                          Update your profile information
+                          {t('profile.profileInfo')}
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                          <Label htmlFor="edit-name">Full Name</Label>
+                          <Label htmlFor="edit-name">{t('profile.name')}</Label>
                           <Input
                             id="edit-name"
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
-                            placeholder="Your full name"
+                            placeholder={t('auth.namePlaceholder')}
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="edit-phone">Mobile Number</Label>
+                          <Label htmlFor="edit-phone">{t('profile.phone')}</Label>
                           <Input
                             id="edit-phone"
                             value={phone}
@@ -332,7 +334,7 @@ export default function Profile() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label>Service Types</Label>
+                          <Label>{t('profile.services')}</Label>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="outline" className="w-full justify-between">
@@ -383,7 +385,7 @@ export default function Profile() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label>Communities</Label>
+                          <Label>{t('profile.communities')}</Label>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="outline" className="w-full justify-between">
@@ -438,7 +440,7 @@ export default function Profile() {
                           disabled={updating}
                           className="w-full"
                         >
-                          {updating ? "Saving..." : "Save Changes"}
+                          {updating ? t('common.loading') : t('profile.updateProfile')}
                         </Button>
                       </div>
                     </DialogContent>
@@ -451,15 +453,65 @@ export default function Profile() {
             <div className="grid grid-cols-3 gap-4 pt-4 border-t">
               <div className="text-center">
                 <p className="text-2xl font-bold text-primary">₹{totalEarnings}</p>
-                <p className="text-sm text-muted-foreground mt-1">Earned</p>
+                <p className="text-sm text-muted-foreground mt-1">{t('profile.totalEarned')}</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold">{completedJobs}</p>
-                <p className="text-sm text-muted-foreground mt-1">Jobs</p>
+                <p className="text-sm text-muted-foreground mt-1">{t('profile.completedJobs')}</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold">{workerRating.toFixed(1)} ⭐</p>
-                <p className="text-sm text-muted-foreground mt-1">{ratingsCount} Ratings</p>
+                <p className="text-sm text-muted-foreground mt-1">{t('profile.rating')}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Language Selection */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Languages className="w-5 h-5" />
+              {t('profile.language')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2">
+              <Label>{t('profile.selectLanguage')}</Label>
+              <div className="grid gap-2">
+                <Button
+                  variant={i18n.language === 'en' ? 'default' : 'outline'}
+                  className="w-full justify-start"
+                  onClick={() => {
+                    i18n.changeLanguage('en');
+                    localStorage.setItem('language', 'en');
+                    toast({ title: "Language changed to English" });
+                  }}
+                >
+                  English
+                </Button>
+                <Button
+                  variant={i18n.language === 'hi' ? 'default' : 'outline'}
+                  className="w-full justify-start"
+                  onClick={() => {
+                    i18n.changeLanguage('hi');
+                    localStorage.setItem('language', 'hi');
+                    toast({ title: "भाषा हिंदी में बदल गई" });
+                  }}
+                >
+                  हिंदी (Hindi)
+                </Button>
+                <Button
+                  variant={i18n.language === 'te' ? 'default' : 'outline'}
+                  className="w-full justify-start"
+                  onClick={() => {
+                    i18n.changeLanguage('te');
+                    localStorage.setItem('language', 'te');
+                    toast({ title: "భాష తెలుగులోకి మార్చబడింది" });
+                  }}
+                >
+                  తెలుగు (Telugu)
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -474,7 +526,7 @@ export default function Profile() {
               className="w-full"
             >
               <LogOut className="w-4 h-4 mr-2" />
-              Logout
+              {t('profile.logout')}
             </Button>
 
             <AlertDialog>
@@ -485,23 +537,23 @@ export default function Profile() {
                   disabled={deleting}
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
-                  {deleting ? "Deleting..." : "Delete Account"}
+                  {deleting ? t('common.loading') : t('profile.deleteAccount')}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Account?</AlertDialogTitle>
+                  <AlertDialogTitle>{t('profile.deleteAccount')}?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will permanently delete your account and all data. This action cannot be undone.
+                    {t('profile.deleteConfirm')}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>{t('profile.cancel')}</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleDeleteAccount}
                     className="bg-destructive hover:bg-destructive/90"
                   >
-                    Delete
+                    {t('common.delete')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
