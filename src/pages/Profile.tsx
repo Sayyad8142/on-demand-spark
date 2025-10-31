@@ -70,6 +70,7 @@ export default function Profile() {
   // Earnings data
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [completedJobs, setCompletedJobs] = useState(0);
+  const [workerRating, setWorkerRating] = useState<number>(0);
 
   // Fetch communities from Supabase with real-time updates
   useEffect(() => {
@@ -137,7 +138,20 @@ export default function Profile() {
       }
     };
 
+    const fetchRating = async () => {
+      const { data, error } = await supabase
+        .from('worker_rating_stats')
+        .select('avg_rating')
+        .eq('worker_id', user.id)
+        .maybeSingle();
+
+      if (!error && data) {
+        setWorkerRating(Number(data.avg_rating) || 0);
+      }
+    };
+
     fetchEarnings();
+    fetchRating();
   }, [user]);
 
   const handleUpdate = async () => {
@@ -442,7 +456,7 @@ export default function Profile() {
                 <p className="text-sm text-muted-foreground mt-1">Jobs</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold">{worker?.rating?.toFixed(1) || "0.0"}</p>
+                <p className="text-2xl font-bold">{workerRating.toFixed(1)}</p>
                 <p className="text-sm text-muted-foreground mt-1">Rating</p>
               </div>
             </div>
