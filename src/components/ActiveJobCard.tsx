@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Home, User, Phone, Check } from "lucide-react";
+import { MapPin, Home, User, Check } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 
 type Booking = Database["public"]["Tables"]["bookings"]["Row"];
@@ -52,12 +52,6 @@ export default function ActiveJobCard({ booking, onStatusUpdate, updating }: Act
           </div>
           <div className="flex-1">
             <p className="font-semibold text-lg">{booking.cust_name}</p>
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <Phone className="w-3.5 h-3.5" />
-              <a href={`tel:${booking.cust_phone}`} className="hover:text-primary transition-colors">
-                {booking.cust_phone}
-              </a>
-            </div>
           </div>
         </div>
 
