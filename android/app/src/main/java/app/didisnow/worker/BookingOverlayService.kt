@@ -313,18 +313,14 @@ class BookingOverlayService : Service() {
         }
 
         // Set booking details
-        overlayView?.findViewById<TextView>(R.id.title)?.text = "New Booking: $serviceType"
-        val subtitle = if (flatNo.isNotEmpty()) "$community • $flatNo" else "$customer • $community"
-        overlayView?.findViewById<TextView>(R.id.subtitle)?.text = subtitle
+        overlayView?.findViewById<TextView>(R.id.title)?.text = "New Booking"
+        overlayView?.findViewById<TextView>(R.id.subtitle)?.text = serviceType
+        overlayView?.findViewById<TextView>(R.id.customerName)?.text = customer
+        overlayView?.findViewById<TextView>(R.id.community)?.text = community
+        overlayView?.findViewById<TextView>(R.id.flatNo)?.text = "Flat #$flatNo"
         overlayView?.findViewById<TextView>(R.id.price)?.text = "₹$price"
         
-        // Check and display authentication status (for debugging)
-        val sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE).getString("didi_session", null)
-        val authStatusView = overlayView?.findViewById<TextView>(R.id.authStatus)
-        authStatusView?.text = "✅ Token Present | FGS: DATA_SYNC | Booking: $bookingId"
-        authStatusView?.setTextColor(android.graphics.Color.parseColor("#22C55E"))
-        authStatusView?.setBackgroundColor(android.graphics.Color.parseColor("#F0FDF4"))
-        android.util.Log.d("BookingOverlay", "✅ Debug banner: Token validated, FGS type: DATA_SYNC")
+        android.util.Log.d("BookingOverlay", "✅ Overlay populated with booking data")
         
         // Prepare countdown handler (will start after view is added)
         val countdownText = overlayView?.findViewById<TextView>(R.id.countdown)

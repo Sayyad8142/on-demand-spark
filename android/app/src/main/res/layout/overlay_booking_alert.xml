@@ -2,97 +2,217 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:background="@android:color/white"
-    android:padding="48dp"
-    android:gravity="center"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:gravity="center">
 
-        <TextView
-            android:id="@+id/title"
-            android:text="New Booking"
-            android:textColor="#000000"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:gravity="center"
+    <!-- Card container with rounded corners effect -->
+    <LinearLayout
+        android:orientation="vertical"
+        android:background="@android:color/white"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="32dp"
+        android:elevation="8dp">
+
+        <!-- Header Section with colored background -->
+        <LinearLayout
+            android:orientation="vertical"
+            android:background="#F0F4FF"
+            android:padding="24dp"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content">
 
-        <TextView
-            android:id="@+id/subtitle"
-            android:text="Booking details"
-            android:textColor="#666666"
-            android:textSize="18sp"
-            android:gravity="center"
-            android:layout_marginTop="12dp"
+            <TextView
+                android:id="@+id/title"
+                android:text="New Booking"
+                android:textColor="#1E293B"
+                android:textSize="32sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+
+            <TextView
+                android:id="@+id/subtitle"
+                android:text="maid"
+                android:textColor="#3B82F6"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:textAllCaps="true"
+                android:layout_marginTop="8dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+
+        <!-- Price Section with gradient background -->
+        <LinearLayout
+            android:orientation="vertical"
+            android:background="#DCFCE7"
+            android:padding="32dp"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content">
 
-        <TextView
-            android:id="@+id/price"
-            android:text="₹0"
-            android:textColor="#22C55E"
-            android:textSize="48sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:layout_marginTop="24dp"
+            <TextView
+                android:id="@+id/price"
+                android:text="₹200"
+                android:textColor="#16A34A"
+                android:textSize="64sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+
+        <!-- Details Section -->
+        <LinearLayout
+            android:orientation="vertical"
+            android:padding="24dp"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content">
 
-        <TextView
-            android:id="@+id/countdown"
-            android:text="30s"
-            android:textColor="#F59E0B"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:layout_marginTop="16dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            <!-- Customer Name -->
+            <LinearLayout
+                android:orientation="horizontal"
+                android:background="#F1F5F9"
+                android:padding="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:gravity="center_vertical">
 
+                <TextView
+                    android:text="👤 "
+                    android:textSize="20sp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"/>
+
+                <TextView
+                    android:id="@+id/customerName"
+                    android:text="Customer Name"
+                    android:textColor="#1E293B"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+            </LinearLayout>
+
+            <!-- Location -->
+            <LinearLayout
+                android:orientation="vertical"
+                android:background="#F1F5F9"
+                android:padding="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp">
+
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <TextView
+                        android:text="📍 "
+                        android:textSize="20sp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"/>
+
+                    <TextView
+                        android:id="@+id/community"
+                        android:text="Community Name"
+                        android:textColor="#1E293B"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"/>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/flatNo"
+                    android:text="Flat #101"
+                    android:textColor="#64748B"
+                    android:textSize="16sp"
+                    android:layout_marginStart="32dp"
+                    android:layout_marginTop="4dp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+            </LinearLayout>
+
+            <!-- Countdown Timer -->
+            <LinearLayout
+                android:orientation="horizontal"
+                android:background="#FEF3C7"
+                android:padding="16dp"
+                android:gravity="center"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:text="⏱️ "
+                    android:textSize="20sp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"/>
+
+                <TextView
+                    android:text="Auto-reject in "
+                    android:textColor="#D97706"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+
+                <TextView
+                    android:id="@+id/countdown"
+                    android:text="30s"
+                    android:textColor="#D97706"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Action Buttons -->
         <LinearLayout
             android:orientation="horizontal"
-            android:layout_marginTop="32dp"
+            android:padding="24dp"
+            android:paddingTop="8dp"
             android:gravity="center"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
             <Button
                 android:id="@+id/btnReject"
-                android:text="Reject"
+                android:text="REJECT"
                 android:textColor="@android:color/white"
                 android:backgroundTint="#EF4444"
                 android:layout_weight="1"
                 android:layout_marginEnd="12dp"
-                android:paddingVertical="20dp"
-                android:textSize="18sp"
+                android:paddingVertical="24dp"
+                android:textSize="20sp"
                 android:textStyle="bold"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"/>
 
             <Button
                 android:id="@+id/btnAccept"
-                android:text="Accept"
+                android:text="ACCEPT"
                 android:textColor="@android:color/white"
-                android:backgroundTint="#22C55E"
+                android:backgroundTint="#16A34A"
                 android:layout_weight="1"
                 android:layout_marginStart="12dp"
-                android:paddingVertical="20dp"
-                android:textSize="18sp"
+                android:paddingVertical="24dp"
+                android:textSize="20sp"
                 android:textStyle="bold"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"/>
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/authStatus"
-            android:text="✅ Authenticated"
-            android:textColor="#22C55E"
-            android:textSize="14sp"
-            android:gravity="center"
-            android:layout_marginTop="24dp"
-            android:padding="8dp"
-            android:background="#F0FDF4"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"/>
+    </LinearLayout>
+
 </LinearLayout>
