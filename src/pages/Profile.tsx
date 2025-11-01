@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X, Pencil, Languages } from "lucide-react";
+import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X, Pencil, Languages, Star, Briefcase, Wallet } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -274,213 +274,248 @@ export default function Profile() {
       </header>
 
       {/* Content */}
-      <main className="max-w-2xl mx-auto p-4 space-y-4 pb-24">
-        {/* Profile Info */}
-        <Card className="border-0 shadow-lg">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-4 mb-6">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg">
-                <User className="w-12 h-12 text-primary-foreground" />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-xl font-bold mb-1">{worker?.full_name}</h2>
-                <p className="text-muted-foreground text-sm mb-3">{worker?.phone}</p>
-                <div className="flex items-center gap-2">
+      <main className="max-w-2xl mx-auto pb-24">
+        {/* Profile Header Card */}
+        <div className="relative">
+          {/* Cover Image */}
+          <div className="h-32 bg-gradient-to-br from-primary via-primary/90 to-primary/70 relative overflow-hidden">
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjEiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
+            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+              <DialogTrigger asChild>
+                <Button 
+                  variant="secondary" 
+                  size="icon" 
+                  className="absolute top-4 right-4 h-9 w-9 bg-white/90 hover:bg-white shadow-lg"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{t('profile.edit')}</DialogTitle>
+                  <DialogDescription>
+                    {t('profile.profileInfo')}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-name">{t('profile.name')}</Label>
+                    <Input
+                      id="edit-name"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder={t('auth.namePlaceholder')}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-phone">{t('profile.phone')}</Label>
+                    <Input
+                      id="edit-phone"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="Your mobile number"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-upi">UPI ID</Label>
+                    <Input
+                      id="edit-upi"
+                      value={upiId}
+                      onChange={(e) => setUpiId(e.target.value)}
+                      placeholder="Your UPI ID"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{t('profile.services')}</Label>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="w-full justify-between">
+                          <span className="text-muted-foreground">
+                            {selectedServices.length > 0 
+                              ? `${selectedServices.length} selected` 
+                              : "Select services"}
+                          </span>
+                          <ChevronDown className="h-4 w-4 opacity-50" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-full">
+                        <DropdownMenuLabel>Select Services</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {SERVICES.map(service => (
+                          <DropdownMenuCheckboxItem
+                            key={service.value}
+                            checked={selectedServices.includes(service.value)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedServices([...selectedServices, service.value]);
+                              } else {
+                                setSelectedServices(selectedServices.filter(s => s !== service.value));
+                              }
+                            }}
+                          >
+                            {service.label}
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    {selectedServices.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {selectedServices.map(serviceValue => {
+                          const service = SERVICES.find(s => s.value === serviceValue);
+                          return (
+                            <Badge key={serviceValue} variant="secondary" className="gap-1">
+                              {service?.label}
+                              <X 
+                                className="h-3 w-3 cursor-pointer" 
+                                onClick={() => setSelectedServices(selectedServices.filter(s => s !== serviceValue))}
+                              />
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{t('profile.communities')}</Label>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="w-full justify-between">
+                          <span className="text-muted-foreground">
+                            {selectedCommunities.length > 0 
+                              ? `${selectedCommunities.length} selected` 
+                              : "Select communities"}
+                          </span>
+                          <ChevronDown className="h-4 w-4 opacity-50" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-full">
+                        <DropdownMenuLabel>Select Communities</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {communities.map(community => (
+                          <DropdownMenuCheckboxItem
+                            key={community.id}
+                            checked={selectedCommunities.includes(community.value)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedCommunities([...selectedCommunities, community.value]);
+                              } else {
+                                setSelectedCommunities(selectedCommunities.filter(c => c !== community.value));
+                              }
+                            }}
+                          >
+                            {community.name}
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    {selectedCommunities.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {selectedCommunities.map(communityValue => {
+                          const community = communities.find(c => c.value === communityValue);
+                          return (
+                            <Badge key={communityValue} variant="secondary" className="gap-1">
+                              {community?.name}
+                              <X 
+                                className="h-3 w-3 cursor-pointer" 
+                                onClick={() => setSelectedCommunities(selectedCommunities.filter(c => c !== communityValue))}
+                              />
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <Button
+                    onClick={handleUpdate}
+                    disabled={updating}
+                    className="w-full"
+                  >
+                    {updating ? t('common.loading') : t('profile.updateProfile')}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+          
+          {/* Profile Card */}
+          <Card className="mx-4 -mt-16 border-0 shadow-xl relative">
+            <CardContent className="pt-6 pb-6">
+              <div className="flex items-start gap-4 mb-6">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg border-4 border-white dark:border-gray-800">
+                  <User className="w-10 h-10 text-primary-foreground" />
+                </div>
+                <div className="flex-1 pt-2">
+                  <h2 className="text-2xl font-bold mb-1">{worker?.full_name}</h2>
+                  <p className="text-muted-foreground text-sm mb-2 flex items-center gap-1">
+                    📱 {worker?.phone}
+                  </p>
                   <Badge 
                     variant={worker?.is_active ? "default" : "secondary"}
-                    className={worker?.is_active ? "bg-green-500 hover:bg-green-600" : ""}
+                    className={worker?.is_active ? "bg-green-500 hover:bg-green-600 shadow-sm" : ""}
                   >
                     {worker?.is_active ? t('profile.status.active') : t('profile.status.pending')}
                   </Badge>
-                  <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="icon" className="h-8 w-8">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>{t('profile.edit')}</DialogTitle>
-                        <DialogDescription>
-                          {t('profile.profileInfo')}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-name">{t('profile.name')}</Label>
-                          <Input
-                            id="edit-name"
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            placeholder={t('auth.namePlaceholder')}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-phone">{t('profile.phone')}</Label>
-                          <Input
-                            id="edit-phone"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            placeholder="Your mobile number"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-upi">UPI ID</Label>
-                          <Input
-                            id="edit-upi"
-                            value={upiId}
-                            onChange={(e) => setUpiId(e.target.value)}
-                            placeholder="Your UPI ID"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>{t('profile.services')}</Label>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline" className="w-full justify-between">
-                                <span className="text-muted-foreground">
-                                  {selectedServices.length > 0 
-                                    ? `${selectedServices.length} selected` 
-                                    : "Select services"}
-                                </span>
-                                <ChevronDown className="h-4 w-4 opacity-50" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-full">
-                              <DropdownMenuLabel>Select Services</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              {SERVICES.map(service => (
-                                <DropdownMenuCheckboxItem
-                                  key={service.value}
-                                  checked={selectedServices.includes(service.value)}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) {
-                                      setSelectedServices([...selectedServices, service.value]);
-                                    } else {
-                                      setSelectedServices(selectedServices.filter(s => s !== service.value));
-                                    }
-                                  }}
-                                >
-                                  {service.label}
-                                </DropdownMenuCheckboxItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                          {selectedServices.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {selectedServices.map(serviceValue => {
-                                const service = SERVICES.find(s => s.value === serviceValue);
-                                return (
-                                  <Badge key={serviceValue} variant="secondary" className="gap-1">
-                                    {service?.label}
-                                    <X 
-                                      className="h-3 w-3 cursor-pointer" 
-                                      onClick={() => setSelectedServices(selectedServices.filter(s => s !== serviceValue))}
-                                    />
-                                  </Badge>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>{t('profile.communities')}</Label>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline" className="w-full justify-between">
-                                <span className="text-muted-foreground">
-                                  {selectedCommunities.length > 0 
-                                    ? `${selectedCommunities.length} selected` 
-                                    : "Select communities"}
-                                </span>
-                                <ChevronDown className="h-4 w-4 opacity-50" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-full">
-                              <DropdownMenuLabel>Select Communities</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              {communities.map(community => (
-                                <DropdownMenuCheckboxItem
-                                  key={community.id}
-                                  checked={selectedCommunities.includes(community.value)}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) {
-                                      setSelectedCommunities([...selectedCommunities, community.value]);
-                                    } else {
-                                      setSelectedCommunities(selectedCommunities.filter(c => c !== community.value));
-                                    }
-                                  }}
-                                >
-                                  {community.name}
-                                </DropdownMenuCheckboxItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                          {selectedCommunities.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {selectedCommunities.map(communityValue => {
-                                const community = communities.find(c => c.value === communityValue);
-                                return (
-                                  <Badge key={communityValue} variant="secondary" className="gap-1">
-                                    {community?.name}
-                                    <X 
-                                      className="h-3 w-3 cursor-pointer" 
-                                      onClick={() => setSelectedCommunities(selectedCommunities.filter(c => c !== communityValue))}
-                                    />
-                                  </Badge>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-
-                        <Button
-                          onClick={handleUpdate}
-                          disabled={updating}
-                          className="w-full"
-                        >
-                          {updating ? t('common.loading') : t('profile.updateProfile')}
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
                 </div>
               </div>
-            </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-3 pt-6 mt-6 border-t">
-              <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 text-center border shadow-sm">
-                <p className="text-2xl font-extrabold text-primary mb-1">₹{totalEarnings}</p>
-                <p className="text-xs text-muted-foreground font-medium">{t('profile.totalEarned')}</p>
-              </div>
-              <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 text-center border shadow-sm">
-                <p className="text-2xl font-extrabold mb-1">{completedJobs}</p>
-                <p className="text-xs text-muted-foreground font-medium">{t('profile.completedJobs')}</p>
-              </div>
-              <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 text-center border shadow-sm">
-                <p className="text-2xl font-extrabold mb-1 flex items-center justify-center gap-1">
-                  {workerRating.toFixed(1)} <span className="text-yellow-500">⭐</span>
-                </p>
-                <p className="text-xs text-muted-foreground font-medium">{t('profile.rating')}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              {/* Stats Grid */}
+              <div className="grid grid-cols-3 gap-3 mt-6">
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 rounded-2xl p-4 border-2 border-green-100 dark:border-green-900">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-500 mb-3 mx-auto">
+                    <Wallet className="w-5 h-5 text-white" />
+                  </div>
+                  <p className="text-2xl font-extrabold text-green-600 dark:text-green-400 text-center mb-1">
+                    ₹{totalEarnings}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground font-semibold text-center uppercase tracking-wide">
+                    {t('profile.totalEarned')}
+                  </p>
+                </div>
 
-        {/* Language Selection */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Languages className="w-5 h-5" />
-              {t('profile.language')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-2xl p-4 border-2 border-blue-100 dark:border-blue-900">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 mb-3 mx-auto">
+                    <Briefcase className="w-5 h-5 text-white" />
+                  </div>
+                  <p className="text-2xl font-extrabold text-blue-600 dark:text-blue-400 text-center mb-1">
+                    {completedJobs}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground font-semibold text-center uppercase tracking-wide">
+                    {t('profile.completedJobs')}
+                  </p>
+                </div>
+
+                <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950 dark:to-yellow-950 rounded-2xl p-4 border-2 border-amber-100 dark:border-amber-900">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500 mb-3 mx-auto">
+                    <Star className="w-5 h-5 text-white fill-white" />
+                  </div>
+                  <p className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 text-center mb-1">
+                    {workerRating.toFixed(1)}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground font-semibold text-center uppercase tracking-wide">
+                    {t('profile.rating')}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="px-4 mt-4 space-y-4">
+
+          {/* Language Selection */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Languages className="w-5 h-5" />
+                {t('profile.language')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
             <div className="space-y-2">
               <Label>{t('profile.selectLanguage')}</Label>
               <div className="grid gap-2">
@@ -522,9 +557,9 @@ export default function Profile() {
           </CardContent>
         </Card>
 
-        {/* Actions */}
-        <Card className="border-0 shadow-lg">
-          <CardContent className="pt-6 space-y-3">
+          {/* Actions */}
+          <Card className="border-0 shadow-lg">
+            <CardContent className="pt-6 space-y-3">
             <Button
               onClick={handleLogout}
               variant="outline"
@@ -563,8 +598,9 @@ export default function Profile() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </main>
     </div>
   );
