@@ -36,25 +36,25 @@ export default function ActiveJobCard({
 
       <div className="p-5 space-y-5">
         {/* 1. Flat Number Display - First and Highlighted */}
-        <div className="bg-gradient-to-br from-primary/5 to-primary/10 border-2 border-primary/30 rounded-2xl p-4 shadow-sm bg-zinc-50">
-          <p className="font-bold text-center text-primary mb-4 text-2xl">FLAT NO : {booking.flat_no}</p>
+        <div className="bg-white dark:bg-gray-800 border-2 border-border rounded-2xl p-4 shadow-sm">
+          <p className="font-bold text-center text-red-500 mb-4 text-2xl">FLAT NO : {booking.flat_no}</p>
           {booking.flat_no && booking.flat_no.toString().length === 4 && <div className="grid grid-cols-3 gap-3">
               <div className="text-center">
                 <p className="text-xs font-semibold text-muted-foreground mb-2">TOWER</p>
-                <div className="bg-white dark:bg-gray-800 rounded-xl py-3 shadow-sm border border-primary/20">
-                  <p className="text-2xl font-bold text-primary">{booking.flat_no.toString().charAt(0)}</p>
+                <div className="bg-white dark:bg-gray-800 rounded-xl py-3 shadow-sm border border-border">
+                  <p className="text-2xl font-bold text-red-500">{booking.flat_no.toString().charAt(0)}</p>
                 </div>
               </div>
               <div className="text-center">
                 <p className="text-xs font-semibold text-muted-foreground mb-2">FLOOR</p>
-                <div className="bg-white dark:bg-gray-800 rounded-xl py-3 shadow-sm border border-primary/20">
-                  <p className="text-2xl font-bold text-primary">{booking.flat_no.toString().substring(1, 3)}</p>
+                <div className="bg-white dark:bg-gray-800 rounded-xl py-3 shadow-sm border border-border">
+                  <p className="text-2xl font-bold text-red-500">{booking.flat_no.toString().substring(1, 3)}</p>
                 </div>
               </div>
               <div className="text-center">
                 <p className="text-xs font-semibold text-muted-foreground mb-2">DOOR</p>
-                <div className="bg-white dark:bg-gray-800 rounded-xl py-3 shadow-sm border border-primary/20">
-                  <p className="text-2xl font-bold text-primary">{booking.flat_no.toString().charAt(3)}</p>
+                <div className="bg-white dark:bg-gray-800 rounded-xl py-3 shadow-sm border border-border">
+                  <p className="text-2xl font-bold text-red-500">{booking.flat_no.toString().charAt(3)}</p>
                 </div>
               </div>
             </div>}
