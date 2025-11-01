@@ -32,21 +32,11 @@ export default function ActiveJobCard({
   }
   console.log('✅ ActiveJobCard: Showing card, status is:', booking.status);
   return <Card className="shadow-card overflow-hidden">
-      <div className="bg-white dark:bg-gray-800 p-4 border-b">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-bold text-lg">Active Job</h3>
-            
-          </div>
-          <Badge className={`${statusColor} border`}>
-            {booking.status.replace('_', ' ').toUpperCase()}
-          </Badge>
-        </div>
-      </div>
+      
 
       <div className="p-5 space-y-5">
         {/* 1. Flat Number Display - First and Highlighted */}
-        <div className="bg-gradient-to-br from-primary/5 to-primary/10 border-2 border-primary/30 rounded-2xl p-4 shadow-sm">
+        <div className="bg-gradient-to-br from-primary/5 to-primary/10 border-2 border-primary/30 rounded-2xl p-4 shadow-sm bg-zinc-50">
           <p className="text-sm font-bold text-center text-primary mb-4">FLAT NO : {booking.flat_no}</p>
           {booking.flat_no && booking.flat_no.toString().length === 4 && <div className="grid grid-cols-3 gap-3">
               <div className="text-center">
