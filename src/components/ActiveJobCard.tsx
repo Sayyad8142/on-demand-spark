@@ -44,79 +44,89 @@ export default function ActiveJobCard({ booking, onStatusUpdate, updating }: Act
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
-        {/* Customer Info */}
-        <div className="flex items-start gap-3">
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <User className="w-6 h-6 text-primary" />
-          </div>
-          <div className="flex-1">
-            <p className="font-semibold text-lg">{booking.cust_name}</p>
-          </div>
+      <div className="p-5 space-y-5">
+        {/* 1. Flat Number Display - First and Highlighted */}
+        <div className="bg-gradient-to-br from-primary/5 to-primary/10 border-2 border-primary/30 rounded-2xl p-4 shadow-sm">
+          <p className="text-sm font-bold text-center text-primary mb-4">FLAT NO : {booking.flat_no}</p>
+          {booking.flat_no && booking.flat_no.toString().length === 4 && (
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center">
+                <p className="text-xs font-semibold text-muted-foreground mb-2">TOWER</p>
+                <div className="bg-white dark:bg-gray-800 rounded-xl py-3 shadow-sm border border-primary/20">
+                  <p className="text-2xl font-bold text-primary">{booking.flat_no.toString().charAt(0)}</p>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-xs font-semibold text-muted-foreground mb-2">FLOOR</p>
+                <div className="bg-white dark:bg-gray-800 rounded-xl py-3 shadow-sm border border-primary/20">
+                  <p className="text-2xl font-bold text-primary">{booking.flat_no.toString().substring(1, 3)}</p>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-xs font-semibold text-muted-foreground mb-2">DOOR</p>
+                <div className="bg-white dark:bg-gray-800 rounded-xl py-3 shadow-sm border border-primary/20">
+                  <p className="text-2xl font-bold text-primary">{booking.flat_no.toString().charAt(3)}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Location */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 mb-2">
-            <MapPin className="w-5 h-5 text-primary" />
-            <p className="font-semibold">{booking.community}</p>
-          </div>
-          
-          {/* Flat Number Display */}
-          <div className="bg-card border-2 border-primary/20 rounded-xl p-3">
-            <p className="text-xs font-medium text-muted-foreground mb-3 text-center">FLAT NO : {booking.flat_no}</p>
-            {booking.flat_no && booking.flat_no.toString().length === 4 && (
-              <div className="grid grid-cols-3 gap-2">
-                <div className="text-center">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">TOWER :</p>
-                  <div className="bg-primary/10 rounded-lg py-2">
-                    <p className="text-xl font-bold text-foreground">{booking.flat_no.toString().charAt(0)}</p>
-                  </div>
-                </div>
-                <div className="text-center">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">FLOOR :</p>
-                  <div className="bg-primary/10 rounded-lg py-2">
-                    <p className="text-xl font-bold text-foreground">{booking.flat_no.toString().substring(1, 3)}</p>
-                  </div>
-                </div>
-                <div className="text-center">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">DOOR :</p>
-                  <div className="bg-primary/10 rounded-lg py-2">
-                    <p className="text-xl font-bold text-foreground">{booking.flat_no.toString().charAt(3)}</p>
-                  </div>
-                </div>
+        {/* 2. Service and Price */}
+        <div className="bg-card border border-border rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Home className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Service Type</p>
+                <p className="font-bold text-lg capitalize">{booking.service_type.replace('_', ' ')}</p>
+              </div>
+            </div>
+            {booking.price_inr && (
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground mb-1">Earnings</p>
+                <p className="font-bold text-primary text-2xl">₹{booking.price_inr}</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Service Details */}
-        <div className="flex items-center gap-3">
-          <Home className="w-5 h-5 text-primary" />
-          <div className="flex-1">
-            <p className="text-sm text-muted-foreground">Service</p>
-            <p className="font-medium">{booking.service_type.replace('_', ' ')}</p>
-          </div>
-          {booking.price_inr && (
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Earnings</p>
-              <p className="font-bold text-primary text-lg">₹{booking.price_inr}</p>
+        {/* 3. Customer Name and Community */}
+        <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <User className="w-6 h-6 text-primary" />
             </div>
-          )}
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground mb-1">Customer Name</p>
+              <p className="font-bold text-lg">{booking.cust_name}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <MapPin className="w-6 h-6 text-primary" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground mb-1">Community</p>
+              <p className="font-bold text-lg">{booking.community}</p>
+            </div>
+          </div>
         </div>
 
         {/* Notes */}
         {booking.notes && (
-          <div className="text-sm bg-muted p-3 rounded-lg">
-            <p className="font-medium mb-1">Notes:</p>
-            <p className="text-muted-foreground">{booking.notes}</p>
+          <div className="bg-muted/50 border border-border rounded-xl p-4">
+            <p className="text-xs font-semibold text-muted-foreground mb-2">NOTES:</p>
+            <p className="text-sm text-foreground">{booking.notes}</p>
           </div>
         )}
 
-        {/* Action Button */}
+        {/* 4. Work Completed Button - Red Color */}
         <Button
           size="lg"
-          className="w-full h-14 text-base font-semibold"
+          className="w-full h-14 text-base font-bold bg-red-500 hover:bg-red-600 text-white shadow-lg"
           onClick={() => onStatusUpdate('completed')}
           disabled={updating}
         >
