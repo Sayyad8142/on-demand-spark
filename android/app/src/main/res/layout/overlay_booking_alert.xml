@@ -31,6 +31,7 @@
                 android:layout_height="wrap_content">
 
                 <TextView
+                    android:id="@+id/title"
                     android:text="New Booking"
                     android:textColor="#1E293B"
                     android:textSize="32sp"
