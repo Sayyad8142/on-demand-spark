@@ -29,7 +29,7 @@ export default function ActiveJobCard({
   }
   console.log('✅ ActiveJobCard: Showing card, status is:', booking.status);
   return <Card className="shadow-card overflow-hidden">
-      <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-4 border-b">
+      <div className="bg-white dark:bg-gray-800 p-4 border-b">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-bold text-lg">Active Job</h3>
