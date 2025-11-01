@@ -7,7 +7,6 @@ import { useActiveJob } from "@/hooks/useActiveJob";
 import { BookingAlertModal } from "@/components/BookingAlertModal";
 import ActiveJobCard from "@/components/ActiveJobCard";
 import AvailabilityToggle from "@/components/AvailabilityToggle";
-import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Bell, X } from "lucide-react";
@@ -119,10 +118,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header 
-        workerName={worker?.full_name} 
-        communityName={worker?.community}
-      />
       <div className="flex-1 p-4 space-y-4">
       {/* Web Push Banner */}
       {showWebPushBanner && (
