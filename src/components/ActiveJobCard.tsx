@@ -64,7 +64,7 @@ export default function ActiveJobCard({
         <div className="bg-card border border-border rounded-xl p-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-stone-50">
                 <Home className="w-6 h-6 text-primary" />
               </div>
               <div>
