@@ -1,8 +1,10 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Home, User, Check } from "lucide-react";
+import { MapPin, Home, User, Check, ChevronDown } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useState } from "react";
 type Booking = Database["public"]["Tables"]["bookings"]["Row"];
 interface ActiveJobCardProps {
   booking: Booking;
@@ -20,6 +22,7 @@ export default function ActiveJobCard({
   onStatusUpdate,
   updating
 }: ActiveJobCardProps) {
+  const [isOpen, setIsOpen] = useState(false);
   const statusColor = STATUS_COLORS[booking.status as keyof typeof STATUS_COLORS] || 'bg-secondary';
 
   // Don't show for completed or cancelled bookings
@@ -86,27 +89,37 @@ export default function ActiveJobCard({
           </div>
         </div>
 
-        {/* 3. Customer Name and Community */}
-        <div className="bg-card border border-border rounded-xl p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="w-5 h-5 text-primary" />
+        {/* 3. Customer Name and Community - Dropdown */}
+        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" className="w-full justify-between">
+              <span className="font-semibold">Customer Details</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="bg-card border border-border rounded-xl p-3 space-y-2 mt-2">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground">Customer Name</p>
+                  <p className="font-bold text-base">{booking.cust_name}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <MapPin className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground">Community</p>
+                  <p className="font-bold text-base">{booking.community}</p>
+                </div>
+              </div>
             </div>
-            <div className="flex-1">
-              <p className="text-xs text-muted-foreground">Customer Name</p>
-              <p className="font-bold text-base">{booking.cust_name}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <MapPin className="w-5 h-5 text-primary" />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs text-muted-foreground">Community</p>
-              <p className="font-bold text-base">{booking.community}</p>
-            </div>
-          </div>
-        </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Notes */}
         {booking.notes && <div className="bg-muted/50 border border-border rounded-xl p-4">
