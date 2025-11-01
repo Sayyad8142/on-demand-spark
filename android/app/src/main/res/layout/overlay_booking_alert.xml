@@ -6,35 +6,112 @@
     android:layout_height="match_parent"
     android:gravity="center">
 
-    <!-- Card container with rounded corners effect -->
+    <!-- Card container -->
     <LinearLayout
         android:orientation="vertical"
         android:background="@android:color/white"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="32dp"
+        android:layout_margin="24dp"
         android:elevation="8dp">
 
-        <!-- Service Image Section -->
-        <LinearLayout
-            android:orientation="vertical"
-            android:background="#F0F4FF"
-            android:padding="16dp"
+        <!-- Header with Title and Countdown -->
+        <RelativeLayout
+            android:padding="20dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <ImageView
-                android:id="@+id/serviceImage"
-                android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:scaleType="centerCrop"
-                android:src="@drawable/service_maid"
-                android:contentDescription="Service Image"
-                android:layout_marginBottom="16dp"/>
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:layout_toStartOf="@+id/countdownBox"
+                android:layout_marginEnd="16dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:text="New Booking"
+                    android:textColor="#1E293B"
+                    android:textSize="32sp"
+                    android:textStyle="bold"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+
+                <TextView
+                    android:text="Request"
+                    android:textColor="#1E293B"
+                    android:textSize="32sp"
+                    android:textStyle="bold"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+
+                <TextView
+                    android:text="Respond within 30 seconds"
+                    android:textColor="#64748B"
+                    android:textSize="16sp"
+                    android:layout_marginTop="4dp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+            </LinearLayout>
+
+            <!-- Countdown Box -->
+            <LinearLayout
+                android:id="@+id/countdownBox"
+                android:orientation="vertical"
+                android:background="#16A34A"
+                android:padding="16dp"
+                android:gravity="center"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:layout_width="100dp"
+                android:layout_height="100dp">
+
+                <TextView
+                    android:id="@+id/countdown"
+                    android:text="29"
+                    android:textColor="@android:color/white"
+                    android:textSize="36sp"
+                    android:textStyle="bold"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+
+                <TextView
+                    android:text="s"
+                    android:textColor="@android:color/white"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+
+                <!-- Progress bar under countdown -->
+                <View
+                    android:layout_width="60dp"
+                    android:layout_height="3dp"
+                    android:background="@android:color/white"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+        </RelativeLayout>
+
+        <!-- Service Image -->
+        <ImageView
+            android:id="@+id/serviceImage"
+            android:layout_width="match_parent"
+            android:layout_height="160dp"
+            android:scaleType="centerCrop"
+            android:src="@drawable/service_maid"
+            android:contentDescription="Service Image"/>
+
+        <!-- Service Title and Description -->
+        <LinearLayout
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
 
             <TextView
-                android:id="@+id/title"
-                android:text="New Booking"
+                android:id="@+id/subtitle"
+                android:text="Maid Service"
                 android:textColor="#1E293B"
                 android:textSize="28sp"
                 android:textStyle="bold"
@@ -43,167 +120,132 @@
                 android:layout_height="wrap_content"/>
 
             <TextView
-                android:id="@+id/subtitle"
-                android:text="maid"
-                android:textColor="#3B82F6"
-                android:textSize="20sp"
-                android:textStyle="bold"
+                android:text="Includes: Dishes &amp; Jhaadu/Pocha"
+                android:textColor="#64748B"
+                android:textSize="16sp"
                 android:gravity="center"
-                android:textAllCaps="true"
                 android:layout_marginTop="4dp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"/>
         </LinearLayout>
 
-        <!-- Price Section with gradient background -->
+        <!-- Price and Tower Number -->
         <LinearLayout
-            android:orientation="vertical"
-            android:background="#DCFCE7"
-            android:padding="24dp"
+            android:orientation="horizontal"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="20dp"
+            android:paddingBottom="16dp">
 
-            <TextView
-                android:id="@+id/price"
-                android:text="₹200"
-                android:textColor="#16A34A"
-                android:textSize="56sp"
-                android:textStyle="bold"
-                android:gravity="center"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
-        </LinearLayout>
-
-        <!-- Details Section -->
-        <LinearLayout
-            android:orientation="vertical"
-            android:padding="20dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <!-- Customer Name -->
-            <LinearLayout
-                android:orientation="horizontal"
-                android:background="#F1F5F9"
-                android:padding="16dp"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:gravity="center_vertical">
-
-                <TextView
-                    android:text="👤 "
-                    android:textSize="20sp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"/>
-
-                <TextView
-                    android:id="@+id/customerName"
-                    android:text="Customer Name"
-                    android:textColor="#1E293B"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
-            </LinearLayout>
-
-            <!-- Location -->
             <LinearLayout
                 android:orientation="vertical"
                 android:background="#F1F5F9"
                 android:padding="16dp"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp">
-
-                <LinearLayout
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
-
-                    <TextView
-                        android:text="📍 "
-                        android:textSize="20sp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"/>
-
-                    <TextView
-                        android:id="@+id/community"
-                        android:text="Community Name"
-                        android:textColor="#1E293B"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
-                </LinearLayout>
+                android:gravity="center"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content">
 
                 <TextView
-                    android:id="@+id/flatNo"
-                    android:text="Flat #101"
+                    android:text="Price"
                     android:textColor="#64748B"
-                    android:textSize="16sp"
-                    android:layout_marginStart="32dp"
+                    android:textSize="14sp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+
+                <TextView
+                    android:id="@+id/price"
+                    android:text="₹0"
+                    android:textColor="#1E293B"
+                    android:textSize="32sp"
+                    android:textStyle="bold"
                     android:layout_marginTop="4dp"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"/>
             </LinearLayout>
 
-            <!-- Countdown Timer -->
             <LinearLayout
-                android:orientation="horizontal"
-                android:background="#FEF3C7"
+                android:orientation="vertical"
+                android:background="#F1F5F9"
                 android:padding="16dp"
                 android:gravity="center"
-                android:layout_width="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content">
 
                 <TextView
-                    android:text="⏱️ "
-                    android:textSize="20sp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"/>
-
-                <TextView
-                    android:text="Auto-reject in "
-                    android:textColor="#D97706"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
+                    android:text="Tower No."
+                    android:textColor="#64748B"
+                    android:textSize="14sp"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"/>
 
                 <TextView
-                    android:id="@+id/countdown"
-                    android:text="30s"
-                    android:textColor="#D97706"
-                    android:textSize="18sp"
+                    android:id="@+id/flatNo"
+                    android:text="9"
+                    android:textColor="#1E293B"
+                    android:textSize="32sp"
                     android:textStyle="bold"
+                    android:layout_marginTop="4dp"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"/>
             </LinearLayout>
         </LinearLayout>
 
+        <!-- Community -->
+        <LinearLayout
+            android:orientation="vertical"
+            android:background="#F1F5F9"
+            android:padding="16dp"
+            android:gravity="center"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginBottom="20dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:text="Community"
+                android:textColor="#64748B"
+                android:textSize="14sp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
+            <TextView
+                android:id="@+id/community"
+                android:text="Prestige High Fields"
+                android:textColor="#1E293B"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:layout_marginTop="4dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+
+        <!-- Hidden fields for data -->
+        <TextView
+            android:id="@+id/customerName"
+            android:visibility="gone"
+            android:layout_width="0dp"
+            android:layout_height="0dp"/>
+
         <!-- Action Buttons -->
         <LinearLayout
             android:orientation="horizontal"
-            android:padding="24dp"
-            android:paddingTop="8dp"
-            android:gravity="center"
+            android:padding="20dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
             <Button
                 android:id="@+id/btnReject"
                 android:text="REJECT"
-                android:textColor="@android:color/white"
-                android:backgroundTint="#EF4444"
+                android:textColor="#EC4899"
+                android:background="@drawable/btn_outline"
                 android:layout_weight="1"
-                android:layout_marginEnd="12dp"
-                android:paddingVertical="24dp"
-                android:textSize="20sp"
+                android:layout_marginEnd="8dp"
+                android:paddingVertical="18dp"
+                android:textSize="18sp"
                 android:textStyle="bold"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"/>
@@ -214,9 +256,9 @@
                 android:textColor="@android:color/white"
                 android:backgroundTint="#16A34A"
                 android:layout_weight="1"
-                android:layout_marginStart="12dp"
-                android:paddingVertical="24dp"
-                android:textSize="20sp"
+                android:layout_marginStart="8dp"
+                android:paddingVertical="18dp"
+                android:textSize="18sp"
                 android:textStyle="bold"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"/>
