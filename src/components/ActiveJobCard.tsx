@@ -94,23 +94,23 @@ export default function ActiveJobCard({ booking, onStatusUpdate, updating }: Act
         </div>
 
         {/* 3. Customer Name and Community */}
-        <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="w-6 h-6 text-primary" />
+        <div className="bg-card border border-border rounded-xl p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <User className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1">
-              <p className="text-xs text-muted-foreground mb-1">Customer Name</p>
-              <p className="font-bold text-lg">{booking.cust_name}</p>
+              <p className="text-xs text-muted-foreground">Customer Name</p>
+              <p className="font-bold text-base">{booking.cust_name}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <MapPin className="w-6 h-6 text-primary" />
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <MapPin className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1">
-              <p className="text-xs text-muted-foreground mb-1">Community</p>
-              <p className="font-bold text-lg">{booking.community}</p>
+              <p className="text-xs text-muted-foreground">Community</p>
+              <p className="font-bold text-base">{booking.community}</p>
             </div>
           </div>
         </div>
