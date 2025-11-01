@@ -122,34 +122,34 @@ export default function Bookings() {
 
 function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusColor: (status: string) => string }) {
   return (
-    <Card className="p-4 shadow-lg border-0">
-      <div className="flex items-start justify-between mb-3">
+    <Card className="p-3 shadow-lg border-0">
+      <div className="flex items-center justify-between mb-2">
         <Badge className={getStatusColor(booking.status)}>
           {booking.status.replace('_', ' ')}
         </Badge>
       </div>
 
-      {/* Flat Number Display */}
-      <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 mb-3 shadow-sm">
-        <p className="font-extrabold text-center text-red-500 mb-3 text-xl tracking-tight">FLAT NO : {booking.flat_no}</p>
+      {/* Flat Number Display - Compact */}
+      <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 mb-2 shadow-sm">
+        <p className="font-extrabold text-center text-red-500 mb-2 text-lg tracking-tight">FLAT NO : {booking.flat_no}</p>
         {booking.flat_no && booking.flat_no.toString().length === 4 && (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2">
             <div className="text-center">
-              <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wider">TOWER</p>
-              <div className="bg-white dark:bg-gray-800 rounded-xl py-2 shadow-md border-2 border-gray-100 dark:border-gray-700">
-                <p className="text-2xl font-extrabold text-red-500">{booking.flat_no.toString().charAt(0)}</p>
+              <p className="text-[9px] font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wider">TOWER</p>
+              <div className="bg-white dark:bg-gray-800 rounded-lg py-1.5 shadow-md border border-gray-100 dark:border-gray-700">
+                <p className="text-xl font-extrabold text-red-500">{booking.flat_no.toString().charAt(0)}</p>
               </div>
             </div>
             <div className="text-center">
-              <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wider">FLOOR</p>
-              <div className="bg-white dark:bg-gray-800 rounded-xl py-2 shadow-md border-2 border-gray-100 dark:border-gray-700">
-                <p className="text-2xl font-extrabold text-red-500">{booking.flat_no.toString().substring(1, 3)}</p>
+              <p className="text-[9px] font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wider">FLOOR</p>
+              <div className="bg-white dark:bg-gray-800 rounded-lg py-1.5 shadow-md border border-gray-100 dark:border-gray-700">
+                <p className="text-xl font-extrabold text-red-500">{booking.flat_no.toString().substring(1, 3)}</p>
               </div>
             </div>
             <div className="text-center">
-              <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wider">DOOR</p>
-              <div className="bg-white dark:bg-gray-800 rounded-xl py-2 shadow-md border-2 border-gray-100 dark:border-gray-700">
-                <p className="text-2xl font-extrabold text-red-500">{booking.flat_no.toString().charAt(3)}</p>
+              <p className="text-[9px] font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wider">DOOR</p>
+              <div className="bg-white dark:bg-gray-800 rounded-lg py-1.5 shadow-md border border-gray-100 dark:border-gray-700">
+                <p className="text-xl font-extrabold text-red-500">{booking.flat_no.toString().charAt(3)}</p>
               </div>
             </div>
           </div>
@@ -157,21 +157,19 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
       </div>
 
       {/* Customer Name */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className="flex-1">
-          <p className="text-xs text-gray-500 dark:text-gray-400">Customer</p>
-          <p className="font-semibold text-base">{booking.cust_name}</p>
-        </div>
+      <div className="mb-2">
+        <p className="text-[10px] text-gray-500 dark:text-gray-400">Customer</p>
+        <p className="font-semibold text-sm">{booking.cust_name}</p>
       </div>
 
       {/* Community */}
-      <div className="flex items-center gap-2 mb-3">
-        <MapPin className="w-4 h-4 text-red-500" />
-        <p className="text-sm text-muted-foreground">{booking.community}</p>
+      <div className="flex items-center gap-1.5 mb-2">
+        <MapPin className="w-3.5 h-3.5 text-red-500" />
+        <p className="text-xs text-muted-foreground">{booking.community}</p>
       </div>
 
-      <div className="flex items-center justify-between text-sm border-t pt-3">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between text-xs border-t pt-2">
+        <div className="flex items-center gap-3">
           <span className="text-muted-foreground">
             {booking.service_type.replace('_', ' ')}
           </span>
@@ -183,7 +181,7 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
           )}
         </div>
         {booking.price_inr && (
-          <span className="font-bold text-red-500 text-lg">₹{booking.price_inr}</span>
+          <span className="font-bold text-red-500 text-base">₹{booking.price_inr}</span>
         )}
       </div>
     </Card>
