@@ -19,6 +19,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
@@ -320,7 +321,18 @@ class BookingOverlayService : Service() {
         overlayView?.findViewById<TextView>(R.id.flatNo)?.text = "Flat #$flatNo"
         overlayView?.findViewById<TextView>(R.id.price)?.text = "₹$price"
         
-        android.util.Log.d("BookingOverlay", "✅ Overlay populated with booking data")
+        // Set service-specific image
+        val serviceImageView = overlayView?.findViewById<ImageView>(R.id.serviceImage)
+        val imageResource = when {
+            serviceType.contains("cook", ignoreCase = true) -> R.drawable.service_cook
+            serviceType.contains("bathroom", ignoreCase = true) -> R.drawable.service_bathroom
+            serviceType.contains("maid", ignoreCase = true) || 
+            serviceType.contains("dish", ignoreCase = true) -> R.drawable.service_maid
+            else -> R.drawable.service_maid // Default to maid image
+        }
+        serviceImageView?.setImageResource(imageResource)
+        
+        android.util.Log.d("BookingOverlay", "✅ Overlay populated with booking data and service image")
         
         // Prepare countdown handler (will start after view is added)
         val countdownText = overlayView?.findViewById<TextView>(R.id.countdown)
