@@ -276,22 +276,25 @@ export default function Profile() {
       {/* Content */}
       <main className="max-w-2xl mx-auto p-4 space-y-4 pb-24">
         {/* Profile Info */}
-        <Card>
+        <Card className="border-0 shadow-lg">
           <CardContent className="pt-6">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center">
-                <User className="w-10 h-10 text-primary-foreground" />
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg">
+                <User className="w-12 h-12 text-primary-foreground" />
               </div>
               <div className="flex-1">
-                <h2 className="text-xl font-semibold">{worker?.full_name}</h2>
-                <p className="text-muted-foreground">{worker?.phone}</p>
-                <div className="flex items-center gap-2 mt-2">
-                  <Badge variant={worker?.is_active ? "default" : "secondary"}>
+                <h2 className="text-xl font-bold mb-1">{worker?.full_name}</h2>
+                <p className="text-muted-foreground text-sm mb-3">{worker?.phone}</p>
+                <div className="flex items-center gap-2">
+                  <Badge 
+                    variant={worker?.is_active ? "default" : "secondary"}
+                    className={worker?.is_active ? "bg-green-500 hover:bg-green-600" : ""}
+                  >
                     {worker?.is_active ? t('profile.status.active') : t('profile.status.pending')}
                   </Badge>
                   <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
                     <DialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button variant="outline" size="icon" className="h-8 w-8">
                         <Pencil className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
@@ -450,27 +453,29 @@ export default function Profile() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-4 pt-4 border-t">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-primary">₹{totalEarnings}</p>
-                <p className="text-sm text-muted-foreground mt-1">{t('profile.totalEarned')}</p>
+            <div className="grid grid-cols-3 gap-3 pt-6 mt-6 border-t">
+              <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 text-center border shadow-sm">
+                <p className="text-2xl font-extrabold text-primary mb-1">₹{totalEarnings}</p>
+                <p className="text-xs text-muted-foreground font-medium">{t('profile.totalEarned')}</p>
               </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold">{completedJobs}</p>
-                <p className="text-sm text-muted-foreground mt-1">{t('profile.completedJobs')}</p>
+              <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 text-center border shadow-sm">
+                <p className="text-2xl font-extrabold mb-1">{completedJobs}</p>
+                <p className="text-xs text-muted-foreground font-medium">{t('profile.completedJobs')}</p>
               </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold">{workerRating.toFixed(1)} ⭐</p>
-                <p className="text-sm text-muted-foreground mt-1">{t('profile.rating')}</p>
+              <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 text-center border shadow-sm">
+                <p className="text-2xl font-extrabold mb-1 flex items-center justify-center gap-1">
+                  {workerRating.toFixed(1)} <span className="text-yellow-500">⭐</span>
+                </p>
+                <p className="text-xs text-muted-foreground font-medium">{t('profile.rating')}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Language Selection */}
-        <Card>
+        <Card className="border-0 shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
               <Languages className="w-5 h-5" />
               {t('profile.language')}
             </CardTitle>
@@ -518,7 +523,7 @@ export default function Profile() {
         </Card>
 
         {/* Actions */}
-        <Card>
+        <Card className="border-0 shadow-lg">
           <CardContent className="pt-6 space-y-3">
             <Button
               onClick={handleLogout}
