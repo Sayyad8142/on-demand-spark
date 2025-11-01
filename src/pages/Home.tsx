@@ -13,12 +13,14 @@ import { Card } from "@/components/ui/card";
 import { Bell, X } from "lucide-react";
 import { Capacitor } from '@capacitor/core';
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "react-i18next";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
 
 export default function Home() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user, session } = useAuth();
   const { worker, updateAvailability, refetch: refetchWorker } = useWorkerProfile(user?.id);
   const { activeJob, updateJobStatus, refetch: refetchActiveJob } = useActiveJob(user?.id);
@@ -135,10 +137,10 @@ export default function Home() {
             <Bell className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <h3 className="font-semibold text-sm text-blue-900 dark:text-blue-100 mb-1">
-                Enable Web Push Notifications
+                {t('home.enableWebPush')}
               </h3>
               <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
-                Get booking alerts even when this tab is in the background
+                {t('home.enableWebPushDesc')}
               </p>
               <Button
                 size="sm"
@@ -148,7 +150,7 @@ export default function Home() {
                 }}
                 className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs"
               >
-                Enable in Settings
+                {t('home.enableInSettings')}
               </Button>
             </div>
           </div>

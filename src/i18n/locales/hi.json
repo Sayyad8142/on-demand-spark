@@ -25,12 +25,15 @@
   "home": {
     "welcome": "स्वागत है",
     "availabilityTitle": "उपलब्धता स्थिति",
-    "goOnline": "ऑनलाइन जाएं",
-    "goOffline": "ऑफलाइन जाएं",
-    "onlineDesc": "आपको बुकिंग अलर्ट मिलेंगे",
-    "offlineDesc": "आपको कोई बुकिंग नहीं मिलेगी",
+    "goOnline": "आप ऑनलाइन हैं",
+    "goOffline": "आप ऑफलाइन हैं",
+    "onlineDesc": "बुकिंग स्वीकार करने के लिए तैयार",
+    "offlineDesc": "बुकिंग स्वीकार नहीं कर रहे",
     "activeJob": "सक्रिय काम",
-    "noActiveJob": "इस समय कोई सक्रिय काम नहीं"
+    "noActiveJob": "इस समय कोई सक्रिय काम नहीं",
+    "enableWebPush": "वेब पुश सूचनाएं सक्षम करें",
+    "enableWebPushDesc": "जब यह टैब बैकग्राउंड में हो तब भी बुकिंग अलर्ट प्राप्त करें",
+    "enableInSettings": "सेटिंग्स में सक्षम करें"
   },
   "bookings": {
     "title": "मेरी बुकिंग",

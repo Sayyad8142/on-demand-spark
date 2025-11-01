@@ -1,14 +1,16 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { Home, Calendar, User } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export default function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
 
   const navItems = [
-    { path: "/home", icon: Home, label: "Home" },
-    { path: "/bookings", icon: Calendar, label: "Bookings" },
-    { path: "/profile", icon: User, label: "Profile" },
+    { path: "/home", icon: Home, label: t('nav.home') },
+    { path: "/bookings", icon: Calendar, label: t('nav.bookings') },
+    { path: "/profile", icon: User, label: t('nav.profile') },
   ];
 
   const isActive = (path: string) => location.pathname === path;

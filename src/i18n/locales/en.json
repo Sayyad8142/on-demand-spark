@@ -25,12 +25,15 @@
   "home": {
     "welcome": "Welcome",
     "availabilityTitle": "Availability Status",
-    "goOnline": "Go Online",
-    "goOffline": "Go Offline",
-    "onlineDesc": "You will receive booking alerts",
-    "offlineDesc": "You won't receive any bookings",
+    "goOnline": "You're Online",
+    "goOffline": "You're Offline",
+    "onlineDesc": "Ready to accept bookings",
+    "offlineDesc": "Not accepting bookings",
     "activeJob": "Active Job",
-    "noActiveJob": "No active jobs at the moment"
+    "noActiveJob": "No active jobs at the moment",
+    "enableWebPush": "Enable Web Push Notifications",
+    "enableWebPushDesc": "Get booking alerts even when this tab is in the background",
+    "enableInSettings": "Enable in Settings"
   },
   "bookings": {
     "title": "My Bookings",

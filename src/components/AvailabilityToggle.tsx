@@ -2,6 +2,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Wifi, WifiOff } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface AvailabilityToggleProps {
   isOnline: boolean;
@@ -10,6 +11,8 @@ interface AvailabilityToggleProps {
 }
 
 export default function AvailabilityToggle({ isOnline, onToggle, disabled }: AvailabilityToggleProps) {
+  const { t } = useTranslation();
+  
   return (
     <Card className="p-6 shadow-card">
       <div className="flex items-center justify-between">
@@ -25,10 +28,10 @@ export default function AvailabilityToggle({ isOnline, onToggle, disabled }: Ava
           </div>
           <div>
             <Label htmlFor="availability" className="text-base font-semibold">
-              {isOnline ? "You're Online" : "You're Offline"}
+              {isOnline ? t('home.goOnline') : t('home.goOffline')}
             </Label>
             <p className="text-sm text-muted-foreground">
-              {isOnline ? "Ready to accept bookings" : "Not accepting bookings"}
+              {isOnline ? t('home.onlineDesc') : t('home.offlineDesc')}
             </p>
           </div>
         </div>
