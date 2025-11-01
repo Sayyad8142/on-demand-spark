@@ -60,24 +60,13 @@ export default function ActiveJobCard({
             </div>}
         </div>
 
-        {/* 2. Service and Price */}
-        <div className="bg-card border border-border rounded-xl p-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-stone-50">
-                <Home className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Service Type</p>
-                <p className="font-bold text-lg capitalize">{booking.service_type.replace('_', ' ')}</p>
-              </div>
+        {/* 2. Earnings */}
+        {booking.price_inr && <div className="bg-card border border-border rounded-xl p-3">
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground mb-1">Earnings</p>
+              <p className="font-bold text-primary text-2xl">₹{booking.price_inr}</p>
             </div>
-            {booking.price_inr && <div className="text-right">
-                <p className="text-xs text-muted-foreground mb-1">Earnings</p>
-                <p className="font-bold text-primary text-2xl">₹{booking.price_inr}</p>
-              </div>}
-          </div>
-        </div>
+          </div>}
 
         {/* 3. Customer Name and Community - Dropdown */}
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
