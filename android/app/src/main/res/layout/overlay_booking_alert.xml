@@ -1,270 +1,168 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    android:background="@android:color/white"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center">
+    android:background="#F8FAFC"
+    android:fillViewport="true">
 
-    <!-- Card container -->
     <LinearLayout
         android:orientation="vertical"
-        android:background="@android:color/white"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="24dp"
-        android:elevation="8dp">
+        android:padding="16dp"
+        android:gravity="center">
 
-        <!-- Header with Title and Countdown -->
-        <RelativeLayout
-            android:padding="20dp"
+        <!-- Card container -->
+        <LinearLayout
+            android:orientation="vertical"
+            android:background="@android:color/white"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:elevation="8dp">
 
+            <!-- Service Image -->
+            <ImageView
+                android:id="@+id/serviceImage"
+                android:layout_width="match_parent"
+                android:layout_height="180dp"
+                android:scaleType="centerCrop"
+                android:src="@drawable/service_maid"
+                android:contentDescription="Service Image"/>
+
+            <!-- Content Section -->
             <LinearLayout
                 android:orientation="vertical"
-                android:layout_alignParentStart="true"
-                android:layout_centerVertical="true"
-                android:layout_toStartOf="@+id/countdownBox"
-                android:layout_marginEnd="16dp"
-                android:layout_width="wrap_content"
+                android:padding="24dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
+                <!-- Title -->
                 <TextView
                     android:id="@+id/title"
                     android:text="New Booking"
                     android:textColor="#1E293B"
-                    android:textSize="32sp"
+                    android:textSize="24sp"
                     android:textStyle="bold"
-                    android:layout_width="wrap_content"
+                    android:gravity="center"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"/>
 
+                <!-- Service Type -->
                 <TextView
-                    android:text="Request"
-                    android:textColor="#1E293B"
-                    android:textSize="32sp"
+                    android:id="@+id/subtitle"
+                    android:text="MAID"
+                    android:textColor="#3B82F6"
+                    android:textSize="28sp"
                     android:textStyle="bold"
-                    android:layout_width="wrap_content"
+                    android:gravity="center"
+                    android:layout_marginTop="8dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"/>
 
+                <!-- Price Section -->
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:background="#D1FAE5"
+                    android:padding="24dp"
+                    android:gravity="center"
+                    android:layout_marginTop="24dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <TextView
+                        android:id="@+id/price"
+                        android:text="₹200"
+                        android:textColor="#10B981"
+                        android:textSize="48sp"
+                        android:textStyle="bold"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"/>
+                </LinearLayout>
+
+                <!-- Community Section -->
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:background="#F1F5F9"
+                    android:padding="16dp"
+                    android:gravity="center"
+                    android:layout_marginTop="16dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <TextView
+                        android:text="📍"
+                        android:textSize="20sp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"/>
+
+                    <TextView
+                        android:id="@+id/community"
+                        android:text="prestige-high-fields"
+                        android:textColor="#1E293B"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"/>
+                </LinearLayout>
+
+                <!-- Hidden fields for data -->
                 <TextView
-                    android:text="Respond within 30 seconds"
-                    android:textColor="#64748B"
-                    android:textSize="16sp"
-                    android:layout_marginTop="4dp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
-            </LinearLayout>
-
-            <!-- Countdown Box -->
-            <LinearLayout
-                android:id="@+id/countdownBox"
-                android:orientation="vertical"
-                android:background="#16A34A"
-                android:padding="16dp"
-                android:gravity="center"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:layout_width="100dp"
-                android:layout_height="100dp">
-
-                <TextView
-                    android:id="@+id/countdown"
-                    android:text="29"
-                    android:textColor="@android:color/white"
-                    android:textSize="36sp"
-                    android:textStyle="bold"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
-
-                <TextView
-                    android:text="s"
-                    android:textColor="@android:color/white"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
-
-                <!-- Progress bar under countdown -->
-                <View
-                    android:layout_width="60dp"
-                    android:layout_height="3dp"
-                    android:background="@android:color/white"
-                    android:layout_marginTop="4dp"/>
-            </LinearLayout>
-        </RelativeLayout>
-
-        <!-- Service Image -->
-        <ImageView
-            android:id="@+id/serviceImage"
-            android:layout_width="match_parent"
-            android:layout_height="160dp"
-            android:scaleType="centerCrop"
-            android:src="@drawable/service_maid"
-            android:contentDescription="Service Image"/>
-
-        <!-- Service Title and Description -->
-        <LinearLayout
-            android:orientation="vertical"
-            android:padding="20dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <TextView
-                android:id="@+id/subtitle"
-                android:text="Maid Service"
-                android:textColor="#1E293B"
-                android:textSize="28sp"
-                android:textStyle="bold"
-                android:gravity="center"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
-
-            <TextView
-                android:text="Includes: Dishes &amp; Jhaadu/Pocha"
-                android:textColor="#64748B"
-                android:textSize="16sp"
-                android:gravity="center"
-                android:layout_marginTop="4dp"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
-        </LinearLayout>
-
-        <!-- Price and Tower Number -->
-        <LinearLayout
-            android:orientation="horizontal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingHorizontal="20dp"
-            android:paddingBottom="16dp">
-
-            <LinearLayout
-                android:orientation="vertical"
-                android:background="#F1F5F9"
-                android:padding="16dp"
-                android:gravity="center"
-                android:layout_weight="1"
-                android:layout_marginEnd="8dp"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content">
-
-                <TextView
-                    android:text="Price"
-                    android:textColor="#64748B"
-                    android:textSize="14sp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
-
-                <TextView
-                    android:id="@+id/price"
-                    android:text="₹0"
-                    android:textColor="#1E293B"
-                    android:textSize="32sp"
-                    android:textStyle="bold"
-                    android:layout_marginTop="4dp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
-            </LinearLayout>
-
-            <LinearLayout
-                android:orientation="vertical"
-                android:background="#F1F5F9"
-                android:padding="16dp"
-                android:gravity="center"
-                android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content">
-
-                <TextView
-                    android:text="Tower No."
-                    android:textColor="#64748B"
-                    android:textSize="14sp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
+                    android:id="@+id/customerName"
+                    android:visibility="gone"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"/>
 
                 <TextView
                     android:id="@+id/flatNo"
-                    android:text="9"
-                    android:textColor="#1E293B"
-                    android:textSize="32sp"
-                    android:textStyle="bold"
-                    android:layout_marginTop="4dp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
+                    android:visibility="gone"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"/>
+
+                <TextView
+                    android:id="@+id/countdown"
+                    android:visibility="gone"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"/>
+
+                <!-- Action Buttons -->
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_marginTop="24dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <Button
+                        android:id="@+id/btnReject"
+                        android:text="REJECT"
+                        android:textColor="#EF4444"
+                        android:background="@drawable/btn_outline"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:paddingVertical="16dp"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"/>
+
+                    <Button
+                        android:id="@+id/btnAccept"
+                        android:text="ACCEPT"
+                        android:textColor="@android:color/white"
+                        android:backgroundTint="#10B981"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:paddingVertical="16dp"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"/>
+                </LinearLayout>
+
             </LinearLayout>
-        </LinearLayout>
 
-        <!-- Community -->
-        <LinearLayout
-            android:orientation="vertical"
-            android:background="#F1F5F9"
-            android:padding="16dp"
-            android:gravity="center"
-            android:layout_marginHorizontal="20dp"
-            android:layout_marginBottom="20dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <TextView
-                android:text="Community"
-                android:textColor="#64748B"
-                android:textSize="14sp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
-
-            <TextView
-                android:id="@+id/community"
-                android:text="Prestige High Fields"
-                android:textColor="#1E293B"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:layout_marginTop="4dp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
-        </LinearLayout>
-
-        <!-- Hidden fields for data -->
-        <TextView
-            android:id="@+id/customerName"
-            android:visibility="gone"
-            android:layout_width="0dp"
-            android:layout_height="0dp"/>
-
-        <!-- Action Buttons -->
-        <LinearLayout
-            android:orientation="horizontal"
-            android:padding="20dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <Button
-                android:id="@+id/btnReject"
-                android:text="REJECT"
-                android:textColor="#EC4899"
-                android:background="@drawable/btn_outline"
-                android:layout_weight="1"
-                android:layout_marginEnd="8dp"
-                android:paddingVertical="18dp"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"/>
-
-            <Button
-                android:id="@+id/btnAccept"
-                android:text="ACCEPT"
-                android:textColor="@android:color/white"
-                android:backgroundTint="#16A34A"
-                android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                android:paddingVertical="18dp"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"/>
         </LinearLayout>
 
     </LinearLayout>
 
-</LinearLayout>
+</ScrollView>
