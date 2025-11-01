@@ -63,13 +63,29 @@ export default function ActiveJobCard({ booking, onStatusUpdate, updating }: Act
           </div>
           
           {/* Flat Number Display */}
-          <div className="bg-card border-2 border-primary/20 rounded-xl p-3 text-center">
-            <p className="text-xs font-medium text-muted-foreground mb-1">FLAT NO :</p>
-            <p className="text-2xl font-bold text-foreground mb-2">{booking.flat_no}</p>
+          <div className="bg-card border-2 border-primary/20 rounded-xl p-3">
+            <p className="text-xs font-medium text-muted-foreground mb-3 text-center">FLAT NO : {booking.flat_no}</p>
             {booking.flat_no && booking.flat_no.toString().length === 4 && (
-              <p className="text-sm font-medium text-muted-foreground">
-                Tower {booking.flat_no.toString().charAt(0)} <span className="text-primary">•</span> Floor {booking.flat_no.toString().substring(1, 3)} <span className="text-primary">•</span> Door {booking.flat_no.toString().charAt(3)}
-              </p>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="text-center">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">TOWER :</p>
+                  <div className="bg-primary/10 rounded-lg py-2">
+                    <p className="text-xl font-bold text-foreground">{booking.flat_no.toString().charAt(0)}</p>
+                  </div>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">FLOOR :</p>
+                  <div className="bg-primary/10 rounded-lg py-2">
+                    <p className="text-xl font-bold text-foreground">{booking.flat_no.toString().substring(1, 3)}</p>
+                  </div>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">DOOR :</p>
+                  <div className="bg-primary/10 rounded-lg py-2">
+                    <p className="text-xl font-bold text-foreground">{booking.flat_no.toString().charAt(3)}</p>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>
