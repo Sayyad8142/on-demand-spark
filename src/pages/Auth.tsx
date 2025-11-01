@@ -11,6 +11,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
+import { Languages } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -45,6 +53,7 @@ export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
+  const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [communities, setCommunities] = useState<Array<{ name: string; value: string }>>([]);
@@ -350,6 +359,49 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 p-4">
+      {/* Language Selector - Top Right */}
+      <div className="fixed top-4 right-4 z-50">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" className="bg-background shadow-lg">
+              <Languages className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-background z-50">
+            <DropdownMenuItem
+              onClick={() => {
+                i18n.changeLanguage('en');
+                localStorage.setItem('language', 'en');
+                toast({ title: "Language changed to English" });
+              }}
+              className={i18n.language === 'en' ? 'bg-accent' : ''}
+            >
+              English
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                i18n.changeLanguage('hi');
+                localStorage.setItem('language', 'hi');
+                toast({ title: "भाषा हिंदी में बदल गई" });
+              }}
+              className={i18n.language === 'hi' ? 'bg-accent' : ''}
+            >
+              हिंदी (Hindi)
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                i18n.changeLanguage('te');
+                localStorage.setItem('language', 'te');
+                toast({ title: "భాష తెలుగులోకి మార్చబడింది" });
+              }}
+              className={i18n.language === 'te' ? 'bg-accent' : ''}
+            >
+              తెలుగు (Telugu)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl text-center">Worker Portal</CardTitle>
