@@ -65,7 +65,12 @@ export default function ActiveJobCard({ booking, onStatusUpdate, updating }: Act
           {/* Flat Number Display */}
           <div className="bg-card border-2 border-primary/20 rounded-xl p-3 text-center">
             <p className="text-xs font-medium text-muted-foreground mb-1">FLAT NO :</p>
-            <p className="text-2xl font-bold text-foreground">{booking.flat_no}</p>
+            <p className="text-2xl font-bold text-foreground mb-2">{booking.flat_no}</p>
+            {booking.flat_no && booking.flat_no.toString().length === 4 && (
+              <p className="text-sm font-medium text-muted-foreground">
+                Tower {booking.flat_no.toString().charAt(0)} <span className="text-primary">•</span> Floor {booking.flat_no.toString().substring(1, 3)} <span className="text-primary">•</span> Door {booking.flat_no.toString().charAt(3)}
+              </p>
+            )}
           </div>
         </div>
 
