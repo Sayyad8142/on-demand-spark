@@ -31,69 +31,67 @@ export default function ActiveJobCard({
     return null;
   }
   console.log('✅ ActiveJobCard: Showing card, status is:', booking.status);
-  return <Card className="shadow-card overflow-hidden">
-      
-
-      <div className="p-5 space-y-5">
-        {/* 1. Flat Number Display - First and Highlighted */}
-        <div className="bg-white dark:bg-gray-800 border-2 border-border rounded-2xl p-4 shadow-sm">
-          <p className="font-bold text-center text-red-500 mb-4 text-2xl">FLAT NO : {booking.flat_no}</p>
-          {booking.flat_no && booking.flat_no.toString().length === 4 && <div className="grid grid-cols-3 gap-3">
+  return <Card className="shadow-lg overflow-hidden border-0">
+      <div className="p-4 space-y-3">
+        {/* 1. Flat Number Display */}
+        <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-sm">
+          <p className="font-extrabold text-center text-red-500 mb-4 text-2xl tracking-tight">FLAT NO : {booking.flat_no}</p>
+          {booking.flat_no && booking.flat_no.toString().length === 4 && <div className="grid grid-cols-3 gap-4">
               <div className="text-center">
-                <p className="text-xs font-semibold text-muted-foreground mb-2">TOWER</p>
-                <div className="bg-white dark:bg-gray-800 rounded-xl py-3 shadow-sm border border-border">
-                  <p className="text-2xl font-bold text-red-500">{booking.flat_no.toString().charAt(0)}</p>
+                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">TOWER</p>
+                <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
+                  <p className="text-3xl font-extrabold text-red-500">{booking.flat_no.toString().charAt(0)}</p>
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-xs font-semibold text-muted-foreground mb-2">FLOOR</p>
-                <div className="bg-white dark:bg-gray-800 rounded-xl py-3 shadow-sm border border-border">
-                  <p className="text-2xl font-bold text-red-500">{booking.flat_no.toString().substring(1, 3)}</p>
+                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">FLOOR</p>
+                <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
+                  <p className="text-3xl font-extrabold text-red-500">{booking.flat_no.toString().substring(1, 3)}</p>
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-xs font-semibold text-muted-foreground mb-2">DOOR</p>
-                <div className="bg-white dark:bg-gray-800 rounded-xl py-3 shadow-sm border border-border">
-                  <p className="text-2xl font-bold text-red-500">{booking.flat_no.toString().charAt(3)}</p>
+                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">DOOR</p>
+                <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
+                  <p className="text-3xl font-extrabold text-red-500">{booking.flat_no.toString().charAt(3)}</p>
                 </div>
               </div>
             </div>}
         </div>
 
         {/* 2. Earnings */}
-        {booking.price_inr && <div className="bg-card border border-border rounded-xl p-3">
+        {booking.price_inr && <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">Earnings</p>
-            <p className="font-bold text-primary text-xl">₹{booking.price_inr}</p>
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Earnings</p>
+            <p className="font-bold text-red-500 text-2xl">₹{booking.price_inr}</p>
           </div>
           </div>}
 
-        {/* 3. Customer Name and Community - Dropdown */}
+        {/* 3. Customer Details - Dropdown */}
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           <CollapsibleTrigger asChild>
-            <Button variant="outline" className="w-full justify-between">
-              <span className="font-semibold">Customer Details</span>
-              <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            <Button variant="outline" className="w-full justify-between h-12 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+              <span className="font-semibold text-base">Customer Details</span>
+              <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="bg-card border border-border rounded-xl p-3 space-y-2 mt-2">
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="w-5 h-5 text-primary" />
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 space-y-3 mt-2 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0">
+                  <User className="w-5 h-5 text-red-500" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground">Customer Name</p>
-                  <p className="font-bold text-base">{booking.cust_name}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Customer Name</p>
+                  <p className="font-semibold text-base text-gray-900 dark:text-gray-100 truncate">{booking.cust_name}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <MapPin className="w-5 h-5 text-primary" />
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0">
+                  <MapPin className="w-5 h-5 text-red-500" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground">Community</p>
-                  <p className="font-bold text-base">{booking.community}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Community</p>
+                  <p className="font-semibold text-base text-gray-900 dark:text-gray-100 truncate">{booking.community}</p>
                 </div>
               </div>
             </div>
@@ -101,15 +99,20 @@ export default function ActiveJobCard({
         </Collapsible>
 
         {/* Notes */}
-        {booking.notes && <div className="bg-muted/50 border border-border rounded-xl p-4">
-            <p className="text-xs font-semibold text-muted-foreground mb-2">NOTES:</p>
-            <p className="text-sm text-foreground">{booking.notes}</p>
+        {booking.notes && <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+            <p className="text-xs font-bold text-amber-800 dark:text-amber-400 mb-2">NOTES:</p>
+            <p className="text-sm text-amber-900 dark:text-amber-200">{booking.notes}</p>
           </div>}
 
-        {/* 4. Work Completed Button - Red Color */}
-        <Button size="lg" className="w-full h-14 text-base font-bold bg-red-500 hover:bg-red-600 text-white shadow-lg" onClick={() => onStatusUpdate('completed')} disabled={updating}>
+        {/* 4. Work Completed Button */}
+        <Button 
+          size="lg" 
+          className="w-full h-14 text-lg font-bold bg-red-500 hover:bg-red-600 text-white shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98]" 
+          onClick={() => onStatusUpdate('completed')} 
+          disabled={updating}
+        >
           {updating ? "Updating..." : <>
-              <Check className="w-5 h-5 mr-2" />
+              <Check className="w-6 h-6 mr-2" />
               Work Completed
             </>}
         </Button>
