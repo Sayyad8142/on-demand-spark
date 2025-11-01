@@ -121,6 +121,9 @@ export default function Bookings() {
 }
 
 function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusColor: (status: string) => string }) {
+  const isCompleted = booking.status === 'completed';
+  const numberColor = isCompleted ? 'text-green-500' : 'text-red-500';
+  
   return (
     <Card className="p-3 shadow-lg border-0">
       <div className="flex items-center justify-between mb-2">
@@ -131,25 +134,25 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
 
       {/* Flat Number Display - Compact */}
       <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 mb-2 shadow-sm">
-        <p className="font-extrabold text-center text-red-500 mb-2 text-lg tracking-tight">FLAT NO : {booking.flat_no}</p>
+        <p className={`font-extrabold text-center ${numberColor} mb-2 text-lg tracking-tight`}>FLAT NO : {booking.flat_no}</p>
         {booking.flat_no && booking.flat_no.toString().length === 4 && (
           <div className="grid grid-cols-3 gap-2">
             <div className="text-center">
               <p className="text-[9px] font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wider">TOWER</p>
               <div className="bg-white dark:bg-gray-800 rounded-lg py-1.5 shadow-md border border-gray-100 dark:border-gray-700">
-                <p className="text-xl font-extrabold text-red-500">{booking.flat_no.toString().charAt(0)}</p>
+                <p className={`text-xl font-extrabold ${numberColor}`}>{booking.flat_no.toString().charAt(0)}</p>
               </div>
             </div>
             <div className="text-center">
               <p className="text-[9px] font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wider">FLOOR</p>
               <div className="bg-white dark:bg-gray-800 rounded-lg py-1.5 shadow-md border border-gray-100 dark:border-gray-700">
-                <p className="text-xl font-extrabold text-red-500">{booking.flat_no.toString().substring(1, 3)}</p>
+                <p className={`text-xl font-extrabold ${numberColor}`}>{booking.flat_no.toString().substring(1, 3)}</p>
               </div>
             </div>
             <div className="text-center">
               <p className="text-[9px] font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wider">DOOR</p>
               <div className="bg-white dark:bg-gray-800 rounded-lg py-1.5 shadow-md border border-gray-100 dark:border-gray-700">
-                <p className="text-xl font-extrabold text-red-500">{booking.flat_no.toString().charAt(3)}</p>
+                <p className={`text-xl font-extrabold ${numberColor}`}>{booking.flat_no.toString().charAt(3)}</p>
               </div>
             </div>
           </div>
@@ -164,7 +167,7 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
 
       {/* Community */}
       <div className="flex items-center gap-1.5 mb-2">
-        <MapPin className="w-3.5 h-3.5 text-red-500" />
+        <MapPin className={`w-3.5 h-3.5 ${numberColor}`} />
         <p className="text-xs text-muted-foreground">{booking.community}</p>
       </div>
 
@@ -181,7 +184,7 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
           )}
         </div>
         {booking.price_inr && (
-          <span className="font-bold text-red-500 text-base">₹{booking.price_inr}</span>
+          <span className={`font-bold ${numberColor} text-base`}>₹{booking.price_inr}</span>
         )}
       </div>
     </Card>
