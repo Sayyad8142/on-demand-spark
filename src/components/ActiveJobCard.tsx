@@ -93,7 +93,7 @@ export default function ActiveJobCard({
               <User className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1">
-              <p className="text-xs text-muted-foreground">Customer Name</p>
+              
               <p className="font-bold text-base">{booking.cust_name}</p>
             </div>
           </div>
@@ -102,7 +102,7 @@ export default function ActiveJobCard({
               <MapPin className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1">
-              <p className="text-xs text-muted-foreground">Community</p>
+              
               <p className="font-bold text-base">{booking.community}</p>
             </div>
           </div>
