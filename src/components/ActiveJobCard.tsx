@@ -62,10 +62,10 @@ export default function ActiveJobCard({
 
         {/* 2. Earnings */}
         {booking.price_inr && <div className="bg-card border border-border rounded-xl p-3">
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground mb-1">Earnings</p>
-              <p className="font-bold text-primary text-2xl">₹{booking.price_inr}</p>
-            </div>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">Earnings</p>
+            <p className="font-bold text-primary text-xl">₹{booking.price_inr}</p>
+          </div>
           </div>}
 
         {/* 3. Customer Name and Community - Dropdown */}
