@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Search, MapPin, Calendar, Loader2 } from "lucide-react";
 
 type Booking = Database["public"]["Tables"]["bookings"]["Row"];
@@ -42,21 +41,8 @@ export default function Bookings() {
     fetchBookings();
   }, [user]);
 
-  const today = new Date().toISOString().split('T')[0];
-  
-  const upcomingBookings = bookings.filter(b => 
-    ['accepted', 'on_the_way', 'started'].includes(b.status) ||
-    (b.scheduled_date && b.scheduled_date >= today)
-  );
-
   const historyBookings = bookings.filter(b => 
     ['completed', 'cancelled'].includes(b.status)
-  );
-
-  const filteredUpcoming = upcomingBookings.filter(b =>
-    b.cust_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    b.community.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    b.flat_no.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const filteredHistory = historyBookings.filter(b =>
@@ -117,45 +103,18 @@ export default function Bookings() {
       </header>
 
       {/* Content */}
-      <main className="max-w-2xl mx-auto p-4">
-        <Tabs defaultValue="upcoming" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="upcoming">
-              Upcoming ({filteredUpcoming.length})
-            </TabsTrigger>
-            <TabsTrigger value="history">
-              History ({filteredHistory.length})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="upcoming" className="space-y-4">
-            {filteredUpcoming.length === 0 ? (
-              <div className="text-center py-12">
-                <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="font-semibold mb-2">No upcoming bookings</h3>
-                <p className="text-sm text-muted-foreground">Your completed jobs will appear here</p>
-              </div>
-            ) : (
-              filteredUpcoming.map(booking => (
-                <BookingCard key={booking.id} booking={booking} getStatusColor={getStatusColor} />
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="history" className="space-y-4">
-            {filteredHistory.length === 0 ? (
-              <div className="text-center py-12">
-                <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="font-semibold mb-2">No booking history</h3>
-                <p className="text-sm text-muted-foreground">Your completed jobs will appear here</p>
-              </div>
-            ) : (
-              filteredHistory.map(booking => (
-                <BookingCard key={booking.id} booking={booking} getStatusColor={getStatusColor} />
-              ))
-            )}
-          </TabsContent>
-        </Tabs>
+      <main className="max-w-2xl mx-auto p-4 space-y-4">
+        {filteredHistory.length === 0 ? (
+          <div className="text-center py-12">
+            <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="font-semibold mb-2">No booking history</h3>
+            <p className="text-sm text-muted-foreground">Your completed jobs will appear here</p>
+          </div>
+        ) : (
+          filteredHistory.map(booking => (
+            <BookingCard key={booking.id} booking={booking} getStatusColor={getStatusColor} />
+          ))
+        )}
       </main>
     </div>
   );
@@ -163,21 +122,55 @@ export default function Bookings() {
 
 function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusColor: (status: string) => string }) {
   return (
-    <Card className="p-4 shadow-card hover:shadow-pink transition-shadow">
+    <Card className="p-4 shadow-lg border-0">
       <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <h3 className="font-semibold text-lg">{booking.cust_name}</h3>
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <MapPin className="w-3 h-3" />
-            {booking.community} • {booking.flat_no}
-          </div>
-        </div>
         <Badge className={getStatusColor(booking.status)}>
           {booking.status.replace('_', ' ')}
         </Badge>
       </div>
 
-      <div className="flex items-center justify-between text-sm">
+      {/* Flat Number Display */}
+      <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 mb-3 shadow-sm">
+        <p className="font-extrabold text-center text-red-500 mb-3 text-xl tracking-tight">FLAT NO : {booking.flat_no}</p>
+        {booking.flat_no && booking.flat_no.toString().length === 4 && (
+          <div className="grid grid-cols-3 gap-3">
+            <div className="text-center">
+              <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wider">TOWER</p>
+              <div className="bg-white dark:bg-gray-800 rounded-xl py-2 shadow-md border-2 border-gray-100 dark:border-gray-700">
+                <p className="text-2xl font-extrabold text-red-500">{booking.flat_no.toString().charAt(0)}</p>
+              </div>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wider">FLOOR</p>
+              <div className="bg-white dark:bg-gray-800 rounded-xl py-2 shadow-md border-2 border-gray-100 dark:border-gray-700">
+                <p className="text-2xl font-extrabold text-red-500">{booking.flat_no.toString().substring(1, 3)}</p>
+              </div>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wider">DOOR</p>
+              <div className="bg-white dark:bg-gray-800 rounded-xl py-2 shadow-md border-2 border-gray-100 dark:border-gray-700">
+                <p className="text-2xl font-extrabold text-red-500">{booking.flat_no.toString().charAt(3)}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Customer Name */}
+      <div className="flex items-center gap-2 mb-3">
+        <div className="flex-1">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Customer</p>
+          <p className="font-semibold text-base">{booking.cust_name}</p>
+        </div>
+      </div>
+
+      {/* Community */}
+      <div className="flex items-center gap-2 mb-3">
+        <MapPin className="w-4 h-4 text-red-500" />
+        <p className="text-sm text-muted-foreground">{booking.community}</p>
+      </div>
+
+      <div className="flex items-center justify-between text-sm border-t pt-3">
         <div className="flex items-center gap-4">
           <span className="text-muted-foreground">
             {booking.service_type.replace('_', ' ')}
@@ -190,7 +183,7 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
           )}
         </div>
         {booking.price_inr && (
-          <span className="font-bold text-primary">₹{booking.price_inr}</span>
+          <span className="font-bold text-red-500 text-lg">₹{booking.price_inr}</span>
         )}
       </div>
     </Card>
