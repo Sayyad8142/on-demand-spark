@@ -72,12 +72,6 @@ dependencies {
     
     // LocalBroadcastManager for React UI communication
     implementation "androidx.localbroadcastmanager:localbroadcastmanager:1.1.0"
-    
-    // Coil for image loading
-    implementation "io.coil-kt:coil:2.6.0"
-    
-    // CardView for material cards
-    implementation "androidx.cardview:cardview:1.0.0"
 }
 
 apply from: 'capacitor.build.gradle'

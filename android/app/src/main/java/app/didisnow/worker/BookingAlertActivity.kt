@@ -1,31 +1,25 @@
 package app.didisnow.worker
 
+import android.content.Context
+import android.content.Intent
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.Drawable
-import android.graphics.drawable.LayerDrawable
-import android.graphics.drawable.RotateDrawable
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.RingtoneManager
-import android.os.Build
 import android.os.Bundle
-import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
-import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import coil.load
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -34,422 +28,384 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
+@Suppress("SetTextI18n")
 class BookingAlertActivity : AppCompatActivity() {
-
+    private var countdownHandler: Handler? = null
+    private lateinit var countdownRunnable: Runnable
+    private var secondsLeft = 30
+    private var mediaPlayer: MediaPlayer? = null
+    private var vibrator: Vibrator? = null
+    
     companion object {
-        private const val TAG = "BookingAlertActivity"
         private const val SUPABASE_URL = "https://paywwbuqycovjopryele.supabase.co"
         private const val SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheXd3YnVxeWNvdmpvcHJ5ZWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkyNjksImV4cCI6MjA3MDc0NTI2OX0.js1MaTBkjuGlaDfQjrZpZ9_G8Jy9ygNAB8KpNDiQg8o"
     }
 
-    // Views
-    private lateinit var alertTitle: TextView
-    private lateinit var countdownCircle: ProgressBar
-    private lateinit var countdown: TextView
-    private lateinit var alertHeroImage: ImageView
-    private lateinit var alertService: TextView
-    private lateinit var alertServiceSubtitle: TextView
-    private lateinit var alertPrice: TextView
-    private lateinit var alertTower: TextView
-    private lateinit var alertCommunity: TextView
-    private lateinit var alertNotes: LinearLayout
-    private lateinit var alertNotesText: TextView
-    private lateinit var btnReject: Button
-    private lateinit var btnAccept: Button
-    private lateinit var loadingIndicator: ProgressBar
-
-    // Data
-    private var bookingId: String = ""
-    private var serviceType: String = ""
-    private var flatNumber: String = ""
-    private var priceInr: String = "0"
-    private var notes: String = ""
-    private var community: String = "Prestige High Fields"
-    private var imageUrl: String = ""
-
-    // Media
-    private var mediaPlayer: MediaPlayer? = null
-    private var vibrator: Vibrator? = null
-    private var countdownTimer: CountDownTimer? = null
-    private val handler = Handler(Looper.getMainLooper())
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Show over lock screen
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            setShowWhenLocked(true)
-            setTurnScreenOn(true)
-        } else {
-            window.addFlags(
-                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
-                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
-            )
-        }
+
+        // Keep screen on & show over lock screen
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+            WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
+        )
 
         setContentView(R.layout.activity_booking_alert)
 
-        // Initialize views
-        initViews()
-
-        // Extract booking data from intent
-        extractBookingData()
-
-        // Populate UI
-        populateUI()
-
-        // Start alert sound and vibration
+        // Play loud siren sound and vibrate
         playAlertSound()
         startVibration()
 
-        // Start countdown timer
-        startCountdown()
+        val bookingId = intent.getStringExtra("booking_id") ?: ""
+        val serviceType = intent.getStringExtra("service_type") ?: ""
+        val flatNo = intent.getStringExtra("flat_no") ?: ""
+        val priceInr = intent.getIntExtra("price_inr", 0)
 
-        // Set up button listeners
-        setupButtons()
-    }
+        // Set service details
+        val serviceText = findViewById<TextView>(R.id.alertService)
+        val serviceSubtitle = findViewById<TextView>(R.id.alertServiceSubtitle)
+        val serviceImage = findViewById<ImageView>(R.id.alertServiceImage)
+        val priceText = findViewById<TextView>(R.id.alertPrice)
+        val towerText = findViewById<TextView>(R.id.alertTower)
+        val communityText = findViewById<TextView>(R.id.alertCommunity)
 
-    private fun initViews() {
-        alertTitle = findViewById(R.id.alertTitle)
-        countdownCircle = findViewById(R.id.countdownCircle)
-        countdown = findViewById(R.id.countdown)
-        alertHeroImage = findViewById(R.id.alertHeroImage)
-        alertService = findViewById(R.id.alertService)
-        alertServiceSubtitle = findViewById(R.id.alertServiceSubtitle)
-        alertPrice = findViewById(R.id.alertPrice)
-        alertTower = findViewById(R.id.alertTower)
-        alertCommunity = findViewById(R.id.alertCommunity)
-        alertNotes = findViewById(R.id.alertNotes)
-        alertNotesText = findViewById(R.id.alertNotesText)
-        btnReject = findViewById(R.id.btnReject)
-        btnAccept = findViewById(R.id.btnAccept)
-        loadingIndicator = findViewById(R.id.loadingIndicator)
-    }
-
-    private fun extractBookingData() {
-        bookingId = intent.getStringExtra("booking_id") ?: ""
-        serviceType = (intent.getStringExtra("service_type") ?: "").lowercase()
-        flatNumber = intent.getStringExtra("flat_number") ?: ""
-        priceInr = intent.getStringExtra("price_inr") ?: "0"
-        notes = intent.getStringExtra("notes") ?: ""
-        community = intent.getStringExtra("community") ?: "Prestige High Fields"
-        imageUrl = intent.getStringExtra("image_url") ?: ""
-
-        Log.d(TAG, "Booking data: id=$bookingId, service=$serviceType, flat=$flatNumber, price=$priceInr")
-    }
-
-    private fun populateUI() {
-        // Title
-        alertTitle.text = "New Booking Request"
-
-        // Service title
-        alertService.text = when (serviceType) {
-            "maid" -> "Maid Service"
-            "cook" -> "Cook Service"
-            "bathroom_cleaning" -> "Bathroom Cleaning"
-            else -> serviceType.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-        }
-
-        // Service subtitle
-        alertServiceSubtitle.text = when (serviceType) {
-            "maid" -> "Includes: Dishes & Jhaadu/Pocha"
-            "cook" -> "Includes: Meal Preparation"
-            "bathroom_cleaning" -> "Includes: Complete Bathroom Cleaning"
-            else -> if (notes.isNotBlank()) notes else "Service details"
-        }
-
-        // Price
-        alertPrice.text = "₹$priceInr"
-
-        // Tower - derive from flat number
-        val towerNo = flatNumber.firstOrNull { it.isDigit() }?.toString() ?: "—"
-        alertTower.text = towerNo
-
-        // Community
-        alertCommunity.text = community
-
-        // Notes
-        if (notes.isNotBlank()) {
-            alertNotes.visibility = View.VISIBLE
-            alertNotesText.text = notes
-        } else {
-            alertNotes.visibility = View.GONE
-        }
-
-        // Load hero image with Coil
-        val fallbackRes = when (serviceType) {
-            "maid" -> R.drawable.maid_dishes
-            "cook" -> R.drawable.service_cook
-            "bathroom_cleaning" -> R.drawable.service_bathroom
-            else -> R.drawable.placeholder_service
-        }
-
-        alertHeroImage.load(if (imageUrl.isBlank()) fallbackRes else imageUrl) {
-            placeholder(R.drawable.placeholder_service)
-            error(fallbackRes)
-            crossfade(true)
-        }
-    }
-
-    private fun startCountdown() {
-        countdownCircle.max = 30
-        countdownCircle.progress = 30
-
-        countdownTimer = object : CountDownTimer(30000, 1000) {
-            override fun onTick(millisUntilFinished: Long) {
-                val secondsLeft = (millisUntilFinished / 1000).toInt()
-                countdown.text = "${secondsLeft}s"
-                countdownCircle.progress = secondsLeft
-
-                // Change countdown ring color based on time
-                updateCountdownColor(secondsLeft)
+        when (serviceType.lowercase()) {
+            "maid" -> {
+                serviceText.text = "Maid Service"
+                serviceSubtitle.text = "Includes: Dishes & Jhaadu/Pocha"
+                serviceImage.setImageResource(R.drawable.maid_dishes)
             }
-
-            override fun onFinish() {
-                // Auto timeout - call reassign
-                Log.d(TAG, "Countdown finished - timeout")
-                handleTimeout()
+            "cook" -> {
+                serviceText.text = "Cook Service"
+                serviceSubtitle.text = "Includes: Meal Preparation"
+                serviceImage.setImageResource(R.drawable.ic_service_cook)
             }
-        }.start()
-    }
-
-    private fun updateCountdownColor(secondsLeft: Int) {
-        val color = when {
-            secondsLeft > 15 -> Color.parseColor("#16A34A") // Green
-            secondsLeft > 10 -> Color.parseColor("#F59E0B") // Amber
-            else -> Color.parseColor("#DC2626") // Red
+            "bathroom cleaning", "bathroom" -> {
+                serviceText.text = "Bathroom Cleaning"
+                serviceSubtitle.text = "Includes: Complete Bathroom Cleaning"
+                serviceImage.setImageResource(R.drawable.ic_service_bathroom)
+            }
+            else -> {
+                serviceText.text = serviceType
+                serviceSubtitle.text = "Service details"
+                serviceImage.setImageResource(R.drawable.ic_service_default)
+            }
         }
 
-        countdown.setTextColor(color)
+        priceText.text = "₹$priceInr"
         
-        // Update progress bar color
-        val progressDrawable = countdownCircle.progressDrawable
-        if (progressDrawable is LayerDrawable) {
-            val layer = progressDrawable.findDrawableByLayerId(android.R.id.progress)
-            if (layer is RotateDrawable) {
-                layer.drawable?.setTint(color)
+        // Derive Tower No from first digit of flat number
+        val towerNo = if (flatNo.isNotBlank()) {
+            flatNo.firstOrNull { it.isDigit() }?.toString() ?: "—"
+        } else {
+            "—"
+        }
+        towerText.text = towerNo
+        communityText.text = "Prestige High Fields"
+
+        val countdownText = findViewById<TextView>(R.id.countdown)
+        val countdownCircle = findViewById<ProgressBar>(R.id.countdownCircle)
+        val btnAccept = findViewById<Button>(R.id.btnAccept)
+        val btnReject = findViewById<Button>(R.id.btnReject)
+
+        // Start 30-second countdown timer
+        countdownHandler = Handler(Looper.getMainLooper())
+        countdownRunnable = object : Runnable {
+            override fun run() {
+                if (secondsLeft > 0) {
+                    countdownText.text = "${secondsLeft}s"
+                    countdownCircle.progress = secondsLeft
+                    
+                    // Change countdown box color based on time remaining
+                    val bgColor = when {
+                        secondsLeft > 15 -> "#22C55E" // Green
+                        secondsLeft > 10 -> "#F59E0B" // Orange
+                        else -> "#EF4444" // Red
+                    }
+                    countdownText.parent?.let { parent ->
+                        if (parent is android.view.View) {
+                            parent.setBackgroundColor(Color.parseColor(bgColor))
+                        }
+                    }
+                    
+                    Log.d("BookingAlert", "⏱️ Countdown: ${secondsLeft}s")
+                    secondsLeft--
+                    countdownHandler?.postDelayed(this, 1000)
+                } else {
+                    Log.d("BookingAlert", "⏱️ Countdown finished - auto closing")
+                    Toast.makeText(this@BookingAlertActivity, "Booking timed out", Toast.LENGTH_SHORT).show()
+                    finish()
+                }
             }
         }
-    }
+        countdownHandler?.post(countdownRunnable)
 
-    private fun setupButtons() {
         btnAccept.setOnClickListener {
-            Log.d(TAG, "Accept button clicked")
-            stopAlerts()
-            handleAccept()
+            Log.d("BookingAlert", "✅ Accept button clicked")
+            stopAlertSound()
+            stopVibration()
+            countdownHandler?.removeCallbacks(countdownRunnable)
+            
+            if (bookingId.isBlank()) {
+                Toast.makeText(this, "No booking ID", Toast.LENGTH_SHORT).show()
+                finish()
+                return@setOnClickListener
+            }
+            
+            // Disable buttons to prevent double-click
+            btnAccept.isEnabled = false
+            btnReject.isEnabled = false
+            
+            // Call the API to accept the booking
+            updateBooking(bookingId, "accepted")
         }
 
         btnReject.setOnClickListener {
-            Log.d(TAG, "Reject button clicked")
-            stopAlerts()
-            handleReject()
+            Log.d("BookingAlert", "❌ Reject button clicked")
+            stopAlertSound()
+            stopVibration()
+            countdownHandler?.removeCallbacks(countdownRunnable)
+            
+            // Disable buttons to prevent double-click
+            btnAccept.isEnabled = false
+            btnReject.isEnabled = false
+            
+            // Call the API to reject the booking
+            updateBooking(bookingId, "rejected")
         }
     }
 
-    private fun handleAccept() {
-        setButtonsEnabled(false)
-        loadingIndicator.visibility = View.VISIBLE
-
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val jwt = getJWT()
-                if (jwt.isNullOrBlank()) {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(this@BookingAlertActivity, "Not authenticated", Toast.LENGTH_SHORT).show()
-                        finish()
-                    }
-                    return@launch
-                }
-
-                val url = URL("$SUPABASE_URL/functions/v1/accept-booking")
-                val conn = url.openConnection() as HttpURLConnection
-                conn.requestMethod = "POST"
-                conn.setRequestProperty("Content-Type", "application/json")
-                conn.setRequestProperty("Authorization", "Bearer $jwt")
-                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                conn.doOutput = true
-
-                val jsonBody = JSONObject().apply {
-                    put("booking_id", bookingId)
-                }
-                
-                conn.outputStream.use { it.write(jsonBody.toString().toByteArray()) }
-
-                val responseCode = conn.responseCode
-                Log.d(TAG, "Accept response code: $responseCode")
-
-                withContext(Dispatchers.Main) {
-                    if (responseCode == 200) {
-                        Toast.makeText(this@BookingAlertActivity, "Booking accepted!", Toast.LENGTH_SHORT).show()
-                        finish()
-                    } else {
-                        val errorMsg = conn.errorStream?.bufferedReader()?.readText() ?: "Unknown error"
-                        Log.e(TAG, "Accept failed: $errorMsg")
-                        Toast.makeText(this@BookingAlertActivity, "Failed to accept", Toast.LENGTH_SHORT).show()
-                        setButtonsEnabled(true)
-                        loadingIndicator.visibility = View.GONE
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Accept error", e)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@BookingAlertActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                    setButtonsEnabled(true)
-                    loadingIndicator.visibility = View.GONE
-                }
-            }
-        }
-    }
-
-    private fun handleReject() {
-        setButtonsEnabled(false)
-        loadingIndicator.visibility = View.VISIBLE
-
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val jwt = getJWT()
-                if (jwt.isNullOrBlank()) {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(this@BookingAlertActivity, "Not authenticated", Toast.LENGTH_SHORT).show()
-                        finish()
-                    }
-                    return@launch
-                }
-
-                val url = URL("$SUPABASE_URL/functions/v1/reassign-booking")
-                val conn = url.openConnection() as HttpURLConnection
-                conn.requestMethod = "POST"
-                conn.setRequestProperty("Content-Type", "application/json")
-                conn.setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
-                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                conn.doOutput = true
-
-                val jsonBody = JSONObject().apply {
-                    put("booking_id", bookingId)
-                    put("reject_reason", "worker_rejected")
-                }
-                
-                conn.outputStream.use { it.write(jsonBody.toString().toByteArray()) }
-
-                val responseCode = conn.responseCode
-                Log.d(TAG, "Reject response code: $responseCode")
-
-                withContext(Dispatchers.Main) {
-                    if (responseCode == 200) {
-                        Toast.makeText(this@BookingAlertActivity, "Booking rejected", Toast.LENGTH_SHORT).show()
-                        finish()
-                    } else {
-                        val errorMsg = conn.errorStream?.bufferedReader()?.readText() ?: "Unknown error"
-                        Log.e(TAG, "Reject failed: $errorMsg")
-                        Toast.makeText(this@BookingAlertActivity, "Failed to reject", Toast.LENGTH_SHORT).show()
-                        setButtonsEnabled(true)
-                        loadingIndicator.visibility = View.GONE
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Reject error", e)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@BookingAlertActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                    setButtonsEnabled(true)
-                    loadingIndicator.visibility = View.GONE
-                }
-            }
-        }
-    }
-
-    private fun handleTimeout() {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val url = URL("$SUPABASE_URL/functions/v1/reassign-booking")
-                val conn = url.openConnection() as HttpURLConnection
-                conn.requestMethod = "POST"
-                conn.setRequestProperty("Content-Type", "application/json")
-                conn.setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
-                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                conn.doOutput = true
-
-                val jsonBody = JSONObject().apply {
-                    put("booking_id", bookingId)
-                    put("reject_reason", "timeout")
-                }
-                
-                conn.outputStream.use { it.write(jsonBody.toString().toByteArray()) }
-
-                Log.d(TAG, "Timeout reassign response: ${conn.responseCode}")
-            } catch (e: Exception) {
-                Log.e(TAG, "Timeout reassign error", e)
-            }
-        }
-        finish()
-    }
-
-    private fun setButtonsEnabled(enabled: Boolean) {
-        btnAccept.isEnabled = enabled
-        btnReject.isEnabled = enabled
-    }
-
-    private fun getJWT(): String? {
-        val prefs = getSharedPreferences("supabase_auth", MODE_PRIVATE)
-        return prefs.getString("access_token", null)
+    override fun onDestroy() {
+        countdownHandler?.removeCallbacks(countdownRunnable)
+        stopAlertSound()
+        stopVibration()
+        super.onDestroy()
     }
 
     private fun playAlertSound() {
         try {
+            // Stop any existing sound
+            stopAlertSound()
+            
+            // Use the custom loud ringtone from raw resources
             mediaPlayer = MediaPlayer().apply {
-                setDataSource(this@BookingAlertActivity, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM))
                 setAudioAttributes(
                     AudioAttributes.Builder()
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                         .setUsage(AudioAttributes.USAGE_ALARM)
                         .build()
                 )
+                setDataSource(
+                    this@BookingAlertActivity,
+                    android.net.Uri.parse("android.resource://${packageName}/${R.raw.new_loud_ringtone}")
+                )
                 isLooping = true
+                setVolume(1.0f, 1.0f)
                 prepare()
                 start()
             }
-            Log.d(TAG, "Alert sound playing")
+            
+            Log.d("BookingAlert", "🔊 Custom alert sound started")
         } catch (e: Exception) {
-            Log.e(TAG, "Error playing alert sound", e)
+            Log.e("BookingAlert", "❌ Failed to play custom alert sound", e)
         }
     }
 
+    private fun stopAlertSound() {
+        try {
+            mediaPlayer?.apply {
+                if (isPlaying) {
+                    stop()
+                }
+                release()
+            }
+            mediaPlayer = null
+            Log.d("BookingAlert", "🔇 Alert sound stopped")
+        } catch (e: Exception) {
+            Log.e("BookingAlert", "❌ Failed to stop alert sound", e)
+        }
+    }
+    
     private fun startVibration() {
         try {
-            vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
-            val pattern = longArrayOf(0, 500, 200, 500)
+            vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
             
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator?.vibrate(VibrationEffect.createWaveform(pattern, 0))
-            } else {
-                vibrator?.vibrate(pattern, 0)
+            // Create a strong vibration pattern: [delay, vibrate, pause, vibrate, ...]
+            // Pattern: wait 0ms, vibrate 1000ms, pause 500ms, repeat
+            val pattern = longArrayOf(0, 1000, 500, 1000, 500)
+            
+            vibrator?.let {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    // For Android O and above, use VibrationEffect
+                    val vibrationEffect = VibrationEffect.createWaveform(pattern, 0) // 0 = repeat from start
+                    it.vibrate(vibrationEffect)
+                } else {
+                    // For older versions
+                    @Suppress("DEPRECATION")
+                    it.vibrate(pattern, 0)
+                }
+                Log.d("BookingAlert", "📳 Vibration started")
             }
-            Log.d(TAG, "Vibration started")
         } catch (e: Exception) {
-            Log.e(TAG, "Error starting vibration", e)
+            Log.e("BookingAlert", "❌ Failed to start vibration", e)
         }
     }
+    
+    private fun stopVibration() {
+        try {
+            vibrator?.cancel()
+            vibrator = null
+            Log.d("BookingAlert", "📳 Vibration stopped")
+        } catch (e: Exception) {
+            Log.e("BookingAlert", "❌ Failed to stop vibration", e)
+        }
+    }
+    
+    private fun updateBooking(bookingId: String, action: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Log.d("BookingAlert", "📤 Updating booking $bookingId with action: $action")
+                
+                // Get the stored JWT token
+                val jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE)
+                    .getString("supabase_jwt", null)
+                
+                Log.d("BookingAlert", "🔑 JWT token present: ${jwt != null}")
+                
+                if (jwt == null || jwt.isEmpty()) {
+                    Log.w("BookingAlert", "⚠️ No Supabase JWT - cannot proceed")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@BookingAlertActivity,
+                            "❌ Not authenticated - Please log in",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        finish()
+                    }
+                    return@launch
+                }
+                
+                if (action == "accepted") {
+                    // Call try_accept_booking RPC
+                    val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/try_accept_booking")
+                    val connection = rpcUrl.openConnection() as HttpURLConnection
+                    
+                    connection.requestMethod = "POST"
+                    connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+                    connection.setRequestProperty("Authorization", "Bearer $jwt")
+                    connection.setRequestProperty("Content-Type", "application/json")
+                    connection.doOutput = true
 
-    private fun stopAlerts() {
-        countdownTimer?.cancel()
-        
-        mediaPlayer?.let {
-            if (it.isPlaying) {
-                it.stop()
+                    val jsonPayload = """{"p_booking_id":"$bookingId"}"""
+                    connection.outputStream.use { os ->
+                        os.write(jsonPayload.toByteArray())
+                    }
+
+                    val responseCode = connection.responseCode
+                    Log.d("BookingAlert", "📡 RPC Response Code: $responseCode")
+                    
+                    val responseBody = if (responseCode in 200..299) {
+                        connection.inputStream.bufferedReader().use { it.readText() }
+                    } else {
+                        connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
+                    }
+                    connection.disconnect()
+
+                    Log.d("BookingAlert", "📄 RPC Response Body: $responseBody")
+
+                    withContext(Dispatchers.Main) {
+                        if (responseCode in 200..299) {
+                            try {
+                                val jsonResponse = JSONObject(responseBody)
+                                val success = jsonResponse.optBoolean("success", false)
+                                
+                                if (success) {
+                                    Toast.makeText(
+                                        this@BookingAlertActivity,
+                                        "✅ Booking accepted successfully!",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    Log.d("BookingAlert", "✅ Booking accepted successfully")
+                                } else {
+                                    val message = jsonResponse.optString("message", "Already taken")
+                                    Toast.makeText(
+                                        this@BookingAlertActivity,
+                                        "⚠️ $message",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                    Log.w("BookingAlert", "⚠️ Accept failed: $message")
+                                }
+                            } catch (e: Exception) {
+                                Log.e("BookingAlert", "❌ Error parsing response", e)
+                                Toast.makeText(
+                                    this@BookingAlertActivity,
+                                    "✅ Booking accepted",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        } else {
+                            Toast.makeText(
+                                this@BookingAlertActivity,
+                                "❌ Failed to accept booking (Code: $responseCode)",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            Log.e("BookingAlert", "❌ HTTP Error: $responseCode - $responseBody")
+                        }
+                        finish()
+                    }
+                } else if (action == "rejected") {
+                    // Update booking to cancelled status
+                    val updateUrl = URL("$SUPABASE_URL/rest/v1/bookings?id=eq.$bookingId")
+                    val connection = updateUrl.openConnection() as HttpURLConnection
+                    
+                    connection.requestMethod = "PATCH"
+                    connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+                    connection.setRequestProperty("Authorization", "Bearer $jwt")
+                    connection.setRequestProperty("Content-Type", "application/json")
+                    connection.setRequestProperty("Prefer", "return=minimal")
+                    connection.doOutput = true
+
+                    val jsonPayload = """{"status":"cancelled"}"""
+                    connection.outputStream.use { os ->
+                        os.write(jsonPayload.toByteArray())
+                    }
+
+                    val responseCode = connection.responseCode
+                    Log.d("BookingAlert", "📡 Update Response Code: $responseCode")
+                    connection.disconnect()
+
+                    withContext(Dispatchers.Main) {
+                        if (responseCode in 200..299) {
+                            Toast.makeText(
+                                this@BookingAlertActivity,
+                                "❌ Booking rejected",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            Log.d("BookingAlert", "❌ Booking rejected successfully")
+                        } else {
+                            Toast.makeText(
+                                this@BookingAlertActivity,
+                                "⚠️ Failed to reject booking",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            Log.e("BookingAlert", "❌ Reject failed with code: $responseCode")
+                        }
+                        finish()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("BookingAlert", "❌ Error updating booking", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@BookingAlertActivity,
+                        "❌ Network error: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    finish()
+                }
             }
-            it.release()
         }
-        mediaPlayer = null
-
-        vibrator?.cancel()
-        vibrator = null
-        
-        Log.d(TAG, "Alerts stopped")
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        stopAlerts()
-        handler.removeCallbacksAndMessages(null)
     }
 }

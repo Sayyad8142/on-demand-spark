@@ -100,16 +100,14 @@ export class NativeOverlayBridge implements OverlayBridge {
 
       console.log('🚀 Showing booking overlay with payload:', payload);
       
-      // Transform payload to match new data contract
+      // Transform payload to match OverlayPlugin expectations (JSON string format)
       const bookingData = {
-        type: "new_booking",
-        booking_id: payload.bookingId,
-        service_type: payload.service,
-        flat_number: payload.location,
-        price_inr: String(payload.price),
-        notes: "",
+        id: payload.bookingId,
+        cust_name: payload.customer,
         community: payload.location,
-        image_url: ""
+        service_type: payload.service,
+        flat_no: payload.location,
+        price_inr: payload.price
       };
 
       const bookingJson = JSON.stringify(bookingData);

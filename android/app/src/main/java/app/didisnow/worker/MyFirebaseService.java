@@ -31,24 +31,38 @@ public class MyFirebaseService extends FirebaseMessagingService {
     
     try {
       if ("BOOKING_ALERT".equals(type)) {
-        Log.d(TAG, "🚨 BOOKING_ALERT detected! Starting BookingAlertActivity...");
+        Log.d(TAG, "🚨 BOOKING_ALERT detected! Starting BookingOverlayService...");
         
-        // Extract booking data using new unified keys
-        String bookingId = message.getData().get("booking_id");
-        String serviceType = message.getData().get("service_type");
-        String flatNumber = message.getData().get("flat_number");
-        String priceInr = message.getData().get("price_inr");
-        String notes = message.getData().get("notes");
+        // Get booking data - try both field names for compatibility
+        String bookingId = message.getData().get("bookingId");
+        if (bookingId == null || bookingId.isEmpty()) {
+          bookingId = message.getData().get("booking_id");
+        }
+        
+        String customer = message.getData().get("customer");
         String community = message.getData().get("community");
-        String imageUrl = message.getData().get("image_url");
+        String serviceType = message.getData().get("serviceType");
+        if (serviceType == null || serviceType.isEmpty()) {
+          serviceType = message.getData().get("service_type");
+        }
+        String location = message.getData().get("location");
+        String priceStr = message.getData().get("price");
+        int price = 0;
+        try {
+          if (priceStr != null && !priceStr.isEmpty()) {
+            price = Integer.parseInt(priceStr);
+          }
+        } catch (NumberFormatException e) {
+          Log.w(TAG, "⚠️ Failed to parse price: " + priceStr, e);
+        }
         
         Log.d(TAG, "📋 Booking details:");
         Log.d(TAG, "  ID: " + bookingId);
-        Log.d(TAG, "  Service: " + serviceType);
-        Log.d(TAG, "  Flat: " + flatNumber);
-        Log.d(TAG, "  Price: ₹" + priceInr);
+        Log.d(TAG, "  Customer: " + customer);
         Log.d(TAG, "  Community: " + community);
-        Log.d(TAG, "  Notes: " + notes);
+        Log.d(TAG, "  Service: " + serviceType);
+        Log.d(TAG, "  Location: " + location);
+        Log.d(TAG, "  Price: ₹" + price);
         
         // Validate critical data
         if (bookingId == null || bookingId.isEmpty()) {
@@ -68,24 +82,51 @@ public class MyFirebaseService extends FirebaseMessagingService {
           }
         }
         
-        // Start BookingAlertActivity directly with unified keys
-        Intent activityIntent = new Intent(this, BookingAlertActivity.class);
-        activityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        activityIntent.putExtra("booking_id", bookingId != null ? bookingId : "");
-        activityIntent.putExtra("service_type", serviceType != null ? serviceType : "");
-        activityIntent.putExtra("flat_number", flatNumber != null ? flatNumber : "");
-        activityIntent.putExtra("price_inr", priceInr != null ? priceInr : "0");
-        activityIntent.putExtra("notes", notes != null ? notes : "");
-        activityIntent.putExtra("community", community != null ? community : "Prestige High Fields");
-        activityIntent.putExtra("image_url", imageUrl != null ? imageUrl : "");
+        // Start BookingOverlayService to show system overlay
+        Intent serviceIntent = new Intent(this, BookingOverlayService.class);
+        serviceIntent.putExtra("mode", "show");
+        serviceIntent.putExtra("booking_id", bookingId);
+        serviceIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
+        serviceIntent.putExtra("community", community != null ? community : "");
+        serviceIntent.putExtra("service_type", serviceType != null ? serviceType : "Service");
+        serviceIntent.putExtra("flat_no", location != null ? location : "");
+        serviceIntent.putExtra("price_inr", price);
         
-        Log.d(TAG, "🚀 Starting BookingAlertActivity...");
+        // Try to get access token from SharedPreferences to pass via Intent
+        try {
+          String sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
+              .getString("didi_session", null);
+          if (sessionJson != null && !sessionJson.isEmpty()) {
+            org.json.JSONObject session = new org.json.JSONObject(sessionJson);
+            String accessToken = session.optString("accessToken", "");
+            if (!accessToken.isEmpty()) {
+              serviceIntent.putExtra("ACCESS_TOKEN", accessToken);
+              Log.d(TAG, "✅ Access token loaded and will be passed to overlay service");
+            } else {
+              Log.w(TAG, "⚠️ No accessToken in session JSON");
+            }
+          } else {
+            Log.w(TAG, "⚠️ No session found in SharedPreferences");
+          }
+        } catch (Exception e) {
+          Log.e(TAG, "❌ Failed to read session for token", e);
+        }
+        
+        Log.d(TAG, "🚀 Starting BookingOverlayService with mode=show...");
         
         try {
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            androidx.core.content.ContextCompat.startForegroundService(this, serviceIntent);
+          } else {
+            startService(serviceIntent);
+          }
+          Log.d(TAG, "✅ BookingOverlayService started successfully");
+        } catch (Exception se) {
+          Log.e(TAG, "❌ startForegroundService failed, falling back to BookingAlertActivity", se);
+          Intent activityIntent = new Intent(this, BookingAlertActivity.class)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+          activityIntent.putExtras(serviceIntent);
           startActivity(activityIntent);
-          Log.d(TAG, "✅ BookingAlertActivity started successfully");
-        } catch (Exception e) {
-          Log.e(TAG, "❌ Failed to start BookingAlertActivity", e);
         }
       } else {
         Log.d(TAG, "⏭️ Not a BOOKING_ALERT, type: " + type + " - skipping");

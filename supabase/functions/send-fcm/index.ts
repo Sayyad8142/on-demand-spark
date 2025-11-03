@@ -112,18 +112,24 @@ Deno.serve(async (req) => {
         try {
           const isBookingAlert = data?.type === "BOOKING_ALERT";
           
-          // Pass through all data fields as-is for booking alerts
-          const baseData = isBookingAlert ? {
-            ...data,
-            title,
-            body,
-          } : {
+          const baseData = {
+            ...(data || {}),
             type: data?.type || "",
+            bookingId: data?.bookingId || data?.booking_id || "",
+            customer: data?.customer || "",
+            community: data?.community || "",
+            serviceType: data?.serviceType || data?.service_type || "",
+            location: data?.location || "",
+            price: data?.price || "0",
             title,
             body,
           };
           
-          console.log(`📦 FCM payload for ${user_id}:`, baseData);
+          console.log(`📦 FCM payload for ${user_id}:`, { 
+            type: baseData.type, 
+            bookingId: baseData.bookingId,
+            price: baseData.price 
+          });
 
           const message = isBookingAlert
             ? {
