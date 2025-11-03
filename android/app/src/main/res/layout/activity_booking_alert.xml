@@ -2,16 +2,16 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5"
-    android:padding="16dp">
+    android:background="#F9FAFB"
+    android:padding="20dp">
 
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
-        android:layout_margin="0dp"
-        android:elevation="8dp"
-        android:radius="16dp">
+        android:elevation="4dp"
+        app:cardCornerRadius="12dp"
+        xmlns:app="http://schemas.android.com/apk/res-auto">
 
         <LinearLayout
             android:orientation="vertical"
@@ -21,16 +21,17 @@
 
             <!-- Header Section -->
             <RelativeLayout
-                android:padding="20dp"
+                android:padding="24dp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
                 <TextView
                     android:id="@+id/alertTitle"
                     android:text="New Booking Request"
-                    android:textSize="20sp"
+                    android:textSize="24sp"
                     android:textStyle="bold"
-                    android:textColor="#1A1A1A"
+                    android:textColor="#111827"
+                    android:fontFamily="sans-serif-medium"
                     android:layout_alignParentStart="true"
                     android:layout_centerVertical="true"
                     android:layout_width="wrap_content"
@@ -66,7 +67,7 @@
             </RelativeLayout>
 
             <View
-                android:background="#E5E5E5"
+                android:background="#E5E7EB"
                 android:layout_width="match_parent"
                 android:layout_height="1dp" />
 
@@ -74,7 +75,7 @@
             <ImageView
                 android:id="@+id/alertServiceImage"
                 android:layout_width="match_parent"
-                android:layout_height="200dp"
+                android:layout_height="220dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/maid_dishes"
                 android:contentDescription="Service Image" />
@@ -83,11 +84,12 @@
             <TextView
                 android:id="@+id/alertService"
                 android:text="Maid Service"
-                android:textSize="22sp"
+                android:textSize="28sp"
                 android:textStyle="bold"
-                android:textColor="#1A1A1A"
-                android:paddingHorizontal="20dp"
-                android:layout_marginTop="16dp"
+                android:textColor="#111827"
+                android:fontFamily="sans-serif-medium"
+                android:paddingHorizontal="24dp"
+                android:layout_marginTop="20dp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
 
@@ -95,140 +97,169 @@
             <TextView
                 android:id="@+id/alertServiceSubtitle"
                 android:text="Includes: Dishes &amp; Jhaadu/Pocha"
-                android:textSize="14sp"
-                android:textColor="#666666"
-                android:paddingHorizontal="20dp"
-                android:layout_marginTop="4dp"
-                android:layout_marginBottom="16dp"
+                android:textSize="15sp"
+                android:textColor="#6B7280"
+                android:paddingHorizontal="24dp"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="20dp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
 
             <!-- Price and Tower Cards -->
             <LinearLayout
                 android:orientation="horizontal"
-                android:layout_marginHorizontal="20dp"
-                android:layout_marginBottom="12dp"
+                android:layout_marginHorizontal="24dp"
+                android:layout_marginBottom="16dp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
                 <!-- Price Card -->
-                <LinearLayout
-                    android:orientation="vertical"
-                    android:background="#F8F9FA"
-                    android:padding="16dp"
+                <androidx.cardview.widget.CardView
                     android:layout_weight="1"
-                    android:layout_marginEnd="6dp"
+                    android:layout_marginEnd="8dp"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content">
+                    android:layout_height="wrap_content"
+                    app:cardCornerRadius="8dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="#F3F4F6"
+                    xmlns:app="http://schemas.android.com/apk/res-auto">
 
-                    <TextView
-                        android:text="Price"
-                        android:textSize="12sp"
-                        android:textColor="#6B7280"
-                        android:layout_marginBottom="4dp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
+                    <LinearLayout
+                        android:orientation="vertical"
+                        android:padding="20dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
 
-                    <TextView
-                        android:id="@+id/alertPrice"
-                        android:text="₹200"
-                        android:textSize="28sp"
-                        android:textStyle="bold"
-                        android:textColor="#1F2937"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-                </LinearLayout>
+                        <TextView
+                            android:text="Price"
+                            android:textSize="13sp"
+                            android:textColor="#9CA3AF"
+                            android:layout_marginBottom="6dp"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+
+                        <TextView
+                            android:id="@+id/alertPrice"
+                            android:text="₹200"
+                            android:textSize="32sp"
+                            android:textStyle="bold"
+                            android:textColor="#111827"
+                            android:fontFamily="sans-serif-medium"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
 
                 <!-- Tower Card -->
-                <LinearLayout
-                    android:orientation="vertical"
-                    android:background="#F8F9FA"
-                    android:padding="16dp"
+                <androidx.cardview.widget.CardView
                     android:layout_weight="1"
-                    android:layout_marginStart="6dp"
+                    android:layout_marginStart="8dp"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content">
+                    android:layout_height="wrap_content"
+                    app:cardCornerRadius="8dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="#F3F4F6">
 
-                    <TextView
-                        android:text="Tower No."
-                        android:textSize="12sp"
-                        android:textColor="#6B7280"
-                        android:layout_marginBottom="4dp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
+                    <LinearLayout
+                        android:orientation="vertical"
+                        android:padding="20dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
 
-                    <TextView
-                        android:id="@+id/alertTower"
-                        android:text="9"
-                        android:textSize="28sp"
-                        android:textStyle="bold"
-                        android:textColor="#1F2937"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-                </LinearLayout>
+                        <TextView
+                            android:text="Tower No."
+                            android:textSize="13sp"
+                            android:textColor="#9CA3AF"
+                            android:layout_marginBottom="6dp"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+
+                        <TextView
+                            android:id="@+id/alertTower"
+                            android:text="9"
+                            android:textSize="32sp"
+                            android:textStyle="bold"
+                            android:textColor="#111827"
+                            android:fontFamily="sans-serif-medium"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
             </LinearLayout>
 
             <!-- Community Card -->
-            <LinearLayout
-                android:orientation="vertical"
-                android:background="#F8F9FA"
-                android:padding="14dp"
-                android:layout_marginHorizontal="20dp"
-                android:layout_marginBottom="20dp"
+            <androidx.cardview.widget.CardView
+                android:layout_marginHorizontal="24dp"
+                android:layout_marginBottom="24dp"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#F3F4F6">
 
-                <TextView
-                    android:text="Community"
-                    android:textSize="12sp"
-                    android:textColor="#6B7280"
-                    android:layout_marginBottom="4dp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:padding="20dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
 
-                <TextView
-                    android:id="@+id/alertCommunity"
-                    android:text="prestige-high-fields"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="#1F2937"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-            </LinearLayout>
+                    <TextView
+                        android:text="Community"
+                        android:textSize="13sp"
+                        android:textColor="#9CA3AF"
+                        android:layout_marginBottom="6dp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <TextView
+                        android:id="@+id/alertCommunity"
+                        android:text="prestige-high-fields"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="#111827"
+                        android:fontFamily="sans-serif-medium"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
 
             <!-- Action Buttons -->
             <LinearLayout
                 android:orientation="horizontal"
-                android:paddingHorizontal="20dp"
-                android:paddingBottom="20dp"
+                android:paddingHorizontal="24dp"
+                android:paddingBottom="24dp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
                 <Button
                     android:id="@+id/btnReject"
                     android:text="REJECT"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textStyle="bold"
                     android:textColor="#DC2626"
+                    android:fontFamily="sans-serif-medium"
                     android:background="@drawable/btn_outline"
                     android:layout_weight="1"
-                    android:layout_marginEnd="8dp"
-                    android:paddingVertical="16dp"
+                    android:layout_marginEnd="10dp"
+                    android:paddingVertical="18dp"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content" />
+                    android:layout_height="wrap_content"
+                    android:stateListAnimator="@null" />
 
                 <Button
                     android:id="@+id/btnAccept"
                     android:text="ACCEPT"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textStyle="bold"
                     android:textColor="#FFFFFF"
+                    android:fontFamily="sans-serif-medium"
                     android:backgroundTint="#22C55E"
                     android:layout_weight="1"
-                    android:layout_marginStart="8dp"
-                    android:paddingVertical="16dp"
+                    android:layout_marginStart="10dp"
+                    android:paddingVertical="18dp"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content" />
+                    android:layout_height="wrap_content"
+                    android:stateListAnimator="@null" />
             </LinearLayout>
 
             <ProgressBar
