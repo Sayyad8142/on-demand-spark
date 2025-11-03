@@ -267,6 +267,7 @@ class BookingAlertActivity : AppCompatActivity() {
                 conn.requestMethod = "POST"
                 conn.setRequestProperty("Content-Type", "application/json")
                 conn.setRequestProperty("Authorization", "Bearer $jwt")
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY)
                 conn.doOutput = true
 
                 val jsonBody = JSONObject().apply {
@@ -321,6 +322,7 @@ class BookingAlertActivity : AppCompatActivity() {
                 conn.requestMethod = "POST"
                 conn.setRequestProperty("Content-Type", "application/json")
                 conn.setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY)
                 conn.doOutput = true
 
                 val jsonBody = JSONObject().apply {
@@ -364,6 +366,7 @@ class BookingAlertActivity : AppCompatActivity() {
                 conn.requestMethod = "POST"
                 conn.setRequestProperty("Content-Type", "application/json")
                 conn.setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY)
                 conn.doOutput = true
 
                 val jsonBody = JSONObject().apply {
