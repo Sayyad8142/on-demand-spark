@@ -20,11 +20,11 @@
             android:layout_height="wrap_content"
             android:elevation="8dp">
 
-            <!-- Service Image -->
+            <!-- Service Image - Smaller -->
             <ImageView
                 android:id="@+id/serviceImage"
                 android:layout_width="match_parent"
-                android:layout_height="180dp"
+                android:layout_height="120dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/service_maid"
                 android:contentDescription="Service Image"/>
@@ -52,37 +52,33 @@
                     android:id="@+id/subtitle"
                     android:text="MAID"
                     android:textColor="#3B82F6"
-                    android:textSize="28sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:gravity="center"
                     android:layout_marginTop="8dp"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"/>
 
-                <!-- Price Section -->
+                <!-- Countdown Timer - Now visible and highlighted -->
+                <TextView
+                    android:id="@+id/countdown"
+                    android:text="30s"
+                    android:textColor="#DC2626"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:background="#FEE2E2"
+                    android:padding="10dp"
+                    android:gravity="center"
+                    android:layout_marginTop="12dp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:visibility="visible"/>
+
+                <!-- Price Section - Smaller -->
                 <LinearLayout
                     android:orientation="vertical"
                     android:background="#D1FAE5"
-                    android:padding="24dp"
-                    android:gravity="center"
-                    android:layout_marginTop="24dp"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
-
-                    <TextView
-                        android:id="@+id/price"
-                        android:text="₹200"
-                        android:textColor="#10B981"
-                        android:textSize="48sp"
-                        android:textStyle="bold"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
-                </LinearLayout>
-
-                <!-- Community Section -->
-                <LinearLayout
-                    android:orientation="horizontal"
-                    android:background="#F1F5F9"
                     android:padding="16dp"
                     android:gravity="center"
                     android:layout_marginTop="16dp"
@@ -90,21 +86,21 @@
                     android:layout_height="wrap_content">
 
                     <TextView
-                        android:text="📍"
-                        android:textSize="20sp"
-                        android:layout_marginEnd="8dp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
-
-                    <TextView
-                        android:id="@+id/community"
-                        android:text="prestige-high-fields"
-                        android:textColor="#1E293B"
-                        android:textSize="16sp"
+                        android:id="@+id/price"
+                        android:text="₹200"
+                        android:textColor="#059669"
+                        android:textSize="32sp"
                         android:textStyle="bold"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"/>
                 </LinearLayout>
+
+                <!-- Community Section - Hidden -->
+                <TextView
+                    android:id="@+id/community"
+                    android:visibility="gone"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"/>
 
                 <!-- Hidden fields for data -->
                 <TextView
@@ -119,12 +115,6 @@
                     android:layout_width="0dp"
                     android:layout_height="0dp"/>
 
-                <TextView
-                    android:id="@+id/countdown"
-                    android:visibility="gone"
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"/>
-
                 <!-- Action Buttons -->
                 <LinearLayout
                     android:orientation="horizontal"
@@ -135,8 +125,8 @@
                     <Button
                         android:id="@+id/btnReject"
                         android:text="REJECT"
-                        android:textColor="#EF4444"
-                        android:background="@drawable/btn_outline"
+                        android:textColor="@android:color/white"
+                        android:backgroundTint="#EF4444"
                         android:layout_weight="1"
                         android:layout_marginEnd="8dp"
                         android:paddingVertical="16dp"
