@@ -108,14 +108,14 @@ Deno.serve(async (req) => {
         title: "New Booking Alert!",
         body: `${b.service_type.replace('_', ' ')} in ${b.community}. Tap to accept!`,
         data: { 
-          type: "BOOKING_ALERT",
-          bookingId: booking_id, 
+          type: "new_booking",
           booking_id: booking_id,
-          customer: b.cust_name || "New Customer",
+          service_type: b.service_type,
+          flat_number: b.flat_no || "",
+          price_inr: String(b.price_inr || 0),
+          notes: "",
           community: b.community,
-          serviceType: b.service_type,
-          location: b.flat_no || "",
-          price: String(b.price_inr || 0)
+          image_url: ""
         },
       }),
     });
