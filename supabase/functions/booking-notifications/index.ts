@@ -104,11 +104,11 @@ Deno.serve(async (req) => {
         "Authorization": `Bearer ${ANON_KEY}`,
       },
       body: JSON.stringify({
-        workerIds: userIds, // Now using auth user IDs for FCM token lookup
+        workerIds: userIds,
         title: "New Booking Alert!",
         body: `${b.service_type.replace('_', ' ')} in ${b.community}. Tap to accept!`,
         data: { 
-          type: "new_booking",
+          type: "BOOKING_ALERT",
           booking_id: booking_id,
           service_type: b.service_type,
           flat_number: b.flat_no || "",
