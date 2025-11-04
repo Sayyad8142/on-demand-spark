@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Calendar, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { MapPin, Calendar, CheckCircle, XCircle, Loader2, User } from 'lucide-react';
 import { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { tryAccept } from '@/lib/bookingActions';
@@ -76,11 +76,31 @@ export function BookingCard({
   return (
     <Card className="p-4 shadow-card hover:shadow-pink transition-shadow">
       <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <h3 className="font-semibold text-lg">{booking.cust_name}</h3>
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <MapPin className="w-3 h-3" />
-            {booking.community} • {booking.flat_no}
+        <div className="flex items-start gap-3 flex-1">
+          {/* Worker Photo */}
+          {booking.worker_name && (
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md border-2 border-white dark:border-gray-800 overflow-hidden flex-shrink-0">
+              {booking.worker_photo_url ? (
+                <img 
+                  src={booking.worker_photo_url} 
+                  alt={booking.worker_name} 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User className="w-6 h-6 text-primary-foreground" />
+              )}
+            </div>
+          )}
+          
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-lg">{booking.cust_name}</h3>
+            {booking.worker_name && (
+              <p className="text-xs text-muted-foreground font-medium">Worker: {booking.worker_name}</p>
+            )}
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <MapPin className="w-3 h-3" />
+              {booking.community} • {booking.flat_no}
+            </div>
           </div>
         </div>
         <Badge className={statusColorFn(booking.status)}>
