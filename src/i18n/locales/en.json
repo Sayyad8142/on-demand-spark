@@ -59,6 +59,7 @@
     "totalEarned": "Total Earned",
     "completedJobs": "Completed Jobs",
     "rating": "Rating",
+    "reviews": "Customer Reviews",
     "status": {
       "active": "Active",
       "inactive": "Inactive",
