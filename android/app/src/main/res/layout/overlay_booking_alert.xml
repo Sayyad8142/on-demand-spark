@@ -2,29 +2,27 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F8FAFC"
+    android:background="#FFFFFF"
     android:fillViewport="true">
 
     <LinearLayout
         android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="16dp"
-        android:gravity="center">
+        android:layout_height="wrap_content">
 
-        <!-- Card container -->
+        <!-- Card container with elevation -->
         <LinearLayout
             android:orientation="vertical"
             android:background="@android:color/white"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:elevation="8dp">
+            android:elevation="12dp">
 
-            <!-- Service Image -->
+            <!-- Service Image with rounded corners effect -->
             <ImageView
                 android:id="@+id/serviceImage"
                 android:layout_width="match_parent"
-                android:layout_height="180dp"
+                android:layout_height="240dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/service_maid"
                 android:contentDescription="Service Image"/>
@@ -32,7 +30,7 @@
             <!-- Content Section -->
             <LinearLayout
                 android:orientation="vertical"
-                android:padding="24dp"
+                android:padding="20dp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
@@ -41,14 +39,15 @@
                     android:orientation="horizontal"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical">
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp">
 
                     <!-- Title -->
                     <TextView
                         android:id="@+id/title"
                         android:text="New Booking"
                         android:textColor="#1E293B"
-                        android:textSize="24sp"
+                        android:textSize="32sp"
                         android:textStyle="bold"
                         android:layout_weight="1"
                         android:layout_width="0dp"
@@ -56,8 +55,8 @@
 
                     <!-- Countdown Timer with Circle -->
                     <RelativeLayout
-                        android:layout_width="56dp"
-                        android:layout_height="56dp">
+                        android:layout_width="64dp"
+                        android:layout_height="64dp">
 
                         <ProgressBar
                             android:id="@+id/countdownCircle"
@@ -73,7 +72,7 @@
                             android:id="@+id/countdown"
                             android:text="30s"
                             android:textColor="#22C55E"
-                            android:textSize="14sp"
+                            android:textSize="16sp"
                             android:textStyle="bold"
                             android:gravity="center"
                             android:layout_centerInParent="true"
@@ -82,63 +81,74 @@
                     </RelativeLayout>
                 </LinearLayout>
 
-                <!-- Service Type -->
+                <!-- Service Type (Centered, Large, Bold) -->
                 <TextView
                     android:id="@+id/subtitle"
-                    android:text="MAID"
+                    android:text="maid"
                     android:textColor="#3B82F6"
-                    android:textSize="28sp"
+                    android:textSize="48sp"
                     android:textStyle="bold"
                     android:gravity="center"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="20dp"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"/>
 
-                <!-- Price Section -->
-                <LinearLayout
-                    android:orientation="vertical"
-                    android:background="#D1FAE5"
-                    android:padding="24dp"
-                    android:gravity="center"
-                    android:layout_marginTop="24dp"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
-
-                    <TextView
-                        android:id="@+id/price"
-                        android:text="₹200"
-                        android:textColor="#10B981"
-                        android:textSize="48sp"
-                        android:textStyle="bold"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
-                </LinearLayout>
-
-                <!-- Tower Number Section -->
+                <!-- Price + Tower Row -->
                 <LinearLayout
                     android:orientation="horizontal"
-                    android:background="#F1F5F9"
-                    android:padding="16dp"
-                    android:gravity="center"
-                    android:layout_marginTop="16dp"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:gravity="center_vertical">
 
-                    <TextView
-                        android:text="🏢 Tower: "
-                        android:textColor="#64748B"
-                        android:textSize="16sp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
+                    <!-- Price Section (Left) -->
+                    <LinearLayout
+                        android:orientation="vertical"
+                        android:background="#D1FAE5"
+                        android:padding="20dp"
+                        android:gravity="center"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content">
 
-                    <TextView
-                        android:id="@+id/towerNo"
-                        android:text="1"
-                        android:textColor="#1E293B"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
+                        <TextView
+                            android:id="@+id/price"
+                            android:text="₹200"
+                            android:textColor="#10B981"
+                            android:textSize="42sp"
+                            android:textStyle="bold"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"/>
+                    </LinearLayout>
+
+                    <!-- Tower Number Section (Right) -->
+                    <LinearLayout
+                        android:orientation="horizontal"
+                        android:background="#F1F5F9"
+                        android:padding="20dp"
+                        android:gravity="center"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent">
+
+                        <TextView
+                            android:text="🏢 Tower: "
+                            android:textColor="#64748B"
+                            android:textSize="16sp"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"/>
+
+                        <TextView
+                            android:id="@+id/towerNo"
+                            android:text="9"
+                            android:textColor="#1E293B"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"/>
+                    </LinearLayout>
                 </LinearLayout>
 
                 <!-- Community Section -->
@@ -147,14 +157,13 @@
                     android:background="#F1F5F9"
                     android:padding="16dp"
                     android:gravity="center"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="24dp"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
                     <TextView
-                        android:text="📍"
-                        android:textSize="20sp"
-                        android:layout_marginEnd="8dp"
+                        android:text="📍 "
+                        android:textSize="18sp"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"/>
 
@@ -184,19 +193,20 @@
                 <!-- Action Buttons -->
                 <LinearLayout
                     android:orientation="horizontal"
-                    android:layout_marginTop="24dp"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp">
 
                     <Button
                         android:id="@+id/btnReject"
                         android:text="REJECT"
-                        android:textColor="#EF4444"
-                        android:background="@drawable/btn_outline"
+                        android:textColor="#DC2626"
+                        android:background="@drawable/btn_outline_red"
+                        android:elevation="4dp"
                         android:layout_weight="1"
                         android:layout_marginEnd="8dp"
-                        android:paddingVertical="16dp"
-                        android:textSize="16sp"
+                        android:paddingVertical="18dp"
+                        android:textSize="18sp"
                         android:textStyle="bold"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"/>
@@ -205,11 +215,12 @@
                         android:id="@+id/btnAccept"
                         android:text="ACCEPT"
                         android:textColor="@android:color/white"
-                        android:backgroundTint="#10B981"
+                        android:background="@drawable/btn_filled_green"
+                        android:elevation="4dp"
                         android:layout_weight="1"
                         android:layout_marginStart="8dp"
-                        android:paddingVertical="16dp"
-                        android:textSize="16sp"
+                        android:paddingVertical="18dp"
+                        android:textSize="18sp"
                         android:textStyle="bold"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"/>
