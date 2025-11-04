@@ -24,9 +24,9 @@ import {
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
 
 const SERVICES = [
-  { value: "maid", label: "Maid Service" },
-  { value: "cook", label: "Cook Service" },
-  { value: "bathroom_cleaning", label: "Bathroom Cleaning" }
+  { value: "maid", label: "auth.services.maid" },
+  { value: "cook", label: "auth.services.cook" },
+  { value: "bathroom_cleaning", label: "auth.services.bathroom_cleaning" }
 ];
 
 // SECURITY: Input validation schemas
@@ -404,26 +404,26 @@ export default function Auth() {
 
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">Worker Portal</CardTitle>
+          <CardTitle className="text-2xl text-center">{t('auth.title')}</CardTitle>
           <CardDescription className="text-center">
-            Sign in or create an account to get started
+            {t('auth.description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="signin" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              <TabsTrigger value="signin">{t('auth.signIn')}</TabsTrigger>
+              <TabsTrigger value="signup">{t('auth.signUp')}</TabsTrigger>
             </TabsList>
 
             {/* Sign In Tab */}
             <TabsContent value="signin" className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="signin-phone">Phone Number</Label>
+                <Label htmlFor="signin-phone">{t('auth.phoneLabel')}</Label>
                 <Input
                   id="signin-phone"
                   type="tel"
-                  placeholder="10-digit phone number"
+                  placeholder={t('auth.phonePlaceholder')}
                   value={signInPhone}
                   onChange={(e) => setSignInPhone(e.target.value)}
                   maxLength={10}
@@ -433,11 +433,11 @@ export default function Auth() {
 
               {otpSent && (
                 <div className="space-y-2">
-                  <Label htmlFor="signin-otp">OTP</Label>
+                  <Label htmlFor="signin-otp">{t('auth.otpLabel')}</Label>
                   <Input
                     id="signin-otp"
                     type="text"
-                    placeholder="6-digit OTP"
+                    placeholder={t('auth.otpPlaceholder')}
                     value={signInOtp}
                     onChange={(e) => setSignInOtp(e.target.value)}
                     maxLength={6}
@@ -452,7 +452,7 @@ export default function Auth() {
                   disabled={loading || !signInPhone}
                   className="w-full"
                 >
-                  {loading ? "Sending..." : "Send OTP"}
+                  {loading ? t('auth.sending') : t('auth.sendOtp')}
                 </Button>
               ) : (
                 <>
@@ -461,7 +461,7 @@ export default function Auth() {
                     disabled={loading || !signInOtp}
                     className="w-full"
                   >
-                    {loading ? "Verifying..." : "Verify OTP"}
+                    {loading ? t('auth.verifying') : t('auth.verifyOtp')}
                   </Button>
                   <Button 
                     onClick={() => {
@@ -472,7 +472,7 @@ export default function Auth() {
                     variant="outline"
                     className="w-full"
                   >
-                    Change Phone Number
+                    {t('auth.changePhone')}
                   </Button>
                 </>
               )}
@@ -483,11 +483,11 @@ export default function Auth() {
               {!otpSent ? (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-name">Full Name *</Label>
+                    <Label htmlFor="signup-name">{t('auth.fullNameLabel')}</Label>
                     <Input
                       id="signup-name"
                       type="text"
-                      placeholder="Your full name"
+                      placeholder={t('auth.namePlaceholder')}
                       value={signUpFullName}
                       onChange={(e) => setSignUpFullName(e.target.value)}
                       disabled={loading}
@@ -495,11 +495,11 @@ export default function Auth() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="signup-phone">Phone Number *</Label>
+                    <Label htmlFor="signup-phone">{t('auth.phoneLabel')} *</Label>
                     <Input
                       id="signup-phone"
                       type="tel"
-                      placeholder="10-digit phone number"
+                      placeholder={t('auth.phonePlaceholder')}
                       value={signUpPhone}
                       onChange={(e) => setSignUpPhone(e.target.value)}
                       maxLength={10}
@@ -508,11 +508,11 @@ export default function Auth() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="signup-upi">UPI ID (Optional)</Label>
+                    <Label htmlFor="signup-upi">{t('auth.upiLabel')}</Label>
                     <Input
                       id="signup-upi"
                       type="text"
-                      placeholder="yourname@bank"
+                      placeholder={t('auth.upiPlaceholder')}
                       value={signUpUpiId}
                       onChange={(e) => setSignUpUpiId(e.target.value)}
                       disabled={loading}
@@ -520,14 +520,14 @@ export default function Auth() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="signup-community">Community *</Label>
+                    <Label htmlFor="signup-community">{t('auth.communityLabel')}</Label>
                     <Select 
                       value={signUpCommunity} 
                       onValueChange={setSignUpCommunity}
                       disabled={loading}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select your community" />
+                        <SelectValue placeholder={t('auth.selectCommunity')} />
                       </SelectTrigger>
                       <SelectContent>
                         {communities.map((community) => (
@@ -540,19 +540,19 @@ export default function Auth() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="signup-service">Service Type *</Label>
+                    <Label htmlFor="signup-service">{t('auth.serviceLabel')}</Label>
                     <Select 
                       value={signUpService} 
                       onValueChange={setSignUpService}
                       disabled={loading}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select service type" />
+                        <SelectValue placeholder={t('auth.selectService')} />
                       </SelectTrigger>
                       <SelectContent>
                         {SERVICES.map((service) => (
                           <SelectItem key={service.value} value={service.value}>
-                            {service.label}
+                            {t(service.label)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -564,17 +564,17 @@ export default function Auth() {
                     disabled={loading || !signUpFullName || !signUpPhone || !signUpCommunity || !signUpService}
                     className="w-full"
                   >
-                    {loading ? "Sending..." : "Send OTP"}
+                    {loading ? t('auth.sending') : t('auth.sendOtp')}
                   </Button>
                 </>
               ) : (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-otp">OTP</Label>
+                    <Label htmlFor="signup-otp">{t('auth.otpLabel')}</Label>
                     <Input
                       id="signup-otp"
                       type="text"
-                      placeholder="6-digit OTP"
+                      placeholder={t('auth.otpPlaceholder')}
                       value={signUpOtp}
                       onChange={(e) => setSignUpOtp(e.target.value)}
                       maxLength={6}
@@ -587,7 +587,7 @@ export default function Auth() {
                     disabled={loading || !signUpOtp}
                     className="w-full"
                   >
-                    {loading ? "Creating Account..." : "Create Account"}
+                    {loading ? t('auth.creatingAccount') : t('auth.createAccount')}
                   </Button>
                   <Button 
                     onClick={() => {
@@ -598,7 +598,7 @@ export default function Auth() {
                     variant="outline"
                     className="w-full"
                   >
-                    Change Phone Number
+                    {t('auth.changePhone')}
                   </Button>
                 </>
               )}
