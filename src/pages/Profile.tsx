@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X, Pencil, Languages, Star, Briefcase, Wallet, Settings, MessageSquare, BarChart3 } from "lucide-react";
+import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X, Pencil, Languages, Star, Briefcase, Wallet, Settings, MessageSquare, BarChart3, Camera, Upload } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -71,6 +71,8 @@ export default function Profile() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [phone, setPhone] = useState("");
   const [upiId, setUpiId] = useState("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   
   // Earnings data
   const [totalEarnings, setTotalEarnings] = useState(0);
@@ -132,6 +134,7 @@ export default function Profile() {
       setSelectedServices(worker.service_types || []);
       setSelectedCommunities(worker.communities || (worker.community ? [worker.community] : []));
       setTotalEarnings(worker.total_earnings || 0);
+      setPhotoUrl(worker.photo_url || null);
     }
   }, [worker]);
 
@@ -190,6 +193,73 @@ export default function Profile() {
     fetchRating();
     fetchReviews();
   }, [user]);
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({ title: "Error", description: "Please upload an image file", variant: "destructive" });
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Error", description: "Image must be less than 5MB", variant: "destructive" });
+      return;
+    }
+
+    try {
+      setUploadingPhoto(true);
+
+      // Delete old photo if exists
+      if (photoUrl) {
+        const oldPath = photoUrl.split('/').pop();
+        if (oldPath) {
+          await supabase.storage
+            .from('worker-photos')
+            .remove([`${user.id}/${oldPath}`]);
+        }
+      }
+
+      // Upload new photo
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('worker-photos')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('worker-photos')
+        .getPublicUrl(filePath);
+
+      // Update worker profile
+      const { error: updateError } = await supabase
+        .from('workers')
+        .update({ photo_url: publicUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      setPhotoUrl(publicUrl);
+      toast({ title: "Success", description: "Photo updated successfully" });
+    } catch (error: any) {
+      console.error('Photo upload error:', error);
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to upload photo", 
+        variant: "destructive" 
+      });
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   const handleUpdate = async () => {
     if (!fullName.trim()) {
@@ -479,8 +549,36 @@ export default function Profile() {
           <Card className="mx-4 -mt-16 border-0 shadow-xl relative">
             <CardContent className="pt-6 pb-6">
               <div className="flex items-start gap-4 mb-6">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg border-4 border-white dark:border-gray-800">
-                  <User className="w-10 h-10 text-primary-foreground" />
+                <div className="relative group">
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg border-4 border-white dark:border-gray-800 overflow-hidden">
+                    {photoUrl ? (
+                      <img 
+                        src={photoUrl} 
+                        alt={worker?.full_name || "Profile"} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-10 h-10 text-primary-foreground" />
+                    )}
+                  </div>
+                  <label 
+                    htmlFor="photo-upload" 
+                    className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  >
+                    {uploadingPhoto ? (
+                      <Loader2 className="w-6 h-6 text-white animate-spin" />
+                    ) : (
+                      <Camera className="w-6 h-6 text-white" />
+                    )}
+                  </label>
+                  <input
+                    id="photo-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    disabled={uploadingPhoto}
+                    className="hidden"
+                  />
                 </div>
                 <div className="flex-1 pt-2">
                   <h2 className="text-2xl font-bold mb-1">{worker?.full_name}</h2>
