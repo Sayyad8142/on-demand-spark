@@ -36,16 +36,51 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <!-- Title -->
-                <TextView
-                    android:id="@+id/title"
-                    android:text="New Booking"
-                    android:textColor="#1E293B"
-                    android:textSize="24sp"
-                    android:textStyle="bold"
-                    android:gravity="center"
+                <!-- Header with Title and Timer -->
+                <LinearLayout
+                    android:orientation="horizontal"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"/>
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical">
+
+                    <!-- Title -->
+                    <TextView
+                        android:id="@+id/title"
+                        android:text="New Booking"
+                        android:textColor="#1E293B"
+                        android:textSize="24sp"
+                        android:textStyle="bold"
+                        android:layout_weight="1"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"/>
+
+                    <!-- Countdown Timer with Circle -->
+                    <RelativeLayout
+                        android:layout_width="56dp"
+                        android:layout_height="56dp">
+
+                        <ProgressBar
+                            android:id="@+id/countdownCircle"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:max="30"
+                            android:progress="30"
+                            android:progressDrawable="@drawable/circular_progress"
+                            android:indeterminate="false"/>
+
+                        <TextView
+                            android:id="@+id/countdown"
+                            android:text="30s"
+                            android:textColor="#22C55E"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:gravity="center"
+                            android:layout_centerInParent="true"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"/>
+                    </RelativeLayout>
+                </LinearLayout>
 
                 <!-- Service Type -->
                 <TextView
@@ -79,13 +114,40 @@
                         android:layout_height="wrap_content"/>
                 </LinearLayout>
 
-                <!-- Community Section -->
+                <!-- Tower Number Section -->
                 <LinearLayout
                     android:orientation="horizontal"
                     android:background="#F1F5F9"
                     android:padding="16dp"
                     android:gravity="center"
                     android:layout_marginTop="16dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <TextView
+                        android:text="🏢 Tower: "
+                        android:textColor="#64748B"
+                        android:textSize="16sp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"/>
+
+                    <TextView
+                        android:id="@+id/towerNo"
+                        android:text="1"
+                        android:textColor="#1E293B"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"/>
+                </LinearLayout>
+
+                <!-- Community Section -->
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:background="#F1F5F9"
+                    android:padding="16dp"
+                    android:gravity="center"
+                    android:layout_marginTop="8dp"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
@@ -115,12 +177,6 @@
 
                 <TextView
                     android:id="@+id/flatNo"
-                    android:visibility="gone"
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"/>
-
-                <TextView
-                    android:id="@+id/countdown"
                     android:visibility="gone"
                     android:layout_width="0dp"
                     android:layout_height="0dp"/>

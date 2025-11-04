@@ -321,6 +321,14 @@ class BookingOverlayService : Service() {
         overlayView?.findViewById<TextView>(R.id.flatNo)?.text = "Flat #$flatNo"
         overlayView?.findViewById<TextView>(R.id.price)?.text = "₹$price"
         
+        // Derive Tower No from first digit of flat number
+        val towerNo = if (flatNo.isNotBlank()) {
+            flatNo.firstOrNull { it.isDigit() }?.toString() ?: "—"
+        } else {
+            "—"
+        }
+        overlayView?.findViewById<TextView>(R.id.towerNo)?.text = towerNo
+        
         // Set service-specific image
         val serviceImageView = overlayView?.findViewById<ImageView>(R.id.serviceImage)
         val imageResource = when {
@@ -332,10 +340,11 @@ class BookingOverlayService : Service() {
         }
         serviceImageView?.setImageResource(imageResource)
         
-        android.util.Log.d("BookingOverlay", "✅ Overlay populated with booking data and service image")
+        android.util.Log.d("BookingOverlay", "✅ Overlay populated with booking data, tower number, and service image")
         
         // Prepare countdown handler (will start after view is added)
         val countdownText = overlayView?.findViewById<TextView>(R.id.countdown)
+        val countdownCircle = overlayView?.findViewById<android.widget.ProgressBar>(R.id.countdownCircle)
         var secondsLeft = 30
         countdownHandler = Handler(mainLooper)
         countdownRunnable = object : Runnable {
@@ -345,7 +354,18 @@ class BookingOverlayService : Service() {
                     return
                 }
                 if (secondsLeft > 0) {
-                    ui { countdownText?.text = "${secondsLeft}s" }
+                    ui { 
+                        countdownText?.text = "${secondsLeft}s"
+                        countdownCircle?.progress = secondsLeft
+                        
+                        // Change countdown text color based on time remaining
+                        val textColor = when {
+                            secondsLeft > 15 -> android.graphics.Color.parseColor("#22C55E") // Green
+                            secondsLeft > 10 -> android.graphics.Color.parseColor("#F59E0B") // Orange
+                            else -> android.graphics.Color.parseColor("#DC2626") // Red
+                        }
+                        countdownText?.setTextColor(textColor)
+                    }
                     android.util.Log.d("BookingOverlay", "⏱️ Countdown: ${secondsLeft}s")
                     secondsLeft--
                     countdownHandler?.postDelayed(this, 1000)
