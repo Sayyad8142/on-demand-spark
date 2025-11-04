@@ -213,8 +213,14 @@ export default function Profile() {
     try {
       setUploadingPhoto(true);
 
-      console.log('Starting photo upload for user:', user.id);
-      console.log('Auth UID:', (await supabase.auth.getUser()).data.user?.id);
+      // Get authenticated user ID
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !authUser) {
+        throw new Error('Not authenticated');
+      }
+
+      console.log('Starting photo upload for user:', authUser.id);
 
       // Delete old photo if exists
       if (photoUrl) {
@@ -222,20 +228,24 @@ export default function Profile() {
         if (oldPath) {
           await supabase.storage
             .from('worker-photos')
-            .remove([`${user.id}/${oldPath}`]);
+            .remove([`${authUser.id}/${oldPath}`]);
         }
       }
 
-      // Upload new photo
+      // Upload new photo using auth user ID
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
+      const filePath = `${authUser.id}/${fileName}`;
 
       console.log('Uploading to path:', filePath);
+      console.log('Auth user ID:', authUser.id);
 
       const { error: uploadError, data: uploadData } = await supabase.storage
         .from('worker-photos')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
       console.log('Upload result:', { uploadData, uploadError });
 
