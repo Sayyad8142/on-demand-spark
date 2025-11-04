@@ -132,31 +132,9 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
         </Badge>
       </div>
 
-      {/* Flat Number Display - Compact */}
-      <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 mb-2 shadow-sm">
-        <p className={`font-extrabold text-center ${numberColor} mb-2 text-lg tracking-tight`}>FLAT NO : {booking.flat_no}</p>
-        {booking.flat_no && booking.flat_no.toString().length === 4 && (
-          <div className="grid grid-cols-3 gap-2">
-            <div className="text-center">
-              <p className="text-[9px] font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wider">TOWER</p>
-              <div className="bg-white dark:bg-gray-800 rounded-lg py-1.5 shadow-md border border-gray-100 dark:border-gray-700">
-                <p className={`text-xl font-extrabold ${numberColor}`}>{booking.flat_no.toString().charAt(0)}</p>
-              </div>
-            </div>
-            <div className="text-center">
-              <p className="text-[9px] font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wider">FLOOR</p>
-              <div className="bg-white dark:bg-gray-800 rounded-lg py-1.5 shadow-md border border-gray-100 dark:border-gray-700">
-                <p className={`text-xl font-extrabold ${numberColor}`}>{booking.flat_no.toString().substring(1, 3)}</p>
-              </div>
-            </div>
-            <div className="text-center">
-              <p className="text-[9px] font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wider">DOOR</p>
-              <div className="bg-white dark:bg-gray-800 rounded-lg py-1.5 shadow-md border border-gray-100 dark:border-gray-700">
-                <p className={`text-xl font-extrabold ${numberColor}`}>{booking.flat_no.toString().charAt(3)}</p>
-              </div>
-            </div>
-          </div>
-        )}
+      {/* Flat Number Display */}
+      <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-2 shadow-sm">
+        <p className={`font-extrabold text-center ${numberColor} text-xl tracking-tight`}>FLAT NO : {booking.flat_no}</p>
       </div>
 
       {/* Customer Name */}
