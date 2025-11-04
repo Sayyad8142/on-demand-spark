@@ -213,6 +213,9 @@ export default function Profile() {
     try {
       setUploadingPhoto(true);
 
+      console.log('Starting photo upload for user:', user.id);
+      console.log('Auth UID:', (await supabase.auth.getUser()).data.user?.id);
+
       // Delete old photo if exists
       if (photoUrl) {
         const oldPath = photoUrl.split('/').pop();
@@ -228,9 +231,13 @@ export default function Profile() {
       const fileName = `${Date.now()}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
+      console.log('Uploading to path:', filePath);
+
+      const { error: uploadError, data: uploadData } = await supabase.storage
         .from('worker-photos')
         .upload(filePath, file);
+
+      console.log('Upload result:', { uploadData, uploadError });
 
       if (uploadError) throw uploadError;
 
