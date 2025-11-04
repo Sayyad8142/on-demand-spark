@@ -174,10 +174,15 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
           <span className="text-muted-foreground">
             {booking.service_type.replace('_', ' ')}
           </span>
-          {booking.created_at && (
+          {booking.scheduled_date && (
             <div className="flex items-center gap-1 text-muted-foreground">
               <Calendar className="w-3 h-3" />
-              {new Date(booking.created_at).toLocaleDateString()}
+              {new Date(booking.scheduled_date).toLocaleDateString()}
+              {booking.scheduled_time && (
+                <span className="ml-1">
+                  {booking.scheduled_time.slice(0, 5)}
+                </span>
+              )}
             </div>
           )}
         </div>
