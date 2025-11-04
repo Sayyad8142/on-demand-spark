@@ -34,13 +34,22 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <!-- Header with Title and Timer -->
+                <!-- Header with Title, Siren Icon and Timer -->
                 <LinearLayout
                     android:orientation="horizontal"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
                     android:layout_marginBottom="16dp">
+
+                    <!-- Siren Icon (Blinking) -->
+                    <ImageView
+                        android:id="@+id/sirenIcon"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/ic_siren"
+                        android:layout_marginEnd="8dp"
+                        android:contentDescription="Alert Siren"/>
 
                     <!-- Title -->
                     <TextView
@@ -53,10 +62,10 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"/>
 
-                    <!-- Countdown Timer with Circle -->
+                    <!-- Countdown Timer with Circle (Bigger) -->
                     <RelativeLayout
-                        android:layout_width="64dp"
-                        android:layout_height="64dp">
+                        android:layout_width="96dp"
+                        android:layout_height="96dp">
 
                         <ProgressBar
                             android:id="@+id/countdownCircle"
@@ -72,7 +81,7 @@
                             android:id="@+id/countdown"
                             android:text="30s"
                             android:textColor="#22C55E"
-                            android:textSize="16sp"
+                            android:textSize="28sp"
                             android:textStyle="bold"
                             android:gravity="center"
                             android:layout_centerInParent="true"
@@ -81,12 +90,12 @@
                     </RelativeLayout>
                 </LinearLayout>
 
-                <!-- Service Type (Centered, Large, Bold) -->
+                <!-- Service Type (Centered, Shorter) -->
                 <TextView
                     android:id="@+id/subtitle"
                     android:text="maid"
                     android:textColor="#3B82F6"
-                    android:textSize="48sp"
+                    android:textSize="32sp"
                     android:textStyle="bold"
                     android:gravity="center"
                     android:layout_marginBottom="20dp"
@@ -151,31 +160,12 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Community Section -->
-                <LinearLayout
-                    android:orientation="horizontal"
-                    android:background="#F1F5F9"
-                    android:padding="16dp"
-                    android:gravity="center"
-                    android:layout_marginBottom="24dp"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
-
-                    <TextView
-                        android:text="📍 "
-                        android:textSize="18sp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
-
-                    <TextView
-                        android:id="@+id/community"
-                        android:text="prestige-high-fields"
-                        android:textColor="#1E293B"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
-                </LinearLayout>
+                <!-- Community Section (Hidden) -->
+                <TextView
+                    android:id="@+id/community"
+                    android:visibility="gone"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"/>
 
                 <!-- Hidden fields for data -->
                 <TextView
@@ -200,7 +190,7 @@
                     <Button
                         android:id="@+id/btnReject"
                         android:text="REJECT"
-                        android:textColor="#DC2626"
+                        android:textColor="@android:color/white"
                         android:background="@drawable/btn_outline_red"
                         android:elevation="4dp"
                         android:layout_weight="1"

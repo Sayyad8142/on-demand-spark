@@ -340,7 +340,11 @@ class BookingOverlayService : Service() {
         }
         serviceImageView?.setImageResource(imageResource)
         
-        android.util.Log.d("BookingOverlay", "✅ Overlay populated with booking data, tower number, and service image")
+        // Start blinking animation for siren icon
+        val sirenIcon = overlayView?.findViewById<ImageView>(R.id.sirenIcon)
+        sirenIcon?.startAnimation(android.view.animation.AnimationUtils.loadAnimation(this, R.anim.blink_animation))
+        
+        android.util.Log.d("BookingOverlay", "✅ Overlay populated with booking data, tower number, service image, and blinking siren")
         
         // Prepare countdown handler (will start after view is added)
         val countdownText = overlayView?.findViewById<TextView>(R.id.countdown)
