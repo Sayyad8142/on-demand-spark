@@ -464,39 +464,39 @@ export default function Profile() {
               </div>
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-3 gap-3 mt-6">
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 rounded-2xl p-4 border-2 border-green-100 dark:border-green-900">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-500 mb-3 mx-auto">
+              <div className="grid grid-cols-3 gap-2 mt-6">
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 rounded-2xl p-3 border-2 border-green-100 dark:border-green-900">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-500 mb-2 mx-auto">
                     <Wallet className="w-5 h-5 text-white" />
                   </div>
-                  <p className="text-2xl font-extrabold text-green-600 dark:text-green-400 text-center mb-1">
+                  <p className="text-xl font-extrabold text-green-600 dark:text-green-400 text-center mb-1">
                     ₹{totalEarnings}
                   </p>
-                  <p className="text-[10px] text-muted-foreground font-semibold text-center uppercase tracking-wide">
+                  <p className="text-[9px] text-muted-foreground font-semibold text-center uppercase tracking-tight leading-tight">
                     {t('profile.totalEarned')}
                   </p>
                 </div>
 
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-2xl p-4 border-2 border-blue-100 dark:border-blue-900">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 mb-3 mx-auto">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-2xl p-3 border-2 border-blue-100 dark:border-blue-900">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 mb-2 mx-auto">
                     <Briefcase className="w-5 h-5 text-white" />
                   </div>
-                  <p className="text-2xl font-extrabold text-blue-600 dark:text-blue-400 text-center mb-1">
+                  <p className="text-xl font-extrabold text-blue-600 dark:text-blue-400 text-center mb-1">
                     {completedJobs}
                   </p>
-                  <p className="text-[10px] text-muted-foreground font-semibold text-center uppercase tracking-wide">
+                  <p className="text-[9px] text-muted-foreground font-semibold text-center uppercase tracking-tight leading-tight">
                     {t('profile.completedJobs')}
                   </p>
                 </div>
 
-                <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950 dark:to-yellow-950 rounded-2xl p-4 border-2 border-amber-100 dark:border-amber-900">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500 mb-3 mx-auto">
+                <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950 dark:to-yellow-950 rounded-2xl p-3 border-2 border-amber-100 dark:border-amber-900">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500 mb-2 mx-auto">
                     <Star className="w-5 h-5 text-white fill-white" />
                   </div>
-                  <p className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 text-center mb-1">
+                  <p className="text-xl font-extrabold text-amber-600 dark:text-amber-400 text-center mb-1">
                     {workerRating.toFixed(1)}
                   </p>
-                  <p className="text-[10px] text-muted-foreground font-semibold text-center uppercase tracking-wide">
+                  <p className="text-[9px] text-muted-foreground font-semibold text-center uppercase tracking-tight leading-tight">
                     {t('profile.rating')}
                   </p>
                 </div>
