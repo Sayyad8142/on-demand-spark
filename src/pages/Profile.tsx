@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X, Pencil, Languages, Star, Briefcase, Wallet, Settings, MessageSquare } from "lucide-react";
+import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X, Pencil, Languages, Star, Briefcase, Wallet, Settings, MessageSquare, BarChart3 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import RatingBreakdown from "@/components/RatingBreakdown";
 import {
   Dialog,
   DialogContent,
@@ -77,6 +78,13 @@ export default function Profile() {
   const [workerRating, setWorkerRating] = useState<number>(0);
   const [ratingsCount, setRatingsCount] = useState<number>(0);
   const [reviews, setReviews] = useState<any[]>([]);
+  const [ratingBreakdown, setRatingBreakdown] = useState<{
+    5: number;
+    4: number;
+    3: number;
+    2: number;
+    1: number;
+  }>({ 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 });
 
   // Fetch communities from Supabase with real-time updates
   useEffect(() => {
@@ -166,6 +174,15 @@ export default function Profile() {
 
       if (!error && data) {
         setReviews(data);
+        
+        // Calculate rating breakdown
+        const breakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+        data.forEach((review) => {
+          if (review.rating >= 1 && review.rating <= 5) {
+            breakdown[review.rating as keyof typeof breakdown]++;
+          }
+        });
+        setRatingBreakdown(breakdown);
       }
     };
 
@@ -522,6 +539,27 @@ export default function Profile() {
         </div>
 
         <div className="px-4 mt-4 space-y-4">
+
+          {/* Rating Breakdown Section */}
+          {reviews.length > 0 && (
+            <Card className="border-0 shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <BarChart3 className="w-5 h-5" />
+                  Rating Breakdown
+                </CardTitle>
+                <CardDescription>
+                  Distribution of your {ratingsCount} rating{ratingsCount !== 1 ? 's' : ''}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RatingBreakdown 
+                  ratings={ratingBreakdown} 
+                  totalRatings={ratingsCount}
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Reviews Section */}
           {reviews.length > 0 && (
