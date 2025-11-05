@@ -119,6 +119,15 @@ export default function Home() {
     await Promise.all([refetchActiveJob(), refetchWorker()]);
   };
 
+  // Guard: Don't render if user is not loaded yet
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex-1 p-4 space-y-4">
@@ -156,11 +165,11 @@ export default function Home() {
       )}
       
       <Card className="p-6 space-y-4">
-        <AvailabilityToggle workerId={user!.id} />
+        <AvailabilityToggle workerId={user.id} />
         
         <div className="pt-4 border-t">
           <CommunitySelector 
-            workerId={user!.id} 
+            workerId={user.id} 
             value={worker?.selected_community_id || selectedCommunity}
             onChange={(id) => {
               setSelectedCommunity(id);
@@ -171,7 +180,7 @@ export default function Home() {
       </Card>
 
       {worker?.selected_community_id && (
-        <GeofenceStatus workerId={user!.id} />
+        <GeofenceStatus workerId={user.id} />
       )}
 
       {activeJob && <ActiveJobCard booking={activeJob} onStatusUpdate={handleStatusUpdate} updating={updating} />}
