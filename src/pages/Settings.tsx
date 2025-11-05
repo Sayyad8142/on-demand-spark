@@ -21,10 +21,11 @@ import { startForegroundService, stopForegroundService } from "@/lib/foregroundS
 import { usePushRegister } from "@/hooks/usePushRegister";
 import { supabase } from "@/integrations/supabase/client";
 import { SimulatedOverlayModal } from "@/components/SimulatedOverlayModal";
+import { toast } from "@/hooks/use-toast";
 
 export default function Settings() {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { toast: toastFunc } = useToast();
   const { user } = useAuth();
   const { worker } = useWorkerProfile(user?.id);
   const { registerPush, checkRegistrationStatus, registeredToken, isRegistering, lastSyncTime } = usePushRegister();
@@ -35,14 +36,68 @@ export default function Settings() {
   const [showToken, setShowToken] = useState(false);
   const [testingServerPush, setTestingServerPush] = useState(false);
   const [simulatedBooking, setSimulatedBooking] = useState<any>(null);
+  const [respectAvailability, setRespectAvailability] = useState(true);
+  const [loading, setLoading] = useState(true);
   const isNative = Capacitor.isNativePlatform();
 
   useEffect(() => {
     checkStatus();
+    loadWorkerSettings();
     if (user?.id) {
       checkRegistrationStatus();
     }
   }, [user?.id, checkRegistrationStatus]);
+
+  async function loadWorkerSettings() {
+    if (!user) return;
+    
+    try {
+      const { data: worker } = await supabase
+        .from("workers")
+        .select("respect_availability")
+        .or(`id.eq.${user.id},user_id.eq.${user.id}`)
+        .single();
+        
+      if (worker) {
+        setRespectAvailability(worker.respect_availability ?? true);
+      }
+    } catch (error) {
+      console.error("Error loading settings:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function updateRespectAvailability(value: boolean) {
+    if (!user) return;
+    
+    try {
+      const { data: worker } = await supabase
+        .from("workers")
+        .select("id")
+        .or(`id.eq.${user.id},user_id.eq.${user.id}`)
+        .single();
+        
+      if (!worker) return;
+      
+      const { error } = await supabase
+        .from("workers")
+        .update({ respect_availability: value })
+        .eq("id", worker.id);
+        
+      if (error) throw error;
+      
+      setRespectAvailability(value);
+      toast({ 
+        title: value 
+          ? "Will receive alerts only during available slots" 
+          : "Will receive all alerts regardless of availability" 
+      });
+    } catch (error) {
+      console.error("Error updating settings:", error);
+      toast({ title: "Error updating settings", variant: "destructive" });
+    }
+  }
 
   const checkStatus = async () => {
     setChecking(true);
@@ -62,12 +117,12 @@ export default function Settings() {
     setHasPermission(granted);
     
     if (granted) {
-      toast({
+      toastFunc({
         title: "Permission granted",
         description: "You can now enable booking alerts"
       });
     } else {
-      toast({
+      toastFunc({
         title: "Permission required",
         description: "Please grant overlay permission in system settings",
         variant: "destructive"
@@ -77,7 +132,7 @@ export default function Settings() {
 
   const handleToggleOverlay = async (enabled: boolean) => {
     if (!hasPermission && enabled) {
-      toast({
+      toastFunc({
         title: "Permission required",
         description: "Please grant overlay permission first",
         variant: "destructive"
@@ -90,21 +145,21 @@ export default function Settings() {
       if (enabled) {
         localStorage.setItem('overlay_mode', 'enabled');
         await startForegroundService();
-        toast({
+        toastFunc({
           title: "Booking alerts activated",
           description: "You'll receive overlay alerts for new bookings"
         });
       } else {
         localStorage.removeItem('overlay_mode');
         await stopForegroundService();
-        toast({
+        toastFunc({
           title: "Booking alerts deactivated",
           description: "You won't receive overlay alerts"
         });
       }
       setOverlayEnabled(enabled);
     } catch (error: any) {
-      toast({
+      toastFunc({
         title: "Error",
         description: error.message,
         variant: "destructive"
@@ -117,13 +172,13 @@ export default function Settings() {
   const handleRegisterPush = async () => {
     try {
       const token = await registerPush();
-      toast({
+      toastFunc({
         title: "Notifications enabled",
         description: "Push notifications registered successfully"
       });
       console.log('FCM Token:', token);
     } catch (error: any) {
-      toast({
+      toastFunc({
         title: "Registration failed",
         description: error.message,
         variant: "destructive"
@@ -160,6 +215,29 @@ export default function Settings() {
       </header>
 
       <main className="max-w-2xl mx-auto p-4 space-y-4">
+        {/* Availability Settings */}
+        {!loading && (
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex-1 pr-4">
+                <Label htmlFor="respect-availability" className="text-base font-semibold">
+                  Respect Availability
+                </Label>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {respectAvailability 
+                    ? "Only receive alerts during available slots" 
+                    : "Receive all alerts any time"}
+                </p>
+              </div>
+              <Switch
+                id="respect-availability"
+                checked={respectAvailability}
+                onCheckedChange={updateRespectAvailability}
+              />
+            </div>
+          </Card>
+        )}
+
         {/* Permission Status */}
         <Card className="p-6">
           <div className="flex items-start gap-4">

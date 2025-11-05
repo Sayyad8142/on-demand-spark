@@ -1,8 +1,10 @@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Wifi, WifiOff } from "lucide-react";
+import { Wifi, WifiOff, Calendar } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 interface AvailabilityToggleProps {
   isOnline: boolean;
@@ -12,9 +14,10 @@ interface AvailabilityToggleProps {
 
 export default function AvailabilityToggle({ isOnline, onToggle, disabled }: AvailabilityToggleProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   
   return (
-    <Card className="p-6 shadow-card">
+    <Card className="p-6 shadow-card space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
@@ -43,6 +46,16 @@ export default function AvailabilityToggle({ isOnline, onToggle, disabled }: Ava
           className="data-[state=checked]:bg-primary"
         />
       </div>
+      
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full"
+        onClick={() => navigate("/availability")}
+      >
+        <Calendar className="w-4 h-4 mr-2" />
+        Set Weekly Availability
+      </Button>
     </Card>
   );
 }

@@ -21,6 +21,7 @@ import Troubleshoot from "./pages/Troubleshoot";
 import VerifyPush from "./pages/VerifyPush";
 import DevCacheReset from "./pages/DevCacheReset";
 import NotFound from "./pages/NotFound";
+import Availability from "./pages/Availability";
 import BottomNav from "./components/BottomNav";
 
 const queryClient = new QueryClient();
@@ -210,6 +211,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <DevCacheReset />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/availability"
+              element={
+                <ProtectedRoute>
+                  <Availability />
                 </ProtectedRoute>
               }
             />

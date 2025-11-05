@@ -80,6 +80,7 @@
     "completedJobs": "Completed Jobs",
     "rating": "Rating",
     "reviews": "Customer Reviews",
+    "availability": "Availability",
     "status": {
       "active": "Active",
       "inactive": "Inactive",

@@ -39,10 +39,10 @@ Deno.serve(async (req) => {
 
     console.log("🔍 Loading booking:", booking_id);
     
-    // Load booking with cust_name field and price_inr
+    // Load booking with all relevant fields
     const { data: b, error: be } = await supabase
       .from("bookings")
-      .select("id, status, service_type, community, cust_name, cust_phone, flat_no, price_inr")
+      .select("id, status, service_type, community, cust_name, cust_phone, flat_no, price_inr, booking_type, scheduled_date, scheduled_time")
       .eq("id", booking_id)
       .single();
       
@@ -56,7 +56,17 @@ Deno.serve(async (req) => {
       return new Response("skip - not pending", { status: 200 });
     }
 
-    console.log("✅ Booking loaded:", { service_type: b.service_type, community: b.community, price_inr: b.price_inr });
+    console.log("✅ Booking loaded:", { service_type: b.service_type, community: b.community, price_inr: b.price_inr, booking_type: b.booking_type });
+
+    // Determine timestamp for availability check
+    let checkTimestamp: string;
+    if (b.booking_type === 'scheduled' && b.scheduled_date && b.scheduled_time) {
+      checkTimestamp = `${b.scheduled_date}T${b.scheduled_time}`;
+      console.log("📅 Scheduled booking - checking availability at:", checkTimestamp);
+    } else {
+      checkTimestamp = new Date().toISOString();
+      console.log("⚡ Instant booking - checking availability at:", checkTimestamp);
+    }
 
     // Eligible workers: active, available, not busy, matching service & community
     console.log("🔍 Finding eligible workers...");
@@ -79,14 +89,50 @@ Deno.serve(async (req) => {
       return new Response("no-workers", { status: 200 });
     }
 
-    // Sort workers by rating (highest first), then by total_ratings for tie-breaking
-    const sortedWorkers = workers.sort((a, b) => {
+    console.log(`📋 Found ${workers.length} potentially eligible workers, filtering by availability...`);
+
+    // Filter workers by availability at the check timestamp
+    const availableWorkers = [];
+    for (const worker of workers) {
+      const { data: isAvailable, error: availError } = await supabase
+        .rpc('is_worker_available_at_time', {
+          p_worker_id: worker.id,
+          p_timestamp: checkTimestamp
+        });
+      
+      if (availError) {
+        console.error(`❌ Error checking availability for worker ${worker.id}:`, availError);
+        continue;
+      }
+      
+      if (isAvailable) {
+        availableWorkers.push(worker);
+      } else {
+        console.log(`⏭️  Worker ${worker.full_name} not available at ${checkTimestamp}`);
+      }
+    }
+
+    if (availableWorkers.length === 0) {
+      console.log("⚠️ No workers available in the selected time window");
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'No workers available in your selected time window' 
+      }), { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
+
+    console.log(`✅ Found ${availableWorkers.length} available workers out of ${workers.length} total`);
+
+    // Sort available workers by rating (highest first), then by total_ratings for tie-breaking
+    const sortedWorkers = availableWorkers.sort((a, b) => {
       const ratingDiff = (b.rating || 0) - (a.rating || 0);
       if (ratingDiff !== 0) return ratingDiff;
       return (b.total_ratings || 0) - (a.total_ratings || 0);
     });
 
-    console.log(`✅ Found ${sortedWorkers.length} eligible workers (sorted by rating)`);
+    console.log(`✅ Sorted ${sortedWorkers.length} available workers by rating`);
     
     // Define priority tiers based on rating
     const TIER_1_MIN_RATING = 4.5; // Top tier: 4.5+ stars

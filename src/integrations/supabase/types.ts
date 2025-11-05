@@ -1891,6 +1891,70 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_availability: {
+        Row: {
+          day_of_week: number
+          id: string
+          slots: boolean[]
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          day_of_week: number
+          id?: string
+          slots: boolean[]
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          day_of_week?: number
+          id?: string
+          slots?: boolean[]
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_availability_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_blackouts: {
+        Row: {
+          date: string
+          id: string
+          reason: string | null
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          date: string
+          id?: string
+          reason?: string | null
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          date?: string
+          id?: string
+          reason?: string | null
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_blackouts_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_contact_access_log: {
         Row: {
           accessed_at: string
@@ -2069,7 +2133,9 @@ export type Database = {
           phone: string
           photo_url: string | null
           rating: number | null
+          respect_availability: boolean | null
           service_types: string[]
+          timezone: string | null
           total_earnings: number | null
           total_ratings: number | null
           updated_at: string
@@ -2090,7 +2156,9 @@ export type Database = {
           phone: string
           photo_url?: string | null
           rating?: number | null
+          respect_availability?: boolean | null
           service_types?: string[]
+          timezone?: string | null
           total_earnings?: number | null
           total_ratings?: number | null
           updated_at?: string
@@ -2111,7 +2179,9 @@ export type Database = {
           phone?: string
           photo_url?: string | null
           rating?: number | null
+          respect_availability?: boolean | null
           service_types?: string[]
+          timezone?: string | null
           total_earnings?: number | null
           total_ratings?: number | null
           updated_at?: string
@@ -2163,7 +2233,9 @@ export type Database = {
           phone: string
           photo_url: string | null
           rating: number | null
+          respect_availability: boolean | null
           service_types: string[]
+          timezone: string | null
           total_earnings: number | null
           total_ratings: number | null
           updated_at: string
@@ -2228,7 +2300,9 @@ export type Database = {
               phone: string
               photo_url: string | null
               rating: number | null
+              respect_availability: boolean | null
               service_types: string[]
+              timezone: string | null
               total_earnings: number | null
               total_ratings: number | null
               updated_at: string
@@ -2266,7 +2340,9 @@ export type Database = {
               phone: string
               photo_url: string | null
               rating: number | null
+              respect_availability: boolean | null
               service_types: string[]
+              timezone: string | null
               total_earnings: number | null
               total_ratings: number | null
               updated_at: string
@@ -2622,6 +2698,10 @@ export type Database = {
         Returns: Json
       }
       is_admin: { Args: never; Returns: boolean }
+      is_worker_available_at_time: {
+        Args: { p_timestamp: string; p_worker_id: string }
+        Returns: boolean
+      }
       maid_total_price: {
         Args: {
           p_community?: string
@@ -2708,6 +2788,10 @@ export type Database = {
       run_sla_with_secret: { Args: { p_secret: string }; Returns: undefined }
       schedule_assignment_timeout: {
         Args: { p_assignment_id: string; p_expires_at: string }
+        Returns: undefined
+      }
+      seed_worker_availability: {
+        Args: { p_worker_id: string }
         Returns: undefined
       }
       send_demo_notification: {
