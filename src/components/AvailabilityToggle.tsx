@@ -108,12 +108,29 @@ export function AvailabilityToggle({ workerId }: AvailabilityToggleProps) {
   };
 
   return (
-    <div className="flex items-center justify-between">
+    <div 
+      className={`flex items-center justify-between transition-colors duration-300 ${
+        isAvailable 
+          ? "bg-green-50 dark:bg-green-950/30 border-2 border-green-200 dark:border-green-800 rounded-xl p-4" 
+          : "bg-red-50 dark:bg-red-950/30 border-2 border-red-200 dark:border-red-800 rounded-xl p-4"
+      }`}
+    >
       <div>
-        <Label htmlFor="availability" className="text-base font-semibold">
+        <Label 
+          htmlFor="availability" 
+          className={`text-base font-semibold ${
+            isAvailable 
+              ? "text-green-700 dark:text-green-300" 
+              : "text-red-700 dark:text-red-300"
+          }`}
+        >
           {isAvailable ? "Available for Bookings" : "Unavailable"}
         </Label>
-        <p className="text-sm text-muted-foreground">
+        <p className={`text-sm ${
+          isAvailable 
+            ? "text-green-600 dark:text-green-400" 
+            : "text-red-600 dark:text-red-400"
+        }`}>
           {isAvailable
             ? "You will receive booking alerts"
             : "You will not receive booking alerts"}
@@ -124,6 +141,7 @@ export function AvailabilityToggle({ workerId }: AvailabilityToggleProps) {
         checked={isAvailable}
         onCheckedChange={handleToggle}
         disabled={loading}
+        className={isAvailable ? "data-[state=checked]:bg-green-600" : ""}
       />
     </div>
   );

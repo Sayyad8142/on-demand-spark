@@ -161,9 +161,7 @@ export default function Home() {
         </Card>
       )}
       
-      <Card className="p-6">
-        <AvailabilityToggle workerId={user.id} />
-      </Card>
+      <AvailabilityToggle workerId={user.id} />
 
       {activeJob && <ActiveJobCard booking={activeJob} onStatusUpdate={handleStatusUpdate} updating={updating} />}
       
