@@ -34,8 +34,15 @@ object OverlayPermissionHelper {
         android.util.Log.d("OverlayPermission", "📱 Showing overlay permission dialog")
 
         AlertDialog.Builder(activity)
-            .setTitle("Display Over Other Apps")
-            .setMessage("To ensure you never miss a booking, please allow On-Demand Spark to display alerts over other apps (including YouTube, WhatsApp, etc.).\n\nThis is required for urgent booking notifications.")
+            .setTitle("📱 Display Over Other Apps Permission")
+            .setMessage(
+                "🔔 Why we need this permission:\n\n" +
+                "• Show urgent booking alerts even when your phone is locked\n" +
+                "• Display alerts over YouTube, WhatsApp, and other apps\n" +
+                "• Ensure you never miss a booking opportunity\n\n" +
+                "✅ This permission allows booking alerts to appear on top of other apps so you can accept jobs immediately.\n\n" +
+                "This is required for automatic booking notifications."
+            )
             .setPositiveButton("Allow") { _, _ ->
                 android.util.Log.d("OverlayPermission", "🔓 User clicked Allow - requesting permission")
                 request(activity)
