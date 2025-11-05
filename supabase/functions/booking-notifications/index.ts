@@ -50,30 +50,43 @@ Deno.serve(async (req) => {
 
     console.log("🔍 Loading booking:", booking_id);
     
-    // Load booking with community reference
+    // Load booking details (community is TEXT field, not FK)
     const { data: b, error: be } = await supabase
       .from("bookings")
-      .select("id, status, service_type, community_id, cust_name, cust_phone, flat_no, price_inr, communities(id, name, center_lat, center_lng)")
+      .select("id, status, service_type, community, cust_name, cust_phone, flat_no, price_inr")
       .eq("id", booking_id)
       .single();
       
     if (be) {
       console.error("❌ Booking load error:", be);
-      return new Response(JSON.stringify({ error: be.message }), { status: 500 });
+      return new Response(JSON.stringify({ error: be.message }), { status: 500, headers: corsHeaders });
     }
     
     if (!b || b.status !== "pending") {
       console.log("⏭️ Skipping - booking not pending:", b?.status);
-      return new Response("skip - not pending", { status: 200 });
+      return new Response("skip - not pending", { status: 200, headers: corsHeaders });
     }
 
-    const communityData = (b as any).communities;
     console.log("✅ Booking loaded:", { 
       service_type: b.service_type, 
-      community_id: b.community_id, 
-      community_name: communityData?.name,
-      has_center: !!(communityData?.center_lat && communityData?.center_lng)
+      community: b.community
     });
+
+    // Fetch community details by name
+    const { data: communityData, error: communityError } = await supabase
+      .from("communities")
+      .select("id, name, center_lat, center_lng, radius_m")
+      .eq("name", b.community)
+      .single();
+
+    if (communityError) {
+      console.log("⚠️ Community not found in communities table, proceeding without geofence");
+    } else {
+      console.log("✅ Community found:", {
+        name: communityData.name,
+        has_center: !!(communityData.center_lat && communityData.center_lng)
+      });
+    }
 
     // Check if community has geofence configured
     const hasCommunityCenter = communityData?.center_lat && communityData?.center_lng;
@@ -84,14 +97,26 @@ Deno.serve(async (req) => {
 
     // Eligible workers: active, available, not busy, matching service & selected community
     console.log("🔍 Finding eligible workers...");
-    const { data: workers, error: we } = await supabase
+    
+    // Build query - if we have communityData with ID, filter by selected_community_id
+    // Otherwise, we can't filter by community and will notify all workers with matching service
+    let workersQuery = supabase
       .from("workers")
       .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng")
       .eq("is_active", true)
       .eq("is_available", true)
       .eq("is_busy", false)
-      .contains("service_types", [b.service_type])
-      .eq("selected_community_id", b.community_id);
+      .contains("service_types", [b.service_type]);
+    
+    // Only filter by community if we have the community ID
+    if (communityData?.id) {
+      workersQuery = workersQuery.eq("selected_community_id", communityData.id);
+      console.log("🔍 Filtering workers by selected_community_id:", communityData.id);
+    } else {
+      console.log("⚠️ No community ID, finding all workers with matching service type");
+    }
+    
+    const { data: workers, error: we } = await workersQuery;
       
     if (we) {
       console.error("❌ Workers load error:", we);
@@ -248,14 +273,15 @@ async function sendNotifications(userIds: string[], booking: any, bookingId: str
       body: JSON.stringify({
       workerIds: userIds,
       title: "New Booking Alert!",
-      body: `${booking.service_type.replace('_', ' ')} in ${(booking as any).communities?.name || 'your area'}. Tap to accept!`,
+      body: `${booking.service_type.replace('_', ' ')} in ${booking.community || 'your area'}. Tap to accept!`,
       data: { 
         type: "BOOKING_ALERT",
         bookingId: bookingId, 
         booking_id: bookingId,
         customer: booking.cust_name || "New Customer",
-        community: (booking as any).communities?.name || '',
+        community: booking.community || '',
         serviceType: booking.service_type,
+        service_type: booking.service_type, // Also send as service_type for compatibility
         location: booking.flat_no || "",
         price: String(booking.price_inr || 0)
       },
