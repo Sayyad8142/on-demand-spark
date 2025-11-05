@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     console.log("🔍 Finding eligible workers...");
     const { data: workers, error: we } = await supabase
       .from("workers")
-      .select("id, full_name, user_id")
+      .select("id, full_name, user_id, rating, total_ratings")
       .eq("is_active", true)
       .eq("is_available", true)
       .eq("is_busy", false)
@@ -79,72 +79,133 @@ Deno.serve(async (req) => {
       return new Response("no-workers", { status: 200 });
     }
 
-    // Use user_id for FCM token lookup (workers are now linked to auth users)
-    const userIds = workers
-      .map((w) => w.user_id || w.id) // Fallback to worker.id for legacy workers
-      .filter(Boolean);
-    
-    console.log(`✅ Found ${workers.length} eligible workers:`, workers.map(w => w.full_name).join(", "));
-    console.log(`🔑 User IDs (for FCM):`, userIds);
-    console.log(`📋 Worker details:`, workers.map(w => ({ name: w.full_name, worker_id: w.id, user_id: w.user_id })));
-
-    if (userIds.length === 0) {
-      console.log("⚠️ No user_ids found for workers - they may need to log in to link their accounts");
-      return new Response("no-user-ids", { status: 200 });
-    }
-
-    // Call send-fcm edge function via HTTP
-    const fcmUrl = `${SUPABASE_URL}/functions/v1/send-fcm`;
-    console.log("📤 Calling send-fcm for user IDs:", userIds);
-    
-    const sendResponse = await fetch(fcmUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${ANON_KEY}`,
-      },
-      body: JSON.stringify({
-        workerIds: userIds, // Now using auth user IDs for FCM token lookup
-        title: "New Booking Alert!",
-        body: `${b.service_type.replace('_', ' ')} in ${b.community}. Tap to accept!`,
-        data: { 
-          type: "BOOKING_ALERT",
-          bookingId: booking_id, 
-          booking_id: booking_id,
-          customer: b.cust_name || "New Customer",
-          community: b.community,
-          serviceType: b.service_type,
-          location: b.flat_no || "",
-          price: String(b.price_inr || 0)
-        },
-      }),
+    // Sort workers by rating (highest first), then by total_ratings for tie-breaking
+    const sortedWorkers = workers.sort((a, b) => {
+      const ratingDiff = (b.rating || 0) - (a.rating || 0);
+      if (ratingDiff !== 0) return ratingDiff;
+      return (b.total_ratings || 0) - (a.total_ratings || 0);
     });
 
-    if (!sendResponse.ok) {
-      const error = await sendResponse.text();
-      console.error("❌ FCM send error:", error);
-      return new Response(JSON.stringify({ error }), { status: 500 });
+    console.log(`✅ Found ${sortedWorkers.length} eligible workers (sorted by rating)`);
+    
+    // Define priority tiers based on rating
+    const TIER_1_MIN_RATING = 4.5; // Top tier: 4.5+ stars
+    const TIER_2_MIN_RATING = 4.0; // Mid tier: 4.0-4.5 stars
+    const TIER_TIMEOUT_SECONDS = 30; // Time window before moving to next tier
+    
+    // Assign workers to tiers
+    const tier1Workers = sortedWorkers.filter(w => (w.rating || 0) >= TIER_1_MIN_RATING);
+    const tier2Workers = sortedWorkers.filter(w => (w.rating || 0) >= TIER_2_MIN_RATING && (w.rating || 0) < TIER_1_MIN_RATING);
+    const tier3Workers = sortedWorkers.filter(w => (w.rating || 0) < TIER_2_MIN_RATING);
+
+    console.log(`📊 Priority Tiers: Tier 1 (${tier1Workers.length}), Tier 2 (${tier2Workers.length}), Tier 3 (${tier3Workers.length})`);
+
+    // Create booking_requests for all workers with priority order
+    const now = new Date();
+    const bookingRequests = sortedWorkers.map((worker, index) => {
+      let tier = 3;
+      let timeoutSeconds = TIER_TIMEOUT_SECONDS * 3;
+      
+      if ((worker.rating || 0) >= TIER_1_MIN_RATING) {
+        tier = 1;
+        timeoutSeconds = TIER_TIMEOUT_SECONDS;
+      } else if ((worker.rating || 0) >= TIER_2_MIN_RATING) {
+        tier = 2;
+        timeoutSeconds = TIER_TIMEOUT_SECONDS * 2;
+      }
+
+      return {
+        booking_id,
+        worker_id: worker.user_id || worker.id,
+        order_sequence: tier,
+        status: tier === 1 ? 'pending' : 'queued',
+        offered_at: tier === 1 ? now.toISOString() : null,
+        timeout_at: tier === 1 ? new Date(now.getTime() + timeoutSeconds * 1000).toISOString() : null,
+      };
+    });
+
+    // Insert booking requests
+    const { error: reqError } = await supabase
+      .from("booking_requests")
+      .insert(bookingRequests);
+
+    if (reqError) {
+      console.error("❌ Error creating booking requests:", reqError);
+      // Continue anyway to send notifications
     }
 
-    const result = await sendResponse.json();
-    console.log("✅ FCM notifications sent successfully:", result);
-    
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        sent: userIds.length, 
-        workers: workers.map(w => ({ 
-          id: w.id, 
-          name: w.full_name, 
-          user_id: w.user_id,
-          fcm_lookup_id: w.user_id || w.id 
-        })),
-        result 
-      }), 
-      { status: 200, headers: corsHeaders }
-    );
+    // Only notify Tier 1 workers initially
+    const tier1UserIds = tier1Workers
+      .map((w) => w.user_id || w.id)
+      .filter(Boolean);
+
+    if (tier1UserIds.length === 0) {
+      console.log("⚠️ No Tier 1 workers, notifying Tier 2...");
+      // If no tier 1, immediately notify tier 2
+      const tier2UserIds = tier2Workers.map((w) => w.user_id || w.id).filter(Boolean);
+      
+      if (tier2UserIds.length === 0) {
+        console.log("⚠️ No Tier 2 workers, notifying all...");
+        const allUserIds = sortedWorkers.map((w) => w.user_id || w.id).filter(Boolean);
+        return await sendNotifications(allUserIds, b, booking_id);
+      }
+      
+      return await sendNotifications(tier2UserIds, b, booking_id);
+    }
+
+    console.log(`🎯 Notifying Tier 1 workers first (${tier1UserIds.length} workers, ${TIER_TIMEOUT_SECONDS}s window)`);
+    console.log(`⏳ Tier 2 (${tier2Workers.length}) and Tier 3 (${tier3Workers.length}) will be notified if no acceptance`);
+
+    return await sendNotifications(tier1UserIds, b, booking_id);
   } catch (e) {
     console.error("❌ Exception in booking-notifications:", e);
     return new Response(`err:${(e as Error)?.message ?? e}`, { status: 500, headers: corsHeaders });
   }
 });
+
+// Helper function to send FCM notifications
+async function sendNotifications(userIds: string[], booking: any, bookingId: string) {
+  const fcmUrl = `${SUPABASE_URL}/functions/v1/send-fcm`;
+  console.log("📤 Calling send-fcm for user IDs:", userIds);
+  
+  const sendResponse = await fetch(fcmUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${ANON_KEY}`,
+    },
+    body: JSON.stringify({
+      workerIds: userIds,
+      title: "New Booking Alert!",
+      body: `${booking.service_type.replace('_', ' ')} in ${booking.community}. Tap to accept!`,
+      data: { 
+        type: "BOOKING_ALERT",
+        bookingId: bookingId, 
+        booking_id: bookingId,
+        customer: booking.cust_name || "New Customer",
+        community: booking.community,
+        serviceType: booking.service_type,
+        location: booking.flat_no || "",
+        price: String(booking.price_inr || 0)
+      },
+    }),
+  });
+
+  if (!sendResponse.ok) {
+    const error = await sendResponse.text();
+    console.error("❌ FCM send error:", error);
+    return new Response(JSON.stringify({ error }), { status: 500, headers: corsHeaders });
+  }
+
+  const result = await sendResponse.json();
+  console.log("✅ FCM notifications sent successfully:", result);
+  
+  return new Response(
+    JSON.stringify({ 
+      success: true,
+      sent: userIds.length,
+      result 
+    }), 
+    { status: 200, headers: corsHeaders }
+  );
+}
