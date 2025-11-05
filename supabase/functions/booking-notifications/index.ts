@@ -72,11 +72,11 @@ Deno.serve(async (req) => {
       community: b.community
     });
 
-    // Fetch community details by name
+    // Fetch community details by name (case-insensitive)
     const { data: communityData, error: communityError } = await supabase
       .from("communities")
       .select("id, name, center_lat, center_lng, radius_m")
-      .eq("name", b.community)
+      .ilike("name", b.community.replace(/-/g, ' '))
       .single();
 
     if (communityError) {
