@@ -52,6 +52,17 @@ export function AvailabilityToggle({ workerId }: AvailabilityToggleProps) {
           setLoading(false);
           return;
         }
+
+        // Start native foreground service for continuous location tracking
+        try {
+          const OverlayPlugin = (window as any)?.Capacitor?.Plugins?.OverlayPlugin;
+          if (OverlayPlugin?.startForegroundService) {
+            await OverlayPlugin.startForegroundService();
+            console.log('✅ Foreground service started for location tracking');
+          }
+        } catch (error) {
+          console.warn('⚠️ Could not start foreground service:', error);
+        }
       }
 
       const { data, error } = await supabase.rpc("update_worker_availability", {
@@ -65,6 +76,17 @@ export function AvailabilityToggle({ workerId }: AvailabilityToggleProps) {
       if (!checked && Capacitor.isNativePlatform()) {
         // Stop background location tracking
         await stopBackgroundLocationTracking();
+
+        // Stop native foreground service
+        try {
+          const OverlayPlugin = (window as any)?.Capacitor?.Plugins?.OverlayPlugin;
+          if (OverlayPlugin?.stopForegroundService) {
+            await OverlayPlugin.stopForegroundService();
+            console.log('✅ Foreground service stopped');
+          }
+        } catch (error) {
+          console.warn('⚠️ Could not stop foreground service:', error);
+        }
       }
 
       toast({
