@@ -126,8 +126,8 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="p-4 space-y-4 pb-24">
+    <div className="min-h-screen">
+      <div className="p-4 space-y-4 pb-32">
       {/* Web Push Banner */}
       {showWebPushBanner && (
         <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 relative">
