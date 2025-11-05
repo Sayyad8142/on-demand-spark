@@ -395,18 +395,22 @@ export default function Profile() {
       </header>
 
       {/* Content */}
-      <main className="max-w-2xl mx-auto pb-24">
+      <main className="max-w-2xl mx-auto pb-20">
         {/* Profile Header Card */}
         <div className="relative">
           {/* Cover Image */}
           <div className="h-32 bg-gradient-to-br from-primary via-primary/90 to-primary/70 relative overflow-hidden">
             <div className="absolute inset-0 bg-white"></div>
+          </div>
+          
+          {/* Profile Card */}
+          <Card className="mx-4 -mt-16 border-0 shadow-xl relative">
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
               <DialogTrigger asChild>
                 <Button 
                   variant="secondary" 
                   size="icon" 
-                  className="absolute top-4 right-4 h-9 w-9 bg-white/90 hover:bg-white shadow-lg"
+                  className="absolute top-4 right-4 h-9 w-9 bg-white hover:bg-gray-100 shadow-lg z-10"
                 >
                   <Pencil className="h-4 w-4" />
                 </Button>
@@ -540,7 +544,7 @@ export default function Profile() {
                           return (
                             <Badge key={communityValue} variant="secondary" className="gap-1">
                               {community?.name}
-                              <X 
+                              <X
                                 className="h-3 w-3 cursor-pointer" 
                                 onClick={() => setSelectedCommunities(selectedCommunities.filter(c => c !== communityValue))}
                               />
@@ -561,10 +565,6 @@ export default function Profile() {
                 </div>
               </DialogContent>
             </Dialog>
-          </div>
-          
-          {/* Profile Card */}
-          <Card className="mx-4 -mt-16 border-0 shadow-xl relative">
             <CardContent className="pt-6 pb-6">
               <div className="flex items-start gap-4 mb-6">
                 <div className="relative group">
