@@ -8,7 +8,6 @@ import { BookingAlertModal } from "@/components/BookingAlertModal";
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { GeofenceStatus } from "@/components/GeofenceStatus";
-import { CommunitySelector } from "@/components/CommunitySelector";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Bell, X } from "lucide-react";
@@ -28,7 +27,6 @@ export default function Home() {
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [showWebPushBanner, setShowWebPushBanner] = useState(false);
-  const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
   
   const isOnline = !!worker?.is_available;
 
@@ -164,19 +162,8 @@ export default function Home() {
         </Card>
       )}
       
-      <Card className="p-6 space-y-4">
+      <Card className="p-6">
         <AvailabilityToggle workerId={user.id} />
-        
-        <div className="pt-4 border-t">
-          <CommunitySelector 
-            workerId={user.id} 
-            value={worker?.selected_community_id || selectedCommunity}
-            onChange={(id) => {
-              setSelectedCommunity(id);
-              refetchWorker();
-            }}
-          />
-        </div>
       </Card>
 
       {worker?.selected_community_id && (
