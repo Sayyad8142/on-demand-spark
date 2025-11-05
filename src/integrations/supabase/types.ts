@@ -513,26 +513,35 @@ export type Database = {
       }
       communities: {
         Row: {
+          center_lat: number | null
+          center_lng: number | null
           created_at: string
           id: string
           is_active: boolean
           name: string
+          radius_m: number | null
           updated_at: string
           value: string
         }
         Insert: {
+          center_lat?: number | null
+          center_lng?: number | null
           created_at?: string
           id?: string
           is_active?: boolean
           name: string
+          radius_m?: number | null
           updated_at?: string
           value: string
         }
         Update: {
+          center_lat?: number | null
+          center_lng?: number | null
           created_at?: string
           id?: string
           is_active?: boolean
           name?: string
+          radius_m?: number | null
           updated_at?: string
           value?: string
         }
@@ -1891,6 +1900,70 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_availability: {
+        Row: {
+          day_of_week: number
+          id: string
+          slots: boolean[]
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          day_of_week: number
+          id?: string
+          slots: boolean[]
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          day_of_week?: number
+          id?: string
+          slots?: boolean[]
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_availability_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_blackouts: {
+        Row: {
+          date: string
+          id: string
+          reason: string | null
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          date: string
+          id?: string
+          reason?: string | null
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          date?: string
+          id?: string
+          reason?: string | null
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_blackouts_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_contact_access_log: {
         Row: {
           accessed_at: string
@@ -2062,14 +2135,22 @@ export type Database = {
           fcm_token: string | null
           full_name: string
           id: string
+          in_geofence: boolean | null
           is_active: boolean
           is_available: boolean | null
           is_busy: boolean | null
           last_active_at: string | null
+          last_lat: number | null
+          last_lng: number | null
+          last_seen_at: string | null
+          location_enabled: boolean | null
           phone: string
           photo_url: string | null
           rating: number | null
+          respect_availability: boolean | null
+          selected_community_id: string | null
           service_types: string[]
+          timezone: string | null
           total_earnings: number | null
           total_ratings: number | null
           updated_at: string
@@ -2083,14 +2164,22 @@ export type Database = {
           fcm_token?: string | null
           full_name: string
           id?: string
+          in_geofence?: boolean | null
           is_active?: boolean
           is_available?: boolean | null
           is_busy?: boolean | null
           last_active_at?: string | null
+          last_lat?: number | null
+          last_lng?: number | null
+          last_seen_at?: string | null
+          location_enabled?: boolean | null
           phone: string
           photo_url?: string | null
           rating?: number | null
+          respect_availability?: boolean | null
+          selected_community_id?: string | null
           service_types?: string[]
+          timezone?: string | null
           total_earnings?: number | null
           total_ratings?: number | null
           updated_at?: string
@@ -2104,21 +2193,37 @@ export type Database = {
           fcm_token?: string | null
           full_name?: string
           id?: string
+          in_geofence?: boolean | null
           is_active?: boolean
           is_available?: boolean | null
           is_busy?: boolean | null
           last_active_at?: string | null
+          last_lat?: number | null
+          last_lng?: number | null
+          last_seen_at?: string | null
+          location_enabled?: boolean | null
           phone?: string
           photo_url?: string | null
           rating?: number | null
+          respect_availability?: boolean | null
+          selected_community_id?: string | null
           service_types?: string[]
+          timezone?: string | null
           total_earnings?: number | null
           total_ratings?: number | null
           updated_at?: string
           upi_id?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workers_selected_community_id_fkey"
+            columns: ["selected_community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -2156,14 +2261,22 @@ export type Database = {
           fcm_token: string | null
           full_name: string
           id: string
+          in_geofence: boolean | null
           is_active: boolean
           is_available: boolean | null
           is_busy: boolean | null
           last_active_at: string | null
+          last_lat: number | null
+          last_lng: number | null
+          last_seen_at: string | null
+          location_enabled: boolean | null
           phone: string
           photo_url: string | null
           rating: number | null
+          respect_availability: boolean | null
+          selected_community_id: string | null
           service_types: string[]
+          timezone: string | null
           total_earnings: number | null
           total_ratings: number | null
           updated_at: string
@@ -2221,14 +2334,22 @@ export type Database = {
               fcm_token: string | null
               full_name: string
               id: string
+              in_geofence: boolean | null
               is_active: boolean
               is_available: boolean | null
               is_busy: boolean | null
               last_active_at: string | null
+              last_lat: number | null
+              last_lng: number | null
+              last_seen_at: string | null
+              location_enabled: boolean | null
               phone: string
               photo_url: string | null
               rating: number | null
+              respect_availability: boolean | null
+              selected_community_id: string | null
               service_types: string[]
+              timezone: string | null
               total_earnings: number | null
               total_ratings: number | null
               updated_at: string
@@ -2259,14 +2380,22 @@ export type Database = {
               fcm_token: string | null
               full_name: string
               id: string
+              in_geofence: boolean | null
               is_active: boolean
               is_available: boolean | null
               is_busy: boolean | null
               last_active_at: string | null
+              last_lat: number | null
+              last_lng: number | null
+              last_seen_at: string | null
+              location_enabled: boolean | null
               phone: string
               photo_url: string | null
               rating: number | null
+              respect_availability: boolean | null
+              selected_community_id: string | null
               service_types: string[]
+              timezone: string | null
               total_earnings: number | null
               total_ratings: number | null
               updated_at: string
@@ -2488,6 +2617,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      haversine_m: {
+        Args: { lat1: number; lat2: number; lng1: number; lng2: number }
+        Returns: number
+      }
       http: {
         Args: { request: Database["public"]["CompositeTypes"]["http_request"] }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
@@ -2622,6 +2755,10 @@ export type Database = {
         Returns: Json
       }
       is_admin: { Args: never; Returns: boolean }
+      is_worker_available_at_time: {
+        Args: { p_timestamp: string; p_worker_id: string }
+        Returns: boolean
+      }
       maid_total_price: {
         Args: {
           p_community?: string
@@ -2708,6 +2845,10 @@ export type Database = {
       run_sla_with_secret: { Args: { p_secret: string }; Returns: undefined }
       schedule_assignment_timeout: {
         Args: { p_assignment_id: string; p_expires_at: string }
+        Returns: undefined
+      }
+      seed_worker_availability: {
+        Args: { p_worker_id: string }
         Returns: undefined
       }
       send_demo_notification: {
@@ -2877,6 +3018,10 @@ export type Database = {
           }
       update_worker_fcm_token: {
         Args: { p_fcm_token: string; p_worker_id: string }
+        Returns: Json
+      }
+      update_worker_location: {
+        Args: { p_lat: number; p_lng: number }
         Returns: Json
       }
       urlencode:

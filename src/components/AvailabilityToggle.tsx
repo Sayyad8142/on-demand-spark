@@ -1,48 +1,108 @@
+import { useEffect, useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
-import { Wifi, WifiOff } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { startBackgroundLocationTracking, stopBackgroundLocationTracking, requestBatteryOptimizationExemption } from "@/lib/backgroundLocation";
+import { Capacitor } from '@capacitor/core';
 
 interface AvailabilityToggleProps {
-  isOnline: boolean;
-  onToggle: (value: boolean) => void;
-  disabled?: boolean;
+  workerId: string;
 }
 
-export default function AvailabilityToggle({ isOnline, onToggle, disabled }: AvailabilityToggleProps) {
-  const { t } = useTranslation();
-  
+export function AvailabilityToggle({ workerId }: AvailabilityToggleProps) {
+  const [isAvailable, setIsAvailable] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadAvailability();
+  }, [workerId]);
+
+  const loadAvailability = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("workers")
+        .select("is_available")
+        .eq("id", workerId)
+        .single();
+
+      if (error) throw error;
+      setIsAvailable(data?.is_available || false);
+    } catch (error) {
+      console.error("Error loading availability:", error);
+    }
+  };
+
+  const handleToggle = async (checked: boolean) => {
+    setLoading(true);
+    try {
+      if (checked && Capacitor.isNativePlatform()) {
+        // Request battery optimization exemption
+        await requestBatteryOptimizationExemption();
+        
+        // Start background location tracking
+        const locationStarted = await startBackgroundLocationTracking();
+        if (!locationStarted) {
+          toast({
+            title: "Location permission required",
+            description: "Please grant location permissions to receive booking alerts",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+      }
+
+      const { data, error } = await supabase.rpc("update_worker_availability", {
+        p_is_available: checked,
+      });
+
+      if (error) throw error;
+
+      setIsAvailable(checked);
+
+      if (!checked && Capacitor.isNativePlatform()) {
+        // Stop background location tracking
+        await stopBackgroundLocationTracking();
+      }
+
+      toast({
+        title: checked ? "Now Available" : "Now Unavailable",
+        description: checked
+          ? "You will receive booking alerts in your selected area"
+          : "You will not receive booking alerts",
+      });
+    } catch (error: any) {
+      console.error("Error updating availability:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update availability",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <Card className="p-6 shadow-card">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-            isOnline ? 'bg-primary/10' : 'bg-muted'
-          }`}>
-            {isOnline ? (
-              <Wifi className="w-6 h-6 text-primary" />
-            ) : (
-              <WifiOff className="w-6 h-6 text-muted-foreground" />
-            )}
-          </div>
-          <div>
-            <Label htmlFor="availability" className="text-base font-semibold">
-              {isOnline ? t('home.goOnline') : t('home.goOffline')}
-            </Label>
-            <p className="text-sm text-muted-foreground">
-              {isOnline ? t('home.onlineDesc') : t('home.offlineDesc')}
-            </p>
-          </div>
-        </div>
-        <Switch
-          id="availability"
-          checked={isOnline}
-          onCheckedChange={onToggle}
-          disabled={disabled}
-          className="data-[state=checked]:bg-primary"
-        />
+    <div className="flex items-center justify-between">
+      <div>
+        <Label htmlFor="availability" className="text-base font-semibold">
+          {isAvailable ? "Available for Bookings" : "Unavailable"}
+        </Label>
+        <p className="text-sm text-muted-foreground">
+          {isAvailable
+            ? "You will receive booking alerts"
+            : "You will not receive booking alerts"}
+        </p>
       </div>
-    </Card>
+      <Switch
+        id="availability"
+        checked={isAvailable}
+        onCheckedChange={handleToggle}
+        disabled={loading}
+      />
+    </div>
   );
 }
