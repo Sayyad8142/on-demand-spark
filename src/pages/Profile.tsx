@@ -400,7 +400,7 @@ export default function Profile() {
         <div className="relative">
           {/* Cover Image */}
           <div className="h-32 bg-gradient-to-br from-primary via-primary/90 to-primary/70 relative overflow-hidden">
-            <div className="absolute inset-0 bg-white opacity-30"></div>
+            <div className="absolute inset-0 bg-white"></div>
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
               <DialogTrigger asChild>
                 <Button 
