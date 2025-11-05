@@ -94,17 +94,17 @@ export async function startBackgroundLocationTracking(): Promise<boolean> {
     await updateWorkerLocation(location.lat, location.lng);
   }
 
-  // Start interval - update every 2 minutes (Android foreground service will keep it alive)
+  // Start interval - update every 1 minute (more frequent updates)
   locationInterval = setInterval(async () => {
     console.log('📍 Automatic location update...');
     const loc = await getCurrentLocation();
     if (loc) {
       await updateWorkerLocation(loc.lat, loc.lng);
     }
-  }, 120000); // 2 minutes (120 seconds)
+  }, 60000); // 1 minute (60 seconds)
 
   isTrackingLocation = true;
-  console.log('✅ Background location tracking started (2 min interval)');
+  console.log('✅ Background location tracking started (1 min interval)');
   return true;
 }
 

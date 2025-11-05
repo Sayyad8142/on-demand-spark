@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { startBackgroundLocationTracking, stopBackgroundLocationTracking, requestBatteryOptimizationExemption } from "@/lib/backgroundLocation";
+import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
 import { Capacitor } from '@capacitor/core';
 
 interface AvailabilityToggleProps {
@@ -18,6 +19,21 @@ export function AvailabilityToggle({ workerId }: AvailabilityToggleProps) {
   useEffect(() => {
     loadAvailability();
   }, [workerId]);
+
+  // Auto-start location tracking if already available on mount (e.g., after app restart)
+  useEffect(() => {
+    const autoStartTracking = async () => {
+      if (isAvailable && Capacitor.isNativePlatform()) {
+        console.log('📍 Worker is available, auto-starting location tracking');
+        await startBackgroundLocationTracking();
+        await startForegroundService();
+      }
+    };
+    
+    if (isAvailable) {
+      autoStartTracking();
+    }
+  }, [isAvailable]);
 
   const loadAvailability = async () => {
     try {
@@ -54,15 +70,7 @@ export function AvailabilityToggle({ workerId }: AvailabilityToggleProps) {
         }
 
         // Start native foreground service for continuous location tracking
-        try {
-          const OverlayPlugin = (window as any)?.Capacitor?.Plugins?.OverlayPlugin;
-          if (OverlayPlugin?.startForegroundService) {
-            await OverlayPlugin.startForegroundService();
-            console.log('✅ Foreground service started for location tracking');
-          }
-        } catch (error) {
-          console.warn('⚠️ Could not start foreground service:', error);
-        }
+        await startForegroundService();
       }
 
       const { data, error } = await supabase.rpc("update_worker_availability", {
@@ -78,15 +86,7 @@ export function AvailabilityToggle({ workerId }: AvailabilityToggleProps) {
         await stopBackgroundLocationTracking();
 
         // Stop native foreground service
-        try {
-          const OverlayPlugin = (window as any)?.Capacitor?.Plugins?.OverlayPlugin;
-          if (OverlayPlugin?.stopForegroundService) {
-            await OverlayPlugin.stopForegroundService();
-            console.log('✅ Foreground service stopped');
-          }
-        } catch (error) {
-          console.warn('⚠️ Could not stop foreground service:', error);
-        }
+        await stopForegroundService();
       }
 
       toast({
