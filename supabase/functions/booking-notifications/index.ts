@@ -80,19 +80,27 @@ Deno.serve(async (req) => {
       .single();
 
     if (communityError) {
-      console.log("⚠️ Community not found in communities table, proceeding without geofence");
-    } else {
-      console.log("✅ Community found:", {
-        name: communityData.name,
-        has_center: !!(communityData.center_lat && communityData.center_lng)
-      });
+      console.error("❌ Community not found in communities table:", b.community);
+      return new Response(
+        JSON.stringify({ error: `Community "${b.community}" not found. Please configure it first.` }), 
+        { status: 400, headers: corsHeaders }
+      );
     }
+
+    console.log("✅ Community found:", {
+      name: communityData.name,
+      has_center: !!(communityData.center_lat && communityData.center_lng)
+    });
 
     // Check if community has geofence configured
     const hasCommunityCenter = communityData?.center_lat && communityData?.center_lng;
     
     if (!hasCommunityCenter) {
-      console.log("⚠️ Community has no geofence configured, proceeding without location filter");
+      console.error("❌ Community has no geofence configured:", communityData.name);
+      return new Response(
+        JSON.stringify({ error: `Community "${communityData.name}" has no geofence. Please configure center coordinates.` }), 
+        { status: 400, headers: corsHeaders }
+      );
     }
 
     // Eligible workers: active, available, not busy, matching service & selected community
