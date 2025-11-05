@@ -13,7 +13,6 @@ import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import RatingBreakdown from "@/components/RatingBreakdown";
-import { Calendar } from "lucide-react";
 import {
   Dialog,
   DialogContent,
