@@ -7,7 +7,6 @@ import { useActiveJob } from "@/hooks/useActiveJob";
 import { BookingAlertModal } from "@/components/BookingAlertModal";
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
-import { GeofenceStatus } from "@/components/GeofenceStatus";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Bell, X } from "lucide-react";
@@ -165,10 +164,6 @@ export default function Home() {
       <Card className="p-6">
         <AvailabilityToggle workerId={user.id} />
       </Card>
-
-      {worker?.selected_community_id && (
-        <GeofenceStatus workerId={user.id} />
-      )}
 
       {activeJob && <ActiveJobCard booking={activeJob} onStatusUpdate={handleStatusUpdate} updating={updating} />}
       
