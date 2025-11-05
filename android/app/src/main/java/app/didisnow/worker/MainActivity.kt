@@ -62,42 +62,30 @@ class MainActivity : BridgeActivity() {
         handleNavigationIntent(intent)
     }
     
-    override fun onNewIntent(intent: Intent?) {
+    // IMPORTANT: must match BridgeActivity/Activity signature (non-null Intent)
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        android.util.Log.d("MainActivity", "📬 onNewIntent called")
-        // Handle navigation when app is brought to foreground
-        intent?.let { handleNavigationIntent(it) }
+        android.util.Log.d("MainActivity", "🟡 onNewIntent called")
+        handleNavigationIntent(intent)
     }
     
-    private fun handleNavigationIntent(intent: Intent) {
-        val navigateTo = intent.getStringExtra("navigate_to")
-        val bookingId = intent.getStringExtra("booking_id")
+    // Accept nullable Intent and guard reads
+    private fun handleNavigationIntent(intent: Intent?) {
+        val navigateTo = intent?.getStringExtra("navigate_to")
+        val bookingId = intent?.getStringExtra("booking_id")
         
         android.util.Log.d("MainActivity", "🧭 Navigation intent: navigateTo=$navigateTo, bookingId=$bookingId")
         
-        if (navigateTo != null) {
-            // Wait a bit for the bridge to be ready, then send navigation event to React
-            android.os.Handler(mainLooper).postDelayed({
-                try {
-                    val data = """
-                        {
-                            "navigateTo": "$navigateTo",
-                            "bookingId": ${if (bookingId != null) "\"$bookingId\"" else "null"}
-                        }
-                    """.trimIndent()
-                    
-                    // Send event to web layer via JavaScript
-                    bridge.eval("""
-                        window.dispatchEvent(new CustomEvent('nativeNavigation', { 
-                            detail: $data 
-                        }));
-                    """.trimIndent(), null)
-                    
-                    android.util.Log.d("MainActivity", "✅ Navigation event dispatched to web layer")
-                } catch (e: Exception) {
-                    android.util.Log.e("MainActivity", "❌ Failed to dispatch navigation event", e)
-                }
-            }, 500)
+        if (navigateTo.isNullOrEmpty()) return
+        
+        // Send event to WebView/JS
+        bridge?.webView?.post {
+            val js = """
+                window.dispatchEvent(new CustomEvent('native:navigate', {
+                  detail: { screen: '$navigateTo', bookingId: '${bookingId ?: ""}' }
+                }));
+            """.trimIndent()
+            bridge?.webView?.evaluateJavascript(js, null)
         }
     }
 }
