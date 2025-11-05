@@ -3,7 +3,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { startBackgroundLocationTracking, stopBackgroundLocationTracking, requestBatteryOptimizationExemption } from "@/lib/backgroundLocation";
+import { startNativeLocationTracking, stopNativeLocationTracking, isNativeLocationTracking, requestBatteryOptimization } from "@/lib/nativeLocationTracking";
 import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
 import { Capacitor } from '@capacitor/core';
 
@@ -20,13 +20,17 @@ export function AvailabilityToggle({ workerId }: AvailabilityToggleProps) {
     loadAvailability();
   }, [workerId]);
 
-  // Auto-start location tracking if already available on mount (e.g., after app restart)
+  // Auto-start native location tracking if already available on mount
   useEffect(() => {
     const autoStartTracking = async () => {
       if (isAvailable && Capacitor.isNativePlatform()) {
-        console.log('📍 Worker is available, auto-starting location tracking');
-        await startBackgroundLocationTracking();
-        await startForegroundService();
+        const isTracking = await isNativeLocationTracking();
+        if (!isTracking) {
+          console.log('📍 Worker is available, auto-starting native location tracking');
+          await startNativeLocationTracking();
+          await startForegroundService();
+          await requestBatteryOptimization();
+        }
       }
     };
     
@@ -55,10 +59,10 @@ export function AvailabilityToggle({ workerId }: AvailabilityToggleProps) {
     try {
       if (checked && Capacitor.isNativePlatform()) {
         // Request battery optimization exemption
-        await requestBatteryOptimizationExemption();
+        await requestBatteryOptimization();
         
-        // Start background location tracking
-        const locationStarted = await startBackgroundLocationTracking();
+        // Start native location tracking (includes WorkManager as backup)
+        const locationStarted = await startNativeLocationTracking();
         if (!locationStarted) {
           toast({
             title: "Location permission required",
@@ -69,7 +73,7 @@ export function AvailabilityToggle({ workerId }: AvailabilityToggleProps) {
           return;
         }
 
-        // Start native foreground service for continuous location tracking
+        // Start native foreground service for notifications
         await startForegroundService();
       }
 
@@ -82,8 +86,8 @@ export function AvailabilityToggle({ workerId }: AvailabilityToggleProps) {
       setIsAvailable(checked);
 
       if (!checked && Capacitor.isNativePlatform()) {
-        // Stop background location tracking
-        await stopBackgroundLocationTracking();
+        // Stop native location tracking
+        await stopNativeLocationTracking();
 
         // Stop native foreground service
         await stopForegroundService();

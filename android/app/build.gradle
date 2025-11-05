@@ -72,6 +72,12 @@ dependencies {
     
     // LocalBroadcastManager for React UI communication
     implementation "androidx.localbroadcastmanager:localbroadcastmanager:1.1.0"
+    
+    // WorkManager for background location updates
+    implementation "androidx.work:work-runtime-ktx:2.9.0"
+    
+    // Google Play Services Location
+    implementation "com.google.android.gms:play-services-location:21.1.0"
 }
 
 apply from: 'capacitor.build.gradle'
