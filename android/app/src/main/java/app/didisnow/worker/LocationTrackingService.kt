@@ -189,6 +189,17 @@ class LocationTrackingService : Service() {
         notificationManager.notify(NOTIFICATION_ID, notification)
     }
     
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        Log.d(TAG, "onTaskRemoved - restarting service")
+        val i = Intent(applicationContext, LocationTrackingService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            applicationContext.startForegroundService(i)
+        } else {
+            applicationContext.startService(i)
+        }
+    }
+    
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "LocationTrackingService destroyed")

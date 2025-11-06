@@ -71,6 +71,17 @@ class BookingForegroundService : Service() {
         startForeground(NOTIFICATION_ID, notification)
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        android.util.Log.d("BookingForegroundService", "onTaskRemoved - restarting service")
+        val i = Intent(applicationContext, BookingForegroundService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            applicationContext.startForegroundService(i)
+        } else {
+            applicationContext.startService(i)
+        }
+    }
+    
     override fun onDestroy() {
         super.onDestroy()
         // Service destroyed - will restart due to START_STICKY

@@ -3,6 +3,7 @@ package app.didisnow.worker
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.work.*
@@ -61,6 +62,13 @@ class LocationUpdateWorker(
     override suspend fun doWork(): Result {
         Log.d(TAG, "LocationUpdateWorker executing")
         
+        // Run as foreground worker to prevent being killed
+        try {
+            setForeground(createForegroundInfo())
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to set foreground, continuing anyway", e)
+        }
+        
         // Check if user is still logged in and available
         val prefs = applicationContext.getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
         val isLoggedIn = prefs.getBoolean("is_logged_in", false)
@@ -102,6 +110,35 @@ class LocationUpdateWorker(
             Log.e(TAG, "Error in LocationUpdateWorker", e)
             Result.retry()
         }
+    }
+    
+    private fun createForegroundInfo(): ForegroundInfo {
+        val notificationIntent = android.content.Intent(applicationContext, MainActivity::class.java)
+        val pendingIntent = android.app.PendingIntent.getActivity(
+            applicationContext,
+            0,
+            notificationIntent,
+            android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            android.app.Notification.Builder(applicationContext, "location_tracking_channel")
+                .setContentTitle("Location Update")
+                .setContentText("Updating worker location...")
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentIntent(pendingIntent)
+                .build()
+        } else {
+            @Suppress("DEPRECATION")
+            android.app.Notification.Builder(applicationContext)
+                .setContentTitle("Location Update")
+                .setContentText("Updating worker location...")
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentIntent(pendingIntent)
+                .build()
+        }
+        
+        return ForegroundInfo(9999, notification)
     }
     
     private suspend fun updateLocationToSupabase(lat: Double, lng: Double) {

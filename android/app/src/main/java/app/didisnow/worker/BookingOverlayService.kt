@@ -885,6 +885,13 @@ class BookingOverlayService : Service() {
         }
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        android.util.Log.d("BookingOverlay", "onTaskRemoved - stopping overlay service")
+        // BookingOverlayService should stop when task is removed (it's only for active alerts)
+        finishAndStop("onTaskRemoved")
+    }
+
     override fun onDestroy() {
         android.util.Log.d("BookingOverlay", "🧹 onDestroy called")
         
