@@ -404,7 +404,7 @@ export default function Auth() {
 
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">{t('auth.title')}</CardTitle>
+          <CardTitle className="text-2xl text-center">Partner Portal</CardTitle>
           <CardDescription className="text-center">
             {t('auth.description')}
           </CardDescription>
