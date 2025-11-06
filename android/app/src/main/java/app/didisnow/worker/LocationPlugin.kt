@@ -16,6 +16,8 @@ import com.getcapacitor.annotation.CapacitorPlugin
 @CapacitorPlugin(name = "LocationPlugin")
 class LocationPlugin : Plugin() {
     
+    private var permissionCall: PluginCall? = null
+    
     companion object {
         private const val TAG = "LocationPlugin"
         private const val PERMISSION_REQUEST_CODE = 1001
@@ -44,14 +46,29 @@ class LocationPlugin : Plugin() {
             return
         }
         
-        // Request permissions
-        pluginRequestPermissions(permissions.toTypedArray(), PERMISSION_REQUEST_CODE) { result ->
-            val granted = result.all { it.value == "granted" }
+        // Request permissions using Capacitor's correct flow
+        permissionCall = call
+        pluginRequestPermissions(permissions.toTypedArray(), PERMISSION_REQUEST_CODE)
+    }
+    
+    override fun handleRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.handleRequestPermissionsResult(requestCode, permissions, grantResults)
+        
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            val call = permissionCall ?: return
+            
+            val granted = grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }
             Log.d(TAG, "Permission request result: $granted")
             
             val ret = JSObject()
             ret.put("granted", granted)
             call.resolve(ret)
+            
+            permissionCall = null
         }
     }
     
