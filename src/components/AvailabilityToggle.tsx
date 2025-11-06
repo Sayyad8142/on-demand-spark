@@ -3,7 +3,6 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { startNativeLocationTracking, stopNativeLocationTracking, isNativeLocationTracking, requestBatteryOptimization } from "@/lib/nativeLocationTracking";
 import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
 import { Capacitor } from '@capacitor/core';
 
@@ -19,25 +18,6 @@ export function AvailabilityToggle({ workerId }: AvailabilityToggleProps) {
   useEffect(() => {
     loadAvailability();
   }, [workerId]);
-
-  // Auto-start native location tracking if already available on mount
-  useEffect(() => {
-    const autoStartTracking = async () => {
-      if (isAvailable && Capacitor.isNativePlatform()) {
-        const isTracking = await isNativeLocationTracking();
-        if (!isTracking) {
-          console.log('📍 Worker is available, auto-starting native location tracking');
-          await startNativeLocationTracking();
-          await startForegroundService();
-          await requestBatteryOptimization();
-        }
-      }
-    };
-    
-    if (isAvailable) {
-      autoStartTracking();
-    }
-  }, [isAvailable]);
 
   const loadAvailability = async () => {
     try {
@@ -58,21 +38,6 @@ export function AvailabilityToggle({ workerId }: AvailabilityToggleProps) {
     setLoading(true);
     try {
       if (checked && Capacitor.isNativePlatform()) {
-        // Request battery optimization exemption
-        await requestBatteryOptimization();
-        
-        // Start native location tracking (includes WorkManager as backup)
-        const locationStarted = await startNativeLocationTracking();
-        if (!locationStarted) {
-          toast({
-            title: "Location permission required",
-            description: "Please grant location permissions to receive booking alerts",
-            variant: "destructive",
-          });
-          setLoading(false);
-          return;
-        }
-
         // Start native foreground service for notifications
         await startForegroundService();
       }
@@ -86,9 +51,6 @@ export function AvailabilityToggle({ workerId }: AvailabilityToggleProps) {
       setIsAvailable(checked);
 
       if (!checked && Capacitor.isNativePlatform()) {
-        // Stop native location tracking
-        await stopNativeLocationTracking();
-
         // Stop native foreground service
         await stopForegroundService();
       }
@@ -96,7 +58,7 @@ export function AvailabilityToggle({ workerId }: AvailabilityToggleProps) {
       toast({
         title: checked ? "Now Available" : "Now Unavailable",
         description: checked
-          ? "You will receive booking alerts in your selected area"
+          ? "You will receive booking alerts"
           : "You will not receive booking alerts",
       });
     } catch (error: any) {

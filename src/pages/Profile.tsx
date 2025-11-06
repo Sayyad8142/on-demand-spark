@@ -4,7 +4,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { GeofenceStatus } from "@/components/GeofenceStatus";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -655,11 +654,6 @@ export default function Profile() {
         </div>
 
         <div className="px-4 mt-4 space-y-4">
-          {/* Location Status */}
-          {worker?.selected_community_id && (
-            <GeofenceStatus workerId={user?.id || ''} />
-          )}
-
           {/* Rating Breakdown Section */}
           {reviews.length > 0 && (
             <Card className="border-0 shadow-lg">

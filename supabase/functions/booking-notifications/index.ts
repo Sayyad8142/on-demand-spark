@@ -139,39 +139,14 @@ Deno.serve(async (req) => {
       return new Response("no-workers", { status: 200 });
     }
 
-    // Filter by fresh location (≤3 min) and geofence
-    const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+    // All eligible workers who match service type
     let eligibleWorkers = workers;
 
-    if (hasCommunityCenter) {
-      eligibleWorkers = workers.filter(w => {
-        // Must have location enabled
-        if (!w.location_enabled) {
-          console.log(`⏭️ Worker ${w.full_name}: location disabled`);
-          return false;
-        }
-
-        // Must have fresh location (≤3 min)
-        if (!w.last_seen_at || w.last_seen_at < threeMinutesAgo) {
-          console.log(`⏭️ Worker ${w.full_name}: stale location (${w.last_seen_at})`);
-          return false;
-        }
-
-        // Must be in geofence
-        if (!w.in_geofence) {
-          console.log(`⏭️ Worker ${w.full_name}: outside geofence`);
-          return false;
-        }
-
-        return true;
-      });
-
-      console.log(`📊 After fresh location + geofence filter: ${eligibleWorkers.length} workers`);
-    }
+    console.log(`📊 Total eligible workers: ${eligibleWorkers.length}`);
 
     if (!eligibleWorkers.length) {
-      console.log("⚠️ No workers available in the selected time window");
-      return new Response("No nearby experts available", { status: 200 });
+      console.log("⚠️ No workers available");
+      return new Response("No experts available", { status: 200 });
     }
 
     // Sort workers by rating (highest first), then distance to center (if available)

@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
-import { startNativeLocationTracking, isNativeLocationTracking } from '@/lib/nativeLocationTracking';
 
 /**
  * Hook to handle app lifecycle events (foreground/background)
@@ -55,12 +54,6 @@ export function useAppState() {
             }
           } else {
             console.warn('⚠️ No session or AuthBridge when app came to foreground');
-          }
-
-          // Restart native location tracking if it was enabled
-          if (await isNativeLocationTracking()) {
-            console.log('📍 App resumed - restarting native location tracking');
-            await startNativeLocationTracking();
           }
         }
       });
