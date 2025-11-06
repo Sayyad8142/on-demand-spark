@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 import { Geolocation } from '@capacitor/geolocation';
+import { requestNativeLocationPermissions } from '@/lib/nativeLocationTracking';
 
 let locationInterval: NodeJS.Timeout | null = null;
 let isTrackingLocation = false;
@@ -15,12 +16,10 @@ export async function requestLocationPermissions(): Promise<boolean> {
   }
 
   try {
-    const permission = await Geolocation.requestPermissions({
-      permissions: ['location', 'coarseLocation']
-    });
-    
-    console.log('Location permissions:', permission);
-    return permission.location === 'granted' || permission.coarseLocation === 'granted';
+    console.log('📍 Requesting location permissions via native plugin...');
+    const granted = await requestNativeLocationPermissions();
+    console.log('Location permissions result:', granted);
+    return granted;
   } catch (error) {
     console.error('Error requesting location permissions:', error);
     return false;

@@ -1,7 +1,9 @@
+import { registerPlugin } from '@capacitor/core';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 
 interface LocationPlugin {
+  requestLocationPermissions(): Promise<{ granted: boolean }>;
   startLocationTracking(): Promise<{ success: boolean }>;
   stopLocationTracking(): Promise<{ success: boolean }>;
   isLocationTracking(): Promise<{ isTracking: boolean }>;
@@ -9,16 +11,34 @@ interface LocationPlugin {
   requestBatteryOptimization(): Promise<{ success: boolean }>;
 }
 
-const LocationPluginInstance = Capacitor.isNativePlatform()
-  ? (Capacitor as any).Plugins.LocationPlugin as LocationPlugin
-  : null;
+const LocationPluginInstance = registerPlugin<LocationPlugin>('LocationPlugin');
+
+/**
+ * Request location permissions (foreground and background)
+ */
+export async function requestNativeLocationPermissions(): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) {
+    console.log('Native location permissions not available on web');
+    return false;
+  }
+
+  try {
+    console.log('📍 Requesting native location permissions...');
+    const result = await LocationPluginInstance.requestLocationPermissions();
+    console.log('Native location permissions result:', result);
+    return result.granted === true;
+  } catch (error) {
+    console.error('Error requesting native location permissions:', error);
+    return false;
+  }
+}
 
 /**
  * Start native background location tracking service
  * This will continue tracking even when app is closed/minimized
  */
 export async function startNativeLocationTracking(): Promise<boolean> {
-  if (!Capacitor.isNativePlatform() || !LocationPluginInstance) {
+  if (!Capacitor.isNativePlatform()) {
     console.log('Native location tracking not available on web');
     return false;
   }
@@ -46,7 +66,7 @@ export async function startNativeLocationTracking(): Promise<boolean> {
  * Stop native background location tracking service
  */
 export async function stopNativeLocationTracking(): Promise<boolean> {
-  if (!Capacitor.isNativePlatform() || !LocationPluginInstance) {
+  if (!Capacitor.isNativePlatform()) {
     console.log('Native location tracking not available on web');
     return false;
   }
@@ -65,7 +85,7 @@ export async function stopNativeLocationTracking(): Promise<boolean> {
  * Check if native location tracking is currently active
  */
 export async function isNativeLocationTracking(): Promise<boolean> {
-  if (!Capacitor.isNativePlatform() || !LocationPluginInstance) {
+  if (!Capacitor.isNativePlatform()) {
     return false;
   }
 
@@ -82,7 +102,7 @@ export async function isNativeLocationTracking(): Promise<boolean> {
  * Request battery optimization exemption for uninterrupted background tracking
  */
 export async function requestBatteryOptimization(): Promise<void> {
-  if (!Capacitor.isNativePlatform() || !LocationPluginInstance) {
+  if (!Capacitor.isNativePlatform()) {
     return;
   }
 

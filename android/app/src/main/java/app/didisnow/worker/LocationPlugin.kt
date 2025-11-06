@@ -18,6 +18,41 @@ class LocationPlugin : Plugin() {
     
     companion object {
         private const val TAG = "LocationPlugin"
+        private const val PERMISSION_REQUEST_CODE = 1001
+    }
+    
+    @PluginMethod
+    fun requestLocationPermissions(call: PluginCall) {
+        Log.d(TAG, "requestLocationPermissions called")
+        
+        val permissions = mutableListOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+        
+        // Add background location for Android 10+ (API 29+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            permissions.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+        }
+        
+        // Check if already granted
+        if (hasLocationPermissions()) {
+            Log.d(TAG, "Location permissions already granted")
+            val ret = JSObject()
+            ret.put("granted", true)
+            call.resolve(ret)
+            return
+        }
+        
+        // Request permissions
+        pluginRequestPermissions(permissions.toTypedArray(), PERMISSION_REQUEST_CODE) { result ->
+            val granted = result.all { it.value == "granted" }
+            Log.d(TAG, "Permission request result: $granted")
+            
+            val ret = JSObject()
+            ret.put("granted", granted)
+            call.resolve(ret)
+        }
     }
     
     @PluginMethod
@@ -132,13 +167,26 @@ class LocationPlugin : Plugin() {
     
     private fun hasLocationPermissions(): Boolean {
         val context = context
-        return ActivityCompat.checkSelfPermission(
+        val hasFineLocation = ActivityCompat.checkSelfPermission(
             context,
             Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED &&
-        ActivityCompat.checkSelfPermission(
+        ) == PackageManager.PERMISSION_GRANTED
+        
+        val hasCoarseLocation = ActivityCompat.checkSelfPermission(
             context,
             Manifest.permission.ACCESS_COARSE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
+        
+        // For Android 10+, also check background location
+        val hasBackgroundLocation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_BACKGROUND_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true // Not required for older versions
+        }
+        
+        return hasFineLocation && hasCoarseLocation && hasBackgroundLocation
     }
 }
