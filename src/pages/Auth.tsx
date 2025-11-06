@@ -352,47 +352,8 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 p-4">
-      {/* Language Selector - Always Visible */}
-      <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 bg-background rounded-lg shadow-lg p-2">
-        <Button
-          variant={i18n.language === 'en' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => {
-            i18n.changeLanguage('en');
-            localStorage.setItem('language', 'en');
-            toast({ title: "Language changed to English" });
-          }}
-          className="justify-start"
-        >
-          English
-        </Button>
-        <Button
-          variant={i18n.language === 'hi' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => {
-            i18n.changeLanguage('hi');
-            localStorage.setItem('language', 'hi');
-            toast({ title: "भाषा हिंदी में बदल गई" });
-          }}
-          className="justify-start"
-        >
-          हिंदी (Hindi)
-        </Button>
-        <Button
-          variant={i18n.language === 'te' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => {
-            i18n.changeLanguage('te');
-            localStorage.setItem('language', 'te');
-            toast({ title: "భాష తెలుగులోకి మార్చబడింది" });
-          }}
-          className="justify-start"
-        >
-          తెలుగు (Telugu)
-        </Button>
-      </div>
-
-      <Card className="w-full max-w-md">
+      <div className="w-full max-w-md space-y-4">
+        <Card className="w-full">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl text-center">Partner Portal</CardTitle>
           <CardDescription className="text-center">
@@ -596,6 +557,47 @@ export default function Auth() {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Language Selector - Below Card */}
+      <div className="flex items-center justify-center gap-2 bg-background/80 backdrop-blur-sm rounded-full shadow-lg p-2">
+        <Button
+          variant={i18n.language === 'en' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => {
+            i18n.changeLanguage('en');
+            localStorage.setItem('language', 'en');
+            toast({ title: "Language changed to English" });
+          }}
+          className="rounded-full px-4"
+        >
+          English
+        </Button>
+        <Button
+          variant={i18n.language === 'hi' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => {
+            i18n.changeLanguage('hi');
+            localStorage.setItem('language', 'hi');
+            toast({ title: "भाषा हिंदी में बदल गई" });
+          }}
+          className="rounded-full px-4"
+        >
+          हिंदी
+        </Button>
+        <Button
+          variant={i18n.language === 'te' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => {
+            i18n.changeLanguage('te');
+            localStorage.setItem('language', 'te');
+            toast({ title: "భాష తెలుగులోకి మార్చబడింది" });
+          }}
+          className="rounded-full px-4"
+        >
+          తెలుగు
+        </Button>
+      </div>
+      </div>
     </div>
   );
 }
