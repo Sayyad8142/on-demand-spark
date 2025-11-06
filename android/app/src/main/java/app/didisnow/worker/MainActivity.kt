@@ -47,6 +47,7 @@ class MainActivity : BridgeActivity() {
         registerPlugin(OverlayPlugin::class.java)
         registerPlugin(AuthBridge::class.java)
         registerPlugin(LocationPlugin::class.java)
+        registerPlugin(SmsRetrieverPlugin::class.java)
         
         android.util.Log.d("MainActivity", "🚀 App starting - checking permissions")
         

@@ -15,6 +15,8 @@ import { useTranslation } from "react-i18next";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+// @ts-ignore - SMS Retriever bridge
+const SmsRetrieverPlugin = (window as any).Capacitor?.Plugins?.SmsRetrieverPlugin;
 
 const SERVICES = [
   { value: "maid", label: "auth.services.maid" },
@@ -70,6 +72,55 @@ export default function Auth() {
   const [signUpCommunity, setSignUpCommunity] = useState("");
   const [signUpService, setSignUpService] = useState("");
   const [signUpOtp, setSignUpOtp] = useState("");
+
+  // Auto OTP detection for Android
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || !SmsRetrieverPlugin) {
+      return;
+    }
+
+    const startSmsRetriever = async () => {
+      try {
+        const result = await SmsRetrieverPlugin.startWatching();
+        console.log('📱 SMS Retriever started:', result);
+        
+        // Listen for SMS events
+        SmsRetrieverPlugin.addListener('smsReceived', (data: any) => {
+          console.log('📱 SMS received:', data);
+          const message = data.message || '';
+          
+          // Extract 6-digit OTP from message
+          const otpMatch = message.match(/\b\d{6}\b/);
+          if (otpMatch) {
+            const otp = otpMatch[0];
+            console.log('📱 Auto-filled OTP:', otp);
+            
+            // Fill OTP based on which tab is active
+            setSignInOtp(otp);
+            setSignUpOtp(otp);
+            
+            toast({ 
+              title: "OTP Auto-detected", 
+              description: `Code ${otp} filled automatically` 
+            });
+          }
+        });
+      } catch (error) {
+        console.error('❌ SMS Retriever error:', error);
+      }
+    };
+
+    if (otpSent) {
+      startSmsRetriever();
+    }
+
+    return () => {
+      if (SmsRetrieverPlugin) {
+        SmsRetrieverPlugin.removeAllListeners();
+        SmsRetrieverPlugin.stopWatching().catch(console.error);
+      }
+    };
+  }, [otpSent, toast]);
 
   useEffect(() => {
     const fetchCommunities = async () => {
