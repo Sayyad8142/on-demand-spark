@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X, Pencil, Languages, Star, Briefcase, Wallet, Settings, MessageSquare, BarChart3, Camera, Upload, Clock, ChevronRight } from "lucide-react";
+import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X, Pencil, Languages, Star, Briefcase, Wallet, Settings, MessageSquare, BarChart3, Camera, Upload, Clock, ChevronRight, Shield, FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
@@ -805,6 +805,27 @@ export default function Profile() {
                     >
                       <LogOut className="w-4 h-4 mr-2" />
                       {t('profile.logout')}
+                    </Button>
+                  </div>
+
+                  <DropdownMenuSeparator />
+                  
+                  <div className="p-2 space-y-1">
+                    <Button
+                      onClick={() => navigate('/privacy-policy')}
+                      variant="ghost"
+                      className="w-full justify-start text-sm"
+                    >
+                      <Shield className="w-4 h-4 mr-2" />
+                      Privacy Policy
+                    </Button>
+                    <Button
+                      onClick={() => navigate('/terms-of-service')}
+                      variant="ghost"
+                      className="w-full justify-start text-sm"
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Terms of Service
                     </Button>
                   </div>
 
