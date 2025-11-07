@@ -235,7 +235,7 @@ export default function Availability() {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b">
         <div className="flex items-center gap-3 p-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
