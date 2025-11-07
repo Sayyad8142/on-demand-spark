@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build;
+import android.os.Bundle;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -41,22 +42,21 @@ public class SmsRetrieverPlugin extends Plugin {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     if (SmsRetriever.SMS_RETRIEVED_ACTION.equals(intent.getAction())) {
-                        com.google.android.gms.auth.api.phone.SmsMessage smsMessage = 
-                            intent.getParcelableExtra(SmsRetriever.EXTRA_SMS_MESSAGE);
+                        Bundle extras = intent.getExtras();
+                        Status status = (Status) extras.get(SmsRetriever.EXTRA_STATUS);
                         
-                        if (smsMessage != null) {
-                            String message = smsMessage.getMessageBody();
-                            
-                            // Notify JS layer
-                            JSObject ret = new JSObject();
-                            ret.put("message", message);
-                            notifyListeners("smsReceived", ret);
-                        }
-
-                        Status status = (Status) intent.getParcelableExtra(SmsRetriever.EXTRA_STATUS);
                         if (status != null) {
                             switch (status.getStatusCode()) {
                                 case CommonStatusCodes.SUCCESS:
+                                    // Get SMS message contents
+                                    String message = (String) extras.get(SmsRetriever.EXTRA_SMS_MESSAGE);
+                                    
+                                    if (message != null) {
+                                        // Notify JS layer
+                                        JSObject ret = new JSObject();
+                                        ret.put("message", message);
+                                        notifyListeners("smsReceived", ret);
+                                    }
                                     break;
                                 case CommonStatusCodes.TIMEOUT:
                                     JSObject timeout = new JSObject();
