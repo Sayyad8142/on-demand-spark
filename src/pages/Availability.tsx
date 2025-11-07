@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, Calendar, Check } from "lucide-react";
+import { ArrowLeft, Clock, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type DayKey = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 type Slot = { label: string; start: string; end: string; selected: boolean };
@@ -237,112 +236,117 @@ export default function Availability() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-xl font-semibold">Free Time Slots</h1>
+            <h1 className="text-xl font-semibold">Select Your Available Days</h1>
             <p className="text-sm text-muted-foreground">
-              Choose when you're available
+              Choose when you're free to work
             </p>
           </div>
         </div>
       </div>
 
-      {/* Day Tabs */}
-      <Tabs value={activeDay.toString()} onValueChange={(v) => setActiveDay(parseInt(v) as DayKey)} className="w-full">
-        <div className="sticky top-[73px] z-10 bg-background/95 backdrop-blur-sm border-b shadow-sm">
-          <TabsList className="w-full justify-start overflow-x-auto rounded-none h-12 p-0 bg-transparent">
-            {DAYS_SHORT.map((day, i) => (
-              <TabsTrigger
+      {/* Day Selector */}
+      <div className="p-4">
+        <Card className="p-4">
+          <h2 className="text-base font-semibold mb-4">Select days of the week</h2>
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {DAYS.map((day, i) => (
+              <button
                 key={i}
-                value={i.toString()}
-                className="flex-1 min-w-[60px] rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-medium"
+                onClick={() => setActiveDay(i as DayKey)}
+                className={`flex-shrink-0 w-24 h-24 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1 ${
+                  activeDay === i
+                    ? "bg-primary border-primary text-primary-foreground shadow-md"
+                    : "bg-background border-border hover:border-primary/50"
+                }`}
               >
-                {day}
-              </TabsTrigger>
+                <span className="text-xs font-medium uppercase opacity-80">
+                  {DAYS_SHORT[i]}
+                </span>
+                <span className="text-2xl font-bold">{i === 0 ? "M" : i === 1 ? "T" : i === 2 ? "W" : i === 3 ? "T" : i === 4 ? "F" : i === 5 ? "S" : "S"}</span>
+              </button>
             ))}
-          </TabsList>
+          </div>
+        </Card>
+      </div>
+
+      {/* Day Actions */}
+      <div className="px-4 pb-4">
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => selectAllDay(activeDay)}
+            className="flex-1"
+          >
+            <Check className="h-4 w-4 mr-1" />
+            Select All
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => clearDay(activeDay)}
+            className="flex-1"
+          >
+            Clear Day
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => copyToAllDays(activeDay)}
+            className="flex-1"
+          >
+            Copy to All
+          </Button>
         </div>
+      </div>
 
-        {DAYS.map((_, dayIndex) => (
-          <TabsContent key={dayIndex} value={dayIndex.toString()} className="m-0">
-            <div className="p-4 space-y-4">
-              {/* Day Actions */}
-              <div className="flex gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => selectAllDay(dayIndex as DayKey)}
-                  className="flex-1"
-                >
-                  <Check className="h-4 w-4 mr-1" />
-                  All
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => clearDay(dayIndex as DayKey)}
-                  className="flex-1"
-                >
-                  Clear
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copyToAllDays(dayIndex as DayKey)}
-                  className="flex-1"
-                >
-                  Copy to All
-                </Button>
-              </div>
+      {/* Time Slots */}
+      <div className="px-4 pb-4">
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Clock className="h-5 w-5 text-muted-foreground" />
+            <span className="text-base font-semibold">Select time slots for {DAYS[activeDay]}</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {weekData[activeDay].map((slot, i) => (
+              <button
+                key={i}
+                className={`px-3 py-3 rounded-xl text-sm font-medium transition-all border-2 ${
+                  slot.selected
+                    ? "bg-primary/10 border-primary text-primary"
+                    : "bg-background border-border hover:border-primary/30 text-foreground"
+                }`}
+                onClick={() => toggleSlot(activeDay, i)}
+              >
+                {slot.label}
+              </button>
+            ))}
+          </div>
+        </Card>
+      </div>
 
-              {/* Time Slots */}
-              <Card className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{DAYS[dayIndex]}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {weekData[dayIndex as DayKey].map((slot, i) => (
-                    <button
-                      key={i}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                        slot.selected
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "bg-muted hover:bg-muted/80 text-muted-foreground"
-                      }`}
-                      onClick={() => toggleSlot(dayIndex as DayKey, i)}
-                    >
-                      {slot.label}
-                    </button>
-                  ))}
-                </div>
-              </Card>
-
-              {/* Summary */}
-              <Card className="p-4 bg-primary/5 border-primary/20">
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground mb-1">Selected times:</p>
-                    <p className="text-sm text-muted-foreground break-words">{getSummary()}</p>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          </TabsContent>
-        ))}
-      </Tabs>
+      {/* Summary */}
+      <div className="px-4 pb-4">
+        <Card className="p-4 bg-primary/5 border-primary/20">
+          <p className="text-sm font-semibold text-foreground mb-2">
+            Selected time slots for {DAYS[activeDay]}:
+          </p>
+          <p className="text-sm text-muted-foreground">{getSummary()}</p>
+        </Card>
+      </div>
 
       {/* Bottom Actions */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t p-4 space-y-2 shadow-lg">
         <div className="flex gap-2 max-w-2xl mx-auto">
           <Button variant="outline" onClick={selectAllWeek} className="flex-1">
-            Select All Week
+            All Week
           </Button>
           <Button variant="outline" onClick={clearAllWeek} className="flex-1">
             Clear Week
           </Button>
         </div>
         <Button onClick={saveAvailability} disabled={saving} className="w-full max-w-2xl mx-auto" size="lg">
-          {saving ? "Saving..." : "Save Changes"}
+          {saving ? "Saving..." : "Save Availability"}
         </Button>
       </div>
     </div>
