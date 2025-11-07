@@ -24,12 +24,11 @@ const generateSlots = (): Slot[] => {
     for (let min = 0; min < 60; min += 30) {
       const h = hour.toString().padStart(2, "0");
       const m = min.toString().padStart(2, "0");
-      
+
       // Convert to 12-hour format for label
       const hour12 = hour > 12 ? hour - 12 : hour;
       const period = hour >= 12 ? "PM" : "AM";
       const label = `${hour12}:${m} ${period}`;
-      
       slots.push({
         label,
         start: `${h}:${m}:00`,
@@ -198,23 +197,18 @@ export default function Availability() {
           slots: selectedSlots.length > 0 ? selectedSlots : []
         });
       }
-      
       const {
         error
-      } = await supabase
-        .from("worker_availability")
-        .upsert(dayRecords, { 
-          onConflict: 'worker_id,day_of_week',
-          ignoreDuplicates: false 
-        });
-        
+      } = await supabase.from("worker_availability").upsert(dayRecords, {
+        onConflict: 'worker_id,day_of_week',
+        ignoreDuplicates: false
+      });
       if (error) throw error;
-      
       toast({
         title: "Availability saved",
         description: "Your free time slots have been updated"
       });
-      
+
       // Redirect to home after saving
       navigate("/home");
     } catch (error: any) {
@@ -252,14 +246,10 @@ export default function Availability() {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b">
         <div className="flex items-center gap-3 p-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+          
           <div className="flex-1">
             <h1 className="text-xl font-semibold">Set Your Available Time Slots</h1>
-            <p className="text-sm text-muted-foreground">
-              Select when you're free to accept jobs
-            </p>
+            
           </div>
         </div>
       </div>
@@ -276,7 +266,7 @@ export default function Availability() {
               </button>)}
           </div>
           <div className="grid grid-cols-3 gap-2">
-            {DAYS.slice(4, 7).map((day, i) => <button key={i + 4} onClick={() => setActiveDay((i + 4) as DayKey)} className={`w-full h-16 rounded-lg border-2 transition-all flex flex-col items-center justify-center ${activeDay === (i + 4) ? "bg-primary border-primary text-primary-foreground shadow-md" : "bg-background border-border hover:border-primary/50"}`}>
+            {DAYS.slice(4, 7).map((day, i) => <button key={i + 4} onClick={() => setActiveDay(i + 4 as DayKey)} className={`w-full h-16 rounded-lg border-2 transition-all flex flex-col items-center justify-center ${activeDay === i + 4 ? "bg-primary border-primary text-primary-foreground shadow-md" : "bg-background border-border hover:border-primary/50"}`}>
                 <span className="text-xs font-medium uppercase">
                   {DAYS_SHORT[i + 4]}
                 </span>
