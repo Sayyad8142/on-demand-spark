@@ -396,14 +396,14 @@ export default function Profile() {
       {/* Content */}
       <main className="max-w-2xl mx-auto pb-20">
         {/* Profile Header Card */}
-        <div className="relative">
+        <div className="relative -mt-4">
           {/* Cover Image */}
-          <div className="h-32 bg-gradient-to-br from-primary via-primary/90 to-primary/70 relative overflow-hidden">
+          <div className="h-24 bg-gradient-to-br from-primary via-primary/90 to-primary/70 relative overflow-hidden">
             <div className="absolute inset-0 bg-white"></div>
           </div>
           
           {/* Profile Card */}
-          <Card className="mx-4 -mt-16 border-0 shadow-xl relative">
+          <Card className="mx-4 -mt-12 border-0 shadow-xl relative">
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
               <DialogTrigger asChild>
                 <Button 
