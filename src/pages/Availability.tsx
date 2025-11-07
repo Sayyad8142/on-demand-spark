@@ -23,7 +23,12 @@ const generateSlots = (): Slot[] => {
     for (let min = 0; min < 60; min += 30) {
       const h = hour.toString().padStart(2, "0");
       const m = min.toString().padStart(2, "0");
-      const label = `${h}:${m}`;
+      
+      // Convert to 12-hour format for label
+      const hour12 = hour > 12 ? hour - 12 : hour;
+      const period = hour >= 12 ? "PM" : "AM";
+      const label = `${hour12}:${m} ${period}`;
+      
       slots.push({
         label,
         start: `${h}:${m}:00`,
