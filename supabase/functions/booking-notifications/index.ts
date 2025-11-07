@@ -103,28 +103,89 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Eligible workers: active, available, not busy, matching service & selected community
-    console.log("🔍 Finding eligible workers...");
-    
-    // Build query - if we have communityData with ID, filter by selected_community_id
-    // Otherwise, we can't filter by community and will notify all workers with matching service
-    let workersQuery = supabase
-      .from("workers")
-      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng")
-      .eq("is_active", true)
-      .eq("is_available", true)
-      .eq("is_busy", false)
-      .contains("service_types", [b.service_type]);
-    
-    // Only filter by community if we have the community ID
-    if (communityData?.id) {
-      workersQuery = workersQuery.eq("selected_community_id", communityData.id);
-      console.log("🔍 Filtering workers by selected_community_id:", communityData.id);
-    } else {
-      console.log("⚠️ No community ID, finding all workers with matching service type");
-    }
-    
-    const { data: workers, error: we } = await workersQuery;
+  // Get current time in Asia/Kolkata timezone
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  const timeString = formatter.format(now);
+  const weekdayFormatter = new Intl.DateTimeFormat('en-US', { 
+    timeZone: 'Asia/Kolkata', 
+    weekday: 'short' 
+  });
+  const weekday = weekdayFormatter.format(now);
+  const weekdayMap: Record<string, number> = {
+    'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 0
+  };
+  const currentDayOfWeek = weekdayMap[weekday];
+
+  console.log(`📅 Current time in Kolkata: ${timeString} on day ${currentDayOfWeek} (${weekday})`);
+
+  // Get workers with availability for current time
+  const { data: availableWorkers, error: availError } = await supabase
+    .from('worker_availability')
+    .select('worker_id, slots')
+    .eq('day_of_week', currentDayOfWeek);
+
+  if (availError) {
+    console.error('Error fetching availability:', availError);
+    return new Response(JSON.stringify({ error: 'Failed to fetch availability' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Filter workers whose current time falls within their selected slots
+  const availableWorkerIds = new Set<string>();
+  if (availableWorkers) {
+    availableWorkers.forEach((worker) => {
+      if (worker.slots && Array.isArray(worker.slots)) {
+        // Check if current time falls within any of the worker's slots
+        const isAvailableNow = worker.slots.some((slotStart: string) => {
+          // Each slot is 30 minutes, so calculate the end time
+          const [hours, minutes] = slotStart.split(':').map(Number);
+          const slotEnd = `${hours.toString().padStart(2, '0')}:${(minutes + 30).toString().padStart(2, '0')}:00`;
+          return timeString >= slotStart && timeString < slotEnd;
+        });
+        if (isAvailableNow) {
+          availableWorkerIds.add(worker.worker_id);
+        }
+      }
+    });
+  }
+
+  console.log(`Found ${availableWorkerIds.size} workers available at ${timeString} on day ${currentDayOfWeek}`);
+
+  // Query for eligible workers based on service type, community, and availability
+  let workersQuery = supabase
+    .from("workers")
+    .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng")
+    .eq("is_active", true)
+    .eq("is_available", true)
+    .eq("is_busy", false)
+    .contains("service_types", [b.service_type]);
+  
+  // Only filter by community if we have the community ID
+  if (communityData?.id) {
+    workersQuery = workersQuery.eq("selected_community_id", communityData.id);
+    console.log("🔍 Filtering workers by selected_community_id:", communityData.id);
+  } else {
+    console.log("⚠️ No community ID, finding all workers with matching service type");
+  }
+
+  // Add availability filter - only include workers in the available set
+  if (availableWorkerIds.size > 0) {
+    workersQuery = workersQuery.in("id", Array.from(availableWorkerIds));
+    console.log(`🔍 Filtering by ${availableWorkerIds.size} workers with matching availability`);
+  } else {
+    console.log("⚠️ No workers have availability set for current time slot - skipping availability filter");
+  }
+  
+  const { data: workers, error: we } = await workersQuery;
       
     if (we) {
       console.error("❌ Workers load error:", we);

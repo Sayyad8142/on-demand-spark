@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X, Pencil, Languages, Star, Briefcase, Wallet, Settings, MessageSquare, BarChart3, Camera, Upload } from "lucide-react";
+import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X, Pencil, Languages, Star, Briefcase, Wallet, Settings, MessageSquare, BarChart3, Camera, Upload, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -674,6 +674,29 @@ export default function Profile() {
               </CardContent>
             </Card>
           )}
+
+          {/* Availability Management */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Clock className="w-5 h-5" />
+                Free Time Slots
+              </CardTitle>
+              <CardDescription>
+                Manage when you're available for bookings
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                onClick={() => navigate("/availability")}
+              >
+                <Clock className="h-4 w-4 mr-2" />
+                Manage Availability
+              </Button>
+            </CardContent>
+          </Card>
 
           {/* Reviews Section */}
           {reviews.length > 0 && (
