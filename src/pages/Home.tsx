@@ -132,7 +132,7 @@ export default function Home() {
       {/* Fixed Availability Toggle */}
       <div className="fixed top-0 left-0 right-0 z-10 bg-background border-b border-border">
         <div className="p-4">
-          <AvailabilityToggle workerId={user.id} className="bg-green-300" />
+          <AvailabilityToggle workerId={user.id} />
         </div>
       </div>
 
