@@ -127,7 +127,15 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      <div className="p-4 space-y-4 pb-32">
+      {/* Fixed Availability Toggle */}
+      <div className="fixed top-0 left-0 right-0 z-10 bg-background border-b border-border">
+        <div className="p-4">
+          <AvailabilityToggle workerId={user.id} />
+        </div>
+      </div>
+
+      {/* Main Content with top padding for fixed header */}
+      <div className="p-4 space-y-4 pb-32 pt-28">
       {/* Web Push Banner */}
       {showWebPushBanner && (
         <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 relative">
@@ -160,8 +168,6 @@ export default function Home() {
           </div>
         </Card>
       )}
-      
-      <AvailabilityToggle workerId={user.id} />
 
       {activeJob && <ActiveJobCard booking={activeJob} onStatusUpdate={handleStatusUpdate} updating={updating} />}
       
