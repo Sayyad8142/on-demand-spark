@@ -419,7 +419,7 @@ export default function Auth() {
       <div className="w-full max-w-md space-y-4">
         <Card className="w-full">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">Partner Portal</CardTitle>
+          <CardTitle className="text-2xl text-center">Didi now Partner</CardTitle>
           <CardDescription className="text-center">
             {t('auth.description')}
           </CardDescription>
