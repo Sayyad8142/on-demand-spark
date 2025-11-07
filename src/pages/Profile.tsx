@@ -675,29 +675,6 @@ export default function Profile() {
             </Card>
           )}
 
-          {/* Availability Management */}
-          <Card className="border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Clock className="w-5 h-5" />
-                Free Time Slots
-              </CardTitle>
-              <CardDescription>
-                Manage when you're available for bookings
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button 
-                variant="outline" 
-                className="w-full" 
-                onClick={() => navigate("/availability")}
-              >
-                <Clock className="h-4 w-4 mr-2" />
-                Manage Availability
-              </Button>
-            </CardContent>
-          </Card>
-
           {/* Reviews Section */}
           {reviews.length > 0 && (
             <Card className="border-0 shadow-lg">
