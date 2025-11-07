@@ -247,13 +247,13 @@ export default function Availability() {
 
       {/* Day Tabs */}
       <Tabs value={activeDay.toString()} onValueChange={(v) => setActiveDay(parseInt(v) as DayKey)} className="w-full">
-        <div className="sticky top-[73px] z-10 bg-background border-b">
-          <TabsList className="w-full justify-start overflow-x-auto rounded-none h-auto p-0 bg-transparent">
+        <div className="sticky top-[73px] z-10 bg-background/95 backdrop-blur-sm border-b shadow-sm">
+          <TabsList className="w-full justify-start overflow-x-auto rounded-none h-12 p-0 bg-transparent">
             {DAYS_SHORT.map((day, i) => (
               <TabsTrigger
                 key={i}
                 value={i.toString()}
-                className="flex-1 min-w-[60px] rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
+                className="flex-1 min-w-[60px] rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-medium"
               >
                 {day}
               </TabsTrigger>
@@ -265,32 +265,33 @@ export default function Availability() {
           <TabsContent key={dayIndex} value={dayIndex.toString()} className="m-0">
             <div className="p-4 space-y-4">
               {/* Day Actions */}
-              <Card className="p-3">
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => selectAllDay(dayIndex as DayKey)}
-                  >
-                    <Check className="h-4 w-4 mr-1" />
-                    Select All
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => clearDay(dayIndex as DayKey)}
-                  >
-                    Clear Day
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => copyToAllDays(dayIndex as DayKey)}
-                  >
-                    Copy to All
-                  </Button>
-                </div>
-              </Card>
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => selectAllDay(dayIndex as DayKey)}
+                  className="flex-1"
+                >
+                  <Check className="h-4 w-4 mr-1" />
+                  All
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => clearDay(dayIndex as DayKey)}
+                  className="flex-1"
+                >
+                  Clear
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyToAllDays(dayIndex as DayKey)}
+                  className="flex-1"
+                >
+                  Copy to All
+                </Button>
+              </div>
 
               {/* Time Slots */}
               <Card className="p-4">
@@ -298,28 +299,30 @@ export default function Availability() {
                   <Clock className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium">{DAYS[dayIndex]}</span>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {weekData[dayIndex as DayKey].map((slot, i) => (
-                    <Button
+                    <button
                       key={i}
-                      variant={slot.selected ? "default" : "outline"}
-                      size="sm"
-                      className="min-w-[70px]"
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                        slot.selected
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                      }`}
                       onClick={() => toggleSlot(dayIndex as DayKey, i)}
                     >
                       {slot.label}
-                    </Button>
+                    </button>
                   ))}
                 </div>
               </Card>
 
               {/* Summary */}
-              <Card className="p-3 bg-muted/50">
-                <div className="flex items-start gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium mb-1">Selected slots:</p>
-                    <p className="text-sm text-muted-foreground">{getSummary()}</p>
+              <Card className="p-4 bg-primary/5 border-primary/20">
+                <div className="flex items-start gap-3">
+                  <Calendar className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground mb-1">Selected times:</p>
+                    <p className="text-sm text-muted-foreground break-words">{getSummary()}</p>
                   </div>
                 </div>
               </Card>
@@ -329,16 +332,16 @@ export default function Availability() {
       </Tabs>
 
       {/* Bottom Actions */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4 space-y-2">
-        <div className="flex gap-2">
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t p-4 space-y-2 shadow-lg">
+        <div className="flex gap-2 max-w-2xl mx-auto">
           <Button variant="outline" onClick={selectAllWeek} className="flex-1">
             Select All Week
           </Button>
           <Button variant="outline" onClick={clearAllWeek} className="flex-1">
-            Clear All Week
+            Clear Week
           </Button>
         </div>
-        <Button onClick={saveAvailability} disabled={saving} className="w-full" size="lg">
+        <Button onClick={saveAvailability} disabled={saving} className="w-full max-w-2xl mx-auto" size="lg">
           {saving ? "Saving..." : "Save Changes"}
         </Button>
       </div>
