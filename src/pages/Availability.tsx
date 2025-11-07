@@ -175,10 +175,7 @@ export default function Availability() {
     }
     setSaving(true);
     try {
-      // Delete all existing availability for this worker
-      await supabase.from("worker_availability").delete().eq("worker_id", user!.id);
-
-      // Prepare slots for each day
+      // Prepare slots for each day using upsert
       const dayRecords = [];
       for (let day = 0; day < 7; day++) {
         const selectedSlots = weekData[day as DayKey].filter(s => s.selected).map(s => s.start);
@@ -190,11 +187,28 @@ export default function Availability() {
           });
         }
       }
+      
       if (dayRecords.length > 0) {
+        // First delete all existing records for this worker
+        await supabase
+          .from("worker_availability")
+          .delete()
+          .eq("worker_id", user!.id);
+
+        // Small delay to ensure delete completes
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Then insert new records
         const {
           error
         } = await supabase.from("worker_availability").insert(dayRecords);
         if (error) throw error;
+      } else {
+        // If no slots selected, just delete all
+        await supabase
+          .from("worker_availability")
+          .delete()
+          .eq("worker_id", user!.id);
       }
       toast({
         title: "Availability saved",
