@@ -86,6 +86,18 @@ export default function Availability() {
           }
         });
         setWeekData(newWeekData);
+      } else {
+        // First time user - select all slots by default
+        const newWeekData = {
+          ...weekData
+        };
+        for (let day = 0; day < 7; day++) {
+          newWeekData[day as DayKey] = newWeekData[day as DayKey].map(slot => ({
+            ...slot,
+            selected: true
+          }));
+        }
+        setWeekData(newWeekData);
       }
     } catch (error: any) {
       console.error("Error loading availability:", error);
