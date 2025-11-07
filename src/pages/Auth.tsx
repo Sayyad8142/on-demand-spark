@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
+import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -419,6 +420,9 @@ export default function Auth() {
       <div className="w-full max-w-md space-y-4">
         <Card className="w-full">
         <CardHeader className="space-y-1">
+          <div className="flex justify-center mb-4">
+            <img src={didiPartnerLogo} alt="Didi Now Partner" className="w-32 h-32" />
+          </div>
           <CardTitle className="text-2xl text-center">Didi now Partner</CardTitle>
           <CardDescription className="text-center">
             {t('auth.description')}
