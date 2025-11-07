@@ -421,7 +421,7 @@ export default function Auth() {
         <Card className="w-full">
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
-            <img src={didiPartnerLogo} alt="Didi Now Partner" className="w-32 h-32" />
+            <img src={didiPartnerLogo} alt="Didi Now Partner" className="w-24 h-24" />
           </div>
           <CardTitle className="text-2xl text-center">Didi now Partner</CardTitle>
           <CardDescription className="text-center">
