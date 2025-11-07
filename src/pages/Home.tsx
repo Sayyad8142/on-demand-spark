@@ -4,7 +4,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { useBookingAlerts } from "@/hooks/useBookingAlerts";
 import { useActiveJob } from "@/hooks/useActiveJob";
+import { useIncomingCall } from "@/hooks/useIncomingCall";
 import { BookingAlertModal } from "@/components/BookingAlertModal";
+import IncomingCallScreen from "@/components/IncomingCallScreen";
+import CallScreen from "@/components/CallScreen";
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { Button } from "@/components/ui/button";
@@ -13,6 +16,7 @@ import { Bell, X } from "lucide-react";
 import { Capacitor } from '@capacitor/core';
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/components/ui/use-toast";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -38,7 +42,13 @@ export default function Home() {
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [showWebPushBanner, setShowWebPushBanner] = useState(false);
+  const [isInCall, setIsInCall] = useState(false);
+  const [callRoomUrl, setCallRoomUrl] = useState('');
+  const [callToken, setCallToken] = useState('');
+  const [callId, setCallId] = useState('');
   const isOnline = !!worker?.is_available;
+  const { toast } = useToast();
+  const { incomingCall, dismissCall } = useIncomingCall();
 
   // Note: FCM initialization is handled in App.tsx, no need to duplicate here
 
@@ -122,12 +132,76 @@ export default function Home() {
     await Promise.all([refetchActiveJob(), refetchWorker()]);
   };
 
+  const handleCall = async () => {
+    if (!activeJob) return;
+
+    try {
+      console.log('📞 Initiating call for booking:', activeJob.id);
+      toast({
+        title: 'Connecting...',
+        description: 'Starting call, please wait',
+      });
+
+      const { data, error } = await supabase.functions.invoke('create-rtc-call', {
+        body: { booking_id: activeJob.id },
+      });
+
+      if (error) throw error;
+
+      setCallRoomUrl(data.room_url);
+      setCallToken(data.caller_token);
+      setCallId(data.rtc_call_id);
+      setIsInCall(true);
+
+      console.log('✅ Call initiated:', data.rtc_call_id);
+    } catch (error) {
+      console.error('❌ Failed to start call:', error);
+      toast({
+        title: 'Call Failed',
+        description: error instanceof Error ? error.message : 'Failed to start call',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCallEnd = () => {
+    setIsInCall(false);
+    setCallRoomUrl('');
+    setCallToken('');
+    setCallId('');
+  };
+
   // Guard: Don't render if user is not loaded yet
   if (!user) {
     return <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>;
   }
+
+  // Show incoming call screen
+  if (incomingCall) {
+    return (
+      <IncomingCallScreen
+        rtcCallId={incomingCall.rtcCallId}
+        callerName={incomingCall.callerName}
+        onDismiss={dismissCall}
+      />
+    );
+  }
+
+  // Show active call screen
+  if (isInCall && callRoomUrl && callToken && callId) {
+    return (
+      <CallScreen
+        roomUrl={callRoomUrl}
+        token={callToken}
+        userName={worker?.full_name || 'Worker'}
+        rtcCallId={callId}
+        onCallEnd={handleCallEnd}
+      />
+    );
+  }
+
   return <div className="min-h-screen">
       {/* Fixed Availability Toggle */}
       <div className="fixed top-0 left-0 right-0 z-10 bg-background border-b border-border">
@@ -162,7 +236,7 @@ export default function Home() {
           </div>
         </Card>}
 
-      {activeJob && <ActiveJobCard booking={activeJob} onStatusUpdate={handleStatusUpdate} updating={updating} />}
+      {activeJob && <ActiveJobCard booking={activeJob} onStatusUpdate={handleStatusUpdate} updating={updating} onCall={handleCall} />}
       
       {/* Only show in-app modal on web platform; Android uses native overlay */}
       {!Capacitor.isNativePlatform() && <BookingAlertModal open={!!pending} booking={pending} onAccept={handleAccept} onReject={reject} onClose={clearAlert} />}
