@@ -6,10 +6,13 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-
 type DayKey = 0 | 1 | 2 | 3 | 4 | 5 | 6;
-type Slot = { label: string; start: string; end: string; selected: boolean };
-
+type Slot = {
+  label: string;
+  start: string;
+  end: string;
+  selected: boolean;
+};
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const DAYS_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -25,17 +28,20 @@ const generateSlots = (): Slot[] => {
         label,
         start: `${h}:${m}:00`,
         end: `${h}:${min + 30 < 60 ? (min + 30).toString().padStart(2, "0") : "00"}:00`,
-        selected: false,
+        selected: false
       });
     }
   }
   return slots;
 };
-
 export default function Availability() {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { user } = useAuth();
+  const {
+    toast
+  } = useToast();
+  const {
+    user
+  } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [weekData, setWeekData] = useState<Record<DayKey, Slot[]>>({
@@ -45,33 +51,32 @@ export default function Availability() {
     3: generateSlots(),
     4: generateSlots(),
     5: generateSlots(),
-    6: generateSlots(),
+    6: generateSlots()
   });
-  const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6 : (new Date().getDay() - 1) as DayKey);
-
+  const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1 as DayKey);
   useEffect(() => {
     loadAvailability();
   }, []);
-
   const loadAvailability = async () => {
     try {
-      const { data, error } = await supabase
-        .from("worker_availability")
-        .select("day_of_week, slots")
-        .order("day_of_week");
-
+      const {
+        data,
+        error
+      } = await supabase.from("worker_availability").select("day_of_week, slots").order("day_of_week");
       if (error) throw error;
-
       if (data && data.length > 0) {
-        const newWeekData = { ...weekData };
+        const newWeekData = {
+          ...weekData
+        };
         data.forEach((row: any) => {
           const dayKey = row.day_of_week as DayKey;
           if (row.slots && Array.isArray(row.slots)) {
             (row.slots as any[]).forEach((timeSlot: any) => {
               const timeStr = String(timeSlot);
-              newWeekData[dayKey] = newWeekData[dayKey].map((slot) =>
-                slot.start === timeStr ? { ...slot, selected: true } : slot
-              );
+              newWeekData[dayKey] = newWeekData[dayKey].map(slot => slot.start === timeStr ? {
+                ...slot,
+                selected: true
+              } : slot);
             });
           }
         });
@@ -82,127 +87,125 @@ export default function Availability() {
       toast({
         title: "Error",
         description: "Failed to load your availability",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-
   const toggleSlot = (day: DayKey, index: number) => {
-    setWeekData((prev) => ({
+    setWeekData(prev => ({
       ...prev,
-      [day]: prev[day].map((slot, i) =>
-        i === index ? { ...slot, selected: !slot.selected } : slot
-      ),
+      [day]: prev[day].map((slot, i) => i === index ? {
+        ...slot,
+        selected: !slot.selected
+      } : slot)
     }));
   };
-
   const selectAllDay = (day: DayKey) => {
-    setWeekData((prev) => ({
+    setWeekData(prev => ({
       ...prev,
-      [day]: prev[day].map((slot) => ({ ...slot, selected: true })),
+      [day]: prev[day].map(slot => ({
+        ...slot,
+        selected: true
+      }))
     }));
   };
-
   const clearDay = (day: DayKey) => {
-    setWeekData((prev) => ({
+    setWeekData(prev => ({
       ...prev,
-      [day]: prev[day].map((slot) => ({ ...slot, selected: false })),
+      [day]: prev[day].map(slot => ({
+        ...slot,
+        selected: false
+      }))
     }));
   };
-
   const copyToAllDays = (sourceDay: DayKey) => {
     const sourceSlots = weekData[sourceDay];
-    const newWeekData = { ...weekData };
+    const newWeekData = {
+      ...weekData
+    };
     for (let day = 0; day < 7; day++) {
-      newWeekData[day as DayKey] = sourceSlots.map((slot) => ({ ...slot }));
+      newWeekData[day as DayKey] = sourceSlots.map(slot => ({
+        ...slot
+      }));
     }
     setWeekData(newWeekData);
-    toast({ title: "Copied", description: "Applied this day to all days" });
+    toast({
+      title: "Copied",
+      description: "Applied this day to all days"
+    });
   };
-
   const selectAllWeek = () => {
-    const newWeekData = { ...weekData };
+    const newWeekData = {
+      ...weekData
+    };
     for (let day = 0; day < 7; day++) {
-      newWeekData[day as DayKey] = newWeekData[day as DayKey].map((slot) => ({
+      newWeekData[day as DayKey] = newWeekData[day as DayKey].map(slot => ({
         ...slot,
-        selected: true,
+        selected: true
       }));
     }
     setWeekData(newWeekData);
   };
-
   const clearAllWeek = () => {
-    const newWeekData = { ...weekData };
+    const newWeekData = {
+      ...weekData
+    };
     for (let day = 0; day < 7; day++) {
       newWeekData[day as DayKey] = generateSlots();
     }
     setWeekData(newWeekData);
   };
-
   const saveAvailability = async () => {
     // Check if at least one slot is selected
-    const hasAnySlot = Object.values(weekData).some((slots) =>
-      slots.some((s) => s.selected)
-    );
+    const hasAnySlot = Object.values(weekData).some(slots => slots.some(s => s.selected));
     if (!hasAnySlot) {
       toast({
         title: "No slots selected",
         description: "Please select at least one time slot",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     setSaving(true);
     try {
       // Delete all existing availability for this worker
-      await supabase
-        .from("worker_availability")
-        .delete()
-        .eq("worker_id", user!.id);
+      await supabase.from("worker_availability").delete().eq("worker_id", user!.id);
 
       // Prepare slots for each day
       const dayRecords = [];
       for (let day = 0; day < 7; day++) {
-        const selectedSlots = weekData[day as DayKey]
-          .filter((s) => s.selected)
-          .map((s) => s.start);
-
+        const selectedSlots = weekData[day as DayKey].filter(s => s.selected).map(s => s.start);
         if (selectedSlots.length > 0) {
           dayRecords.push({
             worker_id: user!.id,
             day_of_week: day,
-            slots: selectedSlots,
+            slots: selectedSlots
           });
         }
       }
-
       if (dayRecords.length > 0) {
-        const { error } = await supabase
-          .from("worker_availability")
-          .insert(dayRecords);
-
+        const {
+          error
+        } = await supabase.from("worker_availability").insert(dayRecords);
         if (error) throw error;
       }
-
       toast({
         title: "Availability saved",
-        description: "Your free time slots have been updated",
+        description: "Your free time slots have been updated"
       });
     } catch (error: any) {
       console.error("Error saving availability:", error);
       toast({
         title: "Error",
         description: "Failed to save availability",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setSaving(false);
     }
   };
-
   const getSummary = () => {
     const summary: string[] = [];
     weekData[activeDay].forEach((slot, i, arr) => {
@@ -218,17 +221,12 @@ export default function Availability() {
     });
     return summary.length > 0 ? summary.join(", ") : "No slots selected";
   };
-
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+    return <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-background pb-24">
+  return <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b">
         <div className="flex items-center gap-3 p-4">
@@ -249,22 +247,12 @@ export default function Availability() {
         <Card className="p-4">
           <h2 className="text-base font-semibold mb-4">Select days of the week</h2>
           <div className="flex gap-2 overflow-x-auto pb-2">
-            {DAYS.map((day, i) => (
-              <button
-                key={i}
-                onClick={() => setActiveDay(i as DayKey)}
-                className={`flex-shrink-0 w-24 h-24 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1 ${
-                  activeDay === i
-                    ? "bg-primary border-primary text-primary-foreground shadow-md"
-                    : "bg-background border-border hover:border-primary/50"
-                }`}
-              >
+            {DAYS.map((day, i) => <button key={i} onClick={() => setActiveDay(i as DayKey)} className={`flex-shrink-0 w-24 h-24 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1 ${activeDay === i ? "bg-primary border-primary text-primary-foreground shadow-md" : "bg-background border-border hover:border-primary/50"}`}>
                 <span className="text-xs font-medium uppercase opacity-80">
                   {DAYS_SHORT[i]}
                 </span>
-                <span className="text-2xl font-bold">{i === 0 ? "M" : i === 1 ? "T" : i === 2 ? "W" : i === 3 ? "T" : i === 4 ? "F" : i === 5 ? "S" : "S"}</span>
-              </button>
-            ))}
+                
+              </button>)}
           </div>
         </Card>
       </div>
@@ -272,29 +260,14 @@ export default function Availability() {
       {/* Day Actions */}
       <div className="px-4 pb-4">
         <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => selectAllDay(activeDay)}
-            className="flex-1"
-          >
+          <Button variant="secondary" size="sm" onClick={() => selectAllDay(activeDay)} className="flex-1">
             <Check className="h-4 w-4 mr-1" />
             Select All
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => clearDay(activeDay)}
-            className="flex-1"
-          >
+          <Button variant="outline" size="sm" onClick={() => clearDay(activeDay)} className="flex-1">
             Clear Day
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => copyToAllDays(activeDay)}
-            className="flex-1"
-          >
+          <Button variant="outline" size="sm" onClick={() => copyToAllDays(activeDay)} className="flex-1">
             Copy to All
           </Button>
         </div>
@@ -308,19 +281,9 @@ export default function Availability() {
             <span className="text-base font-semibold">Select time slots for {DAYS[activeDay]}</span>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            {weekData[activeDay].map((slot, i) => (
-              <button
-                key={i}
-                className={`px-3 py-3 rounded-xl text-sm font-medium transition-all border-2 ${
-                  slot.selected
-                    ? "bg-primary/10 border-primary text-primary"
-                    : "bg-background border-border hover:border-primary/30 text-foreground"
-                }`}
-                onClick={() => toggleSlot(activeDay, i)}
-              >
+            {weekData[activeDay].map((slot, i) => <button key={i} className={`px-3 py-3 rounded-xl text-sm font-medium transition-all border-2 ${slot.selected ? "bg-primary/10 border-primary text-primary" : "bg-background border-border hover:border-primary/30 text-foreground"}`} onClick={() => toggleSlot(activeDay, i)}>
                 {slot.label}
-              </button>
-            ))}
+              </button>)}
           </div>
         </Card>
       </div>
@@ -349,6 +312,5 @@ export default function Availability() {
           {saving ? "Saving..." : "Save Availability"}
         </Button>
       </div>
-    </div>
-  );
+    </div>;
 }
