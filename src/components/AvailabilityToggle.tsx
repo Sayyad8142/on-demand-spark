@@ -74,7 +74,11 @@ export function AvailabilityToggle({ workerId }: AvailabilityToggleProps) {
   };
 
   return (
-    <div className="bg-card border rounded-lg p-4 shadow-sm">
+    <div className={`border rounded-lg p-4 shadow-sm transition-colors ${
+      isAvailable 
+        ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800" 
+        : "bg-card"
+    }`}>
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
