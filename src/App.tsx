@@ -13,6 +13,7 @@ import { requestAndroidOverlay } from "@/lib/overlay";
 import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
 import { tryAccept } from "@/lib/bookingActions";
 import { requestLocationPermissions } from "@/lib/backgroundLocation";
+import OfflineBanner from "@/components/OfflineBanner";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import Bookings from "./pages/Bookings";
@@ -26,6 +27,7 @@ import Availability from "./pages/Availability";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import ContactSupport from "./pages/ContactSupport";
+import OfflineSettings from "./pages/OfflineSettings";
 import BottomNav from "./components/BottomNav";
 
 const queryClient = new QueryClient();
@@ -172,6 +174,7 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <OfflineBanner />
         <BrowserRouter>
           <NativeNavigationHandler />
           <Routes>
@@ -243,6 +246,7 @@ const App = () => {
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/contact-support" element={<ProtectedRoute><ContactSupport /></ProtectedRoute>} />
+            <Route path="/offline-settings" element={<ProtectedRoute><OfflineSettings /></ProtectedRoute>} />
             <Route path="/" element={<Navigate to="/auth" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
