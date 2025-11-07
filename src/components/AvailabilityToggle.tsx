@@ -8,9 +8,10 @@ import { Capacitor } from '@capacitor/core';
 
 interface AvailabilityToggleProps {
   workerId: string;
+  className?: string;
 }
 
-export function AvailabilityToggle({ workerId }: AvailabilityToggleProps) {
+export function AvailabilityToggle({ workerId, className }: AvailabilityToggleProps) {
   const [isAvailable, setIsAvailable] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -78,7 +79,7 @@ export function AvailabilityToggle({ workerId }: AvailabilityToggleProps) {
       isAvailable 
         ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800" 
         : "bg-card"
-    }`}>
+    } ${className || ""}`}>
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">

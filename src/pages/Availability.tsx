@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import BottomNav from "@/components/BottomNav";
 type DayKey = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 type Slot = {
   label: string;
@@ -326,7 +327,7 @@ export default function Availability() {
       </div>
 
       {/* Bottom Actions */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t p-4 space-y-2 shadow-lg">
+      <div className="fixed bottom-16 left-0 right-0 bg-background/95 backdrop-blur-sm border-t p-4 space-y-2 shadow-lg">
         <div className="flex gap-2 max-w-2xl mx-auto">
           <Button variant="outline" onClick={selectAllWeek} className="flex-1">
             All Week
@@ -339,5 +340,7 @@ export default function Availability() {
           {saving ? "Saving..." : "Save Availability"}
         </Button>
       </div>
+
+      <BottomNav />
     </div>;
 }
