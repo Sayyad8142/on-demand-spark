@@ -93,7 +93,11 @@ export function AvailabilityToggle({ workerId, className }: AvailabilityTogglePr
               <span className="inline-flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
             )}
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className={`text-sm ${
+            isAvailable 
+              ? "text-green-600 dark:text-green-400" 
+              : "text-red-600 dark:text-red-400"
+          }`}>
             {isAvailable
               ? "You will receive booking alerts"
               : "Toggle on to start receiving bookings"}
