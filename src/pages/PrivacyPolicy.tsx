@@ -197,12 +197,12 @@ export default function PrivacyPolicy() {
                 <section>
                   <h2 className="text-xl font-semibold mb-3">12. Contact Us</h2>
                   <p className="text-muted-foreground leading-relaxed">
-                    If you have questions about this privacy policy or our data practices, please contact us through:
+                    If you have questions about this privacy policy or our data practices, please contact us:
                   </p>
                   <ul className="list-disc list-inside text-muted-foreground space-y-1 ml-4 mt-2">
-                    <li>In-app support/feedback feature</li>
-                    <li>Email: [Your support email]</li>
-                    <li>Phone: [Your support phone]</li>
+                    <li>Through the in-app Contact & Support page</li>
+                    <li>Email: support@didinow.com</li>
+                    <li>Phone: +91 XXXX-XXXXXX</li>
                   </ul>
                 </section>
 
