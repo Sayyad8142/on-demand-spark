@@ -170,8 +170,8 @@ export default function Profile() {
 
     const fetchReviews = async () => {
       const { data, error } = await supabase
-        .from('worker_reviews')
-        .select('*, bookings(cust_name, service_type)')
+        .from('worker_ratings')
+        .select('*, bookings(cust_name, service_type, flat_no, community)')
         .eq('worker_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -697,16 +697,19 @@ export default function Profile() {
                             {review.bookings?.cust_name || 'Customer'}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {review.bookings?.service_type} • {format(new Date(review.created_at), 'MMM d, yyyy')}
+                            {review.bookings?.service_type} • {review.bookings?.community} • Flat {review.bookings?.flat_no}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {format(new Date(review.created_at), 'MMM d, yyyy')}
                           </p>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 bg-amber-100 dark:bg-amber-950 px-2 py-1 rounded-lg">
                           <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
                           <span className="font-semibold text-sm">{review.rating}</span>
                         </div>
                       </div>
                       {review.comment && (
-                        <p className="text-sm text-foreground mt-2">
+                        <p className="text-sm text-foreground mt-3 p-3 bg-background rounded-lg border">
                           "{review.comment}"
                         </p>
                       )}
