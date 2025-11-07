@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Calendar, User } from "lucide-react";
+import { Home, Calendar, User, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export default function BottomNav() {
@@ -10,6 +10,7 @@ export default function BottomNav() {
   const navItems = [
     { path: "/home", icon: Home, label: t('nav.home') },
     { path: "/bookings", icon: Calendar, label: t('nav.bookings') },
+    { path: "/availability", icon: Clock, label: t('nav.availability') },
     { path: "/profile", icon: User, label: t('nav.profile') },
   ];
 

@@ -122,6 +122,7 @@
   "nav": {
     "home": "Home",
     "bookings": "Bookings",
+    "availability": "Availability",
     "profile": "Profile",
     "settings": "Settings"
   },

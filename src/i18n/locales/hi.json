@@ -122,6 +122,7 @@
   "nav": {
     "home": "होम",
     "bookings": "बुकिंग",
+    "availability": "उपलब्धता",
     "profile": "प्रोफ़ाइल",
     "settings": "सेटिंग्स"
   },
