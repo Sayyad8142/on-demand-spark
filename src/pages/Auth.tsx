@@ -391,8 +391,21 @@ export default function Auth() {
         }
       }
 
+      // Check if worker has set availability
+      const { data: availabilityData } = await supabase
+        .from('worker_availability')
+        .select('*')
+        .eq('worker_id', data.user.id)
+        .limit(1);
+
       toast({ title: "Success!", description: "Account created successfully" });
-      navigate("/home");
+      
+      // Redirect to availability page if no slots set, otherwise home
+      if (!availabilityData || availabilityData.length === 0) {
+        navigate("/availability");
+      } else {
+        navigate("/home");
+      }
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {

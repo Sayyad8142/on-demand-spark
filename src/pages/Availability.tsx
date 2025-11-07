@@ -200,6 +200,9 @@ export default function Availability() {
         title: "Availability saved",
         description: "Your free time slots have been updated"
       });
+      
+      // Redirect to home after saving
+      navigate("/home");
     } catch (error: any) {
       console.error("Error saving availability:", error);
       toast({
@@ -239,9 +242,9 @@ export default function Availability() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-xl font-semibold">Select Your Available Days</h1>
+            <h1 className="text-xl font-semibold">Set Your Available Time Slots</h1>
             <p className="text-sm text-muted-foreground">
-              Choose when you're free to work
+              Select when you're free to accept jobs
             </p>
           </div>
         </div>
