@@ -247,11 +247,10 @@ export default function Availability() {
         <Card className="p-4">
           <h2 className="text-base font-semibold mb-4">Select days of the week</h2>
           <div className="flex gap-2 overflow-x-auto pb-2">
-            {DAYS.map((day, i) => <button key={i} onClick={() => setActiveDay(i as DayKey)} className={`flex-shrink-0 w-24 h-24 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1 ${activeDay === i ? "bg-primary border-primary text-primary-foreground shadow-md" : "bg-background border-border hover:border-primary/50"}`}>
-                <span className="text-xs font-medium uppercase opacity-80">
+            {DAYS.map((day, i) => <button key={i} onClick={() => setActiveDay(i as DayKey)} className={`flex-shrink-0 w-16 h-16 rounded-lg border-2 transition-all flex flex-col items-center justify-center ${activeDay === i ? "bg-primary border-primary text-primary-foreground shadow-md" : "bg-background border-border hover:border-primary/50"}`}>
+                <span className="text-xs font-medium uppercase">
                   {DAYS_SHORT[i]}
                 </span>
-                
               </button>)}
           </div>
         </Card>
