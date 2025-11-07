@@ -1904,21 +1904,21 @@ export type Database = {
         Row: {
           day_of_week: number
           id: string
-          slots: boolean[]
+          slots: string[]
           updated_at: string
           worker_id: string
         }
         Insert: {
           day_of_week: number
           id?: string
-          slots: boolean[]
+          slots: string[]
           updated_at?: string
           worker_id: string
         }
         Update: {
           day_of_week?: number
           id?: string
-          slots?: boolean[]
+          slots?: string[]
           updated_at?: string
           worker_id?: string
         }
