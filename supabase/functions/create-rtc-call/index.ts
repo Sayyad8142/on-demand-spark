@@ -67,7 +67,6 @@ serve(async (req) => {
           max_participants: 2,
           enable_chat: false,
           enable_screenshare: false,
-          enable_recording: 'cloud',
           exp: Math.floor(Date.now() / 1000) + 3600, // 1 hour expiry
         },
       }),
