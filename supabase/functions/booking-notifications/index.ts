@@ -241,7 +241,7 @@ Deno.serve(async (req) => {
     console.log(`📊 Priority Tiers: Tier 1 (${tier1Workers.length}), Tier 2 (${tier2Workers.length}), Tier 3 (${tier3Workers.length})`);
 
     // Create booking_requests for all workers with priority order
-    const now = new Date();
+    const currentTime = new Date();
     const bookingRequests = sortedWorkers.map((worker, index) => {
       let tier = 3;
       let timeoutSeconds = TIER_TIMEOUT_SECONDS * 3;
@@ -259,8 +259,8 @@ Deno.serve(async (req) => {
         worker_id: worker.user_id || worker.id,
         order_sequence: tier,
         status: tier === 1 ? 'pending' : 'queued',
-        offered_at: tier === 1 ? now.toISOString() : null,
-        timeout_at: tier === 1 ? new Date(now.getTime() + timeoutSeconds * 1000).toISOString() : null,
+        offered_at: tier === 1 ? currentTime.toISOString() : null,
+        timeout_at: tier === 1 ? new Date(currentTime.getTime() + timeoutSeconds * 1000).toISOString() : null,
       };
     });
 
