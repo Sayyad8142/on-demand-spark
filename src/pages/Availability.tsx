@@ -251,10 +251,17 @@ export default function Availability() {
       <div className="p-4">
         <Card className="p-4">
           <h2 className="text-base font-semibold mb-4">Select days of the week</h2>
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {DAYS.map((day, i) => <button key={i} onClick={() => setActiveDay(i as DayKey)} className={`flex-shrink-0 w-16 h-16 rounded-lg border-2 transition-all flex flex-col items-center justify-center ${activeDay === i ? "bg-primary border-primary text-primary-foreground shadow-md" : "bg-background border-border hover:border-primary/50"}`}>
+          <div className="grid grid-cols-4 gap-2 mb-2">
+            {DAYS.slice(0, 4).map((day, i) => <button key={i} onClick={() => setActiveDay(i as DayKey)} className={`w-full h-16 rounded-lg border-2 transition-all flex flex-col items-center justify-center ${activeDay === i ? "bg-primary border-primary text-primary-foreground shadow-md" : "bg-background border-border hover:border-primary/50"}`}>
                 <span className="text-xs font-medium uppercase">
                   {DAYS_SHORT[i]}
+                </span>
+              </button>)}
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {DAYS.slice(4, 7).map((day, i) => <button key={i + 4} onClick={() => setActiveDay((i + 4) as DayKey)} className={`w-full h-16 rounded-lg border-2 transition-all flex flex-col items-center justify-center ${activeDay === (i + 4) ? "bg-primary border-primary text-primary-foreground shadow-md" : "bg-background border-border hover:border-primary/50"}`}>
+                <span className="text-xs font-medium uppercase">
+                  {DAYS_SHORT[i + 4]}
                 </span>
               </button>)}
           </div>
