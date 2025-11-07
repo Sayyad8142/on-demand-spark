@@ -1,0 +1,114 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabase = createClient(supabaseUrl, serviceKey);
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+Deno.serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    console.log('Checking for scheduled bookings that need alerts...');
+
+    // Find bookings that need alerts (scheduled to start in 10 minutes)
+    // We need to combine scheduled_date and scheduled_time, subtract 10 minutes, and compare to now
+    const { data: bookings, error: fetchError } = await supabase
+      .from('bookings')
+      .select('id, scheduled_date, scheduled_time, service_type, community')
+      .eq('status', 'pending')
+      .eq('prealert_sent', false)
+      .not('scheduled_date', 'is', null)
+      .not('scheduled_time', 'is', null);
+
+    if (fetchError) {
+      console.error('Error fetching bookings:', fetchError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch bookings', details: fetchError }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!bookings || bookings.length === 0) {
+      console.log('No scheduled bookings pending alerts');
+      return new Response(
+        JSON.stringify({ message: 'No bookings to process', count: 0 }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`Found ${bookings.length} scheduled bookings to check`);
+
+    // Get current time
+    const now = new Date();
+    const alertsSent = [];
+
+    // Check each booking to see if it needs an alert
+    for (const booking of bookings) {
+      // Combine date and time strings
+      const scheduledDateTime = new Date(`${booking.scheduled_date}T${booking.scheduled_time}`);
+      
+      // Calculate 10 minutes before scheduled time
+      const alertTime = new Date(scheduledDateTime.getTime() - 10 * 60 * 1000);
+      
+      console.log(`Booking ${booking.id}: scheduled=${scheduledDateTime.toISOString()}, alert=${alertTime.toISOString()}, now=${now.toISOString()}`);
+
+      // If current time is past the alert time, send notification
+      if (now >= alertTime) {
+        console.log(`Sending alert for booking ${booking.id}`);
+
+        // Call booking-notifications function
+        const { error: notifyError } = await supabase.functions.invoke('booking-notifications', {
+          body: { booking_id: booking.id }
+        });
+
+        if (notifyError) {
+          console.error(`Failed to send notification for booking ${booking.id}:`, notifyError);
+          continue;
+        }
+
+        // Mark as prealert sent
+        const { error: updateError } = await supabase
+          .from('bookings')
+          .update({ prealert_sent: true })
+          .eq('id', booking.id);
+
+        if (updateError) {
+          console.error(`Failed to update prealert_sent for booking ${booking.id}:`, updateError);
+          continue;
+        }
+
+        alertsSent.push(booking.id);
+        console.log(`Successfully sent alert for booking ${booking.id}`);
+      } else {
+        console.log(`Booking ${booking.id} not ready yet (${Math.round((alertTime.getTime() - now.getTime()) / 60000)} minutes remaining)`);
+      }
+    }
+
+    console.log(`Processed ${bookings.length} bookings, sent ${alertsSent.length} alerts`);
+
+    return new Response(
+      JSON.stringify({
+        message: 'Scheduled bookings check complete',
+        checked: bookings.length,
+        alerts_sent: alertsSent.length,
+        booking_ids: alertsSent
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error) {
+    console.error('Error in check-scheduled-bookings:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error', details: error instanceof Error ? error.message : String(error) }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});
