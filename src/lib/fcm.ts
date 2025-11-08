@@ -1,6 +1,7 @@
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
+import { requestNotificationPermissionWithRationale } from '@/native/permission';
 
 let fcmInitialized = false;
 
@@ -17,8 +18,12 @@ export async function initFCM() {
   
   console.log('🔔 Initializing FCM...');
   
-  // Request permission
-  const permStatus = await PushNotifications.requestPermissions();
+  // Request permission with rationale dialog
+  await requestNotificationPermissionWithRationale();
+  
+  // Wait a moment and check permission status
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  const permStatus = await PushNotifications.checkPermissions();
   
   if (permStatus.receive !== 'granted') {
     console.warn('⚠️ Push notification permission not granted');

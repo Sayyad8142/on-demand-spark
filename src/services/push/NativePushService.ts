@@ -1,6 +1,7 @@
 import { PushService } from './PushService';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { supabase } from '@/integrations/supabase/client';
+import { requestNotificationPermissionWithRationale } from '@/native/permission';
 
 /**
  * Native Push Service for Capacitor/Android
@@ -13,7 +14,10 @@ export class NativePushService implements PushService {
 
   async requestPermission(): Promise<boolean> {
     try {
-      const result = await PushNotifications.requestPermissions();
+      // Use custom permission dialog with rationale
+      await requestNotificationPermissionWithRationale();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const result = await PushNotifications.checkPermissions();
       return result.receive === 'granted';
     } catch (error) {
       console.error('❌ Error requesting push permission:', error);
