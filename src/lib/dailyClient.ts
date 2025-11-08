@@ -22,26 +22,42 @@ export class DailyClient {
   }
 
   async join(roomUrl: string, token: string, userName: string): Promise<void> {
-    try {
-      console.log('🎥 Joining Daily.co call:', roomUrl);
-      
-      this.callObject = DailyIframe.createCallObject({
-        audioSource: true,
-        videoSource: false, // Audio-only
-      });
+    console.log('🎥 Joining Daily.co call:', roomUrl);
+    
+    this.callObject = DailyIframe.createCallObject({
+      audioSource: true,
+      videoSource: false, // Audio-only
+    });
 
-      this.setupEventListeners();
+    this.setupEventListeners();
 
-      await this.callObject.join({
-        url: roomUrl,
-        token,
-        userName,
-      });
+    // Retry logic: up to 2 attempts within 2 seconds
+    const maxAttempts = 2;
+    const retryDelay = 1000; // 1 second
 
-      console.log('✅ Joined call successfully');
-    } catch (error) {
-      console.error('❌ Failed to join call:', error);
-      throw error;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        console.log(`📞 Join attempt ${attempt}/${maxAttempts}`);
+        
+        await this.callObject.join({
+          url: roomUrl,
+          token,
+          userName,
+        });
+
+        console.log('✅ Joined call successfully');
+        return;
+      } catch (error) {
+        console.error(`❌ Join attempt ${attempt} failed:`, error);
+        
+        if (attempt < maxAttempts) {
+          console.log(`⏳ Retrying in ${retryDelay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+        } else {
+          console.error('❌ All join attempts failed');
+          throw error;
+        }
+      }
     }
   }
 
