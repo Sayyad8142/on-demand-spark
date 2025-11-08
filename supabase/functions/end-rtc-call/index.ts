@@ -46,6 +46,17 @@ serve(async (req) => {
       throw new Error('Call not found or unauthorized');
     }
 
+    console.log('📋 Current call status:', rtcCall.status);
+
+    // Check if call can be ended
+    if (['completed', 'rejected', 'no_answer', 'cancelled', 'missed'].includes(rtcCall.status)) {
+      console.log('⚠️ Call already ended with status:', rtcCall.status);
+      return new Response(
+        JSON.stringify({ success: true, message: 'Call already ended' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Calculate duration if call was active
     let duration_sec = null;
     if (rtcCall.started_at) {
@@ -54,15 +65,17 @@ serve(async (req) => {
       duration_sec = Math.floor((ended - started) / 1000);
     }
 
-    // Determine final status
+    // Determine final status based on current state and reason
     let finalStatus = 'completed';
     if (reason === 'rejected') {
       finalStatus = 'rejected';
     } else if (reason === 'missed' || reason === 'no_answer') {
-      finalStatus = 'no_answer';
+      finalStatus = 'missed';
     } else if (reason === 'cancelled') {
       finalStatus = 'cancelled';
     }
+
+    console.log('🔄 Updating call to status:', finalStatus, 'Duration:', duration_sec);
 
     // Update call record
     const { error: updateError } = await supabase
