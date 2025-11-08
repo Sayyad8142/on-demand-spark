@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     // Load booking details (community is TEXT field, not FK)
     const { data: b, error: be } = await supabase
       .from("bookings")
-      .select("id, status, service_type, community, cust_name, cust_phone, flat_no, price_inr")
+      .select("id, status, service_type, community, cust_name, cust_phone, flat_no, price_inr, scheduled_date, scheduled_time, prealert_sent")
       .eq("id", booking_id)
       .single();
       
@@ -65,6 +65,16 @@ Deno.serve(async (req) => {
     if (!b || b.status !== "pending") {
       console.log("⏭️ Skipping - booking not pending:", b?.status);
       return new Response("skip - not pending", { status: 200, headers: corsHeaders });
+    }
+
+    // CRITICAL: Skip immediate notification for scheduled bookings
+    // Scheduled bookings will be handled by check-scheduled-bookings cron job
+    if (b.scheduled_date && b.scheduled_time && !b.prealert_sent) {
+      console.log("⏰ Skipping - this is a scheduled booking, will notify 15 min before:", {
+        scheduled_date: b.scheduled_date,
+        scheduled_time: b.scheduled_time
+      });
+      return new Response("skip - scheduled booking", { status: 200, headers: corsHeaders });
     }
 
     console.log("✅ Booking loaded:", { 

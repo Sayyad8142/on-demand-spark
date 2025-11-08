@@ -55,8 +55,8 @@ Deno.serve(async (req) => {
       // Combine date and time strings
       const scheduledDateTime = new Date(`${booking.scheduled_date}T${booking.scheduled_time}`);
       
-      // Calculate 10 minutes before scheduled time
-      const alertTime = new Date(scheduledDateTime.getTime() - 10 * 60 * 1000);
+      // Calculate 15 minutes before scheduled time
+      const alertTime = new Date(scheduledDateTime.getTime() - 15 * 60 * 1000);
       
       console.log(`Booking ${booking.id}: scheduled=${scheduledDateTime.toISOString()}, alert=${alertTime.toISOString()}, now=${now.toISOString()}`);
 
