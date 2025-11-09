@@ -24,11 +24,12 @@ public class AuthBridge extends Plugin {
         
         // Use commit() instead of apply() for SYNCHRONOUS write
         // This ensures JWT is written to disk immediately
-        boolean success = prefs().edit().putString("supabase_jwt", token).commit();
+        // Using "jwt_token" key to match LocationTrackingService and LocationUpdateWorker
+        boolean success = prefs().edit().putString("jwt_token", token).commit();
         
         if (success) {
             // Verify it was saved by reading it back
-            String savedToken = prefs().getString("supabase_jwt", null);
+            String savedToken = prefs().getString("jwt_token", null);
             if (token.equals(savedToken)) {
                 android.util.Log.d("AuthBridge", "✅ JWT token saved and verified");
                 android.util.Log.d("AuthBridge", "🔑 Token preview: " + token.substring(0, Math.min(50, token.length())) + "...");
@@ -46,7 +47,7 @@ public class AuthBridge extends Plugin {
 
     @PluginMethod
     public void getToken(PluginCall call) {
-        String token = prefs().getString("supabase_jwt", null);
+        String token = prefs().getString("jwt_token", null);
         JSObject ret = new JSObject();
         ret.put("token", token);
         call.resolve(ret);
@@ -54,7 +55,7 @@ public class AuthBridge extends Plugin {
 
     @PluginMethod
     public void clearToken(PluginCall call) {
-        boolean success = prefs().edit().remove("supabase_jwt").commit();
+        boolean success = prefs().edit().remove("jwt_token").commit();
         if (success) {
             android.util.Log.d("AuthBridge", "🗑️ Cleared JWT token");
         } else {
