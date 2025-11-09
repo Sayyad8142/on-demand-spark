@@ -107,6 +107,76 @@ export default function Troubleshoot() {
     }
   };
 
+  const testNativeOverlay = async () => {
+    if (!Capacitor.isNativePlatform()) {
+      toast({
+        title: "Not Available",
+        description: "Native overlay only works on Android app",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // @ts-ignore - Capacitor bridge
+      const { OverlayPlugin } = (window as any).Capacitor?.Plugins || {};
+      
+      if (!OverlayPlugin) {
+        toast({
+          title: "Error",
+          description: "OverlayPlugin not available",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Check permission first
+      const { granted } = await OverlayPlugin.checkPermission();
+      if (!granted) {
+        toast({
+          title: "Permission Required",
+          description: "Requesting overlay permission...",
+        });
+        const result = await OverlayPlugin.requestPermission();
+        if (!result.granted) {
+          toast({
+            title: "Permission Denied",
+            description: "Overlay permission is required to show booking alerts",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+
+      // Show test overlay
+      const testBooking = {
+        id: 'test-' + Date.now(),
+        service_type: 'Test Service',
+        cust_name: 'Test Customer',
+        community: 'Test Community',
+        flat_no: '101',
+        price_inr: 500,
+      };
+
+      await OverlayPlugin.showBookingOverlay({ 
+        booking: JSON.stringify(testBooking)
+      });
+
+      console.log('✅ Test overlay triggered');
+      toast({
+        title: "Overlay Triggered",
+        description: "Check if the overlay appeared on screen",
+      });
+    } catch (error: any) {
+      console.error('❌ Test overlay failed:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to show test overlay",
+        variant: "destructive"
+      });
+    }
+  };
+
   const createTestBooking = async () => {
     if (!user || !worker) {
       toast({
@@ -323,6 +393,37 @@ export default function Troubleshoot() {
             </div>
           </div>
         </Card>
+
+        {/* Test Native Overlay (Android only) */}
+        {Capacitor.isNativePlatform() && (
+          <Card className="p-6 bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900 flex items-center justify-center flex-shrink-0">
+                <TestTube className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold mb-1 text-purple-900 dark:text-purple-100">Test Native Overlay</h3>
+                <p className="text-sm text-purple-700 dark:text-purple-300 mb-3">
+                  Directly test the Android system overlay (bypasses FCM)
+                </p>
+                <Button 
+                  onClick={testNativeOverlay}
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  Test Overlay Now
+                </Button>
+                <div className="mt-3 p-3 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                  <p className="text-xs font-medium mb-2 text-purple-900 dark:text-purple-100">This will:</p>
+                  <ul className="text-xs text-purple-700 dark:text-purple-300 space-y-1">
+                    <li>✓ Check overlay permission</li>
+                    <li>✓ Request permission if needed</li>
+                    <li>✓ Show full-screen overlay with test booking</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Test Booking */}
         <Card className="p-6 bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800">
