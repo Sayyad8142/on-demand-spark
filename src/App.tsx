@@ -211,7 +211,7 @@ const App = () => {
             <Route
               path="/troubleshoot"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute showNav={true}>
                   <Troubleshoot />
                 </ProtectedRoute>
               }
@@ -219,7 +219,7 @@ const App = () => {
             <Route
               path="/availability"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute showNav={true}>
                   <Availability />
                 </ProtectedRoute>
               }
@@ -243,7 +243,7 @@ const App = () => {
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/contact-support" element={<ProtectedRoute showNav={true}><ContactSupport /></ProtectedRoute>} />
-            <Route path="/offline-settings" element={<ProtectedRoute><OfflineSettings /></ProtectedRoute>} />
+            <Route path="/offline-settings" element={<ProtectedRoute showNav={true}><OfflineSettings /></ProtectedRoute>} />
             <Route path="/" element={<Navigate to="/auth" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
