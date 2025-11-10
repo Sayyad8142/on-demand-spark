@@ -27,21 +27,6 @@ class BootReceiver : BroadcastReceiver() {
                     context.startService(bookingServiceIntent)
                 }
                 Log.d("BootReceiver", "BookingForegroundService restarted after boot")
-                
-                // If user was available, restart location tracking
-                if (wasAvailable) {
-                    val locationServiceIntent = Intent(context, LocationTrackingService::class.java)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        context.startForegroundService(locationServiceIntent)
-                    } else {
-                        context.startService(locationServiceIntent)
-                    }
-                    
-                    // Also schedule WorkManager as backup
-                    LocationUpdateWorker.schedule(context)
-                    
-                    Log.d("BootReceiver", "LocationTrackingService restarted after boot")
-                }
             }
         }
     }
