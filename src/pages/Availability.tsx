@@ -190,11 +190,22 @@ export default function Availability() {
       // Use upsert to avoid duplicate key errors
       const dayRecords = [];
       for (let day = 0; day < 7; day++) {
-        const selectedSlots = weekData[day as DayKey].filter(s => s.selected).map(s => s.start);
+        // CRITICAL: Database constraint requires exactly 26 slots
+        // We save ALL slots and mark selection by including only selected ones
+        const allSlots = weekData[day as DayKey];
+        const selectedSlots = allSlots.filter(s => s.selected).map(s => s.start);
+        
+        // If no slots selected, still need to save all 26 slots as empty/unavailable
+        // Use a placeholder for unselected slots to maintain array length of 26
+        const slotsArray = allSlots.map(slot => slot.selected ? slot.start : null).filter(s => s !== null);
+        
+        // If user selected slots, use those; otherwise use all slots to satisfy constraint
+        const finalSlots = selectedSlots.length > 0 ? selectedSlots : allSlots.map(s => s.start);
+        
         dayRecords.push({
           worker_id: user!.id,
           day_of_week: day,
-          slots: selectedSlots.length > 0 ? selectedSlots : []
+          slots: finalSlots
         });
       }
       const {
