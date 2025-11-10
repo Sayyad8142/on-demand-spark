@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Bell, X } from "lucide-react";
 import { Capacitor } from '@capacitor/core';
+import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/components/ui/use-toast";
@@ -49,6 +50,75 @@ export default function Home() {
   const isOnline = !!worker?.is_available;
   const { toast } = useToast();
   const { incomingCall, dismissCall } = useIncomingCall();
+
+  // Debug function to test overlay
+  const testOverlay = async () => {
+    console.log('🔵 ========== OVERLAY TEST STARTED ==========');
+    console.log('🔵 Platform:', Capacitor.getPlatform());
+    console.log('🔵 Is Native:', Capacitor.isNativePlatform());
+    
+    if (!Capacitor.isNativePlatform()) {
+      toast({ title: "Not Native", description: "Overlay only works on Android app", variant: "destructive" });
+      return;
+    }
+
+    try {
+      // @ts-ignore - Capacitor bridge
+      const { OverlayPlugin } = (window as any).Capacitor?.Plugins || {};
+      console.log('🔌 OverlayPlugin:', OverlayPlugin ? 'Found ✅' : 'Not found ❌');
+      console.log('🔌 Available methods:', OverlayPlugin ? Object.keys(OverlayPlugin) : 'N/A');
+      
+      if (!OverlayPlugin) {
+        toast({ title: "Plugin Error", description: "OverlayPlugin not available", variant: "destructive" });
+        return;
+      }
+
+      // Check permission
+      console.log('🔍 Checking overlay permission...');
+      const permCheck = await OverlayPlugin.checkPermission();
+      console.log('🔍 Permission result:', permCheck);
+      
+      if (!permCheck.granted) {
+        console.log('⚠️ Permission not granted, requesting...');
+        toast({ title: "Permission Required", description: "Requesting overlay permission..." });
+        const permReq = await OverlayPlugin.requestPermission();
+        console.log('📝 Permission request result:', permReq);
+        
+        if (!permReq.granted) {
+          toast({ title: "Permission Denied", description: "Cannot show overlay without permission", variant: "destructive" });
+          return;
+        }
+      }
+
+      console.log('✅ Permission granted');
+
+      // Prepare test booking data
+      const testBooking = {
+        id: 'test-' + Date.now(),
+        service_type: 'Test Cook Service',
+        cust_name: 'Test Customer',
+        community: 'Test Community',
+        flat_no: 'A-101',
+        price_inr: 500,
+      };
+
+      console.log('📦 Test booking data:', testBooking);
+      const bookingJson = JSON.stringify(testBooking);
+      console.log('📦 Booking JSON:', bookingJson);
+      console.log('🚀 Calling showBookingOverlay...');
+
+      await OverlayPlugin.showBookingOverlay({ booking: bookingJson });
+
+      console.log('✅ ========== OVERLAY TRIGGERED SUCCESSFULLY ==========');
+      toast({ title: "Overlay Triggered", description: "Check your screen for the overlay", duration: 5000 });
+    } catch (error: any) {
+      console.error('❌ ========== OVERLAY TEST FAILED ==========');
+      console.error('❌ Error:', error);
+      console.error('❌ Error message:', error?.message);
+      console.error('❌ Error stack:', error?.stack);
+      toast({ title: "Error", description: error?.message || "Failed to show overlay", variant: "destructive" });
+    }
+  };
 
   // Note: FCM initialization is handled in App.tsx, no need to duplicate here
 
@@ -237,6 +307,21 @@ export default function Home() {
         </Card>}
 
       {activeJob && <ActiveJobCard booking={activeJob} onStatusUpdate={handleStatusUpdate} updating={updating} onCall={handleCall} />}
+      
+      {/* Debug: Test Overlay Button (Android only) */}
+      {Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android' && (
+        <Card className="p-4 bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-sm text-purple-900 dark:text-purple-100">Test Overlay</h3>
+              <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">Debug: Test the native booking alert</p>
+            </div>
+            <Button onClick={testOverlay} size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
+              Test
+            </Button>
+          </div>
+        </Card>
+      )}
       
       {/* Only show in-app modal on web platform; Android uses native overlay */}
       {!Capacitor.isNativePlatform() && <BookingAlertModal open={!!pending} booking={pending} onAccept={handleAccept} onReject={reject} onClose={clearAlert} />}
