@@ -27,7 +27,10 @@ object PermissionHelper {
                 showRationaleDialog(
                     activity,
                     "Enable Notifications",
-                    "🔔 Allow notifications to receive instant booking alerts from customers.\n\nYou'll be notified immediately when customers request your services.",
+                    "🔔 Receive instant booking alerts\n\n" +
+                    "📱 Get notified when customers request your services\n\n" +
+                    "✅ Never miss job opportunities\n\n" +
+                    "Allow notifications to receive booking alerts from customers immediately.",
                     permission,
                     NOTIFICATION_PERMISSION_CODE
                 )
@@ -52,7 +55,7 @@ object PermissionHelper {
         permission: String,
         requestCode: Int
     ) {
-        androidx.appcompat.app.AlertDialog.Builder(activity)
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(activity)
             .setTitle(title)
             .setMessage(message)
             .setPositiveButton("Allow") { _, _ ->
@@ -67,9 +70,12 @@ object PermissionHelper {
             }
             .setCancelable(false)
             .create()
-            .apply {
-                show()
-            }
+        
+        dialog.show()
+        
+        // Force text colors to be visible
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)?.setTextColor(0xFF4CAF50.toInt())
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE)?.setTextColor(0xFF757575.toInt())
     }
     
     /**
@@ -82,7 +88,7 @@ object PermissionHelper {
         permissions: Array<String>,
         requestCode: Int
     ) {
-        androidx.appcompat.app.AlertDialog.Builder(activity)
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(activity)
             .setTitle(title)
             .setMessage(message)
             .setPositiveButton("Allow") { _, _ ->
@@ -97,8 +103,11 @@ object PermissionHelper {
             }
             .setCancelable(false)
             .create()
-            .apply {
-                show()
-            }
+        
+        dialog.show()
+        
+        // Force text colors to be visible
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)?.setTextColor(0xFF4CAF50.toInt())
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE)?.setTextColor(0xFF757575.toInt())
     }
 }

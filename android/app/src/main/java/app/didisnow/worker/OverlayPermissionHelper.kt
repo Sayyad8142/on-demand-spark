@@ -33,15 +33,13 @@ object OverlayPermissionHelper {
 
         android.util.Log.d("OverlayPermission", "📱 Showing overlay permission dialog")
 
-        AlertDialog.Builder(activity)
-            .setTitle("📱 Display Over Other Apps Permission")
+        val dialog = AlertDialog.Builder(activity)
+            .setTitle("Display Over Other Apps")
             .setMessage(
-                "🔔 Why we need this permission:\n\n" +
-                "• Show urgent booking alerts even when your phone is locked\n" +
-                "• Display alerts over YouTube, WhatsApp, and other apps\n" +
-                "• Ensure you never miss a booking opportunity\n\n" +
-                "✅ This permission allows booking alerts to appear on top of other apps so you can accept jobs immediately.\n\n" +
-                "This is required for automatic booking notifications."
+                "📱 Display over locked screen and other apps\n\n" +
+                "🔔 Show urgent booking alerts instantly\n\n" +
+                "✅ Never miss booking opportunities\n\n" +
+                "This permission allows booking alerts to appear on top of YouTube, WhatsApp, and other apps even when your screen is locked, so you can accept jobs immediately."
             )
             .setPositiveButton("Allow") { _, _ ->
                 android.util.Log.d("OverlayPermission", "🔓 User clicked Allow - requesting permission")
@@ -51,6 +49,12 @@ object OverlayPermissionHelper {
                 android.util.Log.d("OverlayPermission", "⏭️ User clicked Later")
             }
             .setCancelable(false)
-            .show()
+            .create()
+        
+        dialog.show()
+        
+        // Force text colors to be visible
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(0xFF4CAF50.toInt())
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(0xFF757575.toInt())
     }
 }
