@@ -242,7 +242,7 @@ const App = () => {
             />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
-            <Route path="/contact-support" element={<ProtectedRoute><ContactSupport /></ProtectedRoute>} />
+            <Route path="/contact-support" element={<ProtectedRoute showNav={true}><ContactSupport /></ProtectedRoute>} />
             <Route path="/offline-settings" element={<ProtectedRoute><OfflineSettings /></ProtectedRoute>} />
             <Route path="/" element={<Navigate to="/auth" replace />} />
             <Route path="*" element={<NotFound />} />
