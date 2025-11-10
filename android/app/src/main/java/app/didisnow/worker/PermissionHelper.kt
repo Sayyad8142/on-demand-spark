@@ -1,7 +1,6 @@
 package app.didisnow.worker
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.ActivityCompat
@@ -53,7 +52,7 @@ object PermissionHelper {
         permission: String,
         requestCode: Int
     ) {
-        AlertDialog.Builder(activity)
+        androidx.appcompat.app.AlertDialog.Builder(activity)
             .setTitle(title)
             .setMessage(message)
             .setPositiveButton("Allow") { _, _ ->
@@ -67,7 +66,10 @@ object PermissionHelper {
                 dialog.dismiss()
             }
             .setCancelable(false)
-            .show()
+            .create()
+            .apply {
+                show()
+            }
     }
     
     /**
@@ -80,7 +82,7 @@ object PermissionHelper {
         permissions: Array<String>,
         requestCode: Int
     ) {
-        AlertDialog.Builder(activity)
+        androidx.appcompat.app.AlertDialog.Builder(activity)
             .setTitle(title)
             .setMessage(message)
             .setPositiveButton("Allow") { _, _ ->
@@ -94,6 +96,9 @@ object PermissionHelper {
                 dialog.dismiss()
             }
             .setCancelable(false)
-            .show()
+            .create()
+            .apply {
+                show()
+            }
     }
 }
