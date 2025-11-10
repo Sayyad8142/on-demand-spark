@@ -308,21 +308,6 @@ export default function Home() {
 
       {activeJob && <ActiveJobCard booking={activeJob} onStatusUpdate={handleStatusUpdate} updating={updating} onCall={handleCall} />}
       
-      {/* Debug: Test Overlay Button (Android only) */}
-      {Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android' && (
-        <Card className="p-4 bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-sm text-purple-900 dark:text-purple-100">Test Overlay</h3>
-              <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">Debug: Test the native booking alert</p>
-            </div>
-            <Button onClick={testOverlay} size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
-              Test
-            </Button>
-          </div>
-        </Card>
-      )}
-      
       {/* Only show in-app modal on web platform; Android uses native overlay */}
       {!Capacitor.isNativePlatform() && <BookingAlertModal open={!!pending} booking={pending} onAccept={handleAccept} onReject={reject} onClose={clearAlert} />}
       </div>
