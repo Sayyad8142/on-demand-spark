@@ -123,7 +123,7 @@ export default function ContactSupport() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/settings')}
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
