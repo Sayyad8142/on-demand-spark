@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { useToast } from "@/hooks/use-toast";
+import { usePushRegister } from "@/hooks/usePushRegister";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureServiceWorker, subscribeWebPush } from "@/push/webPush";
 import { Capacitor } from '@capacitor/core';
@@ -18,6 +19,7 @@ export default function Troubleshoot() {
   const { user, session } = useAuth();
   const { worker } = useWorkerProfile(user?.id);
   const { toast } = useToast();
+  const { registerPush, isRegistering } = usePushRegister();
   const [enabling, setEnabling] = useState(false);
   const [testing, setTesting] = useState(false);
   const [tokenStatus, setTokenStatus] = useState<{saved: boolean, preview?: string} | null>(null);
@@ -351,16 +353,43 @@ export default function Troubleshoot() {
                       Last checked: {pushTokenStatus.lastCheck}
                     </p>
                   </div>
-                  <Button
-                    onClick={checkPushStatus}
-                    disabled={checkingPush}
-                    size="sm"
-                    variant="outline"
-                    className="mt-3 w-full"
-                  >
-                    <RefreshCw className={`w-4 h-4 mr-2 ${checkingPush ? 'animate-spin' : ''}`} />
-                    Re-check Status
-                  </Button>
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      onClick={checkPushStatus}
+                      disabled={checkingPush}
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      <RefreshCw className={`w-4 h-4 mr-2 ${checkingPush ? 'animate-spin' : ''}`} />
+                      Re-check
+                    </Button>
+                    <Button
+                      onClick={async () => {
+                        try {
+                          await registerPush();
+                          toast({
+                            title: "✅ Token Refreshed",
+                            description: "FCM token has been re-registered successfully"
+                          });
+                          await checkPushStatus();
+                        } catch (error: any) {
+                          console.error('❌ Token refresh error:', error);
+                          toast({
+                            title: "Error",
+                            description: error.message || "Failed to refresh token",
+                            variant: "destructive"
+                          });
+                        }
+                      }}
+                      disabled={isRegistering}
+                      size="sm"
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <RefreshCw className={`w-4 h-4 mr-2 ${isRegistering ? 'animate-spin' : ''}`} />
+                      Refresh Token
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div>
@@ -375,15 +404,43 @@ export default function Troubleshoot() {
                       <li>3. Re-check status to verify</li>
                     </ol>
                   </div>
-                  <Button
-                    onClick={checkPushStatus}
-                    disabled={checkingPush}
-                    size="sm"
-                    className="w-full bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    <RefreshCw className={`w-4 h-4 mr-2 ${checkingPush ? 'animate-spin' : ''}`} />
-                    Check Again
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={checkPushStatus}
+                      disabled={checkingPush}
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      <RefreshCw className={`w-4 h-4 mr-2 ${checkingPush ? 'animate-spin' : ''}`} />
+                      Check Again
+                    </Button>
+                    <Button
+                      onClick={async () => {
+                        try {
+                          await registerPush();
+                          toast({
+                            title: "✅ Token Registered",
+                            description: "FCM token has been registered successfully"
+                          });
+                          await checkPushStatus();
+                        } catch (error: any) {
+                          console.error('❌ Token registration error:', error);
+                          toast({
+                            title: "Error",
+                            description: error.message || "Failed to register token",
+                            variant: "destructive"
+                          });
+                        }
+                      }}
+                      disabled={isRegistering}
+                      size="sm"
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <RefreshCw className={`w-4 h-4 mr-2 ${isRegistering ? 'animate-spin' : ''}`} />
+                      Register Now
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
