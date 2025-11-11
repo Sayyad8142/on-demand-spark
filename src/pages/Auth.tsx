@@ -13,8 +13,6 @@ import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
-import { DEMO_CONFIG, isDemoUser, DEMO_STORAGE_KEY } from "@/config/demo";
-import { Info } from "lucide-react";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -155,21 +153,7 @@ export default function Auth() {
       return;
     }
 
-    const phone = normalizePhone(signInPhone);
-    
-    // DEMO MODE: Skip OTP entirely for demo account
-    if (phone === DEMO_CONFIG.PHONE) {
-      setOtpSent(true);
-      setSignInOtp(DEMO_CONFIG.OTP);
-      toast({ 
-        title: "🎭 Demo Mode Activated", 
-        description: `OTP auto-filled: ${DEMO_CONFIG.OTP}. Click "Verify OTP" to continue.`,
-        duration: 8000
-      });
-      return;
-    }
-
-    // SECURITY: Validate phone number format for real users
+    // SECURITY: Validate phone number format
     const validation = phoneSchema.safeParse(signInPhone);
     if (!validation.success) {
       toast({ 
@@ -182,6 +166,7 @@ export default function Auth() {
 
     try {
       setLoading(true);
+      const phone = normalizePhone(signInPhone);
       
       const { error } = await supabase.auth.signInWithOtp({ phone });
       
@@ -202,125 +187,7 @@ export default function Auth() {
       return;
     }
 
-    const phone = normalizePhone(signInPhone);
-    const isDemo = isDemoUser(phone);
-
-    // DEMO MODE: Use password-based auth instead of OTP to avoid SMS
-    if (isDemo && signInOtp === DEMO_CONFIG.OTP) {
-      try {
-        setLoading(true);
-        console.log('🎭 Demo login - using password auth...');
-        
-        const DEMO_EMAIL = 'demo@didisnow.app';
-        const DEMO_PASSWORD = 'DemoPartner2025!';
-        
-        // Try to sign in with demo credentials
-        let { data, error } = await supabase.auth.signInWithPassword({
-          email: DEMO_EMAIL,
-          password: DEMO_PASSWORD
-        });
-
-        // If account doesn't exist, create it
-        if (error?.message?.includes('Invalid login credentials')) {
-          console.log('🎭 Demo account not found, creating...');
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email: DEMO_EMAIL,
-            password: DEMO_PASSWORD,
-            options: {
-              data: { phone: DEMO_CONFIG.PHONE }
-            }
-          });
-          
-          if (signUpError) {
-            console.error('❌ Demo account creation failed:', signUpError);
-            throw new Error('Could not create demo account. Please contact support.');
-          }
-          data = signUpData;
-        } else if (error) {
-          console.error('❌ Demo login failed:', error);
-          throw new Error('Demo login failed. Please try again.');
-        }
-
-        if (!data?.user) {
-          throw new Error("No user returned from authentication");
-        }
-
-        // Upsert demo worker profile with availability slots (ensure single record)
-        try {
-          const availabilitySlots = Array(26).fill(true); // All slots available
-          const { error: upsertError } = await supabase
-            .from('workers')
-            .upsert({
-              id: data.user.id,
-              full_name: 'Demo Partner',
-              phone: '+919999999999',
-              service_types: ['maid'],
-              communities: ['Prestige High Fields'],
-              availability_slots: availabilitySlots,
-              is_active: true,
-              is_available: true, // Start as available for demo
-              is_busy: false,
-            }, { 
-              onConflict: 'id', // Use id instead of phone for upsert
-              ignoreDuplicates: false 
-            });
-
-          if (upsertError) {
-            console.error('⚠️ Error upserting demo worker (non-critical):', upsertError);
-            // Don't throw - allow login to proceed
-          } else {
-            console.log('✅ Demo worker profile created/updated');
-          }
-        } catch (profileError) {
-          console.error('⚠️ Worker profile error (non-critical):', profileError);
-          // Don't throw - allow login to proceed
-        }
-
-        // Mark as demo user in localStorage
-        try {
-          localStorage.setItem(DEMO_STORAGE_KEY, 'true');
-          console.log('✅ Demo user flag saved');
-        } catch (storageError) {
-          console.error('⚠️ Failed to save demo flag:', storageError);
-        }
-        
-        // Log analytics event (no PII)
-        console.log('📊 Analytics: demo_login_used');
-
-        // CRITICAL: Save JWT to native storage
-        if (Capacitor.isNativePlatform() && AuthBridge && data.session?.access_token) {
-          console.log('🔐 [Auth Page] Saving JWT immediately after demo sign-in...');
-          try {
-            await AuthBridge.saveToken({ token: data.session.access_token });
-            const verify = await AuthBridge.getToken();
-            if (verify?.token === data.session.access_token) {
-              console.log('✅ [Auth Page] JWT saved and verified successfully');
-            } else {
-              console.error('⚠️ [Auth Page] JWT verification failed');
-            }
-          } catch (jwtError) {
-            console.error('⚠️ [Auth Page] Failed to save JWT (non-critical):', jwtError);
-            // Don't throw - allow login to proceed
-          }
-        }
-
-        toast({ 
-          title: "🎭 Demo Mode Active", 
-          description: "Logged in as Demo Partner",
-          duration: 5000
-        });
-        
-        navigate("/home");
-        return;
-      } catch (error: any) {
-        console.error('❌ Demo login error:', error);
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-        setLoading(false);
-        return;
-      }
-    }
-
-    // SECURITY: Validate OTP format for real users
+    // SECURITY: Validate OTP format
     const validation = otpSchema.safeParse(signInOtp);
     if (!validation.success) {
       toast({ 
@@ -331,9 +198,9 @@ export default function Auth() {
       return;
     }
 
-    // REGULAR USER OTP VERIFICATION
     try {
       setLoading(true);
+      const phone = normalizePhone(signInPhone);
       const { data, error } = await supabase.auth.verifyOtp({ phone, token: signInOtp, type: 'sms' });
       
       if (error) throw error;
@@ -354,9 +221,6 @@ export default function Auth() {
         // Link existing worker to auth user by updating the worker's ID
         await supabase.from('workers').update({ id: data.user.id }).eq('phone', phone);
       }
-
-      // Clear demo flag
-      localStorage.removeItem(DEMO_STORAGE_KEY);
 
       // CRITICAL: Save JWT to native storage immediately for overlay functionality
       if (Capacitor.isNativePlatform() && AuthBridge && data.session?.access_token) {
@@ -584,73 +448,31 @@ export default function Auth() {
                   maxLength={10}
                   disabled={otpSent || loading}
                 />
-                
-                {/* Demo hint when demo phone detected */}
-                {signInPhone === '9999999999' && !otpSent && (
-                  <div className="flex items-start gap-2 p-2 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                    <Info className="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-yellow-700 dark:text-yellow-300">
-                      Demo for reviewers: Use OTP <strong>{DEMO_CONFIG.OTP}</strong>
-                    </p>
-                  </div>
-                )}
               </div>
 
               {otpSent && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-otp">{t('auth.otpLabel')}</Label>
-                    <Input
-                      id="signin-otp"
-                      type="text"
-                      placeholder={t('auth.otpPlaceholder')}
-                      value={signInOtp}
-                      onChange={(e) => setSignInOtp(e.target.value)}
-                      maxLength={6}
-                      disabled={loading}
-                    />
-                  </div>
-                  
-                  {/* Demo OTP reminder */}
-                  {normalizePhone(signInPhone) === DEMO_CONFIG.PHONE && (
-                    <div className="flex items-start gap-2 p-2 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md">
-                      <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-blue-700 dark:text-blue-300">
-                        Enter demo OTP: <strong>{DEMO_CONFIG.OTP}</strong>
-                      </p>
-                    </div>
-                  )}
-                </>
+                <div className="space-y-2">
+                  <Label htmlFor="signin-otp">{t('auth.otpLabel')}</Label>
+                  <Input
+                    id="signin-otp"
+                    type="text"
+                    placeholder={t('auth.otpPlaceholder')}
+                    value={signInOtp}
+                    onChange={(e) => setSignInOtp(e.target.value)}
+                    maxLength={6}
+                    disabled={loading}
+                  />
+                </div>
               )}
 
               {!otpSent ? (
-                <>
-                  <Button 
-                    onClick={handleSignInSendOtp} 
-                    disabled={loading || !signInPhone}
-                    className="w-full"
-                  >
-                    {loading ? t('auth.sending') : t('auth.sendOtp')}
-                  </Button>
-                  
-                  {/* Demo login link */}
-                  <div className="text-center">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSignInPhone('9999999999');
-                        toast({
-                          title: "Demo Mode",
-                          description: `Now click "Send OTP" and use OTP: ${DEMO_CONFIG.OTP}`,
-                          duration: 6000
-                        });
-                      }}
-                      className="text-xs text-muted-foreground hover:text-primary underline"
-                    >
-                      Use demo login (for reviewers)
-                    </button>
-                  </div>
-                </>
+                <Button 
+                  onClick={handleSignInSendOtp} 
+                  disabled={loading || !signInPhone}
+                  className="w-full"
+                >
+                  {loading ? t('auth.sending') : t('auth.sendOtp')}
+                </Button>
               ) : (
                 <>
                   <Button 

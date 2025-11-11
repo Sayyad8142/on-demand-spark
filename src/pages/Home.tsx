@@ -18,7 +18,6 @@ import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/components/ui/use-toast";
-import { DEMO_STORAGE_KEY, isDemoUser } from "@/config/demo";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -48,16 +47,9 @@ export default function Home() {
   const [callRoomUrl, setCallRoomUrl] = useState('');
   const [callToken, setCallToken] = useState('');
   const [callId, setCallId] = useState('');
-  const [showDemoBanner, setShowDemoBanner] = useState(false);
   const isOnline = !!worker?.is_available;
   const { toast } = useToast();
   const { incomingCall, dismissCall } = useIncomingCall();
-
-  // Check if demo user
-  useEffect(() => {
-    const isDemo = localStorage.getItem(DEMO_STORAGE_KEY) === 'true' || isDemoUser(worker?.phone);
-    setShowDemoBanner(isDemo);
-  }, [worker]);
 
   // Debug function to test overlay
   const testOverlay = async () => {
@@ -281,32 +273,15 @@ export default function Home() {
   }
 
   return <div className="min-h-screen">
-      {/* Demo Mode Banner */}
-      {showDemoBanner && (
-        <div className="fixed top-0 left-0 right-0 z-20 bg-yellow-400 text-black px-4 py-2 flex items-center justify-between shadow-md">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">🎭</span>
-            <span className="text-sm font-semibold">Demo Mode (For Review Only)</span>
-          </div>
-          <button
-            onClick={() => setShowDemoBanner(false)}
-            className="p-1 hover:bg-yellow-500 rounded-full transition-colors"
-            aria-label="Dismiss demo banner"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
       {/* Fixed Availability Toggle */}
-      <div className={`fixed top-0 left-0 right-0 z-10 bg-background border-b border-border ${showDemoBanner ? 'mt-10' : ''}`}>
+      <div className="fixed top-0 left-0 right-0 z-10 bg-background border-b border-border">
         <div className="p-4">
           <AvailabilityToggle workerId={user.id} />
         </div>
       </div>
 
       {/* Main Content with top padding for fixed header */}
-      <div className={`p-4 space-y-4 pb-32 ${showDemoBanner ? 'pt-32' : 'pt-28'}`}>
+      <div className="p-4 space-y-4 pb-32 pt-28">
       {/* Web Push Banner */}
       {showWebPushBanner && <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 relative">
           <button onClick={() => setShowWebPushBanner(false)} className="absolute top-2 right-2 p-1 hover:bg-blue-100 dark:hover:bg-blue-900 rounded">
