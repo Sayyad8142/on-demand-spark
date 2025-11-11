@@ -155,40 +155,40 @@ export default function Auth() {
       return;
     }
 
-    // SECURITY: Validate phone number format (skip for demo)
     const phone = normalizePhone(signInPhone);
-    if (phone !== DEMO_CONFIG.PHONE) {
-      const validation = phoneSchema.safeParse(signInPhone);
-      if (!validation.success) {
-        toast({ 
-          title: "Invalid phone number", 
-          description: validation.error.errors[0].message,
-          variant: "destructive" 
-        });
-        return;
-      }
+    
+    // DEMO MODE: Skip OTP entirely for demo account
+    if (phone === DEMO_CONFIG.PHONE) {
+      setOtpSent(true);
+      setSignInOtp(DEMO_CONFIG.OTP);
+      toast({ 
+        title: "🎭 Demo Mode Activated", 
+        description: `OTP auto-filled: ${DEMO_CONFIG.OTP}. Click "Verify OTP" to continue.`,
+        duration: 8000
+      });
+      return;
+    }
+
+    // SECURITY: Validate phone number format for real users
+    const validation = phoneSchema.safeParse(signInPhone);
+    if (!validation.success) {
+      toast({ 
+        title: "Invalid phone number", 
+        description: validation.error.errors[0].message,
+        variant: "destructive" 
+      });
+      return;
     }
 
     try {
       setLoading(true);
       
-      // Firebase Auth will handle demo phone (no SMS sent, OTP 123456 works)
       const { error } = await supabase.auth.signInWithOtp({ phone });
       
       if (error) throw error;
       
       setOtpSent(true);
-      
-      // Show different message for demo
-      if (phone === DEMO_CONFIG.PHONE) {
-        toast({ 
-          title: "Demo OTP Ready!", 
-          description: `Enter OTP: ${DEMO_CONFIG.OTP}`,
-          duration: 8000
-        });
-      } else {
-        toast({ title: "OTP sent!", description: "Check your phone for the verification code" });
-      }
+      toast({ title: "OTP sent!", description: "Check your phone for the verification code" });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -202,7 +202,97 @@ export default function Auth() {
       return;
     }
 
-    // SECURITY: Validate OTP format
+    const phone = normalizePhone(signInPhone);
+    const isDemo = isDemoUser(phone);
+
+    // DEMO MODE: Use password-based auth instead of OTP to avoid SMS
+    if (isDemo && signInOtp === DEMO_CONFIG.OTP) {
+      try {
+        setLoading(true);
+        console.log('🎭 Demo login - using password auth...');
+        
+        const DEMO_EMAIL = 'demo@didisnow.app';
+        const DEMO_PASSWORD = 'DemoPartner2025!';
+        
+        // Try to sign in with demo credentials
+        let { data, error } = await supabase.auth.signInWithPassword({
+          email: DEMO_EMAIL,
+          password: DEMO_PASSWORD
+        });
+
+        // If account doesn't exist, create it
+        if (error?.message?.includes('Invalid login credentials')) {
+          console.log('🎭 Demo account not found, creating...');
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: DEMO_EMAIL,
+            password: DEMO_PASSWORD,
+            options: {
+              data: { phone: DEMO_CONFIG.PHONE }
+            }
+          });
+          
+          if (signUpError) throw signUpError;
+          data = signUpData;
+        } else if (error) {
+          throw error;
+        }
+
+        if (!data.user) throw new Error("No user returned");
+
+        // Upsert demo worker profile (ensure single record)
+        const { error: upsertError } = await supabase
+          .from('workers')
+          .upsert({
+            id: data.user.id,
+            ...DEMO_CONFIG.WORKER_PROFILE
+          }, { 
+            onConflict: 'phone',
+            ignoreDuplicates: false 
+          });
+
+        if (upsertError) {
+          console.error('Error upserting demo worker:', upsertError);
+        }
+
+        // Mark as demo user in localStorage
+        localStorage.setItem(DEMO_STORAGE_KEY, 'true');
+        
+        // Log analytics event (no PII)
+        console.log('📊 Analytics: demo_login_used');
+
+        // CRITICAL: Save JWT to native storage
+        if (Capacitor.isNativePlatform() && AuthBridge && data.session?.access_token) {
+          console.log('🔐 [Auth Page] Saving JWT immediately after demo sign-in...');
+          try {
+            await AuthBridge.saveToken({ token: data.session.access_token });
+            const verify = await AuthBridge.getToken();
+            if (verify?.token === data.session.access_token) {
+              console.log('✅ [Auth Page] JWT saved and verified successfully');
+            } else {
+              console.error('❌ [Auth Page] JWT verification failed!');
+            }
+          } catch (err) {
+            console.error('❌ [Auth Page] Failed to save JWT:', err);
+          }
+        }
+
+        toast({ 
+          title: "🎭 Demo Mode Active", 
+          description: "Logged in as Demo Partner",
+          duration: 5000
+        });
+        
+        navigate("/home");
+        return;
+      } catch (error: any) {
+        console.error('❌ Demo login error:', error);
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+    }
+
+    // SECURITY: Validate OTP format for real users
     const validation = otpSchema.safeParse(signInOtp);
     if (!validation.success) {
       toast({ 
@@ -213,79 +303,32 @@ export default function Auth() {
       return;
     }
 
+    // REGULAR USER OTP VERIFICATION
     try {
       setLoading(true);
-      const phone = normalizePhone(signInPhone);
       const { data, error } = await supabase.auth.verifyOtp({ phone, token: signInOtp, type: 'sms' });
       
       if (error) throw error;
       if (!data.user) throw new Error("No user returned");
 
-      const isDemo = isDemoUser(phone);
+      // Check if a worker with this phone already exists
+      const { data: existingWorker, error: workerCheckError } = await supabase
+        .from('workers')
+        .select('*')
+        .eq('phone', phone)
+        .maybeSingle();
 
-      // For demo user, ensure worker profile exists using upsert
-      if (isDemo) {
-        console.log('🎭 Demo login detected, ensuring worker profile...');
-        
-        // Check if worker exists
-        const { data: existingWorker } = await supabase
-          .from('workers')
-          .select('id')
-          .eq('phone', DEMO_CONFIG.PHONE)
-          .maybeSingle();
-
-        if (existingWorker) {
-          // Update existing worker
-          const { error: updateError } = await supabase
-            .from('workers')
-            .update({
-              id: data.user.id,
-              ...DEMO_CONFIG.WORKER_PROFILE
-            })
-            .eq('phone', DEMO_CONFIG.PHONE);
-
-          if (updateError) {
-            console.error('Error updating demo worker:', updateError);
-          }
-        } else {
-          // Insert new worker
-          const { error: insertError } = await supabase
-            .from('workers')
-            .insert({
-              id: data.user.id,
-              ...DEMO_CONFIG.WORKER_PROFILE
-            });
-
-          if (insertError) {
-            console.error('Error inserting demo worker:', insertError);
-          }
-        }
-
-        // Mark as demo user in localStorage
-        localStorage.setItem(DEMO_STORAGE_KEY, 'true');
-        
-        // Log analytics event (no PII)
-        console.log('📊 Analytics: demo_login_used');
-      } else {
-        // Regular user: check if a worker with this phone already exists
-        const { data: existingWorker, error: workerCheckError } = await supabase
-          .from('workers')
-          .select('*')
-          .eq('phone', phone)
-          .maybeSingle();
-
-        if (workerCheckError) {
-          console.error('Error checking worker:', workerCheckError);
-        }
-
-        if (existingWorker) {
-          // Link existing worker to auth user by updating the worker's ID
-          await supabase.from('workers').update({ id: data.user.id }).eq('phone', phone);
-        }
-
-        // Clear demo flag
-        localStorage.removeItem(DEMO_STORAGE_KEY);
+      if (workerCheckError) {
+        console.error('Error checking worker:', workerCheckError);
       }
+
+      if (existingWorker) {
+        // Link existing worker to auth user by updating the worker's ID
+        await supabase.from('workers').update({ id: data.user.id }).eq('phone', phone);
+      }
+
+      // Clear demo flag
+      localStorage.removeItem(DEMO_STORAGE_KEY);
 
       // CRITICAL: Save JWT to native storage immediately for overlay functionality
       if (Capacitor.isNativePlatform() && AuthBridge && data.session?.access_token) {
@@ -303,16 +346,7 @@ export default function Auth() {
         }
       }
 
-      if (isDemo) {
-        toast({ 
-          title: "🎭 Demo Mode Active", 
-          description: "Logged in as Demo Partner",
-          duration: 5000
-        });
-      } else {
-        toast({ title: "Success!", description: "Signed in successfully" });
-      }
-      
+      toast({ title: "Success!", description: "Signed in successfully" });
       navigate("/home");
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
