@@ -153,6 +153,81 @@ export default function Auth() {
       return;
     }
 
+    // DEMO MODE: Auto-login for Play Store reviewers
+    if (signInPhone === '9999999999') {
+      try {
+        setLoading(true);
+        const demoEmail = 'demo@didisnow.app';
+        const demoPassword = 'DemoPartner2025!';
+        const demoPhone = '+919999999999';
+        
+        // Try to sign in with demo credentials
+        let authData = await supabase.auth.signInWithPassword({
+          email: demoEmail,
+          password: demoPassword,
+        });
+
+        // If sign in fails, create the demo account
+        if (authData.error) {
+          console.log('Demo account not found, creating...');
+          authData = await supabase.auth.signUp({
+            email: demoEmail,
+            password: demoPassword,
+            options: {
+              data: { full_name: 'Demo Partner', phone: demoPhone },
+              emailRedirectTo: `${window.location.origin}/`
+            }
+          });
+        }
+
+        if (authData.error) throw authData.error;
+        if (!authData.data.user) throw new Error("Failed to authenticate demo user");
+
+        // Check if demo worker exists
+        const { data: existingWorker } = await supabase
+          .from('workers')
+          .select('*')
+          .eq('phone', demoPhone)
+          .maybeSingle();
+
+        if (!existingWorker) {
+          // Create demo worker profile
+          await supabase.from('workers').insert({
+            id: authData.data.user.id,
+            full_name: 'Demo Partner',
+            phone: demoPhone,
+            service_types: ['maid'],
+            communities: ['Prestige High Fields'],
+            is_active: true,
+            is_available: false,
+            is_busy: false
+          });
+        } else if (existingWorker.id !== authData.data.user.id) {
+          // Update worker ID to match auth user
+          await supabase.from('workers').update({ id: authData.data.user.id }).eq('phone', demoPhone);
+        }
+
+        // Save JWT for native platform
+        if (Capacitor.isNativePlatform() && AuthBridge && authData.data.session?.access_token) {
+          await AuthBridge.saveToken({ token: authData.data.session.access_token });
+        }
+
+        toast({ 
+          title: "🎭 Demo Mode Active", 
+          description: "Logged in as Demo Partner for review purposes",
+          duration: 5000 
+        });
+        navigate("/home");
+        return;
+      } catch (error: any) {
+        console.error('Demo login error:', error);
+        toast({ title: "Demo Login Failed", description: error.message, variant: "destructive" });
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     // SECURITY: Validate phone number format
     const validation = phoneSchema.safeParse(signInPhone);
     if (!validation.success) {

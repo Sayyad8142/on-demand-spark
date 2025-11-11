@@ -273,15 +273,22 @@ export default function Home() {
   }
 
   return <div className="min-h-screen">
+      {/* Demo Mode Banner */}
+      {worker?.phone === '+919999999999' && (
+        <div className="fixed top-0 left-0 right-0 z-20 bg-yellow-500 text-black text-center py-1 px-4 text-xs font-semibold">
+          🎭 Demo Mode (For Review Only)
+        </div>
+      )}
+
       {/* Fixed Availability Toggle */}
-      <div className="fixed top-0 left-0 right-0 z-10 bg-background border-b border-border">
+      <div className={`fixed top-0 left-0 right-0 z-10 bg-background border-b border-border ${worker?.phone === '+919999999999' ? 'mt-6' : ''}`}>
         <div className="p-4">
           <AvailabilityToggle workerId={user.id} />
         </div>
       </div>
 
       {/* Main Content with top padding for fixed header */}
-      <div className="p-4 space-y-4 pb-32 pt-28">
+      <div className={`p-4 space-y-4 pb-32 ${worker?.phone === '+919999999999' ? 'pt-32' : 'pt-28'}`}>
       {/* Web Push Banner */}
       {showWebPushBanner && <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 relative">
           <button onClick={() => setShowWebPushBanner(false)} className="absolute top-2 right-2 p-1 hover:bg-blue-100 dark:hover:bg-blue-900 rounded">
