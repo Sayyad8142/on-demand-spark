@@ -42,6 +42,7 @@ When logged in as demo user:
 - **Name:** Demo Partner
 - **Service:** Maid
 - **Community:** Prestige High Fields
+- **Status:** Available (can receive bookings immediately)
 
 ✅ **No SMS sent** - completely offline demo flow  
 ✅ **No Firebase setup required** - works out of the box  
@@ -107,9 +108,11 @@ A single demo worker record is automatically created/updated:
   phone: '+919999999999',
   service_types: ['maid'],
   communities: ['Prestige High Fields'],
+  selected_community_id: '7b7c6481-a983-44bd-b43a-5fee9b464e31',
   is_active: true,
-  is_available: false,
-  is_busy: false
+  is_available: true,  // Available to receive bookings
+  is_busy: false,
+  availability_slots: [true, true, ...] // All 26 slots enabled
 }
 ```
 

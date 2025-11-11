@@ -34,8 +34,11 @@ export function useAuth() {
     }
   };
 
-  // Helper function to save JWT (uses native bridge module)
+  // Helper function to save JWT (uses native bridge module) - only on native
   const saveJWT = async (token: string) => {
+    if (!Capacitor.isNativePlatform()) {
+      return true; // Skip on web, return success
+    }
     return await saveJWTToken(token);
   };
 
@@ -86,8 +89,8 @@ export function useAuth() {
             // Save full session for native overlay
             await saveSession(session);
             
-            // Save JWT token immediately on app startup if session exists
-            if (session.access_token) {
+            // Save JWT token immediately on app startup if session exists (native only)
+            if (Capacitor.isNativePlatform() && session.access_token) {
               console.log('🔐 Saving access token on app startup...');
               const saved = await saveJWT(session.access_token);
               if (saved) {
@@ -95,8 +98,6 @@ export function useAuth() {
               } else {
                 console.error('❌ Failed to save JWT on startup - booking acceptance may not work!');
               }
-            } else {
-              console.error('❌ No access token in session!');
             }
           } else {
             console.log('ℹ️ No session found');
@@ -122,8 +123,8 @@ export function useAuth() {
           setUser(session?.user ?? null);
           setLoading(false);
           
-          // Save or clear session and JWT token
-          if (session?.access_token) {
+          // Save or clear session and JWT token (native only)
+          if (session?.access_token && Capacitor.isNativePlatform()) {
             console.log('🔐 Auth state changed - saving session and JWT...');
             
             // Save full session for native overlay

@@ -239,12 +239,15 @@ export default function Auth() {
 
         if (!data.user) throw new Error("No user returned");
 
-        // Upsert demo worker profile (ensure single record)
+        // Upsert demo worker profile with availability slots (ensure single record)
+        const availabilitySlots = Array(26).fill(true); // All slots available
         const { error: upsertError } = await supabase
           .from('workers')
           .upsert({
             id: data.user.id,
-            ...DEMO_CONFIG.WORKER_PROFILE
+            ...DEMO_CONFIG.WORKER_PROFILE,
+            availability_slots: availabilitySlots,
+            is_available: true, // Start as available for demo
           }, { 
             onConflict: 'phone',
             ignoreDuplicates: false 
