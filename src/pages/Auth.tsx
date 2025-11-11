@@ -231,34 +231,58 @@ export default function Auth() {
             }
           });
           
-          if (signUpError) throw signUpError;
+          if (signUpError) {
+            console.error('❌ Demo account creation failed:', signUpError);
+            throw new Error('Could not create demo account. Please contact support.');
+          }
           data = signUpData;
         } else if (error) {
-          throw error;
+          console.error('❌ Demo login failed:', error);
+          throw new Error('Demo login failed. Please try again.');
         }
 
-        if (!data.user) throw new Error("No user returned");
+        if (!data?.user) {
+          throw new Error("No user returned from authentication");
+        }
 
         // Upsert demo worker profile with availability slots (ensure single record)
-        const availabilitySlots = Array(26).fill(true); // All slots available
-        const { error: upsertError } = await supabase
-          .from('workers')
-          .upsert({
-            id: data.user.id,
-            ...DEMO_CONFIG.WORKER_PROFILE,
-            availability_slots: availabilitySlots,
-            is_available: true, // Start as available for demo
-          }, { 
-            onConflict: 'phone',
-            ignoreDuplicates: false 
-          });
+        try {
+          const availabilitySlots = Array(26).fill(true); // All slots available
+          const { error: upsertError } = await supabase
+            .from('workers')
+            .upsert({
+              id: data.user.id,
+              full_name: 'Demo Partner',
+              phone: '+919999999999',
+              service_types: ['maid'],
+              communities: ['Prestige High Fields'],
+              availability_slots: availabilitySlots,
+              is_active: true,
+              is_available: true, // Start as available for demo
+              is_busy: false,
+            }, { 
+              onConflict: 'id', // Use id instead of phone for upsert
+              ignoreDuplicates: false 
+            });
 
-        if (upsertError) {
-          console.error('Error upserting demo worker:', upsertError);
+          if (upsertError) {
+            console.error('⚠️ Error upserting demo worker (non-critical):', upsertError);
+            // Don't throw - allow login to proceed
+          } else {
+            console.log('✅ Demo worker profile created/updated');
+          }
+        } catch (profileError) {
+          console.error('⚠️ Worker profile error (non-critical):', profileError);
+          // Don't throw - allow login to proceed
         }
 
         // Mark as demo user in localStorage
-        localStorage.setItem(DEMO_STORAGE_KEY, 'true');
+        try {
+          localStorage.setItem(DEMO_STORAGE_KEY, 'true');
+          console.log('✅ Demo user flag saved');
+        } catch (storageError) {
+          console.error('⚠️ Failed to save demo flag:', storageError);
+        }
         
         // Log analytics event (no PII)
         console.log('📊 Analytics: demo_login_used');
@@ -272,10 +296,11 @@ export default function Auth() {
             if (verify?.token === data.session.access_token) {
               console.log('✅ [Auth Page] JWT saved and verified successfully');
             } else {
-              console.error('❌ [Auth Page] JWT verification failed!');
+              console.error('⚠️ [Auth Page] JWT verification failed');
             }
-          } catch (err) {
-            console.error('❌ [Auth Page] Failed to save JWT:', err);
+          } catch (jwtError) {
+            console.error('⚠️ [Auth Page] Failed to save JWT (non-critical):', jwtError);
+            // Don't throw - allow login to proceed
           }
         }
 

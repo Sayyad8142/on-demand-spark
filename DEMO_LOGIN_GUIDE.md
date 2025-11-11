@@ -108,7 +108,6 @@ A single demo worker record is automatically created/updated:
   phone: '+919999999999',
   service_types: ['maid'],
   communities: ['Prestige High Fields'],
-  selected_community_id: '7b7c6481-a983-44bd-b43a-5fee9b464e31',
   is_active: true,
   is_available: true,  // Available to receive bookings
   is_busy: false,
