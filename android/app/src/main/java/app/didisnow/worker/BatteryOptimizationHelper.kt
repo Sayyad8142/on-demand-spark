@@ -33,26 +33,14 @@ object BatteryOptimizationHelper {
         val packageName = activity.packageName
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !pm.isIgnoringBatteryOptimizations(packageName)) {
-            val dialog = AlertDialog.Builder(activity)
-                .setTitle("Disable Battery Optimization")
-                .setMessage(
-                    "🔋 Allow background operation\n\n" +
-                    "🔔 Receive bookings 24/7\n\n" +
-                    "✅ Stay connected to customers\n\n" +
-                    "To keep receiving booking notifications, please allow Didi Now Partner to run in the background without battery restrictions. This ensures you never miss a job opportunity."
-                )
+            AlertDialog.Builder(activity)
+                .setTitle("Allow Background Running")
+                .setMessage("To keep receiving bookings, please allow On-Demand Spark to run in the background without restrictions.")
                 .setPositiveButton("Allow") { _, _ ->
                     requestIgnoreBatteryOptimizations(activity)
                 }
                 .setNegativeButton("Later", null)
-                .setCancelable(false)
-                .create()
-            
-            dialog.show()
-            
-            // Force text colors to be visible
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(0xFF4CAF50.toInt())
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(0xFF757575.toInt())
+                .show()
         }
     }
 }

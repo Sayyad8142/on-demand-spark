@@ -17,17 +17,11 @@ class MainActivity : BridgeActivity() {
         // Request battery optimization exemption to ensure reliable notifications
         BatteryOptimizationHelper.showBatteryDialog(this)
         
-        // Request notification permission after battery dialog
-        android.os.Handler(mainLooper).postDelayed({
-            android.util.Log.d("MainActivity", "🔔 Requesting notification permission")
-            PermissionHelper.requestNotificationPermissionWithRationale(this)
-        }, 1000)
-        
-        // Request overlay permission last
+        // Delay overlay permission dialog slightly so it doesn't conflict with battery dialog
         android.os.Handler(mainLooper).postDelayed({
             android.util.Log.d("MainActivity", "📱 Requesting overlay permission")
             OverlayPermissionHelper.showOverlayPermissionDialog(this)
-        }, 2500)
+        }, 1500)
         
         // Handle intent if launched from overlay
         handleNavigationIntent(intent)

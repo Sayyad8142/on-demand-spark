@@ -59,8 +59,8 @@ const FAQ_ITEMS = [
 ];
 
 const CONTACT_INFO = {
-  phone: "+91 80081 80018",
-  email: "team@didisnow.com",
+  phone: "+91 XXXX-XXXXXX",
+  email: "support@didinow.com",
   hours: "Monday to Saturday, 9:00 AM - 7:00 PM",
   emergencyNote: "For urgent booking issues, contact us immediately via phone."
 };
@@ -123,7 +123,7 @@ export default function ContactSupport() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate('/settings')}
+            onClick={() => navigate(-1)}
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>

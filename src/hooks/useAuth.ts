@@ -46,33 +46,21 @@ export function useAuth() {
       try {
         console.log('🔐 Initializing auth...');
         
-        // Set a maximum timeout to prevent infinite loading
-        const timeoutId = setTimeout(() => {
-          if (mounted && loading) {
-            console.warn('⚠️ Auth initialization timeout - setting loading to false');
-            setLoading(false);
-          }
-        }, 5000); // 5 second timeout
-        
         // Get initial session with retry logic
         let retryCount = 0;
         let session = null;
         
-        while (retryCount < 2 && !session && mounted) {
+        while (retryCount < 3 && !session && mounted) {
           const { data, error } = await supabase.auth.getSession();
           if (error) {
             console.error('❌ Error getting session:', error);
             retryCount++;
-            if (retryCount < 2) {
-              await new Promise(resolve => setTimeout(resolve, 300));
-            }
+            await new Promise(resolve => setTimeout(resolve, 500));
             continue;
           }
           session = data.session;
           break;
         }
-        
-        clearTimeout(timeoutId);
         
         if (mounted) {
           setSession(session);
