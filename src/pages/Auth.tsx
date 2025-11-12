@@ -225,11 +225,13 @@ export default function Auth() {
         // Special handling for demo mode errors
         if (isDemoUser(phone) && signInOtp === DEMO_OTP) {
           toast({
-            title: "Demo Setup Required",
-            description: "To enable demo login: Go to Supabase Dashboard → Authentication → Providers → Phone → Disable 'Enable phone confirmations'",
-            duration: 15000,
+            title: "⚠️ Demo Setup Required",
+            description: "Go to Supabase Dashboard → Authentication → Providers → Phone → DISABLE 'Enable phone confirmations' → Save",
+            duration: 20000,
             variant: "destructive"
           });
+          setLoading(false);
+          return;
         }
         throw error;
       }
@@ -290,7 +292,17 @@ export default function Auth() {
       toast({ title: "Success!", description: "Signed in successfully" });
       navigate("/home");
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      // Show specific error for demo login setup
+      if (isDemoUser(normalizePhone(signInPhone)) && signInOtp === DEMO_OTP) {
+        toast({ 
+          title: "❌ Demo Login Not Configured",
+          description: "Click the link below to configure Supabase for demo login",
+          variant: "destructive",
+          duration: 15000
+        });
+      } else {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      }
     } finally {
       setLoading(false);
     }
@@ -534,6 +546,18 @@ export default function Auth() {
                   <div className="text-xs text-blue-700 dark:text-blue-300">
                     <p className="font-semibold mb-1">Demo Account</p>
                     <p>OTP will be: <span className="font-mono font-bold">{DEMO_OTP}</span></p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Demo OTP Reminder */}
+              {showDemoHelper && otpSent && (
+                <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md">
+                  <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div className="text-xs text-amber-700 dark:text-amber-300">
+                    <p className="font-semibold mb-1">Demo Mode Active</p>
+                    <p>Use OTP: <span className="font-mono font-bold text-base">{DEMO_OTP}</span></p>
+                    <p className="mt-1 text-[10px]">If you see "token expired" error, <a href="https://supabase.com/dashboard/project/paywwbuqycovjopryele/auth/providers" target="_blank" rel="noopener noreferrer" className="underline">configure Supabase</a></p>
                   </div>
                 </div>
               )}
