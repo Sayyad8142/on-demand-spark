@@ -3,7 +3,7 @@
 ## Version Information
 - **App Name**: Didi Now Partner
 - **App ID**: app.didisnow.worker
-- **Version**: 1.0.5 (versionCode 6)
+- **Version**: 1.0.6 (versionCode 7)
 - **Target SDK**: 35 (Android 15)
 - **Min SDK**: 24 (Android 7.0)
 
@@ -109,7 +109,7 @@
 
 ## ✅ Final Checks Before Submission
 
-- [x] Version updated to 1.0.5 (versionCode 6)
+- [x] Version updated to 1.0.6 (versionCode 7)
 - [x] All high-risk permissions removed
 - [x] No automatic permission requests on launch
 - [x] Notification messages neutral and professional
