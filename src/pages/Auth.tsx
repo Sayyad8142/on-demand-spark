@@ -171,6 +171,20 @@ export default function Auth() {
       setLoading(true);
       const phone = normalizePhone(signInPhone);
       
+      // Demo mode: Skip OTP for test number
+      if (isDemoUser(phone)) {
+        console.log('🎭 Demo user detected - skipping SMS');
+        setOtpSent(true);
+        setShowDemoHelper(true);
+        toast({ 
+          title: "Demo Mode", 
+          description: "Use OTP: 123456 (no SMS sent)",
+          duration: 5000
+        });
+        setLoading(false);
+        return;
+      }
+      
       const { error } = await supabase.auth.signInWithOtp({ phone });
       
       if (error) throw error;
@@ -204,9 +218,22 @@ export default function Auth() {
     try {
       setLoading(true);
       const phone = normalizePhone(signInPhone);
+      
       const { data, error } = await supabase.auth.verifyOtp({ phone, token: signInOtp, type: 'sms' });
       
-      if (error) throw error;
+      if (error) {
+        // Special handling for demo mode errors
+        if (isDemoUser(phone) && signInOtp === DEMO_OTP) {
+          toast({
+            title: "Demo Setup Required",
+            description: "To enable demo login: Go to Supabase Dashboard → Authentication → Providers → Phone → Disable 'Enable phone confirmations'",
+            duration: 15000,
+            variant: "destructive"
+          });
+        }
+        throw error;
+      }
+      
       if (!data.user) throw new Error("No user returned");
 
       // Check if a worker with this phone already exists
