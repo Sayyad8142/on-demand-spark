@@ -55,6 +55,23 @@ export default function Auth() {
   const [otpSent, setOtpSent] = useState(false);
   const [communities, setCommunities] = useState<Array<{ name: string; value: string }>>([]);
 
+  // Clear any expired sessions on mount
+  useEffect(() => {
+    const clearExpiredSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error || (session && session.expires_at && session.expires_at * 1000 < Date.now())) {
+          console.log('🗑️ Clearing expired session');
+          await supabase.auth.signOut();
+        }
+      } catch (error) {
+        console.error('Error clearing expired session:', error);
+      }
+    };
+    
+    clearExpiredSession();
+  }, []);
+
   // Redirect if already logged in
   useEffect(() => {
     if (!authLoading && user) {
@@ -170,14 +187,36 @@ export default function Auth() {
       setLoading(true);
       const phone = normalizePhone(signInPhone);
       
+      // Clear any existing session first
+      await supabase.auth.signOut();
+      
       const { error } = await supabase.auth.signInWithOtp({ phone });
       
-      if (error) throw error;
+      if (error) {
+        console.error('OTP send error:', error);
+        throw error;
+      }
       
       setOtpSent(true);
-      toast({ title: "OTP sent!", description: "Check your phone for the verification code" });
+      
+      if (isDemoPhone(phone)) {
+        toast({ 
+          title: "Demo OTP Ready!", 
+          description: "Enter OTP: 123456 (Firebase test number)"
+        });
+      } else {
+        toast({ 
+          title: "OTP sent!", 
+          description: "Check your phone for the verification code" 
+        });
+      }
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      console.error('Sign in error:', error);
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to send OTP", 
+        variant: "destructive" 
+      });
     } finally {
       setLoading(false);
     }
@@ -203,9 +242,27 @@ export default function Auth() {
     try {
       setLoading(true);
       const phone = normalizePhone(signInPhone);
-      const { data, error } = await supabase.auth.verifyOtp({ phone, token: signInOtp, type: 'sms' });
       
-      if (error) throw error;
+      console.log('🔐 Verifying OTP for phone:', phone);
+      const { data, error } = await supabase.auth.verifyOtp({ 
+        phone, 
+        token: signInOtp, 
+        type: 'sms' 
+      });
+      
+      if (error) {
+        console.error('OTP verification error:', error);
+        
+        // Special handling for demo login
+        if (isDemoPhone(phone)) {
+          throw new Error(
+            'Demo login failed. Please ensure Firebase test phone number (+91 9999999999 with OTP 123456) is configured in Firebase Console → Authentication → Sign-in method → Phone → Test phone numbers'
+          );
+        }
+        
+        throw error;
+      }
+      
       if (!data.user) throw new Error("No user returned");
 
       // Check if this is demo login

@@ -3,15 +3,27 @@
 ## Overview
 This app includes a special demo login mode for Play Store reviewers that works **without sending real SMS messages**. It uses Firebase Authentication's test phone number feature.
 
-## Setup (One-time, already configured)
+## Setup (Required - Must be done in Firebase Console)
 
-1. **Firebase Console Setup:**
-   - Go to Firebase Console → Authentication → Sign-in method
-   - Scroll to "Phone" provider → Click "Add test phone number"
-   - Add:
-     - Phone: `+91 9999999999`
+### ⚠️ CRITICAL: Firebase Test Phone Number Configuration
+
+**This MUST be configured for demo login to work:**
+
+1. **Go to Firebase Console:**
+   - Open: https://console.firebase.google.com/
+   - Select your project
+   
+2. **Configure Test Phone Number:**
+   - Navigate to: **Authentication → Sign-in method**
+   - Scroll down to **"Phone"** provider
+   - Click **"Phone numbers for testing"**
+   - Click **"Add phone number"**
+   - Enter:
+     - Phone number: `+91 9999999999`
      - Test code: `123456`
-   - Save
+   - Click **Save**
+
+**Why this is required:** Firebase test phone numbers allow authentication without sending real SMS messages. The OTP `123456` will always work for `+91 9999999999` without any network requests.
 
 2. **Database Setup:**
    - A demo worker profile is automatically created on first login
