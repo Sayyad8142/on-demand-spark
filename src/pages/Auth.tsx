@@ -13,6 +13,7 @@ import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
+import { DEMO_CREDENTIALS, DEMO_WORKER_DATA } from "@/config/demo";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -57,8 +58,9 @@ export default function Auth() {
   // Redirect if already logged in or in guest mode
   useEffect(() => {
     const isGuestMode = localStorage.getItem('guest_mode') === 'true';
-    if (!authLoading && (user || isGuestMode)) {
-      console.log('👤 User already logged in or in guest mode, redirecting to home');
+    const isDemoMode = localStorage.getItem('demo_mode') === 'true';
+    if (!authLoading && (user || isGuestMode || isDemoMode)) {
+      console.log('👤 User already logged in, in guest mode, or demo mode - redirecting to home');
       navigate("/home", {
         replace: true
       });
@@ -145,6 +147,66 @@ export default function Auth() {
         title: "Please enter your phone number",
         variant: "destructive"
       });
+      return;
+    }
+
+    // Check if demo phone - use email/password login instead
+    if (signInPhone === DEMO_CREDENTIALS.phone) {
+      try {
+        setLoading(true);
+        console.log('🎭 Demo login detected - using email/password authentication');
+        
+        // Sign in with demo email/password
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: DEMO_CREDENTIALS.email,
+          password: DEMO_CREDENTIALS.password,
+        });
+        
+        if (error) throw error;
+        if (!data.user) throw new Error("No user returned");
+
+        // Set demo mode flag
+        localStorage.setItem('demo_mode', 'true');
+        
+        // Ensure demo worker exists in database
+        const { error: workerError } = await supabase.from('workers').upsert({
+          id: data.user.id,
+          ...DEMO_WORKER_DATA,
+          is_active: true,
+          is_available: false,
+          is_busy: false,
+        }, { onConflict: 'id' });
+
+        if (workerError) {
+          console.error('Error upserting demo worker:', workerError);
+        }
+
+        // CRITICAL: Save JWT to native storage for overlay functionality
+        if (Capacitor.isNativePlatform() && AuthBridge && data.session?.access_token) {
+          console.log('🔐 [Auth Page] Saving demo JWT...');
+          try {
+            await AuthBridge.saveToken({ token: data.session.access_token });
+            console.log('✅ [Auth Page] Demo JWT saved successfully');
+          } catch (err) {
+            console.error('❌ [Auth Page] Failed to save demo JWT:', err);
+          }
+        }
+
+        toast({
+          title: "🎭 Demo Mode Activated",
+          description: "Logged in as demo account for Play Store review"
+        });
+        navigate("/home");
+        return;
+      } catch (error: any) {
+        toast({
+          title: "Demo Login Failed",
+          description: error.message,
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 

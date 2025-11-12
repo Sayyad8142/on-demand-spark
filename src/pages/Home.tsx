@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/components/ui/use-toast";
 import { DEMO_WORKER } from "@/config/demoData";
+import { DemoBanner } from "@/components/DemoBanner";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -32,7 +33,7 @@ export default function Home() {
     session
   } = useAuth();
   
-  // Guest mode check
+  // Guest mode check (guest mode has no user, demo mode has real authenticated user)
   const isGuestMode = localStorage.getItem('guest_mode') === 'true';
   const effectiveUserId = isGuestMode ? 'demo-worker-id' : user?.id;
   
@@ -361,6 +362,9 @@ export default function Home() {
   }
 
   return <div className="min-h-screen">
+      {/* Demo Mode Banner */}
+      <DemoBanner />
+      
       {/* Fixed Availability Toggle */}
       <div className="fixed top-0 left-0 right-0 z-10 bg-background border-b border-border">
         <div className="p-4">
