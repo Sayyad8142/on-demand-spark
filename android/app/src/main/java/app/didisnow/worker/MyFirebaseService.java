@@ -146,7 +146,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
   private void createNotificationChannel() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       CharSequence name = "Booking Alerts";
-      String description = "Urgent booking notifications";
+      String description = "Booking notifications";
       int importance = NotificationManager.IMPORTANCE_HIGH;
       NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
       channel.setDescription(description);
@@ -176,8 +176,8 @@ public class MyFirebaseService extends FirebaseMessagingService {
     // High priority heads-up notification (no full-screen intent, no ongoing flag)
     NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
       .setSmallIcon(R.drawable.ic_notification)
-      .setContentTitle("⚠️ Overlay Permission Required")
-      .setContentText("Enable 'Display over other apps' to receive booking alerts")
+      .setContentTitle("Overlay Permission Required")
+      .setContentText("Enable display over apps to receive booking alerts")
       .setPriority(NotificationCompat.PRIORITY_HIGH)
       .setAutoCancel(true)
       .setContentIntent(pendingIntent);
