@@ -12,16 +12,7 @@ class MainActivity : BridgeActivity() {
         registerPlugin(SmsRetrieverPlugin::class.java)
         registerPlugin(PermissionPlugin::class.java)
         
-        android.util.Log.d("MainActivity", "🚀 App starting - checking permissions")
-        
-        // Request battery optimization exemption to ensure reliable notifications
-        BatteryOptimizationHelper.showBatteryDialog(this)
-        
-        // Delay overlay permission dialog slightly so it doesn't conflict with battery dialog
-        android.os.Handler(mainLooper).postDelayed({
-            android.util.Log.d("MainActivity", "📱 Requesting overlay permission")
-            OverlayPermissionHelper.showOverlayPermissionDialog(this)
-        }, 1500)
+        android.util.Log.d("MainActivity", "🚀 App starting")
         
         // Handle intent if launched from overlay
         handleNavigationIntent(intent)
