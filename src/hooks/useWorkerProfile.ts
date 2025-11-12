@@ -1,12 +1,21 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
+import { DEMO_WORKER, isGuestMode } from "@/config/demoData";
 
 type Worker = Database["public"]["Tables"]["workers"]["Row"];
 
 export function useWorkerProfile(userId: string | undefined) {
   const [worker, setWorker] = useState<Worker | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Return demo data if in guest mode
+  if (isGuestMode()) {
+    useEffect(() => {
+      setWorker(DEMO_WORKER);
+      setLoading(false);
+    }, []);
+  }
 
   const fetchWorker = async () => {
     if (!userId) return;
@@ -77,6 +86,11 @@ export function useWorkerProfile(userId: string | undefined) {
   }, [userId]);
 
   const updateAvailability = async (isAvailable: boolean) => {
+    // Block updates in guest mode
+    if (isGuestMode()) {
+      throw new Error('Please create an account to update availability');
+    }
+
     if (!userId) return;
 
     try {

@@ -1,12 +1,21 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
+import { DEMO_ACTIVE_JOB, isGuestMode } from "@/config/demoData";
 
 type Booking = Database["public"]["Tables"]["bookings"]["Row"];
 
 export function useActiveJob(userId: string | undefined) {
   const [activeJob, setActiveJob] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Return demo data if in guest mode
+  if (isGuestMode()) {
+    useEffect(() => {
+      setActiveJob(DEMO_ACTIVE_JOB);
+      setLoading(false);
+    }, []);
+  }
 
   const fetchActiveJob = async () => {
     if (!userId) return;
@@ -63,6 +72,11 @@ export function useActiveJob(userId: string | undefined) {
   }, [userId]);
 
   const updateJobStatus = async (bookingId: string, newStatus: string) => {
+    // Block updates in guest mode
+    if (isGuestMode()) {
+      throw new Error('Please create an account to manage bookings');
+    }
+
     try {
       console.log('🔄 Updating job status:', bookingId, 'to', newStatus);
       
