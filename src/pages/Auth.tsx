@@ -489,6 +489,11 @@ export default function Auth() {
                   >
                     Login as Guest
                   </Button>
+                  <div className="mt-4 pt-4 border-t border-border text-center text-xs text-muted-foreground space-y-1">
+                    <p className="font-medium text-foreground">Didi Now Partner</p>
+                    <p>Email: team@didisnow.com</p>
+                    <p>Phone: +91 80081 80018</p>
+                  </div>
                 </>
               ) : (
                 <>
