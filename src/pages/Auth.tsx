@@ -13,8 +13,6 @@ import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
-import { DEMO_PHONE, DEMO_OTP, DEMO_WORKER, isDemoUser } from "@/config/demo";
-import { Info } from "lucide-react";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -67,7 +65,6 @@ export default function Auth() {
   // Sign In state
   const [signInPhone, setSignInPhone] = useState("");
   const [signInOtp, setSignInOtp] = useState("");
-  const [showDemoHelper, setShowDemoHelper] = useState(false);
   
   // Sign Up state
   const [signUpFullName, setSignUpFullName] = useState("");
@@ -171,20 +168,6 @@ export default function Auth() {
       setLoading(true);
       const phone = normalizePhone(signInPhone);
       
-      // Demo mode: Skip OTP for test number
-      if (isDemoUser(phone)) {
-        console.log('🎭 Demo user detected - skipping SMS');
-        setOtpSent(true);
-        setShowDemoHelper(true);
-        toast({ 
-          title: "Demo Mode", 
-          description: "Use OTP: 123456 (no SMS sent)",
-          duration: 5000
-        });
-        setLoading(false);
-        return;
-      }
-      
       const { error } = await supabase.auth.signInWithOtp({ phone });
       
       if (error) throw error;
@@ -218,24 +201,9 @@ export default function Auth() {
     try {
       setLoading(true);
       const phone = normalizePhone(signInPhone);
-      
       const { data, error } = await supabase.auth.verifyOtp({ phone, token: signInOtp, type: 'sms' });
       
-      if (error) {
-        // Special handling for demo mode errors
-        if (isDemoUser(phone) && signInOtp === DEMO_OTP) {
-          toast({
-            title: "⚠️ Demo Setup Required",
-            description: "Go to Supabase Dashboard → Authentication → Providers → Phone → DISABLE 'Enable phone confirmations' → Save",
-            duration: 20000,
-            variant: "destructive"
-          });
-          setLoading(false);
-          return;
-        }
-        throw error;
-      }
-      
+      if (error) throw error;
       if (!data.user) throw new Error("No user returned");
 
       // Check if a worker with this phone already exists
@@ -249,28 +217,9 @@ export default function Auth() {
         console.error('Error checking worker:', workerCheckError);
       }
 
-      // Check if this is demo user
-      const isDemo = isDemoUser(phone);
-      if (isDemo) {
-        console.log('🎭 Demo user login detected');
-        localStorage.setItem('is_demo_user', 'true');
-        
-        // Ensure demo worker exists in database
-        const { error: upsertError } = await supabase.from('workers').upsert({
-          id: data.user.id,
-          ...DEMO_WORKER,
-        }, { onConflict: 'id' });
-        
-        if (upsertError) {
-          console.error('Failed to upsert demo worker:', upsertError);
-        }
-      } else {
-        localStorage.removeItem('is_demo_user');
-        
-        if (existingWorker) {
-          // Link existing worker to auth user by updating the worker's ID
-          await supabase.from('workers').update({ id: data.user.id }).eq('phone', phone);
-        }
+      if (existingWorker) {
+        // Link existing worker to auth user by updating the worker's ID
+        await supabase.from('workers').update({ id: data.user.id }).eq('phone', phone);
       }
 
       // CRITICAL: Save JWT to native storage immediately for overlay functionality
@@ -292,17 +241,7 @@ export default function Auth() {
       toast({ title: "Success!", description: "Signed in successfully" });
       navigate("/home");
     } catch (error: any) {
-      // Show specific error for demo login setup
-      if (isDemoUser(normalizePhone(signInPhone)) && signInOtp === DEMO_OTP) {
-        toast({ 
-          title: "❌ Demo Login Not Configured",
-          description: "Click the link below to configure Supabase for demo login",
-          variant: "destructive",
-          duration: 15000
-        });
-      } else {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-      }
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -523,42 +462,6 @@ export default function Auth() {
                     maxLength={6}
                     disabled={loading}
                   />
-                </div>
-              )}
-
-              {/* Demo Login Link */}
-              {!otpSent && (
-                <button
-                  onClick={() => {
-                    setSignInPhone(DEMO_PHONE);
-                    setShowDemoHelper(true);
-                  }}
-                  className="text-xs text-muted-foreground hover:text-primary text-center w-full underline"
-                >
-                  Use demo login (for Play Store reviewers)
-                </button>
-              )}
-
-              {/* Demo Helper */}
-              {showDemoHelper && !otpSent && (
-                <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md">
-                  <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                  <div className="text-xs text-blue-700 dark:text-blue-300">
-                    <p className="font-semibold mb-1">Demo Account</p>
-                    <p>OTP will be: <span className="font-mono font-bold">{DEMO_OTP}</span></p>
-                  </div>
-                </div>
-              )}
-              
-              {/* Demo OTP Reminder */}
-              {showDemoHelper && otpSent && (
-                <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md">
-                  <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-                  <div className="text-xs text-amber-700 dark:text-amber-300">
-                    <p className="font-semibold mb-1">Demo Mode Active</p>
-                    <p>Use OTP: <span className="font-mono font-bold text-base">{DEMO_OTP}</span></p>
-                    <p className="mt-1 text-[10px]">If you see "token expired" error, <a href="https://supabase.com/dashboard/project/paywwbuqycovjopryele/auth/providers" target="_blank" rel="noopener noreferrer" className="underline">configure Supabase</a></p>
-                  </div>
                 </div>
               )}
 

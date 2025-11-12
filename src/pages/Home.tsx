@@ -12,7 +12,7 @@ import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Bell, X, Info } from "lucide-react";
+import { Bell, X } from "lucide-react";
 import { Capacitor } from '@capacitor/core';
 import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
@@ -43,7 +43,6 @@ export default function Home() {
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [showWebPushBanner, setShowWebPushBanner] = useState(false);
-  const [showDemoBanner, setShowDemoBanner] = useState(false);
   const [isInCall, setIsInCall] = useState(false);
   const [callRoomUrl, setCallRoomUrl] = useState('');
   const [callToken, setCallToken] = useState('');
@@ -176,17 +175,6 @@ export default function Home() {
       }
     }
   }, []);
-
-  // Check if this is demo user
-  useEffect(() => {
-    const isDemo = localStorage.getItem('is_demo_user') === 'true';
-    if (isDemo) {
-      const dismissed = sessionStorage.getItem('demo_banner_dismissed');
-      if (!dismissed) {
-        setShowDemoBanner(true);
-      }
-    }
-  }, []);
   const matches = (b: any) => {
     const inService = worker?.service_types?.includes?.(b.service_type);
     const inCommunity = (worker?.communities || [worker?.community]).includes?.(b.community);
@@ -294,33 +282,6 @@ export default function Home() {
 
       {/* Main Content with top padding for fixed header */}
       <div className="p-4 space-y-4 pb-32 pt-28">
-      
-      {/* Demo Mode Banner */}
-      {showDemoBanner && (
-        <Card className="p-4 bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800 relative">
-          <button 
-            onClick={() => {
-              setShowDemoBanner(false);
-              sessionStorage.setItem('demo_banner_dismissed', 'true');
-            }} 
-            className="absolute top-2 right-2 p-1 hover:bg-amber-100 dark:hover:bg-amber-900 rounded"
-          >
-            <X className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-          </button>
-          <div className="flex items-center gap-3 pr-6">
-            <Info className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-            <div className="flex-1">
-              <h3 className="font-semibold text-sm text-amber-900 dark:text-amber-100">
-                Demo Mode (For Review Only)
-              </h3>
-              <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                You're using a test account. This is for Play Store review purposes only.
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
-
       {/* Web Push Banner */}
       {showWebPushBanner && <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 relative">
           <button onClick={() => setShowWebPushBanner(false)} className="absolute top-2 right-2 p-1 hover:bg-blue-100 dark:hover:bg-blue-900 rounded">
