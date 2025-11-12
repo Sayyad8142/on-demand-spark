@@ -44,24 +44,6 @@ Production-ready worker app for instant on-demand services (maids, cooks, bathro
    - Go online to start receiving booking alerts
    - Test the full workflow: Accept → On the Way → Start Work → Complete
 
-## Reviewer Demo Login
-
-For **Play Store reviewers**, a special demo login is available that works without real SMS:
-
-**Credentials:**
-- Phone: `9999999999`
-- OTP: `123456`
-
-**Instructions:**
-1. Open the app and tap **"Use demo login"** link below Sign In button
-2. Phone field auto-fills with `9999999999`
-3. Tap "Send OTP"
-4. Enter OTP: `123456`
-5. Tap "Verify OTP"
-6. A yellow "Demo Mode" banner appears - you're in!
-
-This uses Firebase test phone numbers (no SMS sent). See [DEMO_LOGIN_GUIDE.md](./DEMO_LOGIN_GUIDE.md) for full details.
-
 ## User Flow
 
 1. **Sign Up** → Enter name, phone, community, service → Verify OTP → Wait for approval

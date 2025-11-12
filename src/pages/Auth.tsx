@@ -13,17 +13,6 @@ import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
-import { DEMO_PHONE_DISPLAY, DEMO_OTP, isDemoPhone, DEMO_WORKER_PROFILE } from "@/config/demo";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { ExternalLink } from "lucide-react";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -64,24 +53,6 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [communities, setCommunities] = useState<Array<{ name: string; value: string }>>([]);
-  const [showFirebaseSetupDialog, setShowFirebaseSetupDialog] = useState(false);
-
-  // Clear any expired sessions on mount
-  useEffect(() => {
-    const clearExpiredSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error || (session && session.expires_at && session.expires_at * 1000 < Date.now())) {
-          console.log('🗑️ Clearing expired session');
-          await supabase.auth.signOut();
-        }
-      } catch (error) {
-        console.error('Error clearing expired session:', error);
-      }
-    };
-    
-    clearExpiredSession();
-  }, []);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -94,7 +65,6 @@ export default function Auth() {
   // Sign In state
   const [signInPhone, setSignInPhone] = useState("");
   const [signInOtp, setSignInOtp] = useState("");
-  const [isDemoMode, setIsDemoMode] = useState(false);
   
   // Sign Up state
   const [signUpFullName, setSignUpFullName] = useState("");
@@ -198,36 +168,14 @@ export default function Auth() {
       setLoading(true);
       const phone = normalizePhone(signInPhone);
       
-      // Clear any existing session first
-      await supabase.auth.signOut();
-      
       const { error } = await supabase.auth.signInWithOtp({ phone });
       
-      if (error) {
-        console.error('OTP send error:', error);
-        throw error;
-      }
+      if (error) throw error;
       
       setOtpSent(true);
-      
-      if (isDemoPhone(phone)) {
-        toast({ 
-          title: "Demo OTP Ready!", 
-          description: "Enter OTP: 123456 (Firebase test number)"
-        });
-      } else {
-        toast({ 
-          title: "OTP sent!", 
-          description: "Check your phone for the verification code" 
-        });
-      }
+      toast({ title: "OTP sent!", description: "Check your phone for the verification code" });
     } catch (error: any) {
-      console.error('Sign in error:', error);
-      toast({ 
-        title: "Error", 
-        description: error.message || "Failed to send OTP", 
-        variant: "destructive" 
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -253,74 +201,25 @@ export default function Auth() {
     try {
       setLoading(true);
       const phone = normalizePhone(signInPhone);
+      const { data, error } = await supabase.auth.verifyOtp({ phone, token: signInOtp, type: 'sms' });
       
-      console.log('🔐 Verifying OTP for phone:', phone);
-      const { data, error } = await supabase.auth.verifyOtp({ 
-        phone, 
-        token: signInOtp, 
-        type: 'sms' 
-      });
-      
-      if (error) {
-        console.error('OTP verification error:', error);
-        
-        // Special handling for demo login
-        if (isDemoPhone(phone)) {
-          // Check if it's an OTP expired error (means Firebase test number not configured)
-          if (error.message?.includes('expired') || error.message?.includes('invalid')) {
-            setShowFirebaseSetupDialog(true);
-            return;
-          }
-          throw new Error(
-            'Demo login failed. Please configure Firebase test phone number first.'
-          );
-        }
-        
-        throw error;
-      }
-      
+      if (error) throw error;
       if (!data.user) throw new Error("No user returned");
 
-      // Check if this is demo login
-      const isDemo = isDemoPhone(phone);
-      
-      if (isDemo) {
-        console.log('🎭 Demo login detected');
-        localStorage.setItem('is_demo_user', 'true');
-        
-        // Ensure demo worker profile exists
-        try {
-          const { error: upsertError } = await supabase
-            .from('workers')
-            .upsert({
-              id: data.user.id,
-              ...DEMO_WORKER_PROFILE
-            }, { onConflict: 'id' });
-          
-          if (upsertError) {
-            console.error('❌ Failed to upsert demo worker:', upsertError);
-          } else {
-            console.log('✅ Demo worker profile ensured');
-          }
-        } catch (err) {
-          console.error('❌ Error upserting demo worker:', err);
-        }
-      } else {
-        // Regular user flow
-        const { data: existingWorker, error: workerCheckError } = await supabase
-          .from('workers')
-          .select('*')
-          .eq('phone', phone)
-          .maybeSingle();
+      // Check if a worker with this phone already exists
+      const { data: existingWorker, error: workerCheckError } = await supabase
+        .from('workers')
+        .select('*')
+        .eq('phone', phone)
+        .maybeSingle();
 
-        if (workerCheckError) {
-          console.error('Error checking worker:', workerCheckError);
-        }
+      if (workerCheckError) {
+        console.error('Error checking worker:', workerCheckError);
+      }
 
-        if (existingWorker) {
-          // Link existing worker to auth user by updating the worker's ID
-          await supabase.from('workers').update({ id: data.user.id }).eq('phone', phone);
-        }
+      if (existingWorker) {
+        // Link existing worker to auth user by updating the worker's ID
+        await supabase.from('workers').update({ id: data.user.id }).eq('phone', phone);
       }
 
       // CRITICAL: Save JWT to native storage immediately for overlay functionality
@@ -517,95 +416,6 @@ export default function Auth() {
 
 
   return (
-    <>
-      <AlertDialog open={showFirebaseSetupDialog} onOpenChange={setShowFirebaseSetupDialog}>
-        <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-xl">
-              <ExternalLink className="h-5 w-5" />
-              Firebase Console Setup Required
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-left space-y-4 pt-4">
-              <p className="font-semibold text-foreground">
-                Demo login requires a one-time Firebase Console configuration:
-              </p>
-              
-              <div className="bg-muted p-4 rounded-lg space-y-3 text-sm">
-                <div className="flex gap-3">
-                  <span className="font-bold text-primary">1.</span>
-                  <div>
-                    <p className="font-medium">Open Firebase Console</p>
-                    <a 
-                      href="https://console.firebase.google.com/" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline flex items-center gap-1 mt-1"
-                    >
-                      https://console.firebase.google.com/
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </div>
-                </div>
-                
-                <div className="flex gap-3">
-                  <span className="font-bold text-primary">2.</span>
-                  <p>Select your project from the list</p>
-                </div>
-                
-                <div className="flex gap-3">
-                  <span className="font-bold text-primary">3.</span>
-                  <p>Navigate to: <code className="bg-background px-2 py-0.5 rounded">Authentication → Sign-in method</code></p>
-                </div>
-                
-                <div className="flex gap-3">
-                  <span className="font-bold text-primary">4.</span>
-                  <p>Scroll down to <strong>Phone</strong> provider section</p>
-                </div>
-                
-                <div className="flex gap-3">
-                  <span className="font-bold text-primary">5.</span>
-                  <p>Click <strong>"Phone numbers for testing"</strong></p>
-                </div>
-                
-                <div className="flex gap-3">
-                  <span className="font-bold text-primary">6.</span>
-                  <div className="flex-1">
-                    <p className="mb-2">Click <strong>"Add phone number"</strong> and enter:</p>
-                    <div className="bg-background p-3 rounded space-y-1 font-mono text-xs">
-                      <div>Phone number: <span className="text-primary font-bold">+91 9999999999</span></div>
-                      <div>Test code: <span className="text-primary font-bold">123456</span></div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex gap-3">
-                  <span className="font-bold text-primary">7.</span>
-                  <p>Click <strong>Save</strong></p>
-                </div>
-                
-                <div className="flex gap-3">
-                  <span className="font-bold text-primary">8.</span>
-                  <p>Return to this page and try demo login again</p>
-                </div>
-              </div>
-              
-              <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg">
-                <p className="text-xs text-foreground">
-                  <strong>Why this is needed:</strong> Firebase test phone numbers allow authentication without sending real SMS messages. 
-                  The OTP <code className="bg-background px-1 rounded">123456</code> will always work for <code className="bg-background px-1 rounded">+91 9999999999</code> 
-                  without any network requests.
-                </p>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setShowFirebaseSetupDialog(false)}>
-              Got it, I'll configure Firebase
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 p-4">
       <div className="w-full max-w-md space-y-4">
         <Card className="w-full">
@@ -634,18 +444,10 @@ export default function Auth() {
                   type="tel"
                   placeholder={t('auth.phonePlaceholder')}
                   value={signInPhone}
-                  onChange={(e) => {
-                    setSignInPhone(e.target.value);
-                    setIsDemoMode(isDemoPhone(e.target.value));
-                  }}
+                  onChange={(e) => setSignInPhone(e.target.value)}
                   maxLength={10}
                   disabled={otpSent || loading}
                 />
-                {isDemoMode && !otpSent && (
-                  <p className="text-xs text-muted-foreground">
-                    Demo for reviewers: Use OTP {DEMO_OTP}
-                  </p>
-                )}
               </div>
 
               {otpSent && (
@@ -660,34 +462,17 @@ export default function Auth() {
                     maxLength={6}
                     disabled={loading}
                   />
-                  {isDemoMode && (
-                    <p className="text-xs text-muted-foreground">
-                      Demo for reviewers: Use OTP {DEMO_OTP}
-                    </p>
-                  )}
                 </div>
               )}
 
               {!otpSent ? (
-                <>
-                  <Button 
-                    onClick={handleSignInSendOtp} 
-                    disabled={loading || !signInPhone}
-                    className="w-full"
-                  >
-                    {loading ? t('auth.sending') : t('auth.sendOtp')}
-                  </Button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSignInPhone(DEMO_PHONE_DISPLAY);
-                      setIsDemoMode(true);
-                    }}
-                    className="w-full text-center text-sm text-primary hover:underline"
-                  >
-                    Use demo login
-                  </button>
-                </>
+                <Button 
+                  onClick={handleSignInSendOtp} 
+                  disabled={loading || !signInPhone}
+                  className="w-full"
+                >
+                  {loading ? t('auth.sending') : t('auth.sendOtp')}
+                </Button>
               ) : (
                 <>
                   <Button 
@@ -880,8 +665,7 @@ export default function Auth() {
           తెలుగు
         </Button>
       </div>
+      </div>
     </div>
-  </div>
-  </>
   );
 }

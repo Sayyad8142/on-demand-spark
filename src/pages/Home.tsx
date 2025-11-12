@@ -18,7 +18,6 @@ import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/components/ui/use-toast";
-import { isDemoUser } from "@/config/demo";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -44,7 +43,6 @@ export default function Home() {
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [showWebPushBanner, setShowWebPushBanner] = useState(false);
-  const [showDemoBanner, setShowDemoBanner] = useState(false);
   const [isInCall, setIsInCall] = useState(false);
   const [callRoomUrl, setCallRoomUrl] = useState('');
   const [callToken, setCallToken] = useState('');
@@ -177,16 +175,6 @@ export default function Home() {
       }
     }
   }, []);
-
-  // Check if user is demo user
-  useEffect(() => {
-    const isDemoStored = localStorage.getItem('is_demo_user') === 'true';
-    const isDemoByPhone = user && isDemoUser(user);
-    if (isDemoStored || isDemoByPhone) {
-      setShowDemoBanner(true);
-      console.log('🎭 Demo user detected');
-    }
-  }, [user]);
   const matches = (b: any) => {
     const inService = worker?.service_types?.includes?.(b.service_type);
     const inCommunity = (worker?.communities || [worker?.community]).includes?.(b.community);
@@ -294,25 +282,6 @@ export default function Home() {
 
       {/* Main Content with top padding for fixed header */}
       <div className="p-4 space-y-4 pb-32 pt-28">
-      
-      {/* Demo Mode Banner */}
-      {showDemoBanner && <Card className="p-4 bg-yellow-50 dark:bg-yellow-950 border-yellow-300 dark:border-yellow-700 relative">
-          <button onClick={() => setShowDemoBanner(false)} className="absolute top-2 right-2 p-1 hover:bg-yellow-100 dark:hover:bg-yellow-900 rounded">
-            <X className="w-4 h-4 text-yellow-700 dark:text-yellow-300" />
-          </button>
-          <div className="flex items-center gap-3 pr-6">
-            <span className="text-2xl">🎭</span>
-            <div className="flex-1">
-              <h3 className="font-semibold text-sm text-yellow-900 dark:text-yellow-100">
-                Demo Mode (For Review Only)
-              </h3>
-              <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-0.5">
-                You're using a test account. All features are functional.
-              </p>
-            </div>
-          </div>
-        </Card>}
-
       {/* Web Push Banner */}
       {showWebPushBanner && <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 relative">
           <button onClick={() => setShowWebPushBanner(false)} className="absolute top-2 right-2 p-1 hover:bg-blue-100 dark:hover:bg-blue-900 rounded">
