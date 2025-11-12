@@ -10,37 +10,27 @@ import android.provider.Settings
 import androidx.appcompat.app.AlertDialog
 
 object BatteryOptimizationHelper {
-    fun requestIgnoreBatteryOptimizations(context: Context) {
+    // Opens battery optimization settings page for user to manually configure
+    // This should only be called from user actions (e.g., button press in Settings)
+    fun openBatterySettings(context: Context) {
         try {
-            val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-            val packageName = context.packageName
-
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                if (!pm.isIgnoringBatteryOptimizations(packageName)) {
-                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                    intent.data = Uri.parse("package:$packageName")
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    context.startActivity(intent)
-                }
+                val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                context.startActivity(intent)
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
-
-    fun showBatteryDialog(activity: Activity) {
-        val pm = activity.getSystemService(Context.POWER_SERVICE) as PowerManager
-        val packageName = activity.packageName
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !pm.isIgnoringBatteryOptimizations(packageName)) {
-            AlertDialog.Builder(activity)
-                .setTitle("Allow Background Running")
-                .setMessage("To keep receiving bookings, please allow On-Demand Spark to run in the background without restrictions.")
-                .setPositiveButton("Allow") { _, _ ->
-                    requestIgnoreBatteryOptimizations(activity)
-                }
-                .setNegativeButton("Later", null)
-                .show()
+    
+    // Check if battery optimization is disabled for this app
+    fun isIgnoringBatteryOptimizations(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+            pm.isIgnoringBatteryOptimizations(context.packageName)
+        } else {
+            true
         }
     }
 }
