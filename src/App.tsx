@@ -13,7 +13,6 @@ import { initNativePush } from "@/native/push";
 import { requestAndroidOverlay } from "@/lib/overlay";
 import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
 import { tryAccept } from "@/lib/bookingActions";
-import { requestLocationPermissions } from "@/lib/backgroundLocation";
 import OfflineBanner from "@/components/OfflineBanner";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
@@ -84,20 +83,6 @@ const App = () => {
   const { session } = useAuth();
   useAppState(); // Refresh JWT when app comes to foreground
   const { registerPush } = usePushRegister();
-
-  // Request location permissions on app startup for native platforms
-  useEffect(() => {
-    if (Capacitor.isNativePlatform()) {
-      console.log('📍 Requesting location permissions on app startup');
-      requestLocationPermissions().then((granted) => {
-        if (granted) {
-          console.log('✅ Location permissions granted');
-        } else {
-          console.log('❌ Location permissions denied');
-        }
-      });
-    }
-  }, []);
 
   // Initialize native push notifications and auto-refresh FCM token when we have a session
   useEffect(() => {

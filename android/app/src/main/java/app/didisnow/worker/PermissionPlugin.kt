@@ -17,14 +17,4 @@ class PermissionPlugin : Plugin() {
             call.resolve()
         } ?: call.reject("Activity not available")
     }
-    
-    @PluginMethod
-    fun requestLocationPermission(call: PluginCall) {
-        activity?.let { activity ->
-            activity.runOnUiThread {
-                PermissionHelper.requestLocationPermissionWithRationale(activity)
-            }
-            call.resolve()
-        } ?: call.reject("Activity not available")
-    }
 }
