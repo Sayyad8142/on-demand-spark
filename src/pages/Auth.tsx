@@ -13,6 +13,7 @@ import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
+import { DEMO_PHONE_DISPLAY, DEMO_OTP, isDemoPhone, DEMO_WORKER_PROFILE } from "@/config/demo";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -65,6 +66,7 @@ export default function Auth() {
   // Sign In state
   const [signInPhone, setSignInPhone] = useState("");
   const [signInOtp, setSignInOtp] = useState("");
+  const [isDemoMode, setIsDemoMode] = useState(false);
   
   // Sign Up state
   const [signUpFullName, setSignUpFullName] = useState("");
@@ -206,20 +208,46 @@ export default function Auth() {
       if (error) throw error;
       if (!data.user) throw new Error("No user returned");
 
-      // Check if a worker with this phone already exists
-      const { data: existingWorker, error: workerCheckError } = await supabase
-        .from('workers')
-        .select('*')
-        .eq('phone', phone)
-        .maybeSingle();
+      // Check if this is demo login
+      const isDemo = isDemoPhone(phone);
+      
+      if (isDemo) {
+        console.log('🎭 Demo login detected');
+        localStorage.setItem('is_demo_user', 'true');
+        
+        // Ensure demo worker profile exists
+        try {
+          const { error: upsertError } = await supabase
+            .from('workers')
+            .upsert({
+              id: data.user.id,
+              ...DEMO_WORKER_PROFILE
+            }, { onConflict: 'id' });
+          
+          if (upsertError) {
+            console.error('❌ Failed to upsert demo worker:', upsertError);
+          } else {
+            console.log('✅ Demo worker profile ensured');
+          }
+        } catch (err) {
+          console.error('❌ Error upserting demo worker:', err);
+        }
+      } else {
+        // Regular user flow
+        const { data: existingWorker, error: workerCheckError } = await supabase
+          .from('workers')
+          .select('*')
+          .eq('phone', phone)
+          .maybeSingle();
 
-      if (workerCheckError) {
-        console.error('Error checking worker:', workerCheckError);
-      }
+        if (workerCheckError) {
+          console.error('Error checking worker:', workerCheckError);
+        }
 
-      if (existingWorker) {
-        // Link existing worker to auth user by updating the worker's ID
-        await supabase.from('workers').update({ id: data.user.id }).eq('phone', phone);
+        if (existingWorker) {
+          // Link existing worker to auth user by updating the worker's ID
+          await supabase.from('workers').update({ id: data.user.id }).eq('phone', phone);
+        }
       }
 
       // CRITICAL: Save JWT to native storage immediately for overlay functionality
@@ -444,10 +472,18 @@ export default function Auth() {
                   type="tel"
                   placeholder={t('auth.phonePlaceholder')}
                   value={signInPhone}
-                  onChange={(e) => setSignInPhone(e.target.value)}
+                  onChange={(e) => {
+                    setSignInPhone(e.target.value);
+                    setIsDemoMode(isDemoPhone(e.target.value));
+                  }}
                   maxLength={10}
                   disabled={otpSent || loading}
                 />
+                {isDemoMode && !otpSent && (
+                  <p className="text-xs text-muted-foreground">
+                    Demo for reviewers: Use OTP {DEMO_OTP}
+                  </p>
+                )}
               </div>
 
               {otpSent && (
@@ -462,17 +498,34 @@ export default function Auth() {
                     maxLength={6}
                     disabled={loading}
                   />
+                  {isDemoMode && (
+                    <p className="text-xs text-muted-foreground">
+                      Demo for reviewers: Use OTP {DEMO_OTP}
+                    </p>
+                  )}
                 </div>
               )}
 
               {!otpSent ? (
-                <Button 
-                  onClick={handleSignInSendOtp} 
-                  disabled={loading || !signInPhone}
-                  className="w-full"
-                >
-                  {loading ? t('auth.sending') : t('auth.sendOtp')}
-                </Button>
+                <>
+                  <Button 
+                    onClick={handleSignInSendOtp} 
+                    disabled={loading || !signInPhone}
+                    className="w-full"
+                  >
+                    {loading ? t('auth.sending') : t('auth.sendOtp')}
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSignInPhone(DEMO_PHONE_DISPLAY);
+                      setIsDemoMode(true);
+                    }}
+                    className="w-full text-center text-sm text-primary hover:underline"
+                  >
+                    Use demo login
+                  </button>
+                </>
               ) : (
                 <>
                   <Button 
