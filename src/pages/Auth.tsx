@@ -54,10 +54,11 @@ export default function Auth() {
   const [otpSent, setOtpSent] = useState(false);
   const [communities, setCommunities] = useState<Array<{ name: string; value: string }>>([]);
 
-  // Redirect if already logged in
+  // Redirect if already logged in or in guest mode
   useEffect(() => {
-    if (!authLoading && user) {
-      console.log('👤 User already logged in, redirecting to home');
+    const isGuestMode = localStorage.getItem('guest_mode') === 'true';
+    if (!authLoading && (user || isGuestMode)) {
+      console.log('👤 User already logged in or in guest mode, redirecting to home');
       navigate("/home", { replace: true });
     }
   }, [user, authLoading, navigate]);

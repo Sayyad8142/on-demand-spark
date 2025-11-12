@@ -53,7 +53,8 @@
     "noActiveJob": "No active jobs at the moment",
     "enableWebPush": "Enable Web Push Notifications",
     "enableWebPushDesc": "Get booking alerts even when this tab is in the background",
-    "enableInSettings": "Enable in Settings"
+    "enableInSettings": "Enable in Settings",
+    "guestMode": "Guest Mode"
   },
   "bookings": {
     "title": "My Bookings",

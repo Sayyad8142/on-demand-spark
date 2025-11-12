@@ -241,11 +241,58 @@ export default function Home() {
     setCallId('');
   };
 
-  // Guard: Don't render if user is not loaded yet
-  if (!user) {
+  // Guard: Check if guest mode
+  const isGuestMode = localStorage.getItem('guest_mode') === 'true';
+
+  // Guard: Don't render if user is not loaded yet and not in guest mode
+  if (!user && !isGuestMode) {
     return <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>;
+  }
+
+  // Guest mode view
+  if (isGuestMode && !user) {
+    return <div className="min-h-screen">
+      <div className="fixed top-0 left-0 right-0 z-10 bg-background border-b border-border">
+        <div className="p-4">
+          <Card className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
+            <div className="p-4 text-center space-y-3">
+              <h3 className="font-semibold text-amber-900 dark:text-amber-100">
+                {t('home.guestMode')}
+              </h3>
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                You're in guest mode. Sign up to access full features and start accepting bookings.
+              </p>
+              <Button 
+                onClick={() => {
+                  localStorage.removeItem('guest_mode');
+                  navigate('/auth');
+                }}
+                className="w-full"
+              >
+                Create Account
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      <div className="p-4 space-y-4 pb-32 pt-40">
+        <Card className="p-6 text-center space-y-4">
+          <h2 className="text-xl font-semibold">Welcome to Didi Now Partner</h2>
+          <p className="text-muted-foreground">
+            This is a platform for service partners to receive and manage bookings.
+          </p>
+          <div className="space-y-2 text-left text-sm text-muted-foreground">
+            <p>✓ Receive instant booking notifications</p>
+            <p>✓ Manage your availability schedule</p>
+            <p>✓ Track your earnings and bookings</p>
+            <p>✓ Communicate with customers</p>
+          </div>
+        </Card>
+      </div>
+    </div>;
   }
 
   // Show incoming call screen
