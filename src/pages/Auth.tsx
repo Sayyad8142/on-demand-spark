@@ -255,8 +255,20 @@ export default function Auth() {
         
         // Special handling for demo login
         if (isDemoPhone(phone)) {
+          // Check if it's an OTP expired error (means Firebase test number not configured)
+          if (error.message?.includes('expired') || error.message?.includes('invalid')) {
+            throw new Error(
+              'Firebase test phone not configured. Required steps:\n\n' +
+              '1. Open Firebase Console: https://console.firebase.google.com/\n' +
+              '2. Select your project\n' +
+              '3. Go to: Authentication → Sign-in method → Phone\n' +
+              '4. Click "Phone numbers for testing"\n' +
+              '5. Add: +91 9999999999 with code: 123456\n' +
+              '6. Save and try again'
+            );
+          }
           throw new Error(
-            'Demo login failed. Please ensure Firebase test phone number (+91 9999999999 with OTP 123456) is configured in Firebase Console → Authentication → Sign-in method → Phone → Test phone numbers'
+            'Demo login failed. Please configure Firebase test phone number first. See DEMO_LOGIN_GUIDE.md for details.'
           );
         }
         
