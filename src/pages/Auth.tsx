@@ -13,7 +13,6 @@ import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
-import { DEMO_PHONE, DEMO_OTP, isDemoUser } from "@/config/demo";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -206,11 +205,6 @@ export default function Auth() {
       
       if (error) throw error;
       if (!data.user) throw new Error("No user returned");
-
-      // Store demo mode flag if demo user
-      if (isDemoUser(signInPhone)) {
-        localStorage.setItem('is_demo_user', 'true');
-      }
 
       // Check if a worker with this phone already exists
       const { data: existingWorker, error: workerCheckError } = await supabase
@@ -472,40 +466,15 @@ export default function Auth() {
               )}
 
               {!otpSent ? (
-                <>
-                  <Button 
-                    onClick={handleSignInSendOtp} 
-                    disabled={loading || !signInPhone}
-                    className="w-full"
-                  >
-                    {loading ? t('auth.sending') : t('auth.sendOtp')}
-                  </Button>
-                  
-                  {/* Demo Login Link */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSignInPhone('9999999999');
-                      toast({ 
-                        title: "Demo Mode", 
-                        description: "Use OTP: 123456 after sending OTP",
-                        duration: 5000
-                      });
-                    }}
-                    className="text-sm text-primary hover:underline text-center w-full"
-                  >
-                    Use demo login (for reviewers)
-                  </button>
-                </>
+                <Button 
+                  onClick={handleSignInSendOtp} 
+                  disabled={loading || !signInPhone}
+                  className="w-full"
+                >
+                  {loading ? t('auth.sending') : t('auth.sendOtp')}
+                </Button>
               ) : (
                 <>
-                  {/* Helper text for demo users */}
-                  {isDemoUser(signInPhone) && (
-                    <div className="text-xs text-muted-foreground bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded p-2">
-                      Demo OTP: <strong className="text-amber-700 dark:text-amber-300">{DEMO_OTP}</strong>
-                    </div>
-                  )}
-                  
                   <Button 
                     onClick={handleSignInVerifyOtp} 
                     disabled={loading || !signInOtp}
