@@ -50,7 +50,7 @@ export function useAuth() {
         let retryCount = 0;
         let session = null;
         
-        while (retryCount < 3 && !session && mounted) {
+        while (retryCount < 2 && !session && mounted) {
           const { data, error } = await supabase.auth.getSession();
           if (error) {
             console.error('❌ Error getting session:', error);
@@ -78,10 +78,12 @@ export function useAuth() {
             if (session.access_token) {
               console.log('🔐 Saving access token on app startup...');
               const saved = await saveJWT(session.access_token);
-              if (saved) {
-                console.log('✅ JWT successfully saved on startup');
-              } else {
-                console.error('❌ Failed to save JWT on startup - booking acceptance may not work!');
+              if (Capacitor.isNativePlatform()) {
+                if (saved) {
+                  console.log('✅ JWT successfully saved on startup');
+                } else {
+                  console.error('❌ Failed to save JWT on startup - booking acceptance may not work!');
+                }
               }
             } else {
               console.error('❌ No access token in session!');
@@ -119,10 +121,12 @@ export function useAuth() {
             
             // Save JWT for AuthBridge
             const saved = await saveJWT(session.access_token);
-            if (saved) {
-              console.log('✅ Session and JWT successfully saved after auth state change');
-            } else {
-              console.error('❌ Failed to save JWT after auth state change');
+            if (Capacitor.isNativePlatform()) {
+              if (saved) {
+                console.log('✅ Session and JWT successfully saved after auth state change');
+              } else {
+                console.error('❌ Failed to save JWT after auth state change');
+              }
             }
           } else if (Capacitor.isNativePlatform()) {
             // Clear tokens on logout
@@ -138,12 +142,12 @@ export function useAuth() {
       }
     );
 
-    // Aggressive session refresh - save session every 1 minute if exists
+    // Aggressive session refresh - save session every 1 minute if exists (native only)
     const intervalId = setInterval(async () => {
-      if (!mounted) return;
+      if (!mounted || !Capacitor.isNativePlatform()) return;
       
       const { data: { session } } = await supabase.auth.getSession();
-      if (session && Capacitor.isNativePlatform()) {
+      if (session) {
         console.log('🔄 Periodic session refresh starting...');
         await saveSession(session);
         if (session.access_token) {
