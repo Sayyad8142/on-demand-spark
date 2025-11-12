@@ -165,11 +165,15 @@ public class MyFirebaseService extends FirebaseMessagingService {
   private void showPermissionNotification() {
     createNotificationChannel();
     
-    Intent intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+    // Safe fallback: Open BookingAlertActivity with NEW_TASK flag
+    Intent intent = new Intent(this, BookingAlertActivity.class);
+    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+    
     PendingIntent pendingIntent = PendingIntent.getActivity(
-      this, 0, intent, PendingIntent.FLAG_IMMUTABLE
+      this, 0, intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
     );
     
+    // High priority heads-up notification (no full-screen intent, no ongoing flag)
     NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
       .setSmallIcon(R.drawable.ic_notification)
       .setContentTitle("⚠️ Overlay Permission Required")
