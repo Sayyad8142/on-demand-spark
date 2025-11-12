@@ -247,6 +247,12 @@ export default function Auth() {
     }
   };
 
+  const handleGuestLogin = () => {
+    localStorage.setItem('guest_mode', 'true');
+    toast({ title: "Guest Mode", description: "Logged in as guest" });
+    navigate("/home");
+  };
+
   const handleSignUpSendOtp = async () => {
     if (!signUpFullName || !signUpPhone || !signUpCommunity || !signUpService) {
       toast({ title: "Please fill all required fields", variant: "destructive" });
@@ -466,13 +472,23 @@ export default function Auth() {
               )}
 
               {!otpSent ? (
-                <Button 
-                  onClick={handleSignInSendOtp} 
-                  disabled={loading || !signInPhone}
-                  className="w-full"
-                >
-                  {loading ? t('auth.sending') : t('auth.sendOtp')}
-                </Button>
+                <>
+                  <Button 
+                    onClick={handleSignInSendOtp} 
+                    disabled={loading || !signInPhone}
+                    className="w-full"
+                  >
+                    {loading ? t('auth.sending') : t('auth.sendOtp')}
+                  </Button>
+                  <Button 
+                    onClick={handleGuestLogin} 
+                    disabled={loading}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Login as Guest
+                  </Button>
+                </>
               ) : (
                 <>
                   <Button 
