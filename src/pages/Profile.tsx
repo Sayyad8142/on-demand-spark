@@ -316,11 +316,17 @@ export default function Profile() {
 
   const handleLogout = async () => {
     try {
+      // Clear guest mode flag
+      localStorage.removeItem('guest_mode');
+      
+      // Sign out from Supabase
       await supabase.auth.signOut();
+      
       toast({ 
         title: "Logged Out", 
         description: "You have been successfully logged out" 
       });
+      
       navigate("/auth");
     } catch (error: any) {
       toast({ 
