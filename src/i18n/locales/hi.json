@@ -53,8 +53,7 @@
     "noActiveJob": "इस समय कोई सक्रिय काम नहीं",
     "enableWebPush": "वेब पुश सूचनाएं सक्षम करें",
     "enableWebPushDesc": "जब यह टैब बैकग्राउंड में हो तब भी बुकिंग अलर्ट प्राप्त करें",
-    "enableInSettings": "सेटिंग्स में सक्षम करें",
-    "guestMode": "अतिथि मोड"
+    "enableInSettings": "सेटिंग्स में सक्षम करें"
   },
   "bookings": {
     "title": "मेरी बुकिंग",

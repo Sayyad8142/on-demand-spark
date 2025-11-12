@@ -316,19 +316,11 @@ export default function Profile() {
 
   const handleLogout = async () => {
     try {
-      // Clear guest mode and demo mode flags
-      localStorage.removeItem('guest_mode');
-      localStorage.removeItem('demo_mode');
-      localStorage.removeItem('demo_banner_dismissed');
-      
-      // Sign out from Supabase
       await supabase.auth.signOut();
-      
       toast({ 
         title: "Logged Out", 
         description: "You have been successfully logged out" 
       });
-      
       navigate("/auth");
     } catch (error: any) {
       toast({ 

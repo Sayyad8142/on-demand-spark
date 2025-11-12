@@ -18,8 +18,6 @@ import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/components/ui/use-toast";
-import { DEMO_WORKER } from "@/config/demoData";
-import { DemoBanner } from "@/components/DemoBanner";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -32,21 +30,16 @@ export default function Home() {
     user,
     session
   } = useAuth();
-  
-  // Guest mode check (guest mode has no user, demo mode has real authenticated user)
-  const isGuestMode = localStorage.getItem('guest_mode') === 'true';
-  const effectiveUserId = isGuestMode ? 'demo-worker-id' : user?.id;
-  
   const {
     worker,
     updateAvailability,
     refetch: refetchWorker
-  } = useWorkerProfile(effectiveUserId);
+  } = useWorkerProfile(user?.id);
   const {
     activeJob,
     updateJobStatus,
     refetch: refetchActiveJob
-  } = useActiveJob(effectiveUserId);
+  } = useActiveJob(user?.id);
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [showWebPushBanner, setShowWebPushBanner] = useState(false);
@@ -198,26 +191,11 @@ export default function Home() {
     await updateAvailability(value);
     setToggling(false);
   };
-  const handleStatusUpdate = async (newStatus: string) => {
-    if (isGuestMode) {
-      toast({
-        title: "Demo Mode",
-        description: "Create an account to manage real bookings",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!activeJob) return;
-    try {
-      setUpdating(true);
-      await updateJobStatus(activeJob.id, newStatus);
-      await refetchWorker();
-    } catch (error) {
-      console.error('Status update failed:', error);
-    } finally {
-      setUpdating(false);
-    }
+  const handleStatusUpdate = async (status: string) => {
+    setUpdating(true);
+    await updateJobStatus(activeJob?.id, status);
+    await refetchWorker();
+    setUpdating(false);
   };
   const handleAccept = async () => {
     await accept();
@@ -225,15 +203,6 @@ export default function Home() {
   };
 
   const handleCall = async () => {
-    if (isGuestMode) {
-      toast({
-        title: "Demo Mode",
-        description: "Create an account to call customers",
-        variant: "destructive"
-      });
-      return;
-    }
-
     if (!activeJob) return;
 
     try {
@@ -272,69 +241,11 @@ export default function Home() {
     setCallId('');
   };
 
-  // Guard: Check if guest mode
-  const isGuestModeCheck = localStorage.getItem('guest_mode') === 'true';
-
-  // Guard: Don't render if user is not loaded yet and not in guest mode
-  if (!user && !isGuestModeCheck) {
+  // Guard: Don't render if user is not loaded yet
+  if (!user) {
     return <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>;
-  }
-
-  // Guest mode view with demo data
-  if (isGuestModeCheck && !user) {
-    return <div className="min-h-screen">
-      {/* Guest Mode Banner */}
-      <div className="fixed top-0 left-0 right-0 z-20 bg-amber-500 text-white">
-        <div className="p-3 flex items-center justify-between">
-          <div className="flex-1 text-center">
-            <span className="font-semibold">👀 {t('home.guestMode')} - Demo Account</span>
-            <span className="ml-2 text-xs opacity-90">Exploring as {DEMO_WORKER.full_name}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Fixed Availability Toggle */}
-      <div className="fixed top-12 left-0 right-0 z-10 bg-background border-b border-border">
-        <div className="p-4">
-          <AvailabilityToggle workerId="demo-worker-id" />
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="p-4 space-y-4 pb-32 pt-36">
-        {/* Sign Up CTA Card */}
-        <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
-          <div className="p-4 space-y-3">
-            <h3 className="font-semibold text-lg">Ready to Start Earning?</h3>
-            <p className="text-sm text-muted-foreground">
-              Create your account to accept real bookings and start earning today!
-            </p>
-            <Button 
-              onClick={() => {
-                localStorage.removeItem('guest_mode');
-                navigate('/auth');
-              }}
-              className="w-full"
-              size="lg"
-            >
-              Create Account Now
-            </Button>
-          </div>
-        </Card>
-
-        {/* Demo Active Job */}
-        {activeJob && (
-          <ActiveJobCard 
-            booking={activeJob} 
-            onStatusUpdate={handleStatusUpdate} 
-            updating={updating} 
-            onCall={handleCall} 
-          />
-        )}
-      </div>
-    </div>;
   }
 
   // Show incoming call screen
@@ -362,13 +273,10 @@ export default function Home() {
   }
 
   return <div className="min-h-screen">
-      {/* Demo Mode Banner */}
-      <DemoBanner />
-      
       {/* Fixed Availability Toggle */}
       <div className="fixed top-0 left-0 right-0 z-10 bg-background border-b border-border">
         <div className="p-4">
-          <AvailabilityToggle workerId={effectiveUserId!} />
+          <AvailabilityToggle workerId={user.id} />
         </div>
       </div>
 

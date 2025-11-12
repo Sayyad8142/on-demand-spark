@@ -146,7 +146,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
   private void createNotificationChannel() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       CharSequence name = "Booking Alerts";
-      String description = "Booking notifications";
+      String description = "Urgent booking notifications";
       int importance = NotificationManager.IMPORTANCE_HIGH;
       NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
       channel.setDescription(description);
@@ -165,19 +165,15 @@ public class MyFirebaseService extends FirebaseMessagingService {
   private void showPermissionNotification() {
     createNotificationChannel();
     
-    // Safe fallback: Open BookingAlertActivity with NEW_TASK flag
-    Intent intent = new Intent(this, BookingAlertActivity.class);
-    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-    
+    Intent intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
     PendingIntent pendingIntent = PendingIntent.getActivity(
-      this, 0, intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
+      this, 0, intent, PendingIntent.FLAG_IMMUTABLE
     );
     
-    // High priority heads-up notification (no full-screen intent, no ongoing flag)
     NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
       .setSmallIcon(R.drawable.ic_notification)
-      .setContentTitle("Overlay Permission Required")
-      .setContentText("Enable display over apps to receive booking alerts")
+      .setContentTitle("⚠️ Overlay Permission Required")
+      .setContentText("Enable 'Display over other apps' to receive booking alerts")
       .setPriority(NotificationCompat.PRIORITY_HIGH)
       .setAutoCancel(true)
       .setContentIntent(pendingIntent);

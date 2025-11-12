@@ -9,22 +9,48 @@ import android.provider.Settings
 import androidx.appcompat.app.AlertDialog
 
 object OverlayPermissionHelper {
-    // Check if overlay permission is granted
-    fun canDraw(context: Context): Boolean =
+    fun canDraw(activity: Activity): Boolean =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-            Settings.canDrawOverlays(context)
+            Settings.canDrawOverlays(activity)
         else true
 
-    // Opens overlay permission settings page for user to manually configure
-    // This should only be called from user actions (e.g., button press in Settings)
-    fun openOverlaySettings(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+    fun request(activity: Activity, requestCode: Int = 9911) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+            !Settings.canDrawOverlays(activity)) {
             val intent = Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:${context.packageName}")
+                Uri.parse("package:${activity.packageName}")
             )
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            context.startActivity(intent)
+            activity.startActivityForResult(intent, requestCode)
         }
+    }
+
+    fun showOverlayPermissionDialog(activity: Activity) {
+        if (canDraw(activity)) {
+            android.util.Log.d("OverlayPermission", "✅ Overlay permission already granted")
+            return // Already has permission
+        }
+
+        android.util.Log.d("OverlayPermission", "📱 Showing overlay permission dialog")
+
+        AlertDialog.Builder(activity)
+            .setTitle("📱 Display Over Other Apps Permission")
+            .setMessage(
+                "🔔 Why we need this permission:\n\n" +
+                "• Show urgent booking alerts even when your phone is locked\n" +
+                "• Display alerts over YouTube, WhatsApp, and other apps\n" +
+                "• Ensure you never miss a booking opportunity\n\n" +
+                "✅ This permission allows booking alerts to appear on top of other apps so you can accept jobs immediately.\n\n" +
+                "This is required for automatic booking notifications."
+            )
+            .setPositiveButton("Allow") { _, _ ->
+                android.util.Log.d("OverlayPermission", "🔓 User clicked Allow - requesting permission")
+                request(activity)
+            }
+            .setNegativeButton("Later") { _, _ ->
+                android.util.Log.d("OverlayPermission", "⏭️ User clicked Later")
+            }
+            .setCancelable(false)
+            .show()
     }
 }
