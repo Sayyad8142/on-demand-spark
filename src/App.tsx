@@ -23,6 +23,9 @@ import VerifyPush from "./pages/VerifyPush";
 import DevCacheReset from "./pages/DevCacheReset";
 import NotFound from "./pages/NotFound";
 import Availability from "./pages/Availability";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import ContactSupport from "./pages/ContactSupport";
 import BottomNav from "./components/BottomNav";
 
 const queryClient = new QueryClient();
@@ -237,6 +240,9 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/contact-support" element={<ProtectedRoute><ContactSupport /></ProtectedRoute>} />
             <Route path="/" element={<Navigate to="/auth" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

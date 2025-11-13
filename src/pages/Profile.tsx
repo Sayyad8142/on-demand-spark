@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X, Pencil, Languages, Star, Briefcase, Wallet, Settings, MessageSquare, BarChart3, Camera, Upload, Clock } from "lucide-react";
+import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X, Pencil, Languages, Star, Briefcase, Wallet, Settings, MessageSquare, BarChart3, Camera, Upload, Clock, ChevronRight, Shield, FileText, HelpCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import RatingBreakdown from "@/components/RatingBreakdown";
@@ -170,8 +171,8 @@ export default function Profile() {
 
     const fetchReviews = async () => {
       const { data, error } = await supabase
-        .from('worker_reviews')
-        .select('*, bookings(cust_name, service_type)')
+        .from('worker_ratings')
+        .select('*, bookings(cust_name, service_type, flat_no, community)')
         .eq('worker_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -678,42 +679,54 @@ export default function Profile() {
           {/* Reviews Section */}
           {reviews.length > 0 && (
             <Card className="border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <MessageSquare className="w-5 h-5" />
-                  {t('profile.reviews')} ({reviews.length})
-                </CardTitle>
-                <CardDescription>
-                  Customer feedback from completed jobs
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {reviews.map((review) => (
-                  <Card key={review.id} className="bg-muted/50">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <p className="font-semibold text-sm">
-                            {review.bookings?.cust_name || 'Customer'}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {review.bookings?.service_type} • {format(new Date(review.created_at), 'MMM d, yyyy')}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                          <span className="font-semibold text-sm">{review.rating}</span>
-                        </div>
-                      </div>
-                      {review.comment && (
-                        <p className="text-sm text-foreground mt-2">
-                          "{review.comment}"
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </CardContent>
+              <Collapsible defaultOpen={false}>
+                <CardHeader className="pb-3">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full hover:opacity-80 transition-opacity [&[data-state=open]>svg]:rotate-90">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="w-5 h-5" />
+                      <CardTitle className="text-base">
+                        {t('profile.reviews')} ({reviews.length})
+                      </CardTitle>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-muted-foreground transition-transform duration-200" />
+                  </CollapsibleTrigger>
+                  <CardDescription className="text-left">
+                    Customer feedback from completed jobs
+                  </CardDescription>
+                </CardHeader>
+                <CollapsibleContent>
+                  <CardContent className="space-y-3 pt-0">
+                    {reviews.map((review) => (
+                      <Card key={review.id} className="bg-muted/50">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1">
+                              <p className="font-semibold text-sm">
+                                {review.bookings?.cust_name || 'Customer'}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {review.bookings?.service_type} • {review.bookings?.community} • Flat {review.bookings?.flat_no}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {format(new Date(review.created_at), 'MMM d, yyyy')}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1 bg-amber-100 dark:bg-amber-950 px-2 py-1 rounded-lg">
+                              <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                              <span className="font-semibold text-sm">{review.rating}</span>
+                            </div>
+                          </div>
+                          {review.comment && (
+                            <p className="text-sm text-foreground mt-3 p-3 bg-background rounded-lg border">
+                              "{review.comment}"
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
             </Card>
           )}
 
@@ -792,6 +805,35 @@ export default function Profile() {
                     >
                       <LogOut className="w-4 h-4 mr-2" />
                       {t('profile.logout')}
+                    </Button>
+                  </div>
+
+                  <DropdownMenuSeparator />
+                  
+                  <div className="p-2 space-y-1">
+                    <Button
+                      onClick={() => navigate('/contact-support')}
+                      variant="ghost"
+                      className="w-full justify-start text-sm"
+                    >
+                      <HelpCircle className="w-4 h-4 mr-2" />
+                      Contact & Support
+                    </Button>
+                    <Button
+                      onClick={() => navigate('/privacy-policy')}
+                      variant="ghost"
+                      className="w-full justify-start text-sm"
+                    >
+                      <Shield className="w-4 h-4 mr-2" />
+                      Privacy Policy
+                    </Button>
+                    <Button
+                      onClick={() => navigate('/terms-of-service')}
+                      variant="ghost"
+                      className="w-full justify-start text-sm"
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Terms of Service
                     </Button>
                   </div>
 
