@@ -146,9 +146,15 @@ Deno.serve(async (req) => {
       if (worker.slots && Array.isArray(worker.slots)) {
         // Check if current time falls within any of the worker's slots
         const isAvailableNow = worker.slots.some((slotStart: string) => {
-          // Each slot is 30 minutes, so calculate the end time
+          // Each slot is 30 minutes, so calculate the end time properly
           const [hours, minutes] = slotStart.split(':').map(Number);
-          const slotEnd = `${hours.toString().padStart(2, '0')}:${(minutes + 30).toString().padStart(2, '0')}:00`;
+          let endMinutes = minutes + 30;
+          let endHours = hours;
+          if (endMinutes >= 60) {
+            endMinutes -= 60;
+            endHours += 1;
+          }
+          const slotEnd = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}:00`;
           return timeString >= slotStart && timeString < slotEnd;
         });
         if (isAvailableNow) {
@@ -160,6 +166,19 @@ Deno.serve(async (req) => {
 
   console.log(`Found ${availableWorkerIds.size} workers available at ${timeString} on day ${currentDayOfWeek}`);
 
+  // If no workers are available at current time slot, don't send notifications
+  if (availableWorkerIds.size === 0) {
+    console.log("⚠️ No workers have availability for current time slot - no notifications sent");
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: "No workers available for this time slot",
+      workers_notified: 0 
+    }), { 
+      status: 200, 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    });
+  }
+
   // Query for eligible workers based on service type, community, and availability
   let workersQuery = supabase
     .from("workers")
@@ -167,7 +186,8 @@ Deno.serve(async (req) => {
     .eq("is_active", true)
     .eq("is_available", true)
     .eq("is_busy", false)
-    .contains("service_types", [b.service_type]);
+    .contains("service_types", [b.service_type])
+    .in("id", Array.from(availableWorkerIds)); // Always filter by availability
   
   // Only filter by community if we have the community ID
   if (communityData?.id) {
@@ -177,13 +197,7 @@ Deno.serve(async (req) => {
     console.log("⚠️ No community ID, finding all workers with matching service type");
   }
 
-  // Add availability filter - only include workers in the available set
-  if (availableWorkerIds.size > 0) {
-    workersQuery = workersQuery.in("id", Array.from(availableWorkerIds));
-    console.log(`🔍 Filtering by ${availableWorkerIds.size} workers with matching availability`);
-  } else {
-    console.log("⚠️ No workers have availability set for current time slot - skipping availability filter");
-  }
+  console.log(`🔍 Filtering by ${availableWorkerIds.size} workers with matching availability`);
   
   const { data: workers, error: we } = await workersQuery;
       
