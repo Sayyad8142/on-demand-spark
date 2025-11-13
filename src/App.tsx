@@ -8,13 +8,11 @@ import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppState } from "@/hooks/useAppState";
-import { usePushRegister } from "@/hooks/usePushRegister";
 import { initNativePush } from "@/native/push";
 import { requestAndroidOverlay } from "@/lib/overlay";
 import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
 import { tryAccept } from "@/lib/bookingActions";
 import { requestLocationPermissions } from "@/lib/backgroundLocation";
-import OfflineBanner from "@/components/OfflineBanner";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import Bookings from "./pages/Bookings";
@@ -25,10 +23,6 @@ import VerifyPush from "./pages/VerifyPush";
 import DevCacheReset from "./pages/DevCacheReset";
 import NotFound from "./pages/NotFound";
 import Availability from "./pages/Availability";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
-import ContactSupport from "./pages/ContactSupport";
-import OfflineSettings from "./pages/OfflineSettings";
 import BottomNav from "./components/BottomNav";
 
 const queryClient = new QueryClient();
@@ -83,7 +77,6 @@ function NativeNavigationHandler() {
 const App = () => {
   const { session } = useAuth();
   useAppState(); // Refresh JWT when app comes to foreground
-  const { registerPush } = usePushRegister();
 
   // Request location permissions on app startup for native platforms
   useEffect(() => {
@@ -99,7 +92,7 @@ const App = () => {
     }
   }, []);
 
-  // Initialize native push notifications and auto-refresh FCM token when we have a session
+  // Initialize native push notifications when we have a session
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId) return;
@@ -110,23 +103,13 @@ const App = () => {
       console.log("🔔 Initializing native push for user:", userId);
       initNativePush(userId);
       
-      // Auto-refresh FCM token on app startup
-      console.log("🔄 Auto-refreshing FCM token on app startup...");
-      registerPush()
-        .then((token) => {
-          console.log("✅ FCM token auto-refreshed successfully:", token.substring(0, 20) + "...");
-        })
-        .catch((error) => {
-          console.error("❌ FCM token auto-refresh failed:", error);
-        });
-      
       // Request overlay permission on Android
       if (Capacitor.getPlatform() === 'android') {
         requestAndroidOverlay();
       }
     }
     // Web push registration is now done manually via /troubleshoot or /verify-push pages
-  }, [session?.user?.id, registerPush]);
+  }, [session?.user?.id]);
 
   // Start/stop foreground service based on login state
   useEffect(() => {
@@ -186,7 +169,6 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <OfflineBanner />
         <BrowserRouter>
           <NativeNavigationHandler />
           <Routes>
@@ -255,10 +237,6 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/terms-of-service" element={<TermsOfService />} />
-            <Route path="/contact-support" element={<ProtectedRoute><ContactSupport /></ProtectedRoute>} />
-            <Route path="/offline-settings" element={<ProtectedRoute><OfflineSettings /></ProtectedRoute>} />
             <Route path="/" element={<Navigate to="/auth" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

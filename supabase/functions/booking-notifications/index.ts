@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     // Load booking details (community is TEXT field, not FK)
     const { data: b, error: be } = await supabase
       .from("bookings")
-      .select("id, status, service_type, community, cust_name, cust_phone, flat_no, price_inr, scheduled_date, scheduled_time, prealert_sent")
+      .select("id, status, service_type, community, cust_name, cust_phone, flat_no, price_inr")
       .eq("id", booking_id)
       .single();
       
@@ -65,16 +65,6 @@ Deno.serve(async (req) => {
     if (!b || b.status !== "pending") {
       console.log("⏭️ Skipping - booking not pending:", b?.status);
       return new Response("skip - not pending", { status: 200, headers: corsHeaders });
-    }
-
-    // CRITICAL: Skip immediate notification for scheduled bookings
-    // Scheduled bookings will be handled by check-scheduled-bookings cron job
-    if (b.scheduled_date && b.scheduled_time && !b.prealert_sent) {
-      console.log("⏰ Skipping - this is a scheduled booking, will notify 15 min before:", {
-        scheduled_date: b.scheduled_date,
-        scheduled_time: b.scheduled_time
-      });
-      return new Response("skip - scheduled booking", { status: 200, headers: corsHeaders });
     }
 
     console.log("✅ Booking loaded:", { 
@@ -156,12 +146,9 @@ Deno.serve(async (req) => {
       if (worker.slots && Array.isArray(worker.slots)) {
         // Check if current time falls within any of the worker's slots
         const isAvailableNow = worker.slots.some((slotStart: string) => {
-          // Each slot is 30 minutes, so calculate the end time properly
+          // Each slot is 30 minutes, so calculate the end time
           const [hours, minutes] = slotStart.split(':').map(Number);
-          const endMinutes = minutes + 30;
-          const endHours = hours + Math.floor(endMinutes / 60);
-          const normalizedMinutes = endMinutes % 60;
-          const slotEnd = `${endHours.toString().padStart(2, '0')}:${normalizedMinutes.toString().padStart(2, '0')}:00`;
+          const slotEnd = `${hours.toString().padStart(2, '0')}:${(minutes + 30).toString().padStart(2, '0')}:00`;
           return timeString >= slotStart && timeString < slotEnd;
         });
         if (isAvailableNow) {
@@ -173,12 +160,6 @@ Deno.serve(async (req) => {
 
   console.log(`Found ${availableWorkerIds.size} workers available at ${timeString} on day ${currentDayOfWeek}`);
 
-  // CRITICAL: If no workers have availability for this time, don't send bookings
-  if (availableWorkerIds.size === 0) {
-    console.log("⚠️ No workers have availability set for current time slot - not notifying anyone");
-    return new Response("No workers available at this time", { status: 200, headers: corsHeaders });
-  }
-
   // Query for eligible workers based on service type, community, and availability
   let workersQuery = supabase
     .from("workers")
@@ -186,8 +167,7 @@ Deno.serve(async (req) => {
     .eq("is_active", true)
     .eq("is_available", true)
     .eq("is_busy", false)
-    .contains("service_types", [b.service_type])
-    .in("id", Array.from(availableWorkerIds)); // CRITICAL: Only include workers with availability
+    .contains("service_types", [b.service_type]);
   
   // Only filter by community if we have the community ID
   if (communityData?.id) {
@@ -197,7 +177,13 @@ Deno.serve(async (req) => {
     console.log("⚠️ No community ID, finding all workers with matching service type");
   }
 
-  console.log(`🔍 Filtering by ${availableWorkerIds.size} workers with matching availability`);
+  // Add availability filter - only include workers in the available set
+  if (availableWorkerIds.size > 0) {
+    workersQuery = workersQuery.in("id", Array.from(availableWorkerIds));
+    console.log(`🔍 Filtering by ${availableWorkerIds.size} workers with matching availability`);
+  } else {
+    console.log("⚠️ No workers have availability set for current time slot - skipping availability filter");
+  }
   
   const { data: workers, error: we } = await workersQuery;
       
@@ -255,7 +241,7 @@ Deno.serve(async (req) => {
     console.log(`📊 Priority Tiers: Tier 1 (${tier1Workers.length}), Tier 2 (${tier2Workers.length}), Tier 3 (${tier3Workers.length})`);
 
     // Create booking_requests for all workers with priority order
-    const currentTime = new Date();
+    const now = new Date();
     const bookingRequests = sortedWorkers.map((worker, index) => {
       let tier = 3;
       let timeoutSeconds = TIER_TIMEOUT_SECONDS * 3;
@@ -272,9 +258,9 @@ Deno.serve(async (req) => {
         booking_id,
         worker_id: worker.user_id || worker.id,
         order_sequence: tier,
-        status: 'pending', // All requests start as pending
-        offered_at: tier === 1 ? currentTime.toISOString() : null,
-        timeout_at: tier === 1 ? new Date(currentTime.getTime() + timeoutSeconds * 1000).toISOString() : null,
+        status: tier === 1 ? 'pending' : 'queued',
+        offered_at: tier === 1 ? now.toISOString() : null,
+        timeout_at: tier === 1 ? new Date(now.getTime() + timeoutSeconds * 1000).toISOString() : null,
       };
     });
 

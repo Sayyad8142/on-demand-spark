@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Home, User, Check, ChevronDown, Phone } from "lucide-react";
+import { MapPin, Home, User, Check, ChevronDown } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useState } from "react";
@@ -10,7 +10,6 @@ interface ActiveJobCardProps {
   booking: Booking;
   onStatusUpdate: (newStatus: string) => Promise<void>;
   updating: boolean;
-  onCall?: () => void;
 }
 const STATUS_COLORS = {
   'assigned': 'bg-blue-100 text-blue-700 border-blue-200',
@@ -21,8 +20,7 @@ const STATUS_COLORS = {
 export default function ActiveJobCard({
   booking,
   onStatusUpdate,
-  updating,
-  onCall
+  updating
 }: ActiveJobCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const statusColor = STATUS_COLORS[booking.status as keyof typeof STATUS_COLORS] || 'bg-secondary';
@@ -106,19 +104,7 @@ export default function ActiveJobCard({
             <p className="text-sm text-amber-900 dark:text-amber-200">{booking.notes}</p>
           </div>}
 
-        {/* 4. Call Button */}
-        {onCall && (
-          <Button 
-            size="lg" 
-            className="w-full h-12 text-lg font-semibold bg-green-500 hover:bg-green-600 text-white shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98]" 
-            onClick={onCall}
-          >
-            <Phone className="w-5 h-5 mr-2" />
-            Free Call (VoIP)
-          </Button>
-        )}
-
-        {/* 5. Work Completed Button */}
+        {/* 4. Work Completed Button */}
         <Button 
           size="lg" 
           className="w-full h-14 text-lg font-bold bg-red-500 hover:bg-red-600 text-white shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98]" 
