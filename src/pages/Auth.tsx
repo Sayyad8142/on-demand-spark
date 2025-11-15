@@ -52,6 +52,7 @@ export default function Auth() {
   const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [communities, setCommunities] = useState<Array<{ name: string; value: string }>>([]);
 
   // Redirect if already logged in
@@ -61,6 +62,16 @@ export default function Auth() {
       navigate("/home", { replace: true });
     }
   }, [user, authLoading, navigate]);
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => {
+        setResendCooldown(resendCooldown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
   
   // Sign In state
   const [signInPhone, setSignInPhone] = useState("");
@@ -173,6 +184,7 @@ export default function Auth() {
       if (error) throw error;
       
       setOtpSent(true);
+      setResendCooldown(30); // 30 seconds cooldown
       toast({ title: "OTP sent!", description: "Check your phone for the verification code" });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -247,6 +259,18 @@ export default function Auth() {
     }
   };
 
+  const handleResendSignInOtp = async () => {
+    if (resendCooldown > 0) {
+      toast({ 
+        title: "Please wait", 
+        description: `You can resend OTP in ${resendCooldown} seconds`,
+        variant: "destructive" 
+      });
+      return;
+    }
+    await handleSignInSendOtp();
+  };
+
   const handleSignUpSendOtp = async () => {
     if (!signUpFullName || !signUpPhone || !signUpCommunity || !signUpService) {
       toast({ title: "Please fill all required fields", variant: "destructive" });
@@ -304,6 +328,7 @@ export default function Auth() {
       if (error) throw error;
       
       setOtpSent(true);
+      setResendCooldown(30); // 30 seconds cooldown
       toast({ title: "OTP sent!", description: "Check your phone for the verification code" });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -414,6 +439,18 @@ export default function Auth() {
     }
   };
 
+  const handleResendSignUpOtp = async () => {
+    if (resendCooldown > 0) {
+      toast({ 
+        title: "Please wait", 
+        description: `You can resend OTP in ${resendCooldown} seconds`,
+        variant: "destructive" 
+      });
+      return;
+    }
+    await handleSignUpSendOtp();
+  };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 p-4">
@@ -482,17 +519,28 @@ export default function Auth() {
                   >
                     {loading ? t('auth.verifying') : t('auth.verifyOtp')}
                   </Button>
-                  <Button 
-                    onClick={() => {
-                      setOtpSent(false);
-                      setSignInOtp("");
-                    }}
-                    disabled={loading}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    {t('auth.changePhone')}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={handleResendSignInOtp}
+                      disabled={loading || resendCooldown > 0}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      {resendCooldown > 0 ? `${t('auth.resend')} (${resendCooldown}s)` : t('auth.resend')}
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        setOtpSent(false);
+                        setSignInOtp("");
+                        setResendCooldown(0);
+                      }}
+                      disabled={loading}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      {t('auth.changePhone')}
+                    </Button>
+                  </div>
                 </>
               )}
             </TabsContent>
@@ -608,17 +656,28 @@ export default function Auth() {
                   >
                     {loading ? t('auth.creatingAccount') : t('auth.createAccount')}
                   </Button>
-                  <Button 
-                    onClick={() => {
-                      setOtpSent(false);
-                      setSignUpOtp("");
-                    }}
-                    disabled={loading}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    {t('auth.changePhone')}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={handleResendSignUpOtp}
+                      disabled={loading || resendCooldown > 0}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      {resendCooldown > 0 ? `${t('auth.resend')} (${resendCooldown}s)` : t('auth.resend')}
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        setOtpSent(false);
+                        setSignUpOtp("");
+                        setResendCooldown(0);
+                      }}
+                      disabled={loading}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      {t('auth.changePhone')}
+                    </Button>
+                  </div>
                 </>
               )}
             </TabsContent>
