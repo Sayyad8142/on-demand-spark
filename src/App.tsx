@@ -8,7 +8,7 @@ import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppState } from "@/hooks/useAppState";
-import { GuestSessionProvider } from "@/contexts/GuestSessionContext";
+import { GuestSessionProvider, useGuestSession } from "@/contexts/GuestSessionContext";
 import { initNativePush } from "@/native/push";
 import { requestAndroidOverlay } from "@/lib/overlay";
 import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
@@ -33,8 +33,6 @@ const queryClient = new QueryClient();
 
 function ProtectedRoute({ children, showNav = false }: { children: React.ReactNode; showNav?: boolean }) {
   const { user, loading } = useAuth();
-  // Import inside component to avoid circular dependencies
-  const { useGuestSession } = require("@/contexts/GuestSessionContext");
   const { isGuest } = useGuestSession();
 
   if (loading) {
