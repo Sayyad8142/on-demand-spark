@@ -4,4 +4,14 @@
     <string name="title_activity_main">Didi Now Worker</string>
     <string name="package_name">app.didisnow.worker</string>
     <string name="custom_url_scheme">didinow</string>
+    
+    <!-- Permission Rationale -->
+    <string name="notification_permission_title">Enable Notifications</string>
+    <string name="notification_permission_message">We need notification permission to alert you instantly about new booking requests and job updates.</string>
+    
+    <string name="location_permission_title">Enable Location</string>
+    <string name="location_permission_message">We need location permission to share your location with customers and help them track your arrival.</string>
+    
+    <string name="overlay_permission_title">Display Over Other Apps</string>
+    <string name="overlay_permission_message">We need this permission to show urgent booking alerts even when you\'re using other apps, so you never miss a job opportunity.</string>
 </resources>
