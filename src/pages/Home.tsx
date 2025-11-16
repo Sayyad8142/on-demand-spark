@@ -149,20 +149,6 @@ export default function Home() {
     await Promise.all([refetchActiveJob(), refetchWorker()]);
   };
 
-  // Redirect to auth if not logged in and not in guest mode
-  useEffect(() => {
-    if (!user && !isGuest) {
-      navigate("/auth");
-    }
-  }, [user, isGuest, navigate]);
-
-  // Guard: Don't render if user is not loaded yet (only for real login, guest can proceed)
-  if (!user && !isGuest) {
-    return <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>;
-  }
-
   console.log('🎭 [Home] Guest mode:', isGuest, 'Worker:', worker);
   return <div className="min-h-screen">
       {/* Demo Mode Banner */}
