@@ -31,13 +31,13 @@ import BottomNav from "./components/BottomNav";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children, showNav = false }: { children: React.ReactNode; showNav?: boolean }) {
-  const { user, loading } = useAuth();
+  const { user, loading, guestMode } = useAuth();
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
-  if (!user) {
+  if (!user && !guestMode) {
     return <Navigate to="/auth" replace />;
   }
 
