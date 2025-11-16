@@ -48,7 +48,7 @@ const otpSchema = z.string()
 export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, loading: authLoading, setGuestMode } = useAuth();
+  const { user, loading: authLoading, enableGuestMode } = useAuth();
   const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
@@ -271,13 +271,9 @@ export default function Auth() {
     await handleSignInSendOtp();
   };
 
-  const handleGuestLogin = async () => {
+  const handleGuestLogin = () => {
     console.log("🎭 Guest login clicked");
-    setGuestMode(true);
-    
-    // Wait for state to update before navigating
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
+    enableGuestMode();
     toast({ 
       title: "Guest Mode", 
       description: "Continuing as guest. Some features may be limited.",
