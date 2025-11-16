@@ -822,99 +822,111 @@ export default function Profile() {
           </CardContent>
         </Card>
 
-          {/* Actions */}
+          {/* Account Actions */}
           <Card className="border-0 shadow-lg">
-            <CardContent className="pt-6">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between">
-                    <span className="flex items-center gap-2">
-                      <Settings className="w-4 h-4" />
-                      Account Settings
-                    </span>
-                    <ChevronDown className="h-4 w-4 opacity-50" />
+            <CardHeader>
+              <CardTitle className="text-lg">Account Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1">
+              {/* Logout */}
+              <Button
+                onClick={handleLogout}
+                variant="ghost"
+                className="w-full justify-start h-12 text-base"
+              >
+                <LogOut className="w-5 h-5 mr-3" />
+                {t('profile.logout')}
+              </Button>
+
+              {/* Divider */}
+              <div className="h-2" />
+
+              {/* Contact & Support */}
+              <Button
+                onClick={() => navigate('/contact-support')}
+                variant="ghost"
+                className="w-full justify-start h-12 text-base"
+              >
+                <HelpCircle className="w-5 h-5 mr-3" />
+                Contact & Support
+              </Button>
+
+              {/* Privacy Policy */}
+              <Button
+                onClick={() => navigate('/privacy-policy')}
+                variant="ghost"
+                className="w-full justify-start h-12 text-base"
+              >
+                <Shield className="w-5 h-5 mr-3" />
+                Privacy Policy
+              </Button>
+
+              {/* Terms of Service */}
+              <Button
+                onClick={() => navigate('/terms-of-service')}
+                variant="ghost"
+                className="w-full justify-start h-12 text-base"
+              >
+                <FileText className="w-5 h-5 mr-3" />
+                Terms of Service
+              </Button>
+
+              {/* Divider */}
+              <div className="h-2" />
+
+              {/* Delete Account */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start h-12 text-base text-destructive hover:text-destructive hover:bg-destructive/10"
+                    disabled={deleting}
+                  >
+                    <Trash2 className="w-5 h-5 mr-3" />
+                    {deleting ? t('common.loading') : t('profile.deleteAccount')}
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-[calc(100vw-2rem)] sm:w-[400px] bg-background z-50" align="end">
-                  <DropdownMenuLabel>Account Actions</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  
-                  <div className="p-2">
-                    <Button
-                      onClick={handleLogout}
-                      variant="ghost"
-                      className="w-full justify-start"
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{t('profile.deleteAccount')}?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t('profile.deleteConfirm')}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{t('profile.cancel')}</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDeleteAccount}
+                      className="bg-destructive hover:bg-destructive/90"
                     >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      {t('profile.logout')}
-                    </Button>
-                  </div>
-
-                  <DropdownMenuSeparator />
-                  
-                  <div className="p-2 space-y-1">
-                    <Button
-                      onClick={() => navigate('/contact-support')}
-                      variant="ghost"
-                      className="w-full justify-start text-sm"
-                    >
-                      <HelpCircle className="w-4 h-4 mr-2" />
-                      Contact & Support
-                    </Button>
-                    <Button
-                      onClick={() => navigate('/privacy-policy')}
-                      variant="ghost"
-                      className="w-full justify-start text-sm"
-                    >
-                      <Shield className="w-4 h-4 mr-2" />
-                      Privacy Policy
-                    </Button>
-                    <Button
-                      onClick={() => navigate('/terms-of-service')}
-                      variant="ghost"
-                      className="w-full justify-start text-sm"
-                    >
-                      <FileText className="w-4 h-4 mr-2" />
-                      Terms of Service
-                    </Button>
-                  </div>
-
-                  <DropdownMenuSeparator />
-                  
-                  <div className="p-2">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
-                          disabled={deleting}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          {deleting ? t('common.loading') : t('profile.deleteAccount')}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>{t('profile.deleteAccount')}?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {t('profile.deleteConfirm')}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>{t('profile.cancel')}</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={handleDeleteAccount}
-                            className="bg-destructive hover:bg-destructive/90"
-                          >
-                            {t('common.delete')}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                      {t('common.delete')}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </CardContent>
+          </Card>
+
+          {/* Account Settings Collapsible */}
+          <Card className="border-0 shadow-lg">
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full justify-between h-14 px-6">
+                  <span className="flex items-center gap-2">
+                    <Settings className="w-5 h-5" />
+                    <span className="text-base font-medium">Account Settings</span>
+                  </span>
+                  <ChevronDown className="h-5 w-5 opacity-50" />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="pt-0 pb-4">
+                  <div className="text-sm text-muted-foreground">
+                    Additional settings and preferences will be available here soon.
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Collapsible>
           </Card>
         </div>
       </main>
