@@ -59,8 +59,8 @@ const FAQ_ITEMS = [
 ];
 
 const CONTACT_INFO = {
-  phone: "+91 XXXX-XXXXXX",
-  email: "support@didinow.com",
+  phone: "+91 8008180018",
+  email: "team@didisnow.com",
   hours: "Monday to Saturday, 9:00 AM - 7:00 PM",
   emergencyNote: "For urgent booking issues, contact us immediately via phone."
 };
