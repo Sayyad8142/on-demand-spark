@@ -23,6 +23,13 @@ export default function Bookings() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Redirect to auth if not logged in and not in guest mode
+  useEffect(() => {
+    if (!user && !isGuest) {
+      navigate("/auth");
+    }
+  }, [user, isGuest, navigate]);
+
   useEffect(() => {
     if (isGuest) {
       // Use demo data for guest mode

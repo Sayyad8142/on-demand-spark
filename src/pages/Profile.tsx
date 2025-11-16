@@ -98,6 +98,13 @@ export default function Profile() {
     1: number;
   }>({ 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 });
 
+  // Redirect to auth if not logged in and not in guest mode
+  useEffect(() => {
+    if (!user && !isGuest) {
+      navigate("/auth");
+    }
+  }, [user, isGuest, navigate]);
+
   // Fetch communities from Supabase with real-time updates
   useEffect(() => {
     const fetchCommunities = async () => {
@@ -333,6 +340,16 @@ export default function Profile() {
 
 
   const handleLogout = async () => {
+    if (isGuest) {
+      exitGuestMode();
+      toast({ 
+        title: "Logged Out", 
+        description: "You have been successfully logged out" 
+      });
+      navigate("/auth");
+      return;
+    }
+
     try {
       await supabase.auth.signOut();
       toast({ 

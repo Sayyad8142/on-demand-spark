@@ -59,6 +59,14 @@ export default function Availability() {
     6: generateSlots()
   });
   const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1 as DayKey);
+  
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!user) {
+      navigate("/auth");
+    }
+  }, [user, navigate]);
+  
   useEffect(() => {
     loadAvailability();
   }, []);
