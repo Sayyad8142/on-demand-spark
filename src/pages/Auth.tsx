@@ -271,8 +271,13 @@ export default function Auth() {
     await handleSignInSendOtp();
   };
 
-  const handleGuestLogin = () => {
+  const handleGuestLogin = async () => {
+    console.log("🎭 Guest login clicked");
     setGuestMode(true);
+    
+    // Wait for state to update before navigating
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     toast({ 
       title: "Guest Mode", 
       description: "Continuing as guest. Some features may be limited.",
