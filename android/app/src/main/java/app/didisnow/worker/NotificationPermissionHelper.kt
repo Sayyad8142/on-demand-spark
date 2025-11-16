@@ -38,24 +38,17 @@ object NotificationPermissionHelper {
             return
         }
         
-        android.util.Log.d("NotificationPermission", "🔔 Showing notification permission dialog")
+        android.util.Log.d("NotificationPermission", "Showing notification permission dialog")
         
         AlertDialog.Builder(activity)
-            .setTitle("🔔 Enable Notifications")
-            .setMessage(
-                "📱 Why we need this permission:\n\n" +
-                "• Receive instant alerts for new booking requests\n" +
-                "• Get notified about booking updates and changes\n" +
-                "• Stay informed about job status changes\n\n" +
-                "✅ Notifications help you respond quickly to customers and never miss a job opportunity.\n\n" +
-                "This is essential for receiving booking alerts."
-            )
+            .setTitle(activity.getString(R.string.notification_permission_title))
+            .setMessage(activity.getString(R.string.notification_permission_message))
             .setPositiveButton("Allow") { _, _ ->
-                android.util.Log.d("NotificationPermission", "🔓 User clicked Allow - requesting permission")
+                android.util.Log.d("NotificationPermission", "User clicked Allow - requesting permission")
                 request(activity)
             }
             .setNegativeButton("Later") { _, _ ->
-                android.util.Log.d("NotificationPermission", "⏭️ User clicked Later")
+                android.util.Log.d("NotificationPermission", "User clicked Later")
             }
             .setCancelable(false)
             .show()
