@@ -2,56 +2,74 @@ import { useEffect, useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useGuestSession } from "@/contexts/GuestSessionContext";
 import { supabase } from "@/integrations/supabase/client";
 import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
 import { Capacitor } from '@capacitor/core';
+
 interface AvailabilityToggleProps {
   workerId: string;
   className?: string;
 }
-export function AvailabilityToggle({
-  workerId,
-  className
-}: AvailabilityToggleProps) {
+
+export function AvailabilityToggle({ workerId, className }: AvailabilityToggleProps) {
   const [isAvailable, setIsAvailable] = useState(false);
   const [loading, setLoading] = useState(false);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+  const { isGuest } = useGuestSession();
+
   useEffect(() => {
+    if (isGuest) {
+      // In guest mode, default to available
+      setIsAvailable(true);
+      return;
+    }
     loadAvailability();
-  }, [workerId]);
+  }, [workerId, isGuest]);
+
   const loadAvailability = async () => {
     try {
-      const {
-        data,
-        error
-      } = await supabase.from("workers").select("is_available").eq("id", workerId).single();
+      const { data, error } = await supabase
+        .from("workers")
+        .select("is_available")
+        .eq("id", workerId)
+        .single();
+
       if (error) throw error;
       setIsAvailable(data?.is_available || false);
     } catch (error) {
       console.error("Error loading availability:", error);
     }
   };
+
   const handleToggle = async (checked: boolean) => {
+    if (isGuest) {
+      // In guest mode, just update local state and show toast
+      setIsAvailable(checked);
+      toast({
+        title: "Demo Mode",
+        description: checked ? "Simulated: Now Available for Bookings" : "Simulated: Now Unavailable"
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       if (checked && Capacitor.isNativePlatform()) {
-        // Start native foreground service for notifications
         await startForegroundService();
       }
-      const {
-        data,
-        error
-      } = await supabase.rpc("update_worker_availability", {
+
+      const { error } = await supabase.rpc("update_worker_availability", {
         p_is_available: checked
       });
+
       if (error) throw error;
       setIsAvailable(checked);
+
       if (!checked && Capacitor.isNativePlatform()) {
-        // Stop native foreground service
         await stopForegroundService();
       }
+
       toast({
         title: checked ? "Now Available" : "Now Unavailable",
         description: checked ? "You will receive booking alerts" : "You will not receive booking alerts"

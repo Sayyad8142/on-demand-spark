@@ -6,6 +6,7 @@ import { useDemoData } from "@/hooks/useDemoData";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { useBookingAlerts } from "@/hooks/useBookingAlerts";
 import { useActiveJob } from "@/hooks/useActiveJob";
+import { useToast } from "@/hooks/use-toast";
 import { BookingAlertModal } from "@/components/BookingAlertModal";
 import { DemoModeBanner } from "@/components/DemoModeBanner";
 import ActiveJobCard from "@/components/ActiveJobCard";
@@ -22,6 +23,7 @@ const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
 export default function Home() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { toast } = useToast();
   const { user, session } = useAuth();
   const { isGuest } = useGuestSession();
   
@@ -105,27 +107,56 @@ export default function Home() {
     clearAlert
   } = useBookingAlerts(user?.id, isOnline, matches);
   const handleToggle = async (value: boolean) => {
+    if (isGuest) {
+      toast({
+        title: "Demo Mode",
+        description: "Availability changes are simulated in demo mode"
+      });
+      return;
+    }
+    
     setToggling(true);
     await updateAvailability(value);
+    await refetchWorker();
     setToggling(false);
   };
+  
   const handleStatusUpdate = async (status: string) => {
+    if (isGuest) {
+      toast({
+        title: "Demo Mode",
+        description: "This action is simulated in demo mode"
+      });
+      return;
+    }
+    
     setUpdating(true);
     await updateJobStatus(activeJob?.id, status);
     await refetchWorker();
     setUpdating(false);
   };
+  
   const handleAccept = async () => {
+    if (isGuest) {
+      toast({
+        title: "Demo Mode",
+        description: "Booking accepted (simulated)"
+      });
+      return;
+    }
+    
     await accept();
     await Promise.all([refetchActiveJob(), refetchWorker()]);
   };
 
-  // Guard: Don't render if user is not loaded yet
-  if (!user) {
+  // Guard: Don't render if user is not loaded yet (only for real login, guest can proceed)
+  if (!user && !isGuest) {
     return <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>;
   }
+
+  console.log('🎭 [Home] Guest mode:', isGuest, 'Worker:', worker);
   return <div className="min-h-screen">
       {/* Demo Mode Banner */}
       {isGuest && (
