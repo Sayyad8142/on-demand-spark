@@ -5,7 +5,7 @@
  * that can be used when the app is in guest mode without hitting the database.
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 export interface DemoBooking {
   id: string;
@@ -88,7 +88,7 @@ export function useDemoData() {
     }
   ]);
 
-  const demoWorkerProfile: DemoWorkerProfile = {
+  const demoWorkerProfile: DemoWorkerProfile = useMemo(() => ({
     id: 'demo-worker-1',
     full_name: 'Demo Worker',
     phone: '+91 98765 00000',
@@ -102,13 +102,13 @@ export function useDemoData() {
     total_earnings: 7200,
     photo_url: null,
     upi_id: 'demo@upi'
-  };
+  }), []);
 
-  const demoEarnings = {
+  const demoEarnings = useMemo(() => ({
     today: 350,
     thisMonth: 7200,
     completedJobs: 23
-  };
+  }), []);
 
   // Simulate accepting a booking in demo mode
   const acceptDemoBooking = (bookingId: string) => {

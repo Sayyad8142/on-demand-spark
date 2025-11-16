@@ -150,7 +150,7 @@ export default function Profile() {
 
   useEffect(() => {
     if (isGuest) {
-      // Use demo data for guest mode
+      // Use demo data for guest mode - set once on mount
       setTotalEarnings(demoEarnings.thisMonth);
       setCompletedJobs(demoEarnings.completedJobs);
       setWorkerRating(demoWorkerProfile.rating);
@@ -211,7 +211,7 @@ export default function Profile() {
     fetchEarnings();
     fetchRating();
     fetchReviews();
-  }, [user]);
+  }, [user, isGuest]); // Added isGuest to dependencies
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
