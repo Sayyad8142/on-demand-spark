@@ -17,55 +17,61 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import RatingBreakdown from "@/components/RatingBreakdown";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import BottomNav from "@/components/BottomNav";
-const SERVICES = [{
-  value: "maid",
-  label: "Maid Service"
-}, {
-  value: "cook",
-  label: "Cook Service"
-}, {
-  value: "bathroom_cleaning",
-  label: "Bathroom Cleaning"
-}];
+
+const SERVICES = [
+  { value: "maid", label: "Maid Service" },
+  { value: "cook", label: "Cook Service" },
+  { value: "bathroom_cleaning", label: "Bathroom Cleaning" }
+];
+
 interface Community {
   id: string;
   name: string;
   value: string;
   is_active: boolean;
 }
+
 export default function Profile() {
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
-  const {
-    user
-  } = useAuth();
-  const {
-    isGuest,
-    exitGuestMode
-  } = useGuestSession();
-  const {
-    demoWorkerProfile,
-    demoEarnings
-  } = useDemoData();
-  const {
-    worker: realWorker,
-    loading: workerLoading,
-    updateWorker
-  } = useWorkerProfile(user?.id);
-  const {
-    t,
-    i18n
-  } = useTranslation();
-
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const { isGuest, exitGuestMode } = useGuestSession();
+  const { demoWorkerProfile, demoEarnings } = useDemoData();
+  const { worker: realWorker, loading: workerLoading, updateWorker } = useWorkerProfile(user?.id);
+  const { t, i18n } = useTranslation();
+  
   // Use demo data if in guest mode
   const worker = isGuest ? demoWorkerProfile : realWorker;
   const loading = isGuest ? false : workerLoading;
+  
   const [fullName, setFullName] = useState("");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedCommunities, setSelectedCommunities] = useState<string[]>([]);
@@ -77,7 +83,7 @@ export default function Profile() {
   const [upiId, setUpiId] = useState("");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
-
+  
   // Earnings data
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [completedJobs, setCompletedJobs] = useState(0);
@@ -90,13 +96,7 @@ export default function Profile() {
     3: number;
     2: number;
     1: number;
-  }>({
-    5: 0,
-    4: 0,
-    3: 0,
-    2: 0,
-    1: 0
-  });
+  }>({ 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 });
 
   // Redirect to auth if not logged in and not in guest mode
   useEffect(() => {
@@ -108,28 +108,41 @@ export default function Profile() {
   // Fetch communities from Supabase with real-time updates
   useEffect(() => {
     const fetchCommunities = async () => {
-      const {
-        data
-      } = await supabase.from('communities').select('*').eq('is_active', true).order('name');
+      const { data } = await supabase
+        .from('communities')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      
       if (data) {
         setCommunities(data);
       }
     };
+
     fetchCommunities();
 
     // Set up real-time subscription
-    const channel = supabase.channel('communities-changes').on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'communities'
-    }, payload => {
-      console.log('Communities changed:', payload);
-      fetchCommunities();
-    }).subscribe();
+    const channel = supabase
+      .channel('communities-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'communities'
+        },
+        (payload) => {
+          console.log('Communities changed:', payload);
+          fetchCommunities();
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
   useEffect(() => {
     if (worker) {
       setFullName(worker.full_name || "");
@@ -141,6 +154,7 @@ export default function Profile() {
       setPhotoUrl(worker.photo_url || null);
     }
   }, [worker]);
+
   useEffect(() => {
     if (isGuest) {
       // Use demo data for guest mode - set once on mount
@@ -150,47 +164,49 @@ export default function Profile() {
       setRatingsCount(demoWorkerProfile.total_ratings);
       return;
     }
+    
     if (!user) return;
+
     const fetchEarnings = async () => {
-      const {
-        data,
-        error
-      } = await supabase.from('bookings').select('price_inr').eq('worker_id', user.id).eq('status', 'completed');
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('price_inr')
+        .eq('worker_id', user.id)
+        .eq('status', 'completed');
+
       if (!error && data) {
         setCompletedJobs(data.length);
         const total = data.reduce((sum, b) => sum + (b.price_inr || 0), 0);
         setTotalEarnings(total);
       }
     };
+
     const fetchRating = async () => {
-      const {
-        data,
-        error
-      } = await supabase.from('worker_rating_stats').select('avg_rating, ratings_count').eq('worker_id', user.id).maybeSingle();
+      const { data, error } = await supabase
+        .from('worker_rating_stats')
+        .select('avg_rating, ratings_count')
+        .eq('worker_id', user.id)
+        .maybeSingle();
+
       if (!error && data) {
         setWorkerRating(Number(data.avg_rating) || 0);
         setRatingsCount(Number(data.ratings_count) || 0);
       }
     };
+
     const fetchReviews = async () => {
-      const {
-        data,
-        error
-      } = await supabase.from('worker_ratings').select('*, bookings(cust_name, service_type, flat_no, community)').eq('worker_id', user.id).order('created_at', {
-        ascending: false
-      });
+      const { data, error } = await supabase
+        .from('worker_ratings')
+        .select('*, bookings(cust_name, service_type, flat_no, community)')
+        .eq('worker_id', user.id)
+        .order('created_at', { ascending: false });
+
       if (!error && data) {
         setReviews(data);
-
+        
         // Calculate rating breakdown
-        const breakdown = {
-          5: 0,
-          4: 0,
-          3: 0,
-          2: 0,
-          1: 0
-        };
-        data.forEach(review => {
+        const breakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+        data.forEach((review) => {
           if (review.rating >= 1 && review.rating <= 5) {
             breakdown[review.rating as keyof typeof breakdown]++;
           }
@@ -198,6 +214,7 @@ export default function Profile() {
         setRatingBreakdown(breakdown);
       }
     };
+
     fetchEarnings();
     fetchRating();
     fetchReviews();
@@ -209,43 +226,35 @@ export default function Profile() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Error",
-        description: "Please upload an image file",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Please upload an image file", variant: "destructive" });
       return;
     }
 
     // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "Error",
-        description: "Image must be less than 5MB",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Image must be less than 5MB", variant: "destructive" });
       return;
     }
+
     try {
       setUploadingPhoto(true);
 
       // Get authenticated user ID
-      const {
-        data: {
-          user: authUser
-        },
-        error: authError
-      } = await supabase.auth.getUser();
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+      
       if (authError || !authUser) {
         throw new Error('Not authenticated');
       }
+
       console.log('Starting photo upload for user:', authUser.id);
 
       // Delete old photo if exists
       if (photoUrl) {
         const oldPath = photoUrl.split('/').pop();
         if (oldPath) {
-          await supabase.storage.from('worker-photos').remove([`${authUser.id}/${oldPath}`]);
+          await supabase.storage
+            .from('worker-photos')
+            .remove([`${authUser.id}/${oldPath}`]);
         }
       }
 
@@ -253,76 +262,64 @@ export default function Profile() {
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}.${fileExt}`;
       const filePath = `${authUser.id}/${fileName}`;
+
       console.log('Uploading to path:', filePath);
       console.log('Auth user ID:', authUser.id);
-      const {
-        error: uploadError,
-        data: uploadData
-      } = await supabase.storage.from('worker-photos').upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false
-      });
-      console.log('Upload result:', {
-        uploadData,
-        uploadError
-      });
+
+      const { error: uploadError, data: uploadData } = await supabase.storage
+        .from('worker-photos')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      console.log('Upload result:', { uploadData, uploadError });
+
       if (uploadError) throw uploadError;
 
       // Get public URL
-      const {
-        data: {
-          publicUrl
-        }
-      } = supabase.storage.from('worker-photos').getPublicUrl(filePath);
+      const { data: { publicUrl } } = supabase.storage
+        .from('worker-photos')
+        .getPublicUrl(filePath);
 
       // Update worker profile
-      const {
-        error: updateError
-      } = await supabase.from('workers').update({
-        photo_url: publicUrl
-      }).eq('id', user.id);
+      const { error: updateError } = await supabase
+        .from('workers')
+        .update({ photo_url: publicUrl })
+        .eq('id', user.id);
+
       if (updateError) throw updateError;
+
       setPhotoUrl(publicUrl);
-      toast({
-        title: "Success",
-        description: "Photo updated successfully"
-      });
+      toast({ title: "Success", description: "Photo updated successfully" });
     } catch (error: any) {
       console.error('Photo upload error:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to upload photo",
-        variant: "destructive"
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to upload photo", 
+        variant: "destructive" 
       });
     } finally {
       setUploadingPhoto(false);
     }
   };
+
   const handleUpdate = async () => {
     if (!fullName.trim()) {
-      toast({
-        title: "Error",
-        description: "Name is required",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Name is required", variant: "destructive" });
       return;
     }
+
     if (selectedServices.length === 0) {
-      toast({
-        title: "Error",
-        description: "Select at least one service",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Select at least one service", variant: "destructive" });
       return;
     }
+
     if (selectedCommunities.length === 0) {
-      toast({
-        title: "Error",
-        description: "Select at least one community",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Select at least one community", variant: "destructive" });
       return;
     }
+
     try {
       setUpdating(true);
       await updateWorker({
@@ -332,89 +329,98 @@ export default function Profile() {
         service_types: selectedServices,
         communities: selectedCommunities
       });
-      toast({
-        title: "Success",
-        description: "Profile updated successfully"
-      });
+      toast({ title: "Success", description: "Profile updated successfully" });
       setEditDialogOpen(false);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setUpdating(false);
     }
   };
+
+
   const handleLogout = async () => {
     if (isGuest) {
       exitGuestMode();
-      toast({
-        title: "Logged Out",
-        description: "You have been successfully logged out"
+      toast({ 
+        title: "Logged Out", 
+        description: "You have been successfully logged out" 
       });
       navigate("/auth");
       return;
     }
+
     try {
       await supabase.auth.signOut();
-      toast({
-        title: "Logged Out",
-        description: "You have been successfully logged out"
+      toast({ 
+        title: "Logged Out", 
+        description: "You have been successfully logged out" 
       });
       navigate("/auth");
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to log out",
-        variant: "destructive"
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to log out", 
+        variant: "destructive" 
       });
     }
   };
+
   const handleDeleteAccount = async () => {
     if (!user) return;
+
     try {
       setDeleting(true);
 
       // Delete worker profile and related data
-      const {
-        error: deleteError
-      } = await supabase.from('workers').delete().eq('id', user.id);
+      const { error: deleteError } = await supabase
+        .from('workers')
+        .delete()
+        .eq('id', user.id);
+
       if (deleteError) throw deleteError;
 
       // Delete the auth user account
-      const {
-        error: authError
-      } = await supabase.auth.admin.deleteUser(user.id);
-
+      const { error: authError } = await supabase.auth.admin.deleteUser(user.id);
+      
       // Sign out (even if delete fails, we should sign out)
       await supabase.auth.signOut();
-      toast({
-        title: "Account Deleted",
-        description: "Your account has been permanently deleted"
+
+      toast({ 
+        title: "Account Deleted", 
+        description: "Your account has been permanently deleted" 
       });
+      
       navigate("/auth");
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete account",
-        variant: "destructive"
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to delete account", 
+        variant: "destructive" 
       });
     } finally {
       setDeleting(false);
     }
   };
+
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">
+    return (
+      <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>;
+      </div>
+    );
   }
-  return <div className="min-h-screen bg-background">
+
+  return (
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-card border-b">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/home")}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/home")}
+          >
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
@@ -426,9 +432,11 @@ export default function Profile() {
       {/* Content */}
       <main className="max-w-2xl mx-auto pb-20">
         {/* Demo Mode Banner */}
-        {isGuest && <div className="px-4 mb-4">
+        {isGuest && (
+          <div className="px-4 mb-4">
             <DemoModeBanner />
-          </div>}
+          </div>
+        )}
         
         {/* Profile Header Card */}
         <div className="relative -mt-4">
@@ -441,7 +449,11 @@ export default function Profile() {
           <Card className="mx-4 -mt-12 border-0 shadow-xl relative">
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="secondary" size="icon" className="absolute top-4 right-4 h-9 w-9 bg-white hover:bg-gray-100 shadow-lg z-10">
+                <Button 
+                  variant="secondary" 
+                  size="icon" 
+                  className="absolute top-4 right-4 h-9 w-9 bg-white hover:bg-gray-100 shadow-lg z-10"
+                >
                   <Pencil className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
@@ -455,17 +467,32 @@ export default function Profile() {
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
                     <Label htmlFor="edit-name">{t('profile.name')}</Label>
-                    <Input id="edit-name" value={fullName} onChange={e => setFullName(e.target.value)} placeholder={t('auth.namePlaceholder')} />
+                    <Input
+                      id="edit-name"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder={t('auth.namePlaceholder')}
+                    />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="edit-phone">{t('profile.phone')}</Label>
-                    <Input id="edit-phone" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Your mobile number" />
+                    <Input
+                      id="edit-phone"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="Your mobile number"
+                    />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="edit-upi">UPI ID</Label>
-                    <Input id="edit-upi" value={upiId} onChange={e => setUpiId(e.target.value)} placeholder="Your UPI ID" />
+                    <Input
+                      id="edit-upi"
+                      value={upiId}
+                      onChange={(e) => setUpiId(e.target.value)}
+                      placeholder="Your UPI ID"
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -474,7 +501,9 @@ export default function Profile() {
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="w-full justify-between">
                           <span className="text-muted-foreground">
-                            {selectedServices.length > 0 ? `${selectedServices.length} selected` : "Select services"}
+                            {selectedServices.length > 0 
+                              ? `${selectedServices.length} selected` 
+                              : "Select services"}
                           </span>
                           <ChevronDown className="h-4 w-4 opacity-50" />
                         </Button>
@@ -482,26 +511,39 @@ export default function Profile() {
                       <DropdownMenuContent className="w-full">
                         <DropdownMenuLabel>Select Services</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        {SERVICES.map(service => <DropdownMenuCheckboxItem key={service.value} checked={selectedServices.includes(service.value)} onCheckedChange={checked => {
-                        if (checked) {
-                          setSelectedServices([...selectedServices, service.value]);
-                        } else {
-                          setSelectedServices(selectedServices.filter(s => s !== service.value));
-                        }
-                      }}>
+                        {SERVICES.map(service => (
+                          <DropdownMenuCheckboxItem
+                            key={service.value}
+                            checked={selectedServices.includes(service.value)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedServices([...selectedServices, service.value]);
+                              } else {
+                                setSelectedServices(selectedServices.filter(s => s !== service.value));
+                              }
+                            }}
+                          >
                             {service.label}
-                          </DropdownMenuCheckboxItem>)}
+                          </DropdownMenuCheckboxItem>
+                        ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
-                    {selectedServices.length > 0 && <div className="flex flex-wrap gap-2 mt-2">
+                    {selectedServices.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
                         {selectedServices.map(serviceValue => {
-                      const service = SERVICES.find(s => s.value === serviceValue);
-                      return <Badge key={serviceValue} variant="secondary" className="gap-1">
+                          const service = SERVICES.find(s => s.value === serviceValue);
+                          return (
+                            <Badge key={serviceValue} variant="secondary" className="gap-1">
                               {service?.label}
-                              <X className="h-3 w-3 cursor-pointer" onClick={() => setSelectedServices(selectedServices.filter(s => s !== serviceValue))} />
-                            </Badge>;
-                    })}
-                      </div>}
+                              <X 
+                                className="h-3 w-3 cursor-pointer" 
+                                onClick={() => setSelectedServices(selectedServices.filter(s => s !== serviceValue))}
+                              />
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -510,7 +552,9 @@ export default function Profile() {
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="w-full justify-between">
                           <span className="text-muted-foreground">
-                            {selectedCommunities.length > 0 ? `${selectedCommunities.length} selected` : "Select communities"}
+                            {selectedCommunities.length > 0 
+                              ? `${selectedCommunities.length} selected` 
+                              : "Select communities"}
                           </span>
                           <ChevronDown className="h-4 w-4 opacity-50" />
                         </Button>
@@ -518,29 +562,46 @@ export default function Profile() {
                       <DropdownMenuContent className="w-full">
                         <DropdownMenuLabel>Select Communities</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        {communities.map(community => <DropdownMenuCheckboxItem key={community.id} checked={selectedCommunities.includes(community.value)} onCheckedChange={checked => {
-                        if (checked) {
-                          setSelectedCommunities([...selectedCommunities, community.value]);
-                        } else {
-                          setSelectedCommunities(selectedCommunities.filter(c => c !== community.value));
-                        }
-                      }}>
+                        {communities.map(community => (
+                          <DropdownMenuCheckboxItem
+                            key={community.id}
+                            checked={selectedCommunities.includes(community.value)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedCommunities([...selectedCommunities, community.value]);
+                              } else {
+                                setSelectedCommunities(selectedCommunities.filter(c => c !== community.value));
+                              }
+                            }}
+                          >
                             {community.name}
-                          </DropdownMenuCheckboxItem>)}
+                          </DropdownMenuCheckboxItem>
+                        ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
-                    {selectedCommunities.length > 0 && <div className="flex flex-wrap gap-2 mt-2">
+                    {selectedCommunities.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
                         {selectedCommunities.map(communityValue => {
-                      const community = communities.find(c => c.value === communityValue);
-                      return <Badge key={communityValue} variant="secondary" className="gap-1">
+                          const community = communities.find(c => c.value === communityValue);
+                          return (
+                            <Badge key={communityValue} variant="secondary" className="gap-1">
                               {community?.name}
-                              <X className="h-3 w-3 cursor-pointer" onClick={() => setSelectedCommunities(selectedCommunities.filter(c => c !== communityValue))} />
-                            </Badge>;
-                    })}
-                      </div>}
+                              <X
+                                className="h-3 w-3 cursor-pointer" 
+                                onClick={() => setSelectedCommunities(selectedCommunities.filter(c => c !== communityValue))}
+                              />
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
-                  <Button onClick={handleUpdate} disabled={updating} className="w-full">
+                  <Button
+                    onClick={handleUpdate}
+                    disabled={updating}
+                    className="w-full"
+                  >
                     {updating ? t('common.loading') : t('profile.updateProfile')}
                   </Button>
                 </div>
@@ -550,19 +611,44 @@ export default function Profile() {
               <div className="flex items-start gap-4 mb-6">
                 <div className="relative group">
                   <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg border-4 border-white dark:border-gray-800 overflow-hidden">
-                    {photoUrl ? <img src={photoUrl} alt={worker?.full_name || "Profile"} className="w-full h-full object-cover" /> : <User className="w-10 h-10 text-primary-foreground" />}
+                    {photoUrl ? (
+                      <img 
+                        src={photoUrl} 
+                        alt={worker?.full_name || "Profile"} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-10 h-10 text-primary-foreground" />
+                    )}
                   </div>
-                  <label htmlFor="photo-upload" className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                    {uploadingPhoto ? <Loader2 className="w-6 h-6 text-white animate-spin" /> : <Camera className="w-6 h-6 text-white" />}
+                  <label 
+                    htmlFor="photo-upload" 
+                    className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  >
+                    {uploadingPhoto ? (
+                      <Loader2 className="w-6 h-6 text-white animate-spin" />
+                    ) : (
+                      <Camera className="w-6 h-6 text-white" />
+                    )}
                   </label>
-                  <input id="photo-upload" type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto} className="hidden" />
+                  <input
+                    id="photo-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    disabled={uploadingPhoto}
+                    className="hidden"
+                  />
                 </div>
                 <div className="flex-1 pt-2">
                   <h2 className="text-2xl font-bold mb-1">{worker?.full_name}</h2>
                   <p className="text-muted-foreground text-sm mb-2 flex items-center gap-1">
                     📱 {worker?.phone}
                   </p>
-                  <Badge variant={worker?.is_active ? "default" : "secondary"} className={worker?.is_active ? "bg-green-500 hover:bg-green-600 shadow-sm" : ""}>
+                  <Badge 
+                    variant={worker?.is_active ? "default" : "secondary"}
+                    className={worker?.is_active ? "bg-green-500 hover:bg-green-600 shadow-sm" : ""}
+                  >
                     {worker?.is_active ? t('profile.status.active') : t('profile.status.pending')}
                   </Badge>
                 </div>
@@ -612,7 +698,8 @@ export default function Profile() {
 
         <div className="px-4 mt-4 space-y-4">
           {/* Rating Breakdown Section */}
-          {reviews.length > 0 && <Card className="border-0 shadow-lg">
+          {reviews.length > 0 && (
+            <Card className="border-0 shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <BarChart3 className="w-5 h-5" />
@@ -623,12 +710,17 @@ export default function Profile() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <RatingBreakdown ratings={ratingBreakdown} totalRatings={ratingsCount} />
+                <RatingBreakdown 
+                  ratings={ratingBreakdown} 
+                  totalRatings={ratingsCount}
+                />
               </CardContent>
-            </Card>}
+            </Card>
+          )}
 
           {/* Reviews Section */}
-          {reviews.length > 0 && <Card className="border-0 shadow-lg">
+          {reviews.length > 0 && (
+            <Card className="border-0 shadow-lg">
               <Collapsible defaultOpen={false}>
                 <CardHeader className="pb-3">
                   <CollapsibleTrigger className="flex items-center justify-between w-full hover:opacity-80 transition-opacity [&[data-state=open]>svg]:rotate-90">
@@ -646,7 +738,8 @@ export default function Profile() {
                 </CardHeader>
                 <CollapsibleContent>
                   <CardContent className="space-y-3 pt-0">
-                    {reviews.map(review => <Card key={review.id} className="bg-muted/50">
+                    {reviews.map((review) => (
+                      <Card key={review.id} className="bg-muted/50">
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex-1">
@@ -665,15 +758,19 @@ export default function Profile() {
                               <span className="font-semibold text-sm">{review.rating}</span>
                             </div>
                           </div>
-                          {review.comment && <p className="text-sm text-foreground mt-3 p-3 bg-background rounded-lg border">
+                          {review.comment && (
+                            <p className="text-sm text-foreground mt-3 p-3 bg-background rounded-lg border">
                               "{review.comment}"
-                            </p>}
+                            </p>
+                          )}
                         </CardContent>
-                      </Card>)}
+                      </Card>
+                    ))}
                   </CardContent>
                 </CollapsibleContent>
               </Collapsible>
-            </Card>}
+            </Card>
+          )}
 
           {/* Language Selection */}
           <Card className="border-0 shadow-lg">
@@ -687,31 +784,37 @@ export default function Profile() {
             <div className="space-y-2">
               <Label>{t('profile.selectLanguage')}</Label>
               <div className="grid gap-2">
-                <Button variant={i18n.language === 'en' ? 'default' : 'outline'} className="w-full justify-start" onClick={() => {
-                  i18n.changeLanguage('en');
-                  localStorage.setItem('language', 'en');
-                  toast({
-                    title: "Language changed to English"
-                  });
-                }}>
+                <Button
+                  variant={i18n.language === 'en' ? 'default' : 'outline'}
+                  className="w-full justify-start"
+                  onClick={() => {
+                    i18n.changeLanguage('en');
+                    localStorage.setItem('language', 'en');
+                    toast({ title: "Language changed to English" });
+                  }}
+                >
                   English
                 </Button>
-                <Button variant={i18n.language === 'hi' ? 'default' : 'outline'} className="w-full justify-start" onClick={() => {
-                  i18n.changeLanguage('hi');
-                  localStorage.setItem('language', 'hi');
-                  toast({
-                    title: "भाषा हिंदी में बदल गई"
-                  });
-                }}>
+                <Button
+                  variant={i18n.language === 'hi' ? 'default' : 'outline'}
+                  className="w-full justify-start"
+                  onClick={() => {
+                    i18n.changeLanguage('hi');
+                    localStorage.setItem('language', 'hi');
+                    toast({ title: "भाषा हिंदी में बदल गई" });
+                  }}
+                >
                   हिंदी (Hindi)
                 </Button>
-                <Button variant={i18n.language === 'te' ? 'default' : 'outline'} className="w-full justify-start" onClick={() => {
-                  i18n.changeLanguage('te');
-                  localStorage.setItem('language', 'te');
-                  toast({
-                    title: "భాష తెలుగులోకి మార్చబడింది"
-                  });
-                }}>
+                <Button
+                  variant={i18n.language === 'te' ? 'default' : 'outline'}
+                  className="w-full justify-start"
+                  onClick={() => {
+                    i18n.changeLanguage('te');
+                    localStorage.setItem('language', 'te');
+                    toast({ title: "భాష తెలుగులోకి మార్చబడింది" });
+                  }}
+                >
                   తెలుగు (Telugu)
                 </Button>
               </div>
@@ -719,85 +822,103 @@ export default function Profile() {
           </CardContent>
         </Card>
 
-          {/* Account Actions */}
+          {/* Actions */}
           <Card className="border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-lg">Account Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1">
-              {/* Logout */}
-              <Button onClick={handleLogout} variant="ghost" className="w-full justify-start h-12 text-base">
-                <LogOut className="w-5 h-5 mr-3" />
-                {t('profile.logout')}
-              </Button>
-
-              {/* Divider */}
-              <div className="h-2" />
-
-              {/* Contact & Support */}
-              <Button onClick={() => navigate('/contact-support')} variant="ghost" className="w-full justify-start h-12 text-base">
-                <HelpCircle className="w-5 h-5 mr-3" />
-                Contact & Support
-              </Button>
-
-              {/* Privacy Policy */}
-              <Button onClick={() => navigate('/privacy-policy')} variant="ghost" className="w-full justify-start h-12 text-base">
-                <Shield className="w-5 h-5 mr-3" />
-                Privacy Policy
-              </Button>
-
-              {/* Terms of Service */}
-              <Button onClick={() => navigate('/terms-of-service')} variant="ghost" className="w-full justify-start h-12 text-base">
-                <FileText className="w-5 h-5 mr-3" />
-                Terms of Service
-              </Button>
-
-              {/* Divider */}
-              <div className="h-2" />
-
-              {/* Delete Account */}
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-start h-12 text-base text-destructive hover:text-destructive hover:bg-destructive/10" disabled={deleting}>
-                    <Trash2 className="w-5 h-5 mr-3" />
-                    {deleting ? t('common.loading') : t('profile.deleteAccount')}
+            <CardContent className="pt-6">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    <span className="flex items-center gap-2">
+                      <Settings className="w-4 h-4" />
+                      Account Settings
+                    </span>
+                    <ChevronDown className="h-4 w-4 opacity-50" />
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>{t('profile.deleteAccount')}?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {t('profile.deleteConfirm')}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>{t('profile.cancel')}</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteAccount} className="bg-destructive hover:bg-destructive/90">
-                      {t('common.delete')}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </CardContent>
-          </Card>
-
-          {/* Account Settings Collapsible */}
-          <Card className="border-0 shadow-lg">
-            <Collapsible>
-              <CollapsibleTrigger asChild>
-                
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <CardContent className="pt-0 pb-4">
-                  <div className="text-sm text-muted-foreground">
-                    Additional settings and preferences will be available here soon.
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-[calc(100vw-2rem)] sm:w-[400px] bg-background z-50" align="end">
+                  <DropdownMenuLabel>Account Actions</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  
+                  <div className="p-2">
+                    <Button
+                      onClick={handleLogout}
+                      variant="ghost"
+                      className="w-full justify-start"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      {t('profile.logout')}
+                    </Button>
                   </div>
-                </CardContent>
-              </CollapsibleContent>
-            </Collapsible>
+
+                  <DropdownMenuSeparator />
+                  
+                  <div className="p-2 space-y-1">
+                    <Button
+                      onClick={() => navigate('/contact-support')}
+                      variant="ghost"
+                      className="w-full justify-start text-sm"
+                    >
+                      <HelpCircle className="w-4 h-4 mr-2" />
+                      Contact & Support
+                    </Button>
+                    <Button
+                      onClick={() => navigate('/privacy-policy')}
+                      variant="ghost"
+                      className="w-full justify-start text-sm"
+                    >
+                      <Shield className="w-4 h-4 mr-2" />
+                      Privacy Policy
+                    </Button>
+                    <Button
+                      onClick={() => navigate('/terms-of-service')}
+                      variant="ghost"
+                      className="w-full justify-start text-sm"
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Terms of Service
+                    </Button>
+                  </div>
+
+                  <DropdownMenuSeparator />
+                  
+                  <div className="p-2">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+                          disabled={deleting}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          {deleting ? t('common.loading') : t('profile.deleteAccount')}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>{t('profile.deleteAccount')}?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {t('profile.deleteConfirm')}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>{t('profile.cancel')}</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleDeleteAccount}
+                            className="bg-destructive hover:bg-destructive/90"
+                          >
+                            {t('common.delete')}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </CardContent>
           </Card>
         </div>
       </main>
       <BottomNav />
-    </div>;
+    </div>
+  );
 }

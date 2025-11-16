@@ -51,30 +51,14 @@ class MainActivity : BridgeActivity() {
         
         android.util.Log.d("MainActivity", "🚀 App starting - checking permissions")
         
-        // Request permissions in sequence to avoid conflicts
-        // 1. Notification permission first (most critical)
-        android.os.Handler(mainLooper).postDelayed({
-            android.util.Log.d("MainActivity", "🔔 Requesting notification permission")
-            NotificationPermissionHelper.showNotificationPermissionDialog(this)
-        }, 500)
+        // Request battery optimization exemption to keep foreground service running
+        BatteryOptimizationHelper.showBatteryDialog(this)
         
-        // 2. Location permission second
-        android.os.Handler(mainLooper).postDelayed({
-            android.util.Log.d("MainActivity", "📍 Requesting location permission")
-            LocationPermissionHelper.showLocationPermissionDialog(this)
-        }, 2000)
-        
-        // 3. Overlay permission third
+        // Delay overlay permission dialog slightly so it doesn't conflict with battery dialog
         android.os.Handler(mainLooper).postDelayed({
             android.util.Log.d("MainActivity", "📱 Requesting overlay permission")
             OverlayPermissionHelper.showOverlayPermissionDialog(this)
-        }, 3500)
-        
-        // 4. Battery optimization last
-        android.os.Handler(mainLooper).postDelayed({
-            android.util.Log.d("MainActivity", "🔋 Requesting battery optimization exemption")
-            BatteryOptimizationHelper.showBatteryDialog(this)
-        }, 5000)
+        }, 1500)
         
         // Handle intent if launched from overlay
         handleNavigationIntent(intent)
