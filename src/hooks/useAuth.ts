@@ -11,6 +11,7 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [guestMode, setGuestMode] = useState(false);
 
   // Save full session to Capacitor storage (for native overlay access)
   const saveSession = async (session: Session | null) => {
@@ -203,7 +204,8 @@ export function useAuth() {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setGuestMode(false);
   };
 
-  return { user, session, loading, signOut };
+  return { user, session, loading, guestMode, setGuestMode, signOut };
 }

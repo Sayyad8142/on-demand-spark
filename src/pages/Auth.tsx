@@ -48,7 +48,7 @@ const otpSchema = z.string()
 export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, setGuestMode } = useAuth();
   const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
@@ -272,6 +272,7 @@ export default function Auth() {
   };
 
   const handleGuestLogin = () => {
+    setGuestMode(true);
     toast({ 
       title: "Guest Mode", 
       description: "Continuing as guest. Some features may be limited.",
