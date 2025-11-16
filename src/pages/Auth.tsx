@@ -271,6 +271,14 @@ export default function Auth() {
     await handleSignInSendOtp();
   };
 
+  const handleGuestLogin = () => {
+    toast({ 
+      title: "Guest Mode", 
+      description: "Continuing as guest. Some features may be limited.",
+    });
+    navigate("/home");
+  };
+
   const handleSignUpSendOtp = async () => {
     if (!signUpFullName || !signUpPhone || !signUpCommunity || !signUpService) {
       toast({ title: "Please fill all required fields", variant: "destructive" });
@@ -724,6 +732,15 @@ export default function Auth() {
           తెలుగు
         </Button>
       </div>
+
+      {/* Guest Login Button */}
+      <Button
+        onClick={handleGuestLogin}
+        variant="ghost"
+        className="text-muted-foreground hover:text-foreground"
+      >
+        Continue as Guest
+      </Button>
       </div>
     </div>
   );
