@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useGuestSession } from "@/contexts/GuestSessionContext";
+import { useDemoData } from "@/hooks/useDemoData";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { useBookingAlerts } from "@/hooks/useBookingAlerts";
 import { useActiveJob } from "@/hooks/useActiveJob";
 import { BookingAlertModal } from "@/components/BookingAlertModal";
+import { DemoModeBanner } from "@/components/DemoModeBanner";
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { Button } from "@/components/ui/button";
@@ -18,23 +21,18 @@ import { useTranslation } from "react-i18next";
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
 export default function Home() {
   const navigate = useNavigate();
-  const {
-    t
-  } = useTranslation();
-  const {
-    user,
-    session
-  } = useAuth();
-  const {
-    worker,
-    updateAvailability,
-    refetch: refetchWorker
-  } = useWorkerProfile(user?.id);
-  const {
-    activeJob,
-    updateJobStatus,
-    refetch: refetchActiveJob
-  } = useActiveJob(user?.id);
+  const { t } = useTranslation();
+  const { user, session } = useAuth();
+  const { isGuest } = useGuestSession();
+  
+  // Use demo data if in guest mode, otherwise use real data
+  const { demoWorkerProfile, demoBookings, acceptDemoBooking } = useDemoData();
+  const { worker: realWorker, updateAvailability, refetch: refetchWorker } = useWorkerProfile(user?.id);
+  const { activeJob: realActiveJob, updateJobStatus, refetch: refetchActiveJob } = useActiveJob(user?.id);
+  
+  // Choose data source based on guest mode
+  const worker = isGuest ? demoWorkerProfile : realWorker;
+  const activeJob = isGuest ? (demoBookings.find(b => b.status === 'accepted' || b.status === 'started') as any) : realActiveJob;
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [showWebPushBanner, setShowWebPushBanner] = useState(false);
@@ -129,15 +127,22 @@ export default function Home() {
       </div>;
   }
   return <div className="min-h-screen">
+      {/* Demo Mode Banner */}
+      {isGuest && (
+        <div className="p-4 pt-20">
+          <DemoModeBanner />
+        </div>
+      )}
+      
       {/* Fixed Availability Toggle */}
       <div className="fixed top-0 left-0 right-0 z-10 bg-background border-b border-border">
         <div className="p-4">
-          <AvailabilityToggle workerId={user.id} />
+          <AvailabilityToggle workerId={isGuest ? 'demo-worker-1' : user?.id} />
         </div>
       </div>
 
       {/* Main Content with top padding for fixed header */}
-      <div className="p-4 space-y-4 pb-32 pt-28">
+      <div className={`p-4 space-y-4 pb-32 ${isGuest ? 'pt-4' : 'pt-28'}`}>
       {/* Web Push Banner */}
       {showWebPushBanner && <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 relative">
           <button onClick={() => setShowWebPushBanner(false)} className="absolute top-2 right-2 p-1 hover:bg-blue-100 dark:hover:bg-blue-900 rounded">

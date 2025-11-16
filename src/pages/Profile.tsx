@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useGuestSession } from "@/contexts/GuestSessionContext";
+import { useDemoData } from "@/hooks/useDemoData";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
+import { DemoModeBanner } from "@/components/DemoModeBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,8 +63,14 @@ export default function Profile() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { worker, loading: workerLoading, updateWorker } = useWorkerProfile(user?.id);
+  const { isGuest, exitGuestMode } = useGuestSession();
+  const { demoWorkerProfile, demoEarnings } = useDemoData();
+  const { worker: realWorker, loading: workerLoading, updateWorker } = useWorkerProfile(user?.id);
   const { t, i18n } = useTranslation();
+  
+  // Use demo data if in guest mode
+  const worker = isGuest ? demoWorkerProfile : realWorker;
+  const loading = isGuest ? false : workerLoading;
   
   const [fullName, setFullName] = useState("");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -140,6 +149,15 @@ export default function Profile() {
   }, [worker]);
 
   useEffect(() => {
+    if (isGuest) {
+      // Use demo data for guest mode
+      setTotalEarnings(demoEarnings.thisMonth);
+      setCompletedJobs(demoEarnings.completedJobs);
+      setWorkerRating(demoWorkerProfile.rating);
+      setRatingsCount(demoWorkerProfile.total_ratings);
+      return;
+    }
+    
     if (!user) return;
 
     const fetchEarnings = async () => {
@@ -396,6 +414,13 @@ export default function Profile() {
 
       {/* Content */}
       <main className="max-w-2xl mx-auto pb-20">
+        {/* Demo Mode Banner */}
+        {isGuest && (
+          <div className="px-4 mb-4">
+            <DemoModeBanner />
+          </div>
+        )}
+        
         {/* Profile Header Card */}
         <div className="relative -mt-4">
           {/* Cover Image */}
