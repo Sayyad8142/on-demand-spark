@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useGuestSession } from "@/contexts/GuestSessionContext";
 import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
@@ -49,18 +50,19 @@ export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
+  const { isGuest, enterGuestMode } = useGuestSession();
   const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [communities, setCommunities] = useState<Array<{ name: string; value: string }>>([]);
 
-  // Redirect if already logged in
+  // Redirect if already logged in OR in guest mode
   useEffect(() => {
-    if (!authLoading && user) {
-      console.log('👤 User already logged in, redirecting to home');
+    if (!authLoading && (user || isGuest)) {
+      console.log('👤 User already logged in or in guest mode, redirecting to home');
       navigate("/home", { replace: true });
     }
-  }, [user, authLoading, navigate]);
+  }, [user, isGuest, authLoading, navigate]);
   
   // Sign In state
   const [signInPhone, setSignInPhone] = useState("");
@@ -623,6 +625,29 @@ export default function Auth() {
               )}
             </TabsContent>
           </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Guest/Demo Mode Button */}
+      <Card className="w-full bg-muted/50 border-dashed">
+        <CardContent className="pt-6 space-y-3">
+          <Button
+            onClick={() => {
+              enterGuestMode();
+              toast({ 
+                title: "Demo Mode Enabled", 
+                description: "You're now exploring in guest mode" 
+              });
+              navigate("/home");
+            }}
+            variant="outline"
+            className="w-full"
+          >
+            Continue as Guest (Demo Mode)
+          </Button>
+          <p className="text-xs text-center text-muted-foreground">
+            Guest mode is for demo/review only. No real bookings or earnings are affected.
+          </p>
         </CardContent>
       </Card>
 
