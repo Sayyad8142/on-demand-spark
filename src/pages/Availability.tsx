@@ -64,10 +64,34 @@ export default function Availability() {
   }, []);
   const loadAvailability = async () => {
     try {
+      // First get worker_id for current user
+      const { data: workerData, error: workerError } = await supabase
+        .from("workers")
+        .select("id")
+        .eq("user_id", user?.id)
+        .single();
+      
+      if (workerError) {
+        console.error("Error fetching worker:", workerError);
+        setLoading(false);
+        return;
+      }
+      
+      const workerId = workerData?.id;
+      if (!workerId) {
+        setLoading(false);
+        return;
+      }
+      
       const {
         data,
         error
-      } = await supabase.from("worker_availability").select("day_of_week, slots").order("day_of_week");
+      } = await supabase
+        .from("worker_availability")
+        .select("day_of_week, slots")
+        .eq("worker_id", workerId)
+        .order("day_of_week");
+      
       if (error) throw error;
       if (data && data.length > 0) {
         const newWeekData = {
@@ -187,12 +211,23 @@ export default function Availability() {
     }
     setSaving(true);
     try {
+      // First get worker_id for current user
+      const { data: workerData, error: workerError } = await supabase
+        .from("workers")
+        .select("id")
+        .eq("user_id", user?.id)
+        .single();
+      
+      if (workerError || !workerData) {
+        throw new Error("Could not find worker profile");
+      }
+      
       // Use upsert to avoid duplicate key errors
       const dayRecords = [];
       for (let day = 0; day < 7; day++) {
         const selectedSlots = weekData[day as DayKey].filter(s => s.selected).map(s => s.start);
         dayRecords.push({
-          worker_id: user!.id,
+          worker_id: workerData.id,
           day_of_week: day,
           slots: selectedSlots.length > 0 ? selectedSlots : []
         });
