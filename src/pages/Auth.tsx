@@ -67,7 +67,7 @@ export default function Auth() {
         replace: true
       });
     }
-  }, [user, isGuest, authLoading]);
+  }, [user, isGuest, authLoading, navigate]);
 
   // Sign In state
   const [signInPhone, setSignInPhone] = useState("");
@@ -255,7 +255,11 @@ export default function Auth() {
         title: "Success!",
         description: "Signed in successfully"
       });
-      // Navigation will happen automatically via useEffect when user state updates
+      
+      // Navigate after a brief delay to ensure auth state updates
+      setTimeout(() => {
+        navigate("/home", { replace: true });
+      }, 100);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -437,7 +441,15 @@ export default function Auth() {
         description: "Account created successfully"
       });
 
-      // Navigation will happen automatically via useEffect when user state updates
+      // Navigate after a brief delay to ensure auth state updates
+      setTimeout(() => {
+        // Redirect to availability page if no slots set, otherwise home
+        if (!availabilityData || availabilityData.length === 0) {
+          navigate("/availability", { replace: true });
+        } else {
+          navigate("/home", { replace: true });
+        }
+      }, 100);
     } catch (error: any) {
       toast({
         title: "Error",
