@@ -1,10 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useGuestSession } from "@/contexts/GuestSessionContext";
-import { useDemoData } from "@/hooks/useDemoData";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
-import { DemoModeBanner } from "@/components/DemoModeBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,14 +60,8 @@ export default function Profile() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { isGuest, exitGuestMode } = useGuestSession();
-  const { demoWorkerProfile, demoEarnings } = useDemoData();
-  const { worker: realWorker, loading: workerLoading, updateWorker } = useWorkerProfile(user?.id);
+  const { worker, loading: workerLoading, updateWorker } = useWorkerProfile(user?.id);
   const { t, i18n } = useTranslation();
-  
-  // Use demo data if in guest mode
-  const worker = isGuest ? demoWorkerProfile : realWorker;
-  const loading = isGuest ? false : workerLoading;
   
   const [fullName, setFullName] = useState("");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -97,13 +88,6 @@ export default function Profile() {
     2: number;
     1: number;
   }>({ 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 });
-
-  // Redirect to auth if not logged in and not in guest mode
-  useEffect(() => {
-    if (!user && !isGuest) {
-      navigate("/auth");
-    }
-  }, [user, isGuest, navigate]);
 
   // Fetch communities from Supabase with real-time updates
   useEffect(() => {
@@ -156,15 +140,6 @@ export default function Profile() {
   }, [worker]);
 
   useEffect(() => {
-    if (isGuest) {
-      // Use demo data for guest mode - set once on mount
-      setTotalEarnings(demoEarnings.thisMonth);
-      setCompletedJobs(demoEarnings.completedJobs);
-      setWorkerRating(demoWorkerProfile.rating);
-      setRatingsCount(demoWorkerProfile.total_ratings);
-      return;
-    }
-    
     if (!user) return;
 
     const fetchEarnings = async () => {
@@ -218,7 +193,7 @@ export default function Profile() {
     fetchEarnings();
     fetchRating();
     fetchReviews();
-  }, [user, isGuest]); // Added isGuest to dependencies
+  }, [user]);
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -340,16 +315,6 @@ export default function Profile() {
 
 
   const handleLogout = async () => {
-    if (isGuest) {
-      exitGuestMode();
-      toast({ 
-        title: "Logged Out", 
-        description: "You have been successfully logged out" 
-      });
-      navigate("/auth");
-      return;
-    }
-
     try {
       await supabase.auth.signOut();
       toast({ 
@@ -403,7 +368,7 @@ export default function Profile() {
     }
   };
 
-  if (loading) {
+  if (workerLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -431,13 +396,6 @@ export default function Profile() {
 
       {/* Content */}
       <main className="max-w-2xl mx-auto pb-20">
-        {/* Demo Mode Banner */}
-        {isGuest && (
-          <div className="px-4 mb-4">
-            <DemoModeBanner />
-          </div>
-        )}
-        
         {/* Profile Header Card */}
         <div className="relative -mt-4">
           {/* Cover Image */}

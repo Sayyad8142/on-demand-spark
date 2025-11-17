@@ -34,15 +34,14 @@ object OverlayPermissionHelper {
         android.util.Log.d("OverlayPermission", "📱 Showing overlay permission dialog")
 
         AlertDialog.Builder(activity)
-            .setTitle("Allow permissions for booking alerts")
+            .setTitle("📱 Display Over Other Apps Permission")
             .setMessage(
-                "We use these permissions to send you booking alerts and keep you online for new work.\n\n" +
-                "📱 Display over other apps\n" +
-                "Needed to show full-screen booking alerts even when you are using other apps, so you never miss a booking.\n\n" +
-                "🔔 Notifications\n" +
-                "Needed to send you new booking alerts, schedule reminders and payment updates.\n\n" +
-                "✅ Allow background running\n" +
-                "Keeps you available for bookings even when the screen is off and prevents battery saver from stopping the app."
+                "🔔 Why we need this permission:\n\n" +
+                "• Show urgent booking alerts even when your phone is locked\n" +
+                "• Display alerts over YouTube, WhatsApp, and other apps\n" +
+                "• Ensure you never miss a booking opportunity\n\n" +
+                "✅ This permission allows booking alerts to appear on top of other apps so you can accept jobs immediately.\n\n" +
+                "This is required for automatic booking notifications."
             )
             .setPositiveButton("Allow") { _, _ ->
                 android.util.Log.d("OverlayPermission", "🔓 User clicked Allow - requesting permission")

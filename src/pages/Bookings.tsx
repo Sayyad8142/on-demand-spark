@@ -1,9 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useGuestSession } from "@/contexts/GuestSessionContext";
-import { useDemoData } from "@/hooks/useDemoData";
-import { DemoModeBanner } from "@/components/DemoModeBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
@@ -17,27 +14,11 @@ type Booking = Database["public"]["Tables"]["bookings"]["Row"];
 export default function Bookings() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isGuest } = useGuestSession();
-  const { demoBookings } = useDemoData();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Redirect to auth if not logged in and not in guest mode
   useEffect(() => {
-    if (!user && !isGuest) {
-      navigate("/auth");
-    }
-  }, [user, isGuest, navigate]);
-
-  useEffect(() => {
-    if (isGuest) {
-      // Use demo data for guest mode
-      setBookings(demoBookings as any);
-      setLoading(false);
-      return;
-    }
-    
     if (!user) return;
 
     const fetchBookings = async () => {
@@ -58,7 +39,7 @@ export default function Bookings() {
     };
 
     fetchBookings();
-  }, [user, isGuest]);
+  }, [user]);
 
   const historyBookings = bookings.filter(b => 
     ['completed', 'cancelled'].includes(b.status)
@@ -91,13 +72,6 @@ export default function Bookings() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary">
-      {/* Demo Mode Banner */}
-      {isGuest && (
-        <div className="p-4">
-          <DemoModeBanner />
-        </div>
-      )}
-      
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-10 shadow-sm">
         <div className="max-w-2xl mx-auto px-4 py-4">

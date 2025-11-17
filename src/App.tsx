@@ -8,7 +8,6 @@ import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppState } from "@/hooks/useAppState";
-import { GuestSessionProvider, useGuestSession } from "@/contexts/GuestSessionContext";
 import { initNativePush } from "@/native/push";
 import { requestAndroidOverlay } from "@/lib/overlay";
 import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
@@ -33,14 +32,12 @@ const queryClient = new QueryClient();
 
 function ProtectedRoute({ children, showNav = false }: { children: React.ReactNode; showNav?: boolean }) {
   const { user, loading } = useAuth();
-  const { isGuest } = useGuestSession();
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
-  // Allow access if user is authenticated OR in guest mode
-  if (!user && !isGuest) {
+  if (!user) {
     return <Navigate to="/auth" replace />;
   }
 
@@ -172,11 +169,10 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <GuestSessionProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
           <NativeNavigationHandler />
           <Routes>
             <Route path="/auth" element={<Auth />} />
@@ -252,7 +248,6 @@ const App = () => {
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
-      </GuestSessionProvider>
     </QueryClientProvider>
   );
 };

@@ -1,14 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useGuestSession } from "@/contexts/GuestSessionContext";
-import { useDemoData } from "@/hooks/useDemoData";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { useBookingAlerts } from "@/hooks/useBookingAlerts";
 import { useActiveJob } from "@/hooks/useActiveJob";
-import { useToast } from "@/hooks/use-toast";
 import { BookingAlertModal } from "@/components/BookingAlertModal";
-import { DemoModeBanner } from "@/components/DemoModeBanner";
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { Button } from "@/components/ui/button";
@@ -22,19 +18,23 @@ import { useTranslation } from "react-i18next";
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
 export default function Home() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
-  const { toast } = useToast();
-  const { user, session } = useAuth();
-  const { isGuest } = useGuestSession();
-  
-  // Use demo data if in guest mode, otherwise use real data
-  const { demoWorkerProfile, demoBookings, acceptDemoBooking } = useDemoData();
-  const { worker: realWorker, updateAvailability, refetch: refetchWorker } = useWorkerProfile(user?.id);
-  const { activeJob: realActiveJob, updateJobStatus, refetch: refetchActiveJob } = useActiveJob(user?.id);
-  
-  // Choose data source based on guest mode
-  const worker = isGuest ? demoWorkerProfile : realWorker;
-  const activeJob = isGuest ? (demoBookings.find(b => b.status === 'accepted' || b.status === 'started') as any) : realActiveJob;
+  const {
+    t
+  } = useTranslation();
+  const {
+    user,
+    session
+  } = useAuth();
+  const {
+    worker,
+    updateAvailability,
+    refetch: refetchWorker
+  } = useWorkerProfile(user?.id);
+  const {
+    activeJob,
+    updateJobStatus,
+    refetch: refetchActiveJob
+  } = useActiveJob(user?.id);
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [showWebPushBanner, setShowWebPushBanner] = useState(false);
@@ -107,80 +107,37 @@ export default function Home() {
     clearAlert
   } = useBookingAlerts(user?.id, isOnline, matches);
   const handleToggle = async (value: boolean) => {
-    if (isGuest) {
-      toast({
-        title: "Demo Mode",
-        description: "Availability changes are simulated in demo mode"
-      });
-      return;
-    }
-    
     setToggling(true);
     await updateAvailability(value);
-    await refetchWorker();
     setToggling(false);
   };
-  
   const handleStatusUpdate = async (status: string) => {
-    if (isGuest) {
-      toast({
-        title: "Demo Mode",
-        description: "This action is simulated in demo mode"
-      });
-      return;
-    }
-    
     setUpdating(true);
     await updateJobStatus(activeJob?.id, status);
     await refetchWorker();
     setUpdating(false);
   };
-  
   const handleAccept = async () => {
-    if (isGuest) {
-      toast({
-        title: "Demo Mode",
-        description: "Booking accepted (simulated)"
-      });
-      return;
-    }
-    
     await accept();
     await Promise.all([refetchActiveJob(), refetchWorker()]);
   };
 
-  // Redirect to auth if not logged in and not in guest mode
-  useEffect(() => {
-    if (!user && !isGuest) {
-      navigate("/auth");
-    }
-  }, [user, isGuest, navigate]);
-
-  // Guard: Don't render if user is not loaded yet (only for real login, guest can proceed)
-  if (!user && !isGuest) {
+  // Guard: Don't render if user is not loaded yet
+  if (!user) {
     return <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>;
   }
-
-  console.log('🎭 [Home] Guest mode:', isGuest, 'Worker:', worker);
   return <div className="min-h-screen">
-      {/* Demo Mode Banner */}
-      {isGuest && (
-        <div className="p-4 pt-20">
-          <DemoModeBanner />
-        </div>
-      )}
-      
       {/* Fixed Availability Toggle */}
       <div className="fixed top-0 left-0 right-0 z-10 bg-background border-b border-border">
         <div className="p-4">
-          <AvailabilityToggle workerId={isGuest ? 'demo-worker-1' : user?.id} />
+          <AvailabilityToggle workerId={user.id} />
         </div>
       </div>
 
       {/* Main Content with top padding for fixed header */}
-      <div className={`p-4 space-y-4 pb-32 ${isGuest ? 'pt-4' : 'pt-28'}`}>
+      <div className="p-4 space-y-4 pb-32 pt-28">
       {/* Web Push Banner */}
       {showWebPushBanner && <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 relative">
           <button onClick={() => setShowWebPushBanner(false)} className="absolute top-2 right-2 p-1 hover:bg-blue-100 dark:hover:bg-blue-900 rounded">
