@@ -67,7 +67,7 @@ export default function Auth() {
         replace: true
       });
     }
-  }, [user, isGuest, authLoading, navigate]);
+  }, [user, isGuest, authLoading]);
 
   // Sign In state
   const [signInPhone, setSignInPhone] = useState("");
@@ -453,6 +453,13 @@ export default function Auth() {
       setLoading(false);
     }
   };
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-pulse text-muted-foreground">Loading...</div>
+    </div>;
+  }
+
   return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 p-4">
       <div className="w-full max-w-md space-y-4">
         <Card className="w-full">
