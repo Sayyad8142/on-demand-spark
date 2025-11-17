@@ -255,7 +255,7 @@ export default function Auth() {
         title: "Success!",
         description: "Signed in successfully"
       });
-      navigate("/home");
+      // Navigation will happen automatically via useEffect when user state updates
     } catch (error: any) {
       toast({
         title: "Error",
@@ -437,12 +437,7 @@ export default function Auth() {
         description: "Account created successfully"
       });
 
-      // Redirect to availability page if no slots set, otherwise home
-      if (!availabilityData || availabilityData.length === 0) {
-        navigate("/availability");
-      } else {
-        navigate("/home");
-      }
+      // Navigation will happen automatically via useEffect when user state updates
     } catch (error: any) {
       toast({
         title: "Error",
@@ -453,12 +448,7 @@ export default function Auth() {
       setLoading(false);
     }
   };
-  // Show loading state while checking authentication
-  if (authLoading) {
-    return <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-pulse text-muted-foreground">Loading...</div>
-    </div>;
-  }
+  // Don't block rendering during auth loading - let the form show
 
   return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 p-4">
       <div className="w-full max-w-md space-y-4">
