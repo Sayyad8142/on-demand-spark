@@ -2,12 +2,3 @@ project_id = "paywwbuqycovjopryele"
 
 [functions.check-scheduled-bookings]
 verify_jwt = false
-
-[functions.create-rtc-call]
-verify_jwt = true
-
-[functions.accept-rtc-call]
-verify_jwt = true
-
-[functions.end-rtc-call]
-verify_jwt = true

@@ -27,6 +27,16 @@ class LocationPlugin : Plugin() {
     fun requestLocationPermissions(call: PluginCall) {
         Log.d(TAG, "requestLocationPermissions called")
         
+        val permissions = mutableListOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+        
+        // Add background location for Android 10+ (API 29+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            permissions.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+        }
+        
         // Check if already granted
         if (hasLocationPermissions()) {
             Log.d(TAG, "Location permissions already granted")
@@ -36,13 +46,9 @@ class LocationPlugin : Plugin() {
             return
         }
         
-        // Request location permissions with rationale dialog
-        activity?.runOnUiThread {
-            PermissionHelper.requestLocationPermissionWithRationale(activity)
-        }
-        
-        // Store call for later resolution (will be called by permission result)
+        // Request permissions using Capacitor's correct flow
         permissionCall = call
+        pluginRequestPermissions(permissions.toTypedArray(), PERMISSION_REQUEST_CODE)
     }
     
     override fun handleRequestPermissionsResult(
@@ -52,21 +58,7 @@ class LocationPlugin : Plugin() {
     ) {
         super.handleRequestPermissionsResult(requestCode, permissions, grantResults)
         
-        // Handle location permission results from PermissionHelper
-        if (requestCode == PermissionHelper.LOCATION_PERMISSION_CODE) {
-            val call = permissionCall ?: return
-            
-            val granted = grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }
-            android.util.Log.d(TAG, "Location permission result from PermissionHelper: $granted")
-            
-            val ret = JSObject()
-            ret.put("granted", granted)
-            call.resolve(ret)
-            
-            permissionCall = null
-        }
-        // Keep original handling for other request codes
-        else if (requestCode == PERMISSION_REQUEST_CODE) {
+        if (requestCode == PERMISSION_REQUEST_CODE) {
             val call = permissionCall ?: return
             
             val granted = grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }

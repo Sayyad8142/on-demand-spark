@@ -1,7 +1,6 @@
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
-import { requestNotificationPermissionWithRationale } from './permission';
 
 export async function initNativePush(userId?: string) {
   if (!Capacitor.isNativePlatform()) {
@@ -15,12 +14,8 @@ export async function initNativePush(userId?: string) {
   console.log('📱 Current permission status:', permStatus);
   
   if (permStatus.receive !== 'granted') {
-    console.log('🔐 Requesting push permissions with rationale...');
-    // Show rationale dialog before requesting permission
-    await requestNotificationPermissionWithRationale();
-    // Wait a moment for the permission request to complete
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    permStatus = await PushNotifications.checkPermissions();
+    console.log('🔐 Requesting push permissions...');
+    permStatus = await PushNotifications.requestPermissions();
     console.log('📱 Permission result:', permStatus);
   }
   
