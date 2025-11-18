@@ -122,7 +122,7 @@ export default function Bookings() {
 
 function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusColor: (status: string) => string }) {
   const isCompleted = booking.status === 'completed';
-  const numberColor = isCompleted ? 'text-green-500' : 'text-red-500';
+  const numberColor = 'text-green-500';
   
   return (
     <Card className="p-3 shadow-lg border-0">
