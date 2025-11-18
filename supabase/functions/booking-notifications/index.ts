@@ -154,14 +154,8 @@ Deno.serve(async (req) => {
             endMinutes -= 60;
             endHours += 1;
           }
-          // Handle hour wrapping past 23:59
-          if (endHours >= 24) {
-            endHours = endHours % 24;
-          }
           const slotEnd = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}:00`;
-          
-          const isInSlot = timeString >= slotStart && timeString < slotEnd;
-          return isInSlot;
+          return timeString >= slotStart && timeString < slotEnd;
         });
         if (isAvailableNow) {
           availableWorkerIds.add(worker.worker_id);
@@ -278,7 +272,7 @@ Deno.serve(async (req) => {
         booking_id,
         worker_id: worker.user_id || worker.id,
         order_sequence: tier,
-        status: 'pending',
+        status: tier === 1 ? 'pending' : 'queued',
         offered_at: tier === 1 ? currentTime.toISOString() : null,
         timeout_at: tier === 1 ? new Date(currentTime.getTime() + timeoutSeconds * 1000).toISOString() : null,
       };
