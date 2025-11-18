@@ -153,6 +153,13 @@ export default function Auth() {
       return;
     }
 
+    // Demo account bypass
+    if (signInPhone === "9999999999") {
+      setOtpSent(true);
+      toast({ title: "Demo Mode", description: "Use OTP: 123456" });
+      return;
+    }
+
     // SECURITY: Validate phone number format
     const validation = phoneSchema.safeParse(signInPhone);
     if (!validation.success) {
@@ -185,6 +192,40 @@ export default function Auth() {
     if (!signInPhone || !signInOtp) {
       toast({ title: "Please enter phone and OTP", variant: "destructive" });
       return;
+    }
+
+    // Demo account login with credentials
+    if (signInPhone === "9999999999" && signInOtp === "123456") {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: 'demo@didisnow.app',
+          password: 'DemoPartner2025!'
+        });
+        
+        if (error) throw error;
+        if (!data.user) throw new Error("No user returned");
+
+        // CRITICAL: Save JWT to native storage for demo account
+        if (Capacitor.isNativePlatform() && AuthBridge && data.session?.access_token) {
+          console.log('🔐 [Demo Auth] Saving JWT...');
+          try {
+            await AuthBridge.saveToken({ token: data.session.access_token });
+            console.log('✅ [Demo Auth] JWT saved successfully');
+          } catch (err) {
+            console.error('❌ [Demo Auth] Failed to save JWT:', err);
+          }
+        }
+
+        toast({ title: "Demo Login", description: "Logged in as demo user" });
+        navigate("/home");
+        return;
+      } catch (error: any) {
+        toast({ title: "Demo Login Failed", description: "Demo account not configured", variant: "destructive" });
+        return;
+      } finally {
+        setLoading(false);
+      }
     }
 
     // SECURITY: Validate OTP format
