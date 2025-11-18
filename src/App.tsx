@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +13,7 @@ import { requestAndroidOverlay } from "@/lib/overlay";
 import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
 import { tryAccept } from "@/lib/bookingActions";
 import { requestLocationPermissions } from "@/lib/backgroundLocation";
+import { PermissionsDialog } from "@/components/PermissionsDialog";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import Bookings from "./pages/Bookings";
@@ -80,6 +81,7 @@ function NativeNavigationHandler() {
 const App = () => {
   const { session } = useAuth();
   useAppState(); // Refresh JWT when app comes to foreground
+  const [showPermissions, setShowPermissions] = useState(false);
 
   // Request location permissions on app startup for native platforms
   useEffect(() => {
@@ -95,7 +97,7 @@ const App = () => {
     }
   }, []);
 
-  // Initialize native push notifications when we have a session
+  // Show permissions dialog on first login
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId) return;
@@ -103,16 +105,31 @@ const App = () => {
     console.log("User logged in:", userId);
     
     if (Capacitor.isNativePlatform()) {
-      console.log("🔔 Initializing native push for user:", userId);
-      initNativePush(userId);
-      
-      // Request overlay permission on Android
-      if (Capacitor.getPlatform() === 'android') {
-        requestAndroidOverlay();
+      // Check if permissions were already requested
+      const permissionsRequested = localStorage.getItem('permissions_requested');
+      if (!permissionsRequested) {
+        // Show permissions dialog on first login
+        setShowPermissions(true);
+      } else {
+        // Permissions already requested, just initialize push
+        console.log("🔔 Initializing native push for user:", userId);
+        initNativePush(userId);
       }
     }
     // Web push registration is now done manually via /troubleshoot or /verify-push pages
   }, [session?.user?.id]);
+
+  const handlePermissionsComplete = () => {
+    setShowPermissions(false);
+    localStorage.setItem('permissions_requested', 'true');
+    
+    // Initialize push after permissions dialog is complete
+    const userId = session?.user?.id;
+    if (userId && Capacitor.isNativePlatform()) {
+      console.log("🔔 Initializing native push after permissions:", userId);
+      initNativePush(userId);
+    }
+  };
 
   // Start/stop foreground service based on login state
   useEffect(() => {
@@ -172,6 +189,10 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <PermissionsDialog 
+          open={showPermissions} 
+          onComplete={handlePermissionsComplete}
+        />
         <BrowserRouter>
           <NativeNavigationHandler />
           <Routes>
