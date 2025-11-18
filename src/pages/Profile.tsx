@@ -317,11 +317,7 @@ export default function Profile() {
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
-      toast({ 
-        title: "Logged Out", 
-        description: "You have been successfully logged out" 
-      });
-      navigate("/auth");
+      // ProtectedRoute will automatically redirect to /auth after signOut completes
     } catch (error: any) {
       toast({ 
         title: "Error", 
@@ -356,7 +352,7 @@ export default function Profile() {
         description: "Your account has been permanently deleted" 
       });
       
-      navigate("/auth");
+      // ProtectedRoute will automatically redirect to /auth after signOut completes
     } catch (error: any) {
       toast({ 
         title: "Error", 
