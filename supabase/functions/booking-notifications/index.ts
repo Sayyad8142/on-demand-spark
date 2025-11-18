@@ -182,7 +182,9 @@ Deno.serve(async (req) => {
     workersQuery = workersQuery.in("id", Array.from(availableWorkerIds));
     console.log(`🔍 Filtering by ${availableWorkerIds.size} workers with matching availability`);
   } else {
-    console.log("⚠️ No workers have availability set for current time slot - skipping availability filter");
+    // NO workers available for this time slot - return 0 results
+    console.log("❌ No workers available for current time slot - blocking notification");
+    workersQuery = workersQuery.in("id", []); // Returns no results
   }
   
   const { data: workers, error: we } = await workersQuery;
