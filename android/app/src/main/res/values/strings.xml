@@ -4,4 +4,9 @@
     <string name="title_activity_main">Didi Now Worker</string>
     <string name="package_name">app.didisnow.worker</string>
     <string name="custom_url_scheme">didinow</string>
+    
+    <!-- Permission descriptions -->
+    <string name="notification_permission_rationale">Allow notifications to receive instant booking alerts from customers</string>
+    <string name="location_permission_rationale">Allow location access to update your real-time position for customers and navigate to job locations</string>
+    <string name="background_location_permission_rationale">Allow background location to keep your position updated even when the app is in background</string>
 </resources>

@@ -278,7 +278,7 @@ class BookingAlertActivity : AppCompatActivity() {
                 
                 // Get the stored JWT token
                 val jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE)
-                    .getString("supabase_jwt", null)
+                    .getString("jwt_token", null)
                 
                 Log.d("BookingAlert", "🔑 JWT token present: ${jwt != null}")
                 

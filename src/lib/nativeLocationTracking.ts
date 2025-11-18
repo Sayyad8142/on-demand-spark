@@ -1,13 +1,13 @@
 import { registerPlugin } from '@capacitor/core';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
+import { saveJWTToken } from '@/native/authBridge';
 
 interface LocationPlugin {
   requestLocationPermissions(): Promise<{ granted: boolean }>;
   startLocationTracking(): Promise<{ success: boolean }>;
   stopLocationTracking(): Promise<{ success: boolean }>;
   isLocationTracking(): Promise<{ isTracking: boolean }>;
-  saveJwtToken(options: { token: string }): Promise<{ success: boolean }>;
   requestBatteryOptimization(): Promise<{ success: boolean }>;
 }
 
@@ -44,11 +44,11 @@ export async function startNativeLocationTracking(): Promise<boolean> {
   }
 
   try {
-    // Get current JWT token and save it to native storage
+    // Get current JWT token and save it to native storage using AuthBridge
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.access_token) {
-      await LocationPluginInstance.saveJwtToken({ token: session.access_token });
-      console.log('JWT token saved to native storage');
+      await saveJWTToken(session.access_token);
+      console.log('JWT token saved to native storage via AuthBridge');
     }
 
     // Start the native location tracking service

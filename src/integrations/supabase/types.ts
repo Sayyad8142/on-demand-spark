@@ -1691,37 +1691,16 @@ export type Database = {
       }
       settings: {
         Row: {
-          auto_cancel_minutes: number
-          cleaning_enabled: boolean
-          cook_enabled: boolean
-          id: number
-          maid_enabled: boolean
-          operating_end_time: string
-          operating_start_time: string
-          scheduled_dispatch_minutes: number
-          updated_at: string | null
+          key: string
+          value: string
         }
         Insert: {
-          auto_cancel_minutes?: number
-          cleaning_enabled?: boolean
-          cook_enabled?: boolean
-          id?: number
-          maid_enabled?: boolean
-          operating_end_time?: string
-          operating_start_time?: string
-          scheduled_dispatch_minutes?: number
-          updated_at?: string | null
+          key: string
+          value: string
         }
         Update: {
-          auto_cancel_minutes?: number
-          cleaning_enabled?: boolean
-          cook_enabled?: boolean
-          id?: number
-          maid_enabled?: boolean
-          operating_end_time?: string
-          operating_start_time?: string
-          scheduled_dispatch_minutes?: number
-          updated_at?: string | null
+          key?: string
+          value?: string
         }
         Relationships: []
       }

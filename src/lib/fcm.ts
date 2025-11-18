@@ -1,6 +1,7 @@
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
+import { requestNotificationPermissionWithRationale } from '@/native/permission';
 
 let fcmInitialized = false;
 
@@ -17,8 +18,12 @@ export async function initFCM() {
   
   console.log('🔔 Initializing FCM...');
   
-  // Request permission
-  const permStatus = await PushNotifications.requestPermissions();
+  // Request permission with rationale dialog
+  await requestNotificationPermissionWithRationale();
+  
+  // Wait a moment and check permission status
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  const permStatus = await PushNotifications.checkPermissions();
   
   if (permStatus.receive !== 'granted') {
     console.warn('⚠️ Push notification permission not granted');
@@ -42,8 +47,14 @@ export async function initFCM() {
   PushNotifications.addListener('pushNotificationReceived', (notification) => {
     console.log('🔔 Foreground notification:', notification);
     const bookingId = notification.data?.bookingId || notification.data?.booking_id;
+    const notifType = notification.data?.type;
     
-    if (bookingId) {
+    if (notifType === 'incoming_rtc') {
+      const rtcCallId = notification.data?.rtc_call_id;
+      const callerName = notification.data?.caller_name;
+      console.log('📞 Incoming call:', rtcCallId, 'from:', callerName);
+      window.postMessage({ type: 'INCOMING_RTC_CALL', rtcCallId, callerName }, '*');
+    } else if (bookingId) {
       console.log('📬 Foreground booking alert:', bookingId);
       window.postMessage({ type: 'BOOKING_ALERT', bookingId }, '*');
     }
@@ -53,8 +64,14 @@ export async function initFCM() {
   PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
     console.log('🔔 Notification clicked:', notification);
     const bookingId = notification.notification.data?.bookingId || notification.notification.data?.booking_id;
+    const notifType = notification.notification.data?.type;
     
-    if (bookingId) {
+    if (notifType === 'incoming_rtc') {
+      const rtcCallId = notification.notification.data?.rtc_call_id;
+      const callerName = notification.notification.data?.caller_name;
+      console.log('📞 Incoming call clicked:', rtcCallId, 'from:', callerName);
+      window.postMessage({ type: 'INCOMING_RTC_CALL', rtcCallId, callerName }, '*');
+    } else if (bookingId) {
       console.log('📬 Booking alert clicked:', bookingId);
       window.postMessage({ type: 'BOOKING_ALERT', bookingId }, '*');
     }
