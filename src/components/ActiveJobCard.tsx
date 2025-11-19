@@ -5,6 +5,7 @@ import { MapPin, Home, User, Check, ChevronDown } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 type Booking = Database["public"]["Tables"]["bookings"]["Row"];
 interface ActiveJobCardProps {
   booking: Booking;
@@ -23,6 +24,7 @@ export default function ActiveJobCard({
   updating
 }: ActiveJobCardProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const { toast } = useToast();
   const statusColor = STATUS_COLORS[booking.status as keyof typeof STATUS_COLORS] || 'bg-secondary';
 
   // Don't show for completed or cancelled bookings
@@ -108,7 +110,17 @@ export default function ActiveJobCard({
         <Button 
           size="lg" 
           className="w-full h-14 text-lg font-bold bg-red-500 hover:bg-red-600 text-white shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98]" 
-          onClick={() => onStatusUpdate('completed')} 
+          onClick={() => {
+            if (localStorage.getItem('guest_mode') === 'true') {
+              toast({
+                title: "Guest Mode",
+                description: "Please create an account to update job status",
+                variant: "destructive"
+              });
+              return;
+            }
+            onStatusUpdate('completed');
+          }}
           disabled={updating}
         >
           {updating ? "Updating..." : <>

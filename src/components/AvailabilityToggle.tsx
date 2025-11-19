@@ -34,6 +34,16 @@ export function AvailabilityToggle({
     }
   };
   const handleToggle = async (checked: boolean) => {
+    // Guest mode check
+    if (localStorage.getItem('guest_mode') === 'true') {
+      toast({
+        title: "Guest Mode",
+        description: "Please create an account to change availability",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       if (checked && Capacitor.isNativePlatform()) {
