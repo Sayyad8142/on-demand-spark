@@ -667,6 +667,21 @@ export default function Auth() {
         </CardContent>
       </Card>
 
+      {/* Guest Mode Button */}
+      <Button 
+        onClick={() => {
+          localStorage.setItem('guest_mode', 'true');
+          navigate('/home');
+        }}
+        variant="outline"
+        className="w-full max-w-md"
+      >
+        View as Guest
+      </Button>
+      <p className="text-xs text-muted-foreground text-center -mt-4">
+        Explore the app without signing in
+      </p>
+
       {/* Language Selector - Below Card */}
       <div className="flex items-center justify-center gap-2 bg-background/80 backdrop-blur-sm rounded-full shadow-lg p-2">
         <Button
