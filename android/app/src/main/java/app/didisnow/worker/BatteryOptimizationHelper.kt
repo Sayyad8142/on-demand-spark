@@ -33,9 +33,13 @@ object BatteryOptimizationHelper {
         val packageName = activity.packageName
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !pm.isIgnoringBatteryOptimizations(packageName)) {
+            // Inflate custom layout with permission descriptions
+            val inflater = activity.layoutInflater
+            val customView = inflater.inflate(R.layout.dialog_permissions, null)
+            
             AlertDialog.Builder(activity)
                 .setTitle("Allow Background Running")
-                .setMessage("To keep receiving bookings, please allow On-Demand Spark to run in the background without restrictions.")
+                .setView(customView)
                 .setPositiveButton("Allow") { _, _ ->
                     requestIgnoreBatteryOptimizations(activity)
                 }
