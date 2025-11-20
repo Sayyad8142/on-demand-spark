@@ -38,6 +38,7 @@ export default function Home() {
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [showWebPushBanner, setShowWebPushBanner] = useState(false);
+  const [showDemoBanner, setShowDemoBanner] = useState(false);
   const isOnline = !!worker?.is_available;
 
   // Note: FCM initialization is handled in App.tsx, no need to duplicate here
@@ -94,6 +95,12 @@ export default function Home() {
         setShowWebPushBanner(true);
       }
     }
+    
+    // Check for demo mode
+    const isDemoMode = localStorage.getItem('demo_mode') === 'true';
+    if (isDemoMode) {
+      setShowDemoBanner(true);
+    }
   }, []);
   const matches = (b: any) => {
     const inService = worker?.service_types?.includes?.(b.service_type);
@@ -138,6 +145,21 @@ export default function Home() {
 
       {/* Main Content with top padding for fixed header */}
       <div className="p-4 space-y-4 pb-32 pt-28">
+      {/* Demo Mode Banner */}
+      {showDemoBanner && <Card className="p-4 bg-pink-50 dark:bg-pink-950 border-pink-200 dark:border-pink-800 relative">
+          <button onClick={() => {
+            setShowDemoBanner(false);
+            localStorage.removeItem('demo_mode');
+          }} className="absolute top-2 right-2 p-1 hover:bg-pink-100 dark:hover:bg-pink-900 rounded">
+            <X className="w-4 h-4 text-pink-600 dark:text-pink-400" />
+          </button>
+          <div className="flex items-center justify-center gap-2">
+            <p className="text-sm font-semibold text-pink-900 dark:text-pink-100">
+              Demo mode for Play Store review
+            </p>
+          </div>
+        </Card>}
+        
       {/* Web Push Banner */}
       {showWebPushBanner && <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 relative">
           <button onClick={() => setShowWebPushBanner(false)} className="absolute top-2 right-2 p-1 hover:bg-blue-100 dark:hover:bg-blue-900 rounded">
