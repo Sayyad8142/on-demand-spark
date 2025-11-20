@@ -63,8 +63,9 @@ export default function Profile() {
   const { user } = useAuth();
   const isGuestMode = localStorage.getItem('guest_mode') === 'true';
   
-  const { worker: realWorker, loading: workerLoading, updateWorker } = useWorkerProfile(!isGuestMode ? user?.id : undefined);
+  const { worker: realWorker, loading: realWorkerLoading, updateWorker } = useWorkerProfile(!isGuestMode ? user?.id : undefined);
   const worker = isGuestMode ? DEMO_WORKER : realWorker;
+  const workerLoading = isGuestMode ? false : realWorkerLoading;
   const { t, i18n } = useTranslation();
   
   const [fullName, setFullName] = useState("");
