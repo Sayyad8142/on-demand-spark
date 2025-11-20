@@ -9,32 +9,31 @@ import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Bell, X } from "lucide-react";
+import { Bell, X, LogOut } from "lucide-react";
 import { Capacitor } from '@capacitor/core';
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/hooks/use-toast";
+import { DEMO_WORKER, DEMO_ACTIVE_JOB, DEMO_BOOKINGS } from "@/config/demoData";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
 export default function Home() {
   const navigate = useNavigate();
-  const {
-    t
-  } = useTranslation();
-  const {
-    user,
-    session
-  } = useAuth();
-  const {
-    worker,
-    updateAvailability,
-    refetch: refetchWorker
-  } = useWorkerProfile(user?.id);
-  const {
-    activeJob,
-    updateJobStatus,
-    refetch: refetchActiveJob
-  } = useActiveJob(user?.id);
+  const { t } = useTranslation();
+  const { user, session } = useAuth();
+  const { toast } = useToast();
+  
+  // Check for guest mode
+  const isGuestMode = localStorage.getItem('guest_mode') === 'true';
+  
+  // Use demo data in guest mode, real data otherwise
+  const { worker: realWorker, updateAvailability, refetch: refetchWorker } = useWorkerProfile(user?.id);
+  const { activeJob: realActiveJob, updateJobStatus, refetch: refetchActiveJob } = useActiveJob(user?.id);
+  
+  const worker = isGuestMode ? DEMO_WORKER : realWorker;
+  const activeJob = isGuestMode ? DEMO_ACTIVE_JOB : realActiveJob;
+  
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [showWebPushBanner, setShowWebPushBanner] = useState(false);
@@ -107,32 +106,81 @@ export default function Home() {
     clearAlert
   } = useBookingAlerts(user?.id, isOnline, matches);
   const handleToggle = async (value: boolean) => {
+    if (isGuestMode) {
+      toast({
+        title: "Guest Mode",
+        description: "Create an account to change availability",
+        variant: "default",
+      });
+      return;
+    }
+    
     setToggling(true);
     await updateAvailability(value);
     setToggling(false);
   };
+  
   const handleStatusUpdate = async (status: string) => {
+    if (isGuestMode) {
+      toast({
+        title: "Guest Mode",
+        description: "Create an account to update job status",
+        variant: "default",
+      });
+      return;
+    }
+
     setUpdating(true);
     await updateJobStatus(activeJob?.id, status);
     await refetchWorker();
     setUpdating(false);
   };
+  
   const handleAccept = async () => {
+    if (isGuestMode) {
+      toast({
+        title: "Guest Mode",
+        description: "Create an account to accept real bookings",
+        variant: "default",
+      });
+      return;
+    }
     await accept();
     await Promise.all([refetchActiveJob(), refetchWorker()]);
   };
 
-  // Guard: Don't render if user is not loaded yet
-  if (!user) {
+  const handleLogoutFromGuest = () => {
+    localStorage.removeItem('guest_mode');
+    navigate('/auth');
+  };
+
+  // Guard: Don't render if user is not loaded yet in non-guest mode
+  if (!user && !isGuestMode) {
     return <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>;
   }
   return <div className="min-h-screen">
+      {/* Guest Mode Banner */}
+      {isGuestMode && (
+        <div className="bg-amber-500/90 text-white px-4 py-3 text-center text-sm font-medium flex items-center justify-center gap-2">
+          👀 Exploring in Guest Mode • Create account to receive real bookings
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogoutFromGuest}
+            className="text-white hover:text-white/80 hover:bg-white/20"
+          >
+            <LogOut className="h-4 w-4 mr-1" />
+            Exit
+          </Button>
+        </div>
+      )}
+
       {/* Fixed Availability Toggle */}
       <div className="fixed top-0 left-0 right-0 z-10 bg-background border-b border-border">
         <div className="p-4">
-          <AvailabilityToggle workerId={user.id} />
+          <AvailabilityToggle workerId={user?.id || 'demo-worker-id'} />
         </div>
       </div>
 
