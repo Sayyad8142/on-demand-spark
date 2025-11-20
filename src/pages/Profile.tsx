@@ -357,6 +357,18 @@ export default function Profile() {
 
   const handleLogout = async () => {
     try {
+      // Handle guest mode logout
+      if (isGuestMode) {
+        localStorage.removeItem('guest_mode');
+        toast({ 
+          title: "Logged Out", 
+          description: "You have exited guest mode" 
+        });
+        navigate("/auth");
+        return;
+      }
+      
+      // Handle regular user logout
       await supabase.auth.signOut();
       toast({ 
         title: "Logged Out", 
