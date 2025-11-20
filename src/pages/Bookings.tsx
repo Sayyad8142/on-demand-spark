@@ -8,17 +8,25 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Search, MapPin, Calendar, Loader2, User } from "lucide-react";
+import { DEMO_BOOKINGS } from "@/config/demoData";
 
 type Booking = Database["public"]["Tables"]["bookings"]["Row"];
 
 export default function Bookings() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isGuestMode = localStorage.getItem('guest_mode') === 'true';
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
+    if (isGuestMode) {
+      setBookings(DEMO_BOOKINGS as any);
+      setLoading(false);
+      return;
+    }
+    
     if (!user) return;
 
     const fetchBookings = async () => {
@@ -39,7 +47,7 @@ export default function Bookings() {
     };
 
     fetchBookings();
-  }, [user]);
+  }, [user, isGuestMode]);
 
   const historyBookings = bookings.filter(b => 
     ['completed', 'cancelled'].includes(b.status)

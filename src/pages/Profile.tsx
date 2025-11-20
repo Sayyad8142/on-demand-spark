@@ -14,6 +14,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import RatingBreakdown from "@/components/RatingBreakdown";
+import { DEMO_WORKER } from "@/config/demoData";
 import {
   Dialog,
   DialogContent,
@@ -60,7 +61,10 @@ export default function Profile() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { worker, loading: workerLoading, updateWorker } = useWorkerProfile(user?.id);
+  const isGuestMode = localStorage.getItem('guest_mode') === 'true';
+  
+  const { worker: realWorker, loading: workerLoading, updateWorker } = useWorkerProfile(!isGuestMode ? user?.id : undefined);
+  const worker = isGuestMode ? DEMO_WORKER : realWorker;
   const { t, i18n } = useTranslation();
   
   const [fullName, setFullName] = useState("");
@@ -140,6 +144,42 @@ export default function Profile() {
   }, [worker]);
 
   useEffect(() => {
+    if (isGuestMode) {
+      // Set demo stats for guest mode
+      setCompletedJobs(2);
+      setTotalEarnings(750);
+      setWorkerRating(4.8);
+      setRatingsCount(127);
+      setRatingBreakdown({ 5: 100, 4: 20, 3: 5, 2: 1, 1: 1 });
+      setReviews([
+        {
+          id: 'demo-review-1',
+          rating: 5,
+          comment: 'Excellent service! Very professional and punctual.',
+          created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          bookings: {
+            cust_name: 'Priya Sharma',
+            service_type: 'cook',
+            flat_no: 'B-205',
+            community: 'downtown'
+          }
+        },
+        {
+          id: 'demo-review-2',
+          rating: 5,
+          comment: 'Great work! Highly recommended.',
+          created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          bookings: {
+            cust_name: 'Amit Patel',
+            service_type: 'bathroom_cleaning',
+            flat_no: 'C-302',
+            community: 'downtown'
+          }
+        }
+      ]);
+      return;
+    }
+    
     if (!user) return;
 
     const fetchEarnings = async () => {
@@ -193,7 +233,7 @@ export default function Profile() {
     fetchEarnings();
     fetchRating();
     fetchReviews();
-  }, [user]);
+  }, [user, isGuestMode]);
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
