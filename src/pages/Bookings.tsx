@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Search, MapPin, Calendar, Loader2, User } from "lucide-react";
-import { DEMO_BOOKINGS } from "@/config/demoData";
 
 type Booking = Database["public"]["Tables"]["bookings"]["Row"];
 
@@ -18,15 +17,8 @@ export default function Bookings() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const isGuestMode = localStorage.getItem('guest_mode') === 'true';
 
   useEffect(() => {
-    if (isGuestMode) {
-      setBookings(DEMO_BOOKINGS);
-      setLoading(false);
-      return;
-    }
-
     if (!user) return;
 
     const fetchBookings = async () => {
@@ -130,7 +122,7 @@ export default function Bookings() {
 
 function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusColor: (status: string) => string }) {
   const isCompleted = booking.status === 'completed';
-  const numberColor = 'text-green-500';
+  const numberColor = isCompleted ? 'text-green-500' : 'text-red-500';
   
   return (
     <Card className="p-3 shadow-lg border-0">

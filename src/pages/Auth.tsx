@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
-import didiPartnerHero from "@/assets/didi-partner-hero.png";
+import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -153,13 +153,6 @@ export default function Auth() {
       return;
     }
 
-    // Demo account bypass
-    if (signInPhone === "9999999999") {
-      setOtpSent(true);
-      toast({ title: "Demo Mode", description: "Use OTP: 123456" });
-      return;
-    }
-
     // SECURITY: Validate phone number format
     const validation = phoneSchema.safeParse(signInPhone);
     if (!validation.success) {
@@ -192,40 +185,6 @@ export default function Auth() {
     if (!signInPhone || !signInOtp) {
       toast({ title: "Please enter phone and OTP", variant: "destructive" });
       return;
-    }
-
-    // Demo account login with credentials
-    if (signInPhone === "9999999999" && signInOtp === "123456") {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: 'demo@didisnow.app',
-          password: 'DemoPartner2025!'
-        });
-        
-        if (error) throw error;
-        if (!data.user) throw new Error("No user returned");
-
-        // CRITICAL: Save JWT to native storage for demo account
-        if (Capacitor.isNativePlatform() && AuthBridge && data.session?.access_token) {
-          console.log('🔐 [Demo Auth] Saving JWT...');
-          try {
-            await AuthBridge.saveToken({ token: data.session.access_token });
-            console.log('✅ [Demo Auth] JWT saved successfully');
-          } catch (err) {
-            console.error('❌ [Demo Auth] Failed to save JWT:', err);
-          }
-        }
-
-        toast({ title: "Demo Login", description: "Logged in as demo user" });
-        navigate("/home");
-        return;
-      } catch (error: any) {
-        toast({ title: "Demo Login Failed", description: "Demo account not configured", variant: "destructive" });
-        return;
-      } finally {
-        setLoading(false);
-      }
     }
 
     // SECURITY: Validate OTP format
@@ -462,7 +421,7 @@ export default function Auth() {
         <Card className="w-full">
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
-            <img src={didiPartnerHero} alt="Didi Now Partner" className="w-32 h-auto rounded-lg" />
+            <img src={didiPartnerLogo} alt="Didi Now Partner" className="w-24 h-24" />
           </div>
           <CardTitle className="text-2xl text-center">Didi now Partner</CardTitle>
           <CardDescription className="text-center">
@@ -666,21 +625,6 @@ export default function Auth() {
           </Tabs>
         </CardContent>
       </Card>
-
-      {/* Guest Mode Button */}
-      <Button 
-        onClick={() => {
-          localStorage.setItem('guest_mode', 'true');
-          navigate('/home');
-        }}
-        variant="outline"
-        className="w-full max-w-md"
-      >
-        View as Guest
-      </Button>
-      <p className="text-xs text-muted-foreground text-center -mt-4">
-        Explore the app without signing in
-      </p>
 
       {/* Language Selector - Below Card */}
       <div className="flex items-center justify-center gap-2 bg-background/80 backdrop-blur-sm rounded-full shadow-lg p-2">

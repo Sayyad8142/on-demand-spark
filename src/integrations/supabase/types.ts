@@ -1555,65 +1555,6 @@ export type Database = {
           },
         ]
       }
-      rtc_calls: {
-        Row: {
-          booking_id: string
-          callee_id: string
-          callee_token: string | null
-          caller_id: string
-          caller_token: string | null
-          created_at: string
-          duration_sec: number | null
-          ended_at: string | null
-          id: string
-          room_id: string
-          started_at: string | null
-          status: string
-          updated_at: string
-          vendor: string
-        }
-        Insert: {
-          booking_id: string
-          callee_id: string
-          callee_token?: string | null
-          caller_id: string
-          caller_token?: string | null
-          created_at?: string
-          duration_sec?: number | null
-          ended_at?: string | null
-          id?: string
-          room_id: string
-          started_at?: string | null
-          status?: string
-          updated_at?: string
-          vendor?: string
-        }
-        Update: {
-          booking_id?: string
-          callee_id?: string
-          callee_token?: string | null
-          caller_id?: string
-          caller_token?: string | null
-          created_at?: string
-          duration_sec?: number | null
-          ended_at?: string | null
-          id?: string
-          room_id?: string
-          started_at?: string | null
-          status?: string
-          updated_at?: string
-          vendor?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "rtc_calls_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "bookings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       search_queries: {
         Row: {
           bhk: number | null
@@ -1691,37 +1632,16 @@ export type Database = {
       }
       settings: {
         Row: {
-          auto_cancel_minutes: number
-          cleaning_enabled: boolean
-          cook_enabled: boolean
-          id: number
-          maid_enabled: boolean
-          operating_end_time: string
-          operating_start_time: string
-          scheduled_dispatch_minutes: number
-          updated_at: string | null
+          key: string
+          value: string
         }
         Insert: {
-          auto_cancel_minutes?: number
-          cleaning_enabled?: boolean
-          cook_enabled?: boolean
-          id?: number
-          maid_enabled?: boolean
-          operating_end_time?: string
-          operating_start_time?: string
-          scheduled_dispatch_minutes?: number
-          updated_at?: string | null
+          key: string
+          value: string
         }
         Update: {
-          auto_cancel_minutes?: number
-          cleaning_enabled?: boolean
-          cook_enabled?: boolean
-          id?: number
-          maid_enabled?: boolean
-          operating_end_time?: string
-          operating_start_time?: string
-          scheduled_dispatch_minutes?: number
-          updated_at?: string | null
+          key?: string
+          value?: string
         }
         Relationships: []
       }
@@ -2639,13 +2559,6 @@ export type Database = {
       get_booking_assignment_status: {
         Args: { p_booking_id: string }
         Returns: Json
-      }
-      get_booking_participants: {
-        Args: { p_booking_id: string }
-        Returns: {
-          user_id: string
-          worker_id: string
-        }[]
       }
       get_booking_status: { Args: { p_booking_id: string }; Returns: Json }
       get_legal_pdfs: {

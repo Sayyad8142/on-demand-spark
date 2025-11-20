@@ -5,7 +5,6 @@ import { MapPin, Home, User, Check, ChevronDown } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
 type Booking = Database["public"]["Tables"]["bookings"]["Row"];
 interface ActiveJobCardProps {
   booking: Booking;
@@ -24,7 +23,6 @@ export default function ActiveJobCard({
   updating
 }: ActiveJobCardProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const { toast } = useToast();
   const statusColor = STATUS_COLORS[booking.status as keyof typeof STATUS_COLORS] || 'bg-secondary';
 
   // Don't show for completed or cancelled bookings
@@ -37,24 +35,24 @@ export default function ActiveJobCard({
       <div className="p-4 space-y-3">
         {/* 1. Flat Number Display */}
         <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-sm">
-          <p className="font-extrabold text-center text-green-500 mb-4 text-2xl tracking-tight">FLAT NO : {booking.flat_no}</p>
+          <p className="font-extrabold text-center text-red-500 mb-4 text-2xl tracking-tight">FLAT NO : {booking.flat_no}</p>
           {booking.flat_no && booking.flat_no.toString().length === 4 && <div className="grid grid-cols-3 gap-4">
               <div className="text-center">
                 <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">TOWER</p>
                 <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
-                  <p className="text-3xl font-extrabold text-green-500">{booking.flat_no.toString().charAt(0)}</p>
+                  <p className="text-3xl font-extrabold text-red-500">{booking.flat_no.toString().charAt(0)}</p>
                 </div>
               </div>
               <div className="text-center">
                 <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">FLOOR</p>
                 <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
-                  <p className="text-3xl font-extrabold text-green-500">{booking.flat_no.toString().substring(1, 3)}</p>
+                  <p className="text-3xl font-extrabold text-red-500">{booking.flat_no.toString().substring(1, 3)}</p>
                 </div>
               </div>
               <div className="text-center">
                 <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">DOOR</p>
                 <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
-                  <p className="text-3xl font-extrabold text-green-500">{booking.flat_no.toString().charAt(3)}</p>
+                  <p className="text-3xl font-extrabold text-red-500">{booking.flat_no.toString().charAt(3)}</p>
                 </div>
               </div>
             </div>}
@@ -110,17 +108,7 @@ export default function ActiveJobCard({
         <Button 
           size="lg" 
           className="w-full h-14 text-lg font-bold bg-red-500 hover:bg-red-600 text-white shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98]" 
-          onClick={() => {
-            if (localStorage.getItem('guest_mode') === 'true') {
-              toast({
-                title: "Guest Mode",
-                description: "Please create an account to update job status",
-                variant: "destructive"
-              });
-              return;
-            }
-            onStatusUpdate('completed');
-          }}
+          onClick={() => onStatusUpdate('completed')} 
           disabled={updating}
         >
           {updating ? "Updating..." : <>

@@ -1,23 +1,12 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
-import { DEMO_WORKER } from "@/config/demoData";
 
 type Worker = Database["public"]["Tables"]["workers"]["Row"];
 
 export function useWorkerProfile(userId: string | undefined) {
   const [worker, setWorker] = useState<Worker | null>(null);
   const [loading, setLoading] = useState(true);
-  const isGuestMode = localStorage.getItem('guest_mode') === 'true';
-
-  // Return demo data in guest mode
-  useEffect(() => {
-    if (isGuestMode) {
-      setWorker(DEMO_WORKER);
-      setLoading(false);
-      return;
-    }
-  }, [isGuestMode]);
 
   const fetchWorker = async () => {
     if (!userId) return;
@@ -88,7 +77,7 @@ export function useWorkerProfile(userId: string | undefined) {
   }, [userId]);
 
   const updateAvailability = async (isAvailable: boolean) => {
-    if (!userId || isGuestMode) return;
+    if (!userId) return;
 
     try {
       // Use RPC function to update availability with proper permissions
@@ -120,7 +109,7 @@ export function useWorkerProfile(userId: string | undefined) {
   };
 
   const updateWorker = async (updates: Partial<Worker>) => {
-    if (!userId || isGuestMode) return;
+    if (!userId) return;
 
     try {
       const { error } = await supabase
