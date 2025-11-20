@@ -148,7 +148,10 @@ Deno.serve(async (req) => {
         const isAvailableNow = worker.slots.some((slotStart: string) => {
           // Each slot is 30 minutes, so calculate the end time
           const [hours, minutes] = slotStart.split(':').map(Number);
-          const slotEnd = `${hours.toString().padStart(2, '0')}:${(minutes + 30).toString().padStart(2, '0')}:00`;
+          const endMinutes = minutes + 30;
+          const endHours = endMinutes >= 60 ? hours + 1 : hours;
+          const normalizedEndMinutes = endMinutes >= 60 ? endMinutes - 60 : endMinutes;
+          const slotEnd = `${endHours.toString().padStart(2, '0')}:${normalizedEndMinutes.toString().padStart(2, '0')}:00`;
           return timeString >= slotStart && timeString < slotEnd;
         });
         if (isAvailableNow) {
@@ -182,7 +185,14 @@ Deno.serve(async (req) => {
     workersQuery = workersQuery.in("id", Array.from(availableWorkerIds));
     console.log(`🔍 Filtering by ${availableWorkerIds.size} workers with matching availability`);
   } else {
-    console.log("⚠️ No workers have availability set for current time slot - skipping availability filter");
+    console.log("⚠️ No workers have availability set for current time slot - no notifications will be sent");
+    return new Response(
+      JSON.stringify({ 
+        message: 'No workers available for this time slot',
+        booking_id: booking_id
+      }), 
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
   
   const { data: workers, error: we } = await workersQuery;
