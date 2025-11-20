@@ -7,6 +7,7 @@
     "description": "Sign in or create an account to get started",
     "signIn": "Sign In",
     "signUp": "Sign Up",
+    "loginAsGuest": "Login as Guest",
     "enterPhone": "Enter your phone number",
     "phoneLabel": "Phone Number",
     "phonePlaceholder": "10-digit phone number",
