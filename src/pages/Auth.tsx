@@ -644,8 +644,8 @@ export default function Auth() {
       </div>
 
       {/* Guest Login Section */}
-      <Card className="w-full">
-        <CardContent className="pt-6 space-y-4">
+      <div className="w-full">
+        <div className="pt-6 space-y-4">
           <div className="text-center space-y-2">
             
             <Button variant="outline" className="w-full" onClick={() => {
@@ -660,8 +660,8 @@ export default function Auth() {
             </Button>
             
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
       </div>
     </div>;
 }
