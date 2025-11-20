@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     // Load booking details (community is TEXT field, not FK)
     const { data: b, error: be } = await supabase
       .from("bookings")
-      .select("id, status, service_type, community, cust_name, cust_phone, flat_no, price_inr")
+      .select("id, status, service_type, community, cust_name, cust_phone, flat_no, price_inr, scheduled_date, scheduled_time")
       .eq("id", booking_id)
       .single();
       
@@ -103,8 +103,22 @@ Deno.serve(async (req) => {
       );
     }
 
-  // Get current time in Asia/Kolkata timezone
-  const now = new Date();
+  // Determine which time to check - scheduled time or current time
+  let checkTime: Date;
+  let checkTimeString: string;
+  let checkDayOfWeek: number;
+  
+  if (b.scheduled_date && b.scheduled_time) {
+    // For scheduled bookings, check availability at the scheduled time
+    const scheduledDateTime = new Date(`${b.scheduled_date}T${b.scheduled_time}`);
+    checkTime = scheduledDateTime;
+    console.log(`📅 Scheduled booking - checking availability for: ${b.scheduled_date} ${b.scheduled_time}`);
+  } else {
+    // For instant bookings, check current time
+    checkTime = new Date();
+    console.log(`📅 Instant booking - checking availability for current time`);
+  }
+
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Kolkata',
     hour: '2-digit',
@@ -112,24 +126,25 @@ Deno.serve(async (req) => {
     second: '2-digit',
     hour12: false
   });
-  const timeString = formatter.format(now);
+  checkTimeString = formatter.format(checkTime);
+  
   const weekdayFormatter = new Intl.DateTimeFormat('en-US', { 
     timeZone: 'Asia/Kolkata', 
     weekday: 'short' 
   });
-  const weekday = weekdayFormatter.format(now);
+  const weekday = weekdayFormatter.format(checkTime);
   const weekdayMap: Record<string, number> = {
     'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 0
   };
-  const currentDayOfWeek = weekdayMap[weekday];
+  checkDayOfWeek = weekdayMap[weekday];
 
-  console.log(`📅 Current time in Kolkata: ${timeString} on day ${currentDayOfWeek} (${weekday})`);
+  console.log(`📅 Checking availability for: ${checkTimeString} on day ${checkDayOfWeek} (${weekday})`);
 
-  // Get workers with availability for current time
+  // Get workers with availability for the check time
   const { data: availableWorkers, error: availError } = await supabase
     .from('worker_availability')
     .select('worker_id, slots')
-    .eq('day_of_week', currentDayOfWeek);
+    .eq('day_of_week', checkDayOfWeek);
 
   if (availError) {
     console.error('Error fetching availability:', availError);
@@ -139,29 +154,29 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Filter workers whose current time falls within their selected slots
+  // Filter workers whose check time falls within their selected slots
   const availableWorkerIds = new Set<string>();
   if (availableWorkers) {
     availableWorkers.forEach((worker) => {
       if (worker.slots && Array.isArray(worker.slots)) {
-        // Check if current time falls within any of the worker's slots
-        const isAvailableNow = worker.slots.some((slotStart: string) => {
+        // Check if check time falls within any of the worker's slots
+        const isAvailableAtTime = worker.slots.some((slotStart: string) => {
           // Each slot is 30 minutes, so calculate the end time
           const [hours, minutes] = slotStart.split(':').map(Number);
           const endMinutes = minutes + 30;
           const endHours = endMinutes >= 60 ? hours + 1 : hours;
           const normalizedEndMinutes = endMinutes >= 60 ? endMinutes - 60 : endMinutes;
           const slotEnd = `${endHours.toString().padStart(2, '0')}:${normalizedEndMinutes.toString().padStart(2, '0')}:00`;
-          return timeString >= slotStart && timeString < slotEnd;
+          return checkTimeString >= slotStart && checkTimeString < slotEnd;
         });
-        if (isAvailableNow) {
+        if (isAvailableAtTime) {
           availableWorkerIds.add(worker.worker_id);
         }
       }
     });
   }
 
-  console.log(`Found ${availableWorkerIds.size} workers available at ${timeString} on day ${currentDayOfWeek}`);
+  console.log(`Found ${availableWorkerIds.size} workers available at ${checkTimeString} on day ${checkDayOfWeek}`);
 
   // Query for eligible workers based on service type, community, and availability
   let workersQuery = supabase
