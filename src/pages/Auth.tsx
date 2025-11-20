@@ -663,35 +663,6 @@ export default function Auth() {
         </CardContent>
       </Card>
 
-      {/* Login as Guest */}
-      <Card className="bg-background/80 backdrop-blur-sm">
-        <CardContent className="pt-6">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              localStorage.setItem('guest_mode', 'true');
-              navigate('/home');
-            }}
-            className="w-full"
-          >
-            {t('auth.loginAsGuest')}
-          </Button>
-          <p className="text-xs text-muted-foreground text-center mt-3">
-            Explore the app without signing up
-          </p>
-          <div className="mt-3 pt-3 border-t border-border">
-            <p className="text-xs text-muted-foreground text-center mb-1">
-              Need help? Contact us:
-            </p>
-            <div className="flex flex-col items-center gap-1 text-xs">
-              <span className="text-primary">📧 team@didisnow.com</span>
-              <span className="text-primary">📞 +91 80081 80018</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Language Selector - Below Card */}
       <div className="flex items-center justify-center gap-2 bg-background/80 backdrop-blur-sm rounded-full shadow-lg p-2">
         <Button
