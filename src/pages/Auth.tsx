@@ -153,6 +153,43 @@ export default function Auth() {
       return;
     }
 
+    // Demo mode: Auto-login for Play Store reviewers
+    if (signInPhone === "9999999999") {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: "demo@didisnow.app",
+          password: "DemoPartner2025!"
+        });
+        
+        if (error) throw error;
+        if (!data.user) throw new Error("Demo login failed");
+
+        // CRITICAL: Save JWT to native storage immediately for overlay functionality
+        if (Capacitor.isNativePlatform() && AuthBridge && data.session?.access_token) {
+          console.log('🔐 [Demo Auth] Saving JWT immediately...');
+          try {
+            await AuthBridge.saveToken({ token: data.session.access_token });
+            console.log('✅ [Demo Auth] JWT saved successfully');
+          } catch (err) {
+            console.error('❌ [Demo Auth] Failed to save JWT:', err);
+          }
+        }
+
+        // Set demo mode flag
+        localStorage.setItem('demo_mode', 'true');
+        
+        toast({ title: "Demo Mode Activated", description: "Logged in as demo user for Play Store review" });
+        navigate("/home");
+        return;
+      } catch (error: any) {
+        toast({ title: "Demo Login Error", description: error.message, variant: "destructive" });
+        return;
+      } finally {
+        setLoading(false);
+      }
+    }
+
     // SECURITY: Validate phone number format
     const validation = phoneSchema.safeParse(signInPhone);
     if (!validation.success) {
