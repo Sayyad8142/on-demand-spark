@@ -32,12 +32,14 @@ const queryClient = new QueryClient();
 
 function ProtectedRoute({ children, showNav = false }: { children: React.ReactNode; showNav?: boolean }) {
   const { user, loading } = useAuth();
+  const isGuestMode = localStorage.getItem('guest_mode') === 'true';
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
-  if (!user) {
+  // Allow access for authenticated users OR guest mode
+  if (!user && !isGuestMode) {
     return <Navigate to="/auth" replace />;
   }
 
