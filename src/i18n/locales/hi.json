@@ -7,6 +7,7 @@
     "description": "शुरू करने के लिए साइन इन करें या खाता बनाएं",
     "signIn": "साइन इन",
     "signUp": "साइन अप",
+    "loginAsGuest": "अतिथि के रूप में लॉगिन करें",
     "enterPhone": "अपना फोन नंबर दर्ज करें",
     "phoneLabel": "फोन नंबर",
     "phonePlaceholder": "10-अंकीय फोन नंबर",
