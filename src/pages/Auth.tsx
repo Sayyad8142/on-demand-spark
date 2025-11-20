@@ -54,10 +54,11 @@ export default function Auth() {
   const [otpSent, setOtpSent] = useState(false);
   const [communities, setCommunities] = useState<Array<{ name: string; value: string }>>([]);
 
-  // Redirect if already logged in
+  // Redirect if already logged in or in guest mode
   useEffect(() => {
-    if (!authLoading && user) {
-      console.log('👤 User already logged in, redirecting to home');
+    const isGuestMode = localStorage.getItem('guest_mode') === 'true';
+    if (!authLoading && (user || isGuestMode)) {
+      console.log('👤 User already logged in or in guest mode, redirecting to home');
       navigate("/home", { replace: true });
     }
   }, [user, authLoading, navigate]);
@@ -702,6 +703,33 @@ export default function Auth() {
           తెలుగు
         </Button>
       </div>
+
+      {/* Guest Login Section */}
+      <Card className="w-full">
+        <CardContent className="pt-6 space-y-4">
+          <div className="text-center space-y-2">
+            <p className="text-sm text-muted-foreground">Want to explore the app first?</p>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                localStorage.setItem('guest_mode', 'true');
+                toast({ 
+                  title: "Guest Mode", 
+                  description: "You can explore demo features. Create account to receive real bookings." 
+                });
+                navigate('/home');
+              }}
+            >
+              Login as Guest
+            </Button>
+            <div className="text-xs text-muted-foreground space-y-1 pt-2">
+              <p>📧 Email: team@didisnow.com</p>
+              <p>📞 Phone: +91 80081 80018</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       </div>
     </div>
   );
