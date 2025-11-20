@@ -70,19 +70,26 @@ export default function Availability() {
       } = await supabase.from("worker_availability").select("day_of_week, slots").order("day_of_week");
       if (error) throw error;
       if (data && data.length > 0) {
-        const newWeekData = {
-          ...weekData
+        // Start fresh - all slots unselected
+        const newWeekData: Record<DayKey, Slot[]> = {
+          0: generateSlots(),
+          1: generateSlots(),
+          2: generateSlots(),
+          3: generateSlots(),
+          4: generateSlots(),
+          5: generateSlots(),
+          6: generateSlots()
         };
+        
+        // Mark only the saved slots as selected
         data.forEach((row: any) => {
           const dayKey = row.day_of_week as DayKey;
           if (row.slots && Array.isArray(row.slots)) {
-            (row.slots as any[]).forEach((timeSlot: any) => {
-              const timeStr = String(timeSlot);
-              newWeekData[dayKey] = newWeekData[dayKey].map(slot => slot.start === timeStr ? {
-                ...slot,
-                selected: true
-              } : slot);
-            });
+            const savedSlots = new Set(row.slots.map((s: any) => String(s)));
+            newWeekData[dayKey] = newWeekData[dayKey].map(slot => ({
+              ...slot,
+              selected: savedSlots.has(slot.start)
+            }));
           }
         });
         setWeekData(newWeekData);
