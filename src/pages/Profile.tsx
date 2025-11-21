@@ -369,17 +369,35 @@ export default function Profile() {
       }
       
       // Handle regular user logout
-      await supabase.auth.signOut();
-      toast({ 
-        title: "Logged Out", 
-        description: "You have been successfully logged out" 
-      });
+      const { error } = await supabase.auth.signOut();
+      
+      // Clear local storage regardless of error
+      localStorage.clear();
+      
+      // Navigate to auth page regardless of error
       navigate("/auth");
+      
+      // Show appropriate message based on whether logout succeeded
+      if (error) {
+        console.error('Logout error:', error);
+        toast({ 
+          title: "Session Cleared", 
+          description: "You have been logged out locally" 
+        });
+      } else {
+        toast({ 
+          title: "Logged Out", 
+          description: "You have been successfully logged out" 
+        });
+      }
     } catch (error: any) {
+      console.error('Logout exception:', error);
+      // Clear storage and navigate even on exception
+      localStorage.clear();
+      navigate("/auth");
       toast({ 
-        title: "Error", 
-        description: error.message || "Failed to log out", 
-        variant: "destructive" 
+        title: "Session Cleared", 
+        description: "You have been logged out locally" 
       });
     }
   };
