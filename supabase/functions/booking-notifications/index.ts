@@ -128,17 +128,22 @@ Deno.serve(async (req) => {
   });
   checkTimeString = formatter.format(checkTime);
   
-  const weekdayFormatter = new Intl.DateTimeFormat('en-US', { 
-    timeZone: 'Asia/Kolkata', 
-    weekday: 'short' 
+  // Get day of week using Asia/Kolkata timezone
+  // NOTE: Our database uses Monday=0, Tuesday=1, ..., Sunday=6
+  // This matches the Availability page UI numbering
+  const dayFormatter = new Intl.DateTimeFormat('en-US', { 
+    timeZone: 'Asia/Kolkata',
+    weekday: 'short'
   });
-  const weekday = weekdayFormatter.format(checkTime);
+  const weekday = dayFormatter.format(checkTime);
+  
+  // Map weekday names to our database day numbering (Monday=0, Sunday=6)
   const weekdayMap: Record<string, number> = {
-    'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 0
+    'Mon': 0, 'Tue': 1, 'Wed': 2, 'Thu': 3, 'Fri': 4, 'Sat': 5, 'Sun': 6
   };
   checkDayOfWeek = weekdayMap[weekday];
 
-  console.log(`📅 Checking availability for: ${checkTimeString} on day ${checkDayOfWeek} (${weekday})`);
+  console.log(`📅 Checking availability for: ${checkTimeString} on day ${checkDayOfWeek} (${weekday}, where Mon=0...Sun=6)`);
 
   // Get workers with availability for the check time
   const { data: availableWorkers, error: availError } = await supabase
