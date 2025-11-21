@@ -28,23 +28,48 @@ object BatteryOptimizationHelper {
         }
     }
 
-    fun showBatteryDialog(activity: Activity) {
+    fun showPermissionsDialog(activity: Activity) {
         val pm = activity.getSystemService(Context.POWER_SERVICE) as PowerManager
         val packageName = activity.packageName
+        
+        // Check if we need to show the dialog (battery optimization not granted)
+        val needsBatteryPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && 
+            !pm.isIgnoringBatteryOptimizations(packageName)
+        
+        // Check if we need overlay permission
+        val needsOverlayPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && 
+            !android.provider.Settings.canDrawOverlays(activity)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !pm.isIgnoringBatteryOptimizations(packageName)) {
-            // Inflate custom layout with permission descriptions
-            val inflater = activity.layoutInflater
-            val customView = inflater.inflate(R.layout.dialog_permissions, null)
-            
-            AlertDialog.Builder(activity)
-                .setTitle("Allow Background Running")
-                .setView(customView)
-                .setPositiveButton("Allow") { _, _ ->
+        // Only show dialog if at least one permission is needed
+        if (!needsBatteryPermission && !needsOverlayPermission) {
+            android.util.Log.d("Permissions", "✅ All permissions already granted")
+            return
+        }
+
+        android.util.Log.d("Permissions", "📱 Showing unified permissions dialog")
+        
+        // Inflate custom layout with permission descriptions
+        val inflater = activity.layoutInflater
+        val customView = inflater.inflate(R.layout.dialog_permissions, null)
+        
+        AlertDialog.Builder(activity)
+            .setTitle("Required Permissions")
+            .setView(customView)
+            .setPositiveButton("Allow") { _, _ ->
+                // Request battery optimization first
+                if (needsBatteryPermission) {
                     requestIgnoreBatteryOptimizations(activity)
                 }
-                .setNegativeButton("Later", null)
-                .show()
-        }
+                
+                // Then request overlay permission with a slight delay
+                if (needsOverlayPermission) {
+                    android.os.Handler(activity.mainLooper).postDelayed({
+                        OverlayPermissionHelper.request(activity)
+                    }, 500)
+                }
+            }
+            .setNegativeButton("Later", null)
+            .setCancelable(false)
+            .show()
     }
 }

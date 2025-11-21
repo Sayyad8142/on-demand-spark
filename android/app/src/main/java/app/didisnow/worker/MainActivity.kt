@@ -51,14 +51,8 @@ class MainActivity : BridgeActivity() {
         
         android.util.Log.d("MainActivity", "🚀 App starting - checking permissions")
         
-        // Request battery optimization exemption to keep foreground service running
-        BatteryOptimizationHelper.showBatteryDialog(this)
-        
-        // Delay overlay permission dialog slightly so it doesn't conflict with battery dialog
-        android.os.Handler(mainLooper).postDelayed({
-            android.util.Log.d("MainActivity", "📱 Requesting overlay permission")
-            OverlayPermissionHelper.showOverlayPermissionDialog(this)
-        }, 1500)
+        // Show unified permissions dialog (battery + overlay)
+        BatteryOptimizationHelper.showPermissionsDialog(this)
         
         // Handle intent if launched from overlay
         handleNavigationIntent(intent)
