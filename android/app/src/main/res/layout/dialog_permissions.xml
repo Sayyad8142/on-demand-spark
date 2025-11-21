@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="16dp">
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
+    android:orientation="vertical"
+    android:padding="20dp">
 
         <!-- Device Permission -->
         <LinearLayout
@@ -37,14 +33,14 @@
                     android:text="Device Permission"
                     android:textStyle="bold"
                     android:textSize="16sp"
-                    android:textColor="?android:attr/textColorPrimary" />
+                    android:textColor="#000000" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="We need basic device permission to keep your account active and run essential background processes."
-                    android:textSize="14sp"
-                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="13sp"
+                    android:textColor="#666666"
                     android:layout_marginTop="4dp" />
             </LinearLayout>
         </LinearLayout>
@@ -78,14 +74,14 @@
                     android:text="Notifications Permission"
                     android:textStyle="bold"
                     android:textSize="16sp"
-                    android:textColor="?android:attr/textColorPrimary" />
+                    android:textColor="#000000" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Allow notifications so you get booking alerts instantly."
-                    android:textSize="14sp"
-                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="13sp"
+                    android:textColor="#666666"
                     android:layout_marginTop="4dp" />
             </LinearLayout>
         </LinearLayout>
@@ -116,20 +112,19 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Service Availability Permission"
+                    android:text="Display Over Apps Permission"
                     android:textStyle="bold"
                     android:textSize="16sp"
-                    android:textColor="?android:attr/textColorPrimary" />
+                    android:textColor="#000000" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Enable service permission so the app can function properly when you receive a booking."
-                    android:textSize="14sp"
-                    android:textColor="?android:attr/textColorSecondary"
+                    android:text="Show booking alerts over other apps so you never miss an opportunity."
+                    android:textSize="13sp"
+                    android:textColor="#666666"
                     android:layout_marginTop="4dp" />
             </LinearLayout>
         </LinearLayout>
 
-    </LinearLayout>
-</ScrollView>
+</LinearLayout>
