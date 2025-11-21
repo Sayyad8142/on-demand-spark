@@ -10,6 +10,20 @@ import android.provider.Settings
 import androidx.appcompat.app.AlertDialog
 
 object BatteryOptimizationHelper {
+    fun showBatteryDialog(activity: Activity) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val packageName = activity.packageName
+                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+                activity.startActivity(intent)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("BatteryOptimizationHelper", "Failed to show battery optimization dialog", e)
+        }
+    }
+    
     fun requestIgnoreBatteryOptimizations(context: Context) {
         try {
             val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
