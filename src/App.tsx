@@ -10,7 +10,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAppState } from "@/hooks/useAppState";
 import { initNativePush } from "@/native/push";
 import { requestAndroidOverlay } from "@/lib/overlay";
-import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
 import { tryAccept } from "@/lib/bookingActions";
 import { requestLocationPermissions } from "@/lib/backgroundLocation";
 import Auth from "./pages/Auth";
@@ -115,23 +114,6 @@ const App = () => {
     }
     // Web push registration is now done manually via /troubleshoot or /verify-push pages
   }, [session?.user?.id]);
-
-  // Start/stop foreground service based on login state
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
-      return;
-    }
-
-    if (session?.user) {
-      // User is logged in - start foreground service
-      console.log("User logged in, starting foreground service");
-      startForegroundService();
-    } else {
-      // User is logged out - stop foreground service
-      console.log("User logged out, stopping foreground service");
-      stopForegroundService();
-    }
-  }, [session?.user]);
 
   // Handle deep links for booking acceptance
   useEffect(() => {

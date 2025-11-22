@@ -17,7 +17,6 @@ import {
   checkOverlayPermission,
   openAndroidOverlaySettings 
 } from "@/native/overlay";
-import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
 import { usePushRegister } from "@/hooks/usePushRegister";
 import { supabase } from "@/integrations/supabase/client";
 import { SimulatedOverlayModal } from "@/components/SimulatedOverlayModal";
@@ -89,14 +88,12 @@ export default function Settings() {
     try {
       if (enabled) {
         localStorage.setItem('overlay_mode', 'enabled');
-        await startForegroundService();
         toast({
           title: "Booking alerts activated",
           description: "You'll receive overlay alerts for new bookings"
         });
       } else {
         localStorage.removeItem('overlay_mode');
-        await stopForegroundService();
         toast({
           title: "Booking alerts deactivated",
           description: "You won't receive overlay alerts"
