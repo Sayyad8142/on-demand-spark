@@ -13,13 +13,7 @@ import com.getcapacitor.annotation.CapacitorPlugin
 class ForegroundServicePlugin : Plugin() {
     @com.getcapacitor.PluginMethod
     fun start(call: com.getcapacitor.PluginCall) {
-        val intent = Intent(context, BookingForegroundService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(intent)
-        } else {
-            context.startService(intent)
-        }
-        
+        // Foreground service removed - FCM handles notifications
         // Save login state to persist across reboots
         val prefs = context.getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
         prefs.edit().putBoolean("is_logged_in", true).apply()
@@ -29,9 +23,7 @@ class ForegroundServicePlugin : Plugin() {
 
     @com.getcapacitor.PluginMethod
     fun stop(call: com.getcapacitor.PluginCall) {
-        val intent = Intent(context, BookingForegroundService::class.java)
-        context.stopService(intent)
-        
+        // Foreground service removed - FCM handles notifications
         // Clear login state
         val prefs = context.getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
         prefs.edit().putBoolean("is_logged_in", false).apply()

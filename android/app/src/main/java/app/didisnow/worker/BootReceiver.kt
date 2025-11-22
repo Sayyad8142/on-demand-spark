@@ -19,14 +19,8 @@ class BootReceiver : BroadcastReceiver() {
             Log.d("BootReceiver", "Device booted, was logged in: $wasLoggedIn, was available: $wasAvailable")
             
             if (wasLoggedIn) {
-                // Start booking notification service
-                val bookingServiceIntent = Intent(context, BookingForegroundService::class.java)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(bookingServiceIntent)
-                } else {
-                    context.startService(bookingServiceIntent)
-                }
-                Log.d("BootReceiver", "BookingForegroundService restarted after boot")
+                // No foreground service needed - FCM handles notifications
+                Log.d("BootReceiver", "Device booted, no foreground service – FCM handles notifications")
                 
                 // If user was available, restart location tracking
                 if (wasAvailable) {
