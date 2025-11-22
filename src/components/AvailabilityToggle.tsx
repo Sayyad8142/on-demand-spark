@@ -3,8 +3,6 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { startForegroundService, stopForegroundService } from "@/lib/foregroundService";
-import { Capacitor } from '@capacitor/core';
 interface AvailabilityToggleProps {
   workerId: string;
   className?: string;
@@ -36,10 +34,6 @@ export function AvailabilityToggle({
   const handleToggle = async (checked: boolean) => {
     setLoading(true);
     try {
-      if (checked && Capacitor.isNativePlatform()) {
-        // Start native foreground service for notifications
-        await startForegroundService();
-      }
       const {
         data,
         error
@@ -48,10 +42,6 @@ export function AvailabilityToggle({
       });
       if (error) throw error;
       setIsAvailable(checked);
-      if (!checked && Capacitor.isNativePlatform()) {
-        // Stop native foreground service
-        await stopForegroundService();
-      }
       toast({
         title: checked ? "Now Available" : "Now Unavailable",
         description: checked ? "You will receive booking alerts" : "You will not receive booking alerts"
