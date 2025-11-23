@@ -60,11 +60,8 @@ public class OverlayPlugin extends Plugin {
             Context ctx = getContext();
             Intent intent = new Intent(ctx, BookingOverlayService.class);
             intent.putExtra("mode", "idle");
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                ctx.startForegroundService(intent);
-            } else {
-                ctx.startService(intent);
-            }
+            // Use regular startService since BookingOverlayService is no longer a foreground service
+            ctx.startService(intent);
             call.resolve();
         } catch (Exception e) {
             call.reject("Start service error: " + e.getMessage());
@@ -99,11 +96,8 @@ public class OverlayPlugin extends Plugin {
             intent.putExtra("flat_no", b.optString("flat_no", ""));
             intent.putExtra("price_inr", b.optInt("price_inr", 0));
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                ctx.startForegroundService(intent);
-            } else {
-                ctx.startService(intent);
-            }
+            // Use regular startService since BookingOverlayService is no longer a foreground service
+            ctx.startService(intent);
             call.resolve();
         } catch (Exception e) {
             call.reject("Show overlay error: " + e.getMessage());
@@ -116,11 +110,8 @@ public class OverlayPlugin extends Plugin {
             Context ctx = getContext();
             Intent intent = new Intent(ctx, BookingOverlayService.class);
             intent.putExtra("mode", "hide");
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                ctx.startForegroundService(intent);
-            } else {
-                ctx.startService(intent);
-            }
+            // Use regular startService since BookingOverlayService is no longer a foreground service
+            ctx.startService(intent);
             call.resolve();
         } catch (Exception e) {
             call.reject("Hide overlay error: " + e.getMessage());

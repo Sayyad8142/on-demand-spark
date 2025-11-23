@@ -115,11 +115,8 @@ public class MyFirebaseService extends FirebaseMessagingService {
         Log.d(TAG, "🚀 Starting BookingOverlayService with mode=show...");
         
         try {
-          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            androidx.core.content.ContextCompat.startForegroundService(this, serviceIntent);
-          } else {
-            startService(serviceIntent);
-          }
+          // Use regular startService since BookingOverlayService is no longer a foreground service
+          startService(serviceIntent);
           Log.d(TAG, "✅ BookingOverlayService started successfully");
         } catch (Exception se) {
           Log.e(TAG, "❌ startForegroundService failed, falling back to BookingAlertActivity", se);
