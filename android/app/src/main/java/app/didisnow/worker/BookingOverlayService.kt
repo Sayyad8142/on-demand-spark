@@ -106,9 +106,8 @@ class BookingOverlayService : Service() {
         OverlaySingleton.isShowing = true
         
         try {
-            // Create notification channel and start foreground
-            createNotificationChannel()
-            startForegroundService()
+            // No foreground service needed for overlay
+            android.util.Log.d("BookingOverlay", "✅ Service starting without foreground mode")
             
             val mode = intent?.getStringExtra("mode") ?: "show"
             android.util.Log.d("BookingOverlay", "🎯 Mode: $mode")
@@ -241,28 +240,8 @@ class BookingOverlayService : Service() {
     }
 
     private fun startForegroundService() {
-        try {
-            val notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-                .setContentTitle("Booking Alert Active")
-                .setContentText("Ready to receive booking notifications")
-                .setSmallIcon(R.drawable.ic_notification)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
-                .setOngoing(true)
-                .build()
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                // Android 14+ (SDK 34+) - use DATA_SYNC type explicitly
-                startForeground(NOTIFICATION_ID, notification, 
-                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-                android.util.Log.d("BookingOverlay", "✅ FGS started as DATA_SYNC (Android 14+)")
-            } else {
-                startForeground(NOTIFICATION_ID, notification)
-                android.util.Log.d("BookingOverlay", "✅ FGS started (Android < 14)")
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("BookingOverlay", "❌ FGS start error", e)
-            throw e
-        }
+        // Foreground service removed - overlay works without foreground service
+        android.util.Log.d("BookingOverlay", "✅ Overlay service starting (no foreground required)")
     }
 
     private fun showOverlay(bookingId: String, customer: String, community: String, serviceType: String, flatNo: String, price: Int) {
