@@ -2665,6 +2665,13 @@ export type Database = {
         Returns: number
       }
       get_worker_contact: { Args: { p_booking_id: string }; Returns: Json }
+      get_workers_for_notification: {
+        Args: { p_community: string; p_service_type: string }
+        Returns: {
+          fcm_token: string
+          worker_id: string
+        }[]
+      }
       handle_assignment_timeout: {
         Args: { p_assignment_id: string }
         Returns: Json
@@ -2960,6 +2967,17 @@ export type Database = {
           p_worker_id: string
         }
         Returns: Json
+      }
+      send_fcm_to_worker: {
+        Args: {
+          p_booking_id: string
+          p_community: string
+          p_customer_name: string
+          p_fcm_token: string
+          p_flat_no: string
+          p_service_type: string
+        }
+        Returns: boolean
       }
       send_real_fcm_notification: {
         Args: {
