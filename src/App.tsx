@@ -85,31 +85,6 @@ const App = () => {
   useAppState(); // Refresh JWT when app comes to foreground
   const { needsUpdate, loading: updateCheckLoading } = useForceUpdateCheck();
 
-  // If update is required, show only the force update screen
-  if (needsUpdate) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <ForceUpdateScreen />
-        </TooltipProvider>
-      </QueryClientProvider>
-    );
-  }
-
-  // Show loading while checking for updates
-  if (updateCheckLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground">Checking for updates...</p>
-        </div>
-      </div>
-    );
-  }
-
   // Request location permissions on app startup for native platforms
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
@@ -178,6 +153,31 @@ const App = () => {
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
   }, []);
+
+  // If update is required, show only the force update screen
+  if (needsUpdate) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <ForceUpdateScreen />
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  // Show loading while checking for updates
+  if (updateCheckLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Checking for updates...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
