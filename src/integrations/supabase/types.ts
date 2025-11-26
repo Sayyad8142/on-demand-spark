@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_config: {
+        Row: {
+          created_at: string | null
+          id: string
+          min_worker_version_code: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          min_worker_version_code?: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          min_worker_version_code?: number
+        }
+        Relationships: []
+      }
       assignments: {
         Row: {
           booking_id: string
