@@ -9,8 +9,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Search, MapPin, Calendar, Loader2, User } from "lucide-react";
 import { DEMO_BOOKINGS } from "@/config/demoData";
+import { formatBookingAddress, BookingWithAddress } from "@/lib/address";
 
-type Booking = Database["public"]["Tables"]["bookings"]["Row"];
+type Booking = BookingWithAddress;
 
 export default function Bookings() {
   const navigate = useNavigate();
@@ -162,7 +163,7 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
 
       {/* Flat Number Display */}
       <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-2 shadow-sm">
-        <p className={`font-extrabold text-center ${numberColor} text-xl tracking-tight`}>FLAT NO : {booking.flat_no}</p>
+        <p className={`font-extrabold text-center ${numberColor} text-xl tracking-tight`}>{formatBookingAddress(booking)}</p>
       </div>
 
       {/* Customer Name */}

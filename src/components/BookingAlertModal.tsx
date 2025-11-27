@@ -2,15 +2,9 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { MapPin, User, IndianRupee, Clock } from "lucide-react";
+import { formatBookingAddress, BookingWithAddress } from "@/lib/address";
 
-type BookingAlert = {
-  id: string;
-  service_type: string;
-  cust_name: string;
-  community: string;
-  flat_no: string;
-  price_inr: number;
-};
+type BookingAlert = BookingWithAddress;
 
 export function BookingAlertModal({
   open,
@@ -75,7 +69,7 @@ export function BookingAlertModal({
             <MapPin className="w-5 h-5 text-muted-foreground flex-shrink-0" />
             <div className="flex-1">
               <div className="font-medium">{booking.community}</div>
-              <div className="text-sm text-muted-foreground">Flat #{booking.flat_no}</div>
+              <div className="text-sm text-muted-foreground">{formatBookingAddress(booking)}</div>
             </div>
           </div>
 

@@ -493,6 +493,38 @@ export type Database = {
           },
         ]
       }
+      buildings: {
+        Row: {
+          community_id: string
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          community_id: string
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          community_id?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buildings_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       callback_requests: {
         Row: {
           best_time: string | null
@@ -533,7 +565,9 @@ export type Database = {
         Row: {
           center_lat: number | null
           center_lng: number | null
+          city: string | null
           created_at: string
+          flat_format: string | null
           id: string
           is_active: boolean
           name: string
@@ -544,7 +578,9 @@ export type Database = {
         Insert: {
           center_lat?: number | null
           center_lng?: number | null
+          city?: string | null
           created_at?: string
+          flat_format?: string | null
           id?: string
           is_active?: boolean
           name: string
@@ -555,7 +591,9 @@ export type Database = {
         Update: {
           center_lat?: number | null
           center_lng?: number | null
+          city?: string | null
           created_at?: string
+          flat_format?: string | null
           id?: string
           is_active?: boolean
           name?: string
@@ -893,6 +931,60 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flats: {
+        Row: {
+          building_id: string | null
+          community_id: string
+          created_at: string | null
+          display_name: string | null
+          door: number | null
+          flat_no: string
+          floor: number | null
+          id: string
+          tower: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          building_id?: string | null
+          community_id: string
+          created_at?: string | null
+          display_name?: string | null
+          door?: number | null
+          flat_no: string
+          floor?: number | null
+          id?: string
+          tower?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          building_id?: string | null
+          community_id?: string
+          created_at?: string | null
+          display_name?: string | null
+          door?: number | null
+          flat_no?: string
+          floor?: number | null
+          id?: string
+          tower?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flats_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flats_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
             referencedColumns: ["id"]
           },
         ]
@@ -1391,8 +1483,11 @@ export type Database = {
       }
       profiles: {
         Row: {
+          building_id: string | null
           community: string
+          community_id: string | null
           created_at: string
+          flat_id: string | null
           flat_no: string
           full_name: string
           id: string
@@ -1404,8 +1499,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          building_id?: string | null
           community: string
+          community_id?: string | null
           created_at?: string
+          flat_id?: string | null
           flat_no: string
           full_name: string
           id?: string
@@ -1417,8 +1515,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          building_id?: string | null
           community?: string
+          community_id?: string | null
           created_at?: string
+          flat_id?: string | null
           flat_no?: string
           full_name?: string
           id?: string
@@ -1429,7 +1530,29 @@ export type Database = {
           tos_accepted_at?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_flat_id_fkey"
+            columns: ["flat_id"]
+            isOneToOne: false
+            referencedRelation: "flats"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       properties: {
         Row: {

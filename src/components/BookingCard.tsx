@@ -3,11 +3,11 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Calendar, CheckCircle, XCircle, Loader2, User } from 'lucide-react';
-import { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { tryAccept } from '@/lib/bookingActions';
+import { formatBookingAddress, BookingWithAddress } from '@/lib/address';
 
-type Booking = Database['public']['Tables']['bookings']['Row'];
+type Booking = BookingWithAddress;
 
 interface BookingCardProps {
   booking: Booking;
@@ -99,7 +99,7 @@ export function BookingCard({
             )}
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <MapPin className="w-3 h-3" />
-              {booking.community} • {booking.flat_no}
+              {booking.community} • {formatBookingAddress(booking)}
             </div>
           </div>
         </div>
