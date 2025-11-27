@@ -5,7 +5,9 @@ import { MapPin, Home, User, Check, ChevronDown } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useState } from "react";
-type Booking = Database["public"]["Tables"]["bookings"]["Row"];
+import { formatBookingAddress, parsePHFCode, BookingWithAddress } from "@/lib/address";
+
+type Booking = BookingWithAddress;
 interface ActiveJobCardProps {
   booking: Booking;
   onStatusUpdate: (newStatus: string) => Promise<void>;
@@ -31,28 +33,32 @@ export default function ActiveJobCard({
     return null;
   }
   console.log('✅ ActiveJobCard: Showing card, status is:', booking.status);
+  
+  const formattedAddress = formatBookingAddress(booking);
+  const phfParsed = parsePHFCode(booking.flat_no);
+  
   return <Card className="shadow-lg overflow-hidden border-0">
       <div className="p-4 space-y-3">
         {/* 1. Flat Number Display */}
         <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-sm">
-          <p className="font-extrabold text-center text-green-500 mb-4 text-2xl tracking-tight">FLAT NO : {booking.flat_no}</p>
-          {booking.flat_no && booking.flat_no.toString().length === 4 && <div className="grid grid-cols-3 gap-4">
+          <p className="font-extrabold text-center text-green-500 mb-4 text-2xl tracking-tight">{formattedAddress}</p>
+          {phfParsed && <div className="grid grid-cols-3 gap-4">
               <div className="text-center">
                 <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">TOWER</p>
                 <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
-                  <p className="text-3xl font-extrabold text-green-500">{booking.flat_no.toString().charAt(0)}</p>
+                  <p className="text-3xl font-extrabold text-green-500">{phfParsed.tower}</p>
                 </div>
               </div>
               <div className="text-center">
                 <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">FLOOR</p>
                 <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
-                  <p className="text-3xl font-extrabold text-green-500">{booking.flat_no.toString().substring(1, 3)}</p>
+                  <p className="text-3xl font-extrabold text-green-500">{phfParsed.floor}</p>
                 </div>
               </div>
               <div className="text-center">
                 <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">DOOR</p>
                 <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
-                  <p className="text-3xl font-extrabold text-green-500">{booking.flat_no.toString().charAt(3)}</p>
+                  <p className="text-3xl font-extrabold text-green-500">{phfParsed.door}</p>
                 </div>
               </div>
             </div>}

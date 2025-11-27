@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Database } from '@/integrations/supabase/types';
+import { formatBookingAddress, BookingWithAddress } from '@/lib/address';
 
-type Booking = Database['public']['Tables']['bookings']['Row'];
+type Booking = BookingWithAddress;
 
 interface SimulatedOverlayModalProps {
   open: boolean;
@@ -80,7 +80,7 @@ export function SimulatedOverlayModal({
             <div className="text-sm space-y-1">
               <div className="font-medium">{booking.cust_name}</div>
               <div className="text-muted-foreground">
-                {booking.community} • #{booking.flat_no}
+                {booking.community} • {formatBookingAddress(booking)}
               </div>
               {booking.notes && (
                 <div className="text-sm text-muted-foreground mt-2 p-2 bg-background rounded">
