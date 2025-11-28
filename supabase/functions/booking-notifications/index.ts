@@ -159,23 +159,26 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Filter workers whose check time falls within their selected slots
+  // Round check time down to nearest 30-minute slot
+  // For example: 15:46:55 becomes 15:30, 16:12:00 becomes 16:00
+  const [checkHours, checkMinutes] = checkTimeString.split(':').map(Number);
+  const roundedMinutes = checkMinutes < 30 ? 0 : 30;
+  const roundedSlot = `${checkHours.toString().padStart(2, '0')}:${roundedMinutes.toString().padStart(2, '0')}`;
+  
+  console.log(`🕐 Rounded booking time ${checkTimeString} to slot: ${roundedSlot}`);
+
+  // Filter workers who have this specific slot selected
   const availableWorkerIds = new Set<string>();
   if (availableWorkers) {
     availableWorkers.forEach((worker) => {
       if (worker.slots && Array.isArray(worker.slots)) {
-        // Check if check time falls within any of the worker's slots
-        const isAvailableAtTime = worker.slots.some((slotStart: string) => {
-          // Each slot is 30 minutes, so calculate the end time
-          const [hours, minutes] = slotStart.split(':').map(Number);
-          const endMinutes = minutes + 30;
-          const endHours = endMinutes >= 60 ? hours + 1 : hours;
-          const normalizedEndMinutes = endMinutes >= 60 ? endMinutes - 60 : endMinutes;
-          const slotEnd = `${endHours.toString().padStart(2, '0')}:${normalizedEndMinutes.toString().padStart(2, '0')}:00`;
-          return checkTimeString >= slotStart && checkTimeString < slotEnd;
-        });
-        if (isAvailableAtTime) {
+        // Check if the worker has the specific rounded slot in their slots array
+        const hasSlot = worker.slots.includes(roundedSlot);
+        if (hasSlot) {
           availableWorkerIds.add(worker.worker_id);
+          console.log(`✅ Worker ${worker.worker_id} has slot ${roundedSlot} selected`);
+        } else {
+          console.log(`❌ Worker ${worker.worker_id} does NOT have slot ${roundedSlot} (has: ${worker.slots.join(', ')})`);
         }
       }
     });
