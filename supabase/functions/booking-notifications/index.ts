@@ -160,10 +160,10 @@ Deno.serve(async (req) => {
   }
 
   // Round check time down to nearest 30-minute slot
-  // For example: 15:46:55 becomes 15:30, 16:12:00 becomes 16:00
+  // For example: 15:46:55 becomes 15:30:00, 16:12:00 becomes 16:00:00
   const [checkHours, checkMinutes] = checkTimeString.split(':').map(Number);
   const roundedMinutes = checkMinutes < 30 ? 0 : 30;
-  const roundedSlot = `${checkHours.toString().padStart(2, '0')}:${roundedMinutes.toString().padStart(2, '0')}`;
+  const roundedSlot = `${checkHours.toString().padStart(2, '0')}:${roundedMinutes.toString().padStart(2, '0')}:00`;
   
   console.log(`🕐 Rounded booking time ${checkTimeString} to slot: ${roundedSlot}`);
 
