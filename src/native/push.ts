@@ -9,6 +9,10 @@ export async function initNativePush(userId?: string) {
   }
 
   console.log('🔔 initNativePush called for user:', userId);
+  console.log('🔄 Force refreshing FCM token to prevent expiration...');
+
+  // Remove all existing listeners to prevent duplicates
+  await PushNotifications.removeAllListeners();
 
   let permStatus = await PushNotifications.checkPermissions();
   console.log('📱 Current permission status:', permStatus);
@@ -24,7 +28,7 @@ export async function initNativePush(userId?: string) {
     return;
   }
 
-  console.log('📝 Registering for push notifications...');
+  console.log('📝 Re-registering for push notifications (forces token refresh)...');
   await PushNotifications.register();
 
   PushNotifications.addListener('registration', async (token) => {
