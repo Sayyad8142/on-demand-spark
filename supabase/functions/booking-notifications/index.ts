@@ -233,8 +233,23 @@ Deno.serve(async (req) => {
       return new Response("no-workers", { status: 200 });
     }
 
-    // All eligible workers who match service type
-    let eligibleWorkers = workers;
+    // Filter out workers who already have active bookings
+    const workerUserIds = workers.map(w => w.user_id || w.id).filter(Boolean);
+    const { data: activeBookings, error: abError } = await supabase
+      .from("bookings")
+      .select("worker_id")
+      .in("worker_id", workerUserIds)
+      .in("status", ["assigned", "accepted", "on_the_way", "started"]);
+
+    if (abError) {
+      console.error("❌ Error checking active bookings:", abError);
+    }
+
+    const busyWorkerIds = new Set(activeBookings?.map(b => b.worker_id) || []);
+    console.log(`📊 Found ${busyWorkerIds.size} workers with active bookings`);
+
+    // All eligible workers who match service type and don't have active bookings
+    let eligibleWorkers = workers.filter(w => !busyWorkerIds.has(w.user_id || w.id));
 
     console.log(`📊 Total eligible workers: ${eligibleWorkers.length}`);
 
