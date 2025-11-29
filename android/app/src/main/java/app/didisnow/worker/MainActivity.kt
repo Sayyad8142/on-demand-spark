@@ -46,6 +46,23 @@ class MainActivity : BridgeActivity() {
         // Show unified permissions dialog (battery + overlay)
         BatteryOptimizationHelper.showPermissionsDialog(this)
         
+        // Check for pending FCM token and trigger refresh if user is logged in
+        val prefs = getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE)
+        val pendingToken = prefs.getString("pending_fcm_token", null)
+        val session = prefs.getString("didi-worker-session", null)
+        
+        if (pendingToken != null && session != null && session.isNotEmpty()) {
+            android.util.Log.d("MainActivity", "🔄 Found pending FCM token and active session, triggering token refresh")
+            // Trigger FCM to re-send the token with session available
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    android.util.Log.d("MainActivity", "✅ FCM token refresh triggered")
+                    // Clear pending token
+                    prefs.edit().remove("pending_fcm_token").apply()
+                }
+            }
+        }
+        
         // Handle intent if launched from overlay
         handleNavigationIntent(intent)
     }

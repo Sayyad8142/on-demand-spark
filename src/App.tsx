@@ -9,7 +9,7 @@ import { App as CapApp } from "@capacitor/app";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppState } from "@/hooks/useAppState";
 import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
-import { initNativePush } from "@/native/push";
+
 import { requestAndroidOverlay } from "@/lib/overlay";
 import { tryAccept } from "@/lib/bookingActions";
 import { requestLocationPermissions } from "@/lib/backgroundLocation";
@@ -99,23 +99,18 @@ const App = () => {
     }
   }, []);
 
-  // Initialize native push notifications when we have a session
+  // Request overlay permission on Android when user logs in
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId) return;
 
     console.log("User logged in:", userId);
     
-    if (Capacitor.isNativePlatform()) {
-      console.log("🔔 Initializing native push for user:", userId);
-      initNativePush(userId);
-      
-      // Request overlay permission on Android
-      if (Capacitor.getPlatform() === 'android') {
-        requestAndroidOverlay();
-      }
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+      console.log("📱 Android platform detected, requesting overlay permission");
+      requestAndroidOverlay();
     }
-    // Web push registration is now done manually via /troubleshoot or /verify-push pages
+    // FCM token registration is now handled natively in MyFirebaseService.java
   }, [session?.user?.id]);
 
   // Handle deep links for booking acceptance
