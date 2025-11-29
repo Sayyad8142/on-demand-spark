@@ -3,6 +3,7 @@ import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Capacitor } from '@capacitor/core';
 import { capacitorStorage } from '@/lib/capacitorStorage';
+import { clearFCMToken } from '@/native/push';
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -202,6 +203,12 @@ export function useAuth() {
   }, []);
 
   const signOut = async () => {
+    // Clear FCM token from database before signing out
+    if (user?.id) {
+      console.log('🗑️ Clearing FCM token before logout...');
+      await clearFCMToken(user.id);
+    }
+    
     await supabase.auth.signOut();
   };
 
