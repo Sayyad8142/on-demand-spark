@@ -9,6 +9,35 @@ export async function initNativePush(userId?: string) {
   }
 
   console.log('🔔 initNativePush called for user:', userId);
+  
+  // Check if existing token is recent (< 7 days old)
+  if (userId) {
+    try {
+      const { data: tokenData } = await supabase
+        .from('fcm_tokens')
+        .select('updated_at')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (tokenData) {
+        const tokenAge = Date.now() - new Date(tokenData.updated_at).getTime();
+        const sevenDays = 7 * 24 * 60 * 60 * 1000;
+        
+        if (tokenAge > sevenDays) {
+          console.log('⚠️ FCM token is older than 7 days, forcing refresh...');
+          // Delete old token to force fresh registration
+          await supabase
+            .from('fcm_tokens')
+            .delete()
+            .eq('user_id', userId);
+        } else {
+          console.log('✅ FCM token is recent (age: ' + Math.floor(tokenAge / (24 * 60 * 60 * 1000)) + ' days)');
+        }
+      }
+    } catch (e) {
+      console.error('❌ Error checking token age:', e);
+    }
+  }
 
   let permStatus = await PushNotifications.checkPermissions();
   console.log('📱 Current permission status:', permStatus);
