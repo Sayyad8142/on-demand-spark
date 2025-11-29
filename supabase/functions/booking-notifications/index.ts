@@ -159,26 +159,23 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Round check time down to nearest 30-minute slot
-  // For example: 15:46:55 becomes 15:30:00, 16:12:00 becomes 16:00:00
-  const [checkHours, checkMinutes] = checkTimeString.split(':').map(Number);
-  const roundedMinutes = checkMinutes < 30 ? 0 : 30;
-  const roundedSlot = `${checkHours.toString().padStart(2, '0')}:${roundedMinutes.toString().padStart(2, '0')}:00`;
-  
-  console.log(`🕐 Rounded booking time ${checkTimeString} to slot: ${roundedSlot}`);
-
-  // Filter workers who have this specific slot selected
+  // Filter workers whose check time falls within their selected slots
   const availableWorkerIds = new Set<string>();
   if (availableWorkers) {
     availableWorkers.forEach((worker) => {
       if (worker.slots && Array.isArray(worker.slots)) {
-        // Check if the worker has the specific rounded slot in their slots array
-        const hasSlot = worker.slots.includes(roundedSlot);
-        if (hasSlot) {
+        // Check if check time falls within any of the worker's slots
+        const isAvailableAtTime = worker.slots.some((slotStart: string) => {
+          // Each slot is 30 minutes, so calculate the end time
+          const [hours, minutes] = slotStart.split(':').map(Number);
+          const endMinutes = minutes + 30;
+          const endHours = endMinutes >= 60 ? hours + 1 : hours;
+          const normalizedEndMinutes = endMinutes >= 60 ? endMinutes - 60 : endMinutes;
+          const slotEnd = `${endHours.toString().padStart(2, '0')}:${normalizedEndMinutes.toString().padStart(2, '0')}:00`;
+          return checkTimeString >= slotStart && checkTimeString < slotEnd;
+        });
+        if (isAvailableAtTime) {
           availableWorkerIds.add(worker.worker_id);
-          console.log(`✅ Worker ${worker.worker_id} has slot ${roundedSlot} selected`);
-        } else {
-          console.log(`❌ Worker ${worker.worker_id} does NOT have slot ${roundedSlot} (has: ${worker.slots.join(', ')})`);
         }
       }
     });
@@ -233,23 +230,8 @@ Deno.serve(async (req) => {
       return new Response("no-workers", { status: 200 });
     }
 
-    // Filter out workers who already have active bookings
-    const workerUserIds = workers.map(w => w.user_id || w.id).filter(Boolean);
-    const { data: activeBookings, error: abError } = await supabase
-      .from("bookings")
-      .select("worker_id")
-      .in("worker_id", workerUserIds)
-      .in("status", ["assigned", "accepted", "on_the_way", "started"]);
-
-    if (abError) {
-      console.error("❌ Error checking active bookings:", abError);
-    }
-
-    const busyWorkerIds = new Set(activeBookings?.map(b => b.worker_id) || []);
-    console.log(`📊 Found ${busyWorkerIds.size} workers with active bookings`);
-
-    // All eligible workers who match service type and don't have active bookings
-    let eligibleWorkers = workers.filter(w => !busyWorkerIds.has(w.user_id || w.id));
+    // All eligible workers who match service type
+    let eligibleWorkers = workers;
 
     console.log(`📊 Total eligible workers: ${eligibleWorkers.length}`);
 

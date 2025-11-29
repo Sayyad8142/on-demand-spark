@@ -202,24 +202,6 @@ export function useAuth() {
   }, []);
 
   const signOut = async () => {
-    // Clear FCM token from database before signing out (handled natively now)
-    if (user?.id && Capacitor.isNativePlatform()) {
-      console.log('🗑️ Clearing FCM token from database...');
-      try {
-        // Delete from fcm_tokens table
-        await supabase.from('fcm_tokens').delete().eq('user_id', user.id);
-        
-        // Clear from workers table
-        await supabase.from('workers')
-          .update({ fcm_token: null })
-          .eq('user_id', user.id);
-        
-        console.log('✅ FCM token cleared');
-      } catch (e) {
-        console.error('❌ Error clearing FCM token:', e);
-      }
-    }
-    
     await supabase.auth.signOut();
   };
 

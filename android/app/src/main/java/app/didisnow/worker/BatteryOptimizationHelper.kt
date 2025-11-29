@@ -70,23 +70,16 @@ object BatteryOptimizationHelper {
             .setTitle("Required Permissions")
             .setView(customView)
             .setPositiveButton("Allow") { _, _ ->
-                // Request battery optimization first (if needed)
+                // Request battery optimization first
                 if (needsBatteryPermission) {
-                    android.util.Log.d("Permissions", "🔋 Requesting battery optimization")
                     requestIgnoreBatteryOptimizations(activity)
-                    
-                    // Request overlay permission after longer delay (3 seconds)
-                    // This gives user time to complete battery optimization first
-                    if (needsOverlayPermission) {
-                        android.os.Handler(activity.mainLooper).postDelayed({
-                            android.util.Log.d("Permissions", "📱 Now requesting overlay permission")
-                            OverlayPermissionHelper.request(activity)
-                        }, 3000)
-                    }
-                } else if (needsOverlayPermission) {
-                    // Only overlay permission needed, request immediately
-                    android.util.Log.d("Permissions", "📱 Requesting overlay permission only")
-                    OverlayPermissionHelper.request(activity)
+                }
+                
+                // Then request overlay permission with a slight delay
+                if (needsOverlayPermission) {
+                    android.os.Handler(activity.mainLooper).postDelayed({
+                        OverlayPermissionHelper.request(activity)
+                    }, 500)
                 }
             }
             .setNegativeButton("Later", null)

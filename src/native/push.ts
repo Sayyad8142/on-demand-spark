@@ -1,22 +1,85 @@
-/**
- * Native push notification handling
- * 
- * FCM token registration is now handled entirely in native Android code
- * (MyFirebaseService.onNewToken) which directly saves tokens to Supabase.
- * 
- * This file is kept for backward compatibility but functionality has been
- * moved to native layer for simpler, more reliable token management.
- */
-
+import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
+import { supabase } from '@/integrations/supabase/client';
 
-// Legacy function - now a no-op
 export async function initNativePush(userId?: string) {
-  console.log('⏭️ Native push registration handled by Android native code');
-  // Token registration happens automatically in MyFirebaseService.onNewToken
-}
+  if (!Capacitor.isNativePlatform()) {
+    console.log('⏭️ Not native platform, skipping push init');
+    return;
+  }
 
-// Legacy function - token clearing now handled in useAuth hook
-export async function clearFCMToken(userId: string) {
-  console.log('⏭️ FCM token clearing handled by useAuth hook');
+  console.log('🔔 initNativePush called for user:', userId);
+
+  let permStatus = await PushNotifications.checkPermissions();
+  console.log('📱 Current permission status:', permStatus);
+  
+  if (permStatus.receive !== 'granted') {
+    console.log('🔐 Requesting push permissions...');
+    permStatus = await PushNotifications.requestPermissions();
+    console.log('📱 Permission result:', permStatus);
+  }
+  
+  if (permStatus.receive !== 'granted') {
+    console.warn('⚠️ Push permission not granted');
+    return;
+  }
+
+  console.log('📝 Registering for push notifications...');
+  await PushNotifications.register();
+
+  PushNotifications.addListener('registration', async (token) => {
+    console.log('🎯 FCM token received:', token.value.substring(0, 30) + '...');
+    
+    try {
+      if (!userId) {
+        console.error('❌ No userId provided, cannot save token');
+        return;
+      }
+      
+      console.log('💾 Saving FCM token for user:', userId);
+      
+      // Save to fcm_tokens table (legacy)
+      const { error: fcmError } = await supabase.from('fcm_tokens').upsert(
+        { user_id: userId, token: token.value },
+        { onConflict: 'user_id' }
+      );
+      
+      if (fcmError) {
+        console.error('❌ Failed to save FCM token to fcm_tokens:', fcmError);
+      } else {
+        console.log('✅ FCM token saved to fcm_tokens table');
+      }
+
+      // Save to workers table
+      const { error: workerError } = await supabase
+        .from('workers')
+        .update({
+          fcm_token: token.value,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId);
+
+      if (workerError) {
+        console.error('❌ Failed to save FCM token to workers:', workerError);
+      } else {
+        console.log('✅ FCM token saved to workers table');
+      }
+    } catch (e) {
+      console.error('❌ Exception saving FCM token:', e);
+    }
+  });
+
+  PushNotifications.addListener('registrationError', (err) => {
+    console.error('Registration error:', err);
+  });
+
+  // foreground push (debug)
+  PushNotifications.addListener('pushNotificationReceived', (notification) => {
+    console.log('Push received (fg):', notification);
+  });
+
+  // tap on notification
+  PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+    console.log('Push action:', action);
+  });
 }

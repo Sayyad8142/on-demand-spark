@@ -172,17 +172,6 @@ Deno.serve(async (req) => {
 
           if (!response.ok) {
             console.error(`❌ FCM error for user ${user_id}:`, result);
-            
-            // Delete stale/invalid tokens (404 = token not found in Firebase)
-            if (result.error?.code === 404 || result.error?.status === "NOT_FOUND") {
-              console.log(`🗑️ Deleting stale FCM token for user ${user_id}`);
-              await supabase
-                .from("fcm_tokens")
-                .delete()
-                .eq("user_id", user_id)
-                .eq("token", token);
-            }
-            
             return { user_id, success: false, error: result };
           }
 
