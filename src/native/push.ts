@@ -12,6 +12,8 @@ export async function initNativePush(userId?: string) {
   }
 
   console.log('🔔 initNativePush called for user:', userId);
+  console.log('📱 Platform:', Capacitor.getPlatform());
+  console.log('📱 Is native?', Capacitor.isNativePlatform());
   
   // Check if we have a stored device token from previous sessions
   if (userId) {
@@ -56,38 +58,53 @@ export async function initNativePush(userId?: string) {
   }
 
   let permStatus = await PushNotifications.checkPermissions();
-  console.log('📱 Current permission status:', permStatus);
+  console.log('📱 Current permission status:', JSON.stringify(permStatus));
   
   if (permStatus.receive !== 'granted') {
     console.log('🔐 Requesting push permissions...');
     permStatus = await PushNotifications.requestPermissions();
-    console.log('📱 Permission result:', permStatus);
+    console.log('📱 Permission result:', JSON.stringify(permStatus));
   }
   
   if (permStatus.receive !== 'granted') {
-    console.warn('⚠️ Push permission not granted');
+    console.warn('⚠️ Push permission not granted:', JSON.stringify(permStatus));
     return;
   }
 
   console.log('📝 Registering for push notifications...');
-  await PushNotifications.register();
+  try {
+    await PushNotifications.register();
+    console.log('✅ Push registration initiated');
+  } catch (error) {
+    console.error('❌ Push registration failed:', error);
+    throw error;
+  }
 
   PushNotifications.addListener('registration', async (token) => {
-    console.log('🎯 FCM token received:', token.value.substring(0, 30) + '...');
+    console.log('🎯 FCM token received (full):', token.value);
+    console.log('🎯 Token length:', token.value.length);
     
     try {
       // Store token in local storage for future use
       await capacitorStorage.setItem(FCM_TOKEN_KEY, token.value);
       console.log('💾 Token stored in local storage');
       
+      // Verify it was stored
+      const verifyToken = await capacitorStorage.getItem(FCM_TOKEN_KEY);
+      console.log('✅ Token verification:', verifyToken ? 'Found' : 'NOT FOUND');
+      
       if (!userId) {
         console.error('❌ No userId provided, cannot save token to database');
+        console.error('❌ Make sure user is logged in before push registration');
         return;
       }
       
+      console.log('💾 Attempting to save token to database for user:', userId);
       await saveTokenToDatabase(userId, token.value);
+      console.log('✅ Token save to database completed');
     } catch (e) {
       console.error('❌ Exception saving FCM token:', e);
+      console.error('❌ Error details:', JSON.stringify(e));
     }
   });
 
@@ -109,32 +126,58 @@ export async function initNativePush(userId?: string) {
 // Helper function to save token to database
 async function saveTokenToDatabase(userId: string, token: string) {
   console.log('💾 Saving FCM token for user:', userId);
+  console.log('💾 Token to save:', token.substring(0, 50) + '...');
   
-  // Save to fcm_tokens table (legacy)
-  const { error: fcmError } = await supabase.from('fcm_tokens').upsert(
-    { user_id: userId, token: token },
-    { onConflict: 'user_id' }
-  );
-  
-  if (fcmError) {
-    console.error('❌ Failed to save FCM token to fcm_tokens:', fcmError);
-  } else {
-    console.log('✅ FCM token saved to fcm_tokens table');
-  }
+  try {
+    // Save to fcm_tokens table (legacy)
+    console.log('💾 Upserting to fcm_tokens table...');
+    const { data: fcmData, error: fcmError } = await supabase.from('fcm_tokens').upsert(
+      { user_id: userId, token: token },
+      { onConflict: 'user_id' }
+    );
+    
+    if (fcmError) {
+      console.error('❌ Failed to save FCM token to fcm_tokens:', JSON.stringify(fcmError));
+      throw fcmError;
+    } else {
+      console.log('✅ FCM token saved to fcm_tokens table');
+    }
 
-  // Save to workers table
-  const { error: workerError } = await supabase
-    .from('workers')
-    .update({
-      fcm_token: token,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('user_id', userId);
+    // Save to workers table
+    console.log('💾 Updating workers table...');
+    const { data: workerData, error: workerError } = await supabase
+      .from('workers')
+      .update({
+        fcm_token: token,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId);
 
-  if (workerError) {
-    console.error('❌ Failed to save FCM token to workers:', workerError);
-  } else {
-    console.log('✅ FCM token saved to workers table');
+    if (workerError) {
+      console.error('❌ Failed to save FCM token to workers:', JSON.stringify(workerError));
+      throw workerError;
+    } else {
+      console.log('✅ FCM token saved to workers table');
+    }
+    
+    // Verify the token was saved
+    console.log('🔍 Verifying token was saved...');
+    const { data: verifyData, error: verifyError } = await supabase
+      .from('fcm_tokens')
+      .select('token')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (verifyError) {
+      console.error('❌ Verification failed:', JSON.stringify(verifyError));
+    } else if (verifyData?.token === token) {
+      console.log('✅✅ Token verified in database!');
+    } else {
+      console.error('❌ Token verification mismatch!');
+    }
+  } catch (error) {
+    console.error('❌ Exception in saveTokenToDatabase:', error);
+    throw error;
   }
 }
 
