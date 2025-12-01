@@ -53,7 +53,7 @@ export default function ActiveJobCard({
               <div className="text-center">
                 <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">BLOCK</p>
                 <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
-                  <p className="text-2xl font-extrabold text-green-500 truncate px-1">{blockName || '-'}</p>
+                  <p className="text-lg font-extrabold text-green-500 px-1 leading-tight">{blockName || '-'}</p>
                 </div>
               </div>
               <div className="text-center">
