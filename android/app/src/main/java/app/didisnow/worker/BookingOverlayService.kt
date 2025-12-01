@@ -585,12 +585,12 @@ class BookingOverlayService : Service() {
                             finishAndStop("booking_taken_by_another_worker")
                         } else {
                             // Schedule next check in 2 seconds
-                            statusCheckHandler?.postDelayed(this@Runnable, 2000)
+                            statusCheckHandler?.postDelayed(this, 2000)
                         }
                     } catch (e: Exception) {
                         android.util.Log.e("BookingOverlay", "❌ Error checking booking status", e)
                         // Continue polling even on error
-                        statusCheckHandler?.postDelayed(this@Runnable, 2000)
+                        statusCheckHandler?.postDelayed(this, 2000)
                     }
                 }
             }
