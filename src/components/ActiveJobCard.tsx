@@ -36,12 +36,6 @@ export default function ActiveJobCard({
   
   const formattedAddress = formatBookingAddress(booking);
   const phfParsed = parsePHFCode(booking.flat_no);
-  // Extract block/building name from community or booking data
-  const blockName = booking.community?.split('-').map(word => 
-    word.replace(/_/g, ' ').split(' ').map(w => 
-      w.charAt(0).toUpperCase() + w.slice(1)
-    ).join(' ')
-  ).join(' ') || null;
   
   return <Card className="shadow-lg overflow-hidden border-0">
       <div className="p-4 space-y-3">
@@ -51,13 +45,7 @@ export default function ActiveJobCard({
             <p className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wider">FLAT NO</p>
             <p className="font-extrabold text-green-500 text-4xl tracking-tight">{booking.flat_no}</p>
           </div>
-          {phfParsed && <div className="grid grid-cols-4 gap-3">
-              <div className="text-center">
-                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">BLOCK</p>
-                <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
-                  <p className="text-xs font-extrabold text-green-500 px-1 leading-tight break-words">{blockName || '-'}</p>
-                </div>
-              </div>
+          {phfParsed && <div className="grid grid-cols-3 gap-3">
               <div className="text-center">
                 <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">TOWER</p>
                 <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
