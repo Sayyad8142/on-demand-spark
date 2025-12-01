@@ -38,7 +38,9 @@ export default function ActiveJobCard({
   const phfParsed = parsePHFCode(booking.flat_no);
   // Extract block/building name from community or booking data
   const blockName = booking.community?.split('-').map(word => 
-    word.charAt(0).toUpperCase() + word.slice(1)
+    word.replace(/_/g, ' ').split(' ').map(w => 
+      w.charAt(0).toUpperCase() + w.slice(1)
+    ).join(' ')
   ).join(' ') || null;
   
   return <Card className="shadow-lg overflow-hidden border-0">
@@ -53,7 +55,7 @@ export default function ActiveJobCard({
               <div className="text-center">
                 <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">BLOCK</p>
                 <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
-                  <p className="text-lg font-extrabold text-green-500 px-1 leading-tight">{blockName || '-'}</p>
+                  <p className="text-xs font-extrabold text-green-500 px-1 leading-tight break-words">{blockName || '-'}</p>
                 </div>
               </div>
               <div className="text-center">
