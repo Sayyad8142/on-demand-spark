@@ -92,15 +92,11 @@ Deno.serve(async (req) => {
       has_center: !!(communityData.center_lat && communityData.center_lng)
     });
 
-    // Check if community has geofence configured
+    // Check if community has geofence configured (optional - only used for distance-based sorting)
     const hasCommunityCenter = communityData?.center_lat && communityData?.center_lng;
     
     if (!hasCommunityCenter) {
-      console.error("❌ Community has no geofence configured:", communityData.name);
-      return new Response(
-        JSON.stringify({ error: `Community "${communityData.name}" has no geofence. Please configure center coordinates.` }), 
-        { status: 400, headers: corsHeaders }
-      );
+      console.log("⚠️ Community has no geofence configured (notifications will still be sent):", communityData.name);
     }
 
   // Determine which time to check - scheduled time or current time
