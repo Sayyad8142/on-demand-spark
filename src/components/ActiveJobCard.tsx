@@ -46,29 +46,35 @@ export default function ActiveJobCard({
         {/* 1. Flat Number Display */}
         <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-sm">
           <p className="font-extrabold text-center text-green-500 mb-4 text-2xl tracking-tight">{formattedAddress}</p>
-          {phfParsed && <div className="grid grid-cols-4 gap-3">
+          {phfParsed && <div className="grid grid-cols-5 gap-2">
+              <div className="text-center">
+                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">FLAT NO</p>
+                <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
+                  <p className="text-xl font-extrabold text-green-500 truncate px-1">{booking.flat_no}</p>
+                </div>
+              </div>
               <div className="text-center">
                 <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">BLOCK</p>
                 <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
-                  <p className="text-2xl font-extrabold text-green-500 truncate px-1">{blockName || '-'}</p>
+                  <p className="text-xl font-extrabold text-green-500 truncate px-1">{blockName || '-'}</p>
                 </div>
               </div>
               <div className="text-center">
                 <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">TOWER</p>
                 <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
-                  <p className="text-3xl font-extrabold text-green-500">{phfParsed.tower}</p>
+                  <p className="text-2xl font-extrabold text-green-500">{phfParsed.tower}</p>
                 </div>
               </div>
               <div className="text-center">
                 <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">FLOOR</p>
                 <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
-                  <p className="text-3xl font-extrabold text-green-500">{phfParsed.floor}</p>
+                  <p className="text-2xl font-extrabold text-green-500">{phfParsed.floor}</p>
                 </div>
               </div>
               <div className="text-center">
                 <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">DOOR</p>
                 <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
-                  <p className="text-3xl font-extrabold text-green-500">{phfParsed.door}</p>
+                  <p className="text-2xl font-extrabold text-green-500">{phfParsed.door}</p>
                 </div>
               </div>
             </div>}
