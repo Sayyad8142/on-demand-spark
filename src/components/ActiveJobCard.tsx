@@ -45,11 +45,10 @@ export default function ActiveJobCard({
       <div className="p-4 space-y-3">
         {/* 1. Flat Number Display */}
         <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-sm">
-          <div className="text-center mb-2">
+          <div className="text-center mb-4">
             <p className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wider">FLAT NO</p>
             <p className="font-extrabold text-green-500 text-4xl tracking-tight">{booking.flat_no}</p>
           </div>
-          <p className="font-bold text-center text-gray-600 dark:text-gray-300 mb-4 text-base tracking-tight">{formattedAddress}</p>
           {phfParsed && <div className="grid grid-cols-4 gap-3">
               <div className="text-center">
                 <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">BLOCK</p>
