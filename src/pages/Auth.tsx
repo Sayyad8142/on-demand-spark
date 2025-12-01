@@ -413,6 +413,18 @@ export default function Auth() {
       if (error) throw error;
       if (!data.user) throw new Error("No user returned");
 
+      // Fetch the community ID from the community value
+      const { data: communityData, error: communityError } = await supabase
+        .from('communities')
+        .select('id')
+        .eq('value', signUpCommunity)
+        .single();
+
+      if (communityError) {
+        console.error('Error fetching community ID:', communityError);
+        throw new Error('Failed to fetch community information');
+      }
+
       // Check if worker with this phone already exists
       const {
         data: existingWorker
@@ -428,6 +440,7 @@ export default function Auth() {
           upi_id: signUpUpiId?.trim() || existingWorker.upi_id,
           service_types: [signUpService],
           communities: [signUpCommunity],
+          selected_community_id: communityData.id,
           is_active: true,
           is_available: false,
           is_busy: false
@@ -436,7 +449,7 @@ export default function Auth() {
         });
         if (workerError) throw workerError;
       } else {
-        // Create new worker profile
+        // Create new worker profile with proper community ID
         const {
           error: workerError
         } = await supabase.from('workers').insert({
@@ -446,6 +459,7 @@ export default function Auth() {
           upi_id: signUpUpiId?.trim() || null,
           service_types: [signUpService],
           communities: [signUpCommunity],
+          selected_community_id: communityData.id,
           is_active: true,
           is_available: false,
           is_busy: false
