@@ -53,6 +53,11 @@ class BookingOverlayService : Service() {
     private var countdownRunnable: Runnable? = null
     private var currentAccessToken: String? = null
     
+    // Booking status polling
+    private var statusCheckHandler: Handler? = null
+    private var statusCheckRunnable: Runnable? = null
+    private var currentBookingId: String? = null
+    
     // Track the startId so we can call stopSelfResult() with it
     private var startIdForStop: Int = 0
     
@@ -206,6 +211,9 @@ class BookingOverlayService : Service() {
                     currentAccessToken = accessToken
                     android.util.Log.d("BookingOverlay", "✅ Token validated and cached (${accessToken?.take(12)}...) - proceeding to show overlay")
 
+                    // Store booking ID for status polling
+                    currentBookingId = bookingId
+                    
                     try {
                         showOverlay(bookingId, customer, community, serviceType, flatNo, price)
                     } catch (e: Exception) {
@@ -396,6 +404,12 @@ class BookingOverlayService : Service() {
                 android.util.Log.d("BookingOverlay", "🧹 Countdown cancelled")
             }
             
+            // Cancel status polling
+            statusCheckRunnable?.let { r ->
+                statusCheckHandler?.removeCallbacks(r)
+                android.util.Log.d("BookingOverlay", "🧹 Status polling cancelled")
+            }
+            
             if (bookingId.isEmpty()) {
                 ui { Toast.makeText(this, "Error: No booking ID", Toast.LENGTH_SHORT).show() }
                 acceptInFlight = false
@@ -483,6 +497,12 @@ class BookingOverlayService : Service() {
                 android.util.Log.d("BookingOverlay", "🧹 Countdown cancelled")
             }
             
+            // Cancel status polling
+            statusCheckRunnable?.let { r ->
+                statusCheckHandler?.removeCallbacks(r)
+                android.util.Log.d("BookingOverlay", "🧹 Status polling cancelled")
+            }
+            
             if (bookingId.isEmpty()) {
                 ui { Toast.makeText(this, "Error: No booking ID", Toast.LENGTH_SHORT).show() }
                 acceptInFlight = false
@@ -524,16 +544,116 @@ class BookingOverlayService : Service() {
             overlayAdded = true
             // Track this window for guaranteed cleanup
             overlayView?.let { addedWindows.add(it) }
-            android.util.Log.d("BookingOverlay", "✅ Overlay added successfully! Starting countdown...")
+            android.util.Log.d("BookingOverlay", "✅ Overlay added successfully! Starting countdown and status monitoring...")
             
             // Start countdown AFTER view is added to window
             countdownRunnable?.let { r -> countdownHandler?.post(r) }
+            
+            // Start booking status polling to detect if another worker accepts
+            startBookingStatusPolling(bookingId)
         } catch (e: Exception) {
             android.util.Log.e("BookingOverlay", "❌ Failed to add overlay to window", e)
             e.printStackTrace()
             Toast.makeText(this, "Failed to show overlay: ${e.message}", Toast.LENGTH_LONG).show()
             OverlaySingleton.isShowing = false
             stopSelf()
+        }
+    }
+    
+    private fun startBookingStatusPolling(bookingId: String) {
+        statusCheckHandler = Handler(mainLooper)
+        statusCheckRunnable = object : Runnable {
+            override fun run() {
+                if (isShuttingDown || overlayView == null) {
+                    android.util.Log.d("BookingOverlay", "🧹 Status polling cancelled - service shutting down")
+                    return
+                }
+                
+                // Check booking status in background
+                serviceScope.launch {
+                    try {
+                        val isStillAvailable = checkBookingStatus(bookingId)
+                        if (!isStillAvailable) {
+                            android.util.Log.d("BookingOverlay", "📢 Booking $bookingId no longer available - another worker accepted it")
+                            ui {
+                                Toast.makeText(
+                                    this@BookingOverlayService,
+                                    "Booking was accepted by another worker",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                            finishAndStop("booking_taken_by_another_worker")
+                        } else {
+                            // Schedule next check in 2 seconds
+                            statusCheckHandler?.postDelayed(this@Runnable, 2000)
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("BookingOverlay", "❌ Error checking booking status", e)
+                        // Continue polling even on error
+                        statusCheckHandler?.postDelayed(this@Runnable, 2000)
+                    }
+                }
+            }
+        }
+        // Start first check after 2 seconds
+        statusCheckRunnable?.let { r -> statusCheckHandler?.postDelayed(r, 2000) }
+    }
+    
+    private suspend fun checkBookingStatus(bookingId: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            // Get access token
+            var jwt = currentAccessToken
+            if (jwt.isNullOrEmpty()) {
+                val sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
+                    .getString("didi_session", null)
+                if (!sessionJson.isNullOrEmpty()) {
+                    try {
+                        val session = JSONObject(sessionJson)
+                        jwt = session.optString("accessToken", "")
+                    } catch (e: Exception) {
+                        android.util.Log.e("BookingOverlay", "❌ Failed to parse session", e)
+                    }
+                }
+            }
+            
+            if (jwt.isNullOrEmpty()) {
+                android.util.Log.e("BookingOverlay", "❌ No access token for status check")
+                return@withContext true // Assume still available if we can't check
+            }
+            
+            // Query booking status
+            val url = URL("$SUPABASE_URL/rest/v1/bookings?id=eq.$bookingId&select=status")
+            val connection = url.openConnection() as HttpURLConnection
+            
+            try {
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+                connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+                connection.setRequestProperty("Authorization", "Bearer $jwt")
+                connection.setRequestProperty("Content-Type", "application/json")
+                
+                val responseCode = connection.responseCode
+                
+                if (responseCode == 200) {
+                    val responseBody = connection.inputStream.bufferedReader().use { it.readText() }
+                    val json = JSONObject(responseBody.trim().removePrefix("[").removeSuffix("]"))
+                    val status = json.optString("status", "")
+                    
+                    android.util.Log.d("BookingOverlay", "📊 Booking $bookingId status: $status")
+                    
+                    // Booking is still available if status is "pending"
+                    return@withContext status == "pending"
+                } else {
+                    android.util.Log.e("BookingOverlay", "❌ Status check failed: $responseCode")
+                    return@withContext true // Assume still available on error
+                }
+            } finally {
+                connection.disconnect()
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("BookingOverlay", "❌ Error in checkBookingStatus", e)
+            return@withContext true // Assume still available on error
         }
     }
     
@@ -734,6 +854,15 @@ class BookingOverlayService : Service() {
             countdownHandler = null
         } catch (e: Throwable) {
             android.util.Log.e("BookingOverlay", "❌ Error cancelling countdown", e)
+        }
+        
+        // Cancel status polling
+        try {
+            statusCheckRunnable?.let { statusCheckHandler?.removeCallbacks(it) }
+            statusCheckRunnable = null
+            statusCheckHandler = null
+        } catch (e: Throwable) {
+            android.util.Log.e("BookingOverlay", "❌ Error cancelling status polling", e)
         }
         
         // Remove all windows
