@@ -569,6 +569,9 @@ class BookingOverlayService : Service() {
                     return
                 }
                 
+                // Capture this Runnable instance so we can use it inside the coroutine
+                val runnable = this
+                
                 // Check booking status in background
                 serviceScope.launch {
                     try {
@@ -585,12 +588,12 @@ class BookingOverlayService : Service() {
                             finishAndStop("booking_taken_by_another_worker")
                         } else {
                             // Schedule next check in 2 seconds
-                            statusCheckHandler?.postDelayed(this, 2000)
+                            statusCheckHandler?.postDelayed(runnable, 2000)
                         }
                     } catch (e: Exception) {
                         android.util.Log.e("BookingOverlay", "❌ Error checking booking status", e)
                         // Continue polling even on error
-                        statusCheckHandler?.postDelayed(this, 2000)
+                        statusCheckHandler?.postDelayed(runnable, 2000)
                     }
                 }
             }
