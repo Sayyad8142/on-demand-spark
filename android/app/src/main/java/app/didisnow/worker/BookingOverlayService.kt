@@ -849,7 +849,7 @@ class BookingOverlayService : Service() {
                             "HTTP $responseCode: ${responseBody.take(200)}"
                         }
                         android.util.Log.d("BookingOverlay", "❌ Reject failed: $errorMsg")
-                        throw IllegalStateException("HTTP $responseCode: $errorBody")
+                        throw IllegalStateException(errorMsg)
                     }
                 } finally {
                     connection.disconnect()
