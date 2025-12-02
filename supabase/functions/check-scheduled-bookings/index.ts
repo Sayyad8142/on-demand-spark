@@ -1,8 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_URL = "https://paywwbuqycovjopryele.supabase.co";
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const supabase = createClient(supabaseUrl, serviceKey);
+const supabase = createClient(SUPABASE_URL, serviceKey);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,12 +64,27 @@ Deno.serve(async (req) => {
       if (now >= alertTime) {
         console.log(`Sending alert for booking ${booking.id}`);
 
-        // Call booking-notifications function
-        const { error: notifyError } = await supabase.functions.invoke('booking-notifications', {
-          body: { booking_id: booking.id }
-        });
+        // Call booking-notifications function with direct HTTP (like the database trigger does)
+        // This ensures the Authorization header is properly included
+        try {
+          const notifyResponse = await fetch(`${SUPABASE_URL}/functions/v1/booking-notifications`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${serviceKey}`,
+            },
+            body: JSON.stringify({ booking_id: booking.id }),
+          });
 
-        if (notifyError) {
+          if (!notifyResponse.ok) {
+            const errorText = await notifyResponse.text();
+            console.error(`Failed to send notification for booking ${booking.id}: ${notifyResponse.status} - ${errorText}`);
+            continue;
+          }
+
+          const notifyResult = await notifyResponse.json();
+          console.log(`Notification response for booking ${booking.id}:`, notifyResult);
+        } catch (notifyError) {
           console.error(`Failed to send notification for booking ${booking.id}:`, notifyError);
           continue;
         }
