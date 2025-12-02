@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { tryAccept } from "@/lib/bookingActions";
+import { tryAccept, rejectBooking } from "@/lib/bookingActions";
 
 export function useBookingAlerts(userId: string | undefined, isOnline: boolean, match: (b:any)=>boolean) {
   const [pending, setPending] = useState<any|null>(null);
@@ -42,9 +42,20 @@ export function useBookingAlerts(userId: string | undefined, isOnline: boolean, 
     setPending(null);
   }, [pending]);
 
-  const reject = useCallback(() => {
+  const reject = useCallback(async () => {
+    if (!pending || !userId) return;
+    
+    const result = await rejectBooking(pending.id, userId);
+    if (result.success) {
+      if (result.shouldNotify) {
+        toast({ title: "Booking offered to next available workers" });
+      } else {
+        toast({ title: "Booking rejected" });
+      }
+    }
+    
     setPending(null);
-  }, []);
+  }, [pending, userId]);
 
   return { pending, accept, reject, clearAlert };
 }
