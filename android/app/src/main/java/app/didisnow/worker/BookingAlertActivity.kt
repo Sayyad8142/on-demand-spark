@@ -464,8 +464,6 @@ class BookingAlertActivity : AppCompatActivity() {
                             ).show()
                             Log.e("BookingAlert", "❌ HTTP Error: $responseCode - $responseBody")
                         }
-                            Log.e("BookingAlert", "❌ Reject failed with code: $responseCode")
-                        }
                         finish()
                     }
                 }
