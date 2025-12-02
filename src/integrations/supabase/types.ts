@@ -3064,6 +3064,10 @@ export type Database = {
         }
         Returns: Json
       }
+      reject_booking_request: {
+        Args: { p_booking_id: string; p_worker_id: string }
+        Returns: Json
+      }
       respond_to_booking_assignment: {
         Args: { p_assignment_id: string; p_response: string }
         Returns: {

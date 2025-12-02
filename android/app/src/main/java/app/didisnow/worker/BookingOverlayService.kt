@@ -762,42 +762,93 @@ class BookingOverlayService : Service() {
                     connection.disconnect()
                 }
             } else {
-                // For reject, update status directly with user JWT
-                val url = URL("$SUPABASE_URL/rest/v1/bookings?id=eq.$bookingId")
-                val connection = url.openConnection() as HttpURLConnection
+                // For reject, call reject_booking_request RPC with user JWT
+                // First, extract user_id from JWT
+                val userId = try {
+                    val parts = jwt.split(".")
+                    if (parts.size >= 2) {
+                        val payload = String(android.util.Base64.decode(parts[1], android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING))
+                        val json = JSONObject(payload)
+                        json.optString("sub", "")
+                    } else {
+                        ""
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("BookingOverlay", "❌ Failed to extract user_id from JWT", e)
+                    ""
+                }
+                
+                if (userId.isEmpty()) {
+                    android.util.Log.e("BookingOverlay", "❌ Could not extract user_id from JWT")
+                    throw IllegalStateException("Could not extract user_id from JWT")
+                }
+                
+                android.util.Log.d("BookingOverlay", "👤 Worker ID: $userId")
+                
+                val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/reject_booking_request")
+                val connection = rpcUrl.openConnection() as HttpURLConnection
                 
                 try {
-                    connection.requestMethod = "PATCH"
+                    connection.requestMethod = "POST"
                     connection.connectTimeout = 8000
                     connection.readTimeout = 8000
                     connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
                     connection.setRequestProperty("Authorization", "Bearer $jwt")
                     connection.setRequestProperty("Content-Type", "application/json")
-                    connection.setRequestProperty("Prefer", "return=minimal")
                     connection.doOutput = true
 
-                    val jsonPayload = """{"status":"cancelled"}"""
+                    val jsonPayload = """{"p_booking_id":"$bookingId","p_worker_id":"$userId"}"""
                     connection.outputStream.use { os ->
                         os.write(jsonPayload.toByteArray())
                     }
 
                     val responseCode = connection.responseCode
-                    android.util.Log.d("BookingOverlay", "📡 PATCH code: $responseCode")
+                    android.util.Log.d("BookingOverlay", "📡 RPC code: $responseCode")
+                    
+                    val responseBody = if (responseCode in 200..299) {
+                        connection.inputStream.bufferedReader().use { it.readText() }
+                    } else {
+                        connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
+                    }
+
+                    android.util.Log.d("BookingOverlay", "📄 RPC Response Body: $responseBody")
                     
                     if (responseCode in 200..299) {
-                        android.util.Log.d("BookingOverlay", "✅ Reject success")
-                        withContext(Dispatchers.Main) {
-                            ui {
-                                Toast.makeText(
-                                    this@BookingOverlayService,
-                                    "Booking rejected",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                        val json = JSONObject(responseBody.ifEmpty { "{}" })
+                        val success = json.optBoolean("success", false)
+                        val message = json.optString("message", "")
+                        
+                        if (success) {
+                            android.util.Log.d("BookingOverlay", "✅ Reject success: $message")
+                            
+                            val toastMessage = when {
+                                message.contains("next-tier-activated") -> "Booking offered to next available workers"
+                                message.contains("no-more-tiers") -> "Booking rejected"
+                                else -> "Booking rejected"
                             }
+                            
+                            withContext(Dispatchers.Main) {
+                                ui {
+                                    Toast.makeText(
+                                        this@BookingOverlayService,
+                                        toastMessage,
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        } else {
+                            val error = json.optString("error", "Unknown error")
+                            android.util.Log.d("BookingOverlay", "❌ Reject failed: $error")
+                            throw IllegalStateException("Server rejected: $error")
                         }
                     } else {
-                        val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
-                        android.util.Log.d("BookingOverlay", "❌ Reject failed: HTTP $responseCode: $errorBody")
+                        val errorMsg = try {
+                            val json = JSONObject(responseBody)
+                            json.optString("message", json.optString("error", json.optString("msg", "HTTP $responseCode")))
+                        } catch (e: Exception) {
+                            "HTTP $responseCode: ${responseBody.take(200)}"
+                        }
+                        android.util.Log.d("BookingOverlay", "❌ Reject failed: $errorMsg")
                         throw IllegalStateException("HTTP $responseCode: $errorBody")
                     }
                 } finally {

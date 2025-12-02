@@ -364,40 +364,106 @@ class BookingAlertActivity : AppCompatActivity() {
                         finish()
                     }
                 } else if (action == "rejected") {
-                    // Update booking to cancelled status
-                    val updateUrl = URL("$SUPABASE_URL/rest/v1/bookings?id=eq.$bookingId")
-                    val connection = updateUrl.openConnection() as HttpURLConnection
+                    // Extract user_id from JWT
+                    val userId = try {
+                        val parts = jwt.split(".")
+                        if (parts.size >= 2) {
+                            val payload = String(android.util.Base64.decode(parts[1], android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING))
+                            val jsonObj = JSONObject(payload)
+                            jsonObj.optString("sub", "")
+                        } else {
+                            ""
+                        }
+                    } catch (e: Exception) {
+                        Log.e("BookingAlert", "❌ Failed to extract user_id from JWT", e)
+                        ""
+                    }
                     
-                    connection.requestMethod = "PATCH"
+                    if (userId.isEmpty()) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                this@BookingAlertActivity,
+                                "⚠️ Could not identify worker",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            finish()
+                        }
+                        return@launch
+                    }
+                    
+                    Log.d("BookingAlert", "👤 Worker ID: $userId")
+                    
+                    // Call reject_booking_request RPC
+                    val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/reject_booking_request")
+                    val connection = rpcUrl.openConnection() as HttpURLConnection
+                    
+                    connection.requestMethod = "POST"
                     connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
                     connection.setRequestProperty("Authorization", "Bearer $jwt")
                     connection.setRequestProperty("Content-Type", "application/json")
-                    connection.setRequestProperty("Prefer", "return=minimal")
                     connection.doOutput = true
 
-                    val jsonPayload = """{"status":"cancelled"}"""
+                    val jsonPayload = """{"p_booking_id":"$bookingId","p_worker_id":"$userId"}"""
                     connection.outputStream.use { os ->
                         os.write(jsonPayload.toByteArray())
                     }
 
                     val responseCode = connection.responseCode
-                    Log.d("BookingAlert", "📡 Update Response Code: $responseCode")
+                    Log.d("BookingAlert", "📡 RPC Response Code: $responseCode")
+                    
+                    val responseBody = if (responseCode in 200..299) {
+                        connection.inputStream.bufferedReader().use { it.readText() }
+                    } else {
+                        connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
+                    }
                     connection.disconnect()
+                    
+                    Log.d("BookingAlert", "📄 RPC Response Body: $responseBody")
 
                     withContext(Dispatchers.Main) {
                         if (responseCode in 200..299) {
-                            Toast.makeText(
-                                this@BookingAlertActivity,
-                                "❌ Booking rejected",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            Log.d("BookingAlert", "❌ Booking rejected successfully")
+                            try {
+                                val jsonResponse = JSONObject(responseBody)
+                                val success = jsonResponse.optBoolean("success", false)
+                                val message = jsonResponse.optString("message", "")
+                                
+                                if (success) {
+                                    val toastMessage = when {
+                                        message.contains("next-tier-activated") -> "Booking offered to next available workers"
+                                        message.contains("no-more-tiers") -> "Booking rejected"
+                                        else -> "Booking rejected"
+                                    }
+                                    
+                                    Toast.makeText(
+                                        this@BookingAlertActivity,
+                                        toastMessage,
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    Log.d("BookingAlert", "✅ Booking rejected: $message")
+                                } else {
+                                    Toast.makeText(
+                                        this@BookingAlertActivity,
+                                        "⚠️ Failed to reject booking",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    Log.w("BookingAlert", "⚠️ Reject failed: ${jsonResponse.optString("error")}")
+                                }
+                            } catch (e: Exception) {
+                                Log.e("BookingAlert", "❌ Error parsing response", e)
+                                Toast.makeText(
+                                    this@BookingAlertActivity,
+                                    "Booking rejected",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
                         } else {
                             Toast.makeText(
                                 this@BookingAlertActivity,
-                                "⚠️ Failed to reject booking",
-                                Toast.LENGTH_SHORT
+                                "⚠️ Failed to reject booking (Code: $responseCode)",
+                                Toast.LENGTH_LONG
                             ).show()
+                            Log.e("BookingAlert", "❌ HTTP Error: $responseCode - $responseBody")
+                        }
                             Log.e("BookingAlert", "❌ Reject failed with code: $responseCode")
                         }
                         finish()
