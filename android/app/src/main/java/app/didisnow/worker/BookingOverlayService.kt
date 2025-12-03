@@ -660,6 +660,93 @@ class BookingOverlayService : Service() {
         }
     }
     
+    /**
+     * Refresh the access token using the refresh token
+     * Returns the new access token, or null if refresh failed
+     */
+    private fun refreshAccessToken(): String? {
+        try {
+            val prefs = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
+            val sessionJson = prefs.getString("didi_session", null)
+            
+            if (sessionJson.isNullOrEmpty()) {
+                android.util.Log.e("BookingOverlay", "❌ No session found for refresh")
+                return null
+            }
+            
+            val session = JSONObject(sessionJson)
+            val refreshToken = session.optString("refreshToken", "")
+            
+            if (refreshToken.isEmpty()) {
+                android.util.Log.e("BookingOverlay", "❌ No refresh token in session")
+                return null
+            }
+            
+            android.util.Log.d("BookingOverlay", "🔄 Refreshing access token...")
+            
+            val url = URL("$SUPABASE_URL/auth/v1/token?grant_type=refresh_token")
+            val connection = url.openConnection() as HttpURLConnection
+            
+            try {
+                connection.requestMethod = "POST"
+                connection.connectTimeout = 10000
+                connection.readTimeout = 10000
+                connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.doOutput = true
+                
+                val payload = """{"refresh_token":"$refreshToken"}"""
+                connection.outputStream.use { os ->
+                    os.write(payload.toByteArray())
+                }
+                
+                val responseCode = connection.responseCode
+                android.util.Log.d("BookingOverlay", "🔄 Refresh response code: $responseCode")
+                
+                if (responseCode in 200..299) {
+                    val responseBody = connection.inputStream.bufferedReader().use { it.readText() }
+                    val newSession = JSONObject(responseBody)
+                    
+                    val newAccessToken = newSession.optString("access_token", "")
+                    val newRefreshToken = newSession.optString("refresh_token", refreshToken)
+                    val expiresIn = newSession.optInt("expires_in", 3600)
+                    
+                    if (newAccessToken.isNotEmpty()) {
+                        // Update stored session with new tokens
+                        val updatedSession = JSONObject().apply {
+                            put("accessToken", newAccessToken)
+                            put("refreshToken", newRefreshToken)
+                            put("expiresIn", expiresIn)
+                            // Preserve user info if present
+                            if (session.has("user")) {
+                                put("user", session.getJSONObject("user"))
+                            }
+                        }
+                        
+                        prefs.edit()
+                            .putString("didi_session", updatedSession.toString())
+                            .apply()
+                        
+                        // Update cached token
+                        currentAccessToken = newAccessToken
+                        
+                        android.util.Log.d("BookingOverlay", "✅ Token refreshed successfully! New token: ${newAccessToken.take(12)}...")
+                        return newAccessToken
+                    }
+                } else {
+                    val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
+                    android.util.Log.e("BookingOverlay", "❌ Token refresh failed: $responseCode - $errorBody")
+                }
+            } finally {
+                connection.disconnect()
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("BookingOverlay", "❌ Token refresh exception", e)
+        }
+        
+        return null
+    }
+    
     private suspend fun updateBooking(bookingId: String, action: String) {
         withContext(Dispatchers.IO) {
             android.util.Log.d("BookingOverlay", "📤 Updating booking $bookingId with action: $action")
@@ -683,9 +770,22 @@ class BookingOverlayService : Service() {
                 }
             }
             
+            // If no token or token might be expired, try refreshing first
             if (jwt.isNullOrEmpty()) {
-                android.util.Log.e("BookingOverlay", "❌ No access token available!")
-                throw IllegalStateException("No access token available")
+                android.util.Log.d("BookingOverlay", "🔄 No token found, attempting refresh...")
+                jwt = refreshAccessToken()
+            } else {
+                // Proactively refresh if we have a session - token may be expired
+                android.util.Log.d("BookingOverlay", "🔄 Proactively refreshing token to ensure it's valid...")
+                val refreshedToken = refreshAccessToken()
+                if (!refreshedToken.isNullOrEmpty()) {
+                    jwt = refreshedToken
+                }
+            }
+            
+            if (jwt.isNullOrEmpty()) {
+                android.util.Log.e("BookingOverlay", "❌ No access token available after refresh attempt!")
+                throw IllegalStateException("No access token available - Please log in again")
             }
             
             android.util.Log.d("BookingOverlay", "✅ Using token: ${jwt?.take(12)}...")

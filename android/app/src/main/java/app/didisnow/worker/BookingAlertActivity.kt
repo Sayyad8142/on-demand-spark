@@ -271,18 +271,130 @@ class BookingAlertActivity : AppCompatActivity() {
         }
     }
     
+    /**
+     * Refresh the access token using the refresh token
+     * Returns the new access token, or null if refresh failed
+     */
+    private fun refreshAccessToken(): String? {
+        try {
+            val prefs = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
+            val sessionJson = prefs.getString("didi_session", null)
+            
+            if (sessionJson.isNullOrEmpty()) {
+                Log.e("BookingAlert", "❌ No session found for refresh")
+                return null
+            }
+            
+            val session = org.json.JSONObject(sessionJson)
+            val refreshToken = session.optString("refreshToken", "")
+            
+            if (refreshToken.isEmpty()) {
+                Log.e("BookingAlert", "❌ No refresh token in session")
+                return null
+            }
+            
+            Log.d("BookingAlert", "🔄 Refreshing access token...")
+            
+            val url = URL("$SUPABASE_URL/auth/v1/token?grant_type=refresh_token")
+            val connection = url.openConnection() as HttpURLConnection
+            
+            try {
+                connection.requestMethod = "POST"
+                connection.connectTimeout = 10000
+                connection.readTimeout = 10000
+                connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.doOutput = true
+                
+                val payload = """{"refresh_token":"$refreshToken"}"""
+                connection.outputStream.use { os ->
+                    os.write(payload.toByteArray())
+                }
+                
+                val responseCode = connection.responseCode
+                Log.d("BookingAlert", "🔄 Refresh response code: $responseCode")
+                
+                if (responseCode in 200..299) {
+                    val responseBody = connection.inputStream.bufferedReader().use { it.readText() }
+                    val newSession = org.json.JSONObject(responseBody)
+                    
+                    val newAccessToken = newSession.optString("access_token", "")
+                    val newRefreshToken = newSession.optString("refresh_token", refreshToken)
+                    val expiresIn = newSession.optInt("expires_in", 3600)
+                    
+                    if (newAccessToken.isNotEmpty()) {
+                        // Update stored session with new tokens
+                        val updatedSession = org.json.JSONObject().apply {
+                            put("accessToken", newAccessToken)
+                            put("refreshToken", newRefreshToken)
+                            put("expiresIn", expiresIn)
+                            // Preserve user info if present
+                            if (session.has("user")) {
+                                put("user", session.getJSONObject("user"))
+                            }
+                        }
+                        
+                        prefs.edit()
+                            .putString("didi_session", updatedSession.toString())
+                            .apply()
+                        
+                        // Also update worker_prefs for backward compatibility
+                        getSharedPreferences("worker_prefs", MODE_PRIVATE)
+                            .edit()
+                            .putString("supabase_jwt", newAccessToken)
+                            .apply()
+                        
+                        Log.d("BookingAlert", "✅ Token refreshed successfully! New token: ${newAccessToken.take(12)}...")
+                        return newAccessToken
+                    }
+                } else {
+                    val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
+                    Log.e("BookingAlert", "❌ Token refresh failed: $responseCode - $errorBody")
+                }
+            } finally {
+                connection.disconnect()
+            }
+        } catch (e: Exception) {
+            Log.e("BookingAlert", "❌ Token refresh exception", e)
+        }
+        
+        return null
+    }
+    
     private fun updateBooking(bookingId: String, action: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 Log.d("BookingAlert", "📤 Updating booking $bookingId with action: $action")
                 
-                // Get the stored JWT token
-                val jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE)
+                // First, try to get JWT from worker_prefs
+                var jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE)
                     .getString("supabase_jwt", null)
                 
-                Log.d("BookingAlert", "🔑 JWT token present: ${jwt != null}")
+                // If not found, try CapacitorStorage
+                if (jwt.isNullOrEmpty()) {
+                    val sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
+                        .getString("didi_session", null)
+                    if (!sessionJson.isNullOrEmpty()) {
+                        try {
+                            val session = JSONObject(sessionJson)
+                            jwt = session.optString("accessToken", "")
+                        } catch (e: Exception) {
+                            Log.e("BookingAlert", "❌ Failed to parse session", e)
+                        }
+                    }
+                }
                 
-                if (jwt == null || jwt.isEmpty()) {
+                Log.d("BookingAlert", "🔑 JWT token present: ${!jwt.isNullOrEmpty()}")
+                
+                // Always try to refresh the token first - it might be expired
+                Log.d("BookingAlert", "🔄 Proactively refreshing token...")
+                val refreshedToken = refreshAccessToken()
+                if (!refreshedToken.isNullOrEmpty()) {
+                    jwt = refreshedToken
+                    Log.d("BookingAlert", "✅ Using refreshed token")
+                }
+                
+                if (jwt.isNullOrEmpty()) {
                     Log.w("BookingAlert", "⚠️ No Supabase JWT - cannot proceed")
                     withContext(Dispatchers.Main) {
                         Toast.makeText(
