@@ -52,13 +52,26 @@ Deno.serve(async (req) => {
 
     // Check each booking to see if it needs an alert
     for (const booking of bookings) {
-      // Combine date and time strings
-      const scheduledDateTime = new Date(`${booking.scheduled_date}T${booking.scheduled_time}`);
+      // Combine date and time strings - interpret as IST (Asia/Kolkata timezone)
+      // The database stores times without timezone, but users enter times in IST
+      const scheduledDateTimeStr = `${booking.scheduled_date}T${booking.scheduled_time}`;
+      
+      // Parse the time in IST and convert to UTC for comparison
+      // IST is UTC+5:30, so we need to subtract 5 hours 30 minutes to get UTC
+      const [datePart, timePart] = scheduledDateTimeStr.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hours, minutes, seconds] = timePart.split(':').map(Number);
+      
+      // Create date in IST by adding the offset
+      // IST = UTC + 5:30, so UTC = IST - 5:30
+      const istDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds || 0));
+      // Subtract IST offset (5 hours 30 minutes = 330 minutes) to get UTC
+      const scheduledDateTime = new Date(istDate.getTime() - (5.5 * 60 * 60 * 1000));
       
       // Calculate 10 minutes before scheduled time
       const alertTime = new Date(scheduledDateTime.getTime() - 10 * 60 * 1000);
       
-      console.log(`Booking ${booking.id}: scheduled=${scheduledDateTime.toISOString()}, alert=${alertTime.toISOString()}, now=${now.toISOString()}`);
+      console.log(`Booking ${booking.id}: scheduled_ist=${scheduledDateTimeStr}, scheduled_utc=${scheduledDateTime.toISOString()}, alert_utc=${alertTime.toISOString()}, now_utc=${now.toISOString()}`);
 
       // If current time is past the alert time, send notification
       if (now >= alertTime) {
