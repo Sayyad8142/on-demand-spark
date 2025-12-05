@@ -106,46 +106,62 @@ Deno.serve(async (req) => {
     }
 
   // Determine which time to check - scheduled time or current time
-  let checkTime: Date;
   let checkTimeString: string;
   let checkDayOfWeek: number;
   
   if (b.scheduled_date && b.scheduled_time) {
-    // For scheduled bookings, check availability at the scheduled time
-    const scheduledDateTime = new Date(`${b.scheduled_date}T${b.scheduled_time}`);
-    checkTime = scheduledDateTime;
-    console.log(`📅 Scheduled booking - checking availability for: ${b.scheduled_date} ${b.scheduled_time}`);
+    // For scheduled bookings, use the stored time DIRECTLY (it's already in IST)
+    // Don't convert through Date object which causes timezone issues
+    checkTimeString = b.scheduled_time; // Already in HH:mm:ss IST format
+    
+    // Parse the date to get day of week (create date at midnight UTC to avoid timezone shifts)
+    const [year, month, day] = b.scheduled_date.split('-').map(Number);
+    const scheduledDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0)); // Use noon UTC to avoid date boundary issues
+    const jsDay = scheduledDate.getUTCDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+    
+    // Convert JS day (Sun=0) to our format (Mon=0, Sun=6)
+    const dayMapping: Record<number, number> = {
+      0: 6, // Sunday
+      1: 0, // Monday
+      2: 1, // Tuesday
+      3: 2, // Wednesday
+      4: 3, // Thursday
+      5: 4, // Friday
+      6: 5  // Saturday
+    };
+    checkDayOfWeek = dayMapping[jsDay];
+    
+    console.log(`📅 Scheduled booking - checking availability for: ${b.scheduled_date} ${b.scheduled_time} (IST)`);
+    console.log(`📅 Using time directly: ${checkTimeString}, day: ${checkDayOfWeek}`);
   } else {
-    // For instant bookings, check current time
-    checkTime = new Date();
-    console.log(`📅 Instant booking - checking availability for current time`);
+    // For instant bookings, check current time in IST
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+    checkTimeString = formatter.format(now);
+    
+    // Get day of week in IST
+    const dayFormatter = new Intl.DateTimeFormat('en-US', { 
+      timeZone: 'Asia/Kolkata',
+      weekday: 'short'
+    });
+    const weekday = dayFormatter.format(now);
+    
+    // Map weekday names to our database day numbering (Monday=0, Sunday=6)
+    const weekdayMap: Record<string, number> = {
+      'Mon': 0, 'Tue': 1, 'Wed': 2, 'Thu': 3, 'Fri': 4, 'Sat': 5, 'Sun': 6
+    };
+    checkDayOfWeek = weekdayMap[weekday];
+    
+    console.log(`📅 Instant booking - checking availability for current time in IST`);
   }
 
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Kolkata',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  });
-  checkTimeString = formatter.format(checkTime);
-  
-  // Get day of week using Asia/Kolkata timezone
-  // NOTE: Our database uses Monday=0, Tuesday=1, ..., Sunday=6
-  // This matches the Availability page UI numbering
-  const dayFormatter = new Intl.DateTimeFormat('en-US', { 
-    timeZone: 'Asia/Kolkata',
-    weekday: 'short'
-  });
-  const weekday = dayFormatter.format(checkTime);
-  
-  // Map weekday names to our database day numbering (Monday=0, Sunday=6)
-  const weekdayMap: Record<string, number> = {
-    'Mon': 0, 'Tue': 1, 'Wed': 2, 'Thu': 3, 'Fri': 4, 'Sat': 5, 'Sun': 6
-  };
-  checkDayOfWeek = weekdayMap[weekday];
-
-  console.log(`📅 Checking availability for: ${checkTimeString} on day ${checkDayOfWeek} (${weekday}, where Mon=0...Sun=6)`);
+  console.log(`📅 Checking availability for: ${checkTimeString} on day ${checkDayOfWeek} (Mon=0...Sun=6)`);
 
   // Get workers with availability for the check time
   const { data: availableWorkers, error: availError } = await supabase
