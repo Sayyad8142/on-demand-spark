@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     // Load booking details (community is TEXT field, not FK)
     const { data: b, error: be } = await supabase
       .from("bookings")
-      .select("id, status, service_type, community, cust_name, cust_phone, flat_no, price_inr, scheduled_date, scheduled_time")
+      .select("id, status, service_type, community, cust_name, cust_phone, flat_no, price_inr, scheduled_date, scheduled_time, booking_type")
       .eq("id", booking_id)
       .single();
       
@@ -67,9 +67,15 @@ Deno.serve(async (req) => {
       return new Response("skip - not pending", { status: 200, headers: corsHeaders });
     }
 
-    console.log("✅ Booking loaded:", { 
+    // Determine if this is a scheduled or instant booking
+    const isScheduled = !!(b.scheduled_date && b.scheduled_time);
+    const bookingType = isScheduled ? "scheduled" : "instant";
+    
+    console.log(`✅ Booking loaded (${bookingType}):`, { 
       service_type: b.service_type, 
-      community: b.community
+      community: b.community,
+      scheduled_date: b.scheduled_date,
+      scheduled_time: b.scheduled_time
     });
 
     // Fetch community details by name (case-insensitive)
@@ -313,16 +319,16 @@ Deno.serve(async (req) => {
       if (tier2UserIds.length === 0) {
         console.log("⚠️ No Tier 2 workers, notifying all...");
         const allUserIds = sortedWorkers.map((w) => w.user_id || w.id).filter(Boolean);
-        return await sendNotifications(allUserIds, b, booking_id);
+        return await sendNotifications(allUserIds, b, booking_id, bookingType);
       }
       
-      return await sendNotifications(tier2UserIds, b, booking_id);
+      return await sendNotifications(tier2UserIds, b, booking_id, bookingType);
     }
 
     console.log(`🎯 Notifying Tier 1 workers first (${tier1UserIds.length} workers, ${TIER_TIMEOUT_SECONDS}s window)`);
     console.log(`⏳ Tier 2 (${tier2Workers.length}) and Tier 3 (${tier3Workers.length}) will be notified if no acceptance`);
 
-    return await sendNotifications(tier1UserIds, b, booking_id);
+    return await sendNotifications(tier1UserIds, b, booking_id, bookingType);
   } catch (e) {
     console.error("❌ Exception in booking-notifications:", e);
     return new Response(`err:${(e as Error)?.message ?? e}`, { status: 500, headers: corsHeaders });
@@ -330,9 +336,47 @@ Deno.serve(async (req) => {
 });
 
 // Helper function to send FCM notifications
-async function sendNotifications(userIds: string[], booking: any, bookingId: string) {
+async function sendNotifications(userIds: string[], booking: any, bookingId: string, bookingType: string) {
   const fcmUrl = `${SUPABASE_URL}/functions/v1/send-fcm`;
-  console.log("📤 Calling send-fcm for user IDs:", userIds);
+  console.log(`📤 Calling send-fcm for ${bookingType} booking, user IDs:`, userIds);
+  
+  // Format scheduled time for display (if scheduled booking)
+  let scheduledTimeDisplay = "";
+  if (booking.scheduled_date && booking.scheduled_time) {
+    // Format: "Dec 5, 7:00 AM"
+    const dateObj = new Date(`${booking.scheduled_date}T${booking.scheduled_time}`);
+    scheduledTimeDisplay = dateObj.toLocaleString('en-IN', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Kolkata'
+    });
+  }
+  
+  const fcmPayload = {
+    workerIds: userIds,
+    title: "New Booking Alert!",
+    body: `${booking.service_type.replace('_', ' ')} in ${booking.community || 'your area'}. Tap to accept!`,
+    data: { 
+      type: "BOOKING_ALERT",
+      bookingId: bookingId, 
+      booking_id: bookingId,
+      booking_type: bookingType, // "instant" or "scheduled"
+      customer: booking.cust_name || "New Customer",
+      community: booking.community || '',
+      serviceType: booking.service_type,
+      service_type: booking.service_type,
+      location: booking.flat_no || "",
+      price: String(booking.price_inr || 0),
+      scheduled_time: scheduledTimeDisplay, // Human-readable scheduled time
+      scheduled_date: booking.scheduled_date || "",
+      scheduled_time_raw: booking.scheduled_time || ""
+    },
+  };
+  
+  console.log(`📦 FCM payload being sent:`, JSON.stringify(fcmPayload, null, 2));
   
   const sendResponse = await fetch(fcmUrl, {
     method: "POST",
@@ -340,22 +384,7 @@ async function sendNotifications(userIds: string[], booking: any, bookingId: str
       "Content-Type": "application/json",
       "Authorization": `Bearer ${ANON_KEY}`,
     },
-      body: JSON.stringify({
-      workerIds: userIds,
-      title: "New Booking Alert!",
-      body: `${booking.service_type.replace('_', ' ')} in ${booking.community || 'your area'}. Tap to accept!`,
-      data: { 
-        type: "BOOKING_ALERT",
-        bookingId: bookingId, 
-        booking_id: bookingId,
-        customer: booking.cust_name || "New Customer",
-        community: booking.community || '',
-        serviceType: booking.service_type,
-        service_type: booking.service_type, // Also send as service_type for compatibility
-        location: booking.flat_no || "",
-        price: String(booking.price_inr || 0)
-      },
-    }),
+    body: JSON.stringify(fcmPayload),
   });
 
   if (!sendResponse.ok) {
@@ -370,6 +399,7 @@ async function sendNotifications(userIds: string[], booking: any, bookingId: str
   return new Response(
     JSON.stringify({ 
       success: true,
+      booking_type: bookingType,
       sent: userIds.length,
       result 
     }), 

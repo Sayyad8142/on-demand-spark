@@ -16,20 +16,21 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log('Checking for scheduled bookings that need alerts...');
+    const startTime = new Date().toISOString();
+    console.log(`🕐 check-scheduled-bookings: Starting at ${startTime}`);
 
     // Find bookings that need alerts (scheduled to start in 10 minutes)
     // We need to combine scheduled_date and scheduled_time, subtract 10 minutes, and compare to now
     const { data: bookings, error: fetchError } = await supabase
       .from('bookings')
-      .select('id, scheduled_date, scheduled_time, service_type, community')
+      .select('id, scheduled_date, scheduled_time, service_type, community, cust_name, flat_no, price_inr')
       .eq('status', 'pending')
       .eq('prealert_sent', false)
       .not('scheduled_date', 'is', null)
       .not('scheduled_time', 'is', null);
 
     if (fetchError) {
-      console.error('Error fetching bookings:', fetchError);
+      console.error('❌ Error fetching bookings:', fetchError);
       return new Response(
         JSON.stringify({ error: 'Failed to fetch bookings', details: fetchError }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -37,14 +38,14 @@ Deno.serve(async (req) => {
     }
 
     if (!bookings || bookings.length === 0) {
-      console.log('No scheduled bookings pending alerts');
+      console.log('📭 No scheduled bookings pending pre-alert');
       return new Response(
         JSON.stringify({ message: 'No bookings to process', count: 0 }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Found ${bookings.length} scheduled bookings to check`);
+    console.log(`📋 Found ${bookings.length} scheduled bookings to check`);
 
     // Get current time
     const now = new Date();
@@ -71,15 +72,27 @@ Deno.serve(async (req) => {
       // Calculate 10 minutes before scheduled time
       const alertTime = new Date(scheduledDateTime.getTime() - 10 * 60 * 1000);
       
-      console.log(`Booking ${booking.id}: scheduled_ist=${scheduledDateTimeStr}, scheduled_utc=${scheduledDateTime.toISOString()}, alert_utc=${alertTime.toISOString()}, now_utc=${now.toISOString()}`);
+      console.log(`📊 Booking ${booking.id}:`);
+      console.log(`   scheduled_ist=${scheduledDateTimeStr}`);
+      console.log(`   scheduled_utc=${scheduledDateTime.toISOString()}`);
+      console.log(`   alert_utc=${alertTime.toISOString()}`);
+      console.log(`   now_utc=${now.toISOString()}`);
+      console.log(`   should_alert=${now >= alertTime}`);
 
       // If current time is past the alert time, send notification
       if (now >= alertTime) {
-        console.log(`Sending alert for booking ${booking.id}`);
+        console.log(`🚨 TRIGGERING PRE-ALERT for scheduled booking ${booking.id}`);
+        console.log(`   Service: ${booking.service_type}`);
+        console.log(`   Community: ${booking.community}`);
+        console.log(`   Customer: ${booking.cust_name}`);
+        console.log(`   Flat: ${booking.flat_no}`);
+        console.log(`   Price: ₹${booking.price_inr}`);
 
         // Call booking-notifications function with direct HTTP (like the database trigger does)
         // This ensures the Authorization header is properly included
         try {
+          console.log(`📤 Calling booking-notifications for booking ${booking.id}...`);
+          
           const notifyResponse = await fetch(`${SUPABASE_URL}/functions/v1/booking-notifications`, {
             method: 'POST',
             headers: {
@@ -89,16 +102,23 @@ Deno.serve(async (req) => {
             body: JSON.stringify({ booking_id: booking.id }),
           });
 
+          const responseText = await notifyResponse.text();
+          console.log(`📥 booking-notifications response (${notifyResponse.status}): ${responseText}`);
+
           if (!notifyResponse.ok) {
-            const errorText = await notifyResponse.text();
-            console.error(`Failed to send notification for booking ${booking.id}: ${notifyResponse.status} - ${errorText}`);
+            console.error(`❌ Failed to send notification for booking ${booking.id}: ${notifyResponse.status} - ${responseText}`);
             continue;
           }
 
-          const notifyResult = await notifyResponse.json();
-          console.log(`Notification response for booking ${booking.id}:`, notifyResult);
+          // Try to parse as JSON for detailed logging
+          try {
+            const notifyResult = JSON.parse(responseText);
+            console.log(`✅ Notification result for booking ${booking.id}:`, JSON.stringify(notifyResult, null, 2));
+          } catch {
+            console.log(`✅ Notification sent for booking ${booking.id} (non-JSON response)`);
+          }
         } catch (notifyError) {
-          console.error(`Failed to send notification for booking ${booking.id}:`, notifyError);
+          console.error(`❌ Exception calling booking-notifications for booking ${booking.id}:`, notifyError);
           continue;
         }
 
@@ -109,18 +129,22 @@ Deno.serve(async (req) => {
           .eq('id', booking.id);
 
         if (updateError) {
-          console.error(`Failed to update prealert_sent for booking ${booking.id}:`, updateError);
+          console.error(`❌ Failed to update prealert_sent for booking ${booking.id}:`, updateError);
           continue;
         }
 
         alertsSent.push(booking.id);
-        console.log(`Successfully sent alert for booking ${booking.id}`);
+        console.log(`✅ Successfully processed scheduled booking ${booking.id} - prealert_sent set to true`);
       } else {
-        console.log(`Booking ${booking.id} not ready yet (${Math.round((alertTime.getTime() - now.getTime()) / 60000)} minutes remaining)`);
+        const minutesRemaining = Math.round((alertTime.getTime() - now.getTime()) / 60000);
+        console.log(`⏳ Booking ${booking.id} not ready yet (${minutesRemaining} minutes until pre-alert)`);
       }
     }
 
-    console.log(`Processed ${bookings.length} bookings, sent ${alertsSent.length} alerts`);
+    console.log(`📊 Summary: Checked ${bookings.length} bookings, sent ${alertsSent.length} alerts`);
+    if (alertsSent.length > 0) {
+      console.log(`📋 Alerted booking IDs: ${alertsSent.join(', ')}`);
+    }
 
     return new Response(
       JSON.stringify({
@@ -133,7 +157,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in check-scheduled-bookings:', error);
+    console.error('❌ Error in check-scheduled-bookings:', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: error instanceof Error ? error.message : String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

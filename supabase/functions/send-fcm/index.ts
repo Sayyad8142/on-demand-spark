@@ -62,7 +62,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log("📤 Sending FCM to workers:", workerIds);
+    const bookingType = data?.booking_type || "unknown";
+    console.log(`📤 Sending FCM to workers for ${bookingType} booking:`, workerIds);
+    console.log(`📦 Incoming data payload:`, JSON.stringify(data, null, 2));
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -112,32 +114,38 @@ Deno.serve(async (req) => {
         try {
           const isBookingAlert = data?.type === "BOOKING_ALERT";
           
-          const baseData = {
-            ...(data || {}),
-            type: data?.type || "",
-            bookingId: data?.bookingId || data?.booking_id || "",
-            customer: data?.customer || "",
-            community: data?.community || "",
-            serviceType: data?.serviceType || data?.service_type || "",
-            location: data?.location || "",
-            price: data?.price || "0",
-            title,
-            body,
+          // Build the data payload - ALL values must be strings for FCM
+          const baseData: Record<string, string> = {
+            type: String(data?.type || ""),
+            bookingId: String(data?.bookingId || data?.booking_id || ""),
+            booking_id: String(data?.bookingId || data?.booking_id || ""),
+            booking_type: String(data?.booking_type || "instant"), // "instant" or "scheduled"
+            customer: String(data?.customer || ""),
+            community: String(data?.community || ""),
+            serviceType: String(data?.serviceType || data?.service_type || ""),
+            service_type: String(data?.serviceType || data?.service_type || ""),
+            location: String(data?.location || ""),
+            price: String(data?.price || "0"),
+            scheduled_time: String(data?.scheduled_time || ""), // Human-readable
+            scheduled_date: String(data?.scheduled_date || ""),
+            scheduled_time_raw: String(data?.scheduled_time_raw || ""),
+            title: String(title),
+            body: String(body),
           };
           
-          console.log(`📦 FCM payload for ${user_id}:`, { 
-            type: baseData.type, 
-            bookingId: baseData.bookingId,
-            price: baseData.price 
-          });
+          console.log(`📦 FCM data payload for ${user_id} (${bookingType} booking):`, JSON.stringify(baseData, null, 2));
 
+          // CRITICAL: For BOOKING_ALERT, we MUST use data-only message (no notification block)
+          // This ensures onMessageReceived() is ALWAYS called, even when app is in background
+          // Both instant and scheduled bookings use the SAME data-only format
           const message = isBookingAlert
             ? {
-                // ✅ Data-only payload ensures MyFirebaseService.onMessageReceived() runs
+                // ✅ DATA-ONLY payload - ensures MyFirebaseService.onMessageReceived() runs
+                // This works for BOTH instant AND scheduled bookings
                 message: {
                   token,
                   android: {
-                    priority: "HIGH",
+                    priority: "HIGH" as const,
                     ttl: "60s",
                   },
                   data: baseData,
@@ -149,12 +157,18 @@ Deno.serve(async (req) => {
                   token,
                   notification: { title, body },
                   android: {
-                    priority: "HIGH",
+                    priority: "HIGH" as const,
                     ttl: "60s",
                   },
                   data: baseData,
                 },
               };
+
+          console.log(`🚀 Sending FCM message to ${user_id}:`);
+          console.log(`   isBookingAlert: ${isBookingAlert}`);
+          console.log(`   booking_type: ${baseData.booking_type}`);
+          console.log(`   has_notification_block: ${!isBookingAlert}`);
+          console.log(`   message structure:`, JSON.stringify(message, null, 2));
 
           const response = await fetch(
             `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
@@ -172,10 +186,18 @@ Deno.serve(async (req) => {
 
           if (!response.ok) {
             console.error(`❌ FCM error for user ${user_id}:`, result);
+            
+            // If token is invalid/not registered, delete it from database
+            if (result.error?.code === 404 || 
+                result.error?.details?.some((d: any) => d.errorCode === "UNREGISTERED")) {
+              console.log(`🗑️ Deleting stale FCM token for user ${user_id}`);
+              await supabase.from("fcm_tokens").delete().eq("user_id", user_id);
+            }
+            
             return { user_id, success: false, error: result };
           }
 
-          console.log(`✅ Sent to user ${user_id}:`, result);
+          console.log(`✅ FCM sent successfully to user ${user_id}:`, result);
           return { user_id, success: true, messageId: result.name };
         } catch (error) {
           console.error(`❌ Error sending to user ${user_id}:`, error);
@@ -186,10 +208,11 @@ Deno.serve(async (req) => {
 
     const successCount = results.filter((r) => r.success).length;
     const failureCount = results.filter((r) => !r.success).length;
-    console.log(`📊 Sent ${successCount}/${results.length} notifications`);
+    console.log(`📊 FCM Summary: Sent ${successCount}/${results.length} notifications (${bookingType} booking)`);
 
     return new Response(JSON.stringify({ 
       success: true,
+      booking_type: bookingType,
       sent: successCount,
       failed: failureCount,
       results 

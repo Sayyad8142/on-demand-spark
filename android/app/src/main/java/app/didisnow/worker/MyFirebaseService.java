@@ -11,6 +11,8 @@ import androidx.core.app.NotificationCompat;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
+import java.util.Map;
+
 public class MyFirebaseService extends FirebaseMessagingService {
   private static final String TAG = "MyFirebaseService";
   private static final String CHANNEL_ID = "booking_alerts";
@@ -18,35 +20,53 @@ public class MyFirebaseService extends FirebaseMessagingService {
 
   @Override
   public void onMessageReceived(RemoteMessage message) {
-    Log.d(TAG, "📩 FCM message received from: " + message.getFrom());
+    Log.d(TAG, "═══════════════════════════════════════════════════════════");
+    Log.d(TAG, "📩 FCM MESSAGE RECEIVED");
+    Log.d(TAG, "═══════════════════════════════════════════════════════════");
+    Log.d(TAG, "📩 From: " + message.getFrom());
     Log.d(TAG, "📩 Message ID: " + message.getMessageId());
-    Log.d(TAG, "📩 Data payload: " + message.getData().toString());
     
-    if (message.getNotification() != null) {
-      Log.d(TAG, "📬 Notification payload: " + message.getNotification().getTitle() + " - " + message.getNotification().getBody());
+    // Log the FULL data payload for debugging
+    Map<String, String> data = message.getData();
+    Log.d(TAG, "📦 FULL DATA PAYLOAD:");
+    for (Map.Entry<String, String> entry : data.entrySet()) {
+      Log.d(TAG, "   " + entry.getKey() + " = " + entry.getValue());
     }
     
-    String type = message.getData().get("type");
+    if (message.getNotification() != null) {
+      Log.d(TAG, "📬 Notification payload present: " + message.getNotification().getTitle() + " - " + message.getNotification().getBody());
+    } else {
+      Log.d(TAG, "📬 No notification payload (data-only message) - GOOD for overlay!");
+    }
+    
+    String type = data.get("type");
+    String bookingType = data.get("booking_type"); // "instant" or "scheduled"
     Log.d(TAG, "🏷️ Message type: " + type);
+    Log.d(TAG, "🏷️ Booking type: " + bookingType);
     
     try {
+      // Handle BOOKING_ALERT for BOTH instant AND scheduled bookings
       if ("BOOKING_ALERT".equals(type)) {
-        Log.d(TAG, "🚨 BOOKING_ALERT detected! Starting BookingOverlayService...");
+        Log.d(TAG, "═══════════════════════════════════════════════════════════");
+        Log.d(TAG, "🚨 BOOKING_ALERT DETECTED - " + (bookingType != null ? bookingType.toUpperCase() : "UNKNOWN") + " BOOKING");
+        Log.d(TAG, "═══════════════════════════════════════════════════════════");
         
         // Get booking data - try both field names for compatibility
-        String bookingId = message.getData().get("bookingId");
+        String bookingId = data.get("bookingId");
         if (bookingId == null || bookingId.isEmpty()) {
-          bookingId = message.getData().get("booking_id");
+          bookingId = data.get("booking_id");
         }
         
-        String customer = message.getData().get("customer");
-        String community = message.getData().get("community");
-        String serviceType = message.getData().get("serviceType");
+        String customer = data.get("customer");
+        String community = data.get("community");
+        String serviceType = data.get("serviceType");
         if (serviceType == null || serviceType.isEmpty()) {
-          serviceType = message.getData().get("service_type");
+          serviceType = data.get("service_type");
         }
-        String location = message.getData().get("location");
-        String priceStr = message.getData().get("price");
+        String location = data.get("location");
+        String priceStr = data.get("price");
+        String scheduledTime = data.get("scheduled_time"); // Human-readable scheduled time
+        
         int price = 0;
         try {
           if (priceStr != null && !priceStr.isEmpty()) {
@@ -56,26 +76,31 @@ public class MyFirebaseService extends FirebaseMessagingService {
           Log.w(TAG, "⚠️ Failed to parse price: " + priceStr, e);
         }
         
-        Log.d(TAG, "📋 Booking details:");
-        Log.d(TAG, "  ID: " + bookingId);
-        Log.d(TAG, "  Customer: " + customer);
-        Log.d(TAG, "  Community: " + community);
-        Log.d(TAG, "  Service: " + serviceType);
-        Log.d(TAG, "  Location: " + location);
-        Log.d(TAG, "  Price: ₹" + price);
+        Log.d(TAG, "📋 BOOKING DETAILS:");
+        Log.d(TAG, "   ID: " + bookingId);
+        Log.d(TAG, "   Type: " + bookingType);
+        Log.d(TAG, "   Customer: " + customer);
+        Log.d(TAG, "   Community: " + community);
+        Log.d(TAG, "   Service: " + serviceType);
+        Log.d(TAG, "   Location: " + location);
+        Log.d(TAG, "   Price: ₹" + price);
+        if (scheduledTime != null && !scheduledTime.isEmpty()) {
+          Log.d(TAG, "   Scheduled Time: " + scheduledTime);
+        }
         
         // Validate critical data
         if (bookingId == null || bookingId.isEmpty()) {
           Log.e(TAG, "❌ CRITICAL: No bookingId in FCM payload! Cannot show overlay.");
-          Log.e(TAG, "❌ Full data payload: " + message.getData().toString());
+          Log.e(TAG, "❌ Full data payload: " + data.toString());
           return;
         }
         
         // Check overlay permission
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
           if (!android.provider.Settings.canDrawOverlays(this)) {
-            Log.e(TAG, "❌ CRITICAL: No overlay permission! User must grant permission in Settings.");
-            showPermissionNotification();
+            Log.e(TAG, "❌ CRITICAL: No overlay permission! Falling back to Activity.");
+            // Try to show BookingAlertActivity as fallback
+            launchBookingAlertActivity(bookingId, customer, community, serviceType, location, price, bookingType, scheduledTime);
             return;
           } else {
             Log.d(TAG, "✅ Overlay permission granted");
@@ -83,14 +108,19 @@ public class MyFirebaseService extends FirebaseMessagingService {
         }
         
         // Start BookingOverlayService to show system overlay
+        // This works for BOTH instant AND scheduled bookings!
+        Log.d(TAG, "🚀 Starting BookingOverlayService for " + bookingType + " booking...");
+        
         Intent serviceIntent = new Intent(this, BookingOverlayService.class);
         serviceIntent.putExtra("mode", "show");
         serviceIntent.putExtra("booking_id", bookingId);
+        serviceIntent.putExtra("booking_type", bookingType != null ? bookingType : "instant");
         serviceIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
         serviceIntent.putExtra("community", community != null ? community : "");
         serviceIntent.putExtra("service_type", serviceType != null ? serviceType : "Service");
         serviceIntent.putExtra("flat_no", location != null ? location : "");
         serviceIntent.putExtra("price_inr", price);
+        serviceIntent.putExtra("scheduled_time", scheduledTime != null ? scheduledTime : "");
         
         // Try to get access token from SharedPreferences to pass via Intent
         try {
@@ -112,24 +142,66 @@ public class MyFirebaseService extends FirebaseMessagingService {
           Log.e(TAG, "❌ Failed to read session for token", e);
         }
         
-        Log.d(TAG, "🚀 Starting BookingOverlayService with mode=show...");
+        Log.d(TAG, "🚀 Starting BookingOverlayService with mode=show for " + bookingType + " booking...");
         
         try {
           // Use regular startService since BookingOverlayService is no longer a foreground service
           startService(serviceIntent);
-          Log.d(TAG, "✅ BookingOverlayService started successfully");
+          Log.d(TAG, "✅ BookingOverlayService started successfully for " + bookingType + " booking!");
         } catch (Exception se) {
-          Log.e(TAG, "❌ startForegroundService failed, falling back to BookingAlertActivity", se);
-          Intent activityIntent = new Intent(this, BookingAlertActivity.class)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-          activityIntent.putExtras(serviceIntent);
-          startActivity(activityIntent);
+          Log.e(TAG, "❌ startService failed, falling back to BookingAlertActivity", se);
+          launchBookingAlertActivity(bookingId, customer, community, serviceType, location, price, bookingType, scheduledTime);
         }
       } else {
-        Log.d(TAG, "⏭️ Not a BOOKING_ALERT, type: " + type + " - skipping");
+        Log.d(TAG, "⏭️ Not a BOOKING_ALERT, type: " + type + " - skipping overlay");
       }
     } catch (Exception e) {
       Log.e(TAG, "❌ BOOKING_ALERT handling failed", e);
+    }
+  }
+  
+  /**
+   * Launch BookingAlertActivity as fallback when overlay permission is not granted
+   * or when starting the overlay service fails.
+   * Works for BOTH instant AND scheduled bookings.
+   */
+  private void launchBookingAlertActivity(String bookingId, String customer, String community, 
+                                           String serviceType, String location, int price,
+                                           String bookingType, String scheduledTime) {
+    Log.d(TAG, "🚀 Launching BookingAlertActivity as fallback for " + bookingType + " booking");
+    
+    try {
+      Intent activityIntent = new Intent(this, BookingAlertActivity.class);
+      activityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+      activityIntent.putExtra("booking_id", bookingId);
+      activityIntent.putExtra("booking_type", bookingType != null ? bookingType : "instant");
+      activityIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
+      activityIntent.putExtra("community", community != null ? community : "");
+      activityIntent.putExtra("service_type", serviceType != null ? serviceType : "Service");
+      activityIntent.putExtra("flat_no", location != null ? location : "");
+      activityIntent.putExtra("price_inr", price);
+      activityIntent.putExtra("scheduled_time", scheduledTime != null ? scheduledTime : "");
+      
+      // Pass access token
+      try {
+        String sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
+            .getString("didi_session", null);
+        if (sessionJson != null && !sessionJson.isEmpty()) {
+          org.json.JSONObject session = new org.json.JSONObject(sessionJson);
+          String accessToken = session.optString("accessToken", "");
+          if (!accessToken.isEmpty()) {
+            activityIntent.putExtra("ACCESS_TOKEN", accessToken);
+          }
+        }
+      } catch (Exception e) {
+        Log.e(TAG, "❌ Failed to read session for activity token", e);
+      }
+      
+      startActivity(activityIntent);
+      Log.d(TAG, "✅ BookingAlertActivity launched successfully for " + bookingType + " booking");
+    } catch (Exception e) {
+      Log.e(TAG, "❌ Failed to launch BookingAlertActivity", e);
+      showPermissionNotification();
     }
   }
 
