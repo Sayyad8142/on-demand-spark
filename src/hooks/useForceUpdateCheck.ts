@@ -8,36 +8,47 @@ export const useForceUpdateCheck = () => {
 
   useEffect(() => {
     const checkVersion = async () => {
+      // Set a 3-second timeout to prevent hanging
+      const timeoutId = setTimeout(() => {
+        console.log('Version check timed out, proceeding without update');
+        setNeedsUpdate(false);
+        setLoading(false);
+      }, 3000);
+
       try {
-        // Get current app version code from config
         const currentVersionCode = CURRENT_VERSION_CODE;
 
-        console.log('Current app version code:', currentVersionCode);
-
-        // Fetch minimum required version from Supabase
+        // Use maybeSingle() to handle empty table gracefully
         const { data, error } = await supabase
           .from('app_config')
           .select('min_worker_version_code')
-          .single();
+          .maybeSingle();
+
+        clearTimeout(timeoutId);
 
         if (error) {
           console.error('Error fetching app config:', error);
           setNeedsUpdate(false);
+          setLoading(false);
           return;
         }
 
-        const minVersionCode = data?.min_worker_version_code || 1;
-        console.log('Minimum required version code:', minVersionCode);
+        // If no config row exists, don't require update
+        if (!data) {
+          setNeedsUpdate(false);
+          setLoading(false);
+          return;
+        }
 
-        // Check if update is needed
+        const minVersionCode = data.min_worker_version_code || 1;
+
         if (currentVersionCode < minVersionCode) {
-          console.log('Update required!');
           setNeedsUpdate(true);
         } else {
-          console.log('App is up to date');
           setNeedsUpdate(false);
         }
       } catch (error) {
+        clearTimeout(timeoutId);
         console.error('Error checking version:', error);
         setNeedsUpdate(false);
       } finally {
