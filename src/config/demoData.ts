@@ -7,6 +7,7 @@ export const DEMO_WORKER = {
   communities: ['downtown'],
   community: 'downtown',
   selected_community_id: null,
+  cook_cuisine_tags: ['north_indian', 'south_indian'],
   is_active: true,
   is_available: true,
   is_busy: false,

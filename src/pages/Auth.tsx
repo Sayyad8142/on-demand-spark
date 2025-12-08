@@ -76,6 +76,7 @@ export default function Auth() {
   const [signUpUpiId, setSignUpUpiId] = useState("");
   const [signUpCommunity, setSignUpCommunity] = useState("");
   const [signUpServices, setSignUpServices] = useState<string[]>([]);
+  const [signUpCuisineTags, setSignUpCuisineTags] = useState<string[]>([]);
   const [signUpOtp, setSignUpOtp] = useState("");
 
   // Auto OTP detection for Android
@@ -433,6 +434,8 @@ export default function Auth() {
       } = await supabase.from('workers').select('*').eq('phone', phone).maybeSingle();
       if (existingWorker) {
         // Update existing worker with new ID and details
+        // Clear cuisine tags if cook is not in services
+        const cuisineTags = signUpServices.includes('cook') ? signUpCuisineTags : [];
         const {
           error: workerError
         } = await supabase.from('workers').upsert({
@@ -443,6 +446,7 @@ export default function Auth() {
           service_types: signUpServices,
           communities: [signUpCommunity],
           selected_community_id: communityData.id,
+          cook_cuisine_tags: cuisineTags,
           is_active: true,
           is_available: false,
           is_busy: false
@@ -452,6 +456,8 @@ export default function Auth() {
         if (workerError) throw workerError;
       } else {
         // Create new worker profile with proper community ID
+        // Clear cuisine tags if cook is not in services
+        const cuisineTags = signUpServices.includes('cook') ? signUpCuisineTags : [];
         const {
           error: workerError
         } = await supabase.from('workers').insert({
@@ -462,6 +468,7 @@ export default function Auth() {
           service_types: signUpServices,
           communities: [signUpCommunity],
           selected_community_id: communityData.id,
+          cook_cuisine_tags: cuisineTags,
           is_active: true,
           is_available: false,
           is_busy: false
@@ -603,6 +610,10 @@ export default function Auth() {
                                 setSignUpServices(prev => [...prev, service.value]);
                               } else {
                                 setSignUpServices(prev => prev.filter(s => s !== service.value));
+                                // Clear cuisine tags if cook is deselected
+                                if (service.value === 'cook') {
+                                  setSignUpCuisineTags([]);
+                                }
                               }
                             }}
                             disabled={loading}
@@ -617,6 +628,66 @@ export default function Auth() {
                       ))}
                     </div>
                   </div>
+
+                  {/* Cook Cuisine Specialization */}
+                  {signUpServices.includes('cook') && (
+                    <div className="space-y-3">
+                      <Label>{t('auth.cuisineLabel', 'What type of cooking do you specialise in?')}</Label>
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
+                          <Checkbox
+                            id="cuisine-north"
+                            checked={signUpCuisineTags.includes('north_indian')}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSignUpCuisineTags(prev => [...prev, 'north_indian']);
+                              } else {
+                                setSignUpCuisineTags(prev => prev.filter(c => c !== 'north_indian'));
+                              }
+                            }}
+                            disabled={loading}
+                          />
+                          <Label htmlFor="cuisine-north" className="flex-1 cursor-pointer font-normal">
+                            {t('auth.cuisineNorth', 'North Indian')}
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
+                          <Checkbox
+                            id="cuisine-south"
+                            checked={signUpCuisineTags.includes('south_indian')}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSignUpCuisineTags(prev => [...prev, 'south_indian']);
+                              } else {
+                                setSignUpCuisineTags(prev => prev.filter(c => c !== 'south_indian'));
+                              }
+                            }}
+                            disabled={loading}
+                          />
+                          <Label htmlFor="cuisine-south" className="flex-1 cursor-pointer font-normal">
+                            {t('auth.cuisineSouth', 'South Indian')}
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
+                          <Checkbox
+                            id="cuisine-both"
+                            checked={signUpCuisineTags.includes('north_indian') && signUpCuisineTags.includes('south_indian')}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSignUpCuisineTags(['north_indian', 'south_indian']);
+                              } else {
+                                setSignUpCuisineTags([]);
+                              }
+                            }}
+                            disabled={loading}
+                          />
+                          <Label htmlFor="cuisine-both" className="flex-1 cursor-pointer font-normal">
+                            {t('auth.cuisineBoth', 'Both')}
+                          </Label>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <Button onClick={handleSignUpSendOtp} disabled={loading || !signUpFullName || !signUpPhone || !signUpCommunity || signUpServices.length === 0} className="w-full">
                     {loading ? t('auth.sending') : t('auth.sendOtp')}
