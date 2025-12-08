@@ -50,10 +50,10 @@ Deno.serve(async (req) => {
 
     console.log("🔍 Loading booking:", booking_id);
     
-    // Load booking details (community is TEXT field, not FK)
+    // Load booking details including cuisine_preference for cook bookings
     const { data: b, error: be } = await supabase
       .from("bookings")
-      .select("id, status, service_type, community, cust_name, cust_phone, flat_no, price_inr, scheduled_date, scheduled_time, booking_type")
+      .select("id, status, service_type, community, cust_name, cust_phone, flat_no, price_inr, scheduled_date, scheduled_time, booking_type, cook_cuisine_pref")
       .eq("id", booking_id)
       .single();
       
@@ -71,11 +71,16 @@ Deno.serve(async (req) => {
     const isScheduled = !!(b.scheduled_date && b.scheduled_time);
     const bookingType = isScheduled ? "scheduled" : "instant";
     
+    // Log cuisine preference for cook bookings
+    const isCookBooking = b.service_type === 'cook';
+    const cuisinePreference = b.cook_cuisine_pref || 'any';
+    
     console.log(`✅ Booking loaded (${bookingType}):`, { 
       service_type: b.service_type, 
       community: b.community,
       scheduled_date: b.scheduled_date,
-      scheduled_time: b.scheduled_time
+      scheduled_time: b.scheduled_time,
+      ...(isCookBooking && { cuisine_preference: cuisinePreference })
     });
 
     // Fetch community details by name (case-insensitive)
@@ -202,9 +207,10 @@ Deno.serve(async (req) => {
   console.log(`Found ${availableWorkerIds.size} workers available at ${checkTimeString} on day ${checkDayOfWeek}`);
 
   // Query for eligible workers based on service type, community, and availability
+  // For cook bookings, also fetch cook_cuisine_tags for cuisine matching
   let workersQuery = supabase
     .from("workers")
-    .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng")
+    .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng, cook_cuisine_tags")
     .eq("is_active", true)
     .eq("is_available", true)
     .eq("is_busy", false)
@@ -248,10 +254,59 @@ Deno.serve(async (req) => {
       return new Response("no-workers", { status: 200 });
     }
 
-    // All eligible workers who match service type
+    // =====================================================
+    // CUISINE-AWARE MATCHING FOR COOK BOOKINGS
+    // =====================================================
     let eligibleWorkers = workers;
 
-    console.log(`📊 Total eligible workers: ${eligibleWorkers.length}`);
+    if (isCookBooking && cuisinePreference !== 'any') {
+      console.log(`🍳 Cook booking with cuisine preference: ${cuisinePreference}`);
+      
+      // Split workers into primary (matching cuisine) and secondary (fallback)
+      const primaryWorkers: typeof workers = [];
+      const secondaryWorkers: typeof workers = [];
+      
+      workers.forEach((worker) => {
+        const cuisineTags: string[] = worker.cook_cuisine_tags || [];
+        
+        // Check if worker's cuisine tags include the requested cuisine
+        const matchesCuisine = cuisineTags.includes(cuisinePreference);
+        
+        if (matchesCuisine) {
+          primaryWorkers.push(worker);
+        } else {
+          secondaryWorkers.push(worker);
+        }
+      });
+      
+      console.log(`🍳 Cuisine matching results:`);
+      console.log(`   - PRIMARY (${cuisinePreference} cooks): ${primaryWorkers.length} workers`);
+      console.log(`   - SECONDARY (other cooks): ${secondaryWorkers.length} workers`);
+      
+      if (primaryWorkers.length > 0) {
+        primaryWorkers.forEach((w, i) => {
+          console.log(`   [Primary ${i+1}] ${w.full_name} - cuisine_tags: ${JSON.stringify(w.cook_cuisine_tags)}, rating: ${w.rating}`);
+        });
+      }
+      
+      if (secondaryWorkers.length > 0) {
+        secondaryWorkers.forEach((w, i) => {
+          console.log(`   [Secondary ${i+1}] ${w.full_name} - cuisine_tags: ${JSON.stringify(w.cook_cuisine_tags)}, rating: ${w.rating}`);
+        });
+      }
+      
+      // Merge: primary workers first, then secondary as fallback
+      // This ensures primary workers get Tier 1 priority
+      eligibleWorkers = [...primaryWorkers, ...secondaryWorkers];
+      
+      if (primaryWorkers.length === 0) {
+        console.log(`⚠️ No primary ${cuisinePreference} cooks found, falling back to all cooks`);
+      }
+    } else if (isCookBooking) {
+      console.log(`🍳 Cook booking with cuisine_preference='any' - all cook workers eligible`);
+    }
+
+    console.log(`📊 Total eligible workers after cuisine filtering: ${eligibleWorkers.length}`);
 
     if (!eligibleWorkers.length) {
       console.log("⚠️ No workers available");
@@ -259,47 +314,129 @@ Deno.serve(async (req) => {
     }
 
     // Sort workers by rating (highest first), then distance to center (if available)
-    const sortedWorkers = eligibleWorkers.sort((a, b) => {
-      const ratingDiff = (b.rating || 0) - (a.rating || 0);
-      if (ratingDiff !== 0) return ratingDiff;
+    // NOTE: For cook bookings with cuisine preference, we preserve primary/secondary ordering
+    // by only sorting within each group
+    let sortedWorkers: typeof eligibleWorkers;
+    
+    if (isCookBooking && cuisinePreference !== 'any') {
+      // For cuisine-aware matching, sort within primary and secondary groups separately
+      // to maintain the primary-first ordering
+      const primaryCount = eligibleWorkers.filter(w => 
+        (w.cook_cuisine_tags || []).includes(cuisinePreference)
+      ).length;
+      
+      const primaryWorkers = eligibleWorkers.slice(0, primaryCount);
+      const secondaryWorkers = eligibleWorkers.slice(primaryCount);
+      
+      // Sort each group by rating
+      const sortByRating = (a: typeof workers[0], b: typeof workers[0]) => {
+        const ratingDiff = (b.rating || 0) - (a.rating || 0);
+        if (ratingDiff !== 0) return ratingDiff;
+        if (hasCommunityCenter && a.last_lat && a.last_lng && b.last_lat && b.last_lng) {
+          const distA = haversineM(a.last_lat, a.last_lng, communityData.center_lat, communityData.center_lng);
+          const distB = haversineM(b.last_lat, b.last_lng, communityData.center_lat, communityData.center_lng);
+          return distA - distB;
+        }
+        return (b.total_ratings || 0) - (a.total_ratings || 0);
+      };
+      
+      primaryWorkers.sort(sortByRating);
+      secondaryWorkers.sort(sortByRating);
+      
+      sortedWorkers = [...primaryWorkers, ...secondaryWorkers];
+      
+      console.log(`🍳 Final cook worker order (cuisine-aware):`);
+      sortedWorkers.forEach((w, i) => {
+        const isPrimary = (w.cook_cuisine_tags || []).includes(cuisinePreference);
+        console.log(`   [${i+1}] ${w.full_name} (${isPrimary ? 'PRIMARY' : 'SECONDARY'}) - rating: ${w.rating}, tags: ${JSON.stringify(w.cook_cuisine_tags)}`);
+      });
+    } else {
+      // For non-cook bookings or cuisine_preference='any', use standard sorting
+      sortedWorkers = eligibleWorkers.sort((a, b) => {
+        const ratingDiff = (b.rating || 0) - (a.rating || 0);
+        if (ratingDiff !== 0) return ratingDiff;
 
-      // Tie-break by distance to community center if available
-      if (hasCommunityCenter && a.last_lat && a.last_lng && b.last_lat && b.last_lng) {
-        const distA = haversineM(a.last_lat, a.last_lng, communityData.center_lat, communityData.center_lng);
-        const distB = haversineM(b.last_lat, b.last_lng, communityData.center_lat, communityData.center_lng);
-        return distA - distB; // Closer is better
-      }
+        // Tie-break by distance to community center if available
+        if (hasCommunityCenter && a.last_lat && a.last_lng && b.last_lat && b.last_lng) {
+          const distA = haversineM(a.last_lat, a.last_lng, communityData.center_lat, communityData.center_lng);
+          const distB = haversineM(b.last_lat, b.last_lng, communityData.center_lat, communityData.center_lng);
+          return distA - distB; // Closer is better
+        }
 
-      return (b.total_ratings || 0) - (a.total_ratings || 0);
-    });
+        return (b.total_ratings || 0) - (a.total_ratings || 0);
+      });
+    }
 
     console.log(`✅ Final sorted count: ${sortedWorkers.length} workers`);
-    console.log(`📊 Filter summary: ${totalAvailable} total → ${eligibleWorkers.length} after location/geofence → ${sortedWorkers.length} final`);
+    console.log(`📊 Filter summary: ${totalAvailable} total → ${eligibleWorkers.length} after cuisine filtering → ${sortedWorkers.length} final`);
     
-    // Define priority tiers based on rating
-    const TIER_1_MIN_RATING = 4.5; // Top tier: 4.5+ stars
-    const TIER_2_MIN_RATING = 4.0; // Mid tier: 4.0-4.5 stars
+    // =====================================================
+    // TIERING LOGIC
+    // For cook bookings with cuisine preference:
+    //   - Tier 1 = PRIMARY workers (matching cuisine) sorted by rating
+    //   - Tier 2 = SECONDARY workers (other cooks) sorted by rating
+    // For other bookings:
+    //   - Use rating-based tiers as before
+    // =====================================================
     const TIER_TIMEOUT_SECONDS = 30; // Time window before moving to next tier
     
-    // Assign workers to tiers
-    const tier1Workers = sortedWorkers.filter(w => (w.rating || 0) >= TIER_1_MIN_RATING);
-    const tier2Workers = sortedWorkers.filter(w => (w.rating || 0) >= TIER_2_MIN_RATING && (w.rating || 0) < TIER_1_MIN_RATING);
-    const tier3Workers = sortedWorkers.filter(w => (w.rating || 0) < TIER_2_MIN_RATING);
+    let tier1Workers: typeof sortedWorkers;
+    let tier2Workers: typeof sortedWorkers;
+    let tier3Workers: typeof sortedWorkers;
+    
+    if (isCookBooking && cuisinePreference !== 'any') {
+      // For cuisine-aware cook bookings: Tier 1 = primary, Tier 2 = secondary
+      tier1Workers = sortedWorkers.filter(w => 
+        (w.cook_cuisine_tags || []).includes(cuisinePreference)
+      );
+      tier2Workers = sortedWorkers.filter(w => 
+        !(w.cook_cuisine_tags || []).includes(cuisinePreference)
+      );
+      tier3Workers = []; // No tier 3 for cuisine-aware matching
+      
+      console.log(`🍳 Cook booking tiers (cuisine-aware):`);
+      console.log(`   - Tier 1 (PRIMARY ${cuisinePreference} cooks): ${tier1Workers.length}`);
+      console.log(`   - Tier 2 (SECONDARY other cooks): ${tier2Workers.length}`);
+    } else {
+      // Standard rating-based tiers for non-cook bookings
+      const TIER_1_MIN_RATING = 4.5;
+      const TIER_2_MIN_RATING = 4.0;
+      
+      tier1Workers = sortedWorkers.filter(w => (w.rating || 0) >= TIER_1_MIN_RATING);
+      tier2Workers = sortedWorkers.filter(w => (w.rating || 0) >= TIER_2_MIN_RATING && (w.rating || 0) < TIER_1_MIN_RATING);
+      tier3Workers = sortedWorkers.filter(w => (w.rating || 0) < TIER_2_MIN_RATING);
 
-    console.log(`📊 Priority Tiers: Tier 1 (${tier1Workers.length}), Tier 2 (${tier2Workers.length}), Tier 3 (${tier3Workers.length})`);
+      console.log(`📊 Priority Tiers (rating-based): Tier 1 (${tier1Workers.length}), Tier 2 (${tier2Workers.length}), Tier 3 (${tier3Workers.length})`);
+    }
 
     // Create booking_requests for all workers with priority order
     const currentTime = new Date();
-    const bookingRequests = sortedWorkers.map((worker, index) => {
+    const bookingRequests = sortedWorkers.map((worker) => {
       let tier = 3;
       let timeoutSeconds = TIER_TIMEOUT_SECONDS * 3;
       
-      if ((worker.rating || 0) >= TIER_1_MIN_RATING) {
-        tier = 1;
-        timeoutSeconds = TIER_TIMEOUT_SECONDS;
-      } else if ((worker.rating || 0) >= TIER_2_MIN_RATING) {
-        tier = 2;
-        timeoutSeconds = TIER_TIMEOUT_SECONDS * 2;
+      if (isCookBooking && cuisinePreference !== 'any') {
+        // Cuisine-aware tiering
+        const isPrimary = (worker.cook_cuisine_tags || []).includes(cuisinePreference);
+        if (isPrimary) {
+          tier = 1;
+          timeoutSeconds = TIER_TIMEOUT_SECONDS;
+        } else {
+          tier = 2;
+          timeoutSeconds = TIER_TIMEOUT_SECONDS * 2;
+        }
+      } else {
+        // Rating-based tiering
+        const TIER_1_MIN_RATING = 4.5;
+        const TIER_2_MIN_RATING = 4.0;
+        
+        if ((worker.rating || 0) >= TIER_1_MIN_RATING) {
+          tier = 1;
+          timeoutSeconds = TIER_TIMEOUT_SECONDS;
+        } else if ((worker.rating || 0) >= TIER_2_MIN_RATING) {
+          tier = 2;
+          timeoutSeconds = TIER_TIMEOUT_SECONDS * 2;
+        }
       }
 
       return {
