@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
@@ -74,7 +75,7 @@ export default function Auth() {
   const [signUpPhone, setSignUpPhone] = useState("");
   const [signUpUpiId, setSignUpUpiId] = useState("");
   const [signUpCommunity, setSignUpCommunity] = useState("");
-  const [signUpService, setSignUpService] = useState("");
+  const [signUpServices, setSignUpServices] = useState<string[]>([]);
   const [signUpOtp, setSignUpOtp] = useState("");
 
   // Auto OTP detection for Android
@@ -310,9 +311,10 @@ export default function Auth() {
     }
   };
   const handleSignUpSendOtp = async () => {
-    if (!signUpFullName || !signUpPhone || !signUpCommunity || !signUpService) {
+    if (!signUpFullName || !signUpPhone || !signUpCommunity || signUpServices.length === 0) {
       toast({
         title: "Please fill all required fields",
+        description: signUpServices.length === 0 ? "Select at least one service type" : undefined,
         variant: "destructive"
       });
       return;
@@ -359,7 +361,7 @@ export default function Auth() {
           data: {
             full_name: signUpFullName.trim(),
             upi_id: signUpUpiId?.trim() || null,
-            service_types: [signUpService],
+            service_types: signUpServices,
             communities: [signUpCommunity]
           }
         }
@@ -438,7 +440,7 @@ export default function Auth() {
           full_name: signUpFullName.trim(),
           phone,
           upi_id: signUpUpiId?.trim() || existingWorker.upi_id,
-          service_types: [signUpService],
+          service_types: signUpServices,
           communities: [signUpCommunity],
           selected_community_id: communityData.id,
           is_active: true,
@@ -457,7 +459,7 @@ export default function Auth() {
           full_name: signUpFullName.trim(),
           phone,
           upi_id: signUpUpiId?.trim() || null,
-          service_types: [signUpService],
+          service_types: signUpServices,
           communities: [signUpCommunity],
           selected_community_id: communityData.id,
           is_active: true,
@@ -588,21 +590,35 @@ export default function Auth() {
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-service">{t('auth.serviceLabel')}</Label>
-                    <Select value={signUpService} onValueChange={setSignUpService} disabled={loading}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('auth.selectService')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SERVICES.map(service => <SelectItem key={service.value} value={service.value}>
+                  <div className="space-y-3">
+                    <Label>{t('auth.serviceLabel')}</Label>
+                    <div className="space-y-2">
+                      {SERVICES.map(service => (
+                        <div key={service.value} className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
+                          <Checkbox
+                            id={`service-${service.value}`}
+                            checked={signUpServices.includes(service.value)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSignUpServices(prev => [...prev, service.value]);
+                              } else {
+                                setSignUpServices(prev => prev.filter(s => s !== service.value));
+                              }
+                            }}
+                            disabled={loading}
+                          />
+                          <Label 
+                            htmlFor={`service-${service.value}`} 
+                            className="flex-1 cursor-pointer font-normal"
+                          >
                             {t(service.label)}
-                          </SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
-                  <Button onClick={handleSignUpSendOtp} disabled={loading || !signUpFullName || !signUpPhone || !signUpCommunity || !signUpService} className="w-full">
+                  <Button onClick={handleSignUpSendOtp} disabled={loading || !signUpFullName || !signUpPhone || !signUpCommunity || signUpServices.length === 0} className="w-full">
                     {loading ? t('auth.sending') : t('auth.sendOtp')}
                   </Button>
                 </> : <>
