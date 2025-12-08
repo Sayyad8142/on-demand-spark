@@ -71,6 +71,7 @@ export default function Profile() {
   const [fullName, setFullName] = useState("");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedCommunities, setSelectedCommunities] = useState<string[]>([]);
+  const [selectedCuisineTags, setSelectedCuisineTags] = useState<string[]>([]);
   const [communities, setCommunities] = useState<Community[]>([]);
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -139,6 +140,7 @@ export default function Profile() {
       setUpiId(worker.upi_id || "");
       setSelectedServices(worker.service_types || []);
       setSelectedCommunities(worker.communities || (worker.community ? [worker.community] : []));
+      setSelectedCuisineTags(worker.cook_cuisine_tags || []);
       setTotalEarnings(worker.total_earnings || 0);
       setPhotoUrl(worker.photo_url || null);
     }
@@ -338,12 +340,15 @@ export default function Profile() {
 
     try {
       setUpdating(true);
+      // Clear cuisine tags if cook is not in services
+      const cuisineTags = selectedServices.includes('cook') ? selectedCuisineTags : [];
       await updateWorker({
         full_name: fullName,
         phone: phone,
         upi_id: upiId,
         service_types: selectedServices,
-        communities: selectedCommunities
+        communities: selectedCommunities,
+        cook_cuisine_tags: cuisineTags
       });
       toast({ title: "Success", description: "Profile updated successfully" });
       setEditDialogOpen(false);
@@ -549,6 +554,10 @@ export default function Profile() {
                                 setSelectedServices([...selectedServices, service.value]);
                               } else {
                                 setSelectedServices(selectedServices.filter(s => s !== service.value));
+                                // Clear cuisine tags if cook is deselected
+                                if (service.value === 'cook') {
+                                  setSelectedCuisineTags([]);
+                                }
                               }
                             }}
                           >
@@ -625,6 +634,69 @@ export default function Profile() {
                       </div>
                     )}
                   </div>
+
+                  {/* Cook Cuisine Specialization */}
+                  {selectedServices.includes('cook') && (
+                    <div className="space-y-3">
+                      <Label>{t('profile.cuisineLabel', 'What type of cooking do you specialise in?')}</Label>
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
+                          <input
+                            type="checkbox"
+                            id="profile-cuisine-north"
+                            checked={selectedCuisineTags.includes('north_indian')}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedCuisineTags([...selectedCuisineTags, 'north_indian']);
+                              } else {
+                                setSelectedCuisineTags(selectedCuisineTags.filter(c => c !== 'north_indian'));
+                              }
+                            }}
+                            className="h-4 w-4 rounded border-gray-300"
+                          />
+                          <Label htmlFor="profile-cuisine-north" className="flex-1 cursor-pointer font-normal">
+                            {t('profile.cuisineNorth', 'North Indian')}
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
+                          <input
+                            type="checkbox"
+                            id="profile-cuisine-south"
+                            checked={selectedCuisineTags.includes('south_indian')}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedCuisineTags([...selectedCuisineTags, 'south_indian']);
+                              } else {
+                                setSelectedCuisineTags(selectedCuisineTags.filter(c => c !== 'south_indian'));
+                              }
+                            }}
+                            className="h-4 w-4 rounded border-gray-300"
+                          />
+                          <Label htmlFor="profile-cuisine-south" className="flex-1 cursor-pointer font-normal">
+                            {t('profile.cuisineSouth', 'South Indian')}
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
+                          <input
+                            type="checkbox"
+                            id="profile-cuisine-both"
+                            checked={selectedCuisineTags.includes('north_indian') && selectedCuisineTags.includes('south_indian')}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedCuisineTags(['north_indian', 'south_indian']);
+                              } else {
+                                setSelectedCuisineTags([]);
+                              }
+                            }}
+                            className="h-4 w-4 rounded border-gray-300"
+                          />
+                          <Label htmlFor="profile-cuisine-both" className="flex-1 cursor-pointer font-normal">
+                            {t('profile.cuisineBoth', 'Both')}
+                          </Label>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <Button
                     onClick={handleUpdate}

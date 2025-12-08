@@ -2352,6 +2352,7 @@ export type Database = {
         Row: {
           communities: string[] | null
           community: string | null
+          cook_cuisine_tags: string[]
           created_at: string
           fcm_token: string | null
           full_name: string
@@ -2381,6 +2382,7 @@ export type Database = {
         Insert: {
           communities?: string[] | null
           community?: string | null
+          cook_cuisine_tags?: string[]
           created_at?: string
           fcm_token?: string | null
           full_name: string
@@ -2410,6 +2412,7 @@ export type Database = {
         Update: {
           communities?: string[] | null
           community?: string | null
+          cook_cuisine_tags?: string[]
           created_at?: string
           fcm_token?: string | null
           full_name?: string
@@ -2478,6 +2481,7 @@ export type Database = {
         Returns: {
           communities: string[] | null
           community: string | null
+          cook_cuisine_tags: string[]
           created_at: string
           fcm_token: string | null
           full_name: string
@@ -2551,6 +2555,7 @@ export type Database = {
             Returns: {
               communities: string[] | null
               community: string | null
+              cook_cuisine_tags: string[]
               created_at: string
               fcm_token: string | null
               full_name: string
@@ -2597,6 +2602,7 @@ export type Database = {
             Returns: {
               communities: string[] | null
               community: string | null
+              cook_cuisine_tags: string[]
               created_at: string
               fcm_token: string | null
               full_name: string
