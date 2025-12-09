@@ -2551,7 +2551,15 @@ export type Database = {
       }
       admin_upsert_worker:
         | {
-            Args: { p_worker: Json }
+            Args: {
+              p_community: string
+              p_full_name: string
+              p_is_active?: boolean
+              p_phone: string
+              p_photo_url?: string
+              p_service_types: string[]
+              p_upi_id: string
+            }
             Returns: {
               communities: string[] | null
               community: string | null
@@ -2590,15 +2598,7 @@ export type Database = {
             }
           }
         | {
-            Args: {
-              p_community: string
-              p_full_name: string
-              p_is_active?: boolean
-              p_phone: string
-              p_photo_url?: string
-              p_service_types: string[]
-              p_upi_id: string
-            }
+            Args: { p_worker: Json }
             Returns: {
               communities: string[] | null
               community: string | null
