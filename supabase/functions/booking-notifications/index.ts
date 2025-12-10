@@ -521,7 +521,7 @@ async function sendNotifications(userIds: string[], booking: any, bookingId: str
       community: booking.community || '',
       serviceType: booking.service_type,
       service_type: booking.service_type,
-      location: booking.flat_no || "",
+      location: "", // Removed flat_no for privacy - only show in overlay
       price: String(booking.price_inr || 0),
       scheduled_time: scheduledTimeDisplay, // Human-readable scheduled time
       scheduled_date: booking.scheduled_date || "",
