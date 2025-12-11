@@ -510,8 +510,8 @@ async function sendNotifications(userIds: string[], booking: any, bookingId: str
   
   const fcmPayload = {
     workerIds: userIds,
-    title: "New Booking Alert!",
-    body: `${booking.service_type.replace('_', ' ')} in ${booking.community || 'your area'}. Tap to accept!`,
+    title: "New Booking",
+    body: "New Booking",
     data: { 
       type: "BOOKING_ALERT",
       bookingId: bookingId, 

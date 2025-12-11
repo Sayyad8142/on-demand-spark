@@ -64,8 +64,8 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         workerIds,
-        title: "New Booking Alert!",
-        body: `${booking.service_type.replace('_', ' ')} in ${booking.community}. Tap to accept!`,
+        title: "New Booking",
+        body: "New Booking",
         data: {
           type: "BOOKING_ALERT",
           bookingId: booking_id,

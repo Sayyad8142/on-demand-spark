@@ -2722,6 +2722,7 @@ export type Database = {
       }
       bytea_to_text: { Args: { data: string }; Returns: string }
       check_expired_assignments: { Args: never; Returns: Json }
+      cleanup_old_support_chats: { Args: never; Returns: undefined }
       create_admin_email_user: { Args: never; Returns: undefined }
       delete_my_data: { Args: never; Returns: undefined }
       escalate_overdue_bookings: { Args: never; Returns: undefined }
