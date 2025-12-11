@@ -73,7 +73,9 @@ Deno.serve(async (req) => {
           customer: booking.cust_name || "New Customer",
           community: booking.community,
           serviceType: booking.service_type,
-          location: booking.flat_no || "",
+          service_type: booking.service_type,
+          location: "", // Removed flat_no for privacy - only show in overlay
+          flat_no: booking.flat_no || "", // Keep flat_no for overlay to read
           price: String(booking.price_inr || 0),
           tier: String(tier)
         },

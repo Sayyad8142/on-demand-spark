@@ -522,6 +522,7 @@ async function sendNotifications(userIds: string[], booking: any, bookingId: str
       serviceType: booking.service_type,
       service_type: booking.service_type,
       location: "", // Removed flat_no for privacy - only show in overlay
+      flat_no: booking.flat_no || "", // Keep flat_no for overlay to read
       price: String(booking.price_inr || 0),
       scheduled_time: scheduledTimeDisplay, // Human-readable scheduled time
       scheduled_date: booking.scheduled_date || "",
