@@ -125,6 +125,7 @@ Deno.serve(async (req) => {
             serviceType: String(data?.serviceType || data?.service_type || ""),
             service_type: String(data?.serviceType || data?.service_type || ""),
             location: String(data?.location || ""),
+            flat_no: String(data?.flat_no || ""), // Keep flat_no for overlay to read
             price: String(data?.price || "0"),
             scheduled_time: String(data?.scheduled_time || ""), // Human-readable
             scheduled_date: String(data?.scheduled_date || ""),
