@@ -2,39 +2,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { auth } from "./firebase";
 
 export async function signInToSupabaseWithFirebaseToken(idToken: string) {
-  // Try Firebase provider first (Supabase third-party auth naming can differ)
+  // Use Firebase provider ONLY (do not fallback to oidc)
   let res = await supabase.auth.signInWithIdToken({
     provider: "firebase",
     token: idToken,
   } as any);
 
-  // If provider not allowed, try alternate provider keys
-  if (res.error?.message?.includes("not allowed") || res.error?.message?.includes("provider")) {
-    console.log("Firebase provider not allowed, trying firebase-phone...");
+  // Some Supabase setups use a different key for Firebase
+  if (res.error?.message?.toLowerCase().includes("not allowed") ||
+      res.error?.message?.toLowerCase().includes("provider")) {
     res = await supabase.auth.signInWithIdToken({
       provider: "firebase-phone",
       token: idToken,
     } as any);
   }
 
-  // Try generic oidc as last fallback
-  if (res.error?.message?.includes("not allowed") || res.error?.message?.includes("provider")) {
-    console.log("firebase-phone not allowed, trying oidc...");
-    res = await supabase.auth.signInWithIdToken({
-      provider: "oidc",
-      token: idToken,
-    } as any);
-  }
-
-  // If still failing, throw with helpful message
-  if (res.error) {
-    console.error("Supabase signInWithIdToken failed:", res.error);
-    throw new Error(
-      `Supabase auth failed: ${res.error.message}. Please configure Firebase as a third-party auth provider in Supabase Dashboard > Authentication > Providers.`
-    );
-  }
-
-  return { user: res.data.user, session: res.data.session };
+  if (res.error) throw res.error;
+  return res.data;
 }
 
 export async function signOutFromBoth() {
