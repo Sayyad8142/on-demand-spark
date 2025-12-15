@@ -1487,6 +1487,7 @@ export type Database = {
           community: string
           community_id: string | null
           created_at: string
+          firebase_uid: string | null
           flat_id: string | null
           flat_no: string
           full_name: string
@@ -1503,6 +1504,7 @@ export type Database = {
           community: string
           community_id?: string | null
           created_at?: string
+          firebase_uid?: string | null
           flat_id?: string | null
           flat_no: string
           full_name: string
@@ -1519,6 +1521,7 @@ export type Database = {
           community?: string
           community_id?: string | null
           created_at?: string
+          firebase_uid?: string | null
           flat_id?: string | null
           flat_no?: string
           full_name?: string
@@ -2804,6 +2807,7 @@ export type Database = {
         }[]
       }
       get_ops_setting: { Args: { p_key: string }; Returns: string }
+      get_profile_id: { Args: never; Returns: string }
       get_setting: {
         Args: { p_default: string; p_key: string }
         Returns: string
