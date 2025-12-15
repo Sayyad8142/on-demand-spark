@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X, Pencil, Languages, Star, Briefcase, Wallet, Settings, MessageSquare, BarChart3, Camera, Upload, Clock, ChevronRight, Shield, FileText, HelpCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { auth as firebaseAuth } from "@/lib/firebase";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -365,34 +366,39 @@ export default function Profile() {
       // Handle guest mode logout
       if (isGuestMode) {
         localStorage.removeItem('guest_mode');
-        toast({ 
-          title: "Logged Out", 
-          description: "You have exited guest mode" 
+        toast({
+          title: "Logged Out",
+          description: "You have exited guest mode"
         });
         navigate("/auth");
         return;
       }
-      
+
       // Handle regular user logout
       const { error } = await supabase.auth.signOut();
-      
+      try {
+        await firebaseAuth.signOut();
+      } catch (firebaseError) {
+        console.warn('Firebase logout error:', firebaseError);
+      }
+
       // Clear local storage regardless of error
       localStorage.clear();
-      
+
       // Navigate to auth page regardless of error
       navigate("/auth");
-      
+
       // Show appropriate message based on whether logout succeeded
       if (error) {
         console.error('Logout error:', error);
-        toast({ 
-          title: "Session Cleared", 
-          description: "You have been logged out locally" 
+        toast({
+          title: "Session Cleared",
+          description: "You have been logged out locally"
         });
       } else {
-        toast({ 
-          title: "Logged Out", 
-          description: "You have been successfully logged out" 
+        toast({
+          title: "Logged Out",
+          description: "You have been successfully logged out"
         });
       }
     } catch (error: any) {
@@ -400,9 +406,9 @@ export default function Profile() {
       // Clear storage and navigate even on exception
       localStorage.clear();
       navigate("/auth");
-      toast({ 
-        title: "Session Cleared", 
-        description: "You have been logged out locally" 
+      toast({
+        title: "Session Cleared",
+        description: "You have been logged out locally"
       });
     }
   };
