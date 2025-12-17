@@ -102,6 +102,39 @@ export function useAuth() {
     }
   };
 
+  // If Supabase's own persisted session isn't available, restore from our native backup
+  // (saved under didi_session) so workers don't need OTP after app inactivity.
+  const tryRestoreSupabaseFromNativeBackup = async (): Promise<Session | null> => {
+    if (!Capacitor.isNativePlatform()) return null;
+
+    try {
+      const raw = await capacitorStorage.getItem("didi_session");
+      if (!raw) return null;
+
+      const parsed = JSON.parse(raw) as {
+        accessToken?: string;
+        refreshToken?: string;
+      };
+
+      const access_token = parsed.accessToken;
+      const refresh_token = parsed.refreshToken;
+      if (!access_token || !refresh_token) return null;
+
+      console.log("🧩 Restoring Supabase session from didi_session backup...");
+      const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
+      if (error) {
+        console.warn("⚠️ Restore from didi_session failed:", error);
+        return null;
+      }
+
+      return data.session ?? null;
+    } catch (error) {
+      console.error("❌ Restore from didi_session exception:", error);
+      return null;
+    }
+  };
+
+
   useEffect(() => {
     let mounted = true;
 
@@ -125,11 +158,16 @@ export function useAuth() {
           break;
         }
 
-        // If Supabase session is missing (common after long inactivity), try to re-create it
-        // from the persisted Firebase login without forcing the user to re-enter OTP.
+        // If Supabase session is missing (common after long inactivity), first try to restore it
+        // from our native backup; if that fails, fall back to Firebase silent sign-in.
+        if (!currentSession && mounted) {
+          currentSession = await tryRestoreSupabaseFromNativeBackup();
+        }
+
         if (!currentSession && mounted) {
           currentSession = await trySilentSupabaseReauth();
         }
+
 
         if (!mounted) return;
 
@@ -190,14 +228,21 @@ export function useAuth() {
           void saveJWT(nextSession.access_token);
         }, 0);
       } else {
-        setTimeout(() => {
-          void capacitorStorage.removeItem("didi_session");
-          if (AuthBridge) {
-            void AuthBridge.clearToken();
-          }
-          console.log("🗑️ Cleared session from native storage");
-        }, 0);
+        // IMPORTANT: don't clear didi_session on INITIAL_SESSION (it is our fallback backup).
+        // Only clear on explicit sign-out events.
+        if (event === "SIGNED_OUT") {
+          setTimeout(() => {
+            void capacitorStorage.removeItem("didi_session");
+            if (AuthBridge) {
+              void AuthBridge.clearToken();
+            }
+            console.log("🗑️ Cleared session from native storage");
+          }, 0);
+        } else {
+          console.log(`ℹ️ No session for auth event ${event}; keeping didi_session backup`);
+        }
       }
+
     });
 
     // Aggressive session refresh - save session every 1 minute if exists
