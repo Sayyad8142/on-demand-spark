@@ -84,6 +84,7 @@ export default function Profile() {
   
   // Earnings data
   const [totalEarnings, setTotalEarnings] = useState(0);
+  const [todayEarnings, setTodayEarnings] = useState(0);
   const [completedJobs, setCompletedJobs] = useState(0);
   const [workerRating, setWorkerRating] = useState<number>(0);
   const [ratingsCount, setRatingsCount] = useState<number>(0);
@@ -152,6 +153,7 @@ export default function Profile() {
       // Set demo stats for guest mode
       setCompletedJobs(2);
       setTotalEarnings(750);
+      setTodayEarnings(200);
       setWorkerRating(4.8);
       setRatingsCount(127);
       setRatingBreakdown({ 5: 100, 4: 20, 3: 5, 2: 1, 1: 1 });
@@ -189,7 +191,7 @@ export default function Profile() {
     const fetchEarnings = async () => {
       const { data, error } = await supabase
         .from('bookings')
-        .select('price_inr')
+        .select('price_inr, completed_at')
         .eq('worker_id', user.id)
         .eq('status', 'completed');
 
@@ -197,6 +199,14 @@ export default function Profile() {
         setCompletedJobs(data.length);
         const total = data.reduce((sum, b) => sum + (b.price_inr || 0), 0);
         setTotalEarnings(total);
+        
+        // Calculate today's earnings
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayTotal = data
+          .filter(b => b.completed_at && new Date(b.completed_at) >= today)
+          .reduce((sum, b) => sum + (b.price_inr || 0), 0);
+        setTodayEarnings(todayTotal);
       }
     };
 
@@ -762,7 +772,7 @@ export default function Profile() {
               </div>
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-3 gap-2 mt-6">
+              <div className="grid grid-cols-2 gap-2 mt-6">
                 <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 rounded-2xl p-3 border-2 border-green-100 dark:border-green-900">
                   <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-500 mb-2 mx-auto">
                     <Wallet className="w-5 h-5 text-white" />
@@ -772,6 +782,18 @@ export default function Profile() {
                   </p>
                   <p className="text-[9px] text-muted-foreground font-semibold text-center uppercase tracking-tight leading-tight">
                     {t('profile.totalEarned')}
+                  </p>
+                </div>
+
+                <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 rounded-2xl p-3 border-2 border-purple-100 dark:border-purple-900">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-purple-500 mb-2 mx-auto">
+                    <Clock className="w-5 h-5 text-white" />
+                  </div>
+                  <p className="text-xl font-extrabold text-purple-600 dark:text-purple-400 text-center mb-1">
+                    ₹{todayEarnings}
+                  </p>
+                  <p className="text-[9px] text-muted-foreground font-semibold text-center uppercase tracking-tight leading-tight">
+                    {t('profile.todayEarned', 'TODAY EARNED')}
                   </p>
                 </div>
 
