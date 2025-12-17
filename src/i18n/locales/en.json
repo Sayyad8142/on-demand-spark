@@ -135,5 +135,11 @@
     "delete": "Delete",
     "edit": "Edit",
     "confirm": "Confirm"
+  },
+  "forceUpdate": {
+    "title": "Update Required",
+    "message": "A new version of Didi Now Worker App is available. Please update to continue using the app.",
+    "button": "Update Now",
+    "info": "This update contains important improvements and bug fixes."
   }
 }
