@@ -159,7 +159,7 @@ export default function Auth() {
   const handleFirebaseError = (error: any) => {
     console.error('Firebase Auth Error:', error);
     const code = error?.code || '';
-    
+
     if (code === 'auth/invalid-verification-code') {
       toast({ title: "Invalid OTP", description: "The verification code is incorrect. Please try again.", variant: "destructive" });
     } else if (code === 'auth/code-expired') {
@@ -168,6 +168,12 @@ export default function Auth() {
       toast({ title: "Too Many Requests", description: "Too many attempts. Please try again later.", variant: "destructive" });
     } else if (code === 'auth/invalid-phone-number') {
       toast({ title: "Invalid Phone", description: "The phone number format is invalid.", variant: "destructive" });
+    } else if (code === 'auth/invalid-app-credential') {
+      toast({
+        title: "Error",
+        description: "App verification failed (reCAPTCHA). Please update the app and try again.",
+        variant: "destructive"
+      });
     } else {
       toast({ title: "Error", description: error.message || "Something went wrong", variant: "destructive" });
     }
@@ -223,6 +229,7 @@ export default function Auth() {
       clearRecaptchaVerifier();
       const phone = normalizePhone(signInPhone);
       const verifier = getRecaptchaVerifier('recaptcha-container');
+      await verifier.render();
       const result = await signInWithPhoneNumber(auth, phone, verifier);
       confirmationResultRef.current = result;
       setOtpSent(true);
@@ -342,6 +349,7 @@ export default function Auth() {
       clearRecaptchaVerifier();
       const phone = normalizePhone(signUpPhone);
       const verifier = getRecaptchaVerifier('recaptcha-container');
+      await verifier.render();
       const result = await signInWithPhoneNumber(auth, phone, verifier);
       confirmationResultRef.current = result;
       setOtpSent(true);
