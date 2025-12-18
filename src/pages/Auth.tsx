@@ -170,9 +170,10 @@ export default function Auth() {
       toast({ title: "Invalid Phone", description: "The phone number format is invalid.", variant: "destructive" });
     } else if (code === 'auth/invalid-app-credential') {
       toast({
-        title: "Error",
-        description: "App verification failed (reCAPTCHA). Please update the app and try again.",
-        variant: "destructive"
+        title: "App verification failed",
+        description:
+          "reCAPTCHA verification failed. If this is the Android app, set Capacitor to https://localhost and ensure Firebase Auth → Authorized domains includes 'localhost'.",
+        variant: "destructive",
       });
     } else {
       toast({ title: "Error", description: error.message || "Something went wrong", variant: "destructive" });
