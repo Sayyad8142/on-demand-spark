@@ -4,13 +4,12 @@ const config: CapacitorConfig = {
   appId: 'app.didisnow.worker',
   appName: 'Didi Now Worker',
   webDir: 'dist',
-  // Firebase Phone Auth (reCAPTCHA) is more reliable on Android when the WebView
-  // runs on http://localhost instead of https://localhost.
+  // Ensure the Capacitor WebView runs on https://localhost.
+  // This provides a secure context and matches Firebase Auth authorized domains.
   server: {
-    // Keep HTTPS scheme for a secure context required by Firebase reCAPTCHA.
     androidScheme: 'https',
-    hostname: 'localhost'
-  }
+    hostname: 'localhost',
+  },
 };
 
 export default config;

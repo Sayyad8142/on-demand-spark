@@ -16,15 +16,25 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
 let verifier: any = null;
+let renderPromise: Promise<number> | null = null;
 
 export function getRecaptchaVerifier(containerId: string) {
   const el = document.getElementById(containerId);
   if (!el) throw new Error(`reCAPTCHA container #${containerId} not found`);
+  // Reuse a single verifier instance; do NOT recreate on every click.
   if (!verifier) verifier = new RecaptchaVerifier(auth, containerId, { size: "invisible" });
   return verifier;
+}
+
+export async function ensureRecaptchaRendered(containerId: string) {
+  const v = getRecaptchaVerifier(containerId);
+  // render() should only be called once per verifier.
+  if (!renderPromise) renderPromise = v.render();
+  return renderPromise;
 }
 
 export function clearRecaptchaVerifier() {
   try { verifier?.clear?.(); } catch {}
   verifier = null;
+  renderPromise = null;
 }
