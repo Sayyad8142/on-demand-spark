@@ -14,7 +14,7 @@ import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
-import { auth, getRecaptchaVerifier, clearRecaptchaVerifier } from "@/lib/firebase";
+import { auth, getRecaptchaVerifier, ensureRecaptchaRendered, clearRecaptchaVerifier } from "@/lib/firebase";
 import { signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
 import { signInToSupabaseWithFirebaseToken } from "@/lib/supabaseAuthFirebase";
 
@@ -22,6 +22,8 @@ import { signInToSupabaseWithFirebaseToken } from "@/lib/supabaseAuthFirebase";
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
 // @ts-ignore - SMS Retriever bridge
 const SmsRetrieverPlugin = (window as any).Capacitor?.Plugins?.SmsRetrieverPlugin;
+// @ts-ignore - Native Firebase Phone Auth bridge
+const FirebasePhoneAuth = (window as any).Capacitor?.Plugins?.FirebasePhoneAuth;
 
 const SERVICES = [{
   value: "maid",
@@ -50,8 +52,10 @@ export default function Auth() {
   const [communities, setCommunities] = useState<Array<{ name: string; value: string }>>([]);
   const [resendTimer, setResendTimer] = useState(0);
   
-  // Firebase confirmation result
+  // Firebase confirmation result (web)
   const confirmationResultRef = useRef<ConfirmationResult | null>(null);
+  // Native Android verification id
+  const nativeVerificationIdRef = useRef<string | null>(null);
 
   // Redirect if already logged in or in guest mode
   useEffect(() => {
@@ -159,6 +163,18 @@ export default function Auth() {
   const handleFirebaseError = (error: any) => {
     console.error('Firebase Auth Error:', error);
     const code = error?.code || '';
+    const msg = (error?.message || error?.error_description || '').toString();
+
+    // Supabase error when Firebase OIDC provider isn't enabled
+    if (msg.includes('Custom OIDC provider') && msg.includes('firebase')) {
+      toast({
+        title: "Backend auth not configured",
+        description:
+          "OTP is verified, but Supabase must allow the 'firebase' OIDC provider to create a session. Enable it in Supabase Auth providers.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (code === 'auth/invalid-verification-code') {
       toast({ title: "Invalid OTP", description: "The verification code is incorrect. Please try again.", variant: "destructive" });
@@ -172,12 +188,52 @@ export default function Auth() {
       toast({
         title: "App verification failed",
         description:
-          "reCAPTCHA verification failed. If this is the Android app, set Capacitor to https://localhost and ensure Firebase Auth → Authorized domains includes 'localhost'.",
+          "reCAPTCHA verification failed. Android now uses native PhoneAuth (no captcha UI). If this happens on web, ensure 'localhost' is an authorized domain in Firebase Auth.",
         variant: "destructive",
       });
     } else {
-      toast({ title: "Error", description: error.message || "Something went wrong", variant: "destructive" });
+      toast({ title: "Error", description: msg || "Something went wrong", variant: "destructive" });
     }
+  };
+
+  const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+
+  const sendOtp = async (phoneE164: string) => {
+    if (isNativeAndroid && FirebasePhoneAuth?.sendOtp) {
+      console.log('📲 [OTP] Using native Android PhoneAuth (no reCAPTCHA UI)');
+      const res = await FirebasePhoneAuth.sendOtp({ phone: phoneE164 });
+
+      // Auto verification can happen on some devices/SIMs.
+      if (res?.autoVerified && res?.idToken) {
+        return { kind: 'idToken' as const, idToken: res.idToken as string };
+      }
+
+      nativeVerificationIdRef.current = (res?.verificationId as string) || null;
+      return { kind: 'sent' as const };
+    }
+
+    console.log('🌐 [OTP] Using web Firebase Phone Auth (invisible reCAPTCHA)');
+    await ensureRecaptchaRendered('recaptcha-container');
+    const verifier = getRecaptchaVerifier('recaptcha-container');
+    const result = await signInWithPhoneNumber(auth, phoneE164, verifier);
+    confirmationResultRef.current = result;
+    return { kind: 'sent' as const };
+  };
+
+  const verifyOtp = async (otp: string) => {
+    if (isNativeAndroid && FirebasePhoneAuth?.verifyOtp) {
+      const verificationId = nativeVerificationIdRef.current;
+      if (!verificationId) throw new Error('missing verificationId');
+      console.log('🔎 [OTP] Verifying via native Android PhoneAuth');
+      const res = await FirebasePhoneAuth.verifyOtp({ otp, verificationId });
+      if (!res?.idToken) throw new Error('missing idToken');
+      return res.idToken as string;
+    }
+
+    if (!confirmationResultRef.current) throw new Error('missing confirmation result');
+    console.log('🔎 [OTP] Verifying via web Firebase Phone Auth');
+    const userCredential = await confirmationResultRef.current.confirm(otp);
+    return await userCredential.user.getIdToken(true);
   };
 
   const handleSignInSendOtp = async () => {
@@ -227,18 +283,25 @@ export default function Auth() {
 
     try {
       setLoading(true);
-      clearRecaptchaVerifier();
       const phone = normalizePhone(signInPhone);
-      const verifier = getRecaptchaVerifier('recaptcha-container');
-      await verifier.render();
-      const result = await signInWithPhoneNumber(auth, phone, verifier);
-      confirmationResultRef.current = result;
+      nativeVerificationIdRef.current = null;
+      confirmationResultRef.current = null;
+
+      const res = await sendOtp(phone);
+
+      // If auto-verified, immediately proceed to backend sign-in
+      if (res.kind === 'idToken') {
+        await signInToSupabaseWithFirebaseToken(res.idToken);
+        toast({ title: "Success!", description: "Signed in successfully" });
+        navigate("/home");
+        return;
+      }
+
       setOtpSent(true);
       setResendTimer(30);
       toast({ title: "OTP sent!", description: "Check your phone for the verification code" });
     } catch (error: any) {
       handleFirebaseError(error);
-      clearRecaptchaVerifier();
     } finally {
       setLoading(false);
     }
@@ -256,22 +319,14 @@ export default function Auth() {
       return;
     }
 
-    if (!confirmationResultRef.current) {
-      toast({ title: "Error", description: "Please request OTP again", variant: "destructive" });
-      return;
-    }
-
     try {
       setLoading(true);
       const phone = normalizePhone(signInPhone);
-      
-      // Verify OTP with Firebase
-      const userCredential = await confirmationResultRef.current.confirm(signInOtp);
-      const idToken = await userCredential.user.getIdToken(true);
-      
+
+      const idToken = await verifyOtp(signInOtp);
+
       // Sign in to Supabase with Firebase token
       const supabaseData = await signInToSupabaseWithFirebaseToken(idToken);
-      
       if (!supabaseData.user) throw new Error("No user returned from Supabase");
 
       // Check if a worker with this phone already exists
@@ -280,11 +335,11 @@ export default function Auth() {
         .select('*')
         .eq('phone', phone)
         .maybeSingle();
-        
+
       if (workerCheckError) {
         console.error('Error checking worker:', workerCheckError);
       }
-      
+
       if (existingWorker) {
         // Link existing worker to auth user
         await supabase.from('workers').update({ id: supabaseData.user.id }).eq('phone', phone);
@@ -295,8 +350,8 @@ export default function Auth() {
         console.log('🔐 [Auth Page] Saving JWT immediately after sign-in...');
         try {
           await AuthBridge.saveToken({ token: supabaseData.session.access_token });
-          const verify = await AuthBridge.getToken();
-          if (verify?.token === supabaseData.session.access_token) {
+          const verifyToken = await AuthBridge.getToken();
+          if (verifyToken?.token === supabaseData.session.access_token) {
             console.log('✅ [Auth Page] JWT saved and verified successfully');
           } else {
             console.error('❌ [Auth Page] JWT verification failed!');
@@ -305,7 +360,7 @@ export default function Auth() {
           console.error('❌ [Auth Page] Failed to save JWT:', err);
         }
       }
-      
+
       toast({ title: "Success!", description: "Signed in successfully" });
       navigate("/home");
     } catch (error: any) {
@@ -330,13 +385,13 @@ export default function Auth() {
       toast({ title: "Invalid name", description: nameValidation.error.errors[0].message, variant: "destructive" });
       return;
     }
-    
+
     const phoneValidation = phoneSchema.safeParse(signUpPhone);
     if (!phoneValidation.success) {
       toast({ title: "Invalid phone number", description: phoneValidation.error.errors[0].message, variant: "destructive" });
       return;
     }
-    
+
     if (signUpUpiId) {
       const upiValidation = upiSchema.safeParse(signUpUpiId);
       if (!upiValidation.success) {
@@ -347,18 +402,24 @@ export default function Auth() {
 
     try {
       setLoading(true);
-      clearRecaptchaVerifier();
       const phone = normalizePhone(signUpPhone);
-      const verifier = getRecaptchaVerifier('recaptcha-container');
-      await verifier.render();
-      const result = await signInWithPhoneNumber(auth, phone, verifier);
-      confirmationResultRef.current = result;
+      nativeVerificationIdRef.current = null;
+      confirmationResultRef.current = null;
+
+      const res = await sendOtp(phone);
+
+      if (res.kind === 'idToken') {
+        await signInToSupabaseWithFirebaseToken(res.idToken);
+        toast({ title: "Success!", description: "Signed in successfully" });
+        navigate("/home");
+        return;
+      }
+
       setOtpSent(true);
       setResendTimer(30);
       toast({ title: "OTP sent!", description: "Check your phone for the verification code" });
     } catch (error: any) {
       handleFirebaseError(error);
-      clearRecaptchaVerifier();
     } finally {
       setLoading(false);
     }
@@ -384,14 +445,12 @@ export default function Auth() {
     try {
       setLoading(true);
       const phone = normalizePhone(signUpPhone);
-      
-      // Verify OTP with Firebase
-      const userCredential = await confirmationResultRef.current.confirm(signUpOtp);
-      const idToken = await userCredential.user.getIdToken(true);
-      
+
+      const idToken = await verifyOtp(signUpOtp);
+
       // Sign in to Supabase with Firebase token
       const supabaseData = await signInToSupabaseWithFirebaseToken(idToken);
-      
+
       if (!supabaseData.user) throw new Error("No user returned from Supabase");
 
       // Fetch the community ID from the community value
@@ -489,10 +548,11 @@ export default function Auth() {
 
   const handleResendOtp = async () => {
     if (resendTimer > 0) return;
-    
-    clearRecaptchaVerifier();
+
+    // Keep verifier instance; just restart the OTP flow.
     confirmationResultRef.current = null;
-    
+    nativeVerificationIdRef.current = null;
+
     if (activeTab === 'signin') {
       await handleSignInSendOtp();
     } else {
