@@ -16,7 +16,6 @@ import { useTranslation } from "react-i18next";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import { auth, getRecaptchaVerifier, ensureRecaptchaRendered, clearRecaptchaVerifier } from "@/lib/firebase";
 import { signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
-import { signInToSupabaseWithFirebaseToken } from "@/lib/supabaseAuthFirebase";
 
 // Helper to get Capacitor plugins lazily (plugins may not be ready at module load).
 const getCapPlugin = <T,>(name: string): T | undefined =>
@@ -309,10 +308,19 @@ export default function Auth() {
 
       const res = await sendOtp(phone);
 
-      // If auto-verified, immediately proceed to backend sign-in
+      // If auto-verified, Firebase user is already set - navigate directly
       if (res.kind === 'idToken') {
-        await signInToSupabaseWithFirebaseToken(res.idToken);
-        toast({ title: "Success!", description: "Signed in successfully" });
+        const firebaseUser = auth.currentUser;
+        if (!firebaseUser) {
+          toast({ title: "Login failed", description: "User not found after OTP verification", variant: "destructive" });
+          return;
+        }
+        console.log('✅ Auto-verified! Firebase user:', firebaseUser.uid);
+        toast({ title: "OTP verified ✅", description: "Signed in successfully" });
+        
+        // Sync worker profile with Firebase UID
+        await syncWorkerProfile(firebaseUser.uid, firebaseUser.phoneNumber || normalizePhone(signInPhone));
+        
         navigate("/home");
         return;
       }
@@ -343,42 +351,37 @@ export default function Auth() {
       setLoading(true);
       const phone = normalizePhone(signInPhone);
 
-      const idToken = await verifyOtp(signInOtp);
-
-      // Sign in to Supabase with Firebase token
-      const supabaseData = await signInToSupabaseWithFirebaseToken(idToken);
-      if (!supabaseData.user) throw new Error("No user returned from Supabase");
-
-      // Check if a worker with this phone already exists
-      const { data: existingWorker, error: workerCheckError } = await supabase
-        .from('workers')
-        .select('*')
-        .eq('phone', phone)
-        .maybeSingle();
-
-      if (workerCheckError) {
-        console.error('Error checking worker:', workerCheckError);
+      // Verify OTP - this signs in the Firebase user
+      await verifyOtp(signInOtp);
+      
+      // Get the Firebase user
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser) {
+        toast({ title: "Login failed", description: "User not found after OTP verification", variant: "destructive" });
+        return;
       }
+      
+      console.log('✅ OTP verified! Firebase user:', firebaseUser.uid, 'phone:', firebaseUser.phoneNumber);
+      toast({ title: "OTP verified ✅" });
+      
+      // Sync worker profile with Firebase UID
+      await syncWorkerProfile(firebaseUser.uid, phone);
 
-      if (existingWorker) {
-        // Link existing worker to auth user
-        await supabase.from('workers').update({ id: supabaseData.user.id }).eq('phone', phone);
-      }
-
-      // Save JWT to native storage
+      // Save Firebase ID token to native storage
       const authBridge = getAuthBridge();
-      if (Capacitor.isNativePlatform() && authBridge && supabaseData.session?.access_token) {
-        console.log('🔐 [Auth Page] Saving JWT immediately after sign-in...');
+      if (Capacitor.isNativePlatform() && authBridge) {
+        console.log('🔐 [Auth Page] Saving Firebase ID token after sign-in...');
         try {
-          await authBridge.saveToken({ token: supabaseData.session.access_token });
+          const idToken = await firebaseUser.getIdToken();
+          await authBridge.saveToken({ token: idToken });
           const verifyToken = await authBridge.getToken();
-          if (verifyToken?.token === supabaseData.session.access_token) {
-            console.log('✅ [Auth Page] JWT saved and verified successfully');
+          if (verifyToken?.token === idToken) {
+            console.log('✅ [Auth Page] Token saved and verified successfully');
           } else {
-            console.error('❌ [Auth Page] JWT verification failed!');
+            console.error('❌ [Auth Page] Token verification failed!');
           }
         } catch (err) {
-          console.error('❌ [Auth Page] Failed to save JWT:', err);
+          console.error('❌ [Auth Page] Failed to save token:', err);
         }
       }
 
@@ -388,6 +391,52 @@ export default function Auth() {
       handleFirebaseError(error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Helper function to sync/upsert worker profile using Firebase UID
+  const syncWorkerProfile = async (firebaseUid: string, phone: string) => {
+    try {
+      console.log('🔄 Syncing worker profile for Firebase UID:', firebaseUid);
+      
+      // Check if a worker with this phone already exists
+      const { data: existingWorker, error: workerCheckError } = await supabase
+        .from('workers')
+        .select('id, user_id')
+        .eq('phone', phone)
+        .maybeSingle();
+
+      if (workerCheckError) {
+        console.error('Error checking worker:', workerCheckError);
+        toast({ title: "Warning", description: "Logged in, profile sync pending", variant: "default" });
+        return;
+      }
+
+      if (existingWorker) {
+        // Link existing worker to Firebase UID if not already linked
+        if (existingWorker.user_id !== firebaseUid) {
+          console.log('🔗 Linking existing worker to Firebase UID');
+          const { error: updateError } = await supabase
+            .from('workers')
+            .update({ user_id: firebaseUid })
+            .eq('id', existingWorker.id);
+          
+          if (updateError) {
+            console.error('Error linking worker:', updateError);
+            toast({ title: "Warning", description: "Logged in, profile sync pending", variant: "default" });
+          } else {
+            console.log('✅ Worker linked to Firebase UID');
+          }
+        } else {
+          console.log('✅ Worker already linked to Firebase UID');
+        }
+      } else {
+        console.log('⚠️ No worker profile found for phone:', phone);
+        // Worker will be created during sign-up flow
+      }
+    } catch (err) {
+      console.error('Error syncing worker profile:', err);
+      toast({ title: "Warning", description: "Logged in, profile sync pending", variant: "default" });
     }
   };
 
@@ -430,8 +479,15 @@ export default function Auth() {
       const res = await sendOtp(phone);
 
       if (res.kind === 'idToken') {
-        await signInToSupabaseWithFirebaseToken(res.idToken);
-        toast({ title: "Success!", description: "Signed in successfully" });
+        const firebaseUser = auth.currentUser;
+        if (!firebaseUser) {
+          toast({ title: "Login failed", description: "User not found after OTP verification", variant: "destructive" });
+          return;
+        }
+        console.log('✅ Auto-verified signup! Firebase user:', firebaseUser.uid);
+        toast({ title: "OTP verified ✅" });
+        // Will continue to create worker profile below via normal signup flow
+        // For now, just navigate - worker profile creation happens in handleSignUpVerifyOtp
         navigate("/home");
         return;
       }
@@ -467,12 +523,18 @@ export default function Auth() {
       setLoading(true);
       const phone = normalizePhone(signUpPhone);
 
-      const idToken = await verifyOtp(signUpOtp);
-
-      // Sign in to Supabase with Firebase token
-      const supabaseData = await signInToSupabaseWithFirebaseToken(idToken);
-
-      if (!supabaseData.user) throw new Error("No user returned from Supabase");
+      // Verify OTP - this signs in the Firebase user
+      await verifyOtp(signUpOtp);
+      
+      // Get the Firebase user
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser) {
+        toast({ title: "Signup failed", description: "User not found after OTP verification", variant: "destructive" });
+        return;
+      }
+      
+      console.log('✅ OTP verified! Firebase user:', firebaseUser.uid);
+      toast({ title: "OTP verified ✅" });
 
       // Fetch the community ID from the community value
       const { data: communityData, error: communityError } = await supabase
@@ -495,10 +557,14 @@ export default function Auth() {
 
       const cuisineTags = signUpServices.includes('cook') ? signUpCuisineTags : [];
 
+      // Use Firebase UID as the worker identifier
+      const workerId = firebaseUser.uid;
+
       if (existingWorker) {
-        // Update existing worker
+        // Update existing worker and link to Firebase UID
         const { error: workerError } = await supabase.from('workers').upsert({
-          id: supabaseData.user.id,
+          id: existingWorker.id,
+          user_id: workerId,
           full_name: signUpFullName.trim(),
           phone,
           upi_id: signUpUpiId?.trim() || existingWorker.upi_id,
@@ -512,9 +578,9 @@ export default function Auth() {
         }, { onConflict: 'id' });
         if (workerError) throw workerError;
       } else {
-        // Create new worker profile
+        // Create new worker profile with Firebase UID
         const { error: workerError } = await supabase.from('workers').insert({
-          id: supabaseData.user.id,
+          user_id: workerId,
           full_name: signUpFullName.trim(),
           phone,
           upi_id: signUpUpiId?.trim() || null,
@@ -529,20 +595,21 @@ export default function Auth() {
         if (workerError) throw workerError;
       }
 
-      // Save JWT to native storage
+      // Save Firebase ID token to native storage
       const authBridge = getAuthBridge();
-      if (Capacitor.isNativePlatform() && authBridge && supabaseData.session?.access_token) {
-        console.log('🔐 [Auth Page] Saving JWT immediately after sign-up...');
+      if (Capacitor.isNativePlatform() && authBridge) {
+        console.log('🔐 [Auth Page] Saving Firebase ID token after sign-up...');
         try {
-          await authBridge.saveToken({ token: supabaseData.session.access_token });
+          const idToken = await firebaseUser.getIdToken();
+          await authBridge.saveToken({ token: idToken });
           const verify = await authBridge.getToken();
-          if (verify?.token === supabaseData.session.access_token) {
-            console.log('✅ [Auth Page] JWT saved and verified successfully');
+          if (verify?.token === idToken) {
+            console.log('✅ [Auth Page] Token saved and verified successfully');
           } else {
-            console.error('❌ [Auth Page] JWT verification failed!');
+            console.error('❌ [Auth Page] Token verification failed!');
           }
         } catch (err) {
-          console.error('❌ [Auth Page] Failed to save JWT:', err);
+          console.error('❌ [Auth Page] Failed to save token:', err);
         }
       }
 
@@ -550,7 +617,7 @@ export default function Auth() {
       const { data: availabilityData } = await supabase
         .from('worker_availability')
         .select('*')
-        .eq('worker_id', supabaseData.user.id)
+        .eq('worker_id', workerId)
         .limit(1);
         
       toast({ title: "Success!", description: "Account created successfully" });
