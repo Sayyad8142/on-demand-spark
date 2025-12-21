@@ -18,12 +18,14 @@ import { auth, getRecaptchaVerifier, ensureRecaptchaRendered, clearRecaptchaVeri
 import { signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
 import { signInToSupabaseWithFirebaseToken } from "@/lib/supabaseAuthFirebase";
 
-// @ts-ignore - Capacitor bridge
-const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
-// @ts-ignore - SMS Retriever bridge
-const SmsRetrieverPlugin = (window as any).Capacitor?.Plugins?.SmsRetrieverPlugin;
-// @ts-ignore - Native Firebase Phone Auth bridge
-const FirebasePhoneAuth = (window as any).Capacitor?.Plugins?.FirebasePhoneAuth;
+// Helper to get Capacitor plugins lazily (plugins may not be ready at module load).
+const getCapPlugin = <T,>(name: string): T | undefined =>
+  (window as any).Capacitor?.Plugins?.[name] as T | undefined;
+
+// @ts-ignore - Capacitor bridges
+const getAuthBridge = () => getCapPlugin<any>('AuthBridge');
+const getSmsRetrieverPlugin = () => getCapPlugin<any>('SmsRetrieverPlugin');
+const getFirebasePhoneAuth = () => getCapPlugin<any>('FirebasePhoneAuth');
 
 const SERVICES = [{
   value: "maid",
@@ -94,15 +96,16 @@ export default function Auth() {
 
   // Auto OTP detection for Android
   useEffect(() => {
-    if (!Capacitor.isNativePlatform() || !SmsRetrieverPlugin) {
+    const smsPlugin = getSmsRetrieverPlugin();
+    if (!Capacitor.isNativePlatform() || !smsPlugin) {
       return;
     }
     const startSmsRetriever = async () => {
       try {
-        const result = await SmsRetrieverPlugin.startWatching();
+        const result = await smsPlugin.startWatching();
         console.log('📱 SMS Retriever started:', result);
 
-        SmsRetrieverPlugin.addListener('smsReceived', (data: any) => {
+        smsPlugin.addListener('smsReceived', (data: any) => {
           console.log('📱 SMS received:', data);
           const message = data.message || '';
           const otpMatch = message.match(/\b\d{6}\b/);
@@ -125,9 +128,10 @@ export default function Auth() {
       startSmsRetriever();
     }
     return () => {
-      if (SmsRetrieverPlugin) {
-        SmsRetrieverPlugin.removeAllListeners();
-        SmsRetrieverPlugin.stopWatching().catch(console.error);
+      const plugin = getSmsRetrieverPlugin();
+      if (plugin) {
+        plugin.removeAllListeners();
+        plugin.stopWatching().catch(console.error);
       }
     };
   }, [otpSent, toast]);
@@ -199,9 +203,10 @@ export default function Auth() {
   const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
   const sendOtp = async (phoneE164: string) => {
-    if (isNativeAndroid && FirebasePhoneAuth?.sendOtp) {
+    const nativePlugin = getFirebasePhoneAuth();
+    if (isNativeAndroid && nativePlugin?.sendOtp) {
       console.log('📲 [OTP] Using native Android PhoneAuth (no reCAPTCHA UI)');
-      const res = await FirebasePhoneAuth.sendOtp({ phone: phoneE164 });
+      const res = await nativePlugin.sendOtp({ phone: phoneE164 });
 
       // Auto verification can happen on some devices/SIMs.
       if (res?.autoVerified && res?.idToken) {
@@ -221,11 +226,12 @@ export default function Auth() {
   };
 
   const verifyOtp = async (otp: string) => {
-    if (isNativeAndroid && FirebasePhoneAuth?.verifyOtp) {
+    const nativePlugin = getFirebasePhoneAuth();
+    if (isNativeAndroid && nativePlugin?.verifyOtp) {
       const verificationId = nativeVerificationIdRef.current;
       if (!verificationId) throw new Error('missing verificationId');
       console.log('🔎 [OTP] Verifying via native Android PhoneAuth');
-      const res = await FirebasePhoneAuth.verifyOtp({ otp, verificationId });
+      const res = await nativePlugin.verifyOtp({ otp, verificationId });
       if (!res?.idToken) throw new Error('missing idToken');
       return res.idToken as string;
     }
@@ -253,10 +259,11 @@ export default function Auth() {
         if (error) throw error;
         if (!data.user) throw new Error("Demo login failed");
 
-        if (Capacitor.isNativePlatform() && AuthBridge && data.session?.access_token) {
+        const authBridge = getAuthBridge();
+        if (Capacitor.isNativePlatform() && authBridge && data.session?.access_token) {
           console.log('🔐 [Demo Auth] Saving JWT immediately...');
           try {
-            await AuthBridge.saveToken({ token: data.session.access_token });
+            await authBridge.saveToken({ token: data.session.access_token });
             console.log('✅ [Demo Auth] JWT saved successfully');
           } catch (err) {
             console.error('❌ [Demo Auth] Failed to save JWT:', err);
@@ -346,11 +353,12 @@ export default function Auth() {
       }
 
       // Save JWT to native storage
-      if (Capacitor.isNativePlatform() && AuthBridge && supabaseData.session?.access_token) {
+      const authBridge = getAuthBridge();
+      if (Capacitor.isNativePlatform() && authBridge && supabaseData.session?.access_token) {
         console.log('🔐 [Auth Page] Saving JWT immediately after sign-in...');
         try {
-          await AuthBridge.saveToken({ token: supabaseData.session.access_token });
-          const verifyToken = await AuthBridge.getToken();
+          await authBridge.saveToken({ token: supabaseData.session.access_token });
+          const verifyToken = await authBridge.getToken();
           if (verifyToken?.token === supabaseData.session.access_token) {
             console.log('✅ [Auth Page] JWT saved and verified successfully');
           } else {
@@ -509,11 +517,12 @@ export default function Auth() {
       }
 
       // Save JWT to native storage
-      if (Capacitor.isNativePlatform() && AuthBridge && supabaseData.session?.access_token) {
+      const authBridge = getAuthBridge();
+      if (Capacitor.isNativePlatform() && authBridge && supabaseData.session?.access_token) {
         console.log('🔐 [Auth Page] Saving JWT immediately after sign-up...');
         try {
-          await AuthBridge.saveToken({ token: supabaseData.session.access_token });
-          const verify = await AuthBridge.getToken();
+          await authBridge.saveToken({ token: supabaseData.session.access_token });
+          const verify = await authBridge.getToken();
           if (verify?.token === supabaseData.session.access_token) {
             console.log('✅ [Auth Page] JWT saved and verified successfully');
           } else {
