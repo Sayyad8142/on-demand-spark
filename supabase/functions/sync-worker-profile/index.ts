@@ -77,17 +77,22 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Normalize phone number - extract last 10 digits for matching
+    const normalizedPhone = phone.replace(/\D/g, '').slice(-10);
+    const phoneWithCountryCode = `+91${normalizedPhone}`;
+    
+    console.log("📱 Phone variants:", { original: phone, normalized: normalizedPhone, withCode: phoneWithCountryCode });
+
     // Create Supabase client with service role key
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Check if worker exists by phone
-    const { data: existingWorker, error: checkError } = await supabase
+    // Check if worker exists by various phone formats
+    const { data: existingWorkers, error: checkError } = await supabase
       .from("workers")
-      .select("id, user_id, full_name")
-      .eq("phone", phone)
-      .maybeSingle();
+      .select("id, user_id, full_name, phone")
+      .or(`phone.eq.${phone},phone.eq.${normalizedPhone},phone.eq.${phoneWithCountryCode},phone.eq.+${normalizedPhone}`);
 
     if (checkError) {
       console.error("❌ Error checking worker:", checkError);
@@ -96,6 +101,9 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const existingWorker = existingWorkers?.[0] || null;
+    console.log("🔍 Found workers:", existingWorkers?.length || 0, existingWorker ? `(${existingWorker.full_name})` : "");
 
     let workerId: string | null = null;
 

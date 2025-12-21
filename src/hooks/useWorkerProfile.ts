@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { callFn, isPermissionError, getErrorMessage } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 type Worker = Database["public"]["Tables"]["workers"]["Row"];
 
@@ -10,31 +11,61 @@ export function useWorkerProfile(userId: string | undefined) {
   const [worker, setWorker] = useState<Worker | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { firebaseUser } = useAuth();
 
   const fetchWorker = async () => {
-    if (!userId) return;
+    if (!userId && !firebaseUser) {
+      setLoading(false);
+      return;
+    }
     
     try {
-      console.log('🔍 Fetching worker for user_id:', userId);
+      const firebaseUid = firebaseUser?.uid;
+      console.log('🔍 Fetching worker for firebase_uid:', firebaseUid, 'or user_id:', userId);
       
-      // First, try to find worker by user_id (preferred method)
-      let { data, error } = await supabase
-        .from('workers')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+      let data = null;
+      let error = null;
 
-      // If not found by user_id, try by id (legacy workers)
-      if (!data && !error) {
-        console.log('⚠️ No worker found by user_id, trying by id');
-        const legacyResult = await supabase
+      // Try to find worker by Firebase UID first (stored in user_id column)
+      if (firebaseUid) {
+        const result = await supabase
           .from('workers')
           .select('*')
-          .eq('id', userId)
+          .eq('user_id', firebaseUid)
           .maybeSingle();
         
-        data = legacyResult.data;
-        error = legacyResult.error;
+        data = result.data;
+        error = result.error;
+        
+        if (data) {
+          console.log('✅ Worker found by Firebase UID:', data.full_name);
+        }
+      }
+
+      // If not found by Firebase UID and userId is provided, try by user_id or id
+      if (!data && !error && userId) {
+        console.log('⚠️ No worker found by Firebase UID, trying by user_id:', userId);
+        const userIdResult = await supabase
+          .from('workers')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+        
+        data = userIdResult.data;
+        error = userIdResult.error;
+
+        // Also try by id (legacy workers)
+        if (!data && !error) {
+          console.log('⚠️ No worker found by user_id, trying by id');
+          const legacyResult = await supabase
+            .from('workers')
+            .select('*')
+            .eq('id', userId)
+            .maybeSingle();
+          
+          data = legacyResult.data;
+          error = legacyResult.error;
+        }
       }
 
       if (error) throw error;
@@ -42,7 +73,7 @@ export function useWorkerProfile(userId: string | undefined) {
       if (data) {
         console.log('✅ Worker fetched:', data.full_name, '| user_id:', data.user_id);
       } else {
-        console.log('⚠️ No worker found for user:', userId);
+        console.log('⚠️ No worker found');
       }
       
       setWorker(data);
@@ -55,7 +86,7 @@ export function useWorkerProfile(userId: string | undefined) {
 
   useEffect(() => {
     fetchWorker();
-  }, [userId]);
+  }, [userId, firebaseUser?.uid]);
 
   const updateAvailability = async (isAvailable: boolean) => {
     if (!userId) return;
