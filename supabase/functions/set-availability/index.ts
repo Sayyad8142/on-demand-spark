@@ -6,6 +6,7 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { verifyFirebaseToken } from "../_shared/verifyFirebase.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,28 +38,29 @@ Deno.serve(async (req) => {
 
     const firebaseToken = authHeader.replace("Bearer ", "");
 
-    // Decode Firebase token to get UID
-    let firebaseUid: string;
+    // Verify Firebase token using Admin SDK
+    let decoded;
     try {
-      const parts = firebaseToken.split(".");
-      if (parts.length !== 3) {
-        throw new Error("Invalid JWT format");
-      }
-      const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-      firebaseUid = payload.user_id || payload.sub;
-      
-      if (!firebaseUid) {
-        throw new Error("No user_id in token");
-      }
-      
-      console.log("✅ Firebase UID:", firebaseUid);
+      decoded = await verifyFirebaseToken(firebaseToken);
     } catch (err) {
-      console.error("❌ Failed to decode Firebase token:", err);
+      console.error("❌ Firebase token verification failed:", err);
       return new Response(
-        JSON.stringify({ error: "Invalid Firebase token" }),
+        JSON.stringify({ error: "Unauthorized - Invalid Firebase token" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const firebaseUid = decoded.uid;
+
+    if (!firebaseUid) {
+      console.error("❌ No UID in verified token");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("✅ Firebase UID:", firebaseUid);
 
     // Parse request body
     const body: RequestBody = await req.json();

@@ -8,6 +8,7 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { verifyFirebaseToken } from "../_shared/verifyFirebase.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -39,34 +40,30 @@ Deno.serve(async (req) => {
 
     const firebaseToken = authHeader.replace("Bearer ", "");
 
-    // Verify Firebase token and extract UID
-    // For now, we decode the JWT to get the UID (Firebase tokens are JWTs)
-    // In production, you should verify the signature using Firebase Admin SDK
-    let firebaseUid: string;
-    let phoneFromToken: string | null = null;
-
+    // Verify Firebase token using Admin SDK
+    let decoded;
     try {
-      // Decode JWT payload (base64url encoded)
-      const parts = firebaseToken.split(".");
-      if (parts.length !== 3) {
-        throw new Error("Invalid JWT format");
-      }
-      const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-      firebaseUid = payload.user_id || payload.sub;
-      phoneFromToken = payload.phone_number || null;
-      
-      if (!firebaseUid) {
-        throw new Error("No user_id in token");
-      }
-      
-      console.log("✅ Firebase UID:", firebaseUid, "Phone:", phoneFromToken);
+      decoded = await verifyFirebaseToken(firebaseToken);
     } catch (err) {
-      console.error("❌ Failed to decode Firebase token:", err);
+      console.error("❌ Firebase token verification failed:", err);
       return new Response(
-        JSON.stringify({ error: "Invalid Firebase token" }),
+        JSON.stringify({ error: "Unauthorized - Invalid Firebase token" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const firebaseUid = decoded.uid;
+    const phoneFromToken = decoded.phone_number || null;
+
+    if (!firebaseUid) {
+      console.error("❌ No UID in verified token");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("✅ Firebase UID:", firebaseUid, "Phone:", phoneFromToken);
 
     // Parse request body
     const body: RequestBody = await req.json().catch(() => ({ phone: "" }));
