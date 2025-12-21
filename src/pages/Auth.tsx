@@ -170,12 +170,24 @@ export default function Auth() {
     const msg = (error?.message || error?.error_description || '').toString().toLowerCase();
     const status = error?.status;
 
-    // Only show "setup required" for VERY specific Supabase config errors
-    // This is when the provider literally doesn't exist
+    // Show actionable guidance for Supabase Third-Party Firebase Auth errors
     if (msg.includes('custom oidc provider') && msg.includes('not found')) {
       toast({
         title: "Firebase Auth Setup Required",
-        description: "Please configure Firebase in Supabase Dashboard: Auth > Third-party Auth > Firebase.",
+        description:
+          "Supabase Firebase provider is not configured. Go to Supabase Dashboard → Auth → Third-party Auth → Firebase and enable/configure it.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Most common case: Firebase provider is enabled but Supabase rejects the Firebase ID token
+    // because required Firebase custom claims are missing or the user is using an old token.
+    if (msg.includes('custom oidc provider') && msg.includes('not allowed') && msg.includes('firebase')) {
+      toast({
+        title: "Login not ready yet",
+        description:
+          "Supabase rejected your Firebase token. Ensure Firebase users have custom claims role=authenticated and aud=authenticated, then sign out and sign in again to refresh the token.",
         variant: "destructive",
       });
       return;
