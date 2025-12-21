@@ -394,50 +394,27 @@ export default function Auth() {
     }
   };
   
-  // Helper function to sync/upsert worker profile using Firebase UID
-  const syncWorkerProfile = async (firebaseUid: string, phone: string) => {
-    try {
-      console.log('🔄 Syncing worker profile for Firebase UID:', firebaseUid);
-      
-      // Check if a worker with this phone already exists
-      const { data: existingWorker, error: workerCheckError } = await supabase
-        .from('workers')
-        .select('id, user_id')
-        .eq('phone', phone)
-        .maybeSingle();
-
-      if (workerCheckError) {
-        console.error('Error checking worker:', workerCheckError);
-        toast({ title: "Warning", description: "Logged in, profile sync pending", variant: "default" });
-        return;
-      }
-
-      if (existingWorker) {
-        // Link existing worker to Firebase UID if not already linked
-        if (existingWorker.user_id !== firebaseUid) {
-          console.log('🔗 Linking existing worker to Firebase UID');
-          const { error: updateError } = await supabase
-            .from('workers')
-            .update({ user_id: firebaseUid })
-            .eq('id', existingWorker.id);
-          
-          if (updateError) {
-            console.error('Error linking worker:', updateError);
-            toast({ title: "Warning", description: "Logged in, profile sync pending", variant: "default" });
-          } else {
-            console.log('✅ Worker linked to Firebase UID');
-          }
+  // Helper function to sync/upsert worker profile using Firebase UID (non-blocking)
+  const syncWorkerProfile = (firebaseUid: string, phone: string) => {
+    // Run in background - don't block login
+    (async () => {
+      try {
+        console.log('🔄 Syncing worker profile for Firebase UID:', firebaseUid);
+        
+        const { callFn } = await import('@/lib/api');
+        const result = await callFn('sync-worker-profile', { phone });
+        
+        if (!result.ok) {
+          console.error('Profile sync failed:', result.error);
+          toast({ title: "Warning", description: "Logged in, profile sync pending", variant: "default" });
         } else {
-          console.log('✅ Worker already linked to Firebase UID');
+          console.log('✅ Worker profile synced successfully');
         }
-      } else {
-        console.log('⚠️ No worker profile found for phone:', phone);
-        // Worker will be created during sign-up flow
+      } catch (err) {
+        console.error('Error syncing worker profile:', err);
+        toast({ title: "Warning", description: "Logged in, profile sync pending", variant: "default" });
       }
-    } catch (err) {
-      console.error('Error syncing worker profile:', err);
-      toast({ title: "Warning", description: "Logged in, profile sync pending", variant: "default" });
-    }
+    })();
   };
 
   const handleSignUpSendOtp = async () => {

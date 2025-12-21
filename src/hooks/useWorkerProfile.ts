@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
+import { callFn, isPermissionError, getErrorMessage } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 type Worker = Database["public"]["Tables"]["workers"]["Row"];
 
 export function useWorkerProfile(userId: string | undefined) {
   const [worker, setWorker] = useState<Worker | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   const fetchWorker = async () => {
     if (!userId) return;
@@ -32,28 +35,6 @@ export function useWorkerProfile(userId: string | undefined) {
         
         data = legacyResult.data;
         error = legacyResult.error;
-        
-        // If found by id but user_id is not set, link the worker to this auth user
-        if (data && !data.user_id) {
-          console.log('🔗 Linking worker to auth user:', userId);
-          const { error: updateError } = await supabase
-            .from('workers')
-            .update({ user_id: userId })
-            .eq('id', data.id);
-          
-          if (updateError) {
-            console.error('❌ Failed to link worker to user:', updateError);
-          } else {
-            console.log('✅ Worker linked successfully');
-            // Refetch to get updated data
-            const { data: updatedData } = await supabase
-              .from('workers')
-              .select('*')
-              .eq('id', data.id)
-              .single();
-            data = updatedData;
-          }
-        }
       }
 
       if (error) throw error;
@@ -80,25 +61,23 @@ export function useWorkerProfile(userId: string | undefined) {
     if (!userId) return;
 
     try {
-      // Use RPC function to update availability with proper permissions
-      const { data, error } = await supabase.rpc('update_worker_availability', {
-        p_is_available: isAvailable
+      // Use Edge Function for protected write
+      const result = await callFn<{ success: boolean; is_available: boolean }>("set-availability", {
+        is_available: isAvailable
       });
 
-      if (error) {
-        console.error('RPC error:', error);
-        throw error;
+      if (!result.ok) {
+        if (isPermissionError(result)) {
+          toast({
+            title: "Permission Error",
+            description: getErrorMessage(result),
+            variant: "destructive"
+          });
+        }
+        throw new Error(result.error);
       }
 
-      // Check the response from the RPC function
-      const result = data as { success: boolean; error?: string; worker_id?: string; is_available?: boolean } | null;
-      
-      if (result && !result.success) {
-        console.error('Update failed:', result.error);
-        throw new Error(result.error || 'Failed to update availability');
-      }
-
-      console.log('Availability updated successfully:', result);
+      console.log('Availability updated successfully via Edge Function');
       
       // Refetch to get updated worker data
       await fetchWorker();
@@ -110,20 +89,8 @@ export function useWorkerProfile(userId: string | undefined) {
 
   const updateWorker = async (updates: Partial<Worker>) => {
     if (!userId) return;
-
-    try {
-      const { error } = await supabase
-        .from('workers')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', userId);
-
-      if (error) throw error;
-      
-      await fetchWorker();
-    } catch (error) {
-      console.error('Error updating worker:', error);
-      throw error;
-    }
+    // TODO: Use Edge Function for protected writes
+    console.log('⚠️ updateWorker: Direct update not supported, use Edge Function');
   };
 
   return { worker, loading, updateAvailability, updateWorker, refetch: fetchWorker };
