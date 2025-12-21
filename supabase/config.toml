@@ -2,3 +2,12 @@ project_id = "paywwbuqycovjopryele"
 
 [functions.check-scheduled-bookings]
 verify_jwt = false
+
+[functions.sync-worker-profile]
+verify_jwt = false
+
+[functions.set-availability]
+verify_jwt = false
+
+[functions.booking-action]
+verify_jwt = false
