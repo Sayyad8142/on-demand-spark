@@ -1,12 +1,9 @@
 /**
  * Shared Firebase verification helper
  * 
- * Uses Firebase Admin SDK to securely verify ID tokens.
- * This prevents fake tokens and ensures production-grade security.
+ * Verifies Firebase ID tokens by calling Google's public token verification endpoint.
+ * This is a lightweight alternative that doesn't require firebase-admin SDK.
  */
-
-import { initializeApp, cert, getApps } from "https://esm.sh/firebase-admin@12.0.0/app";
-import { getAuth } from "https://esm.sh/firebase-admin@12.0.0/auth";
 
 export interface DecodedFirebaseToken {
   uid: string;
@@ -16,40 +13,66 @@ export interface DecodedFirebaseToken {
   [key: string]: unknown;
 }
 
-let initialized = false;
+const FIREBASE_PROJECT_ID = Deno.env.get("FIREBASE_PROJECT_ID");
 
 export async function verifyFirebaseToken(idToken: string): Promise<DecodedFirebaseToken> {
-  // Initialize Firebase Admin if not already initialized
-  if (!initialized && !getApps().length) {
-    const projectId = Deno.env.get("FIREBASE_PROJECT_ID");
-    const clientEmail = Deno.env.get("FIREBASE_CLIENT_EMAIL");
-    const privateKey = Deno.env.get("FIREBASE_PRIVATE_KEY")?.replace(/\\n/g, "\n");
-
-    if (!projectId || !clientEmail || !privateKey) {
-      console.error("❌ Missing Firebase Admin credentials");
-      throw new Error("Firebase Admin SDK not configured");
-    }
-
-    initializeApp({
-      credential: cert({
-        projectId,
-        clientEmail,
-        privateKey,
-      }),
-    });
-    initialized = true;
-    console.log("✅ Firebase Admin SDK initialized");
+  if (!FIREBASE_PROJECT_ID) {
+    console.error("❌ FIREBASE_PROJECT_ID not configured");
+    throw new Error("Firebase not configured");
   }
 
-  // Verify the token using Firebase Admin SDK
-  const decodedToken = await getAuth().verifyIdToken(idToken);
-  
-  console.log("✅ Firebase token verified for UID:", decodedToken.uid);
-  
+  // Verify token with Google's tokeninfo endpoint
+  const response = await fetch(
+    `https://www.googleapis.com/oauth1/v3/tokeninfo?id_token=${idToken}`
+  );
+
+  if (!response.ok) {
+    // Try Firebase's secure token verification endpoint
+    const verifyResponse = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${Deno.env.get("FIREBASE_WEB_API_KEY")}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      }
+    );
+
+    if (!verifyResponse.ok) {
+      console.error("❌ Token verification failed");
+      throw new Error("Invalid Firebase token");
+    }
+
+    const data = await verifyResponse.json();
+    const user = data.users?.[0];
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    console.log("✅ Firebase token verified for UID:", user.localId);
+
+    return {
+      uid: user.localId,
+      phone_number: user.phoneNumber,
+      email: user.email,
+      name: user.displayName,
+    };
+  }
+
+  const tokenInfo = await response.json();
+
+  // Verify the audience matches our project
+  if (tokenInfo.aud !== FIREBASE_PROJECT_ID) {
+    console.error("❌ Token audience mismatch");
+    throw new Error("Invalid token audience");
+  }
+
+  console.log("✅ Firebase token verified for UID:", tokenInfo.sub);
+
   return {
-    uid: decodedToken.uid,
-    phone_number: decodedToken.phone_number,
-    email: decodedToken.email,
-    name: decodedToken.name,
+    uid: tokenInfo.sub,
+    phone_number: tokenInfo.phone_number,
+    email: tokenInfo.email,
+    name: tokenInfo.name,
   };
 }
