@@ -165,16 +165,28 @@ export default function Auth() {
   };
 
   const handleFirebaseError = (error: any) => {
-    console.error('Firebase Auth Error:', error);
+    console.error('Firebase/Supabase Auth Error:', error);
     const code = error?.code || '';
     const msg = (error?.message || error?.error_description || '').toString();
+    const status = error?.status;
 
-    // Supabase error when Firebase OIDC provider isn't enabled
-    if (msg.includes('Custom OIDC provider') && msg.includes('firebase')) {
+    // Supabase Third-Party Firebase Auth errors
+    if (msg.includes('Custom OIDC provider') || msg.includes('firebase')) {
+      // This typically means Firebase Third-Party Auth isn't configured in Supabase
       toast({
-        title: "Backend auth not configured",
+        title: "Firebase Auth Setup Required",
         description:
-          "OTP is verified, but Supabase must allow the 'firebase' OIDC provider to create a session. Enable it in Supabase Auth providers.",
+          "Please configure Firebase in Supabase Dashboard: Auth > Third-party Auth > Firebase. Add your Firebase Project ID.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Invalid JWT or token format
+    if (msg.includes('invalid JWT') || msg.includes('token') || status === 401) {
+      toast({
+        title: "Authentication failed",
+        description: "Invalid token. Please try signing in again.",
         variant: "destructive",
       });
       return;
