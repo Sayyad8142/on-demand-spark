@@ -7,23 +7,63 @@ type Booking = Database["public"]["Tables"]["bookings"]["Row"];
 export function useActiveJob(userId: string | undefined) {
   const [activeJob, setActiveJob] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
+  const [workerId, setWorkerId] = useState<string | null>(null);
 
-  const fetchActiveJob = async () => {
-    if (!userId) return;
+  // First, get the worker record ID from user_id
+  const fetchWorkerId = async () => {
+    if (!userId) return null;
 
     try {
-      console.log('🔍 Fetching active job for worker:', userId);
+      // Try by user_id first
+      let { data } = await supabase
+        .from('workers')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      // Fallback to id match (legacy workers)
+      if (!data) {
+        const { data: legacyData } = await supabase
+          .from('workers')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle();
+        data = legacyData;
+      }
+
+      if (data) {
+        console.log('✅ Found worker id:', data.id);
+        setWorkerId(data.id);
+        return data.id;
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ Error fetching worker id:', error);
+      return null;
+    }
+  };
+
+  const fetchActiveJob = async (workerRecordId?: string) => {
+    const wId = workerRecordId || workerId;
+    if (!wId) {
+      console.log('⚠️ No worker id available for active job fetch');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      console.log('🔍 Fetching active job for worker record id:', wId);
       const { data, error } = await supabase
         .from('bookings')
         .select('*')
-        .eq('worker_id', userId)
+        .eq('worker_id', wId)
         .in('status', ['assigned', 'accepted', 'on_the_way', 'started'])
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (error) throw error;
-      console.log('📦 Active job fetched:', data ? `Found booking ${data.id}` : 'No active job');
+      console.log('📦 Active job fetched:', data ? `Found booking ${data.id}, flat: ${data.flat_no}` : 'No active job');
       setActiveJob(data);
     } catch (error) {
       console.error('❌ Error fetching active job:', error);
@@ -33,9 +73,21 @@ export function useActiveJob(userId: string | undefined) {
   };
 
   useEffect(() => {
-    fetchActiveJob();
+    const init = async () => {
+      const wId = await fetchWorkerId();
+      if (wId) {
+        await fetchActiveJob(wId);
+      } else {
+        setLoading(false);
+      }
+    };
+    init();
+  }, [userId]);
 
-    // Subscribe to booking updates
+  // Subscribe to booking updates once we have workerId
+  useEffect(() => {
+    if (!workerId) return;
+
     const channel = supabase
       .channel('active-job-updates')
       .on(
@@ -44,14 +96,31 @@ export function useActiveJob(userId: string | undefined) {
           event: 'UPDATE',
           schema: 'public',
           table: 'bookings',
-          filter: `worker_id=eq.${userId}`
+          filter: `worker_id=eq.${workerId}`
         },
         (payload) => {
           const booking = payload.new as Booking;
+          console.log('📡 Realtime booking update:', booking.id, 'status:', booking.status);
           if (['assigned', 'accepted', 'on_the_way', 'started'].includes(booking.status)) {
             setActiveJob(booking);
           } else {
             setActiveJob(null);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'bookings',
+          filter: `worker_id=eq.${workerId}`
+        },
+        (payload) => {
+          const booking = payload.new as Booking;
+          console.log('📡 Realtime booking insert:', booking.id, 'status:', booking.status);
+          if (['assigned', 'accepted', 'on_the_way', 'started'].includes(booking.status)) {
+            setActiveJob(booking);
           }
         }
       )
@@ -60,7 +129,7 @@ export function useActiveJob(userId: string | undefined) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [workerId]);
 
   const updateJobStatus = async (bookingId: string, newStatus: string) => {
     try {
