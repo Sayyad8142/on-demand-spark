@@ -159,15 +159,25 @@ export default function Auth() {
     console.error('🔴 [Auth Error] Full error object:', JSON.stringify(error, null, 2));
     const code = error?.code || '';
     const msg = (error?.message || error?.error_description || '').toString().toLowerCase();
-    const status = error?.status;
+
+    // Native Android PhoneAuth failures (no reCAPTCHA) — usually a Firebase/Android app verification config issue.
+    if (code === 'native/phone-auth-failed') {
+      toast({
+        title: 'App verification failed',
+        description:
+          "Android PhoneAuth failed (native). This is usually caused by missing/incorrect SHA-1/SHA-256 in Firebase for your APK signing key. Add them in Firebase Console → Project settings → Your apps (Android), then download a fresh google-services.json and rebuild.",
+        variant: 'destructive',
+      });
+      return;
+    }
 
     // Show actionable guidance for Supabase Third-Party Firebase Auth errors
     if (msg.includes('custom oidc provider') && msg.includes('not found')) {
       toast({
-        title: "Firebase Auth Setup Required",
+        title: 'Firebase Auth Setup Required',
         description:
-          "Supabase Firebase provider is not configured. Go to Supabase Dashboard → Auth → Third-party Auth → Firebase and enable/configure it.",
-        variant: "destructive",
+          'Supabase Firebase provider is not configured. Go to Supabase Dashboard → Auth → Third-party Auth → Firebase and enable/configure it.',
+        variant: 'destructive',
       });
       return;
     }
@@ -176,39 +186,44 @@ export default function Auth() {
     // because required Firebase custom claims are missing or the user is using an old token.
     if (msg.includes('custom oidc provider') && msg.includes('not allowed') && msg.includes('firebase')) {
       toast({
-        title: "Login not ready yet",
+        title: 'Login not ready yet',
         description:
-          "Supabase rejected your Firebase token. Ensure Firebase users have custom claims role=authenticated and aud=authenticated, then sign out and sign in again to refresh the token.",
-        variant: "destructive",
+          'Supabase rejected your Firebase token. Ensure Firebase users have custom claims role=authenticated and aud=authenticated, then sign out and sign in again to refresh the token.',
+        variant: 'destructive',
       });
       return;
     }
 
     if (code === 'auth/invalid-verification-code') {
-      toast({ title: "Invalid OTP", description: "The verification code is incorrect. Please try again.", variant: "destructive" });
+      toast({ title: 'Invalid OTP', description: 'The verification code is incorrect. Please try again.', variant: 'destructive' });
     } else if (code === 'auth/code-expired') {
-      toast({ title: "OTP Expired", description: "The verification code has expired. Please request a new one.", variant: "destructive" });
+      toast({ title: 'OTP Expired', description: 'The verification code has expired. Please request a new one.', variant: 'destructive' });
     } else if (code === 'auth/too-many-requests') {
-      toast({ title: "Too Many Requests", description: "Too many attempts. Please try again later.", variant: "destructive" });
+      toast({ title: 'Too Many Requests', description: 'Too many attempts. Please try again later.', variant: 'destructive' });
     } else if (code === 'auth/invalid-phone-number') {
-      toast({ title: "Invalid Phone", description: "The phone number format is invalid.", variant: "destructive" });
+      toast({ title: 'Invalid Phone', description: 'The phone number format is invalid.', variant: 'destructive' });
     } else if (code === 'auth/invalid-app-credential') {
       toast({
-        title: "App verification failed",
+        title: 'App verification failed',
         description:
-          "reCAPTCHA verification failed. Android now uses native PhoneAuth (no captcha UI). If this happens on web, ensure 'localhost' is an authorized domain in Firebase Auth.",
-        variant: "destructive",
+          "reCAPTCHA verification failed. This usually means the web fallback was used. On Android APK we should be using native PhoneAuth; if you still see this, the native plugin is failing and you need to fix SHA-1/SHA-256 in Firebase as described above.",
+        variant: 'destructive',
       });
     } else {
-      toast({ title: "Error", description: msg || "Something went wrong", variant: "destructive" });
+      toast({ title: 'Error', description: msg || 'Something went wrong', variant: 'destructive' });
     }
   };
 
   const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
+  const asNativePhoneAuthError = (err: any) => {
+    const message = (err?.message || err?.error || '').toString() || 'Android PhoneAuth failed';
+    console.error('❌ [OTP] Native Android PhoneAuth error:', err);
+    return { code: 'native/phone-auth-failed', message };
+  };
+
   const sendOtp = async (phoneE164: string) => {
-    // On native Android, prefer the native Firebase PhoneAuth plugin.
-    // If it's not available in this build, fall back to the web flow as a temporary bypass.
+    // On native Android, ALWAYS use the native Firebase PhoneAuth plugin (no reCAPTCHA).
     if (isNativeAndroid) {
       const available = isCapPluginAvailable('FirebasePhoneAuth');
       console.log('📲 [OTP] Android env:', {
@@ -217,25 +232,24 @@ export default function Auth() {
         pluginAvailable: available,
       });
 
-      if (available) {
-        try {
-          console.log('📲 [OTP] Using native Android PhoneAuth (no reCAPTCHA UI)');
-          const res = await FirebasePhoneAuth.sendOtp({ phone: phoneE164 });
+      if (!available) {
+        throw { code: 'native/phone-auth-failed', message: 'FirebasePhoneAuth plugin not available in this APK build' };
+      }
 
-          // Auto verification can happen on some devices/SIMs.
-          if (res?.autoVerified && res?.idToken) {
-            return { kind: 'idToken' as const, idToken: res.idToken as string };
-          }
+      try {
+        console.log('📲 [OTP] Using native Android PhoneAuth (no reCAPTCHA UI)');
+        const res = await FirebasePhoneAuth.sendOtp({ phone: phoneE164 });
 
-          nativeVerificationIdRef.current = (res?.verificationId as string) || null;
-          return { kind: 'sent' as const };
-        } catch (nativeErr: any) {
-          console.error('❌ [OTP] Native plugin error, falling back to web OTP:', nativeErr);
-          nativeVerificationIdRef.current = null;
-          // continue to web fallback below
+        // Auto verification can happen on some devices/SIMs.
+        if (res?.autoVerified && res?.idToken) {
+          return { kind: 'idToken' as const, idToken: res.idToken as string };
         }
-      } else {
-        console.warn('⚠️ [OTP] FirebasePhoneAuth native plugin not available; falling back to web OTP');
+
+        nativeVerificationIdRef.current = (res?.verificationId as string) || null;
+        return { kind: 'sent' as const };
+      } catch (nativeErr: any) {
+        nativeVerificationIdRef.current = null;
+        throw asNativePhoneAuthError(nativeErr);
       }
     }
 
@@ -252,15 +266,21 @@ export default function Auth() {
       const available = isCapPluginAvailable('FirebasePhoneAuth');
       const verificationId = nativeVerificationIdRef.current;
 
-      if (available && verificationId) {
+      if (!available) {
+        throw { code: 'native/phone-auth-failed', message: 'FirebasePhoneAuth plugin not available in this APK build' };
+      }
+      if (!verificationId) {
+        throw { code: 'native/phone-auth-failed', message: 'Missing verificationId. Please request OTP again.' };
+      }
+
+      try {
         console.log('🔎 [OTP] Verifying via native Android PhoneAuth');
         const res = await FirebasePhoneAuth.verifyOtp({ otp, verificationId });
         if (!res?.idToken) throw new Error('missing idToken');
         return res.idToken as string;
+      } catch (nativeErr: any) {
+        throw asNativePhoneAuthError(nativeErr);
       }
-
-      console.warn('⚠️ [OTP] Native verify unavailable; trying web verify');
-      // fall through to web verify below
     }
 
     if (!confirmationResultRef.current) throw new Error('missing confirmation result');
