@@ -1,8 +1,22 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export async function tryAccept(bookingId: string) {
-  const { error } = await supabase.rpc("try_accept_booking", { p_booking_id: bookingId });
-  return !error;
+export async function tryAccept(bookingId: string): Promise<{ success: boolean; error?: string }> {
+  const { data, error } = await supabase.rpc("try_accept_booking", { p_booking_id: bookingId });
+  
+  if (error) {
+    console.error("❌ RPC error accepting booking:", error);
+    return { success: false, error: error.message };
+  }
+  
+  const result = data as { success?: boolean; error?: string } | null;
+  
+  if (!result?.success) {
+    console.error("❌ Booking accept failed:", result?.error);
+    return { success: false, error: result?.error || "Failed to accept booking" };
+  }
+  
+  console.log("✅ Booking accepted successfully");
+  return { success: true };
 }
 
 export async function rejectBooking(bookingId: string, workerId: string) {

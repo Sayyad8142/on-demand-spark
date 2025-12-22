@@ -30,12 +30,12 @@ export function BookingCard({
   const handleAccept = async () => {
     setAccepting(true);
     try {
-      const success = await tryAccept(booking.id);
-      if (success) {
+      const result = await tryAccept(booking.id);
+      if (result.success) {
         toast.success('Booking accepted!');
         onAccept?.(booking.id);
       } else {
-        toast.error('Booking already taken');
+        toast.error(result.error || 'Booking already taken');
       }
     } catch (error) {
       toast.error('Failed to accept booking');
