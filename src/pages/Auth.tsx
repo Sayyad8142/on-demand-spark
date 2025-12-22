@@ -11,18 +11,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
-import { Capacitor, registerPlugin } from '@capacitor/core';
+import { Capacitor } from '@capacitor/core';
+import { AuthBridge, SmsRetriever, FirebasePhoneAuth, isCapPluginAvailable } from "@/native/capPlugins";
 import { useTranslation } from "react-i18next";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import { auth, getRecaptchaVerifier, ensureRecaptchaRendered, clearRecaptchaVerifier } from "@/lib/firebase";
 import { signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
-
-// Capacitor: register native plugins (do NOT rely on window.Capacitor.Plugins)
-const AuthBridge = registerPlugin<any>('AuthBridge');
-const SmsRetriever = registerPlugin<any>('SmsRetrieverPlugin');
-const FirebasePhoneAuth = registerPlugin<any>('FirebasePhoneAuth');
-
-const isCapPluginAvailable = (name: string) => Capacitor.isNativePlatform() && Capacitor.isPluginAvailable(name);
 
 const SERVICES = [{
   value: "maid",
@@ -213,29 +207,35 @@ export default function Auth() {
   const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
   const sendOtp = async (phoneE164: string) => {
-    // On native Android, always use the native Firebase PhoneAuth plugin
+    // On native Android, prefer the native Firebase PhoneAuth plugin.
+    // If it's not available in this build, fall back to the web flow as a temporary bypass.
     if (isNativeAndroid) {
       const available = isCapPluginAvailable('FirebasePhoneAuth');
-      console.log('📲 [OTP] Native Android detected, plugin available:', available);
+      console.log('📲 [OTP] Android env:', {
+        platform: Capacitor.getPlatform(),
+        isNative: Capacitor.isNativePlatform(),
+        pluginAvailable: available,
+      });
 
-      if (!available) {
-        throw new Error('FirebasePhoneAuth plugin not available on Android. Please rebuild the app.');
-      }
+      if (available) {
+        try {
+          console.log('📲 [OTP] Using native Android PhoneAuth (no reCAPTCHA UI)');
+          const res = await FirebasePhoneAuth.sendOtp({ phone: phoneE164 });
 
-      try {
-        console.log('📲 [OTP] Using native Android PhoneAuth (no reCAPTCHA UI)');
-        const res = await FirebasePhoneAuth.sendOtp({ phone: phoneE164 });
+          // Auto verification can happen on some devices/SIMs.
+          if (res?.autoVerified && res?.idToken) {
+            return { kind: 'idToken' as const, idToken: res.idToken as string };
+          }
 
-        // Auto verification can happen on some devices/SIMs.
-        if (res?.autoVerified && res?.idToken) {
-          return { kind: 'idToken' as const, idToken: res.idToken as string };
+          nativeVerificationIdRef.current = (res?.verificationId as string) || null;
+          return { kind: 'sent' as const };
+        } catch (nativeErr: any) {
+          console.error('❌ [OTP] Native plugin error, falling back to web OTP:', nativeErr);
+          nativeVerificationIdRef.current = null;
+          // continue to web fallback below
         }
-
-        nativeVerificationIdRef.current = (res?.verificationId as string) || null;
-        return { kind: 'sent' as const };
-      } catch (nativeErr: any) {
-        console.error('❌ [OTP] Native plugin error:', nativeErr);
-        throw nativeErr; // Don't fall back to web on Android
+      } else {
+        console.warn('⚠️ [OTP] FirebasePhoneAuth native plugin not available; falling back to web OTP');
       }
     }
 
@@ -249,16 +249,18 @@ export default function Auth() {
 
   const verifyOtp = async (otp: string) => {
     if (isNativeAndroid) {
-      if (!isCapPluginAvailable('FirebasePhoneAuth')) {
-        throw new Error('FirebasePhoneAuth plugin not available on Android. Please rebuild the app.');
+      const available = isCapPluginAvailable('FirebasePhoneAuth');
+      const verificationId = nativeVerificationIdRef.current;
+
+      if (available && verificationId) {
+        console.log('🔎 [OTP] Verifying via native Android PhoneAuth');
+        const res = await FirebasePhoneAuth.verifyOtp({ otp, verificationId });
+        if (!res?.idToken) throw new Error('missing idToken');
+        return res.idToken as string;
       }
 
-      const verificationId = nativeVerificationIdRef.current;
-      if (!verificationId) throw new Error('missing verificationId');
-      console.log('🔎 [OTP] Verifying via native Android PhoneAuth');
-      const res = await FirebasePhoneAuth.verifyOtp({ otp, verificationId });
-      if (!res?.idToken) throw new Error('missing idToken');
-      return res.idToken as string;
+      console.warn('⚠️ [OTP] Native verify unavailable; trying web verify');
+      // fall through to web verify below
     }
 
     if (!confirmationResultRef.current) throw new Error('missing confirmation result');
