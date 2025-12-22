@@ -33,12 +33,14 @@ export function useBookingAlerts(userId: string | undefined, isOnline: boolean, 
   const clearAlert = useCallback(() => setPending(null), []);
   const accept = useCallback(async () => {
     if (!pending) return;
-    const ok = await tryAccept(pending.id);
-    if (!ok) {
-      toast({ title: "Booking already taken", variant: "destructive" });
+
+    const result = await tryAccept(pending.id);
+    if (!result.success) {
+      toast({ title: result.error || "Booking already taken", variant: "destructive" });
     } else {
       toast({ title: "Booking accepted" });
     }
+
     setPending(null);
   }, [pending]);
 
