@@ -7,6 +7,7 @@ import { useActiveJob } from "@/hooks/useActiveJob";
 import { BookingAlertModal } from "@/components/BookingAlertModal";
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
+import { UpcomingBookingsBar } from "@/components/UpcomingBookingsBar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Bell, X, LogOut } from "lucide-react";
@@ -216,5 +217,8 @@ export default function Home() {
       {/* Only show in-app modal on web platform; Android uses native overlay */}
       {!Capacitor.isNativePlatform() && <BookingAlertModal open={!!pending} booking={pending} onAccept={handleAccept} onReject={reject} onClose={clearAlert} />}
       </div>
+
+      {/* Upcoming Bookings Bar */}
+      {!isGuestMode && worker && <UpcomingBookingsBar workerId={worker.id} />}
     </div>;
 }
