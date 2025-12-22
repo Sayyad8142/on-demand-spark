@@ -33,49 +33,6 @@ export const initializeStorageCache = async (): Promise<void> => {
   }
 };
 
-// Supabase expects a synchronous storage adapter.
-// On native, we use an in-memory cache for sync reads and persist changes asynchronously.
-export const supabaseStorage = {
-  getItem(key: string): string | null {
-    try {
-      if (Capacitor.isNativePlatform()) {
-        return memoryCache[key] ?? null;
-      }
-      return localStorage.getItem(key);
-    } catch {
-      return null;
-    }
-  },
-
-  setItem(key: string, value: string) {
-    try {
-      if (Capacitor.isNativePlatform()) {
-        memoryCache[key] = value;
-        // Fire-and-forget persistence (Supabase calls this synchronously)
-        void Preferences.set({ key, value });
-      } else {
-        localStorage.setItem(key, value);
-      }
-    } catch {
-      // ignore
-    }
-  },
-
-  removeItem(key: string) {
-    try {
-      if (Capacitor.isNativePlatform()) {
-        delete memoryCache[key];
-        void Preferences.remove({ key });
-      } else {
-        localStorage.removeItem(key);
-      }
-    } catch {
-      // ignore
-    }
-  },
-};
-
-// Async helper storage used by our app code (e.g., didi_session backup).
 export const capacitorStorage = {
   async getItem(key: string): Promise<string | null> {
     try {
@@ -84,7 +41,7 @@ export const capacitorStorage = {
         if (memoryCache[key]) {
           return memoryCache[key];
         }
-
+        
         // Fall back to persistent storage
         const { value } = await Preferences.get({ key });
         if (value) {
@@ -99,16 +56,16 @@ export const capacitorStorage = {
       return null;
     }
   },
-
+  
   async setItem(key: string, value: string): Promise<void> {
     try {
       if (Capacitor.isNativePlatform()) {
         // Update memory cache immediately
         memoryCache[key] = value;
-
+        
         // Persist to storage
         await Preferences.set({ key, value });
-
+        
         // Verify it was saved
         const verify = await Preferences.get({ key });
         if (verify.value === value) {
@@ -124,13 +81,13 @@ export const capacitorStorage = {
       throw error;
     }
   },
-
+  
   async removeItem(key: string): Promise<void> {
     try {
       if (Capacitor.isNativePlatform()) {
         // Clear from memory cache
         delete memoryCache[key];
-
+        
         await Preferences.remove({ key });
         console.log(`🗑️ Storage REMOVE [${key}]`);
       } else {
@@ -141,4 +98,3 @@ export const capacitorStorage = {
     }
   },
 };
-

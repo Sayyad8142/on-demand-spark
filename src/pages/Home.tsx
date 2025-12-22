@@ -7,7 +7,6 @@ import { useActiveJob } from "@/hooks/useActiveJob";
 import { BookingAlertModal } from "@/components/BookingAlertModal";
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
-import { UpcomingBookingsBar } from "@/components/UpcomingBookingsBar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Bell, X, LogOut } from "lucide-react";
@@ -22,7 +21,7 @@ const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
 export default function Home() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { user, firebaseUser, getAccessToken } = useAuth();
+  const { user, session } = useAuth();
   const { toast } = useToast();
   
   // Check for guest mode
@@ -45,24 +44,20 @@ export default function Home() {
   // CRITICAL: Ensure JWT is saved on native platform for overlay functionality
   useEffect(() => {
     const ensureJWTSaved = async () => {
-      if (!Capacitor.isNativePlatform() || !AuthBridge || !firebaseUser) {
-        console.log('⚠️ Not native platform, AuthBridge unavailable, or no user');
+      if (!Capacitor.isNativePlatform() || !AuthBridge) {
+        console.log('⚠️ Not native platform or AuthBridge unavailable');
         return;
       }
-      
+      if (!session?.access_token) {
+        console.log('⚠️ No session or access token available');
+        return;
+      }
       try {
-        console.log('🔐 [Home] Getting Firebase ID token...');
-        const accessToken = await getAccessToken();
-        if (!accessToken) {
-          console.log('⚠️ No access token available');
-          return;
-        }
-        
         console.log('🔐 [Home] Verifying JWT in native storage...');
 
-        // Check if JWT exists and matches current token
+        // Check if JWT exists and matches current session
         const stored = await AuthBridge.getToken();
-        if (stored?.token === accessToken) {
+        if (stored?.token === session.access_token) {
           console.log('✅ [Home] JWT already saved correctly');
           return;
         }
@@ -71,11 +66,11 @@ export default function Home() {
         // Save with retry logic
         for (let attempt = 1; attempt <= 3; attempt++) {
           await AuthBridge.saveToken({
-            token: accessToken
+            token: session.access_token
           });
           await new Promise(resolve => setTimeout(resolve, 100));
           const verify = await AuthBridge.getToken();
-          if (verify?.token === accessToken) {
+          if (verify?.token === session.access_token) {
             console.log(`✅ [Home] JWT saved successfully on attempt ${attempt}`);
             return;
           }
@@ -87,7 +82,7 @@ export default function Home() {
       }
     };
     ensureJWTSaved();
-  }, [firebaseUser, getAccessToken]);
+  }, [session]);
 
   // Check if notification permission is default (not granted or denied)
   useEffect(() => {
@@ -221,14 +216,5 @@ export default function Home() {
       {/* Only show in-app modal on web platform; Android uses native overlay */}
       {!Capacitor.isNativePlatform() && <BookingAlertModal open={!!pending} booking={pending} onAccept={handleAccept} onReject={reject} onClose={clearAlert} />}
       </div>
-
-      {/* Upcoming Bookings Bar - only show when no active job */}
-      {!activeJob && !isGuestMode && (
-        <UpcomingBookingsBar 
-          workerId={user?.id}
-          communityName={worker?.community}
-          serviceTypes={worker?.service_types}
-        />
-      )}
     </div>;
 }

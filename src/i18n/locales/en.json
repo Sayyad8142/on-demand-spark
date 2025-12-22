@@ -53,8 +53,7 @@
     "noActiveJob": "No active jobs at the moment",
     "enableWebPush": "Enable Web Push Notifications",
     "enableWebPushDesc": "Get booking alerts even when this tab is in the background",
-    "enableInSettings": "Enable in Settings",
-    "upcomingBooking": "Upcoming Booking"
+    "enableInSettings": "Enable in Settings"
   },
   "bookings": {
     "title": "My Bookings",
@@ -78,7 +77,6 @@
     "edit": "Edit Profile",
     "earnings": "Earnings",
     "totalEarned": "Total Earned",
-    "todayEarned": "Today Earned",
     "completedJobs": "Completed Jobs",
     "rating": "Rating",
     "reviews": "Customer Reviews",
@@ -137,11 +135,5 @@
     "delete": "Delete",
     "edit": "Edit",
     "confirm": "Confirm"
-  },
-  "forceUpdate": {
-    "title": "Update Required",
-    "message": "A new version of Didi Now Worker App is available. Please update to continue using the app.",
-    "button": "Update Now",
-    "info": "This update contains important improvements and bug fixes."
   }
 }

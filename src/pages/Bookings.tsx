@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Search, MapPin, Calendar, Loader2, User, Star } from "lucide-react";
+import { ArrowLeft, Search, MapPin, Calendar, Loader2, User } from "lucide-react";
 import { DEMO_BOOKINGS } from "@/config/demoData";
 import { formatBookingAddress, BookingWithAddress } from "@/lib/address";
 
-type Booking = BookingWithAddress & { rating?: number | null };
+type Booking = BookingWithAddress;
 
 export default function Bookings() {
   const navigate = useNavigate();
@@ -23,12 +23,7 @@ export default function Bookings() {
 
   useEffect(() => {
     if (isGuestMode) {
-      // Add sample ratings to demo bookings
-      const demoWithRatings = (DEMO_BOOKINGS as any[]).map((b, i) => ({
-        ...b,
-        rating: i === 0 ? 5 : i === 1 ? 4 : null
-      }));
-      setBookings(demoWithRatings);
+      setBookings(DEMO_BOOKINGS as any);
       setLoading(false);
       return;
     }
@@ -37,35 +32,14 @@ export default function Bookings() {
 
     const fetchBookings = async () => {
       try {
-        // Fetch bookings
-        const { data: bookingsData, error: bookingsError } = await supabase
+        const { data, error } = await supabase
           .from('bookings')
           .select('*')
           .eq('worker_id', user.id)
           .order('created_at', { ascending: false });
 
-        if (bookingsError) throw bookingsError;
-
-        // Fetch ratings for these bookings
-        const bookingIds = (bookingsData || []).map(b => b.id);
-        const { data: ratingsData } = await supabase
-          .from('worker_ratings')
-          .select('booking_id, rating')
-          .in('booking_id', bookingIds);
-
-        // Create a map of booking_id to rating
-        const ratingsMap = new Map<string, number>();
-        (ratingsData || []).forEach(r => {
-          ratingsMap.set(r.booking_id, r.rating);
-        });
-
-        // Merge ratings into bookings
-        const bookingsWithRatings = (bookingsData || []).map(b => ({
-          ...b,
-          rating: ratingsMap.get(b.id) || null
-        }));
-
-        setBookings(bookingsWithRatings);
+        if (error) throw error;
+        setBookings(data || []);
       } catch (error) {
         console.error('Error fetching bookings:', error);
       } finally {
@@ -223,18 +197,9 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Rating Display */}
-          {booking.rating && (
-            <div className="flex items-center gap-1 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded-full">
-              <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-              <span className="text-yellow-600 dark:text-yellow-400 font-semibold text-xs">{booking.rating}</span>
-            </div>
-          )}
-          {booking.price_inr && (
-            <span className={`font-bold ${numberColor} text-base`}>₹{booking.price_inr}</span>
-          )}
-        </div>
+        {booking.price_inr && (
+          <span className={`font-bold ${numberColor} text-base`}>₹{booking.price_inr}</span>
+        )}
       </div>
     </Card>
   );

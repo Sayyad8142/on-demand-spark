@@ -35,29 +35,22 @@ export function useActiveJob(userId: string | undefined) {
   useEffect(() => {
     fetchActiveJob();
 
-    // Subscribe to booking updates - NO filter on worker_id because
-    // Postgres realtime filters evaluate on the OLD row, so we'd miss
-    // the update when worker_id changes from NULL to userId on acceptance.
+    // Subscribe to booking updates
     const channel = supabase
       .channel('active-job-updates')
       .on(
         'postgres_changes',
         {
-          event: '*', // Listen for INSERT and UPDATE
+          event: 'UPDATE',
           schema: 'public',
           table: 'bookings',
+          filter: `worker_id=eq.${userId}`
         },
         (payload) => {
           const booking = payload.new as Booking;
-          // Only process if this booking is assigned to current user
-          if (booking.worker_id !== userId) return;
-
-          console.log('📡 Realtime booking update for worker:', booking.id, booking.status);
-
           if (['assigned', 'accepted', 'on_the_way', 'started'].includes(booking.status)) {
             setActiveJob(booking);
           } else {
-            // Booking completed/cancelled - clear active job
             setActiveJob(null);
           }
         }

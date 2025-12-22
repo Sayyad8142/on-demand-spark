@@ -1,70 +1,58 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
-import { callFn, isPermissionError, getErrorMessage } from "@/lib/api";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 
 type Worker = Database["public"]["Tables"]["workers"]["Row"];
 
 export function useWorkerProfile(userId: string | undefined) {
   const [worker, setWorker] = useState<Worker | null>(null);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-  const { firebaseUser } = useAuth();
 
   const fetchWorker = async () => {
-    if (!userId && !firebaseUser) {
-      setLoading(false);
-      return;
-    }
+    if (!userId) return;
     
     try {
-      const firebaseUid = firebaseUser?.uid;
-      console.log('🔍 Fetching worker for firebase_uid:', firebaseUid, 'or user_id:', userId);
+      console.log('🔍 Fetching worker for user_id:', userId);
       
-      let data = null;
-      let error = null;
+      // First, try to find worker by user_id (preferred method)
+      let { data, error } = await supabase
+        .from('workers')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-      // Try to find worker by Firebase UID first (stored in user_id column)
-      if (firebaseUid) {
-        const result = await supabase
+      // If not found by user_id, try by id (legacy workers)
+      if (!data && !error) {
+        console.log('⚠️ No worker found by user_id, trying by id');
+        const legacyResult = await supabase
           .from('workers')
           .select('*')
-          .eq('user_id', firebaseUid)
+          .eq('id', userId)
           .maybeSingle();
         
-        data = result.data;
-        error = result.error;
+        data = legacyResult.data;
+        error = legacyResult.error;
         
-        if (data) {
-          console.log('✅ Worker found by Firebase UID:', data.full_name);
-        }
-      }
-
-      // If not found by Firebase UID and userId is provided, try by user_id or id
-      if (!data && !error && userId) {
-        console.log('⚠️ No worker found by Firebase UID, trying by user_id:', userId);
-        const userIdResult = await supabase
-          .from('workers')
-          .select('*')
-          .eq('user_id', userId)
-          .maybeSingle();
-        
-        data = userIdResult.data;
-        error = userIdResult.error;
-
-        // Also try by id (legacy workers)
-        if (!data && !error) {
-          console.log('⚠️ No worker found by user_id, trying by id');
-          const legacyResult = await supabase
+        // If found by id but user_id is not set, link the worker to this auth user
+        if (data && !data.user_id) {
+          console.log('🔗 Linking worker to auth user:', userId);
+          const { error: updateError } = await supabase
             .from('workers')
-            .select('*')
-            .eq('id', userId)
-            .maybeSingle();
+            .update({ user_id: userId })
+            .eq('id', data.id);
           
-          data = legacyResult.data;
-          error = legacyResult.error;
+          if (updateError) {
+            console.error('❌ Failed to link worker to user:', updateError);
+          } else {
+            console.log('✅ Worker linked successfully');
+            // Refetch to get updated data
+            const { data: updatedData } = await supabase
+              .from('workers')
+              .select('*')
+              .eq('id', data.id)
+              .single();
+            data = updatedData;
+          }
         }
       }
 
@@ -73,7 +61,7 @@ export function useWorkerProfile(userId: string | undefined) {
       if (data) {
         console.log('✅ Worker fetched:', data.full_name, '| user_id:', data.user_id);
       } else {
-        console.log('⚠️ No worker found');
+        console.log('⚠️ No worker found for user:', userId);
       }
       
       setWorker(data);
@@ -86,29 +74,31 @@ export function useWorkerProfile(userId: string | undefined) {
 
   useEffect(() => {
     fetchWorker();
-  }, [userId, firebaseUser?.uid]);
+  }, [userId]);
 
   const updateAvailability = async (isAvailable: boolean) => {
     if (!userId) return;
 
     try {
-      // Use Edge Function for protected write
-      const result = await callFn<{ success: boolean; is_available: boolean }>("set-availability", {
-        is_available: isAvailable
+      // Use RPC function to update availability with proper permissions
+      const { data, error } = await supabase.rpc('update_worker_availability', {
+        p_is_available: isAvailable
       });
 
-      if (!result.ok) {
-        if (isPermissionError(result)) {
-          toast({
-            title: "Permission Error",
-            description: getErrorMessage(result),
-            variant: "destructive"
-          });
-        }
-        throw new Error(result.error);
+      if (error) {
+        console.error('RPC error:', error);
+        throw error;
       }
 
-      console.log('Availability updated successfully via Edge Function');
+      // Check the response from the RPC function
+      const result = data as { success: boolean; error?: string; worker_id?: string; is_available?: boolean } | null;
+      
+      if (result && !result.success) {
+        console.error('Update failed:', result.error);
+        throw new Error(result.error || 'Failed to update availability');
+      }
+
+      console.log('Availability updated successfully:', result);
       
       // Refetch to get updated worker data
       await fetchWorker();
@@ -120,8 +110,20 @@ export function useWorkerProfile(userId: string | undefined) {
 
   const updateWorker = async (updates: Partial<Worker>) => {
     if (!userId) return;
-    // TODO: Use Edge Function for protected writes
-    console.log('⚠️ updateWorker: Direct update not supported, use Edge Function');
+
+    try {
+      const { error } = await supabase
+        .from('workers')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', userId);
+
+      if (error) throw error;
+      
+      await fetchWorker();
+    } catch (error) {
+      console.error('Error updating worker:', error);
+      throw error;
+    }
   };
 
   return { worker, loading, updateAvailability, updateWorker, refetch: fetchWorker };

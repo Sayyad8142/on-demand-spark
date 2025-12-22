@@ -1,25 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { useTranslation } from "react-i18next";
-
-const LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "hi", label: "हिंदी" },
-  { code: "te", label: "తెలుగు" },
-];
 
 const ForceUpdateScreen = () => {
-  const { t, i18n } = useTranslation();
-
   const handleUpdateNow = () => {
     window.open(
       'https://play.google.com/store/apps/details?id=app.didisnow.worker',
       '_blank'
     );
-  };
-
-  const handleLanguageChange = (langCode: string) => {
-    i18n.changeLanguage(langCode);
   };
 
   return (
@@ -34,12 +21,12 @@ const ForceUpdateScreen = () => {
 
         {/* Title */}
         <h1 className="text-3xl font-bold text-foreground">
-          {t('forceUpdate.title')}
+          Update Required
         </h1>
 
         {/* Message */}
         <p className="text-muted-foreground text-lg leading-relaxed">
-          {t('forceUpdate.message')}
+          A new version of Didi Now Worker App is available. Please update to continue using the app.
         </p>
 
         {/* Update Button */}
@@ -48,33 +35,13 @@ const ForceUpdateScreen = () => {
           size="lg"
           className="w-full mt-8"
         >
-          {t('forceUpdate.button')}
+          Update Now
         </Button>
 
         {/* Additional info */}
         <p className="text-sm text-muted-foreground mt-4">
-          {t('forceUpdate.info')}
+          This update contains important improvements and bug fixes.
         </p>
-
-        {/* Language Toggle */}
-        <div className="pt-4 border-t border-border">
-          <p className="text-xs text-muted-foreground mb-3">
-            {t('profile.selectLanguage')}
-          </p>
-          <div className="flex justify-center gap-2">
-            {LANGUAGES.map((lang) => (
-              <Button
-                key={lang.code}
-                variant={i18n.language === lang.code ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleLanguageChange(lang.code)}
-                className="min-w-[80px]"
-              >
-                {lang.label}
-              </Button>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );

@@ -134,7 +134,7 @@
                     <!-- Tower Number Section (Right) -->
                     <LinearLayout
                         android:orientation="horizontal"
-                        android:background="@android:color/transparent"
+                        android:background="#F1F5F9"
                         android:padding="20dp"
                         android:gravity="center"
                         android:layout_weight="1"

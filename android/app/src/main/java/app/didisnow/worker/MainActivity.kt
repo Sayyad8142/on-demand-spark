@@ -38,7 +38,6 @@ class MainActivity : BridgeActivity() {
         registerPlugin(ForegroundServicePlugin::class.java)
         registerPlugin(OverlayPlugin::class.java)
         registerPlugin(AuthBridge::class.java)
-        registerPlugin(FirebasePhoneAuthPlugin::class.java)
         registerPlugin(LocationPlugin::class.java)
         registerPlugin(SmsRetrieverPlugin::class.java)
         
