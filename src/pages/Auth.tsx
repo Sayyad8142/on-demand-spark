@@ -11,20 +11,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import { auth, getRecaptchaVerifier, ensureRecaptchaRendered, clearRecaptchaVerifier } from "@/lib/firebase";
 import { signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
 
-// Helper to get Capacitor plugins lazily (plugins may not be ready at module load).
-const getCapPlugin = <T,>(name: string): T | undefined =>
-  (window as any).Capacitor?.Plugins?.[name] as T | undefined;
+// Capacitor: register native plugins (do NOT rely on window.Capacitor.Plugins)
+const AuthBridge = registerPlugin<any>('AuthBridge');
+const SmsRetriever = registerPlugin<any>('SmsRetrieverPlugin');
+const FirebasePhoneAuth = registerPlugin<any>('FirebasePhoneAuth');
 
-// @ts-ignore - Capacitor bridges
-const getAuthBridge = () => getCapPlugin<any>('AuthBridge');
-const getSmsRetrieverPlugin = () => getCapPlugin<any>('SmsRetrieverPlugin');
-const getFirebasePhoneAuth = () => getCapPlugin<any>('FirebasePhoneAuth');
+const isCapPluginAvailable = (name: string) => Capacitor.isNativePlatform() && Capacitor.isPluginAvailable(name);
 
 const SERVICES = [{
   value: "maid",
@@ -95,16 +93,15 @@ export default function Auth() {
 
   // Auto OTP detection for Android
   useEffect(() => {
-    const smsPlugin = getSmsRetrieverPlugin();
-    if (!Capacitor.isNativePlatform() || !smsPlugin) {
-      return;
-    }
+    if (!otpSent) return;
+    if (!isCapPluginAvailable('SmsRetrieverPlugin')) return;
+
     const startSmsRetriever = async () => {
       try {
-        const result = await smsPlugin.startWatching();
+        const result = await SmsRetriever.startWatching();
         console.log('📱 SMS Retriever started:', result);
 
-        smsPlugin.addListener('smsReceived', (data: any) => {
+        SmsRetriever.addListener('smsReceived', (data: any) => {
           console.log('📱 SMS received:', data);
           const message = data.message || '';
           const otpMatch = message.match(/\b\d{6}\b/);
@@ -115,7 +112,7 @@ export default function Auth() {
             setSignUpOtp(otp);
             toast({
               title: "OTP Auto-detected",
-              description: `Code ${otp} filled automatically`
+              description: `Code ${otp} filled automatically`,
             });
           }
         });
@@ -123,14 +120,15 @@ export default function Auth() {
         console.error('❌ SMS Retriever error:', error);
       }
     };
-    if (otpSent) {
-      startSmsRetriever();
-    }
+
+    startSmsRetriever();
+
     return () => {
-      const plugin = getSmsRetrieverPlugin();
-      if (plugin) {
-        plugin.removeAllListeners();
-        plugin.stopWatching().catch(console.error);
+      try {
+        SmsRetriever.removeAllListeners();
+        SmsRetriever.stopWatching().catch(() => undefined);
+      } catch {
+        // ignore
       }
     };
   }, [otpSent, toast]);
@@ -217,28 +215,27 @@ export default function Auth() {
   const sendOtp = async (phoneE164: string) => {
     // On native Android, always use the native Firebase PhoneAuth plugin
     if (isNativeAndroid) {
-      const nativePlugin = getFirebasePhoneAuth();
-      console.log('📲 [OTP] Native Android detected, plugin:', nativePlugin ? 'found' : 'NOT FOUND');
-      
-      if (nativePlugin) {
-        try {
-          console.log('📲 [OTP] Using native Android PhoneAuth (no reCAPTCHA UI)');
-          const res = await nativePlugin.sendOtp({ phone: phoneE164 });
-          console.log('📲 [OTP] Native sendOtp result:', JSON.stringify(res));
+      const available = isCapPluginAvailable('FirebasePhoneAuth');
+      console.log('📲 [OTP] Native Android detected, plugin available:', available);
 
-          // Auto verification can happen on some devices/SIMs.
-          if (res?.autoVerified && res?.idToken) {
-            return { kind: 'idToken' as const, idToken: res.idToken as string };
-          }
-
-          nativeVerificationIdRef.current = (res?.verificationId as string) || null;
-          return { kind: 'sent' as const };
-        } catch (nativeErr: any) {
-          console.error('❌ [OTP] Native plugin error:', nativeErr);
-          throw nativeErr; // Don't fall back to web on Android
-        }
-      } else {
+      if (!available) {
         throw new Error('FirebasePhoneAuth plugin not available on Android. Please rebuild the app.');
+      }
+
+      try {
+        console.log('📲 [OTP] Using native Android PhoneAuth (no reCAPTCHA UI)');
+        const res = await FirebasePhoneAuth.sendOtp({ phone: phoneE164 });
+
+        // Auto verification can happen on some devices/SIMs.
+        if (res?.autoVerified && res?.idToken) {
+          return { kind: 'idToken' as const, idToken: res.idToken as string };
+        }
+
+        nativeVerificationIdRef.current = (res?.verificationId as string) || null;
+        return { kind: 'sent' as const };
+      } catch (nativeErr: any) {
+        console.error('❌ [OTP] Native plugin error:', nativeErr);
+        throw nativeErr; // Don't fall back to web on Android
       }
     }
 
@@ -252,13 +249,14 @@ export default function Auth() {
 
   const verifyOtp = async (otp: string) => {
     if (isNativeAndroid) {
-      const nativePlugin = getFirebasePhoneAuth();
-      if (!nativePlugin) throw new Error('FirebasePhoneAuth plugin not available');
-      
+      if (!isCapPluginAvailable('FirebasePhoneAuth')) {
+        throw new Error('FirebasePhoneAuth plugin not available on Android. Please rebuild the app.');
+      }
+
       const verificationId = nativeVerificationIdRef.current;
       if (!verificationId) throw new Error('missing verificationId');
       console.log('🔎 [OTP] Verifying via native Android PhoneAuth');
-      const res = await nativePlugin.verifyOtp({ otp, verificationId });
+      const res = await FirebasePhoneAuth.verifyOtp({ otp, verificationId });
       if (!res?.idToken) throw new Error('missing idToken');
       return res.idToken as string;
     }
@@ -286,8 +284,8 @@ export default function Auth() {
         if (error) throw error;
         if (!data.user) throw new Error("Demo login failed");
 
-        const authBridge = getAuthBridge();
-        if (Capacitor.isNativePlatform() && authBridge && data.session?.access_token) {
+        const authBridge = isCapPluginAvailable('AuthBridge') ? AuthBridge : null;
+        if (authBridge && data.session?.access_token) {
           console.log('🔐 [Demo Auth] Saving JWT immediately...');
           try {
             await authBridge.saveToken({ token: data.session.access_token });
@@ -383,8 +381,8 @@ export default function Auth() {
       await syncWorkerProfile(firebaseUser.uid, phone);
 
       // Save Firebase ID token to native storage
-      const authBridge = getAuthBridge();
-      if (Capacitor.isNativePlatform() && authBridge) {
+      const authBridge = isCapPluginAvailable('AuthBridge') ? AuthBridge : null;
+      if (authBridge) {
         console.log('🔐 [Auth Page] Saving Firebase ID token after sign-in...');
         try {
           const idToken = await firebaseUser.getIdToken();
@@ -588,8 +586,8 @@ export default function Auth() {
       }
 
       // Save Firebase ID token to native storage
-      const authBridge = getAuthBridge();
-      if (Capacitor.isNativePlatform() && authBridge) {
+      const authBridge = isCapPluginAvailable('AuthBridge') ? AuthBridge : null;
+      if (authBridge) {
         console.log('🔐 [Auth Page] Saving Firebase ID token after sign-up...');
         try {
           const idToken = await firebaseUser.getIdToken();
