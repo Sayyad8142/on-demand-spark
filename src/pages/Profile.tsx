@@ -945,16 +945,6 @@ export default function Profile() {
           </CardContent>
         </Card>
 
-          {/* Logout Button - Prominent */}
-          <Button
-            onClick={handleLogout}
-            variant="outline"
-            className="w-full justify-center gap-2 h-12 text-base border-2 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950"
-          >
-            <LogOut className="w-5 h-5" />
-            {t('profile.logout')}
-          </Button>
-
           {/* Actions */}
           <Card className="border-0 shadow-lg">
             <CardContent className="pt-6">
@@ -1036,6 +1026,15 @@ export default function Profile() {
               </DropdownMenu>
             </CardContent>
           </Card>
+
+          {/* Logout Button - Big Red Button */}
+          <Button
+            onClick={handleLogout}
+            className="w-full h-14 text-lg font-semibold bg-red-500 hover:bg-red-600 text-white"
+          >
+            <LogOut className="w-6 h-6 mr-2" />
+            {t('profile.logout')}
+          </Button>
         </div>
       </main>
       <BottomNav />
