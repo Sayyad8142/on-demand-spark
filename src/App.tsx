@@ -125,14 +125,14 @@ const App = () => {
     const sub = CapApp.addListener('appUrlOpen', async (data) => {
       try {
         const url = new URL(data.url);
-        if (url.protocol === 'didinow:' && url.hostname === 'accept') {
-          const bookingId = url.searchParams.get('bookingId') || '';
-          if (bookingId) {
-            console.log('🔗 Deep link accept for bookingId:', bookingId);
-            const ok = await tryAccept(bookingId);
-            if (!ok) console.warn('Booking already taken or accept failed');
+          if (url.protocol === 'didinow:' && url.hostname === 'accept') {
+            const bookingId = url.searchParams.get('bookingId') || '';
+            if (bookingId) {
+              console.log('🔗 Deep link accept for bookingId:', bookingId);
+              const result = await tryAccept(bookingId);
+              if (!result.success) console.warn('Booking accept failed:', result.error);
+            }
           }
-        }
       } catch (e) {
         console.error('appUrlOpen parse error', e);
       }
