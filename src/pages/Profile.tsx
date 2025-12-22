@@ -945,6 +945,16 @@ export default function Profile() {
           </CardContent>
         </Card>
 
+          {/* Logout Button - Prominent */}
+          <Button
+            onClick={handleLogout}
+            variant="outline"
+            className="w-full justify-center gap-2 h-12 text-base border-2 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950"
+          >
+            <LogOut className="w-5 h-5" />
+            {t('profile.logout')}
+          </Button>
+
           {/* Actions */}
           <Card className="border-0 shadow-lg">
             <CardContent className="pt-6">
@@ -960,19 +970,6 @@ export default function Profile() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-[calc(100vw-2rem)] sm:w-[400px] bg-background z-50" align="end">
                   <DropdownMenuLabel>Account Actions</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  
-                  <div className="p-2">
-                    <Button
-                      onClick={handleLogout}
-                      variant="ghost"
-                      className="w-full justify-start"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      {t('profile.logout')}
-                    </Button>
-                  </div>
-
                   <DropdownMenuSeparator />
                   
                   <div className="p-2 space-y-1">
