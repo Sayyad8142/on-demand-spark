@@ -4,11 +4,63 @@ import { Database } from "@/integrations/supabase/types";
 
 type Booking = Database["public"]["Tables"]["bookings"]["Row"];
 
-// Note: This hook expects the *worker row id* (workers.id), not the auth user id.
-export function useActiveJob(workerId: string | undefined) {
+/**
+ * Fetches the active job for the authenticated worker.
+ * @param userId - The auth user id (auth.uid)
+ */
+export function useActiveJob(userId: string | undefined) {
   const [activeJob, setActiveJob] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
+  const [workerId, setWorkerId] = useState<string | null>(null);
 
+  // Resolve the worker's id from their user_id (or legacy id match)
+  useEffect(() => {
+    let cancelled = false;
+
+    const resolveWorkerId = async () => {
+      if (!userId) {
+        setWorkerId(null);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Try by user_id first
+        let { data } = await supabase
+          .from("workers")
+          .select("id")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        // Fallback: id match (legacy workers where id === userId)
+        if (!data) {
+          const { data: legacyData } = await supabase
+            .from("workers")
+            .select("id")
+            .eq("id", userId)
+            .maybeSingle();
+          data = legacyData;
+        }
+
+        if (!cancelled) {
+          const resolvedId = data?.id ?? null;
+          console.log("🔍 useActiveJob resolved worker_id:", resolvedId);
+          setWorkerId(resolvedId);
+        }
+      } catch (err) {
+        console.error("❌ Failed to resolve worker id:", err);
+        if (!cancelled) setWorkerId(null);
+      }
+    };
+
+    resolveWorkerId();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  // Fetch the active booking for this worker
   const fetchActiveJob = useCallback(async () => {
     if (!workerId) {
       setActiveJob(null);
@@ -43,12 +95,12 @@ export function useActiveJob(workerId: string | undefined) {
     }
   }, [workerId]);
 
-  // Initial fetch + when workerId changes
+  // Re-fetch whenever workerId becomes available / changes
   useEffect(() => {
     fetchActiveJob();
   }, [fetchActiveJob]);
 
-  // Realtime updates for this worker
+  // Realtime updates for this worker's bookings
   useEffect(() => {
     if (!workerId) return;
 
@@ -95,10 +147,9 @@ export function useActiveJob(workerId: string | undefined) {
     };
   }, [workerId]);
 
-  // Native overlay acceptance comes in via deep link; ensure UI refresh even if realtime is delayed.
+  // Native overlay accept triggers custom event; refresh active job when that fires
   useEffect(() => {
     const onBookingAccepted = () => {
-      // Small delay to allow DB transaction to commit
       setTimeout(() => {
         fetchActiveJob();
       }, 400);
@@ -124,13 +175,11 @@ export function useActiveJob(workerId: string | undefined) {
 
       console.log("✅ Status update successful");
 
-      // If completed, immediately clear the active job for instant UI update
       if (newStatus === "completed") {
         console.log("🎉 Clearing active job immediately");
         setActiveJob(null);
       }
 
-      // Wait for database transaction to commit before refetching
       await new Promise((resolve) => setTimeout(resolve, 1000));
       console.log("🔄 Refetching active job after delay");
       await fetchActiveJob();
