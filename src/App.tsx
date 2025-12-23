@@ -27,6 +27,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import ContactSupport from "./pages/ContactSupport";
 import ForceUpdateScreen from "./pages/ForceUpdateScreen";
+import CustomerReviews from "./pages/CustomerReviews";
 import BottomNav from "./components/BottomNav";
 
 const queryClient = new QueryClient();
@@ -259,6 +260,7 @@ const App = () => {
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/contact-support" element={<ProtectedRoute><ContactSupport /></ProtectedRoute>} />
+            <Route path="/customer-reviews" element={<ProtectedRoute><CustomerReviews /></ProtectedRoute>} />
             <Route path="/" element={<Navigate to="/auth" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
