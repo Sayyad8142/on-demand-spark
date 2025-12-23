@@ -843,57 +843,26 @@ export default function Profile() {
             </Card>
           )}
 
-          {/* Reviews Section */}
+          {/* Reviews Section - Link to new page */}
           {reviews.length > 0 && (
-            <Card className="border-0 shadow-lg">
-              <Collapsible defaultOpen={false}>
-                <CardHeader className="pb-3">
-                  <CollapsibleTrigger className="flex items-center justify-between w-full hover:opacity-80 transition-opacity [&[data-state=open]>svg]:rotate-90">
-                    <div className="flex items-center gap-2">
-                      <MessageSquare className="w-5 h-5" />
-                      <CardTitle className="text-base">
-                        {t('profile.reviews')} ({reviews.length})
-                      </CardTitle>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground transition-transform duration-200" />
-                  </CollapsibleTrigger>
-                  <CardDescription className="text-left">
-                    Customer feedback from completed jobs
-                  </CardDescription>
-                </CardHeader>
-                <CollapsibleContent>
-                  <CardContent className="space-y-3 pt-0">
-                    {reviews.map((review) => (
-                      <Card key={review.id} className="bg-muted/50">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex-1">
-                              <p className="font-semibold text-sm">
-                                {review.bookings?.cust_name || 'Customer'}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {review.bookings?.service_type} • {review.bookings?.community} • Flat {review.bookings?.flat_no}
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {format(new Date(review.created_at), 'MMM d, yyyy')}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-1 bg-amber-100 dark:bg-amber-950 px-2 py-1 rounded-lg">
-                              <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                              <span className="font-semibold text-sm">{review.rating}</span>
-                            </div>
-                          </div>
-                          {review.comment && (
-                            <p className="text-sm text-foreground mt-3 p-3 bg-background rounded-lg border">
-                              "{review.comment}"
-                            </p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </CardContent>
-                </CollapsibleContent>
-              </Collapsible>
+            <Card 
+              className="border-0 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
+              onClick={() => navigate('/customer-reviews')}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5" />
+                    <CardTitle className="text-base">
+                      {t('profile.reviews')} ({reviews.length})
+                    </CardTitle>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <CardDescription className="text-left">
+                  Customer feedback from completed jobs
+                </CardDescription>
+              </CardHeader>
             </Card>
           )}
 
