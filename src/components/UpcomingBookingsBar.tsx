@@ -118,17 +118,12 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-foreground">
-                    {SERVICE_LABELS[booking.service_type] || booking.service_type}
+                {price !== null && price !== undefined && (
+                  <span className="text-sm font-bold text-green-600 flex items-center">
+                    <IndianRupee className="h-3.5 w-3.5" />
+                    {price}
                   </span>
-                  {price !== null && price !== undefined && (
-                    <span className="text-sm font-bold text-green-600 flex items-center">
-                      <IndianRupee className="h-3.5 w-3.5" />
-                      {price}
-                    </span>
-                  )}
-                </div>
+                )}
               </div>
             );
           })}
