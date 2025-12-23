@@ -99,6 +99,8 @@ public class MyFirebaseService extends FirebaseMessagingService {
           Log.w(TAG, "⚠️ Failed to parse price: " + priceStr, e);
         }
 
+        String scheduledTime = data.get("scheduled_time"); // Human-readable scheduled time
+
         Log.d(TAG, "📋 BOOKING DETAILS:");
         Log.d(TAG, "   ID: " + bookingId);
         Log.d(TAG, "   Type: " + bookingType);
