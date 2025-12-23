@@ -32,13 +32,45 @@ export default function Bookings() {
 
     const fetchBookings = async () => {
       try {
+        // First, resolve the worker record id from user_id
+        let workerId: string | null = null;
+
+        // Try by user_id first
+        const { data: workerByUserId } = await supabase
+          .from('workers')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (workerByUserId) {
+          workerId = workerByUserId.id;
+        } else {
+          // Fallback: legacy workers where workers.id === auth.uid
+          const { data: workerById } = await supabase
+            .from('workers')
+            .select('id')
+            .eq('id', user.id)
+            .maybeSingle();
+          workerId = workerById?.id ?? null;
+        }
+
+        if (!workerId) {
+          console.log('⚠️ No worker record found for user:', user.id);
+          setBookings([]);
+          setLoading(false);
+          return;
+        }
+
+        console.log('🔍 Fetching booking history for worker_id:', workerId);
+
         const { data, error } = await supabase
           .from('bookings')
           .select('*')
-          .eq('worker_id', user.id)
+          .eq('worker_id', workerId)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
+        console.log('📦 Fetched', data?.length ?? 0, 'bookings');
         setBookings(data || []);
       } catch (error) {
         console.error('Error fetching bookings:', error);
