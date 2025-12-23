@@ -1,107 +1,71 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
 type Booking = Database["public"]["Tables"]["bookings"]["Row"];
 
-export function useActiveJob(userId: string | undefined) {
+// Note: This hook expects the *worker row id* (workers.id), not the auth user id.
+export function useActiveJob(workerId: string | undefined) {
   const [activeJob, setActiveJob] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
-  const [workerId, setWorkerId] = useState<string | null>(null);
 
-  // First, get the worker record ID from user_id
-  const fetchWorkerId = async () => {
-    if (!userId) return null;
-
-    try {
-      // Try by user_id first
-      let { data } = await supabase
-        .from('workers')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      // Fallback to id match (legacy workers)
-      if (!data) {
-        const { data: legacyData } = await supabase
-          .from('workers')
-          .select('id')
-          .eq('id', userId)
-          .maybeSingle();
-        data = legacyData;
-      }
-
-      if (data) {
-        console.log('✅ Found worker id:', data.id);
-        setWorkerId(data.id);
-        return data.id;
-      }
-      return null;
-    } catch (error) {
-      console.error('❌ Error fetching worker id:', error);
-      return null;
-    }
-  };
-
-  const fetchActiveJob = async (workerRecordId?: string) => {
-    const wId = workerRecordId || workerId;
-    if (!wId) {
-      console.log('⚠️ No worker id available for active job fetch');
+  const fetchActiveJob = useCallback(async () => {
+    if (!workerId) {
+      setActiveJob(null);
       setLoading(false);
       return;
     }
 
     try {
-      console.log('🔍 Fetching active job for worker record id:', wId);
+      setLoading(true);
+      console.log("🔍 Fetching active job for worker_id:", workerId);
+
       const { data, error } = await supabase
-        .from('bookings')
-        .select('*')
-        .eq('worker_id', wId)
-        .in('status', ['assigned', 'accepted', 'on_the_way', 'started'])
-        .order('created_at', { ascending: false })
+        .from("bookings")
+        .select("*")
+        .eq("worker_id", workerId)
+        .in("status", ["assigned", "accepted", "on_the_way", "started"])
+        .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (error) throw error;
-      console.log('📦 Active job fetched:', data ? `Found booking ${data.id}, flat: ${data.flat_no}` : 'No active job');
+
+      console.log(
+        "📦 Active job fetched:",
+        data ? `Found booking ${data.id}, flat: ${data.flat_no}` : "No active job"
+      );
       setActiveJob(data);
     } catch (error) {
-      console.error('❌ Error fetching active job:', error);
+      console.error("❌ Error fetching active job:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [workerId]);
 
+  // Initial fetch + when workerId changes
   useEffect(() => {
-    const init = async () => {
-      const wId = await fetchWorkerId();
-      if (wId) {
-        await fetchActiveJob(wId);
-      } else {
-        setLoading(false);
-      }
-    };
-    init();
-  }, [userId]);
+    fetchActiveJob();
+  }, [fetchActiveJob]);
 
-  // Subscribe to booking updates once we have workerId
+  // Realtime updates for this worker
   useEffect(() => {
     if (!workerId) return;
 
     const channel = supabase
-      .channel('active-job-updates')
+      .channel(`active-job-updates:${workerId}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'bookings',
-          filter: `worker_id=eq.${workerId}`
+          event: "UPDATE",
+          schema: "public",
+          table: "bookings",
+          filter: `worker_id=eq.${workerId}`,
         },
         (payload) => {
           const booking = payload.new as Booking;
-          console.log('📡 Realtime booking update:', booking.id, 'status:', booking.status);
-          if (['assigned', 'accepted', 'on_the_way', 'started'].includes(booking.status)) {
+          console.log("📡 Realtime booking update:", booking.id, "status:", booking.status);
+          if (["assigned", "accepted", "on_the_way", "started"].includes(booking.status)) {
             setActiveJob(booking);
           } else {
             setActiveJob(null);
@@ -109,17 +73,17 @@ export function useActiveJob(userId: string | undefined) {
         }
       )
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'bookings',
-          filter: `worker_id=eq.${workerId}`
+          event: "INSERT",
+          schema: "public",
+          table: "bookings",
+          filter: `worker_id=eq.${workerId}`,
         },
         (payload) => {
           const booking = payload.new as Booking;
-          console.log('📡 Realtime booking insert:', booking.id, 'status:', booking.status);
-          if (['assigned', 'accepted', 'on_the_way', 'started'].includes(booking.status)) {
+          console.log("📡 Realtime booking insert:", booking.id, "status:", booking.status);
+          if (["assigned", "accepted", "on_the_way", "started"].includes(booking.status)) {
             setActiveJob(booking);
           }
         }
@@ -131,37 +95,49 @@ export function useActiveJob(userId: string | undefined) {
     };
   }, [workerId]);
 
+  // Native overlay acceptance comes in via deep link; ensure UI refresh even if realtime is delayed.
+  useEffect(() => {
+    const onBookingAccepted = () => {
+      // Small delay to allow DB transaction to commit
+      setTimeout(() => {
+        fetchActiveJob();
+      }, 400);
+    };
+
+    window.addEventListener("bookingAccepted", onBookingAccepted);
+    return () => window.removeEventListener("bookingAccepted", onBookingAccepted);
+  }, [fetchActiveJob]);
+
   const updateJobStatus = async (bookingId: string, newStatus: string) => {
     try {
-      console.log('🔄 Updating job status:', bookingId, 'to', newStatus);
-      
-      const { error } = await supabase.rpc('worker_set_booking_status', {
+      console.log("🔄 Updating job status:", bookingId, "to", newStatus);
+
+      const { error } = await supabase.rpc("worker_set_booking_status", {
         booking_id_param: bookingId,
-        new_status_param: newStatus
+        new_status_param: newStatus,
       });
 
       if (error) {
-        console.error('❌ Error from worker_set_booking_status:', error);
+        console.error("❌ Error from worker_set_booking_status:", error);
         throw error;
       }
 
-      console.log('✅ Status update successful');
+      console.log("✅ Status update successful");
 
       // If completed, immediately clear the active job for instant UI update
-      if (newStatus === 'completed') {
-        console.log('🎉 Clearing active job immediately');
+      if (newStatus === "completed") {
+        console.log("🎉 Clearing active job immediately");
         setActiveJob(null);
       }
-      
+
       // Wait for database transaction to commit before refetching
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      console.log('🔄 Refetching active job after delay');
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.log("🔄 Refetching active job after delay");
       await fetchActiveJob();
-      
+
       return true;
     } catch (error) {
-      console.error('❌ Error updating job status:', error);
+      console.error("❌ Error updating job status:", error);
       throw error;
     }
   };
