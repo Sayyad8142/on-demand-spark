@@ -187,11 +187,13 @@ export default function Profile() {
     
     if (!user) return;
 
+    const workerId = realWorker?.id ?? user.id;
+
     const fetchEarnings = async () => {
       const { data, error } = await supabase
         .from('bookings')
         .select('price_inr, completed_at')
-        .eq('worker_id', user.id)
+        .eq('worker_id', workerId)
         .eq('status', 'completed');
 
       if (!error && data) {
@@ -212,7 +214,7 @@ export default function Profile() {
       const { data, error } = await supabase
         .from('worker_rating_stats')
         .select('avg_rating, ratings_count')
-        .eq('worker_id', user.id)
+        .eq('worker_id', workerId)
         .maybeSingle();
 
       if (!error && data) {
@@ -225,7 +227,7 @@ export default function Profile() {
       const { data, error } = await supabase
         .from('worker_ratings')
         .select('*, bookings(cust_name, service_type, flat_no, community)')
-        .eq('worker_id', user.id)
+        .eq('worker_id', workerId)
         .order('created_at', { ascending: false });
 
       if (!error && data) {
@@ -245,7 +247,7 @@ export default function Profile() {
     fetchEarnings();
     fetchRating();
     fetchReviews();
-  }, [user, isGuestMode]);
+  }, [user, isGuestMode, realWorker?.id]);
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
