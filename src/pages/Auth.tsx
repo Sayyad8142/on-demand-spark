@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
+import { Phone } from "lucide-react";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 
 // @ts-ignore - Capacitor bridge
@@ -768,6 +769,14 @@ export default function Auth() {
           తెలుగు
         </Button>
       </div>
+
+      {/* Call Support Button */}
+      <a href="tel:8008180018" className="w-full">
+        <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
+          <Phone className="w-4 h-4 mr-2" />
+          Call Support: 8008180018
+        </Button>
+      </a>
 
       </div>
     </div>;
