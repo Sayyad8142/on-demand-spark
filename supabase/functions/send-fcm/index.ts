@@ -250,13 +250,20 @@ async function getAccessToken(serviceAccount: any): Promise<string> {
   const signatureInput = `${jwtHeader}.${jwtClaimSetEncoded}`;
   
   // Import private key
-  const privateKey = serviceAccount.private_key;
+  // NOTE: Some deployments store the private key with literal "\\n" sequences.
+  // Normalize to real newlines before stripping PEM headers.
+  const privateKeyRaw = String(serviceAccount.private_key || "");
+  const privateKey = privateKeyRaw.includes("\\n")
+    ? privateKeyRaw.replace(/\\n/g, "\n")
+    : privateKeyRaw;
+
   const pemContents = privateKey
     .replace("-----BEGIN PRIVATE KEY-----", "")
     .replace("-----END PRIVATE KEY-----", "")
     .replace(/\s/g, "");
-  
-  const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+
+  // Base64-decode PKCS8 key material
+  const binaryKey = Uint8Array.from(atob(pemContents), (c) => c.charCodeAt(0));
   
   const cryptoKey = await crypto.subtle.importKey(
     "pkcs8",
