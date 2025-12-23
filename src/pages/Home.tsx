@@ -30,7 +30,7 @@ export default function Home() {
   
   // Use demo data in guest mode, real data otherwise
   const { worker: realWorker, updateAvailability, refetch: refetchWorker } = useWorkerProfile(user?.id);
-  const { activeJob: realActiveJob, updateJobStatus, refetch: refetchActiveJob } = useActiveJob(user?.id);
+  const { activeJob: realActiveJob, updateJobStatus, refetch: refetchActiveJob } = useActiveJob(realWorker?.id);
   
   const worker = isGuestMode ? DEMO_WORKER : realWorker;
   const activeJob = isGuestMode ? DEMO_ACTIVE_JOB : realActiveJob;

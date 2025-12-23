@@ -130,7 +130,11 @@ const App = () => {
             if (bookingId) {
               console.log('🔗 Deep link accept for bookingId:', bookingId);
               const result = await tryAccept(bookingId);
-              if (!result.success) console.warn('Booking accept failed:', result.error);
+              if (!result.success) {
+                console.warn('Booking accept failed:', result.error);
+              } else {
+                window.dispatchEvent(new CustomEvent('bookingAccepted', { detail: { bookingId } }));
+              }
             }
           }
       } catch (e) {
