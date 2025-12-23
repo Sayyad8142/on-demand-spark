@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Search, MapPin, Calendar, Loader2, User } from "lucide-react";
+import { ArrowLeft, Search, MapPin, Calendar, Loader2, User, Star } from "lucide-react";
 import { DEMO_BOOKINGS } from "@/config/demoData";
 import { formatBookingAddress, BookingWithAddress } from "@/lib/address";
 
-type Booking = BookingWithAddress;
+type Booking = BookingWithAddress & { rating?: number | null };
 
 export default function Bookings() {
   const navigate = useNavigate();
@@ -71,7 +71,22 @@ export default function Bookings() {
 
         if (error) throw error;
         console.log('📦 Fetched', data?.length ?? 0, 'bookings');
-        setBookings(data || []);
+        
+        // Fetch ratings for completed bookings
+        const bookingIds = (data || []).map(b => b.id);
+        const { data: ratings } = await supabase
+          .from('worker_ratings')
+          .select('booking_id, rating')
+          .in('booking_id', bookingIds);
+        
+        // Merge ratings into bookings
+        const ratingsMap = new Map(ratings?.map(r => [r.booking_id, r.rating]) || []);
+        const bookingsWithRatings = (data || []).map(b => ({
+          ...b,
+          rating: ratingsMap.get(b.id) ?? null
+        }));
+        
+        setBookings(bookingsWithRatings);
       } catch (error) {
         console.error('Error fetching bookings:', error);
       } finally {
@@ -229,9 +244,18 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
             )}
           </div>
         </div>
-        {booking.price_inr && (
-          <span className={`font-bold ${numberColor} text-base`}>₹{booking.price_inr}</span>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Customer Rating */}
+          {booking.rating && (
+            <div className="flex items-center gap-1 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
+              <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+              <span className="font-semibold text-amber-600 dark:text-amber-400">{booking.rating}</span>
+            </div>
+          )}
+          {booking.price_inr && (
+            <span className={`font-bold ${numberColor} text-base`}>₹{booking.price_inr}</span>
+          )}
+        </div>
       </div>
     </Card>
   );
