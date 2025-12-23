@@ -63,26 +63,49 @@ public class MyFirebaseService extends FirebaseMessagingService {
         if (serviceType == null || serviceType.isEmpty()) {
           serviceType = data.get("service_type");
         }
-        String location = data.get("location");
+
+        // Flat number is intentionally sent as `flat_no` (location is blanked for privacy)
+        String flatNo = data.get("flat_no");
+        if (flatNo == null || flatNo.isEmpty()) {
+          flatNo = data.get("flatNo"); // legacy
+        }
+        String location = data.get("location"); // legacy/compat
+        if ((flatNo == null || flatNo.isEmpty()) && location != null && !location.isEmpty()) {
+          flatNo = location;
+        }
+
         String priceStr = data.get("price");
-        String scheduledTime = data.get("scheduled_time"); // Human-readable scheduled time
-        
+        if (priceStr == null || priceStr.isEmpty()) {
+          priceStr = data.get("price_inr");
+        }
+        if (priceStr == null || priceStr.isEmpty()) {
+          priceStr = data.get("priceInr");
+        }
+
         int price = 0;
         try {
           if (priceStr != null && !priceStr.isEmpty()) {
-            price = Integer.parseInt(priceStr);
+            // Support values like "200", "200.0", "₹200"
+            String normalized = priceStr.replaceAll("[^0-9.]", "");
+            if (!normalized.isEmpty()) {
+              if (normalized.contains(".")) {
+                price = (int) Math.round(Double.parseDouble(normalized));
+              } else {
+                price = Integer.parseInt(normalized);
+              }
+            }
           }
-        } catch (NumberFormatException e) {
+        } catch (Exception e) {
           Log.w(TAG, "⚠️ Failed to parse price: " + priceStr, e);
         }
-        
+
         Log.d(TAG, "📋 BOOKING DETAILS:");
         Log.d(TAG, "   ID: " + bookingId);
         Log.d(TAG, "   Type: " + bookingType);
         Log.d(TAG, "   Customer: " + customer);
         Log.d(TAG, "   Community: " + community);
         Log.d(TAG, "   Service: " + serviceType);
-        Log.d(TAG, "   Location: " + location);
+        Log.d(TAG, "   Flat No: " + flatNo);
         Log.d(TAG, "   Price: ₹" + price);
         if (scheduledTime != null && !scheduledTime.isEmpty()) {
           Log.d(TAG, "   Scheduled Time: " + scheduledTime);
@@ -100,7 +123,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
           if (!android.provider.Settings.canDrawOverlays(this)) {
             Log.e(TAG, "❌ CRITICAL: No overlay permission! Falling back to Activity.");
             // Try to show BookingAlertActivity as fallback
-            launchBookingAlertActivity(bookingId, customer, community, serviceType, location, price, bookingType, scheduledTime);
+            launchBookingAlertActivity(bookingId, customer, community, serviceType, flatNo, price, bookingType, scheduledTime);
             return;
           } else {
             Log.d(TAG, "✅ Overlay permission granted");
@@ -118,7 +141,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
         serviceIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
         serviceIntent.putExtra("community", community != null ? community : "");
         serviceIntent.putExtra("service_type", serviceType != null ? serviceType : "Service");
-        serviceIntent.putExtra("flat_no", location != null ? location : "");
+        serviceIntent.putExtra("flat_no", flatNo != null ? flatNo : "");
         serviceIntent.putExtra("price_inr", price);
         serviceIntent.putExtra("scheduled_time", scheduledTime != null ? scheduledTime : "");
         
