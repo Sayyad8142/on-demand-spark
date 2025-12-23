@@ -1,15 +1,21 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Database } from "@/integrations/supabase/types";
 import { Calendar, Clock, IndianRupee } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
 
-type Booking = Database["public"]["Tables"]["bookings"]["Row"];
+type UpcomingBooking = {
+  booking_id: string;
+  community: string;
+  service_type: string;
+  scheduled_date: string | null;
+  scheduled_time: string | null;
+  price_inr: number | null;
+  payout_amount: number | null;
+  status: string;
+};
 
 interface UpcomingBookingsBarProps {
-  workerId: string | undefined;
-  communities?: string[];
-  serviceTypes?: string[];
+  limit?: number;
 }
 
 const SERVICE_LABELS: Record<string, string> = {
@@ -19,49 +25,29 @@ const SERVICE_LABELS: Record<string, string> = {
   bathroom_cleaning: "Bathroom",
 };
 
-export function UpcomingBookingsBar({ workerId, communities, serviceTypes }: UpcomingBookingsBarProps) {
-  const [bookings, setBookings] = useState<Booking[]>([]);
+export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
+  const [bookings, setBookings] = useState<UpcomingBooking[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUpcoming = async () => {
-      const today = new Date().toISOString().split("T")[0];
-
-      // Fetch scheduled bookings that are pending/assigned in worker's communities
-      let query = supabase
-        .from("bookings")
-        .select("*")
-        .eq("booking_type", "scheduled")
-        .in("status", ["pending", "assigned", "confirmed", "accepted"])
-        .gte("scheduled_date", today)
-        .order("scheduled_date", { ascending: true })
-        .order("scheduled_time", { ascending: true })
-        .limit(10);
-
-      // Filter by communities if provided
-      if (communities && communities.length > 0) {
-        query = query.in("community", communities);
-      }
-
-      // Filter by service types if provided
-      if (serviceTypes && serviceTypes.length > 0) {
-        query = query.in("service_type", serviceTypes);
-      }
-
-      const { data, error } = await query;
+      const { data, error } = await supabase.rpc(
+        "get_worker_upcoming_scheduled_bookings",
+        { p_limit: limit }
+      );
 
       if (!error && data) {
         console.log("📅 Upcoming scheduled bookings fetched:", data.length);
-        setBookings(data);
+        setBookings(data as UpcomingBooking[]);
       } else if (error) {
-        console.error("❌ Error fetching upcoming bookings:", error);
+        console.error("❌ Error fetching upcoming scheduled bookings:", error);
       }
+
       setLoading(false);
     };
 
     fetchUpcoming();
 
-    // Subscribe to realtime updates on bookings table
     const channel = supabase
       .channel("upcoming-scheduled-bookings")
       .on(
@@ -80,7 +66,7 @@ export function UpcomingBookingsBar({ workerId, communities, serviceTypes }: Upc
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [communities, serviceTypes]);
+  }, [limit]);
 
   if (loading || bookings.length === 0) return null;
 
@@ -107,18 +93,19 @@ export function UpcomingBookingsBar({ workerId, communities, serviceTypes }: Upc
         <div className="flex items-center gap-2 mb-2">
           <Calendar className="h-4 w-4 text-primary" />
           <span className="text-sm font-semibold text-foreground">
-            Upcoming Bookings ({bookings.length})
+            Upcoming Scheduled ({bookings.length})
           </span>
         </div>
+
         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
           {bookings.map((booking) => {
-            const price = booking.price_inr || booking.payout_amount;
+            const price = booking.price_inr ?? booking.payout_amount;
+
             return (
               <div
-                key={booking.id}
+                key={booking.booking_id}
                 className="flex-shrink-0 bg-card border border-border rounded-xl px-4 py-3 min-w-[160px] shadow-sm"
               >
-                {/* Date & Time Row */}
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm font-bold text-primary">
                     {formatDate(booking.scheduled_date)}
@@ -130,21 +117,21 @@ export function UpcomingBookingsBar({ workerId, communities, serviceTypes }: Upc
                     </span>
                   </div>
                 </div>
-                {/* Service & Price Row */}
+
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold text-foreground">
                     {SERVICE_LABELS[booking.service_type] || booking.service_type}
                   </span>
-                  {price && (
+                  {price !== null && price !== undefined && (
                     <span className="text-sm font-bold text-green-600 flex items-center">
                       <IndianRupee className="h-3.5 w-3.5" />
                       {price}
                     </span>
                   )}
                 </div>
-                {/* Flat info */}
+
                 <div className="mt-1 text-xs text-muted-foreground truncate">
-                  Flat {booking.flat_no}
+                  {booking.community}
                 </div>
               </div>
             );
@@ -154,3 +141,4 @@ export function UpcomingBookingsBar({ workerId, communities, serviceTypes }: Upc
     </div>
   );
 }
+
