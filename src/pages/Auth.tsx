@@ -769,25 +769,6 @@ export default function Auth() {
         </Button>
       </div>
 
-      {/* Guest Login Section */}
-      <div className="w-full">
-        <div className="pt-6 space-y-4">
-          <div className="text-center space-y-2">
-            
-            <Button variant="outline" className="w-full" onClick={() => {
-              localStorage.setItem('guest_mode', 'true');
-              toast({
-                title: "Guest Mode",
-                description: "You can explore demo features. Create account to receive real bookings."
-              });
-              navigate('/home');
-            }}>
-              Login as Guest
-            </Button>
-            
-          </div>
-        </div>
-      </div>
       </div>
     </div>;
 }
