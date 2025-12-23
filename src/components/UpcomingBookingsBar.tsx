@@ -8,6 +8,8 @@ type Booking = Database["public"]["Tables"]["bookings"]["Row"];
 
 interface UpcomingBookingsBarProps {
   workerId: string | undefined;
+  communities?: string[];
+  serviceTypes?: string[];
 }
 
 const SERVICE_LABELS: Record<string, string> = {
@@ -17,31 +19,39 @@ const SERVICE_LABELS: Record<string, string> = {
   bathroom_cleaning: "Bathroom",
 };
 
-export function UpcomingBookingsBar({ workerId }: UpcomingBookingsBarProps) {
+export function UpcomingBookingsBar({ workerId, communities, serviceTypes }: UpcomingBookingsBarProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!workerId) {
-      setLoading(false);
-      return;
-    }
-
     const fetchUpcoming = async () => {
       const today = new Date().toISOString().split("T")[0];
 
-      const { data, error } = await supabase
+      // Fetch scheduled bookings that are pending/assigned in worker's communities
+      let query = supabase
         .from("bookings")
         .select("*")
-        .eq("worker_id", workerId)
-        .in("status", ["assigned", "confirmed", "accepted"])
+        .eq("booking_type", "scheduled")
+        .in("status", ["pending", "assigned", "confirmed", "accepted"])
         .gte("scheduled_date", today)
         .order("scheduled_date", { ascending: true })
         .order("scheduled_time", { ascending: true })
         .limit(10);
 
+      // Filter by communities if provided
+      if (communities && communities.length > 0) {
+        query = query.in("community", communities);
+      }
+
+      // Filter by service types if provided
+      if (serviceTypes && serviceTypes.length > 0) {
+        query = query.in("service_type", serviceTypes);
+      }
+
+      const { data, error } = await query;
+
       if (!error && data) {
-        console.log("📅 Upcoming bookings fetched:", data.length);
+        console.log("📅 Upcoming scheduled bookings fetched:", data.length);
         setBookings(data);
       } else if (error) {
         console.error("❌ Error fetching upcoming bookings:", error);
@@ -51,16 +61,15 @@ export function UpcomingBookingsBar({ workerId }: UpcomingBookingsBarProps) {
 
     fetchUpcoming();
 
-    // Subscribe to realtime updates
+    // Subscribe to realtime updates on bookings table
     const channel = supabase
-      .channel(`upcoming-bookings:${workerId}`)
+      .channel("upcoming-scheduled-bookings")
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "bookings",
-          filter: `worker_id=eq.${workerId}`,
         },
         () => {
           fetchUpcoming();
@@ -71,7 +80,7 @@ export function UpcomingBookingsBar({ workerId }: UpcomingBookingsBarProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [workerId]);
+  }, [communities, serviceTypes]);
 
   if (loading || bookings.length === 0) return null;
 
