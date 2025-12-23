@@ -129,10 +129,6 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
                     </span>
                   )}
                 </div>
-
-                <div className="mt-1 text-xs text-muted-foreground truncate">
-                  {booking.community}
-                </div>
               </div>
             );
           })}
