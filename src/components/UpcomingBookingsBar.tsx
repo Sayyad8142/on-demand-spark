@@ -89,38 +89,35 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
 
   return (
     <div className="fixed bottom-16 left-0 right-0 z-10 bg-gradient-to-t from-background via-background to-background/95 backdrop-blur-sm border-t border-border shadow-lg">
-      <div className="px-3 py-3">
+      <div className="px-3 py-2">
         <div className="flex items-center gap-2 mb-2">
           <Calendar className="h-4 w-4 text-primary" />
           <span className="text-sm font-semibold text-foreground">
-            Upcoming Scheduled ({bookings.length})
+            Upcoming ({bookings.length})
           </span>
         </div>
 
-        <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {bookings.map((booking) => {
             const price = booking.price_inr ?? booking.payout_amount;
 
             return (
               <div
                 key={booking.booking_id}
-                className="flex-shrink-0 bg-card border border-border rounded-xl px-4 py-3 min-w-[160px] shadow-sm"
+                className="flex-shrink-0 bg-card border border-border rounded-lg px-3 py-2 flex items-center gap-2 shadow-sm"
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm font-bold text-primary">
-                    {formatDate(booking.scheduled_date)}
+                <span className="text-xs font-bold text-primary">
+                  {formatDate(booking.scheduled_date)}
+                </span>
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  <span className="text-xs">
+                    {formatTime(booking.scheduled_time)}
                   </span>
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span className="text-xs font-medium">
-                      {formatTime(booking.scheduled_time)}
-                    </span>
-                  </div>
                 </div>
-
                 {price !== null && price !== undefined && (
-                  <span className="text-sm font-bold text-green-600 flex items-center">
-                    <IndianRupee className="h-3.5 w-3.5" />
+                  <span className="text-xs font-bold text-green-600 flex items-center">
+                    <IndianRupee className="h-3 w-3" />
                     {price}
                   </span>
                 )}
