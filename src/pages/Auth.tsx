@@ -82,47 +82,72 @@ export default function Auth() {
   // Auto OTP detection for Android
   useEffect(() => {
     if (!Capacitor.isNativePlatform() || !SmsRetrieverPlugin) {
+      console.log('📱 SMS Retriever not available (not native or plugin missing)');
       return;
     }
+
+    let listenerHandle: any = null;
+
     const startSmsRetriever = async () => {
       try {
+        // Start watching for SMS
         const result = await SmsRetrieverPlugin.startWatching();
         console.log('📱 SMS Retriever started:', result);
 
         // Listen for SMS events
-        SmsRetrieverPlugin.addListener('smsReceived', (data: any) => {
-          console.log('📱 SMS received:', data);
-          const message = data.message || '';
+        listenerHandle = await SmsRetrieverPlugin.addListener('smsReceived', (data: any) => {
+          console.log('📱 SMS received event:', data);
+          
+          // Get OTP directly from native layer if available, or extract from message
+          let otp = data.otp;
+          if (!otp) {
+            const message = data.message || '';
+            const otpMatch = message.match(/\b(\d{6})\b/);
+            if (otpMatch) {
+              otp = otpMatch[1];
+            }
+          }
 
-          // Extract 6-digit OTP from message
-          const otpMatch = message.match(/\b\d{6}\b/);
-          if (otpMatch) {
-            const otp = otpMatch[0];
-            console.log('📱 Auto-filled OTP:', otp);
+          if (otp) {
+            console.log('📱 Auto-filling OTP:', otp);
 
-            // Fill OTP based on which tab is active
+            // Fill OTP in both sign-in and sign-up fields
             setSignInOtp(otp);
             setSignUpOtp(otp);
+            
             toast({
-              title: "OTP Auto-detected",
-              description: `Code ${otp} filled automatically`
+              title: t('auth.otpAutoDetected', 'OTP Auto-detected'),
+              description: t('auth.otpAutoFilled', `Code ${otp} filled automatically`, { otp }),
             });
           }
         });
+
+        // Also listen for errors
+        SmsRetrieverPlugin.addListener('smsError', (error: any) => {
+          console.log('📱 SMS Retriever error/timeout:', error);
+        });
+
       } catch (error) {
         console.error('❌ SMS Retriever error:', error);
       }
     };
+
     if (otpSent) {
+      console.log('📱 OTP sent, starting SMS Retriever...');
       startSmsRetriever();
     }
+
     return () => {
       if (SmsRetrieverPlugin) {
-        SmsRetrieverPlugin.removeAllListeners();
-        SmsRetrieverPlugin.stopWatching().catch(console.error);
+        console.log('📱 Cleaning up SMS Retriever...');
+        if (listenerHandle?.remove) {
+          listenerHandle.remove();
+        }
+        SmsRetrieverPlugin.removeAllListeners?.();
+        SmsRetrieverPlugin.stopWatching?.().catch(() => {});
       }
     };
-  }, [otpSent, toast]);
+  }, [otpSent, toast, t]);
   useEffect(() => {
     const fetchCommunities = async () => {
       const {
