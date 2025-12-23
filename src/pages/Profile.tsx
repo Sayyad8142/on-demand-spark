@@ -912,14 +912,6 @@ export default function Profile() {
           </CardContent>
         </Card>
 
-          {/* Call Support Button */}
-          <a href="tel:8008180018" className="block">
-            <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
-              <Phone className="w-4 h-4 mr-2" />
-              Call Support: 8008180018
-            </Button>
-          </a>
-
           {/* Actions */}
           <Card className="border-0 shadow-lg">
             <CardContent className="pt-6">
@@ -1010,6 +1002,14 @@ export default function Profile() {
             <LogOut className="w-6 h-6 mr-2" />
             {t('profile.logout')}
           </Button>
+
+          {/* Call Support Button */}
+          <a href="tel:8008180018" className="block">
+            <Button className="w-full h-12 bg-green-600 hover:bg-green-700 text-white">
+              <Phone className="w-5 h-5 mr-2" />
+              Call Support: 8008180018
+            </Button>
+          </a>
         </div>
       </main>
       <BottomNav />
