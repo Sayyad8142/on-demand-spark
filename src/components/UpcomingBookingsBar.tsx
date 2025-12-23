@@ -97,7 +97,7 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
           </span>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {bookings.map((booking) => {
             const price = booking.price_inr ?? booking.payout_amount;
 
