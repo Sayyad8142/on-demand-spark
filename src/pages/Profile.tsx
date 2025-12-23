@@ -822,7 +822,7 @@ export default function Profile() {
         </div>
 
         <div className="px-4 mt-4 space-y-4">
-          {/* Rating Breakdown Section */}
+          {/* Rating Breakdown + Customer Reviews Combined */}
           {reviews.length > 0 && (
             <Card className="border-0 shadow-lg">
               <CardHeader>
@@ -834,35 +834,31 @@ export default function Profile() {
                   Distribution of your {ratingsCount} rating{ratingsCount !== 1 ? 's' : ''}
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <RatingBreakdown 
                   ratings={ratingBreakdown} 
                   totalRatings={ratingsCount}
                 />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Reviews Section - Link to new page */}
-          {reviews.length > 0 && (
-            <Card 
-              className="border-0 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
-              onClick={() => navigate('/customer-reviews')}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between w-full">
+                
+                {/* Customer Reviews Link */}
+                <div 
+                  className="flex items-center justify-between p-3 bg-muted/50 rounded-xl cursor-pointer hover:bg-muted transition-colors"
+                  onClick={() => navigate('/customer-reviews')}
+                >
                   <div className="flex items-center gap-2">
                     <MessageSquare className="w-5 h-5" />
-                    <CardTitle className="text-base">
-                      {t('profile.reviews')} ({reviews.length})
-                    </CardTitle>
+                    <div>
+                      <p className="font-semibold text-sm">
+                        {t('profile.reviews')} ({reviews.length})
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Customer feedback from completed jobs
+                      </p>
+                    </div>
                   </div>
                   <ChevronRight className="w-5 h-5 text-muted-foreground" />
                 </div>
-                <CardDescription className="text-left">
-                  Customer feedback from completed jobs
-                </CardDescription>
-              </CardHeader>
+              </CardContent>
             </Card>
           )}
 
