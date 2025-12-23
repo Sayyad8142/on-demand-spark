@@ -218,13 +218,7 @@ export default function Home() {
       {!Capacitor.isNativePlatform() && <BookingAlertModal open={!!pending} booking={pending} onAccept={handleAccept} onReject={reject} onClose={clearAlert} />}
       </div>
 
-      {/* Upcoming Bookings Bar - Show scheduled bookings matching worker's communities/services */}
-      {!isGuestMode && worker && (
-        <UpcomingBookingsBar 
-          workerId={worker.id} 
-          communities={worker.communities || (worker.community ? [worker.community] : [])}
-          serviceTypes={worker.service_types}
-        />
-      )}
+      {/* Upcoming Bookings Bar */}
+      {!isGuestMode && worker && <UpcomingBookingsBar />}
     </div>;
 }

@@ -2844,6 +2844,19 @@ export type Database = {
         Returns: number
       }
       get_worker_contact: { Args: { p_booking_id: string }; Returns: Json }
+      get_worker_upcoming_scheduled_bookings: {
+        Args: { p_limit?: number }
+        Returns: {
+          booking_id: string
+          community: string
+          payout_amount: number
+          price_inr: number
+          scheduled_date: string
+          scheduled_time: string
+          service_type: string
+          status: string
+        }[]
+      }
       get_workers_for_notification: {
         Args: { p_community: string; p_service_type: string }
         Returns: {
