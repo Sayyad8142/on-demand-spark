@@ -14,7 +14,7 @@ const SERVICE_LABELS: Record<string, string> = {
   maid: "Maid",
   cook: "Cook",
   cleaning: "Cleaning",
-  bathroom: "Bathroom",
+  bathroom_cleaning: "Bathroom",
 };
 
 export function UpcomingBookingsBar({ workerId }: UpcomingBookingsBarProps) {
@@ -22,23 +22,29 @@ export function UpcomingBookingsBar({ workerId }: UpcomingBookingsBarProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!workerId) return;
+    if (!workerId) {
+      setLoading(false);
+      return;
+    }
 
     const fetchUpcoming = async () => {
       const today = new Date().toISOString().split("T")[0];
-      
+
       const { data, error } = await supabase
         .from("bookings")
         .select("*")
         .eq("worker_id", workerId)
-        .in("status", ["confirmed", "accepted"])
+        .in("status", ["assigned", "confirmed", "accepted"])
         .gte("scheduled_date", today)
         .order("scheduled_date", { ascending: true })
         .order("scheduled_time", { ascending: true })
         .limit(10);
 
       if (!error && data) {
+        console.log("📅 Upcoming bookings fetched:", data.length);
         setBookings(data);
+      } else if (error) {
+        console.error("❌ Error fetching upcoming bookings:", error);
       }
       setLoading(false);
     };
@@ -47,7 +53,7 @@ export function UpcomingBookingsBar({ workerId }: UpcomingBookingsBarProps) {
 
     // Subscribe to realtime updates
     const channel = supabase
-      .channel("upcoming-bookings")
+      .channel(`upcoming-bookings:${workerId}`)
       .on(
         "postgres_changes",
         {
@@ -87,42 +93,53 @@ export function UpcomingBookingsBar({ workerId }: UpcomingBookingsBarProps) {
   };
 
   return (
-    <div className="fixed bottom-16 left-0 right-0 z-10 bg-background/95 backdrop-blur-sm border-t border-border">
-      <div className="px-3 py-2">
+    <div className="fixed bottom-16 left-0 right-0 z-10 bg-gradient-to-t from-background via-background to-background/95 backdrop-blur-sm border-t border-border shadow-lg">
+      <div className="px-3 py-3">
         <div className="flex items-center gap-2 mb-2">
           <Calendar className="h-4 w-4 text-primary" />
-          <span className="text-xs font-medium text-muted-foreground">
-            Upcoming ({bookings.length})
+          <span className="text-sm font-semibold text-foreground">
+            Upcoming Bookings ({bookings.length})
           </span>
         </div>
         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
-          {bookings.map((booking) => (
-            <div
-              key={booking.id}
-              className="flex-shrink-0 bg-card border border-border rounded-lg px-3 py-2 min-w-[140px]"
-            >
-              <div className="flex items-center gap-1.5 mb-1">
-                <span className="text-xs font-semibold text-primary">
-                  {formatDate(booking.scheduled_date)}
-                </span>
-                <Clock className="h-3 w-3 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">
-                  {formatTime(booking.scheduled_time)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium">
-                  {SERVICE_LABELS[booking.service_type] || booking.service_type}
-                </span>
-                {booking.payout_amount && (
-                  <span className="text-xs font-semibold text-green-600 flex items-center">
-                    <IndianRupee className="h-3 w-3" />
-                    {booking.payout_amount}
+          {bookings.map((booking) => {
+            const price = booking.price_inr || booking.payout_amount;
+            return (
+              <div
+                key={booking.id}
+                className="flex-shrink-0 bg-card border border-border rounded-xl px-4 py-3 min-w-[160px] shadow-sm"
+              >
+                {/* Date & Time Row */}
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm font-bold text-primary">
+                    {formatDate(booking.scheduled_date)}
                   </span>
-                )}
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <Clock className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">
+                      {formatTime(booking.scheduled_time)}
+                    </span>
+                  </div>
+                </div>
+                {/* Service & Price Row */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-foreground">
+                    {SERVICE_LABELS[booking.service_type] || booking.service_type}
+                  </span>
+                  {price && (
+                    <span className="text-sm font-bold text-green-600 flex items-center">
+                      <IndianRupee className="h-3.5 w-3.5" />
+                      {price}
+                    </span>
+                  )}
+                </div>
+                {/* Flat info */}
+                <div className="mt-1 text-xs text-muted-foreground truncate">
+                  Flat {booking.flat_no}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
