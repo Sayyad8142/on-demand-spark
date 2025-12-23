@@ -11,6 +11,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Some older rows accidentally store Firebase UID in workers.user_id.
+// For notifications we must only use UUIDs; prefer user_id if it's a UUID, else fall back to worker.id.
+const normalizeWorkerTargetId = (worker: { id: string; user_id?: string | null }): string => {
+  const u = worker.user_id;
+  if (typeof u === 'string' && uuidRegex.test(u)) return u;
+  return worker.id;
+};
+
 // Haversine distance in meters
 const haversineM = (aLat: number, aLng: number, bLat: number, bLng: number): number => {
   const toRad = (d: number) => d * Math.PI / 180;
@@ -414,7 +424,7 @@ Deno.serve(async (req) => {
     const bookingRequests = sortedWorkers.map((worker) => {
       let tier = 3;
       let timeoutSeconds = TIER_TIMEOUT_SECONDS * 3;
-      
+
       if (isCookBooking && cuisinePreference !== 'any') {
         // Cuisine-aware tiering
         const isPrimary = (worker.cook_cuisine_tags || []).includes(cuisinePreference);
@@ -429,7 +439,7 @@ Deno.serve(async (req) => {
         // Rating-based tiering
         const TIER_1_MIN_RATING = 4.5;
         const TIER_2_MIN_RATING = 4.0;
-        
+
         if ((worker.rating || 0) >= TIER_1_MIN_RATING) {
           tier = 1;
           timeoutSeconds = TIER_TIMEOUT_SECONDS;
@@ -441,7 +451,8 @@ Deno.serve(async (req) => {
 
       return {
         booking_id,
-        worker_id: worker.user_id || worker.id,
+        // booking_requests.worker_id references workers.id (UUID)
+        worker_id: worker.id,
         order_sequence: tier,
         status: 'pending',
         offered_at: tier === 1 ? currentTime.toISOString() : null,
@@ -461,20 +472,24 @@ Deno.serve(async (req) => {
 
     // Only notify Tier 1 workers initially
     const tier1UserIds = tier1Workers
-      .map((w) => w.user_id || w.id)
-      .filter(Boolean);
+      .map((w) => normalizeWorkerTargetId(w))
+      .filter((id) => uuidRegex.test(id));
 
     if (tier1UserIds.length === 0) {
       console.log("⚠️ No Tier 1 workers, notifying Tier 2...");
       // If no tier 1, immediately notify tier 2
-      const tier2UserIds = tier2Workers.map((w) => w.user_id || w.id).filter(Boolean);
-      
+      const tier2UserIds = tier2Workers
+        .map((w) => normalizeWorkerTargetId(w))
+        .filter((id) => uuidRegex.test(id));
+
       if (tier2UserIds.length === 0) {
         console.log("⚠️ No Tier 2 workers, notifying all...");
-        const allUserIds = sortedWorkers.map((w) => w.user_id || w.id).filter(Boolean);
+        const allUserIds = sortedWorkers
+          .map((w) => normalizeWorkerTargetId(w))
+          .filter((id) => uuidRegex.test(id));
         return await sendNotifications(allUserIds, b, booking_id, bookingType);
       }
-      
+
       return await sendNotifications(tier2UserIds, b, booking_id, bookingType);
     }
 
