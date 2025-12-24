@@ -260,14 +260,34 @@ async function getAccessToken(serviceAccount: any): Promise<string> {
   const pemContents = privateKey
     .replace("-----BEGIN PRIVATE KEY-----", "")
     .replace("-----END PRIVATE KEY-----", "")
-    .replace(/\s/g, "");
+    .replace(/[\r\n\s]/g, "");
+
+  const decodeBase64ToBytes = (b64: string): Uint8Array => {
+    // Be tolerant to url-safe base64 and missing padding
+    const normalized = b64.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+    try {
+      const bin = atob(padded);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes;
+    } catch {
+      throw new Error(
+        "Invalid Firebase service account private_key. Re-check FIREBASE_SERVICE_ACCOUNT_KEY (must be the full JSON with a valid PEM private_key)."
+      );
+    }
+  };
 
   // Base64-decode PKCS8 key material
-  const binaryKey = Uint8Array.from(atob(pemContents), (c) => c.charCodeAt(0));
-  
+  const pkcs8Bytes = decodeBase64ToBytes(pemContents);
+  const pkcs8 = pkcs8Bytes.buffer.slice(
+    pkcs8Bytes.byteOffset,
+    pkcs8Bytes.byteOffset + pkcs8Bytes.byteLength
+  ) as ArrayBuffer;
+
   const cryptoKey = await crypto.subtle.importKey(
     "pkcs8",
-    binaryKey,
+    pkcs8,
     { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     false,
     ["sign"]
