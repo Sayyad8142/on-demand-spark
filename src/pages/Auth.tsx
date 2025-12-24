@@ -745,15 +745,14 @@ export default function Auth() {
       </a>
 
       {/* Guest Login Button */}
-      <Button 
-        variant="outline" 
-        className="w-full" 
-        onClick={() => {
-          localStorage.setItem('guest_mode', 'true');
-          toast({ title: "Guest Mode", description: "Exploring as guest with demo data" });
-          navigate("/home");
-        }}
-      >
+      <Button variant="outline" onClick={() => {
+        localStorage.setItem('guest_mode', 'true');
+        toast({
+          title: "Guest Mode",
+          description: "Exploring as guest with demo data"
+        });
+        navigate("/home");
+      }} className="w-full my-0">
         {t('auth.continueAsGuest', 'Continue as Guest')}
       </Button>
 
