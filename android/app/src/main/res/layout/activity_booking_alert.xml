@@ -142,7 +142,6 @@
                 <!-- Tower Card -->
                 <LinearLayout
                     android:orientation="vertical"
-                    android:background="#F8F9FA"
                     android:padding="16dp"
                     android:layout_weight="1"
                     android:layout_marginStart="6dp"
