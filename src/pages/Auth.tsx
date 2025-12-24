@@ -771,7 +771,7 @@ export default function Auth() {
       </div>
 
       {/* Call Support Button */}
-      <a href="tel:8008180018" className="w-full">
+      <a href="tel:8008180018" className="w-full mt-4">
         <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
           <Phone className="w-4 h-4 mr-2" />
           Call Support: 8008180018
