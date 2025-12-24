@@ -86,9 +86,7 @@ export default function Auth() {
       console.log('📱 SMS Retriever not available (not native or plugin missing)');
       return;
     }
-
     let listenerHandle: any = null;
-
     const startSmsRetriever = async () => {
       try {
         // Start watching for SMS
@@ -98,7 +96,7 @@ export default function Auth() {
         // Listen for SMS events
         listenerHandle = await SmsRetrieverPlugin.addListener('smsReceived', (data: any) => {
           console.log('📱 SMS received event:', data);
-          
+
           // Get OTP directly from native layer if available, or extract from message
           let otp = data.otp;
           if (!otp) {
@@ -108,17 +106,17 @@ export default function Auth() {
               otp = otpMatch[1];
             }
           }
-
           if (otp) {
             console.log('📱 Auto-filling OTP:', otp);
 
             // Fill OTP in both sign-in and sign-up fields
             setSignInOtp(otp);
             setSignUpOtp(otp);
-            
             toast({
               title: t('auth.otpAutoDetected', 'OTP Auto-detected'),
-              description: t('auth.otpAutoFilled', `Code ${otp} filled automatically`, { otp }),
+              description: t('auth.otpAutoFilled', `Code ${otp} filled automatically`, {
+                otp
+              })
             });
           }
         });
@@ -127,17 +125,14 @@ export default function Auth() {
         SmsRetrieverPlugin.addListener('smsError', (error: any) => {
           console.log('📱 SMS Retriever error/timeout:', error);
         });
-
       } catch (error) {
         console.error('❌ SMS Retriever error:', error);
       }
     };
-
     if (otpSent) {
       console.log('📱 OTP sent, starting SMS Retriever...');
       startSmsRetriever();
     }
-
     return () => {
       if (SmsRetrieverPlugin) {
         console.log('📱 Cleaning up SMS Retriever...');
@@ -443,12 +438,10 @@ export default function Auth() {
       if (!data.user) throw new Error("No user returned");
 
       // Fetch the community ID from the community value
-      const { data: communityData, error: communityError } = await supabase
-        .from('communities')
-        .select('id')
-        .eq('value', signUpCommunity)
-        .single();
-
+      const {
+        data: communityData,
+        error: communityError
+      } = await supabase.from('communities').select('id').eq('value', signUpCommunity).single();
       if (communityError) {
         console.error('Error fetching community ID:', communityError);
         throw new Error('Failed to fetch community information');
@@ -626,94 +619,67 @@ export default function Auth() {
                   <div className="space-y-3">
                     <Label>{t('auth.serviceLabel')}</Label>
                     <div className="space-y-2">
-                      {SERVICES.map(service => (
-                        <div key={service.value} className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
-                          <Checkbox
-                            id={`service-${service.value}`}
-                            checked={signUpServices.includes(service.value)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSignUpServices(prev => [...prev, service.value]);
-                              } else {
-                                setSignUpServices(prev => prev.filter(s => s !== service.value));
-                                // Clear cuisine tags if cook is deselected
-                                if (service.value === 'cook') {
-                                  setSignUpCuisineTags([]);
-                                }
-                              }
-                            }}
-                            disabled={loading}
-                          />
-                          <Label 
-                            htmlFor={`service-${service.value}`} 
-                            className="flex-1 cursor-pointer font-normal"
-                          >
+                      {SERVICES.map(service => <div key={service.value} className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
+                          <Checkbox id={`service-${service.value}`} checked={signUpServices.includes(service.value)} onCheckedChange={checked => {
+                        if (checked) {
+                          setSignUpServices(prev => [...prev, service.value]);
+                        } else {
+                          setSignUpServices(prev => prev.filter(s => s !== service.value));
+                          // Clear cuisine tags if cook is deselected
+                          if (service.value === 'cook') {
+                            setSignUpCuisineTags([]);
+                          }
+                        }
+                      }} disabled={loading} />
+                          <Label htmlFor={`service-${service.value}`} className="flex-1 cursor-pointer font-normal">
                             {t(service.label)}
                           </Label>
-                        </div>
-                      ))}
+                        </div>)}
                     </div>
                   </div>
 
                   {/* Cook Cuisine Specialization */}
-                  {signUpServices.includes('cook') && (
-                    <div className="space-y-3">
+                  {signUpServices.includes('cook') && <div className="space-y-3">
                       <Label>{t('auth.cuisineLabel', 'What type of cooking do you specialise in?')}</Label>
                       <div className="space-y-2">
                         <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
-                          <Checkbox
-                            id="cuisine-north"
-                            checked={signUpCuisineTags.includes('north_indian')}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSignUpCuisineTags(prev => [...prev, 'north_indian']);
-                              } else {
-                                setSignUpCuisineTags(prev => prev.filter(c => c !== 'north_indian'));
-                              }
-                            }}
-                            disabled={loading}
-                          />
+                          <Checkbox id="cuisine-north" checked={signUpCuisineTags.includes('north_indian')} onCheckedChange={checked => {
+                        if (checked) {
+                          setSignUpCuisineTags(prev => [...prev, 'north_indian']);
+                        } else {
+                          setSignUpCuisineTags(prev => prev.filter(c => c !== 'north_indian'));
+                        }
+                      }} disabled={loading} />
                           <Label htmlFor="cuisine-north" className="flex-1 cursor-pointer font-normal">
                             {t('auth.cuisineNorth', 'North Indian')}
                           </Label>
                         </div>
                         <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
-                          <Checkbox
-                            id="cuisine-south"
-                            checked={signUpCuisineTags.includes('south_indian')}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSignUpCuisineTags(prev => [...prev, 'south_indian']);
-                              } else {
-                                setSignUpCuisineTags(prev => prev.filter(c => c !== 'south_indian'));
-                              }
-                            }}
-                            disabled={loading}
-                          />
+                          <Checkbox id="cuisine-south" checked={signUpCuisineTags.includes('south_indian')} onCheckedChange={checked => {
+                        if (checked) {
+                          setSignUpCuisineTags(prev => [...prev, 'south_indian']);
+                        } else {
+                          setSignUpCuisineTags(prev => prev.filter(c => c !== 'south_indian'));
+                        }
+                      }} disabled={loading} />
                           <Label htmlFor="cuisine-south" className="flex-1 cursor-pointer font-normal">
                             {t('auth.cuisineSouth', 'South Indian')}
                           </Label>
                         </div>
                         <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
-                          <Checkbox
-                            id="cuisine-both"
-                            checked={signUpCuisineTags.includes('north_indian') && signUpCuisineTags.includes('south_indian')}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSignUpCuisineTags(['north_indian', 'south_indian']);
-                              } else {
-                                setSignUpCuisineTags([]);
-                              }
-                            }}
-                            disabled={loading}
-                          />
+                          <Checkbox id="cuisine-both" checked={signUpCuisineTags.includes('north_indian') && signUpCuisineTags.includes('south_indian')} onCheckedChange={checked => {
+                        if (checked) {
+                          setSignUpCuisineTags(['north_indian', 'south_indian']);
+                        } else {
+                          setSignUpCuisineTags([]);
+                        }
+                      }} disabled={loading} />
                           <Label htmlFor="cuisine-both" className="flex-1 cursor-pointer font-normal">
                             {t('auth.cuisineBoth', 'Both')}
                           </Label>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    </div>}
 
                   <Button onClick={handleSignUpSendOtp} disabled={loading || !signUpFullName || !signUpPhone || !signUpCommunity || signUpServices.length === 0} className="w-full">
                     {loading ? t('auth.sending') : t('auth.sendOtp')}
@@ -772,7 +738,7 @@ export default function Auth() {
 
       {/* Call Support Button */}
       <a href="tel:8008180018" className="w-full mt-4">
-        <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
+        <Button className="w-full bg-green-600 hover:bg-green-700 text-white py-0 my-[19px]">
           <Phone className="w-4 h-4 mr-2" />
           Call Support: 8008180018
         </Button>
