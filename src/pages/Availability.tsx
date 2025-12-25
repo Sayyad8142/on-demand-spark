@@ -69,12 +69,23 @@ const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6
     if (!user) return;
     
     try {
-      // First fetch the worker record for the current user
-      const { data: workerData, error: workerError } = await supabase
+      // First try to fetch worker by user_id
+      let { data: workerData, error: workerError } = await supabase
         .from("workers")
         .select("id")
         .eq("user_id", user.id)
         .maybeSingle();
+      
+      // If not found by user_id, try by worker id (for legacy workers where id = user_id)
+      if (!workerData && !workerError) {
+        const result = await supabase
+          .from("workers")
+          .select("id")
+          .eq("id", user.id)
+          .maybeSingle();
+        workerData = result.data;
+        workerError = result.error;
+      }
       
       if (workerError) throw workerError;
       
