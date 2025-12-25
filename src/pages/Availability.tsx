@@ -67,7 +67,7 @@ const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6
 
   const loadWorkerAndAvailability = async () => {
     if (!user) return;
-    
+
     try {
       // First try to fetch worker by user_id
       let { data: workerData, error: workerError } = await supabase
@@ -75,7 +75,7 @@ const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6
         .select("id")
         .eq("user_id", user.id)
         .maybeSingle();
-      
+
       // If not found by user_id, try by worker id (for legacy workers where id = user_id)
       if (!workerData && !workerError) {
         const result = await supabase
@@ -86,9 +86,35 @@ const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6
         workerData = result.data;
         workerError = result.error;
       }
-      
+
+      // If still not found, attempt to auto-create the worker row from auth claims
+      if (!workerData && !workerError) {
+        const { error: ensureError } = await supabase.rpc('ensure_worker_profile');
+        if (ensureError) {
+          console.error('❌ ensure_worker_profile failed:', ensureError);
+        } else {
+          // Retry fetch
+          let retry = await supabase
+            .from("workers")
+            .select("id")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          if (!retry.data && !retry.error) {
+            retry = await supabase
+              .from("workers")
+              .select("id")
+              .eq("id", user.id)
+              .maybeSingle();
+          }
+
+          workerData = retry.data;
+          workerError = retry.error;
+        }
+      }
+
       if (workerError) throw workerError;
-      
+
       if (workerData) {
         setWorkerId(workerData.id);
         await loadAvailability(workerData.id);
