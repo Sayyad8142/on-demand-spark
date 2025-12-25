@@ -2755,6 +2755,7 @@ export type Database = {
       cleanup_old_support_chats: { Args: never; Returns: undefined }
       create_admin_email_user: { Args: never; Returns: undefined }
       delete_my_data: { Args: never; Returns: undefined }
+      ensure_worker_profile: { Args: never; Returns: Json }
       escalate_overdue_bookings: { Args: never; Returns: undefined }
       export_my_data: { Args: never; Returns: Json }
       get_app_setting: { Args: { k: string }; Returns: string }
