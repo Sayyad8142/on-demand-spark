@@ -459,6 +459,7 @@ export default function Auth() {
           error: workerError
         } = await supabase.from('workers').upsert({
           id: data.user.id,
+          user_id: data.user.id,
           full_name: signUpFullName.trim(),
           phone,
           upi_id: signUpUpiId?.trim() || existingWorker.upi_id,
@@ -481,6 +482,7 @@ export default function Auth() {
           error: workerError
         } = await supabase.from('workers').insert({
           id: data.user.id,
+          user_id: data.user.id,
           full_name: signUpFullName.trim(),
           phone,
           upi_id: signUpUpiId?.trim() || null,
