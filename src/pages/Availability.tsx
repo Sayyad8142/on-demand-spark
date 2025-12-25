@@ -58,16 +58,54 @@ export default function Availability() {
     5: generateSlots(),
     6: generateSlots()
   });
-  const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1 as DayKey);
+const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1 as DayKey);
+  const [workerId, setWorkerId] = useState<string | null>(null);
+
   useEffect(() => {
-    loadAvailability();
-  }, []);
-  const loadAvailability = async () => {
+    loadWorkerAndAvailability();
+  }, [user]);
+
+  const loadWorkerAndAvailability = async () => {
+    if (!user) return;
+    
+    try {
+      // First fetch the worker record for the current user
+      const { data: workerData, error: workerError } = await supabase
+        .from("workers")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      
+      if (workerError) throw workerError;
+      
+      if (workerData) {
+        setWorkerId(workerData.id);
+        await loadAvailability(workerData.id);
+      } else {
+        // No worker record found
+        toast({
+          title: "Error",
+          description: "Worker profile not found",
+          variant: "destructive"
+        });
+        setLoading(false);
+      }
+    } catch (error: any) {
+      console.error("Error loading worker:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load your profile",
+        variant: "destructive"
+      });
+      setLoading(false);
+    }
+  };
+  const loadAvailability = async (workerIdToLoad: string) => {
     try {
       const {
         data,
         error
-      } = await supabase.from("worker_availability").select("day_of_week, slots").order("day_of_week");
+      } = await supabase.from("worker_availability").select("day_of_week, slots").eq("worker_id", workerIdToLoad).order("day_of_week");
       if (error) throw error;
       if (data && data.length > 0) {
         // Start fresh - all slots unselected
@@ -182,6 +220,15 @@ export default function Availability() {
     setWeekData(newWeekData);
   };
   const saveAvailability = async () => {
+    if (!workerId) {
+      toast({
+        title: "Error",
+        description: "Worker profile not found",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Check if at least one slot is selected
     const hasAnySlot = Object.values(weekData).some(slots => slots.some(s => s.selected));
     if (!hasAnySlot) {
@@ -199,7 +246,7 @@ export default function Availability() {
       for (let day = 0; day < 7; day++) {
         const selectedSlots = weekData[day as DayKey].filter(s => s.selected).map(s => s.start);
         dayRecords.push({
-          worker_id: user!.id,
+          worker_id: workerId,
           day_of_week: day,
           slots: selectedSlots.length > 0 ? selectedSlots : []
         });
