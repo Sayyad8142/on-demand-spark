@@ -15,7 +15,7 @@ import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
 import { Phone } from "lucide-react";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
-import { sendOtpWeb, verifyOtpWeb, getFirebaseIdToken, auth } from "@/lib/firebase";
+import { sendOtpWeb, verifyOtpWeb, getFirebaseIdToken } from "@/lib/firebase";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
