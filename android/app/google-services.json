@@ -7,6 +7,25 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:993479758920:android:91e40a3a1275d22ff6747d",
+        "android_client_info": {
+          "package_name": "app.didisnow.admin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB5BxScrhv7MjYmKbY3DILVvei7NOjft0Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:993479758920:android:c7bcf1f203ef4e0df6747d",
         "android_client_info": {
           "package_name": "app.didisnow.worker"
@@ -29,6 +48,25 @@
         "mobilesdk_app_id": "1:993479758920:android:c3cbf8fff20c2271f6747d",
         "android_client_info": {
           "package_name": "com.didinow.worker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB5BxScrhv7MjYmKbY3DILVvei7NOjft0Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:993479758920:android:06ca6e7027364c3ef6747d",
+        "android_client_info": {
+          "package_name": "com.didisnow.app"
         }
       },
       "oauth_client": [],
