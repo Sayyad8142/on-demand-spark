@@ -22,7 +22,7 @@ const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
 export default function Home() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { user, session } = useAuth();
+  const { user, idToken } = useAuth();
   const { toast } = useToast();
   
   // Check for guest mode
@@ -49,16 +49,16 @@ export default function Home() {
         console.log('⚠️ Not native platform or AuthBridge unavailable');
         return;
       }
-      if (!session?.access_token) {
-        console.log('⚠️ No session or access token available');
+      if (!idToken) {
+        console.log('⚠️ No Firebase ID token available');
         return;
       }
       try {
         console.log('🔐 [Home] Verifying JWT in native storage...');
 
-        // Check if JWT exists and matches current session
+        // Check if JWT exists and matches current token
         const stored = await AuthBridge.getToken();
-        if (stored?.token === session.access_token) {
+        if (stored?.token === idToken) {
           console.log('✅ [Home] JWT already saved correctly');
           return;
         }
@@ -67,11 +67,11 @@ export default function Home() {
         // Save with retry logic
         for (let attempt = 1; attempt <= 3; attempt++) {
           await AuthBridge.saveToken({
-            token: session.access_token
+            token: idToken
           });
           await new Promise(resolve => setTimeout(resolve, 100));
           const verify = await AuthBridge.getToken();
-          if (verify?.token === session.access_token) {
+          if (verify?.token === idToken) {
             console.log(`✅ [Home] JWT saved successfully on attempt ${attempt}`);
             return;
           }
@@ -83,7 +83,7 @@ export default function Home() {
       }
     };
     ensureJWTSaved();
-  }, [session]);
+  }, [idToken]);
 
   // Check if notification permission is default (not granted or denied)
   useEffect(() => {

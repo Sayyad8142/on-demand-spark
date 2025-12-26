@@ -82,7 +82,7 @@ function NativeNavigationHandler() {
 }
 
 const App = () => {
-  const { session } = useAuth();
+  const { user, idToken } = useAuth();
   useAppState(); // Refresh JWT when app comes to foreground
   const { needsUpdate, loading: updateCheckLoading } = useForceUpdateCheck();
 
@@ -100,16 +100,15 @@ const App = () => {
     }
   }, []);
 
-  // Initialize native push notifications when we have a session
+  // Initialize native push notifications when we have a user
   useEffect(() => {
-    const userId = session?.user?.id;
-    if (!userId) return;
+    if (!user?.id) return;
 
-    console.log("User logged in:", userId);
+    console.log("User logged in:", user.id);
     
     if (Capacitor.isNativePlatform()) {
-      console.log("🔔 Initializing native push for user:", userId);
-      initNativePush(userId);
+      console.log("🔔 Initializing native push for user:", user.id);
+      initNativePush(user.id);
       
       // Request overlay permission on Android
       if (Capacitor.getPlatform() === 'android') {
@@ -117,7 +116,7 @@ const App = () => {
       }
     }
     // Web push registration is now done manually via /troubleshoot or /verify-push pages
-  }, [session?.user?.id]);
+  }, [user?.id]);
 
   // Handle deep links for booking acceptance
   useEffect(() => {

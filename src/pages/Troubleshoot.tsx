@@ -15,7 +15,7 @@ const VAPID_PUBLIC = import.meta.env.VITE_VAPID_PUBLIC_KEY as string;
 
 export default function Troubleshoot() {
   const navigate = useNavigate();
-  const { user, session } = useAuth();
+  const { user, idToken } = useAuth();
   const { worker } = useWorkerProfile(user?.id);
   const { toast } = useToast();
   const [enabling, setEnabling] = useState(false);
@@ -216,20 +216,19 @@ export default function Troubleshoot() {
                       onClick={async () => {
                         try {
                           console.log('💾 Manual JWT save triggered');
-                          const { data: { session } } = await supabase.auth.getSession();
-                          if (session?.access_token) {
-                            console.log('🔑 Token found:', session.access_token.substring(0, 30) + '...');
+                          if (idToken) {
+                            console.log('🔑 Token found:', idToken.substring(0, 30) + '...');
                             // @ts-ignore - Capacitor bridge
                             const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
-                            await AuthBridge.saveToken({ token: session.access_token });
+                            await AuthBridge.saveToken({ token: idToken });
                             
                             // Verify it was saved
                             const verify = await AuthBridge.getToken();
-                            if (verify?.token === session.access_token) {
+                            if (verify?.token === idToken) {
                               console.log('✅ JWT saved and verified');
                               setTokenStatus({
                                 saved: true,
-                                preview: `${session.access_token.substring(0, 20)}...`
+                                preview: `${idToken.substring(0, 20)}...`
                               });
                               toast({ title: "✅ JWT Saved", description: "Token saved and verified successfully" });
                             } else {
@@ -237,7 +236,7 @@ export default function Troubleshoot() {
                               toast({ title: "⚠️ Verification failed", description: "Token saved but verification failed", variant: "destructive" });
                             }
                           } else {
-                            console.error('❌ No session found');
+                            console.error('❌ No Firebase token found');
                             toast({ title: "❌ Not logged in", description: "Please log in first", variant: "destructive" });
                           }
                         } catch (error) {
