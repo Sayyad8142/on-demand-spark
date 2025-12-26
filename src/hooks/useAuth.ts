@@ -1,172 +1,123 @@
 import { useEffect, useState } from "react";
-import { User, Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
 import { Capacitor } from '@capacitor/core';
 import { capacitorStorage } from '@/lib/capacitorStorage';
+import { auth, signOutFirebase, getFirebaseIdToken } from '@/lib/firebase';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+// @ts-ignore - Native Firebase Auth
+const FirebasePhoneAuth = (window as any).Capacitor?.Plugins?.FirebasePhoneAuth;
+
+export interface AuthUser {
+  id: string;
+  phone: string | null;
+}
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [idToken, setIdToken] = useState<string | null>(null);
 
-  // Save full session to Capacitor storage (for native overlay access)
-  const saveSession = async (session: Session | null) => {
-    if (!Capacitor.isNativePlatform() || !session) {
-      return false;
-    }
-
-    try {
-      console.log('💾 Saving session to native storage...');
-      
-      const sessionData = {
-        accessToken: session.access_token,
-        refreshToken: session.refresh_token,
-        expiresAt: session.expires_at
-      };
-      
-      await capacitorStorage.setItem('didi_session', JSON.stringify(sessionData));
-      console.log('✅ Session saved successfully to didi_session key');
-      return true;
-    } catch (error) {
-      console.error('❌ Failed to save session:', error);
-      return false;
-    }
-  };
-
-  // Helper function to save JWT with verification and retry logic
+  // Save JWT to native storage for overlay functionality
   const saveJWT = async (token: string) => {
     if (!AuthBridge || !Capacitor.isNativePlatform()) {
-      console.log('⚠️ AuthBridge not available or not on native platform');
       return false;
     }
 
-    // Retry up to 3 times with delays
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         console.log(`💾 [Attempt ${attempt}/3] Saving JWT to native storage...`);
-        console.log('🔑 Token preview:', token.substring(0, 50) + '...');
-        
         await AuthBridge.saveToken({ token });
-        
-        // Wait a bit for the write to complete
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        // Verify it was actually saved
         const verify = await AuthBridge.getToken();
         if (verify?.token === token) {
-          console.log(`✅ JWT saved and verified successfully on attempt ${attempt}`);
+          console.log(`✅ JWT saved and verified on attempt ${attempt}`);
           return true;
-        } else {
-          console.error(`❌ JWT verification failed on attempt ${attempt} - token mismatch!`);
-          console.log('Expected:', token.substring(0, 50) + '...');
-          console.log('Got:', verify?.token ? verify.token.substring(0, 50) + '...' : 'null');
         }
       } catch (error) {
         console.error(`❌ Failed to save JWT on attempt ${attempt}:`, error);
       }
-
-      // Wait before retry (except on last attempt)
       if (attempt < 3) {
         await new Promise(resolve => setTimeout(resolve, 300));
       }
     }
-    
-    console.error('❌ Failed to save JWT after 3 attempts');
     return false;
+  };
+
+  // Save session data to capacitor storage
+  const saveSession = async (uid: string, phone: string | null, token: string) => {
+    if (!Capacitor.isNativePlatform()) return;
+    
+    try {
+      const sessionData = {
+        uid,
+        phone,
+        idToken: token,
+        savedAt: Date.now()
+      };
+      await capacitorStorage.setItem('firebase_session', JSON.stringify(sessionData));
+      console.log('✅ Firebase session saved to storage');
+    } catch (error) {
+      console.error('❌ Failed to save session:', error);
+    }
   };
 
   useEffect(() => {
     let mounted = true;
-    
+
     const initAuth = async () => {
-      try {
-        console.log('🔐 Initializing auth...');
-        
-        // Get initial session with retry logic
-        let retryCount = 0;
-        let session = null;
-        
-        while (retryCount < 3 && !session && mounted) {
-          const { data, error } = await supabase.auth.getSession();
-          if (error) {
-            console.error('❌ Error getting session:', error);
-            retryCount++;
-            await new Promise(resolve => setTimeout(resolve, 500));
-            continue;
-          }
-          session = data.session;
-          break;
-        }
-        
-        if (mounted) {
-          setSession(session);
-          setUser(session?.user ?? null);
-          setLoading(false);
-          
-          if (session) {
-            console.log('✅ Session restored successfully');
-            console.log('👤 User ID:', session.user?.id);
-            
-            // Save full session for native overlay
-            await saveSession(session);
-            
-            // Save JWT token immediately on app startup if session exists
-            if (session.access_token) {
-              console.log('🔐 Saving access token on app startup...');
-              const saved = await saveJWT(session.access_token);
-              if (saved) {
-                console.log('✅ JWT successfully saved on startup');
-              } else {
-                console.error('❌ Failed to save JWT on startup - booking acceptance may not work!');
+      console.log('🔐 Initializing Firebase auth...');
+      
+      // Check for native user first (Android)
+      if (Capacitor.isNativePlatform() && FirebasePhoneAuth) {
+        try {
+          const result = await FirebasePhoneAuth.getCurrentUser();
+          if (result?.uid) {
+            console.log('✅ Found native Firebase user:', result.uid);
+            if (mounted) {
+              setUser({ id: result.uid, phone: result.phone || null });
+              setIdToken(result.idToken || null);
+              
+              if (result.idToken) {
+                await saveJWT(result.idToken);
+                await saveSession(result.uid, result.phone, result.idToken);
               }
-            } else {
-              console.error('❌ No access token in session!');
             }
-          } else {
-            console.log('ℹ️ No session found');
           }
-        }
-      } catch (error) {
-        console.error('❌ Auth initialization error:', error);
-        if (mounted) {
-          setLoading(false);
+        } catch (error) {
+          console.log('ℹ️ No native user found:', error);
         }
       }
-    };
 
-    initAuth();
-
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('🔄 Auth state changed:', event);
+      // Set up web Firebase auth listener
+      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+        console.log('🔄 Firebase auth state changed:', firebaseUser?.uid || 'null');
         
-        if (mounted) {
-          setSession(session);
-          setUser(session?.user ?? null);
-          setLoading(false);
+        if (!mounted) return;
+
+        if (firebaseUser) {
+          const token = await getFirebaseIdToken();
           
-          // Save or clear session and JWT token
-          if (session?.access_token) {
-            console.log('🔐 Auth state changed - saving session and JWT...');
-            
-            // Save full session for native overlay
-            await saveSession(session);
-            
-            // Save JWT for AuthBridge
-            const saved = await saveJWT(session.access_token);
-            if (saved) {
-              console.log('✅ Session and JWT successfully saved after auth state change');
-            } else {
-              console.error('❌ Failed to save JWT after auth state change');
-            }
-          } else if (Capacitor.isNativePlatform()) {
-            // Clear tokens on logout
+          setUser({
+            id: firebaseUser.uid,
+            phone: firebaseUser.phoneNumber || null
+          });
+          setIdToken(token);
+          
+          if (token && Capacitor.isNativePlatform()) {
+            await saveJWT(token);
+            await saveSession(firebaseUser.uid, firebaseUser.phoneNumber, token);
+          }
+        } else {
+          setUser(null);
+          setIdToken(null);
+          
+          // Clear native storage on logout
+          if (Capacitor.isNativePlatform()) {
             try {
-              await capacitorStorage.removeItem('didi_session');
+              await capacitorStorage.removeItem('firebase_session');
               if (AuthBridge) {
                 await AuthBridge.clearToken();
               }
@@ -176,34 +127,61 @@ export function useAuth() {
             }
           }
         }
-      }
-    );
+        
+        setLoading(false);
+      });
 
-    // Aggressive session refresh - save session every 1 minute if exists
-    const intervalId = setInterval(async () => {
-      if (!mounted) return;
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session && Capacitor.isNativePlatform()) {
-        console.log('🔄 Periodic session refresh starting...');
-        await saveSession(session);
-        if (session.access_token) {
-          const saved = await saveJWT(session.access_token);
-          console.log('🔄 Periodic refresh:', saved ? '✅ success' : '❌ failed');
+      // Timeout for loading state
+      setTimeout(() => {
+        if (mounted && loading) {
+          console.log('⏰ Auth init timeout');
+          setLoading(false);
         }
-      }
-    }, 1 * 60 * 1000); // Every 1 minute
+      }, 5000);
 
+      return unsubscribe;
+    };
+
+    const cleanup = initAuth();
+    
     return () => {
       mounted = false;
-      subscription.unsubscribe();
-      clearInterval(intervalId);
+      cleanup.then(unsub => unsub?.());
     };
   }, []);
 
+  // Periodic token refresh
+  useEffect(() => {
+    if (!user || !Capacitor.isNativePlatform()) return;
+
+    const intervalId = setInterval(async () => {
+      const token = await getFirebaseIdToken();
+      if (token) {
+        setIdToken(token);
+        await saveJWT(token);
+        console.log('🔄 Periodic token refresh completed');
+      }
+    }, 60 * 1000); // Every minute
+
+    return () => clearInterval(intervalId);
+  }, [user]);
+
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      // Sign out from native Firebase
+      if (Capacitor.isNativePlatform() && FirebasePhoneAuth) {
+        await FirebasePhoneAuth.signOut();
+      }
+      // Sign out from web Firebase
+      await signOutFirebase();
+      
+      // Clear local storage
+      localStorage.removeItem('demo_mode');
+      localStorage.removeItem('guest_mode');
+    } catch (error) {
+      console.error('❌ Sign out error:', error);
+    }
   };
 
-  return { user, session, loading, signOut };
+  return { user, loading, signOut, idToken };
 }
