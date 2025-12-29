@@ -33,7 +33,7 @@ export default function Home() {
   const { activeJob: realActiveJob, updateJobStatus, refetch: refetchActiveJob } = useActiveJob(user?.id);
   
   const worker = isGuestMode ? DEMO_WORKER : realWorker;
-  const activeJob = isGuestMode ? DEMO_ACTIVE_JOB : realActiveJob;
+  const activeJob = isGuestMode ? null : realActiveJob;
   
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
