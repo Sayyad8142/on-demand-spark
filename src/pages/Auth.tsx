@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
-import { Phone } from "lucide-react";
+import { Phone, UserRound } from "lucide-react";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 
 // @ts-ignore - Capacitor bridge
@@ -564,6 +564,26 @@ export default function Auth() {
   };
   return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 p-4">
       <div className="w-full max-w-md space-y-4">
+        {/* Guest Button - Top Right */}
+        <div className="flex justify-end">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              localStorage.setItem('guest_mode', 'true');
+              toast({
+                title: "Guest Mode",
+                description: "Exploring as guest with demo data"
+              });
+              navigate("/home");
+            }}
+            className="h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm shadow-sm"
+            title={t('auth.continueAsGuest', 'Continue as Guest')}
+          >
+            <UserRound className="h-4 w-4" />
+          </Button>
+        </div>
+
         <Card className="w-full">
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
@@ -768,17 +788,6 @@ export default function Auth() {
         </Button>
       </a>
 
-      {/* Guest Login Button */}
-      <Button variant="outline" onClick={() => {
-        localStorage.setItem('guest_mode', 'true');
-        toast({
-          title: "Guest Mode",
-          description: "Exploring as guest with demo data"
-        });
-        navigate("/home");
-      }} className="w-full my-0">
-        {t('auth.continueAsGuest', 'Continue as Guest')}
-      </Button>
 
       </div>
     </div>;
