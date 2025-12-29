@@ -214,6 +214,18 @@ export default function Home() {
 
       {activeJob && <ActiveJobCard booking={activeJob} onStatusUpdate={handleStatusUpdate} updating={updating} />}
       
+      {/* Guest Mode Logout Button */}
+      {isGuestMode && activeJob && (
+        <Button
+          variant="outline"
+          onClick={handleLogoutFromGuest}
+          className="w-full"
+        >
+          <LogOut className="h-4 w-4 mr-2" />
+          {t('common.logout', 'Logout from Guest')}
+        </Button>
+      )}
+      
       {/* Only show in-app modal on web platform; Android uses native overlay */}
       {!Capacitor.isNativePlatform() && <BookingAlertModal open={!!pending} booking={pending} onAccept={handleAccept} onReject={reject} onClose={clearAlert} />}
       </div>
