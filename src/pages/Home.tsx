@@ -178,15 +178,17 @@ export default function Home() {
         </div>
       )}
 
-      {/* Fixed Availability Toggle */}
-      <div className="fixed top-0 left-0 right-0 z-10 bg-background border-b border-border">
-        <div className="p-4">
-          <AvailabilityToggle workerId={user?.id || 'demo-worker-id'} />
+      {/* Fixed Availability Toggle - Hidden in guest mode */}
+      {!isGuestMode && (
+        <div className="fixed top-0 left-0 right-0 z-10 bg-background border-b border-border">
+          <div className="p-4">
+            <AvailabilityToggle workerId={user?.id || 'demo-worker-id'} />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Main Content with top padding for fixed header */}
-      <div className="p-4 space-y-4 pb-32 pt-28">
+      <div className={`p-4 space-y-4 pb-32 ${isGuestMode ? 'pt-4' : 'pt-28'}`}>
         
       {/* Web Push Banner */}
       {showWebPushBanner && <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 relative">
