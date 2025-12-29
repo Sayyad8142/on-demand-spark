@@ -214,15 +214,16 @@ export default function Home() {
 
       {activeJob && <ActiveJobCard booking={activeJob} onStatusUpdate={handleStatusUpdate} updating={updating} />}
       
-      {/* Guest Mode Logout Button */}
-      {isGuestMode && activeJob && (
+      {/* Guest Mode Logout Button - Big Red */}
+      {isGuestMode && (
         <Button
-          variant="outline"
+          variant="destructive"
+          size="lg"
           onClick={handleLogoutFromGuest}
-          className="w-full"
+          className="w-full py-6 text-lg"
         >
-          <LogOut className="h-4 w-4 mr-2" />
-          {t('common.logout', 'Logout from Guest')}
+          <LogOut className="h-5 w-5 mr-2" />
+          {t('common.logout', 'Logout')}
         </Button>
       )}
       
