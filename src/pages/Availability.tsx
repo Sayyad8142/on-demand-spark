@@ -17,16 +17,16 @@ type Slot = {
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const DAYS_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-// Generate 30-min slots from 6:00 AM to 7:00 PM
-const generateSlots = (): Slot[] => {
+// Generate 30-min slots from 6:00 AM to endHour (default 7:00 PM, cooks get 9:00 PM)
+const generateSlots = (endHour: number = 19): Slot[] => {
   const slots: Slot[] = [];
-  for (let hour = 6; hour < 19; hour++) {
+  for (let hour = 6; hour < endHour; hour++) {
     for (let min = 0; min < 60; min += 30) {
       const h = hour.toString().padStart(2, "0");
       const m = min.toString().padStart(2, "0");
 
       // Convert to 12-hour format for label
-      const hour12 = hour > 12 ? hour - 12 : hour;
+      const hour12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
       const period = hour >= 12 ? "PM" : "AM";
       const label = `${hour12}:${m} ${period}`;
       slots.push({
@@ -39,6 +39,17 @@ const generateSlots = (): Slot[] => {
   }
   return slots;
 };
+
+const generateInitialWeekData = (endHour: number = 19): Record<DayKey, Slot[]> => ({
+  0: generateSlots(endHour),
+  1: generateSlots(endHour),
+  2: generateSlots(endHour),
+  3: generateSlots(endHour),
+  4: generateSlots(endHour),
+  5: generateSlots(endHour),
+  6: generateSlots(endHour)
+});
+
 export default function Availability() {
   const navigate = useNavigate();
   const {
@@ -49,16 +60,9 @@ export default function Availability() {
   } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [weekData, setWeekData] = useState<Record<DayKey, Slot[]>>({
-    0: generateSlots(),
-    1: generateSlots(),
-    2: generateSlots(),
-    3: generateSlots(),
-    4: generateSlots(),
-    5: generateSlots(),
-    6: generateSlots()
-  });
-const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1 as DayKey);
+  const [isCook, setIsCook] = useState(false);
+  const [weekData, setWeekData] = useState<Record<DayKey, Slot[]>>(generateInitialWeekData());
+  const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1 as DayKey);
   const [workerId, setWorkerId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -72,7 +76,7 @@ const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6
       // First try to fetch worker by user_id
       let { data: workerData, error: workerError } = await supabase
         .from("workers")
-        .select("id")
+        .select("id, service_types")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -80,7 +84,7 @@ const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6
       if (!workerData && !workerError) {
         const result = await supabase
           .from("workers")
-          .select("id")
+          .select("id, service_types")
           .eq("id", user.id)
           .maybeSingle();
         workerData = result.data;
@@ -96,14 +100,14 @@ const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6
           // Retry fetch
           let retry = await supabase
             .from("workers")
-            .select("id")
+            .select("id, service_types")
             .eq("user_id", user.id)
             .maybeSingle();
 
           if (!retry.data && !retry.error) {
             retry = await supabase
               .from("workers")
-              .select("id")
+              .select("id, service_types")
               .eq("id", user.id)
               .maybeSingle();
           }
@@ -117,7 +121,16 @@ const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6
 
       if (workerData) {
         setWorkerId(workerData.id);
-        await loadAvailability(workerData.id);
+        
+        // Check if worker is a cook - cooks get extended hours till 9 PM
+        const workerIsCook = workerData.service_types?.includes('cook') || false;
+        setIsCook(workerIsCook);
+        
+        // Regenerate slots with correct end hour (21 for cooks, 19 for others)
+        const endHour = workerIsCook ? 21 : 19;
+        setWeekData(generateInitialWeekData(endHour));
+        
+        await loadAvailability(workerData.id, endHour);
       } else {
         // No worker record found
         toast({
@@ -137,7 +150,7 @@ const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6
       setLoading(false);
     }
   };
-  const loadAvailability = async (workerIdToLoad: string) => {
+  const loadAvailability = async (workerIdToLoad: string, endHour: number = 19) => {
     try {
       const {
         data,
@@ -145,16 +158,8 @@ const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6
       } = await supabase.from("worker_availability").select("day_of_week, slots").eq("worker_id", workerIdToLoad).order("day_of_week");
       if (error) throw error;
       if (data && data.length > 0) {
-        // Start fresh - all slots unselected
-        const newWeekData: Record<DayKey, Slot[]> = {
-          0: generateSlots(),
-          1: generateSlots(),
-          2: generateSlots(),
-          3: generateSlots(),
-          4: generateSlots(),
-          5: generateSlots(),
-          6: generateSlots()
-        };
+        // Start fresh - all slots unselected with correct end hour
+        const newWeekData: Record<DayKey, Slot[]> = generateInitialWeekData(endHour);
         
         // Mark only the saved slots as selected
         data.forEach((row: any) => {
@@ -170,9 +175,7 @@ const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6
         setWeekData(newWeekData);
       } else {
         // First time user - select all slots by default
-        const newWeekData = {
-          ...weekData
-        };
+        const newWeekData = generateInitialWeekData(endHour);
         for (let day = 0; day < 7; day++) {
           newWeekData[day as DayKey] = newWeekData[day as DayKey].map(slot => ({
             ...slot,
@@ -248,13 +251,8 @@ const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6
     setWeekData(newWeekData);
   };
   const clearAllWeek = () => {
-    const newWeekData = {
-      ...weekData
-    };
-    for (let day = 0; day < 7; day++) {
-      newWeekData[day as DayKey] = generateSlots();
-    }
-    setWeekData(newWeekData);
+    const endHour = isCook ? 21 : 19;
+    setWeekData(generateInitialWeekData(endHour));
   };
   const saveAvailability = async () => {
     if (!workerId) {
