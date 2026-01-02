@@ -14,6 +14,7 @@ import { requestAndroidOverlay } from "@/lib/overlay";
 import { tryAccept } from "@/lib/bookingActions";
 import { requestLocationPermissions } from "@/lib/backgroundLocation";
 import Auth from "./pages/Auth";
+import OtpVerify from "./pages/OtpVerify";
 import Home from "./pages/Home";
 import Bookings from "./pages/Bookings";
 import Profile from "./pages/Profile";
@@ -193,6 +194,7 @@ const App = () => {
           <NativeNavigationHandler />
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/otp-verify" element={<OtpVerify />} />
             <Route
               path="/home"
               element={
