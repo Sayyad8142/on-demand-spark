@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Capacitor } from '@capacitor/core';
-import { capacitorStorage } from '@/lib/capacitorStorage';
+import { capacitorStorage, reloadSessionFromStorage } from '@/lib/capacitorStorage';
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -13,14 +13,12 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   // Save full session to Capacitor storage (for native overlay access)
-  const saveSession = async (session: Session | null) => {
+  const saveSession = useCallback(async (session: Session | null) => {
     if (!Capacitor.isNativePlatform() || !session) {
       return false;
     }
 
     try {
-      console.log('💾 Saving session to native storage...');
-      
       const sessionData = {
         accessToken: session.access_token,
         refreshToken: session.refresh_token,
@@ -28,55 +26,74 @@ export function useAuth() {
       };
       
       await capacitorStorage.setItem('didi_session', JSON.stringify(sessionData));
-      console.log('✅ Session saved successfully to didi_session key');
       return true;
     } catch (error) {
       console.error('❌ Failed to save session:', error);
       return false;
     }
-  };
+  }, []);
 
   // Helper function to save JWT with verification and retry logic
-  const saveJWT = async (token: string) => {
+  const saveJWT = useCallback(async (token: string) => {
     if (!AuthBridge || !Capacitor.isNativePlatform()) {
-      console.log('⚠️ AuthBridge not available or not on native platform');
       return false;
     }
 
-    // Retry up to 3 times with delays
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        console.log(`💾 [Attempt ${attempt}/3] Saving JWT to native storage...`);
-        console.log('🔑 Token preview:', token.substring(0, 50) + '...');
-        
         await AuthBridge.saveToken({ token });
-        
-        // Wait a bit for the write to complete
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        // Verify it was actually saved
         const verify = await AuthBridge.getToken();
         if (verify?.token === token) {
-          console.log(`✅ JWT saved and verified successfully on attempt ${attempt}`);
+          console.log(`✅ JWT saved on attempt ${attempt}`);
           return true;
-        } else {
-          console.error(`❌ JWT verification failed on attempt ${attempt} - token mismatch!`);
-          console.log('Expected:', token.substring(0, 50) + '...');
-          console.log('Got:', verify?.token ? verify.token.substring(0, 50) + '...' : 'null');
         }
       } catch (error) {
-        console.error(`❌ Failed to save JWT on attempt ${attempt}:`, error);
+        console.error(`❌ JWT save attempt ${attempt} failed:`, error);
       }
 
-      // Wait before retry (except on last attempt)
       if (attempt < 3) {
         await new Promise(resolve => setTimeout(resolve, 300));
       }
     }
     
-    console.error('❌ Failed to save JWT after 3 attempts');
     return false;
-  };
+  }, []);
+
+  // Refresh session and tokens - can be called externally
+  const refreshSession = useCallback(async (): Promise<Session | null> => {
+    try {
+      // First try to reload from storage in case it was updated elsewhere
+      await reloadSessionFromStorage();
+      
+      // Get fresh session from Supabase
+      const { data, error } = await supabase.auth.refreshSession();
+      
+      if (error) {
+        console.error('❌ Session refresh error:', error);
+        // Try getting existing session
+        const { data: sessionData } = await supabase.auth.getSession();
+        return sessionData.session;
+      }
+      
+      if (data.session) {
+        setSession(data.session);
+        setUser(data.session.user);
+        await saveSession(data.session);
+        if (data.session.access_token) {
+          await saveJWT(data.session.access_token);
+        }
+        console.log('✅ Session refreshed successfully');
+        return data.session;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('❌ Failed to refresh session:', error);
+      return null;
+    }
+  }, [saveSession, saveJWT]);
 
   useEffect(() => {
     let mounted = true;
@@ -87,9 +104,9 @@ export function useAuth() {
         
         // Get initial session with retry logic
         let retryCount = 0;
-        let session = null;
+        let currentSession = null;
         
-        while (retryCount < 3 && !session && mounted) {
+        while (retryCount < 3 && !currentSession && mounted) {
           const { data, error } = await supabase.auth.getSession();
           if (error) {
             console.error('❌ Error getting session:', error);
@@ -97,33 +114,35 @@ export function useAuth() {
             await new Promise(resolve => setTimeout(resolve, 500));
             continue;
           }
-          session = data.session;
+          currentSession = data.session;
+          
+          // If session exists but might be expired, try to refresh
+          if (currentSession && currentSession.expires_at) {
+            const expiresAt = currentSession.expires_at * 1000;
+            const now = Date.now();
+            const fiveMinutes = 5 * 60 * 1000;
+            
+            if (expiresAt - now < fiveMinutes) {
+              console.log('🔄 Session expires soon, refreshing...');
+              const { data: refreshData } = await supabase.auth.refreshSession();
+              if (refreshData.session) {
+                currentSession = refreshData.session;
+              }
+            }
+          }
           break;
         }
         
         if (mounted) {
-          setSession(session);
-          setUser(session?.user ?? null);
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
           setLoading(false);
           
-          if (session) {
-            console.log('✅ Session restored successfully');
-            console.log('👤 User ID:', session.user?.id);
-            
-            // Save full session for native overlay
-            await saveSession(session);
-            
-            // Save JWT token immediately on app startup if session exists
-            if (session.access_token) {
-              console.log('🔐 Saving access token on app startup...');
-              const saved = await saveJWT(session.access_token);
-              if (saved) {
-                console.log('✅ JWT successfully saved on startup');
-              } else {
-                console.error('❌ Failed to save JWT on startup - booking acceptance may not work!');
-              }
-            } else {
-              console.error('❌ No access token in session!');
+          if (currentSession) {
+            console.log('✅ Session restored, user:', currentSession.user?.id);
+            await saveSession(currentSession);
+            if (currentSession.access_token) {
+              await saveJWT(currentSession.access_token);
             }
           } else {
             console.log('ℹ️ No session found');
@@ -139,71 +158,77 @@ export function useAuth() {
 
     initAuth();
 
-    // Set up auth state listener
+    // Set up auth state listener - SYNCHRONOUS only, no async calls inside
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, newSession) => {
         console.log('🔄 Auth state changed:', event);
         
-        if (mounted) {
-          setSession(session);
-          setUser(session?.user ?? null);
-          setLoading(false);
-          
-          // Save or clear session and JWT token
-          if (session?.access_token) {
-            console.log('🔐 Auth state changed - saving session and JWT...');
-            
-            // Save full session for native overlay
-            await saveSession(session);
-            
-            // Save JWT for AuthBridge
-            const saved = await saveJWT(session.access_token);
-            if (saved) {
-              console.log('✅ Session and JWT successfully saved after auth state change');
-            } else {
-              console.error('❌ Failed to save JWT after auth state change');
-            }
-          } else if (Capacitor.isNativePlatform()) {
-            // Clear tokens on logout
+        if (!mounted) return;
+        
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        setLoading(false);
+        
+        // Defer async operations with setTimeout to avoid deadlock
+        if (newSession?.access_token) {
+          setTimeout(async () => {
+            await saveSession(newSession);
+            await saveJWT(newSession.access_token);
+          }, 0);
+        } else if (Capacitor.isNativePlatform()) {
+          setTimeout(async () => {
             try {
               await capacitorStorage.removeItem('didi_session');
               if (AuthBridge) {
                 await AuthBridge.clearToken();
               }
-              console.log('🗑️ Cleared session from native storage');
             } catch (error) {
               console.error('❌ Failed to clear session:', error);
             }
-          }
+          }, 0);
         }
       }
     );
 
-    // Aggressive session refresh - save session every 1 minute if exists
+    // Session refresh every 5 minutes to keep tokens fresh
     const intervalId = setInterval(async () => {
       if (!mounted) return;
       
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session && Capacitor.isNativePlatform()) {
-        console.log('🔄 Periodic session refresh starting...');
-        await saveSession(session);
-        if (session.access_token) {
-          const saved = await saveJWT(session.access_token);
-          console.log('🔄 Periodic refresh:', saved ? '✅ success' : '❌ failed');
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (currentSession && Capacitor.isNativePlatform()) {
+        // Check if token is about to expire (within 10 minutes)
+        const expiresAt = currentSession.expires_at ? currentSession.expires_at * 1000 : 0;
+        const tenMinutes = 10 * 60 * 1000;
+        
+        if (Date.now() > expiresAt - tenMinutes) {
+          console.log('🔄 Token expiring soon, refreshing...');
+          const { data } = await supabase.auth.refreshSession();
+          if (data.session) {
+            await saveSession(data.session);
+            if (data.session.access_token) {
+              await saveJWT(data.session.access_token);
+            }
+          }
+        } else {
+          // Just save existing tokens
+          await saveSession(currentSession);
+          if (currentSession.access_token) {
+            await saveJWT(currentSession.access_token);
+          }
         }
       }
-    }, 1 * 60 * 1000); // Every 1 minute
+    }, 5 * 60 * 1000); // Every 5 minutes
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
       clearInterval(intervalId);
     };
+  }, [saveSession, saveJWT]);
+
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
   }, []);
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-  };
-
-  return { user, session, loading, signOut };
+  return { user, session, loading, signOut, refreshSession };
 }
