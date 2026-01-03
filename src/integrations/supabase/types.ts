@@ -2797,6 +2797,14 @@ export type Database = {
       bytea_to_text: { Args: { data: string }; Returns: string }
       check_expired_assignments: { Args: never; Returns: Json }
       cleanup_old_support_chats: { Args: never; Returns: undefined }
+      cleanup_stale_worker_busy_flags: {
+        Args: never
+        Returns: {
+          was_busy: boolean
+          worker_id: string
+          worker_name: string
+        }[]
+      }
       create_admin_email_user: { Args: never; Returns: undefined }
       delete_my_data: { Args: never; Returns: undefined }
       ensure_worker_profile: { Args: never; Returns: Json }

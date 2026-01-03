@@ -5,31 +5,66 @@ import { Capacitor } from '@capacitor/core';
 // This solves the issue where Supabase expects sync storage but Capacitor is async
 let memoryCache: Record<string, string> = {};
 let initialized = false;
+let initializationPromise: Promise<void> | null = null;
 
 // Initialize cache from persistent storage
 export const initializeStorageCache = async (): Promise<void> => {
-  if (initialized || !Capacitor.isNativePlatform()) {
+  if (initialized) {
     return;
   }
   
+  // If already initializing, wait for that to complete
+  if (initializationPromise) {
+    return initializationPromise;
+  }
+  
+  if (!Capacitor.isNativePlatform()) {
+    initialized = true;
+    return;
+  }
+  
+  initializationPromise = (async () => {
+    try {
+      console.log('🔄 Initializing storage cache...');
+      
+      // Load all known session keys
+      const keysToLoad = ['didi-worker-session', 'didi_session'];
+      
+      for (const key of keysToLoad) {
+        try {
+          const { value } = await Preferences.get({ key });
+          if (value) {
+            memoryCache[key] = value;
+            console.log(`✅ Loaded ${key} into memory cache`);
+          }
+        } catch (e) {
+          console.error(`❌ Failed to load ${key}:`, e);
+        }
+      }
+      
+      initialized = true;
+      console.log('✅ Storage cache initialized with', Object.keys(memoryCache).length, 'keys');
+    } catch (error) {
+      console.error('❌ Failed to initialize storage cache:', error);
+      initialized = true; // Mark as initialized even on failure to prevent infinite loops
+    }
+  })();
+  
+  return initializationPromise;
+};
+
+// Force reload session from persistent storage
+export const reloadSessionFromStorage = async (): Promise<void> => {
+  if (!Capacitor.isNativePlatform()) return;
+  
   try {
-    console.log('🔄 Initializing storage cache...');
     const { value } = await Preferences.get({ key: 'didi-worker-session' });
     if (value) {
       memoryCache['didi-worker-session'] = value;
-      console.log('✅ Session loaded into memory cache');
+      console.log('🔄 Session reloaded from persistent storage');
     }
-    
-    // Also load didi_session for native overlay
-    const { value: sessionValue } = await Preferences.get({ key: 'didi_session' });
-    if (sessionValue) {
-      memoryCache['didi_session'] = sessionValue;
-    }
-    
-    initialized = true;
-    console.log('✅ Storage cache initialized');
   } catch (error) {
-    console.error('❌ Failed to initialize storage cache:', error);
+    console.error('❌ Failed to reload session:', error);
   }
 };
 
@@ -37,6 +72,11 @@ export const capacitorStorage = {
   async getItem(key: string): Promise<string | null> {
     try {
       if (Capacitor.isNativePlatform()) {
+        // Ensure cache is initialized
+        if (!initialized) {
+          await initializeStorageCache();
+        }
+        
         // First check memory cache for immediate access
         if (memoryCache[key]) {
           return memoryCache[key];
@@ -47,7 +87,6 @@ export const capacitorStorage = {
         if (value) {
           memoryCache[key] = value; // Update cache
         }
-        console.log(`📖 Storage GET [${key}]:`, value ? 'Found' : 'Not found');
         return value;
       }
       return localStorage.getItem(key);
@@ -66,13 +105,7 @@ export const capacitorStorage = {
         // Persist to storage
         await Preferences.set({ key, value });
         
-        // Verify it was saved
-        const verify = await Preferences.get({ key });
-        if (verify.value === value) {
-          console.log(`✅ Storage SET verified [${key}]`);
-        } else {
-          console.error(`❌ Storage SET verification failed [${key}]`);
-        }
+        console.log(`✅ Storage SET [${key}]`);
       } else {
         localStorage.setItem(key, value);
       }

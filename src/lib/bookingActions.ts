@@ -1,6 +1,42 @@
 import { supabase } from "@/integrations/supabase/client";
 
+// Helper to ensure session is valid before making API calls
+async function ensureValidSession(): Promise<boolean> {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error || !session) {
+      console.error('❌ No valid session for API call');
+      return false;
+    }
+    
+    // Check if token is about to expire (within 2 minutes)
+    const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
+    const twoMinutes = 2 * 60 * 1000;
+    
+    if (Date.now() > expiresAt - twoMinutes) {
+      console.log('🔄 Token expiring, refreshing before API call...');
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        console.error('❌ Failed to refresh session:', refreshError);
+        return false;
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Error checking session:', error);
+    return false;
+  }
+}
+
 export async function tryAccept(bookingId: string): Promise<{ success: boolean; error?: string }> {
+  // Ensure valid session before accepting
+  const sessionValid = await ensureValidSession();
+  if (!sessionValid) {
+    return { success: false, error: "Session expired. Please log in again." };
+  }
+  
   const { data, error } = await supabase.rpc("try_accept_booking", { p_booking_id: bookingId });
   
   if (error) {
@@ -20,6 +56,12 @@ export async function tryAccept(bookingId: string): Promise<{ success: boolean; 
 }
 
 export async function rejectBooking(bookingId: string, workerId: string) {
+  // Ensure valid session before rejecting
+  const sessionValid = await ensureValidSession();
+  if (!sessionValid) {
+    return { success: false, shouldNotify: false };
+  }
+  
   const { data, error } = await supabase.rpc("reject_booking_request", {
     p_booking_id: bookingId,
     p_worker_id: workerId,
