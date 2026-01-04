@@ -165,18 +165,15 @@ export default function Auth() {
     try {
       setLoading(true);
       const phone = normalizePhone(signInPhone);
-      
+
       // Check if worker with this phone exists (skip for demo number)
-      const { data: existingWorker, error: workerCheckError } = await supabase
-        .from('workers')
-        .select('id')
-        .eq('phone', phone)
-        .maybeSingle();
-      
+      const {
+        data: existingWorker,
+        error: workerCheckError
+      } = await supabase.from('workers').select('id').eq('phone', phone).maybeSingle();
       if (workerCheckError) {
         console.error('Error checking worker:', workerCheckError);
       }
-      
       if (!existingWorker) {
         toast({
           title: t('auth.accountNotRegistered', 'Account not registered'),
@@ -186,14 +183,13 @@ export default function Auth() {
         setLoading(false);
         return;
       }
-      
       const {
         error
       } = await supabase.auth.signInWithOtp({
         phone
       });
       if (error) throw error;
-      
+
       // Navigate to OTP verification page
       navigate("/otp-verify", {
         state: {
@@ -201,7 +197,6 @@ export default function Auth() {
           mode: 'signin'
         }
       });
-      
       toast({
         title: "OTP sent!",
         description: "Check your phone for the verification code"
@@ -216,7 +211,6 @@ export default function Auth() {
       setLoading(false);
     }
   };
-
   const handleSignUpSendOtp = async () => {
     if (!signUpFullName || !signUpPhone || !signUpCommunity || signUpServices.length === 0) {
       toast({
@@ -274,7 +268,7 @@ export default function Auth() {
         }
       });
       if (error) throw error;
-      
+
       // Navigate to OTP verification page with signup data
       navigate("/otp-verify", {
         state: {
@@ -289,7 +283,6 @@ export default function Auth() {
           }
         }
       });
-      
       toast({
         title: "OTP sent!",
         description: "Check your phone for the verification code"
@@ -309,20 +302,14 @@ export default function Auth() {
       <div className="w-full max-w-md space-y-4">
         {/* Guest Button - Top Right */}
         <div className="flex justify-end">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              localStorage.setItem('guest_mode', 'true');
-              toast({
-                title: "Guest Mode",
-                description: "Exploring as guest with demo data"
-              });
-              navigate("/home");
-            }}
-            className="h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm shadow-sm"
-            title={t('auth.continueAsGuest', 'Continue as Guest')}
-          >
+          <Button variant="ghost" size="icon" onClick={() => {
+          localStorage.setItem('guest_mode', 'true');
+          toast({
+            title: "Guest Mode",
+            description: "Exploring as guest with demo data"
+          });
+          navigate("/home");
+        }} className="h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm shadow-sm" title={t('auth.continueAsGuest', 'Continue as Guest')}>
             <UserRound className="h-4 w-4" />
           </Button>
         </div>
@@ -332,10 +319,8 @@ export default function Auth() {
           <div className="flex justify-center mb-4">
             <img src={didiPartnerLogo} alt="Didi Now Partner" className="w-24 h-24" />
           </div>
-          <CardTitle className="text-2xl text-center">Didi now Partner</CardTitle>
-          <CardDescription className="text-center">
-            {t('auth.description')}
-          </CardDescription>
+          
+          
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="signin" className="w-full">
@@ -392,16 +377,16 @@ export default function Auth() {
                 <div className="space-y-2">
                   {SERVICES.map(service => <div key={service.value} className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
                       <Checkbox id={`service-${service.value}`} checked={signUpServices.includes(service.value)} onCheckedChange={checked => {
-                    if (checked) {
-                      setSignUpServices(prev => [...prev, service.value]);
-                    } else {
-                      setSignUpServices(prev => prev.filter(s => s !== service.value));
-                      // Clear cuisine tags if cook is deselected
-                      if (service.value === 'cook') {
-                        setSignUpCuisineTags([]);
+                      if (checked) {
+                        setSignUpServices(prev => [...prev, service.value]);
+                      } else {
+                        setSignUpServices(prev => prev.filter(s => s !== service.value));
+                        // Clear cuisine tags if cook is deselected
+                        if (service.value === 'cook') {
+                          setSignUpCuisineTags([]);
+                        }
                       }
-                    }
-                  }} disabled={loading} />
+                    }} disabled={loading} />
                       <Label htmlFor={`service-${service.value}`} className="flex-1 cursor-pointer font-normal">
                         {t(service.label)}
                       </Label>
@@ -415,36 +400,36 @@ export default function Auth() {
                   <div className="space-y-2">
                     <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
                       <Checkbox id="cuisine-north" checked={signUpCuisineTags.includes('north_indian')} onCheckedChange={checked => {
-                    if (checked) {
-                      setSignUpCuisineTags(prev => [...prev, 'north_indian']);
-                    } else {
-                      setSignUpCuisineTags(prev => prev.filter(c => c !== 'north_indian'));
-                    }
-                  }} disabled={loading} />
+                      if (checked) {
+                        setSignUpCuisineTags(prev => [...prev, 'north_indian']);
+                      } else {
+                        setSignUpCuisineTags(prev => prev.filter(c => c !== 'north_indian'));
+                      }
+                    }} disabled={loading} />
                       <Label htmlFor="cuisine-north" className="flex-1 cursor-pointer font-normal">
                         {t('auth.cuisineNorth', 'North Indian')}
                       </Label>
                     </div>
                     <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
                       <Checkbox id="cuisine-south" checked={signUpCuisineTags.includes('south_indian')} onCheckedChange={checked => {
-                    if (checked) {
-                      setSignUpCuisineTags(prev => [...prev, 'south_indian']);
-                    } else {
-                      setSignUpCuisineTags(prev => prev.filter(c => c !== 'south_indian'));
-                    }
-                  }} disabled={loading} />
+                      if (checked) {
+                        setSignUpCuisineTags(prev => [...prev, 'south_indian']);
+                      } else {
+                        setSignUpCuisineTags(prev => prev.filter(c => c !== 'south_indian'));
+                      }
+                    }} disabled={loading} />
                       <Label htmlFor="cuisine-south" className="flex-1 cursor-pointer font-normal">
                         {t('auth.cuisineSouth', 'South Indian')}
                       </Label>
                     </div>
                     <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
                       <Checkbox id="cuisine-both" checked={signUpCuisineTags.includes('north_indian') && signUpCuisineTags.includes('south_indian')} onCheckedChange={checked => {
-                    if (checked) {
-                      setSignUpCuisineTags(['north_indian', 'south_indian']);
-                    } else {
-                      setSignUpCuisineTags([]);
-                    }
-                  }} disabled={loading} />
+                      if (checked) {
+                        setSignUpCuisineTags(['north_indian', 'south_indian']);
+                      } else {
+                        setSignUpCuisineTags([]);
+                      }
+                    }} disabled={loading} />
                       <Label htmlFor="cuisine-both" className="flex-1 cursor-pointer font-normal">
                         {t('auth.cuisineBoth', 'Both')}
                       </Label>
