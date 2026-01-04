@@ -141,19 +141,24 @@ export function useWorkerProfile(userId: string | undefined) {
   };
 
   const updateWorker = async (updates: Partial<Worker>) => {
-    if (!userId) return;
+    if (!worker?.id) {
+      console.error('Cannot update: no worker loaded');
+      throw new Error('Worker profile not loaded');
+    }
 
     try {
+      console.log('📝 Updating worker:', worker.id, 'with:', updates);
       const { error } = await supabase
         .from('workers')
         .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', userId);
+        .eq('id', worker.id);
 
       if (error) throw error;
       
+      console.log('✅ Worker updated successfully');
       await fetchWorker();
     } catch (error) {
-      console.error('Error updating worker:', error);
+      console.error('❌ Error updating worker:', error);
       throw error;
     }
   };
