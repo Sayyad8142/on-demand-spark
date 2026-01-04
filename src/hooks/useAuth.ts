@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Capacitor } from '@capacitor/core';
-import { capacitorStorage, reloadSessionFromStorage } from '@/lib/capacitorStorage';
+import { capacitorStorage, reloadSessionFromStorage, getStorageCacheDebug } from '@/lib/capacitorStorage';
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -11,6 +11,11 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Log storage debug info on mount
+  useEffect(() => {
+    console.log('🔐 useAuth mounted, storage status:', getStorageCacheDebug());
+  }, []);
 
   // Save full session to Capacitor storage (for native overlay access)
   const saveSession = useCallback(async (session: Session | null) => {

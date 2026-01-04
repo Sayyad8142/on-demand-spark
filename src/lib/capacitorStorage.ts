@@ -7,7 +7,16 @@ let memoryCache: Record<string, string> = {};
 let initialized = false;
 let initializationPromise: Promise<void> | null = null;
 
-// Initialize cache from persistent storage
+// Synchronous getItem for Supabase - returns from memory cache immediately
+// This is critical because Supabase auth calls getItem synchronously on startup
+const getItemSync = (key: string): string | null => {
+  if (!Capacitor.isNativePlatform()) {
+    return localStorage.getItem(key);
+  }
+  return memoryCache[key] || null;
+};
+
+// Initialize cache from persistent storage - MUST be called before app renders
 export const initializeStorageCache = async (): Promise<void> => {
   if (initialized) {
     return;
@@ -35,7 +44,9 @@ export const initializeStorageCache = async (): Promise<void> => {
           const { value } = await Preferences.get({ key });
           if (value) {
             memoryCache[key] = value;
-            console.log(`✅ Loaded ${key} into memory cache`);
+            console.log(`✅ Loaded ${key} into memory cache (${value.length} chars)`);
+          } else {
+            console.log(`ℹ️ No value found for ${key}`);
           }
         } catch (e) {
           console.error(`❌ Failed to load ${key}:`, e);
@@ -62,50 +73,43 @@ export const reloadSessionFromStorage = async (): Promise<void> => {
     if (value) {
       memoryCache['didi-worker-session'] = value;
       console.log('🔄 Session reloaded from persistent storage');
+    } else {
+      console.log('⚠️ No session found in persistent storage during reload');
     }
   } catch (error) {
     console.error('❌ Failed to reload session:', error);
   }
 };
 
+// Check if storage has been initialized
+export const isStorageInitialized = (): boolean => initialized;
+
+// Get memory cache contents for debugging
+export const getStorageCacheDebug = (): { keys: string[]; initialized: boolean } => ({
+  keys: Object.keys(memoryCache),
+  initialized
+});
+
 export const capacitorStorage = {
-  async getItem(key: string): Promise<string | null> {
-    try {
-      if (Capacitor.isNativePlatform()) {
-        // Ensure cache is initialized
-        if (!initialized) {
-          await initializeStorageCache();
-        }
-        
-        // First check memory cache for immediate access
-        if (memoryCache[key]) {
-          return memoryCache[key];
-        }
-        
-        // Fall back to persistent storage
-        const { value } = await Preferences.get({ key });
-        if (value) {
-          memoryCache[key] = value; // Update cache
-        }
-        return value;
-      }
-      return localStorage.getItem(key);
-    } catch (error) {
-      console.error(`❌ Storage GET error [${key}]:`, error);
-      return null;
+  // Supabase calls this synchronously, so we MUST return synchronously from cache
+  getItem(key: string): string | null {
+    const value = getItemSync(key);
+    if (Capacitor.isNativePlatform()) {
+      console.log(`📖 Storage GET [${key}]: ${value ? 'found' : 'not found'} (init: ${initialized})`);
     }
+    return value;
   },
   
   async setItem(key: string, value: string): Promise<void> {
     try {
       if (Capacitor.isNativePlatform()) {
-        // Update memory cache immediately
+        // Update memory cache immediately for sync access
         memoryCache[key] = value;
         
-        // Persist to storage
+        // Persist to storage asynchronously
         await Preferences.set({ key, value });
         
-        console.log(`✅ Storage SET [${key}]`);
+        console.log(`✅ Storage SET [${key}] (${value.length} chars)`);
       } else {
         localStorage.setItem(key, value);
       }
@@ -118,7 +122,7 @@ export const capacitorStorage = {
   async removeItem(key: string): Promise<void> {
     try {
       if (Capacitor.isNativePlatform()) {
-        // Clear from memory cache
+        // Clear from memory cache immediately
         delete memoryCache[key];
         
         await Preferences.remove({ key });
