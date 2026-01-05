@@ -42,6 +42,7 @@ export default function UpiQrUpload({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentQrUrl || null);
+  const [isSaved, setIsSaved] = useState<boolean>(!!currentQrUrl);
   const [decodedPayload, setDecodedPayload] = useState<string | null>(null);
   const [extractedUpiId, setExtractedUpiId] = useState<string | null>(null);
   const [showUpiConfirm, setShowUpiConfirm] = useState(false);
@@ -50,6 +51,7 @@ export default function UpiQrUpload({
 
   useEffect(() => {
     setPreviewUrl(currentQrUrl || null);
+    setIsSaved(!!currentQrUrl);
   }, [currentQrUrl]);
 
   // Extract UPI ID from QR payload
@@ -156,6 +158,7 @@ export default function UpiQrUpload({
       // Set preview
       const objectUrl = URL.createObjectURL(file);
       setPreviewUrl(objectUrl);
+      setIsSaved(mode !== "profile");
       setDecodedPayload(payload);
       setExtractedUpiId(upiId);
 
@@ -187,6 +190,13 @@ export default function UpiQrUpload({
       }
     } catch (error: any) {
       console.error("QR processing error:", error);
+
+      // Revert preview if save failed in profile mode (avoid false "uploaded" UI)
+      if (mode === "profile") {
+        setPreviewUrl(currentQrUrl || null);
+        setIsSaved(!!currentQrUrl);
+      }
+
       toast({
         title: mode === "profile" ? "Upload Failed" : "Error",
         description: error?.message || "Failed to process QR image",
@@ -252,6 +262,7 @@ export default function UpiQrUpload({
     if (updateError) throw updateError;
 
     setPreviewUrl(publicUrl);
+    setIsSaved(true);
     onQrUrlSaved?.(publicUrl);
 
     toast({
@@ -360,6 +371,7 @@ export default function UpiQrUpload({
         if (error) throw error;
 
         setPreviewUrl(null);
+        setIsSaved(false);
         onQrUrlSaved?.(null);
         setDecodedPayload(null);
         setExtractedUpiId(null);
@@ -382,6 +394,7 @@ export default function UpiQrUpload({
     } else {
       // For signup mode, just clear the preview
       setPreviewUrl(null);
+      setIsSaved(false);
       setDecodedPayload(null);
       setExtractedUpiId(null);
       onQrRemoved?.();
@@ -406,8 +419,14 @@ export default function UpiQrUpload({
             />
             <div className="flex-1 min-w-0">
               <Badge variant="secondary" className="gap-1 text-xs">
-                <Check className="h-3 w-3" />
-                QR Uploaded
+                {uploading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : isSaved ? (
+                  <Check className="h-3 w-3" />
+                ) : (
+                  <X className="h-3 w-3" />
+                )}
+                {uploading ? "Saving..." : isSaved ? "QR Saved" : "Not saved"}
               </Badge>
               {extractedUpiId && (
                 <p className="text-sm text-muted-foreground truncate mt-1">
