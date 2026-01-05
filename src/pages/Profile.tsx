@@ -574,7 +574,6 @@ export default function Profile() {
                       <CreditCard className="w-4 h-4" />
                       Payment Details
                     </Label>
-                    <Input id="edit-upi" value={upiId} onChange={e => setUpiId(e.target.value)} placeholder="Your UPI ID" />
                     {!isGuestMode && worker && (
                       <UpiQrUpload 
                         currentUpiId={upiId} 
