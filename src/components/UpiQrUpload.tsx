@@ -177,19 +177,19 @@ export default function UpiQrUpload({
       }
 
       // For profile mode, upload immediately
-      if (mode === "profile" && workerId) {
+      if (mode === "profile") {
         await uploadQrToStorage(file, payload, upiId);
+      } else {
+        toast({
+          title: "QR Scanned Successfully",
+          description: `UPI ID: ${upiId}`,
+        });
       }
-
-      toast({
-        title: "QR Scanned Successfully",
-        description: `UPI ID: ${upiId}`,
-      });
     } catch (error: any) {
-      console.error("QR decode error:", error);
+      console.error("QR processing error:", error);
       toast({
-        title: "Error",
-        description: "Failed to process QR image",
+        title: mode === "profile" ? "Upload Failed" : "Error",
+        description: error?.message || "Failed to process QR image",
         variant: "destructive",
       });
     } finally {
@@ -201,122 +201,142 @@ export default function UpiQrUpload({
   };
 
   const uploadQrToStorage = async (file: File, payload: string, upiId: string) => {
-    if (!workerId) return;
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      // Delete old QR if exists
-      if (currentQrUrl) {
-        const oldPath = currentQrUrl.split("/worker-upi-qr/")[1];
-        if (oldPath) {
-          await supabase.storage.from("worker-upi-qr").remove([oldPath]);
-        }
-      }
-
-      // Upload new QR
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("worker-upi-qr")
-        .upload(filePath, file, { cacheControl: "3600", upsert: false });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from("worker-upi-qr")
-        .getPublicUrl(filePath);
-
-      // Update worker profile
-      const { error: updateError } = await supabase
-        .from("workers")
-        .update({
-          upi_id: upiId,
-          upi_qr_url: publicUrl,
-          upi_qr_payload: payload,
-          upi_qr_uploaded_at: new Date().toISOString(),
-        })
-        .eq("id", workerId);
-
-      if (updateError) throw updateError;
-
-      setPreviewUrl(publicUrl);
-      onQrUrlSaved?.(publicUrl);
-      toast({
-        title: "QR Saved",
-        description: "Your UPI QR code has been saved",
-      });
-    } catch (error: any) {
-      console.error("Upload error:", error);
-      toast({
-        title: "Upload Failed",
-        description: error.message || "Failed to save QR",
-        variant: "destructive",
-      });
+    if (authError || !user) {
+      throw new Error("Not authenticated");
     }
+
+    // Delete old QR if exists (best-effort)
+    if (currentQrUrl) {
+      const oldPath = currentQrUrl.split("/worker-upi-qr/")[1];
+      if (oldPath) {
+        await supabase.storage.from("worker-upi-qr").remove([oldPath]);
+      }
+    }
+
+    // Upload new QR
+    // IMPORTANT: path must be `${auth.uid()}/${Date.now()}.png`
+    const filePath = `${user.id}/${Date.now()}.png`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("worker-upi-qr")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+    if (uploadError) throw uploadError;
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("worker-upi-qr").getPublicUrl(filePath);
+
+    // Update worker profile (must persist QR metadata)
+    const { error: updateError } = await supabase
+      .from("workers")
+      .update({
+        user_id: user.id,
+        upi_id: upiId,
+        upi_qr_url: publicUrl,
+        upi_qr_payload: payload,
+        upi_qr_uploaded_at: new Date().toISOString(),
+      })
+      .eq("user_id", user.id)
+      .select("id")
+      .single();
+
+    if (updateError) throw updateError;
+
+    setPreviewUrl(publicUrl);
+    onQrUrlSaved?.(publicUrl);
+
+    toast({
+      title: "Saved successfully",
+      description: "Your UPI QR code has been saved",
+    });
   };
 
   const handleConfirmUpiChange = async () => {
     if (!pendingUpiId || !pendingFile) return;
 
-    onUpiIdExtracted(pendingUpiId);
+    try {
+      setUploading(true);
 
-    if (onQrDataReady) {
-      onQrDataReady({
+      onUpiIdExtracted(pendingUpiId);
+
+      onQrDataReady?.({
         file: pendingFile,
         payload: decodedPayload || "",
         extractedUpiId: pendingUpiId,
       });
-    }
 
-    if (mode === "profile" && workerId) {
-      setUploading(true);
-      await uploadQrToStorage(pendingFile, decodedPayload || "", pendingUpiId);
+      if (mode === "profile") {
+        await uploadQrToStorage(pendingFile, decodedPayload || "", pendingUpiId);
+      }
+
+      setShowUpiConfirm(false);
+      setPendingUpiId(null);
+      setPendingFile(null);
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: error?.message || "Failed to save QR",
+        variant: "destructive",
+      });
+    } finally {
       setUploading(false);
     }
-
-    setShowUpiConfirm(false);
-    setPendingUpiId(null);
-    setPendingFile(null);
-
-    toast({
-      title: "UPI Updated",
-      description: `UPI ID changed to ${pendingUpiId}`,
-    });
   };
 
   const handleKeepExistingUpi = async () => {
     if (!pendingFile || !currentUpiId) return;
 
-    if (onQrDataReady) {
-      onQrDataReady({
+    try {
+      setUploading(true);
+
+      onQrDataReady?.({
         file: pendingFile,
         payload: decodedPayload || "",
         extractedUpiId: currentUpiId,
       });
-    }
 
-    if (mode === "profile" && workerId) {
-      setUploading(true);
-      await uploadQrToStorage(pendingFile, decodedPayload || "", currentUpiId);
+      if (mode === "profile") {
+        await uploadQrToStorage(pendingFile, decodedPayload || "", currentUpiId);
+      }
+
+      setShowUpiConfirm(false);
+      setPendingUpiId(null);
+      setPendingFile(null);
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: error?.message || "Failed to save QR",
+        variant: "destructive",
+      });
+    } finally {
       setUploading(false);
     }
-
-    setShowUpiConfirm(false);
-    setPendingUpiId(null);
-    setPendingFile(null);
   };
 
   const handleRemoveQr = async () => {
-    if (mode === "profile" && workerId) {
+    if (mode === "profile") {
       try {
         setUploading(true);
 
-        // Delete from storage
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+          throw new Error("Not authenticated");
+        }
+
+        // Delete from storage (best-effort)
         if (currentQrUrl) {
           const path = currentQrUrl.split("/worker-upi-qr/")[1];
           if (path) {
@@ -328,11 +348,14 @@ export default function UpiQrUpload({
         const { error } = await supabase
           .from("workers")
           .update({
+            user_id: user.id,
             upi_qr_url: null,
             upi_qr_payload: null,
             upi_qr_uploaded_at: null,
           })
-          .eq("id", workerId);
+          .eq("user_id", user.id)
+          .select("id")
+          .single();
 
         if (error) throw error;
 
@@ -341,12 +364,10 @@ export default function UpiQrUpload({
         setDecodedPayload(null);
         setExtractedUpiId(null);
 
-        if (onQrRemoved) {
-          onQrRemoved();
-        }
+        onQrRemoved?.();
 
         toast({
-          title: "QR Removed",
+          title: "Saved successfully",
           description: "Your UPI QR code has been removed",
         });
       } catch (error: any) {
@@ -363,9 +384,7 @@ export default function UpiQrUpload({
       setPreviewUrl(null);
       setDecodedPayload(null);
       setExtractedUpiId(null);
-      if (onQrRemoved) {
-        onQrRemoved();
-      }
+      onQrRemoved?.();
     }
   };
 

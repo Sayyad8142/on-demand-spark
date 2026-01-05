@@ -202,29 +202,26 @@ export default function OtpVerify() {
 
         // Upload QR if provided
         if (qrData?.file) {
-          try {
-            const fileExt = qrData.file.name.split('.').pop();
-            const fileName = `${Date.now()}.${fileExt}`;
-            const filePath = `${data.user.id}/${fileName}`;
+          const filePath = `${data.user.id}/${Date.now()}.png`;
 
-            const { error: uploadError } = await supabase.storage
-              .from('worker-upi-qr')
-              .upload(filePath, qrData.file, { cacheControl: '3600', upsert: false });
+          const { error: uploadError } = await supabase.storage
+            .from('worker-upi-qr')
+            .upload(filePath, qrData.file, {
+              cacheControl: '3600',
+              upsert: false,
+            });
 
-            if (!uploadError) {
-              const { data: { publicUrl } } = supabase.storage
-                .from('worker-upi-qr')
-                .getPublicUrl(filePath);
-              
-              upiQrUrl = publicUrl;
-              upiQrPayload = qrData.payload;
-              upiQrUploadedAt = new Date().toISOString();
-            } else {
-              console.error('QR upload error:', uploadError);
-            }
-          } catch (qrError) {
-            console.error('Failed to upload QR:', qrError);
+          if (uploadError) {
+            throw uploadError;
           }
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('worker-upi-qr')
+            .getPublicUrl(filePath);
+
+          upiQrUrl = publicUrl;
+          upiQrPayload = qrData.payload;
+          upiQrUploadedAt = new Date().toISOString();
         }
 
         if (existingWorker) {
