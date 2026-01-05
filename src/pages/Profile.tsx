@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X, Pencil, Languages, Star, Briefcase, Wallet, Settings, MessageSquare, BarChart3, Camera, Upload, Clock, ChevronRight, Shield, FileText, HelpCircle, Phone } from "lucide-react";
+import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X, Pencil, Languages, Star, Briefcase, Wallet, Settings, MessageSquare, BarChart3, Camera, Upload, Clock, ChevronRight, Shield, FileText, HelpCircle, Phone, QrCode, CreditCard } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +43,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import BottomNav from "@/components/BottomNav";
+import UpiQrUpload from "@/components/UpiQrUpload";
 
 const SERVICES = [
   { value: "maid", label: "Maid Service" },
@@ -78,6 +79,7 @@ export default function Profile() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [phone, setPhone] = useState("");
   const [upiId, setUpiId] = useState("");
+  const [upiQrUrl, setUpiQrUrl] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   
@@ -139,6 +141,7 @@ export default function Profile() {
       setFullName(worker.full_name || "");
       setPhone(worker.phone || "");
       setUpiId(worker.upi_id || "");
+      setUpiQrUrl(worker.upi_qr_url || null);
       setSelectedServices(worker.service_types || []);
       setSelectedCommunities(worker.communities || (worker.community ? [worker.community] : []));
       setSelectedCuisineTags(worker.cook_cuisine_tags || []);
@@ -822,6 +825,54 @@ export default function Profile() {
         </div>
 
         <div className="px-4 mt-4 space-y-4">
+          {/* Payment Details Card */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <CreditCard className="w-5 h-5" />
+                Payment Details
+              </CardTitle>
+              <CardDescription>
+                Your UPI ID for receiving payments
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Current UPI ID Display */}
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Wallet className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground font-medium">UPI ID</p>
+                  <p className="font-semibold truncate">
+                    {worker?.upi_id || "Not set"}
+                  </p>
+                </div>
+              </div>
+
+              {/* UPI QR Upload */}
+              {!isGuestMode && worker && (
+                <UpiQrUpload
+                  currentUpiId={upiId}
+                  currentQrUrl={upiQrUrl}
+                  onUpiIdExtracted={(newUpiId) => {
+                    setUpiId(newUpiId);
+                  }}
+                  onQrRemoved={() => {
+                    setUpiQrUrl(null);
+                  }}
+                  mode="profile"
+                  workerId={worker.id}
+                />
+              )}
+
+              {isGuestMode && (
+                <div className="text-center py-4 text-muted-foreground text-sm">
+                  Sign in to manage your payment details
+                </div>
+              )}
+            </CardContent>
+          </Card>
           {/* Rating Breakdown + Customer Reviews Combined */}
           {reviews.length > 0 && (
             <Card className="border-0 shadow-lg">

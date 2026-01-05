@@ -1,0 +1,481 @@
+import { useState, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Upload, QrCode, Check, X, Loader2, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import jsQR from "jsqr";
+
+interface UpiQrUploadProps {
+  currentUpiId?: string;
+  currentQrUrl?: string | null;
+  onUpiIdExtracted: (upiId: string) => void;
+  onQrDataReady?: (data: { file: File; payload: string; extractedUpiId: string }) => void;
+  onQrRemoved?: () => void;
+  mode: "signup" | "profile";
+  workerId?: string;
+}
+
+export default function UpiQrUpload({
+  currentUpiId,
+  currentQrUrl,
+  onUpiIdExtracted,
+  onQrDataReady,
+  onQrRemoved,
+  mode,
+  workerId,
+}: UpiQrUploadProps) {
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(currentQrUrl || null);
+  const [decodedPayload, setDecodedPayload] = useState<string | null>(null);
+  const [extractedUpiId, setExtractedUpiId] = useState<string | null>(null);
+  const [showUpiConfirm, setShowUpiConfirm] = useState(false);
+  const [pendingUpiId, setPendingUpiId] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+
+  // Extract UPI ID from QR payload
+  const extractUpiIdFromPayload = (payload: string): string | null => {
+    // UPI QR typically looks like: upi://pay?pa=name@bank&pn=Name&...
+    const paMatch = payload.match(/[?&]pa=([^&]+)/i);
+    if (paMatch) {
+      return decodeURIComponent(paMatch[1]);
+    }
+    
+    // Direct UPI ID format: name@bank
+    if (/^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/.test(payload)) {
+      return payload;
+    }
+    
+    return null;
+  };
+
+  // Decode QR from image file
+  const decodeQrFromFile = (file: File): Promise<string | null> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(null);
+          return;
+        }
+
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        
+        resolve(code?.data || null);
+      };
+      img.onerror = () => resolve(null);
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Invalid file",
+        description: "Please upload an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Image must be less than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      // Decode QR code
+      const payload = await decodeQrFromFile(file);
+      
+      if (!payload) {
+        toast({
+          title: "Could not read QR",
+          description: "Please try another image with a clearer QR code",
+          variant: "destructive",
+        });
+        setUploading(false);
+        // Reset file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        return;
+      }
+
+      const upiId = extractUpiIdFromPayload(payload);
+      
+      if (!upiId) {
+        toast({
+          title: "Not a UPI QR",
+          description: "Could not find UPI ID in the QR code",
+          variant: "destructive",
+        });
+        setUploading(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        return;
+      }
+
+      // Set preview
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
+      setDecodedPayload(payload);
+      setExtractedUpiId(upiId);
+
+      // For profile mode with existing worker, check if UPI differs
+      if (mode === "profile" && currentUpiId && currentUpiId !== upiId) {
+        setPendingUpiId(upiId);
+        setPendingFile(file);
+        setShowUpiConfirm(true);
+        setUploading(false);
+        return;
+      }
+
+      // Auto-fill UPI ID
+      onUpiIdExtracted(upiId);
+
+      // Notify parent with QR data
+      if (onQrDataReady) {
+        onQrDataReady({ file, payload, extractedUpiId: upiId });
+      }
+
+      // For profile mode, upload immediately
+      if (mode === "profile" && workerId) {
+        await uploadQrToStorage(file, payload, upiId);
+      }
+
+      toast({
+        title: "QR Scanned Successfully",
+        description: `UPI ID: ${upiId}`,
+      });
+    } catch (error: any) {
+      console.error("QR decode error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to process QR image",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const uploadQrToStorage = async (file: File, payload: string, upiId: string) => {
+    if (!workerId) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Delete old QR if exists
+      if (currentQrUrl) {
+        const oldPath = currentQrUrl.split("/worker-upi-qr/")[1];
+        if (oldPath) {
+          await supabase.storage.from("worker-upi-qr").remove([oldPath]);
+        }
+      }
+
+      // Upload new QR
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("worker-upi-qr")
+        .upload(filePath, file, { cacheControl: "3600", upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from("worker-upi-qr")
+        .getPublicUrl(filePath);
+
+      // Update worker profile
+      const { error: updateError } = await supabase
+        .from("workers")
+        .update({
+          upi_id: upiId,
+          upi_qr_url: publicUrl,
+          upi_qr_payload: payload,
+          upi_qr_uploaded_at: new Date().toISOString(),
+        })
+        .eq("id", workerId);
+
+      if (updateError) throw updateError;
+
+      setPreviewUrl(publicUrl);
+      toast({
+        title: "QR Saved",
+        description: "Your UPI QR code has been saved",
+      });
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Failed to save QR",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleConfirmUpiChange = async () => {
+    if (!pendingUpiId || !pendingFile) return;
+
+    onUpiIdExtracted(pendingUpiId);
+
+    if (onQrDataReady) {
+      onQrDataReady({
+        file: pendingFile,
+        payload: decodedPayload || "",
+        extractedUpiId: pendingUpiId,
+      });
+    }
+
+    if (mode === "profile" && workerId) {
+      setUploading(true);
+      await uploadQrToStorage(pendingFile, decodedPayload || "", pendingUpiId);
+      setUploading(false);
+    }
+
+    setShowUpiConfirm(false);
+    setPendingUpiId(null);
+    setPendingFile(null);
+
+    toast({
+      title: "UPI Updated",
+      description: `UPI ID changed to ${pendingUpiId}`,
+    });
+  };
+
+  const handleKeepExistingUpi = async () => {
+    if (!pendingFile || !currentUpiId) return;
+
+    if (onQrDataReady) {
+      onQrDataReady({
+        file: pendingFile,
+        payload: decodedPayload || "",
+        extractedUpiId: currentUpiId,
+      });
+    }
+
+    if (mode === "profile" && workerId) {
+      setUploading(true);
+      await uploadQrToStorage(pendingFile, decodedPayload || "", currentUpiId);
+      setUploading(false);
+    }
+
+    setShowUpiConfirm(false);
+    setPendingUpiId(null);
+    setPendingFile(null);
+  };
+
+  const handleRemoveQr = async () => {
+    if (mode === "profile" && workerId) {
+      try {
+        setUploading(true);
+
+        // Delete from storage
+        if (currentQrUrl) {
+          const path = currentQrUrl.split("/worker-upi-qr/")[1];
+          if (path) {
+            await supabase.storage.from("worker-upi-qr").remove([path]);
+          }
+        }
+
+        // Update worker profile
+        const { error } = await supabase
+          .from("workers")
+          .update({
+            upi_qr_url: null,
+            upi_qr_payload: null,
+            upi_qr_uploaded_at: null,
+          })
+          .eq("id", workerId);
+
+        if (error) throw error;
+
+        setPreviewUrl(null);
+        setDecodedPayload(null);
+        setExtractedUpiId(null);
+
+        if (onQrRemoved) {
+          onQrRemoved();
+        }
+
+        toast({
+          title: "QR Removed",
+          description: "Your UPI QR code has been removed",
+        });
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to remove QR",
+          variant: "destructive",
+        });
+      } finally {
+        setUploading(false);
+      }
+    } else {
+      // For signup mode, just clear the preview
+      setPreviewUrl(null);
+      setDecodedPayload(null);
+      setExtractedUpiId(null);
+      if (onQrRemoved) {
+        onQrRemoved();
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <Label className="flex items-center gap-2">
+        <QrCode className="h-4 w-4" />
+        UPI QR Code (Optional)
+      </Label>
+
+      {/* Preview or Upload */}
+      {previewUrl ? (
+        <div className="relative border rounded-lg p-3 bg-muted/30">
+          <div className="flex items-start gap-3">
+            <img
+              src={previewUrl}
+              alt="UPI QR Code"
+              className="w-20 h-20 object-contain rounded-md border bg-white"
+            />
+            <div className="flex-1 min-w-0">
+              <Badge variant="secondary" className="gap-1 mb-2">
+                <Check className="h-3 w-3" />
+                QR Uploaded
+              </Badge>
+              {extractedUpiId && (
+                <p className="text-sm text-muted-foreground truncate">
+                  {extractedUpiId}
+                </p>
+              )}
+              <div className="flex gap-2 mt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Upload className="h-3 w-3 mr-1" />
+                      Replace
+                    </>
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRemoveQr}
+                  disabled={uploading}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-3 w-3 mr-1" />
+                  Remove
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div
+          onClick={() => !uploading && fileInputRef.current?.click()}
+          className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/50 transition-colors"
+        >
+          {uploading ? (
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
+              <p className="text-sm text-muted-foreground">Processing...</p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <Upload className="h-8 w-8 text-muted-foreground" />
+              <p className="text-sm font-medium">Upload QR</p>
+              <p className="text-xs text-muted-foreground">
+                Upload your PhonePe/GPay QR. We'll auto-detect your UPI ID.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
+      {/* UPI ID Change Confirmation Dialog */}
+      <AlertDialog open={showUpiConfirm} onOpenChange={setShowUpiConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Update UPI ID?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The QR code contains a different UPI ID:
+              <br />
+              <span className="font-semibold text-foreground">{pendingUpiId}</span>
+              <br /><br />
+              Your current UPI ID is:
+              <br />
+              <span className="font-semibold text-foreground">{currentUpiId}</span>
+              <br /><br />
+              Would you like to update to the new UPI ID?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleKeepExistingUpi}>
+              Keep Existing
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmUpiChange}>
+              Update to New
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
