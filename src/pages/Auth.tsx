@@ -362,11 +362,6 @@ export default function Auth() {
                 <Input id="signup-phone" type="tel" placeholder={t('auth.phonePlaceholder')} value={signUpPhone} onChange={e => setSignUpPhone(e.target.value)} maxLength={10} disabled={loading} />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="signup-upi">{t('auth.upiLabel')}</Label>
-                <Input id="signup-upi" type="text" placeholder={t('auth.upiPlaceholder')} value={signUpUpiId} onChange={e => setSignUpUpiId(e.target.value)} disabled={loading} />
-              </div>
-
               {/* UPI QR Code Upload */}
               <UpiQrUpload
                 currentUpiId={signUpUpiId}
