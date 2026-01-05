@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +23,7 @@ interface UpiQrUploadProps {
   onUpiIdExtracted: (upiId: string) => void;
   onQrDataReady?: (data: { file: File; payload: string; extractedUpiId: string }) => void;
   onQrRemoved?: () => void;
+  onQrUrlSaved?: (url: string | null) => void;
   mode: "signup" | "profile";
   workerId?: string;
 }
@@ -33,6 +34,7 @@ export default function UpiQrUpload({
   onUpiIdExtracted,
   onQrDataReady,
   onQrRemoved,
+  onQrUrlSaved,
   mode,
   workerId,
 }: UpiQrUploadProps) {
@@ -45,6 +47,10 @@ export default function UpiQrUpload({
   const [showUpiConfirm, setShowUpiConfirm] = useState(false);
   const [pendingUpiId, setPendingUpiId] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    setPreviewUrl(currentQrUrl || null);
+  }, [currentQrUrl]);
 
   // Extract UPI ID from QR payload
   const extractUpiIdFromPayload = (payload: string): string | null => {
@@ -239,6 +245,7 @@ export default function UpiQrUpload({
       if (updateError) throw updateError;
 
       setPreviewUrl(publicUrl);
+      onQrUrlSaved?.(publicUrl);
       toast({
         title: "QR Saved",
         description: "Your UPI QR code has been saved",
@@ -330,6 +337,7 @@ export default function UpiQrUpload({
         if (error) throw error;
 
         setPreviewUrl(null);
+        onQrUrlSaved?.(null);
         setDecodedPayload(null);
         setExtractedUpiId(null);
 
