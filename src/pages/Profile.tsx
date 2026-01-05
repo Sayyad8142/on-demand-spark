@@ -499,7 +499,12 @@ export default function Profile() {
 
               <DropdownMenuSeparator />
               
-              <div className="p-1">
+              <div className="p-1 space-y-1">
+                <Button onClick={handleLogout} variant="ghost" className="w-full justify-start text-sm h-10">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  {t('profile.logout')}
+                </Button>
+                
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="ghost" className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 h-10" disabled={deleting}>
@@ -862,11 +867,6 @@ export default function Profile() {
             </CardContent>
           </Card>
 
-          {/* Logout Button - Big Red Button */}
-          <Button onClick={handleLogout} className="w-full h-14 text-lg font-semibold bg-red-500 hover:bg-red-600 text-white py-0 my-[33px]">
-            <LogOut className="w-6 h-6 mr-2" />
-            {t('profile.logout')}
-          </Button>
 
           {/* Call Support Button */}
           <a href="tel:8008180018" className="block">
