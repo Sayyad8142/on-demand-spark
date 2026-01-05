@@ -404,6 +404,9 @@ export type Database = {
           payout_amount: number | null
           prealert_sent: boolean
           price_inr: number | null
+          reach_confirmed_at: string | null
+          reach_confirmed_by: string | null
+          reach_status: string | null
           scheduled_date: string | null
           scheduled_time: string | null
           service_type: string
@@ -451,6 +454,9 @@ export type Database = {
           payout_amount?: number | null
           prealert_sent?: boolean
           price_inr?: number | null
+          reach_confirmed_at?: string | null
+          reach_confirmed_by?: string | null
+          reach_status?: string | null
           scheduled_date?: string | null
           scheduled_time?: string | null
           service_type: string
@@ -498,6 +504,9 @@ export type Database = {
           payout_amount?: number | null
           prealert_sent?: boolean
           price_inr?: number | null
+          reach_confirmed_at?: string | null
+          reach_confirmed_by?: string | null
+          reach_status?: string | null
           scheduled_date?: string | null
           scheduled_time?: string | null
           service_type?: string
@@ -2770,6 +2779,9 @@ export type Database = {
               payout_amount: number | null
               prealert_sent: boolean
               price_inr: number | null
+              reach_confirmed_at: string | null
+              reach_confirmed_by: string | null
+              reach_status: string | null
               scheduled_date: string | null
               scheduled_time: string | null
               service_type: string
@@ -3335,6 +3347,9 @@ export type Database = {
           payout_amount: number | null
           prealert_sent: boolean
           price_inr: number | null
+          reach_confirmed_at: string | null
+          reach_confirmed_by: string | null
+          reach_status: string | null
           scheduled_date: string | null
           scheduled_time: string | null
           service_type: string
