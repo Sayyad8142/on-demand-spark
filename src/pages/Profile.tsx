@@ -971,53 +971,38 @@ export default function Profile() {
 
           {/* Language Selection */}
           <Card className="border-0 shadow-lg">
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Languages className="w-5 h-5" />
                 {t('profile.language')}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-            <div className="space-y-2">
-              <Label>{t('profile.selectLanguage')}</Label>
-              <div className="grid gap-2">
-                <Button
-                  variant={i18n.language === 'en' ? 'default' : 'outline'}
-                  className="w-full justify-start"
-                  onClick={() => {
-                    i18n.changeLanguage('en');
-                    localStorage.setItem('language', 'en');
-                    toast({ title: "Language changed to English" });
-                  }}
-                >
-                  English
-                </Button>
-                <Button
-                  variant={i18n.language === 'hi' ? 'default' : 'outline'}
-                  className="w-full justify-start"
-                  onClick={() => {
-                    i18n.changeLanguage('hi');
-                    localStorage.setItem('language', 'hi');
-                    toast({ title: "भाषा हिंदी में बदल गई" });
-                  }}
-                >
-                  हिंदी (Hindi)
-                </Button>
-                <Button
-                  variant={i18n.language === 'te' ? 'default' : 'outline'}
-                  className="w-full justify-start"
-                  onClick={() => {
-                    i18n.changeLanguage('te');
-                    localStorage.setItem('language', 'te');
-                    toast({ title: "భాష తెలుగులోకి మార్చబడింది" });
-                  }}
-                >
-                  తెలుగు (Telugu)
-                </Button>
+            <CardContent>
+              <div className="flex gap-2">
+                {[
+                  { code: 'en', label: 'EN', toast: 'Language changed to English' },
+                  { code: 'hi', label: 'हि', toast: 'भाषा हिंदी में बदल गई' },
+                  { code: 'te', label: 'తె', toast: 'భాష తెలుగులోకి మార్చబడింది' },
+                ].map((lang) => (
+                  <button
+                    key={lang.code}
+                    onClick={() => {
+                      i18n.changeLanguage(lang.code);
+                      localStorage.setItem('language', lang.code);
+                      toast({ title: lang.toast });
+                    }}
+                    className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all ${
+                      i18n.language === lang.code
+                        ? 'bg-primary text-primary-foreground shadow-md'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    {lang.label}
+                  </button>
+                ))}
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
           {/* Logout Button - Big Red Button */}
           <Button
