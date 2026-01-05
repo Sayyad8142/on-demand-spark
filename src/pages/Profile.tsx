@@ -946,45 +946,28 @@ export default function Profile() {
               </CollapsibleContent>
             </Card>
           </Collapsible>
-          {/* Rating Breakdown + Customer Reviews Combined */}
-          {reviews.length > 0 && (
-            <Card className="border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <BarChart3 className="w-5 h-5" />
-                  Rating Breakdown
-                </CardTitle>
-                <CardDescription>
-                  Distribution of your {ratingsCount} rating{ratingsCount !== 1 ? 's' : ''}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <RatingBreakdown 
-                  ratings={ratingBreakdown} 
-                  totalRatings={ratingsCount}
-                />
-                
-                {/* Customer Reviews Link */}
-                <div 
-                  className="flex items-center justify-between p-3 bg-muted/50 rounded-xl cursor-pointer hover:bg-muted transition-colors"
-                  onClick={() => navigate('/customer-reviews')}
-                >
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="w-5 h-5" />
-                    <div>
-                      <p className="font-semibold text-sm">
-                        {t('profile.reviews')} ({reviews.length})
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Customer feedback from completed jobs
-                      </p>
-                    </div>
+          {/* Ratings & Reviews Link */}
+          <Card 
+            className="border-0 shadow-lg cursor-pointer hover:bg-muted/30 transition-colors"
+            onClick={() => navigate('/customer-reviews')}
+          >
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                    <Star className="w-5 h-5 text-amber-500" />
                   </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-semibold text-sm">Ratings & Reviews</p>
+                    <p className="text-xs text-muted-foreground">
+                      {ratingsCount > 0 ? `${workerRating.toFixed(1)} ★ • ${ratingsCount} review${ratingsCount !== 1 ? 's' : ''}` : 'No reviews yet'}
+                    </p>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Language Selection */}
           <Card className="border-0 shadow-lg">
