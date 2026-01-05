@@ -581,6 +581,7 @@ export default function Profile() {
                         currentQrUrl={upiQrUrl} 
                         onUpiIdExtracted={newUpiId => setUpiId(newUpiId)} 
                         onQrRemoved={() => setUpiQrUrl(null)} 
+                        onQrUrlSaved={url => setUpiQrUrl(url)}
                         mode="profile" 
                         workerId={worker.id} 
                       />
