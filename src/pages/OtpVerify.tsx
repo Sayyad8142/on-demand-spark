@@ -24,6 +24,11 @@ interface OtpVerifyState {
     community: string;
     services: string[];
     cuisineTags: string[];
+    qrData?: {
+      file: File;
+      payload: string;
+      extractedUpiId: string;
+    } | null;
   };
 }
 
@@ -167,7 +172,7 @@ export default function OtpVerify() {
         }
       } else if (state.mode === 'signup' && state.signUpData) {
         // Sign Up flow
-        const { fullName, upiId, community, services, cuisineTags } = state.signUpData;
+        const { fullName, upiId, community, services, cuisineTags, qrData } = state.signUpData;
 
         // Fetch the community ID
         const { data: communityData, error: communityError } = await supabase
@@ -189,6 +194,38 @@ export default function OtpVerify() {
           .maybeSingle();
 
         const finalCuisineTags = services.includes('cook') ? cuisineTags : [];
+        
+        // Prepare QR data fields
+        let upiQrUrl: string | null = null;
+        let upiQrPayload: string | null = null;
+        let upiQrUploadedAt: string | null = null;
+
+        // Upload QR if provided
+        if (qrData?.file) {
+          try {
+            const fileExt = qrData.file.name.split('.').pop();
+            const fileName = `${Date.now()}.${fileExt}`;
+            const filePath = `${data.user.id}/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+              .from('worker-upi-qr')
+              .upload(filePath, qrData.file, { cacheControl: '3600', upsert: false });
+
+            if (!uploadError) {
+              const { data: { publicUrl } } = supabase.storage
+                .from('worker-upi-qr')
+                .getPublicUrl(filePath);
+              
+              upiQrUrl = publicUrl;
+              upiQrPayload = qrData.payload;
+              upiQrUploadedAt = new Date().toISOString();
+            } else {
+              console.error('QR upload error:', uploadError);
+            }
+          } catch (qrError) {
+            console.error('Failed to upload QR:', qrError);
+          }
+        }
 
         if (existingWorker) {
           const { error: workerError } = await supabase.from('workers').upsert({
@@ -197,6 +234,9 @@ export default function OtpVerify() {
             full_name: fullName.trim(),
             phone,
             upi_id: upiId?.trim() || existingWorker.upi_id,
+            upi_qr_url: upiQrUrl || existingWorker.upi_qr_url,
+            upi_qr_payload: upiQrPayload || existingWorker.upi_qr_payload,
+            upi_qr_uploaded_at: upiQrUploadedAt || existingWorker.upi_qr_uploaded_at,
             service_types: services,
             communities: [community],
             selected_community_id: communityData.id,
@@ -213,6 +253,9 @@ export default function OtpVerify() {
             full_name: fullName.trim(),
             phone,
             upi_id: upiId?.trim() || null,
+            upi_qr_url: upiQrUrl,
+            upi_qr_payload: upiQrPayload,
+            upi_qr_uploaded_at: upiQrUploadedAt,
             service_types: services,
             communities: [community],
             selected_community_id: communityData.id,

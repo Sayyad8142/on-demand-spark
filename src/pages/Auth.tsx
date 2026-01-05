@@ -15,6 +15,7 @@ import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
 import { Phone, UserRound } from "lucide-react";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
+import UpiQrUpload from "@/components/UpiQrUpload";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -76,6 +77,13 @@ export default function Auth() {
   const [signUpCommunity, setSignUpCommunity] = useState("");
   const [signUpServices, setSignUpServices] = useState<string[]>([]);
   const [signUpCuisineTags, setSignUpCuisineTags] = useState<string[]>([]);
+  
+  // QR Code upload state
+  const [signUpQrData, setSignUpQrData] = useState<{
+    file: File;
+    payload: string;
+    extractedUpiId: string;
+  } | null>(null);
 
   // Auto OTP detection moved to OtpVerify page
   useEffect(() => {
@@ -279,7 +287,8 @@ export default function Auth() {
             upiId: signUpUpiId,
             community: signUpCommunity,
             services: signUpServices,
-            cuisineTags: signUpCuisineTags
+            cuisineTags: signUpCuisineTags,
+            qrData: signUpQrData
           }
         }
       });
@@ -357,6 +366,15 @@ export default function Auth() {
                 <Label htmlFor="signup-upi">{t('auth.upiLabel')}</Label>
                 <Input id="signup-upi" type="text" placeholder={t('auth.upiPlaceholder')} value={signUpUpiId} onChange={e => setSignUpUpiId(e.target.value)} disabled={loading} />
               </div>
+
+              {/* UPI QR Code Upload */}
+              <UpiQrUpload
+                currentUpiId={signUpUpiId}
+                onUpiIdExtracted={(upiId) => setSignUpUpiId(upiId)}
+                onQrDataReady={(data) => setSignUpQrData(data)}
+                onQrRemoved={() => setSignUpQrData(null)}
+                mode="signup"
+              />
 
               <div className="space-y-2">
                 <Label htmlFor="signup-community">{t('auth.communityLabel')}</Label>

@@ -2463,6 +2463,9 @@ export type Database = {
           total_ratings: number | null
           updated_at: string
           upi_id: string | null
+          upi_qr_payload: string | null
+          upi_qr_uploaded_at: string | null
+          upi_qr_url: string | null
           user_id: string | null
         }
         Insert: {
@@ -2493,6 +2496,9 @@ export type Database = {
           total_ratings?: number | null
           updated_at?: string
           upi_id?: string | null
+          upi_qr_payload?: string | null
+          upi_qr_uploaded_at?: string | null
+          upi_qr_url?: string | null
           user_id?: string | null
         }
         Update: {
@@ -2523,6 +2529,9 @@ export type Database = {
           total_ratings?: number | null
           updated_at?: string
           upi_id?: string | null
+          upi_qr_payload?: string | null
+          upi_qr_uploaded_at?: string | null
+          upi_qr_url?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -2592,6 +2601,9 @@ export type Database = {
           total_ratings: number | null
           updated_at: string
           upi_id: string | null
+          upi_qr_payload: string | null
+          upi_qr_uploaded_at: string | null
+          upi_qr_url: string | null
           user_id: string | null
         }
         SetofOptions: {
@@ -2674,6 +2686,9 @@ export type Database = {
               total_ratings: number | null
               updated_at: string
               upi_id: string | null
+              upi_qr_payload: string | null
+              upi_qr_uploaded_at: string | null
+              upi_qr_url: string | null
               user_id: string | null
             }
             SetofOptions: {
@@ -2713,6 +2728,9 @@ export type Database = {
               total_ratings: number | null
               updated_at: string
               upi_id: string | null
+              upi_qr_payload: string | null
+              upi_qr_uploaded_at: string | null
+              upi_qr_url: string | null
               user_id: string | null
             }
             SetofOptions: {
