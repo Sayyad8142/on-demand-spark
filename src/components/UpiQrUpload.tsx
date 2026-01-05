@@ -370,53 +370,54 @@ export default function UpiQrUpload({
 
       {/* Preview or Upload */}
       {previewUrl ? (
-        <div className="relative border rounded-lg p-3 bg-muted/30">
-          <div className="flex items-start gap-3">
+        <div className="border rounded-lg p-3 bg-muted/30 space-y-3">
+          <div className="flex items-center gap-3">
             <img
               src={previewUrl}
               alt="UPI QR Code"
-              className="w-20 h-20 object-contain rounded-md border bg-white"
+              className="w-16 h-16 object-contain rounded-md border bg-white flex-shrink-0"
             />
             <div className="flex-1 min-w-0">
-              <Badge variant="secondary" className="gap-1 mb-2">
+              <Badge variant="secondary" className="gap-1 text-xs">
                 <Check className="h-3 w-3" />
                 QR Uploaded
               </Badge>
               {extractedUpiId && (
-                <p className="text-sm text-muted-foreground truncate">
+                <p className="text-sm text-muted-foreground truncate mt-1">
                   {extractedUpiId}
                 </p>
               )}
-              <div className="flex gap-2 mt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                >
-                  {uploading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Upload className="h-3 w-3 mr-1" />
-                      Replace
-                    </>
-                  )}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRemoveQr}
-                  disabled={uploading}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="h-3 w-3 mr-1" />
-                  Remove
-                </Button>
-              </div>
             </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="flex-1"
+            >
+              {uploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Upload className="h-3 w-3 mr-1.5" />
+                  Replace
+                </>
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleRemoveQr}
+              disabled={uploading}
+              className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="h-3 w-3 mr-1.5" />
+              Remove
+            </Button>
           </div>
         </div>
       ) : (
