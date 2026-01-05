@@ -825,54 +825,65 @@ export default function Profile() {
         </div>
 
         <div className="px-4 mt-4 space-y-4">
-          {/* Payment Details Card */}
-          <Card className="border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <CreditCard className="w-5 h-5" />
-                Payment Details
-              </CardTitle>
-              <CardDescription>
-                Your UPI ID for receiving payments
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Current UPI ID Display */}
-              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Wallet className="w-5 h-5 text-primary" />
+          {/* Payment Details Collapsible */}
+          <Collapsible>
+            <Card className="border-0 shadow-lg">
+              <CollapsibleTrigger className="w-full">
+                <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <CreditCard className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-semibold text-sm">Payment Details</p>
+                      <p className="text-xs text-muted-foreground">
+                        {worker?.upi_id || "Tap to add UPI details"}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground transition-transform group-data-[state=open]:rotate-90" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground font-medium">UPI ID</p>
-                  <p className="font-semibold truncate">
-                    {worker?.upi_id || "Not set"}
-                  </p>
-                </div>
-              </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="pt-0 space-y-4 border-t">
+                  {/* Current UPI ID Display */}
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl mt-4">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Wallet className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground font-medium">UPI ID</p>
+                      <p className="font-semibold truncate">
+                        {worker?.upi_id || "Not set"}
+                      </p>
+                    </div>
+                  </div>
 
-              {/* UPI QR Upload */}
-              {!isGuestMode && worker && (
-                <UpiQrUpload
-                  currentUpiId={upiId}
-                  currentQrUrl={upiQrUrl}
-                  onUpiIdExtracted={(newUpiId) => {
-                    setUpiId(newUpiId);
-                  }}
-                  onQrRemoved={() => {
-                    setUpiQrUrl(null);
-                  }}
-                  mode="profile"
-                  workerId={worker.id}
-                />
-              )}
+                  {/* UPI QR Upload */}
+                  {!isGuestMode && worker && (
+                    <UpiQrUpload
+                      currentUpiId={upiId}
+                      currentQrUrl={upiQrUrl}
+                      onUpiIdExtracted={(newUpiId) => {
+                        setUpiId(newUpiId);
+                      }}
+                      onQrRemoved={() => {
+                        setUpiQrUrl(null);
+                      }}
+                      mode="profile"
+                      workerId={worker.id}
+                    />
+                  )}
 
-              {isGuestMode && (
-                <div className="text-center py-4 text-muted-foreground text-sm">
-                  Sign in to manage your payment details
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  {isGuestMode && (
+                    <div className="text-center py-4 text-muted-foreground text-sm">
+                      Sign in to manage your payment details
+                    </div>
+                  )}
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
           {/* Rating Breakdown + Customer Reviews Combined */}
           {reviews.length > 0 && (
             <Card className="border-0 shadow-lg">
