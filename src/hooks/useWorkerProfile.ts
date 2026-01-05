@@ -148,9 +148,18 @@ export function useWorkerProfile(userId: string | undefined) {
 
     try {
       console.log('📝 Updating worker:', worker.id, 'with:', updates);
+      
+      // Ensure user_id is set to current auth user to satisfy RLS
+      const { data: { user } } = await supabase.auth.getUser();
+      const updatePayload = {
+        ...updates,
+        user_id: user?.id || worker.user_id, // Always set user_id to current auth user
+        updated_at: new Date().toISOString()
+      };
+      
       const { error } = await supabase
         .from('workers')
-        .update({ ...updates, updated_at: new Date().toISOString() })
+        .update(updatePayload)
         .eq('id', worker.id);
 
       if (error) throw error;
