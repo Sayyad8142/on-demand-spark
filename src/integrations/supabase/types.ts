@@ -400,7 +400,11 @@ export type Database = {
           maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
           notes: string | null
           on_the_way_at: string | null
+          paid_confirmed_at: string | null
+          paid_confirmed_by_user: boolean | null
           pay_enabled_at: string | null
+          payment_method: string | null
+          payment_status: string | null
           payout_amount: number | null
           prealert_sent: boolean
           price_inr: number | null
@@ -450,7 +454,11 @@ export type Database = {
           maid_tasks?: Database["public"]["Enums"]["maid_task"][] | null
           notes?: string | null
           on_the_way_at?: string | null
+          paid_confirmed_at?: string | null
+          paid_confirmed_by_user?: boolean | null
           pay_enabled_at?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
           payout_amount?: number | null
           prealert_sent?: boolean
           price_inr?: number | null
@@ -500,7 +508,11 @@ export type Database = {
           maid_tasks?: Database["public"]["Enums"]["maid_task"][] | null
           notes?: string | null
           on_the_way_at?: string | null
+          paid_confirmed_at?: string | null
+          paid_confirmed_by_user?: boolean | null
           pay_enabled_at?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
           payout_amount?: number | null
           prealert_sent?: boolean
           price_inr?: number | null
@@ -2793,7 +2805,11 @@ export type Database = {
               maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
               notes: string | null
               on_the_way_at: string | null
+              paid_confirmed_at: string | null
+              paid_confirmed_by_user: boolean | null
               pay_enabled_at: string | null
+              payment_method: string | null
+              payment_status: string | null
               payout_amount: number | null
               prealert_sent: boolean
               price_inr: number | null
@@ -3361,7 +3377,11 @@ export type Database = {
           maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
           notes: string | null
           on_the_way_at: string | null
+          paid_confirmed_at: string | null
+          paid_confirmed_by_user: boolean | null
           pay_enabled_at: string | null
+          payment_method: string | null
+          payment_status: string | null
           payout_amount: number | null
           prealert_sent: boolean
           price_inr: number | null
