@@ -88,8 +88,8 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
   };
 
   return (
-    <div className="fixed bottom-16 left-0 right-0 z-10 bg-gradient-to-t from-background via-background to-background/95 backdrop-blur-sm border-t border-border shadow-lg">
-      <div className="px-3 py-2">
+    <div className="fixed bottom-16 left-0 right-0 z-10 bg-gradient-to-t from-background via-background to-background/95 backdrop-blur-sm border-t border-border shadow-lg safe-area-inset-bottom">
+      <div className="px-3 py-2 pb-3">
         <div className="flex items-center justify-center gap-2 mb-2">
           <Calendar className="h-4 w-4 text-primary" />
           <span className="text-sm font-semibold text-foreground">
@@ -97,27 +97,34 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
           </span>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div 
+          className="flex gap-2 overflow-x-auto pb-1" 
+          style={{ 
+            scrollbarWidth: 'none', 
+            msOverflowStyle: 'none',
+            WebkitOverflowScrolling: 'touch'
+          }}
+        >
           {bookings.map((booking) => {
             const price = booking.price_inr ?? booking.payout_amount;
 
             return (
               <div
                 key={booking.booking_id}
-                className="flex-shrink-0 bg-card border border-border rounded-lg px-3 py-2 flex items-center gap-2 shadow-sm"
+                className="flex-shrink-0 min-w-[140px] bg-card border border-border rounded-lg px-3 py-2 flex items-center gap-2 shadow-sm"
               >
-                <span className="text-xs font-bold text-primary">
+                <span className="text-xs font-bold text-primary whitespace-nowrap">
                   {formatDate(booking.scheduled_date)}
                 </span>
                 <div className="flex items-center gap-1 text-muted-foreground">
-                  <Clock className="h-3 w-3" />
-                  <span className="text-xs">
+                  <Clock className="h-3 w-3 flex-shrink-0" />
+                  <span className="text-xs whitespace-nowrap">
                     {formatTime(booking.scheduled_time)}
                   </span>
                 </div>
                 {price !== null && price !== undefined && (
-                  <span className="text-xs font-bold text-green-600 flex items-center">
-                    <IndianRupee className="h-3 w-3" />
+                  <span className="text-xs font-bold text-green-600 flex items-center whitespace-nowrap">
+                    <IndianRupee className="h-3 w-3 flex-shrink-0" />
                     {price}
                   </span>
                 )}
