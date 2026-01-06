@@ -189,7 +189,7 @@ export default function UpiQrUpload({
         });
       }
     } catch (error: any) {
-      console.error("QR processing error:", error);
+      console.error("QR processing / upload error:", error);
 
       // Revert preview if save failed in profile mode (avoid false "uploaded" UI)
       if (mode === "profile") {
@@ -199,7 +199,10 @@ export default function UpiQrUpload({
 
       toast({
         title: mode === "profile" ? "Upload Failed" : "Error",
-        description: error?.message || "Failed to process QR image",
+        description:
+          typeof error?.message === "string"
+            ? error.message
+            : JSON.stringify(error, null, 2),
         variant: "destructive",
       });
     } finally {
@@ -241,7 +244,11 @@ export default function UpiQrUpload({
         contentType: file.type,
       });
 
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      throw new Error(
+        `Storage upload failed: ${uploadError.message || "unknown error"}`
+      );
+    }
 
     const {
       data: { publicUrl },
@@ -262,7 +269,11 @@ export default function UpiQrUpload({
       .select("id")
       .single();
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      throw new Error(
+        `Profile update failed: ${updateError.message || "unknown error"}`
+      );
+    }
 
     setPreviewUrl(publicUrl);
     setIsSaved(true);
