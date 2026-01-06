@@ -371,6 +371,22 @@ export default function Auth() {
                 mode="signup"
               />
 
+              {/* Manual UPI ID Input */}
+              <div className="space-y-2">
+                <Label htmlFor="signup-upi">{t('auth.upiIdLabel', 'UPI ID')} ({t('common.optional', 'Optional')})</Label>
+                <Input 
+                  id="signup-upi" 
+                  type="text" 
+                  placeholder={t('auth.upiPlaceholder', 'e.g., name@paytm')} 
+                  value={signUpUpiId} 
+                  onChange={e => setSignUpUpiId(e.target.value)} 
+                  disabled={loading} 
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('auth.upiHint', 'Enter manually if QR scan didn\'t detect it')}
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="signup-community">{t('auth.communityLabel')}</Label>
                 <Select value={signUpCommunity} onValueChange={setSignUpCommunity} disabled={loading}>
