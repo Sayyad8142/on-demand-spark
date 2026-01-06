@@ -574,6 +574,23 @@ export default function Profile() {
                       <CreditCard className="w-4 h-4" />
                       Payment Details
                     </Label>
+                    
+                    {/* Manual UPI ID Input */}
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-upi">{t('auth.upiIdLabel', 'UPI ID')} ({t('common.optional', 'Optional')})</Label>
+                      <Input 
+                        id="edit-upi" 
+                        type="text" 
+                        placeholder={t('auth.upiPlaceholder', 'e.g., name@paytm')} 
+                        value={upiId} 
+                        onChange={e => setUpiId(e.target.value)} 
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {t('auth.upiHint', 'Enter manually if QR scan didn\'t detect it')}
+                      </p>
+                    </div>
+
+                    {/* UPI QR Upload */}
                     {!isGuestMode && worker && (
                       <UpiQrUpload 
                         currentUpiId={upiId} 
