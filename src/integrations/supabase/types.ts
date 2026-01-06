@@ -2585,45 +2585,7 @@ export type Database = {
       accept_booking: { Args: { p_booking_id: string }; Returns: Json }
       admin_approve_worker_registration: {
         Args: { p_photo_url?: string; p_request_id: string }
-        Returns: {
-          communities: string[] | null
-          community: string | null
-          cook_cuisine_tags: string[]
-          created_at: string
-          fcm_token: string | null
-          full_name: string
-          id: string
-          in_geofence: boolean | null
-          is_active: boolean
-          is_available: boolean | null
-          is_busy: boolean | null
-          last_active_at: string | null
-          last_lat: number | null
-          last_lng: number | null
-          last_seen_at: string | null
-          location_enabled: boolean | null
-          phone: string
-          photo_url: string | null
-          rating: number | null
-          respect_availability: boolean | null
-          selected_community_id: string | null
-          service_types: string[]
-          timezone: string | null
-          total_earnings: number | null
-          total_ratings: number | null
-          updated_at: string
-          upi_id: string | null
-          upi_qr_payload: string | null
-          upi_qr_uploaded_at: string | null
-          upi_qr_url: string | null
-          user_id: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "workers"
-          isOneToOne: true
-          isSetofReturn: false
-        }
+        Returns: undefined
       }
       admin_cancel_booking: {
         Args: { p_booking_id: string; p_reason: string }
