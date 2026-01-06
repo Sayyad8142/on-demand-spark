@@ -229,14 +229,16 @@ export default function UpiQrUpload({
     }
 
     // Upload new QR
-    // IMPORTANT: path must be `${auth.uid()}/${Date.now()}.png`
-    const filePath = `${user.id}/${Date.now()}.png`;
+    // IMPORTANT: path must be `${auth.uid()}/...` to satisfy Storage RLS
+    // Use a stable name so "Replace" overwrites instead of creating endless files.
+    const filePath = `${user.id}/upi-qr.png`;
 
     const { error: uploadError } = await supabase.storage
       .from("worker-upi-qr")
       .upload(filePath, file, {
         cacheControl: "3600",
-        upsert: false,
+        upsert: true,
+        contentType: file.type,
       });
 
     if (uploadError) throw uploadError;
@@ -246,6 +248,7 @@ export default function UpiQrUpload({
     } = supabase.storage.from("worker-upi-qr").getPublicUrl(filePath);
 
     // Update worker profile (must persist QR metadata)
+    const workerMatchId = workerId ?? user.id;
     const { error: updateError } = await supabase
       .from("workers")
       .update({
@@ -255,7 +258,7 @@ export default function UpiQrUpload({
         upi_qr_payload: payload,
         upi_qr_uploaded_at: new Date().toISOString(),
       })
-      .eq("user_id", user.id)
+      .eq("id", workerMatchId)
       .select("id")
       .single();
 
@@ -356,6 +359,7 @@ export default function UpiQrUpload({
         }
 
         // Update worker profile
+        const workerMatchId = workerId ?? user.id;
         const { error } = await supabase
           .from("workers")
           .update({
@@ -364,7 +368,7 @@ export default function UpiQrUpload({
             upi_qr_payload: null,
             upi_qr_uploaded_at: null,
           })
-          .eq("user_id", user.id)
+          .eq("id", workerMatchId)
           .select("id")
           .single();
 
