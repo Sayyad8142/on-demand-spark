@@ -2,3 +2,6 @@ project_id = "paywwbuqycovjopryele"
 
 [functions.check-scheduled-bookings]
 verify_jwt = false
+
+[functions.admin-upload-qr]
+verify_jwt = false
