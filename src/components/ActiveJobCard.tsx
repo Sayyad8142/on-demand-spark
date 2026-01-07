@@ -38,31 +38,35 @@ export default function ActiveJobCard({
   
   return <Card className="shadow-lg overflow-hidden border-0">
       <div className="p-4 space-y-3">
-        {/* 1. Flat Number Display */}
-        <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-sm">
-          <div className="text-center mb-4">
-            <p className="font-extrabold text-green-500 text-4xl tracking-tight">Flat no {booking.flat_no}</p>
+        {/* 1. Flat Number Display - Wooden Door Style */}
+        <div className="flat-door-style p-5">
+          <div className="text-center mb-4 relative z-10">
+            <p className="flat-number-text font-extrabold text-4xl tracking-wide uppercase">
+              Flat no {booking.flat_no}
+            </p>
           </div>
-          {phfParsed && <div className="grid grid-cols-3 gap-3">
+          {phfParsed && (
+            <div className="grid grid-cols-3 gap-3 relative z-10">
               <div className="text-center">
-                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">TOWER</p>
-                <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
-                  <p className="text-3xl font-extrabold text-green-500">{phfParsed.tower}</p>
+                <p className="text-[10px] font-bold text-[#D6B88A] mb-2 tracking-wider">TOWER</p>
+                <div className="bg-[#5A3423] rounded-xl py-4 shadow-inner border-2 border-[#D6B88A]/50">
+                  <p className="text-3xl font-extrabold flat-number-text">{phfParsed.tower}</p>
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">FLOOR</p>
-                <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
-                  <p className="text-3xl font-extrabold text-green-500">{phfParsed.floor}</p>
+                <p className="text-[10px] font-bold text-[#D6B88A] mb-2 tracking-wider">FLOOR</p>
+                <div className="bg-[#5A3423] rounded-xl py-4 shadow-inner border-2 border-[#D6B88A]/50">
+                  <p className="text-3xl font-extrabold flat-number-text">{phfParsed.floor}</p>
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2 tracking-wider">DOOR</p>
-                <div className="bg-white dark:bg-gray-800 rounded-xl py-4 shadow-md border-2 border-gray-100 dark:border-gray-700">
-                  <p className="text-3xl font-extrabold text-green-500">{phfParsed.door}</p>
+                <p className="text-[10px] font-bold text-[#D6B88A] mb-2 tracking-wider">DOOR</p>
+                <div className="bg-[#5A3423] rounded-xl py-4 shadow-inner border-2 border-[#D6B88A]/50">
+                  <p className="text-3xl font-extrabold flat-number-text">{phfParsed.door}</p>
                 </div>
               </div>
-            </div>}
+            </div>
+          )}
         </div>
 
         {/* 2. Earnings */}
