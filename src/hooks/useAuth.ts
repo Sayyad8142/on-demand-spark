@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Capacitor } from '@capacitor/core';
@@ -15,7 +15,6 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const initRef = useRef(false);
 
   // Log storage debug info on mount
   useEffect(() => {
@@ -33,10 +32,6 @@ export function useAuth() {
   }, []);
 
   useEffect(() => {
-    // Prevent double initialization in React Strict Mode
-    if (initRef.current) return;
-    initRef.current = true;
-    
     let mounted = true;
     
     const initAuth = async () => {
@@ -145,6 +140,7 @@ export function useAuth() {
       clearInterval(intervalId);
     };
   }, []);
+
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
