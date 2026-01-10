@@ -88,7 +88,7 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
   };
 
   return (
-    <div className="fixed bottom-20 left-0 right-0 z-10 bg-gradient-to-t from-background via-background to-background/95 backdrop-blur-sm border-t border-border shadow-lg safe-area-inset-bottom">
+    <div className="fixed bottom-24 left-0 right-0 z-10 bg-gradient-to-t from-background via-background to-background/95 backdrop-blur-sm border-t border-border shadow-lg safe-area-inset-bottom">
       <div className="px-3 py-3 pb-4">
         <div className="flex items-center justify-center gap-2 mb-2">
           <Calendar className="h-4 w-4 text-primary" />
