@@ -68,22 +68,54 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Get FCM tokens for these workers
-    const { data: tokens, error: tokenError } = await supabase
+    // Get FCM tokens from fcm_tokens table
+    const { data: fcmTokens, error: tokenError } = await supabase
       .from("fcm_tokens")
       .select("token, user_id")
       .in("user_id", workerIds);
 
     if (tokenError) {
-      console.error("Error fetching tokens:", tokenError);
-      return new Response(
-        JSON.stringify({ error: "Failed to fetch tokens" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      console.error("Error fetching tokens from fcm_tokens:", tokenError);
     }
 
-    if (!tokens || tokens.length === 0) {
+    // Also get FCM tokens from workers table (fallback)
+    const { data: workerTokens, error: workerError } = await supabase
+      .from("workers")
+      .select("id, user_id, fcm_token")
+      .in("user_id", workerIds)
+      .not("fcm_token", "is", null);
+
+    if (workerError) {
+      console.error("Error fetching tokens from workers:", workerError);
+    }
+
+    // Merge tokens, preferring fcm_tokens table but falling back to workers table
+    const tokenMap = new Map<string, string>();
+    
+    // First add tokens from workers table
+    if (workerTokens) {
+      for (const w of workerTokens) {
+        if (w.fcm_token && w.user_id) {
+          tokenMap.set(w.user_id, w.fcm_token);
+        }
+      }
+    }
+    
+    // Then override with tokens from fcm_tokens table (preferred)
+    if (fcmTokens) {
+      for (const t of fcmTokens) {
+        if (t.token && t.user_id) {
+          tokenMap.set(t.user_id, t.token);
+        }
+      }
+    }
+
+    const tokens = Array.from(tokenMap.entries()).map(([user_id, token]) => ({ user_id, token }));
+
+    if (tokens.length === 0) {
       console.log("⚠️ No FCM tokens found for workers:", workerIds);
+      console.log("   Checked fcm_tokens table:", fcmTokens?.length || 0);
+      console.log("   Checked workers table:", workerTokens?.length || 0);
       return new Response(
         JSON.stringify({ error: "No tokens found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
