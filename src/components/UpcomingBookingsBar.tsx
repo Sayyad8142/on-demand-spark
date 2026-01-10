@@ -102,7 +102,7 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
           return (
             <div
               key={booking.booking_id}
-              className="flex-shrink-0 bg-primary/10 rounded-full px-3 py-1.5 flex items-center gap-2"
+              className="flex-shrink-0 bg-background border border-foreground rounded-full px-3 py-1.5 flex items-center gap-2"
             >
               <span className="text-xs font-semibold text-primary whitespace-nowrap">
                 {formatDate(booking.scheduled_date)}
