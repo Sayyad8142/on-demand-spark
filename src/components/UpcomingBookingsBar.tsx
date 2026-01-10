@@ -87,7 +87,7 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
   };
 
   return (
-    <div className="fixed bottom-16 left-0 right-0 z-10 safe-area-inset-bottom">
+    <div className="fixed bottom-[72px] left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-border">
       <div 
         className="flex gap-2 overflow-x-auto px-3 py-2" 
         style={{ 
