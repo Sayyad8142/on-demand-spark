@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Capacitor } from '@capacitor/core';
-import { capacitorStorage } from './capacitorStorage';
+import { capacitorStorage, getRawSessionFromStorage } from './capacitorStorage';
 import { Session } from '@supabase/supabase-js';
 
 // @ts-ignore - Capacitor bridge
@@ -11,6 +11,25 @@ let isRefreshing = false;
 let refreshPromise: Promise<Session | null> | null = null;
 let lastRefreshTime = 0;
 const MIN_REFRESH_INTERVAL = 10000; // 10 seconds minimum between refreshes
+
+// Flag to track intentional logout - ONLY set when user explicitly logs out
+let isIntentionalLogout = false;
+
+/**
+ * Mark that user is intentionally logging out
+ * This prevents recovery attempts during explicit logout
+ */
+export function setIntentionalLogout(value: boolean): void {
+  isIntentionalLogout = value;
+  console.log(`🚪 Intentional logout flag set to: ${value}`);
+}
+
+/**
+ * Check if logout was intentional
+ */
+export function wasIntentionalLogout(): boolean {
+  return isIntentionalLogout;
+}
 
 /**
  * Save session data to native storage for overlay access
@@ -67,24 +86,104 @@ export async function saveJWTToNative(token: string): Promise<boolean> {
 
 /**
  * Clear all session data from native storage
+ * ONLY call this during intentional logout!
  */
 export async function clearNativeSession(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   
+  // Safety check - only clear if logout was intentional
+  if (!isIntentionalLogout) {
+    console.warn('⚠️ clearNativeSession called but logout was NOT intentional - skipping clear');
+    return;
+  }
+  
   try {
     await capacitorStorage.removeItem('didi_session');
+    await capacitorStorage.removeItem('didi-worker-session');
     if (AuthBridge) {
       await AuthBridge.clearToken();
     }
-    console.log('🗑️ Native session cleared');
+    console.log('🗑️ Native session cleared (intentional logout)');
   } catch (error) {
     console.error('❌ Failed to clear native session:', error);
   }
 }
 
 /**
+ * Force clear session - use with extreme caution, only for dev/debug
+ */
+export async function forceClearNativeSession(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return;
+  
+  console.warn('⚠️ FORCE clearing native session');
+  
+  try {
+    await capacitorStorage.removeItem('didi_session');
+    await capacitorStorage.removeItem('didi-worker-session');
+    if (AuthBridge) {
+      await AuthBridge.clearToken();
+    }
+    console.log('🗑️ Native session force cleared');
+  } catch (error) {
+    console.error('❌ Failed to force clear native session:', error);
+  }
+}
+
+/**
+ * Try to restore session from persistent storage
+ * Used when we get a transient SIGNED_OUT event
+ */
+export async function tryRestoreSessionFromStorage(): Promise<Session | null> {
+  if (!Capacitor.isNativePlatform()) return null;
+  
+  try {
+    const rawSession = await getRawSessionFromStorage();
+    if (!rawSession) {
+      console.log('ℹ️ No raw session in storage to restore');
+      return null;
+    }
+    
+    // Parse the stored session
+    const parsed = JSON.parse(rawSession);
+    
+    // The stored format from Supabase is different - it has access_token, refresh_token, etc.
+    if (parsed?.access_token && parsed?.refresh_token) {
+      console.log('🔄 Attempting to restore session from storage...');
+      
+      // Try to set the session in Supabase
+      const { data, error } = await supabase.auth.setSession({
+        access_token: parsed.access_token,
+        refresh_token: parsed.refresh_token,
+      });
+      
+      if (error) {
+        console.error('❌ Failed to restore session:', error);
+        // Don't return null - we still have the stored tokens
+        // Try refresh instead
+        return await safeRefreshSession();
+      }
+      
+      if (data.session) {
+        console.log('✅ Session restored from storage');
+        await saveSessionToNative(data.session);
+        if (data.session.access_token) {
+          await saveJWTToNative(data.session.access_token);
+        }
+        return data.session;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('❌ Error restoring session:', error);
+    return null;
+  }
+}
+
+/**
  * Safely refresh the session with lock to prevent concurrent refreshes
  * This prevents the "refresh_token_already_used" error
+ * NEVER triggers logout on failure - always returns current/stored session
  */
 export async function safeRefreshSession(): Promise<Session | null> {
   const now = Date.now();
@@ -114,15 +213,16 @@ export async function safeRefreshSession(): Promise<Session | null> {
       
       if (currentError) {
         console.error('❌ Error getting current session:', currentError);
-        return null;
+        // DON'T return null - try to restore from storage
+        return await tryRestoreSessionFromStorage();
       }
       
       const currentSession = currentData.session;
       
-      // If no session, nothing to refresh
+      // If no session in memory, try to restore from storage
       if (!currentSession) {
-        console.log('ℹ️ No session to refresh');
-        return null;
+        console.log('ℹ️ No session in memory, trying storage restore...');
+        return await tryRestoreSessionFromStorage();
       }
       
       // Check if token is still valid (more than 5 minutes remaining)
@@ -159,9 +259,16 @@ export async function safeRefreshSession(): Promise<Session | null> {
             }
             return retryData.session;
           }
+          
+          // Still no session - try storage restore as last resort
+          console.log('🔄 Trying storage restore after refresh conflict...');
+          return await tryRestoreSessionFromStorage();
         }
         
-        return currentSession; // Return current session even if refresh failed
+        // Network error or other transient issue - return current session
+        // DO NOT logout on refresh failure
+        console.log('⚠️ Refresh failed but keeping current session');
+        return currentSession;
       }
       
       if (refreshData.session) {
@@ -176,9 +283,14 @@ export async function safeRefreshSession(): Promise<Session | null> {
       return currentSession;
     } catch (error) {
       console.error('❌ Unexpected refresh error:', error);
-      // Try to return current session on error
-      const { data } = await supabase.auth.getSession();
-      return data.session;
+      // Try to return current session on error - NEVER logout
+      try {
+        const { data } = await supabase.auth.getSession();
+        return data.session;
+      } catch {
+        // Last resort - try storage
+        return await tryRestoreSessionFromStorage();
+      }
     } finally {
       isRefreshing = false;
       refreshPromise = null;
@@ -198,4 +310,44 @@ export function sessionNeedsRefresh(session: Session | null): boolean {
   const tenMinutes = 10 * 60 * 1000;
   
   return Date.now() > expiresAt - tenMinutes;
+}
+
+/**
+ * Ensure we have a valid session for API calls
+ * Returns true if session is valid, false if not
+ * NEVER triggers logout - just returns status
+ */
+export async function ensureValidSessionForApiCall(): Promise<boolean> {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error('❌ Error checking session for API call:', error);
+      // Try refresh
+      const refreshed = await safeRefreshSession();
+      return !!refreshed;
+    }
+    
+    if (!session) {
+      console.error('❌ No session for API call');
+      // Try restore from storage
+      const restored = await tryRestoreSessionFromStorage();
+      return !!restored;
+    }
+    
+    // Check if token is about to expire (within 2 minutes)
+    const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
+    const twoMinutes = 2 * 60 * 1000;
+    
+    if (Date.now() > expiresAt - twoMinutes) {
+      console.log('🔄 Token expiring soon, refreshing before API call...');
+      const refreshed = await safeRefreshSession();
+      return !!refreshed;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Error ensuring session:', error);
+    return false;
+  }
 }

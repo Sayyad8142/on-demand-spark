@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { supabase } from "@/integrations/supabase/client";
+import { setIntentionalLogout, forceClearNativeSession } from "@/lib/sessionManager";
+import { Capacitor } from "@capacitor/core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -387,13 +389,23 @@ export default function Profile() {
         return;
       }
 
+      // Mark this as intentional logout BEFORE calling signOut
+      setIntentionalLogout(true);
+      console.log("🚪 User initiated logout from Profile page");
+
       // Handle regular user logout
-      const {
-        error
-      } = await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+
+      // Force clear native session on intentional logout
+      if (Capacitor.isNativePlatform()) {
+        await forceClearNativeSession();
+      }
 
       // Clear local storage regardless of error
       localStorage.clear();
+
+      // Reset the flag
+      setIntentionalLogout(false);
 
       // Navigate to auth page regardless of error
       navigate("/auth");
@@ -413,6 +425,12 @@ export default function Profile() {
       }
     } catch (error: any) {
       console.error('Logout exception:', error);
+      // Reset the flag
+      setIntentionalLogout(false);
+      // Force clear on native
+      if (Capacitor.isNativePlatform()) {
+        await forceClearNativeSession();
+      }
       // Clear storage and navigate even on exception
       localStorage.clear();
       navigate("/auth");
@@ -438,8 +456,20 @@ export default function Profile() {
         error: authError
       } = await supabase.auth.admin.deleteUser(user.id);
 
+      // Mark as intentional logout before signing out
+      setIntentionalLogout(true);
+      
       // Sign out (even if delete fails, we should sign out)
       await supabase.auth.signOut();
+      
+      // Force clear native session
+      if (Capacitor.isNativePlatform()) {
+        await forceClearNativeSession();
+      }
+      
+      // Reset flag
+      setIntentionalLogout(false);
+      
       toast({
         title: "Account Deleted",
         description: "Your account has been permanently deleted"
