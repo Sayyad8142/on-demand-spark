@@ -7,6 +7,15 @@ let memoryCache: Record<string, string> = {};
 let initialized = false;
 let initializationPromise: Promise<void> | null = null;
 
+// Debug mode - set to true for verbose logging
+const DEBUG_STORAGE = false;
+
+const log = (...args: any[]) => {
+  if (DEBUG_STORAGE && Capacitor.isNativePlatform()) {
+    console.log(...args);
+  }
+};
+
 // Synchronous getItem for Supabase - returns from memory cache immediately
 // This is critical because Supabase auth calls getItem synchronously on startup
 const getItemSync = (key: string): string | null => {
@@ -46,7 +55,7 @@ export const initializeStorageCache = async (): Promise<void> => {
             memoryCache[key] = value;
             console.log(`✅ Loaded ${key} into memory cache (${value.length} chars)`);
           } else {
-            console.log(`ℹ️ No value found for ${key}`);
+            log(`ℹ️ No value found for ${key}`);
           }
         } catch (e) {
           console.error(`❌ Failed to load ${key}:`, e);
@@ -81,6 +90,21 @@ export const reloadSessionFromStorage = async (): Promise<void> => {
   }
 };
 
+// Get raw session from persistent storage (for recovery)
+export const getRawSessionFromStorage = async (): Promise<string | null> => {
+  if (!Capacitor.isNativePlatform()) {
+    return localStorage.getItem('didi-worker-session');
+  }
+  
+  try {
+    const { value } = await Preferences.get({ key: 'didi-worker-session' });
+    return value;
+  } catch (error) {
+    console.error('❌ Failed to get raw session:', error);
+    return null;
+  }
+};
+
 // Check if storage has been initialized
 export const isStorageInitialized = (): boolean => initialized;
 
@@ -90,43 +114,59 @@ export const getStorageCacheDebug = (): { keys: string[]; initialized: boolean }
   initialized
 });
 
+// Safely parse JSON without throwing
+const safeJsonParse = (value: string, key: string): any => {
+  try {
+    return JSON.parse(value);
+  } catch (e) {
+    console.error(`⚠️ JSON parse error for ${key}, keeping raw value:`, e);
+    // Don't clear - keep raw value for debugging
+    return null;
+  }
+};
+
 export const capacitorStorage = {
   // Supabase calls this synchronously, so we MUST return synchronously from cache
   getItem(key: string): string | null {
     const value = getItemSync(key);
-    if (Capacitor.isNativePlatform()) {
-      console.log(`📖 Storage GET [${key}]: ${value ? 'found' : 'not found'} (init: ${initialized})`);
-    }
+    log(`📖 Storage GET [${key}]: ${value ? 'found' : 'not found'} (init: ${initialized})`);
     return value;
   },
   
   async setItem(key: string, value: string): Promise<void> {
     try {
       if (Capacitor.isNativePlatform()) {
+        // Validate JSON before storing (Supabase session is JSON)
+        if (value) {
+          safeJsonParse(value, key); // Just validate, don't need result
+        }
+        
         // Update memory cache immediately for sync access
         memoryCache[key] = value;
         
         // Persist to storage asynchronously
         await Preferences.set({ key, value });
         
-        console.log(`✅ Storage SET [${key}] (${value.length} chars)`);
+        log(`✅ Storage SET [${key}] (${value.length} chars)`);
       } else {
         localStorage.setItem(key, value);
       }
     } catch (error) {
       console.error(`❌ Storage SET error [${key}]:`, error);
-      throw error;
+      // Don't throw - storage errors shouldn't crash the app
     }
   },
   
   async removeItem(key: string): Promise<void> {
     try {
       if (Capacitor.isNativePlatform()) {
+        // Log the source of the removal for debugging
+        console.log(`🗑️ Storage REMOVE [${key}] called from:`, new Error().stack?.split('\n')[2]?.trim());
+        
         // Clear from memory cache immediately
         delete memoryCache[key];
         
         await Preferences.remove({ key });
-        console.log(`🗑️ Storage REMOVE [${key}]`);
       } else {
         localStorage.removeItem(key);
       }
