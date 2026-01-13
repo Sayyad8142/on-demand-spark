@@ -3,6 +3,7 @@ import { Capacitor } from '@capacitor/core';
 import { capacitorStorage, getRawSessionFromStorage } from './capacitorStorage';
 import { Session } from '@supabase/supabase-js';
 import { getIntentionalLogoutFlag, setIntentionalLogoutFlag } from './authIntent';
+import { authLog } from './authLogger';
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -12,6 +13,10 @@ let isRefreshing = false;
 let refreshPromise: Promise<Session | null> | null = null;
 let lastRefreshTime = 0;
 const MIN_REFRESH_INTERVAL = 10000; // 10 seconds minimum between refreshes
+
+// Lock for persistence operations to ensure atomicity
+let isPersisting = false;
+let persistPromise: Promise<boolean> | null = null;
 
 /**
  * Mark that user is intentionally logging out
@@ -27,6 +32,52 @@ export function setIntentionalLogout(value: boolean): void {
  */
 export function wasIntentionalLogout(): boolean {
   return getIntentionalLogoutFlag();
+}
+
+/**
+ * Atomically persist session to native storage
+ * Uses a lock to prevent overlapping writes
+ */
+export async function persistSessionAtomic(session: Session): Promise<boolean> {
+  if (!Capacitor.isNativePlatform() || !session) {
+    return false;
+  }
+  
+  // If already persisting, wait for that to complete
+  if (isPersisting && persistPromise) {
+    await persistPromise;
+    // After waiting, persist again to ensure our session is saved
+  }
+  
+  isPersisting = true;
+  
+  const doWork = async (): Promise<boolean> => {
+    try {
+      // Save full session to native storage
+      const saved = await saveSessionToNative(session);
+      
+      // Save JWT to AuthBridge
+      if (session.access_token) {
+        await saveJWTToNative(session.access_token);
+      }
+      
+      if (saved) {
+        authLog.tokenPersisted('session+jwt', true);
+      }
+      
+      return saved;
+    } catch (error) {
+      console.error('❌ Atomic persist failed:', error);
+      authLog.tokenPersisted('session+jwt', false);
+      return false;
+    } finally {
+      isPersisting = false;
+      persistPromise = null;
+    }
+  };
+  
+  persistPromise = doWork();
+  return persistPromise;
 }
 
 
@@ -135,10 +186,12 @@ export async function forceClearNativeSession(): Promise<void> {
 export async function tryRestoreSessionFromStorage(): Promise<Session | null> {
   if (!Capacitor.isNativePlatform()) return null;
   
+  authLog.restoreAttempt('persistent storage');
+  
   try {
     const rawSession = await getRawSessionFromStorage();
     if (!rawSession) {
-      console.log('ℹ️ No raw session in storage to restore');
+      authLog.restoreResult('persistent storage', false);
       return null;
     }
     
@@ -156,25 +209,22 @@ export async function tryRestoreSessionFromStorage(): Promise<Session | null> {
       });
       
       if (error) {
-        console.error('❌ Failed to restore session:', error);
-        // Don't return null - we still have the stored tokens
-        // Try refresh instead
+        authLog.refreshError(error.name || 'SET_SESSION', error.message);
+        // Don't return null - try refresh instead
         return await safeRefreshSession();
       }
       
       if (data.session) {
-        console.log('✅ Session restored from storage');
-        await saveSessionToNative(data.session);
-        if (data.session.access_token) {
-          await saveJWTToNative(data.session.access_token);
-        }
+        authLog.restoreResult('persistent storage', true, data.session.user?.id);
+        await persistSessionAtomic(data.session);
         return data.session;
       }
     }
     
+    authLog.restoreResult('persistent storage', false);
     return null;
-  } catch (error) {
-    console.error('❌ Error restoring session:', error);
+  } catch (error: any) {
+    authLog.refreshError('RESTORE', error?.message || String(error));
     return null;
   }
 }
@@ -205,13 +255,13 @@ export async function safeRefreshSession(): Promise<Session | null> {
   
   refreshPromise = (async () => {
     try {
-      console.log('🔄 Starting session refresh...');
+      authLog.refreshStart('manual refresh');
       
       // First, get the current session to check if it's still valid
       const { data: currentData, error: currentError } = await supabase.auth.getSession();
       
       if (currentError) {
-        console.error('❌ Error getting current session:', currentError);
+        authLog.refreshError('GET_SESSION', currentError.message);
         // DON'T return null - try to restore from storage
         return await tryRestoreSessionFromStorage();
       }
@@ -231,10 +281,7 @@ export async function safeRefreshSession(): Promise<Session | null> {
       if (expiresAt > now + fiveMinutes) {
         console.log('✅ Session still valid, no refresh needed');
         // Still save to native storage to ensure it's synced
-        await saveSessionToNative(currentSession);
-        if (currentSession.access_token) {
-          await saveJWTToNative(currentSession.access_token);
-        }
+        await persistSessionAtomic(currentSession);
         return currentSession;
       }
       
@@ -243,19 +290,21 @@ export async function safeRefreshSession(): Promise<Session | null> {
       const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
       
       if (refreshError) {
-        console.error('❌ Refresh error:', refreshError);
+        const errorCode = refreshError.message?.includes('refresh_token_already_used') 
+          ? 'REFRESH_TOKEN_ALREADY_USED'
+          : refreshError.message?.includes('Invalid Refresh Token')
+          ? 'INVALID_REFRESH_TOKEN'
+          : refreshError.name || 'REFRESH_ERROR';
+          
+        authLog.refreshError(errorCode, refreshError.message);
         
         // If refresh token was already used, try to get session again
         // Another tab/process might have refreshed it
-        if (refreshError.message?.includes('refresh_token_already_used') ||
-            refreshError.message?.includes('Invalid Refresh Token')) {
+        if (errorCode === 'REFRESH_TOKEN_ALREADY_USED' || errorCode === 'INVALID_REFRESH_TOKEN') {
           console.log('🔄 Refresh token conflict, trying getSession...');
           const { data: retryData } = await supabase.auth.getSession();
           if (retryData.session) {
-            await saveSessionToNative(retryData.session);
-            if (retryData.session.access_token) {
-              await saveJWTToNative(retryData.session.access_token);
-            }
+            await persistSessionAtomic(retryData.session);
             return retryData.session;
           }
           
@@ -271,17 +320,14 @@ export async function safeRefreshSession(): Promise<Session | null> {
       }
       
       if (refreshData.session) {
-        console.log('✅ Session refreshed successfully');
-        await saveSessionToNative(refreshData.session);
-        if (refreshData.session.access_token) {
-          await saveJWTToNative(refreshData.session.access_token);
-        }
+        authLog.refreshSuccess(refreshData.session.expires_at);
+        await persistSessionAtomic(refreshData.session);
         return refreshData.session;
       }
       
       return currentSession;
-    } catch (error) {
-      console.error('❌ Unexpected refresh error:', error);
+    } catch (error: any) {
+      authLog.refreshError('UNEXPECTED', error?.message || String(error));
       // Try to return current session on error - NEVER logout
       try {
         const { data } = await supabase.auth.getSession();

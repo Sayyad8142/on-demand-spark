@@ -2,17 +2,17 @@ import React, { createContext, useCallback, useEffect, useMemo, useRef, useState
 import type { Session, User } from "@supabase/supabase-js";
 import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
-import { getStorageCacheDebug, reloadSessionFromStorage } from "@/lib/capacitorStorage";
+import { getStorageCacheDebug, reloadSessionFromStorage, storageReadyPromise } from "@/lib/capacitorStorage";
 import {
   clearNativeSession,
   safeRefreshSession,
-  saveJWTToNative,
-  saveSessionToNative,
+  persistSessionAtomic,
   sessionNeedsRefresh,
   setIntentionalLogout,
   wasIntentionalLogout,
   tryRestoreSessionFromStorage,
 } from "@/lib/sessionManager";
+import { authLog } from "@/lib/authLogger";
 
 export type AuthContextValue = {
   user: User | null;
@@ -35,6 +35,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Track consecutive SIGNED_OUT events to prevent infinite loops
   const signedOutCountRef = useRef(0);
   const lastSignedOutTimeRef = useRef(0);
+  
+  // Track if initAuth has completed
+  const initCompletedRef = useRef(false);
 
   useEffect(() => {
     console.log("🔐 AuthProvider mounted, storage status:", getStorageCacheDebug());
@@ -54,7 +57,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const initAuth = async () => {
       try {
-        console.log("🔐 Initializing auth...");
+        authLog.initAuthStart();
+        
+        // CRITICAL: Wait for storage to be ready before proceeding
+        // This ensures the session is loaded into memory before we try to read it
+        if (Capacitor.isNativePlatform()) {
+          console.log("⏳ Waiting for storage ready...");
+          await storageReadyPromise;
+          console.log("✅ Storage ready, proceeding with auth init");
+        }
 
         // Get initial session with retry logic
         let retryCount = 0;
@@ -71,11 +82,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           currentSession = data.session;
           break;
         }
+        
+        authLog.initAuthSession(!!currentSession, currentSession?.user?.id);
 
-        // If no session in memory, try to restore from storage (native only)
+        // If no session in memory on native, ALWAYS try to restore before giving up
         if (!currentSession && Capacitor.isNativePlatform()) {
-          console.log("🔄 No session in memory, trying storage restore...");
-          currentSession = await tryRestoreSessionFromStorage();
+          console.log("🔄 No session in memory, trying full restore sequence...");
+          
+          // Step 1: Reload from persistent storage to ensure cache is fresh
+          await reloadSessionFromStorage();
+          
+          // Step 2: Try getSession again after reload
+          const { data: retryData } = await supabase.auth.getSession();
+          currentSession = retryData.session;
+          
+          if (!currentSession) {
+            // Step 3: Try to restore from raw storage
+            authLog.restoreAttempt('full restore sequence');
+            currentSession = await tryRestoreSessionFromStorage();
+            authLog.restoreResult('full restore sequence', !!currentSession, currentSession?.user?.id);
+          }
         }
 
         // If session exists but needs refresh, do it safely
@@ -83,28 +109,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log("🔄 Session needs refresh on init...");
           currentSession = await safeRefreshSession();
         } else if (currentSession) {
-          // Session is valid, just save to native storage
-          await saveSessionToNative(currentSession);
-          if (currentSession.access_token) {
-            await saveJWTToNative(currentSession.access_token);
-          }
+          // Session is valid, persist to native storage atomically
+          await persistSessionAtomic(currentSession);
         }
 
         if (mounted) {
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
           setLoading(false);
+          initCompletedRef.current = true;
 
           if (currentSession) {
-            console.log("✅ Session restored, user:", currentSession.user?.id);
+            authLog.routeDecision('/home', `session restored for ${currentSession.user?.id}`);
           } else {
-            console.log("ℹ️ No session found");
+            authLog.routeDecision('/auth', 'no session after full restore sequence');
           }
         }
       } catch (error) {
         console.error("❌ Auth initialization error:", error);
         if (mounted) {
           setLoading(false);
+          initCompletedRef.current = true;
         }
       }
     };
@@ -127,6 +152,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signedOutCountRef.current++;
         lastSignedOutTimeRef.current = now;
         
+        authLog.signedOutEvent(wasIntentionalLogout(), signedOutCountRef.current);
+        
         // If too many SIGNED_OUT events in short time, something is wrong.
         // Before giving up, try ONE last restore from persistent storage.
         if (signedOutCountRef.current > 3) {
@@ -142,10 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setUser(recovered.user);
                 setLoading(false);
 
-                await saveSessionToNative(recovered);
-                if (recovered.access_token) {
-                  await saveJWTToNative(recovered.access_token);
-                }
+                await persistSessionAtomic(recovered);
 
                 signedOutCountRef.current = 0;
                 return;
@@ -202,10 +226,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setUser(recovered.user);
               setLoading(false);
 
-              await saveSessionToNative(recovered);
-              if (recovered.access_token) {
-                await saveJWTToNative(recovered.access_token);
-              }
+              await persistSessionAtomic(recovered);
               
               // Reset counter on successful recovery
               signedOutCountRef.current = 0;
@@ -244,6 +265,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // For other events (SIGNED_IN, TOKEN_REFRESHED, etc.)
       if (event === "TOKEN_REFRESHED") {
         console.log("🔄 Token refreshed event received");
+        
+        // ATOMIC persistence - no setTimeout, await directly
+        if (newSession?.access_token && Capacitor.isNativePlatform()) {
+          await persistSessionAtomic(newSession);
+        }
       }
       
       // Update state
@@ -251,13 +277,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(newSession?.user ?? null);
       setLoading(false);
 
-      // Save to native storage asynchronously
-      if (newSession?.access_token && Capacitor.isNativePlatform()) {
-        // Use setTimeout to not block the auth state change
-        setTimeout(async () => {
-          await saveSessionToNative(newSession);
-          await saveJWTToNative(newSession.access_token);
-        }, 0);
+      // For SIGNED_IN, also persist atomically
+      if (event === "SIGNED_IN" && newSession?.access_token && Capacitor.isNativePlatform()) {
+        await persistSessionAtomic(newSession);
       }
     });
 
