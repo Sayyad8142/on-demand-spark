@@ -1,6 +1,6 @@
 import { Preferences } from '@capacitor/preferences';
 import { Capacitor } from '@capacitor/core';
-
+import { getIntentionalLogoutFlag } from './authIntent';
 // In-memory cache to provide synchronous access for Supabase auth
 // This solves the issue where Supabase expects sync storage but Capacitor is async
 let memoryCache: Record<string, string> = {};
@@ -160,12 +160,21 @@ export const capacitorStorage = {
   async removeItem(key: string): Promise<void> {
     try {
       if (Capacitor.isNativePlatform()) {
+        const source = new Error().stack?.split('\n')[2]?.trim();
+
+        // Supabase may call storage.removeItem() on transient SIGNED_OUT / refresh races.
+        // Never allow the persistent session to be deleted unless the user explicitly logged out.
+        if (key === 'didi-worker-session' && !getIntentionalLogoutFlag()) {
+          console.warn(`🛡️ Blocked Storage REMOVE [${key}] (not intentional logout). From:`, source);
+          return;
+        }
+
         // Log the source of the removal for debugging
-        console.log(`🗑️ Storage REMOVE [${key}] called from:`, new Error().stack?.split('\n')[2]?.trim());
-        
+        console.log(`🗑️ Storage REMOVE [${key}] called from:`, source);
+
         // Clear from memory cache immediately
         delete memoryCache[key];
-        
+
         await Preferences.remove({ key });
       } else {
         localStorage.removeItem(key);

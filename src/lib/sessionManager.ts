@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Capacitor } from '@capacitor/core';
 import { capacitorStorage, getRawSessionFromStorage } from './capacitorStorage';
 import { Session } from '@supabase/supabase-js';
+import { getIntentionalLogoutFlag, setIntentionalLogoutFlag } from './authIntent';
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -12,15 +13,12 @@ let refreshPromise: Promise<Session | null> | null = null;
 let lastRefreshTime = 0;
 const MIN_REFRESH_INTERVAL = 10000; // 10 seconds minimum between refreshes
 
-// Flag to track intentional logout - ONLY set when user explicitly logs out
-let isIntentionalLogout = false;
-
 /**
  * Mark that user is intentionally logging out
  * This prevents recovery attempts during explicit logout
  */
 export function setIntentionalLogout(value: boolean): void {
-  isIntentionalLogout = value;
+  setIntentionalLogoutFlag(value);
   console.log(`🚪 Intentional logout flag set to: ${value}`);
 }
 
@@ -28,8 +26,9 @@ export function setIntentionalLogout(value: boolean): void {
  * Check if logout was intentional
  */
 export function wasIntentionalLogout(): boolean {
-  return isIntentionalLogout;
+  return getIntentionalLogoutFlag();
 }
+
 
 /**
  * Save session data to native storage for overlay access
@@ -92,7 +91,7 @@ export async function clearNativeSession(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   
   // Safety check - only clear if logout was intentional
-  if (!isIntentionalLogout) {
+  if (!getIntentionalLogoutFlag()) {
     console.warn('⚠️ clearNativeSession called but logout was NOT intentional - skipping clear');
     return;
   }
