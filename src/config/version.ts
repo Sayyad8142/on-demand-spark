@@ -1,2 +1,2 @@
 // Current app version code - must match android/app/build.gradle versionCode
-export const CURRENT_VERSION_CODE = 30;
+export const CURRENT_VERSION_CODE = 31;
