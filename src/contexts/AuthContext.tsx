@@ -127,9 +127,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signedOutCountRef.current++;
         lastSignedOutTimeRef.current = now;
         
-        // If too many SIGNED_OUT events in short time, something is wrong - stop trying
+        // If too many SIGNED_OUT events in short time, something is wrong.
+        // Before giving up, try ONE last restore from persistent storage.
         if (signedOutCountRef.current > 3) {
-          console.error("⚠️ Too many SIGNED_OUT events, stopping recovery attempts");
+          console.error("⚠️ Too many SIGNED_OUT events, attempting last restore...");
+
+          if (Capacitor.isNativePlatform()) {
+            try {
+              await reloadSessionFromStorage();
+              const recovered = await tryRestoreSessionFromStorage();
+              if (recovered) {
+                console.log("♻️ Recovered session after repeated SIGNED_OUT events");
+                setSession(recovered);
+                setUser(recovered.user);
+                setLoading(false);
+
+                await saveSessionToNative(recovered);
+                if (recovered.access_token) {
+                  await saveJWTToNative(recovered.access_token);
+                }
+
+                signedOutCountRef.current = 0;
+                return;
+              }
+            } catch (e) {
+              console.error("❌ Last restore attempt failed:", e);
+            }
+          }
+
           setSession(null);
           setUser(null);
           setLoading(false);
