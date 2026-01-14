@@ -17,9 +17,9 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: capacitorStorage,
     persistSession: true,
 
-    // IMPORTANT: On native (Capacitor), we handle refresh ourselves via safeRefreshSession
-    // to avoid refresh-token rotation races that can cause unexpected SIGNED_OUT.
-    autoRefreshToken: !IS_NATIVE,
+    // Enable auto refresh on ALL platforms - supabase-js handles refresh properly
+    // We persist tokens on TOKEN_REFRESHED event via capacitorStorage
+    autoRefreshToken: true,
 
     storageKey: 'didi-worker-session',
 

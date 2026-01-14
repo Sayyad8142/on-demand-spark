@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
-import { safeRefreshSession, tryRestoreSessionFromStorage } from '@/lib/sessionManager';
+import { supabase } from '@/integrations/supabase/client';
 import { reloadSessionFromStorage } from '@/lib/capacitorStorage';
+import { persistSessionAtomic, tryRestoreSessionFromStorage } from '@/lib/sessionManager';
 
 /**
  * Hook to handle app lifecycle events (foreground/background)
- * Ensures JWT token is refreshed when app comes to foreground
- * Uses safeRefreshSession to prevent concurrent refresh attempts
+ * On resume, ensures storage cache is fresh and lets supabase-js handle refresh
  * NEVER triggers logout on any error
  */
 export function useAppState() {
@@ -24,44 +24,46 @@ export function useAppState() {
         if (isActive) {
           const now = Date.now();
           
-          // Debounce - don't handle if we just handled within 2 seconds
-          if (now - lastResumeTimeRef.current < 2000) {
+          // Debounce - don't handle if we just handled within 3 seconds
+          if (now - lastResumeTimeRef.current < 3000) {
             console.log('📱 App resume debounced (too soon)');
             return;
           }
           
           // Prevent concurrent handling
           if (isHandlingRef.current) {
-            console.log('📱 App state change already being handled, skipping...');
+            console.log('📱 App state change already being handled');
             return;
           }
           
           isHandlingRef.current = true;
           lastResumeTimeRef.current = now;
-          console.log('📱 App became active, ensuring session...');
+          console.log('📱 App became active, syncing session...');
           
           try {
-            // First, reload from persistent storage to ensure memory cache is fresh
+            // Reload from persistent storage to ensure memory cache is fresh
             await reloadSessionFromStorage();
             
-            // Then try safe refresh
-            let session = await safeRefreshSession();
+            // Just get the current session - supabase-js will auto-refresh if needed
+            const { data, error } = await supabase.auth.getSession();
             
-            // If no session from refresh, try restore from storage
-            if (!session) {
-              console.log('📱 No session from refresh, trying storage restore...');
-              session = await tryRestoreSessionFromStorage();
-            }
-            
-            if (session) {
-              console.log('✅ Session ready after app resume');
+            if (error) {
+              console.warn('⚠️ Error getting session on resume:', error);
+              // Try restore from storage
+              const restored = await tryRestoreSessionFromStorage();
+              if (restored) {
+                console.log('✅ Session restored on resume');
+              }
+            } else if (data.session) {
+              // Ensure native storage is in sync with latest tokens
+              await persistSessionAtomic(data.session);
+              console.log('✅ Session synced on resume');
             } else {
-              // Don't log as warning - user might genuinely be logged out
-              console.log('ℹ️ No session after app resume (user may not be logged in)');
+              console.log('ℹ️ No session on resume (user may not be logged in)');
             }
           } catch (error) {
             console.error('❌ Error handling app resume:', error);
-            // DON'T do anything drastic - just log the error
+            // Don't do anything drastic - just log
           } finally {
             isHandlingRef.current = false;
           }

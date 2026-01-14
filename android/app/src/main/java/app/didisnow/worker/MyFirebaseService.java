@@ -23,35 +23,17 @@ public class MyFirebaseService extends FirebaseMessagingService {
     Log.d(TAG, "═══════════════════════════════════════════════════════════");
     Log.d(TAG, "📩 FCM MESSAGE RECEIVED");
     Log.d(TAG, "═══════════════════════════════════════════════════════════");
-    Log.d(TAG, "📩 From: " + message.getFrom());
-    Log.d(TAG, "📩 Message ID: " + message.getMessageId());
     
-    // Log the FULL data payload for debugging
     Map<String, String> data = message.getData();
-    Log.d(TAG, "📦 FULL DATA PAYLOAD:");
-    for (Map.Entry<String, String> entry : data.entrySet()) {
-      Log.d(TAG, "   " + entry.getKey() + " = " + entry.getValue());
-    }
-    
-    if (message.getNotification() != null) {
-      Log.d(TAG, "📬 Notification payload present: " + message.getNotification().getTitle() + " - " + message.getNotification().getBody());
-    } else {
-      Log.d(TAG, "📬 No notification payload (data-only message) - GOOD for overlay!");
-    }
+    Log.d(TAG, "📦 DATA PAYLOAD: " + data.toString());
     
     String type = data.get("type");
-    String bookingType = data.get("booking_type"); // "instant" or "scheduled"
-    Log.d(TAG, "🏷️ Message type: " + type);
-    Log.d(TAG, "🏷️ Booking type: " + bookingType);
+    String bookingType = data.get("booking_type");
     
     try {
-      // Handle BOOKING_ALERT for BOTH instant AND scheduled bookings
       if ("BOOKING_ALERT".equals(type)) {
-        Log.d(TAG, "═══════════════════════════════════════════════════════════");
-        Log.d(TAG, "🚨 BOOKING_ALERT DETECTED - " + (bookingType != null ? bookingType.toUpperCase() : "UNKNOWN") + " BOOKING");
-        Log.d(TAG, "═══════════════════════════════════════════════════════════");
+        Log.d(TAG, "🚨 BOOKING_ALERT DETECTED");
         
-        // Get booking data - try both field names for compatibility
         String bookingId = data.get("bookingId");
         if (bookingId == null || bookingId.isEmpty()) {
           bookingId = data.get("booking_id");
@@ -64,12 +46,11 @@ public class MyFirebaseService extends FirebaseMessagingService {
           serviceType = data.get("service_type");
         }
 
-        // Flat number is intentionally sent as `flat_no` (location is blanked for privacy)
         String flatNo = data.get("flat_no");
         if (flatNo == null || flatNo.isEmpty()) {
-          flatNo = data.get("flatNo"); // legacy
+          flatNo = data.get("flatNo");
         }
-        String location = data.get("location"); // legacy/compat
+        String location = data.get("location");
         if ((flatNo == null || flatNo.isEmpty()) && location != null && !location.isEmpty()) {
           flatNo = location;
         }
@@ -85,7 +66,6 @@ public class MyFirebaseService extends FirebaseMessagingService {
         int price = 0;
         try {
           if (priceStr != null && !priceStr.isEmpty()) {
-            // Support values like "200", "200.0", "₹200"
             String normalized = priceStr.replaceAll("[^0-9.]", "");
             if (!normalized.isEmpty()) {
               if (normalized.contains(".")) {
@@ -99,42 +79,27 @@ public class MyFirebaseService extends FirebaseMessagingService {
           Log.w(TAG, "⚠️ Failed to parse price: " + priceStr, e);
         }
 
-        String scheduledTime = data.get("scheduled_time"); // Human-readable scheduled time
+        String scheduledTime = data.get("scheduled_time");
 
-        Log.d(TAG, "📋 BOOKING DETAILS:");
-        Log.d(TAG, "   ID: " + bookingId);
-        Log.d(TAG, "   Type: " + bookingType);
-        Log.d(TAG, "   Customer: " + customer);
-        Log.d(TAG, "   Community: " + community);
-        Log.d(TAG, "   Service: " + serviceType);
-        Log.d(TAG, "   Flat No: " + flatNo);
-        Log.d(TAG, "   Price: ₹" + price);
-        if (scheduledTime != null && !scheduledTime.isEmpty()) {
-          Log.d(TAG, "   Scheduled Time: " + scheduledTime);
-        }
+        Log.d(TAG, "📋 BOOKING: ID=" + bookingId + ", Service=" + serviceType + ", Price=₹" + price);
         
-        // Validate critical data
         if (bookingId == null || bookingId.isEmpty()) {
-          Log.e(TAG, "❌ CRITICAL: No bookingId in FCM payload! Cannot show overlay.");
-          Log.e(TAG, "❌ Full data payload: " + data.toString());
+          Log.e(TAG, "❌ No bookingId in FCM payload!");
           return;
         }
         
         // Check overlay permission
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
           if (!android.provider.Settings.canDrawOverlays(this)) {
-            Log.e(TAG, "❌ CRITICAL: No overlay permission! Falling back to Activity.");
-            // Try to show BookingAlertActivity as fallback
+            Log.e(TAG, "❌ No overlay permission - falling back to Activity");
             launchBookingAlertActivity(bookingId, customer, community, serviceType, flatNo, price, bookingType, scheduledTime);
             return;
-          } else {
-            Log.d(TAG, "✅ Overlay permission granted");
           }
         }
         
-        // Start BookingOverlayService to show system overlay
-        // This works for BOTH instant AND scheduled bookings!
-        Log.d(TAG, "🚀 Starting BookingOverlayService for " + bookingType + " booking...");
+        // Start BookingOverlayService - DO NOT pass access token
+        // The overlay service will read the LATEST token from storage when needed
+        Log.d(TAG, "🚀 Starting BookingOverlayService...");
         
         Intent serviceIntent = new Intent(this, BookingOverlayService.class);
         serviceIntent.putExtra("mode", "show");
@@ -147,53 +112,29 @@ public class MyFirebaseService extends FirebaseMessagingService {
         serviceIntent.putExtra("price_inr", price);
         serviceIntent.putExtra("scheduled_time", scheduledTime != null ? scheduledTime : "");
         
-        // Try to get access token from SharedPreferences to pass via Intent
-        try {
-          String sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
-              .getString("didi_session", null);
-          if (sessionJson != null && !sessionJson.isEmpty()) {
-            org.json.JSONObject session = new org.json.JSONObject(sessionJson);
-            String accessToken = session.optString("accessToken", "");
-            if (!accessToken.isEmpty()) {
-              serviceIntent.putExtra("ACCESS_TOKEN", accessToken);
-              Log.d(TAG, "✅ Access token loaded and will be passed to overlay service");
-            } else {
-              Log.w(TAG, "⚠️ No accessToken in session JSON");
-            }
-          } else {
-            Log.w(TAG, "⚠️ No session found in SharedPreferences");
-          }
-        } catch (Exception e) {
-          Log.e(TAG, "❌ Failed to read session for token", e);
-        }
-        
-        Log.d(TAG, "🚀 Starting BookingOverlayService with mode=show for " + bookingType + " booking...");
+        // NOTE: We intentionally do NOT pass ACCESS_TOKEN here
+        // The overlay service will read the latest token from storage just-in-time
+        // This prevents using stale tokens that could cause refresh conflicts
         
         try {
-          // Use regular startService since BookingOverlayService is no longer a foreground service
           startService(serviceIntent);
-          Log.d(TAG, "✅ BookingOverlayService started successfully for " + bookingType + " booking!");
+          Log.d(TAG, "✅ BookingOverlayService started");
         } catch (Exception se) {
-          Log.e(TAG, "❌ startService failed, falling back to BookingAlertActivity", se);
-          launchBookingAlertActivity(bookingId, customer, community, serviceType, location, price, bookingType, scheduledTime);
+          Log.e(TAG, "❌ startService failed, falling back to Activity", se);
+          launchBookingAlertActivity(bookingId, customer, community, serviceType, flatNo, price, bookingType, scheduledTime);
         }
       } else {
-        Log.d(TAG, "⏭️ Not a BOOKING_ALERT, type: " + type + " - skipping overlay");
+        Log.d(TAG, "⏭️ Not a BOOKING_ALERT, type: " + type);
       }
     } catch (Exception e) {
       Log.e(TAG, "❌ BOOKING_ALERT handling failed", e);
     }
   }
   
-  /**
-   * Launch BookingAlertActivity as fallback when overlay permission is not granted
-   * or when starting the overlay service fails.
-   * Works for BOTH instant AND scheduled bookings.
-   */
   private void launchBookingAlertActivity(String bookingId, String customer, String community, 
                                            String serviceType, String location, int price,
                                            String bookingType, String scheduledTime) {
-    Log.d(TAG, "🚀 Launching BookingAlertActivity as fallback for " + bookingType + " booking");
+    Log.d(TAG, "🚀 Launching BookingAlertActivity as fallback");
     
     try {
       Intent activityIntent = new Intent(this, BookingAlertActivity.class);
@@ -207,23 +148,10 @@ public class MyFirebaseService extends FirebaseMessagingService {
       activityIntent.putExtra("price_inr", price);
       activityIntent.putExtra("scheduled_time", scheduledTime != null ? scheduledTime : "");
       
-      // Pass access token
-      try {
-        String sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
-            .getString("didi_session", null);
-        if (sessionJson != null && !sessionJson.isEmpty()) {
-          org.json.JSONObject session = new org.json.JSONObject(sessionJson);
-          String accessToken = session.optString("accessToken", "");
-          if (!accessToken.isEmpty()) {
-            activityIntent.putExtra("ACCESS_TOKEN", accessToken);
-          }
-        }
-      } catch (Exception e) {
-        Log.e(TAG, "❌ Failed to read session for activity token", e);
-      }
+      // NOTE: Do NOT pass access token - Activity should read from storage if needed
       
       startActivity(activityIntent);
-      Log.d(TAG, "✅ BookingAlertActivity launched successfully for " + bookingType + " booking");
+      Log.d(TAG, "✅ BookingAlertActivity launched");
     } catch (Exception e) {
       Log.e(TAG, "❌ Failed to launch BookingAlertActivity", e);
       showPermissionNotification();
@@ -232,9 +160,8 @@ public class MyFirebaseService extends FirebaseMessagingService {
 
   @Override
   public void onNewToken(String token) {
-    Log.d(TAG, "🔑 New FCM token received: " + token.substring(0, Math.min(30, token.length())) + "...");
-    Log.d(TAG, "💡 Token should be saved by Capacitor PushNotifications plugin");
-    // Token is already handled by Capacitor PushNotifications plugin
+    Log.d(TAG, "🔑 New FCM token received");
+    // Token handled by Capacitor PushNotifications plugin
   }
   
   private void createNotificationChannel() {
@@ -251,7 +178,6 @@ public class MyFirebaseService extends FirebaseMessagingService {
       NotificationManager notificationManager = getSystemService(NotificationManager.class);
       if (notificationManager != null) {
         notificationManager.createNotificationChannel(channel);
-        Log.d(TAG, "✅ Notification channel created with HIGH importance");
       }
     }
   }
