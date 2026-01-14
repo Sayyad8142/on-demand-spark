@@ -159,18 +159,31 @@ export function useActiveJob(userId: string | undefined) {
     return () => window.removeEventListener("bookingAccepted", onBookingAccepted);
   }, [fetchActiveJob]);
 
-  const updateJobStatus = async (bookingId: string, newStatus: string) => {
+  const updateJobStatus = async (bookingId: string, newStatus: string): Promise<{ success: boolean; error?: string; errorCode?: string; remainingSeconds?: number }> => {
     try {
       console.log("🔄 Updating job status:", bookingId, "to", newStatus);
 
-      const { error } = await supabase.rpc("worker_set_booking_status", {
+      const { data, error } = await supabase.rpc("worker_set_booking_status", {
         booking_id_param: bookingId,
         new_status_param: newStatus,
       });
 
       if (error) {
         console.error("❌ Error from worker_set_booking_status:", error);
-        throw error;
+        return { success: false, error: error.message };
+      }
+
+      // Handle the new jsonb response format
+      const result = data as { success: boolean; error?: string; error_code?: string; remaining_seconds?: number } | null;
+      
+      if (!result?.success) {
+        console.warn("⚠️ Status update blocked:", result?.error);
+        return { 
+          success: false, 
+          error: result?.error || "Failed to update status",
+          errorCode: result?.error_code,
+          remainingSeconds: result?.remaining_seconds
+        };
       }
 
       console.log("✅ Status update successful");
@@ -184,10 +197,10 @@ export function useActiveJob(userId: string | undefined) {
       console.log("🔄 Refetching active job after delay");
       await fetchActiveJob();
 
-      return true;
-    } catch (error) {
+      return { success: true };
+    } catch (error: any) {
       console.error("❌ Error updating job status:", error);
-      throw error;
+      return { success: false, error: error?.message || "Unexpected error" };
     }
   };
 

@@ -3430,7 +3430,7 @@ export type Database = {
       }
       worker_set_booking_status: {
         Args: { booking_id_param: string; new_status_param: string }
-        Returns: undefined
+        Returns: Json
       }
     }
     Enums: {
