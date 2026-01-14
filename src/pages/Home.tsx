@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { useBookingAlerts } from "@/hooks/useBookingAlerts";
 import { useActiveJob } from "@/hooks/useActiveJob";
+import { useNativeBookingActions } from "@/hooks/useNativeBookingActions";
 import { BookingAlertModal } from "@/components/BookingAlertModal";
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
@@ -34,6 +35,10 @@ export default function Home() {
   
   const worker = isGuestMode ? DEMO_WORKER : realWorker;
   const activeJob = isGuestMode ? null : realActiveJob;
+  
+  // Listen for booking actions from native Android overlay
+  // When overlay Accept/Decline is pressed, this hook handles the Supabase RPC
+  useNativeBookingActions(worker?.id);
   
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
