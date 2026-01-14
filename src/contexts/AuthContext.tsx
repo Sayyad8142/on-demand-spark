@@ -5,9 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getStorageCacheDebug, reloadSessionFromStorage, storageReadyPromise } from "@/lib/capacitorStorage";
 import {
   clearNativeSession,
-  safeRefreshSession,
   persistSessionAtomic,
-  sessionNeedsRefresh,
   setIntentionalLogout,
   wasIntentionalLogout,
   tryRestoreSessionFromStorage,
@@ -43,13 +41,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log("🔐 AuthProvider mounted, storage status:", getStorageCacheDebug());
   }, []);
 
+  // Simple refresh that just gets the current session - supabase-js handles actual refresh
   const refreshSession = useCallback(async (): Promise<Session | null> => {
-    const refreshedSession = await safeRefreshSession();
-    if (refreshedSession) {
-      setSession(refreshedSession);
-      setUser(refreshedSession.user);
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("❌ Error getting session:", error);
+        return null;
+      }
+      if (data.session) {
+        setSession(data.session);
+        setUser(data.session.user);
+      }
+      return data.session;
+    } catch (error) {
+      console.error("❌ refreshSession error:", error);
+      return null;
     }
-    return refreshedSession;
   }, []);
 
   useEffect(() => {
@@ -60,14 +68,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         authLog.initAuthStart();
         
         // CRITICAL: Wait for storage to be ready before proceeding
-        // This ensures the session is loaded into memory before we try to read it
         if (Capacitor.isNativePlatform()) {
           console.log("⏳ Waiting for storage ready...");
           await storageReadyPromise;
           console.log("✅ Storage ready, proceeding with auth init");
         }
 
-        // Get initial session with retry logic
+        // Get initial session - supabase-js will auto-refresh if needed
         let retryCount = 0;
         let currentSession: Session | null = null;
 
@@ -85,31 +92,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         authLog.initAuthSession(!!currentSession, currentSession?.user?.id);
 
-        // If no session in memory on native, ALWAYS try to restore before giving up
+        // If no session in memory on native, try to restore from storage
         if (!currentSession && Capacitor.isNativePlatform()) {
-          console.log("🔄 No session in memory, trying full restore sequence...");
+          console.log("🔄 No session in memory, trying restore from storage...");
           
-          // Step 1: Reload from persistent storage to ensure cache is fresh
           await reloadSessionFromStorage();
           
-          // Step 2: Try getSession again after reload
           const { data: retryData } = await supabase.auth.getSession();
           currentSession = retryData.session;
           
           if (!currentSession) {
-            // Step 3: Try to restore from raw storage
             authLog.restoreAttempt('full restore sequence');
             currentSession = await tryRestoreSessionFromStorage();
             authLog.restoreResult('full restore sequence', !!currentSession, currentSession?.user?.id);
           }
         }
 
-        // If session exists but needs refresh, do it safely
-        if (currentSession && sessionNeedsRefresh(currentSession)) {
-          console.log("🔄 Session needs refresh on init...");
-          currentSession = await safeRefreshSession();
-        } else if (currentSession) {
-          // Session is valid, persist to native storage atomically
+        // Persist session if we have one (ensures native storage is in sync)
+        if (currentSession) {
           await persistSessionAtomic(currentSession);
         }
 
@@ -140,12 +140,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("🔄 Auth state changed:", event, "intentional:", wasIntentionalLogout());
       if (!mounted) return;
 
+      // Handle TOKEN_REFRESHED - just persist, supabase-js handles the refresh
+      if (event === "TOKEN_REFRESHED") {
+        console.log("🔄 Token refreshed by supabase-js");
+        if (newSession?.access_token && Capacitor.isNativePlatform()) {
+          await persistSessionAtomic(newSession);
+        }
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        return;
+      }
+
+      // Handle SIGNED_IN - persist session
+      if (event === "SIGNED_IN") {
+        console.log("✅ User signed in");
+        if (newSession?.access_token && Capacitor.isNativePlatform()) {
+          await persistSessionAtomic(newSession);
+        }
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        setLoading(false);
+        return;
+      }
+
       // Handle SIGNED_OUT explicitly
       if (event === "SIGNED_OUT") {
         const now = Date.now();
         
-        // Reset counter if more than 30 seconds since last SIGNED_OUT
-        if (now - lastSignedOutTimeRef.current > 30000) {
+        // Reset counter if more than 60 seconds since last SIGNED_OUT
+        if (now - lastSignedOutTimeRef.current > 60000) {
           signedOutCountRef.current = 0;
         }
         
@@ -154,38 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         authLog.signedOutEvent(wasIntentionalLogout(), signedOutCountRef.current);
         
-        // If too many SIGNED_OUT events in short time, something is wrong.
-        // Before giving up, try ONE last restore from persistent storage.
-        if (signedOutCountRef.current > 3) {
-          console.error("⚠️ Too many SIGNED_OUT events, attempting last restore...");
-
-          if (Capacitor.isNativePlatform()) {
-            try {
-              await reloadSessionFromStorage();
-              const recovered = await tryRestoreSessionFromStorage();
-              if (recovered) {
-                console.log("♻️ Recovered session after repeated SIGNED_OUT events");
-                setSession(recovered);
-                setUser(recovered.user);
-                setLoading(false);
-
-                await persistSessionAtomic(recovered);
-
-                signedOutCountRef.current = 0;
-                return;
-              }
-            } catch (e) {
-              console.error("❌ Last restore attempt failed:", e);
-            }
-          }
-
-          setSession(null);
-          setUser(null);
-          setLoading(false);
-          return;
-        }
-
-        // If this was an intentional logout, clear everything
+        // If intentional logout, clear everything
         if (wasIntentionalLogout()) {
           console.log("🚪 Intentional logout - clearing session");
           setSession(null);
@@ -196,52 +188,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await clearNativeSession();
           }
           
-          // Reset the flag
           setIntentionalLogout(false);
+          signedOutCountRef.current = 0;
           return;
         }
 
-        // On native, we sometimes get a transient SIGNED_OUT due to refresh races.
-        // Attempt recovery from persistent storage before giving up.
+        // Too many SIGNED_OUT events - try one last recovery
+        if (signedOutCountRef.current > 5) {
+          console.error("⚠️ Too many SIGNED_OUT events, final recovery attempt...");
+          
+          if (Capacitor.isNativePlatform()) {
+            try {
+              await reloadSessionFromStorage();
+              const recovered = await tryRestoreSessionFromStorage();
+              if (recovered) {
+                console.log("♻️ Recovered session after repeated SIGNED_OUT");
+                setSession(recovered);
+                setUser(recovered.user);
+                setLoading(false);
+                await persistSessionAtomic(recovered);
+                signedOutCountRef.current = 0;
+                return;
+              }
+            } catch (e) {
+              console.error("❌ Final recovery failed:", e);
+            }
+          }
+
+          // Truly no session
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
+        // On native, attempt recovery from storage (transient SIGNED_OUT can happen)
         if (Capacitor.isNativePlatform() && !recoveringSignedOutRef.current) {
           recoveringSignedOutRef.current = true;
           console.warn("⚠️ Unexpected SIGNED_OUT on native, attempting recovery...");
 
           try {
-            // First, reload from persistent storage
             await reloadSessionFromStorage();
             
-            // Try to get session again
             const { data } = await supabase.auth.getSession();
             let recovered = data.session;
             
-            // If still no session, try to restore from raw storage
             if (!recovered) {
               recovered = await tryRestoreSessionFromStorage();
             }
 
             if (recovered) {
-              console.log("♻️ Recovered session after SIGNED_OUT event");
+              console.log("♻️ Recovered session after SIGNED_OUT");
               setSession(recovered);
               setUser(recovered.user);
               setLoading(false);
-
               await persistSessionAtomic(recovered);
-              
-              // Reset counter on successful recovery
               signedOutCountRef.current = 0;
             } else {
-              // No session to recover - user genuinely has no session
               console.log("ℹ️ No session to recover - user is logged out");
               setSession(null);
               setUser(null);
               setLoading(false);
-              // DO NOT clear storage - might be needed later
             }
           } catch (e) {
             console.error("❌ SIGNED_OUT recovery failed:", e);
-            // DO NOT clear session or storage on error
-            // Just update UI state if we have no session in memory
             if (!session) {
               setSession(null);
               setUser(null);
@@ -254,62 +264,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        // Web platform or already recovering - just update state
-        // But don't clear storage unless intentional
+        // Web platform or already recovering
         setSession(null);
         setUser(null);
         setLoading(false);
         return;
       }
 
-      // For other events (SIGNED_IN, TOKEN_REFRESHED, etc.)
-      if (event === "TOKEN_REFRESHED") {
-        console.log("🔄 Token refreshed event received");
-        
-        // ATOMIC persistence - no setTimeout, await directly
-        if (newSession?.access_token && Capacitor.isNativePlatform()) {
-          await persistSessionAtomic(newSession);
-        }
-      }
-      
-      // Update state
+      // For other events, just update state
       setSession(newSession);
       setUser(newSession?.user ?? null);
       setLoading(false);
-
-      // For SIGNED_IN, also persist atomically
-      if (event === "SIGNED_IN" && newSession?.access_token && Capacitor.isNativePlatform()) {
-        await persistSessionAtomic(newSession);
-      }
     });
 
-    // Manual refresh loop ONLY on native (web uses supabase-js auto refresh)
-    const intervalId = Capacitor.isNativePlatform()
-      ? setInterval(async () => {
-          if (!mounted) return;
-
-          try {
-            const { data: current } = await supabase.auth.getSession();
-            if (current.session && sessionNeedsRefresh(current.session)) {
-              console.log("🔄 Scheduled token refresh...");
-              await safeRefreshSession();
-            }
-          } catch (error) {
-            console.error("❌ Scheduled refresh error:", error);
-            // Don't do anything drastic on refresh error
-          }
-        }, 5 * 60 * 1000)
-      : null;
+    // NO manual refresh interval - supabase-js autoRefreshToken handles it
 
     return () => {
       mounted = false;
       subscriptionData.subscription.unsubscribe();
-      if (intervalId) clearInterval(intervalId);
     };
   }, []);
 
   const signOut = useCallback(async () => {
-    // Mark this as intentional logout BEFORE calling signOut
     setIntentionalLogout(true);
     console.log("🚪 User initiated logout");
     
@@ -317,7 +293,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await supabase.auth.signOut();
     } catch (error) {
       console.error("❌ Error during signOut:", error);
-      // Even if API call fails, clear local state
       setSession(null);
       setUser(null);
       if (Capacitor.isNativePlatform()) {

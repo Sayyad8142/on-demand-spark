@@ -8,19 +8,12 @@ import { authLog } from './authLogger';
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
 
-// Global lock to prevent concurrent refresh attempts
-let isRefreshing = false;
-let refreshPromise: Promise<Session | null> | null = null;
-let lastRefreshTime = 0;
-const MIN_REFRESH_INTERVAL = 10000; // 10 seconds minimum between refreshes
-
 // Lock for persistence operations to ensure atomicity
 let isPersisting = false;
 let persistPromise: Promise<boolean> | null = null;
 
 /**
  * Mark that user is intentionally logging out
- * This prevents recovery attempts during explicit logout
  */
 export function setIntentionalLogout(value: boolean): void {
   setIntentionalLogoutFlag(value);
@@ -43,20 +36,19 @@ export async function persistSessionAtomic(session: Session): Promise<boolean> {
     return false;
   }
   
-  // If already persisting, wait for that to complete
+  // If already persisting, wait for that to complete then persist again
   if (isPersisting && persistPromise) {
     await persistPromise;
-    // After waiting, persist again to ensure our session is saved
   }
   
   isPersisting = true;
   
   const doWork = async (): Promise<boolean> => {
     try {
-      // Save full session to native storage
+      // Save full session to native storage (for Capacitor Preferences)
       const saved = await saveSessionToNative(session);
       
-      // Save JWT to AuthBridge
+      // Save JWT to AuthBridge (for Android SharedPreferences - used by overlay)
       if (session.access_token) {
         await saveJWTToNative(session.access_token);
       }
@@ -80,9 +72,9 @@ export async function persistSessionAtomic(session: Session): Promise<boolean> {
   return persistPromise;
 }
 
-
 /**
  * Save session data to native storage for overlay access
+ * This is the didi_session that Android services read
  */
 export async function saveSessionToNative(session: Session): Promise<boolean> {
   if (!Capacitor.isNativePlatform() || !session) {
@@ -90,13 +82,17 @@ export async function saveSessionToNative(session: Session): Promise<boolean> {
   }
 
   try {
+    // Store the full session data that Android services need
     const sessionData = {
       accessToken: session.access_token,
       refreshToken: session.refresh_token,
-      expiresAt: session.expires_at
+      expiresAt: session.expires_at,
+      userId: session.user?.id,
+      updatedAt: Date.now()
     };
     
     await capacitorStorage.setItem('didi_session', JSON.stringify(sessionData));
+    console.log('✅ didi_session updated with latest tokens');
     return true;
   } catch (error) {
     console.error('❌ Failed to save session to native:', error);
@@ -119,7 +115,7 @@ export async function saveJWTToNative(token: string): Promise<boolean> {
       
       const verify = await AuthBridge.getToken();
       if (verify?.token === token) {
-        console.log(`✅ JWT saved on attempt ${attempt}`);
+        console.log(`✅ JWT saved to AuthBridge on attempt ${attempt}`);
         return true;
       }
     } catch (error) {
@@ -141,9 +137,8 @@ export async function saveJWTToNative(token: string): Promise<boolean> {
 export async function clearNativeSession(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   
-  // Safety check - only clear if logout was intentional
   if (!getIntentionalLogoutFlag()) {
-    console.warn('⚠️ clearNativeSession called but logout was NOT intentional - skipping clear');
+    console.warn('⚠️ clearNativeSession called but logout was NOT intentional - skipping');
     return;
   }
   
@@ -195,14 +190,12 @@ export async function tryRestoreSessionFromStorage(): Promise<Session | null> {
       return null;
     }
     
-    // Parse the stored session
     const parsed = JSON.parse(rawSession);
     
-    // The stored format from Supabase is different - it has access_token, refresh_token, etc.
     if (parsed?.access_token && parsed?.refresh_token) {
       console.log('🔄 Attempting to restore session from storage...');
       
-      // Try to set the session in Supabase
+      // Try to set the session - supabase-js will refresh if needed
       const { data, error } = await supabase.auth.setSession({
         access_token: parsed.access_token,
         refresh_token: parsed.refresh_token,
@@ -210,13 +203,12 @@ export async function tryRestoreSessionFromStorage(): Promise<Session | null> {
       
       if (error) {
         authLog.refreshError(error.name || 'SET_SESSION', error.message);
-        // Avoid calling safeRefreshSession() from here (can cause recursion/refresh races).
-        // Let higher-level logic decide what to do next.
         return null;
       }
       
       if (data.session) {
         authLog.restoreResult('persistent storage', true, data.session.user?.id);
+        // Persist the restored (possibly refreshed) session
         await persistSessionAtomic(data.session);
         return data.session;
       }
@@ -231,123 +223,8 @@ export async function tryRestoreSessionFromStorage(): Promise<Session | null> {
 }
 
 /**
- * Safely refresh the session with lock to prevent concurrent refreshes
- * This prevents the "refresh_token_already_used" error
- * NEVER triggers logout on failure - always returns current/stored session
- */
-export async function safeRefreshSession(): Promise<Session | null> {
-  const now = Date.now();
-  
-  // If already refreshing, wait for that to complete
-  if (isRefreshing && refreshPromise) {
-    console.log('🔄 Refresh already in progress, waiting...');
-    return refreshPromise;
-  }
-  
-  // Prevent too frequent refreshes
-  if (now - lastRefreshTime < MIN_REFRESH_INTERVAL) {
-    console.log('⏳ Too soon to refresh, getting current session...');
-    const { data } = await supabase.auth.getSession();
-    return data.session;
-  }
-  
-  isRefreshing = true;
-  lastRefreshTime = now;
-  
-  refreshPromise = (async () => {
-    try {
-      authLog.refreshStart('manual refresh');
-      
-      // First, get the current session to check if it's still valid
-      const { data: currentData, error: currentError } = await supabase.auth.getSession();
-      
-      if (currentError) {
-        authLog.refreshError('GET_SESSION', currentError.message);
-        // DON'T return null - try to restore from storage
-        return await tryRestoreSessionFromStorage();
-      }
-      
-      const currentSession = currentData.session;
-      
-      // If no session in memory, try to restore from storage
-      if (!currentSession) {
-        console.log('ℹ️ No session in memory, trying storage restore...');
-        return await tryRestoreSessionFromStorage();
-      }
-      
-      // Check if token is still valid (more than 5 minutes remaining)
-      const expiresAt = currentSession.expires_at ? currentSession.expires_at * 1000 : 0;
-      const fiveMinutes = 5 * 60 * 1000;
-      
-      if (expiresAt > now + fiveMinutes) {
-        console.log('✅ Session still valid, no refresh needed');
-        // Still save to native storage to ensure it's synced
-        await persistSessionAtomic(currentSession);
-        return currentSession;
-      }
-      
-      // Need to refresh
-      console.log('🔄 Token expiring soon, refreshing...');
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      
-      if (refreshError) {
-        const errorCode = refreshError.message?.includes('refresh_token_already_used') 
-          ? 'REFRESH_TOKEN_ALREADY_USED'
-          : refreshError.message?.includes('Invalid Refresh Token')
-          ? 'INVALID_REFRESH_TOKEN'
-          : refreshError.name || 'REFRESH_ERROR';
-          
-        authLog.refreshError(errorCode, refreshError.message);
-        
-        // If refresh token was already used, try to get session again
-        // Another tab/process might have refreshed it
-        if (errorCode === 'REFRESH_TOKEN_ALREADY_USED' || errorCode === 'INVALID_REFRESH_TOKEN') {
-          console.log('🔄 Refresh token conflict, trying getSession...');
-          const { data: retryData } = await supabase.auth.getSession();
-          if (retryData.session) {
-            await persistSessionAtomic(retryData.session);
-            return retryData.session;
-          }
-          
-          // Still no session - try storage restore as last resort
-          console.log('🔄 Trying storage restore after refresh conflict...');
-          return await tryRestoreSessionFromStorage();
-        }
-        
-        // Network error or other transient issue - return current session
-        // DO NOT logout on refresh failure
-        console.log('⚠️ Refresh failed but keeping current session');
-        return currentSession;
-      }
-      
-      if (refreshData.session) {
-        authLog.refreshSuccess(refreshData.session.expires_at);
-        await persistSessionAtomic(refreshData.session);
-        return refreshData.session;
-      }
-      
-      return currentSession;
-    } catch (error: any) {
-      authLog.refreshError('UNEXPECTED', error?.message || String(error));
-      // Try to return current session on error - NEVER logout
-      try {
-        const { data } = await supabase.auth.getSession();
-        return data.session;
-      } catch {
-        // Last resort - try storage
-        return await tryRestoreSessionFromStorage();
-      }
-    } finally {
-      isRefreshing = false;
-      refreshPromise = null;
-    }
-  })();
-  
-  return refreshPromise;
-}
-
-/**
  * Check if session needs refresh (within 10 minutes of expiry)
+ * Note: With autoRefreshToken: true, supabase-js handles this automatically
  */
 export function sessionNeedsRefresh(session: Session | null): boolean {
   if (!session?.expires_at) return false;
@@ -361,7 +238,6 @@ export function sessionNeedsRefresh(session: Session | null): boolean {
 /**
  * Ensure we have a valid session for API calls
  * Returns true if session is valid, false if not
- * NEVER triggers logout - just returns status
  */
 export async function ensureValidSessionForApiCall(): Promise<boolean> {
   try {
@@ -369,9 +245,7 @@ export async function ensureValidSessionForApiCall(): Promise<boolean> {
     
     if (error) {
       console.error('❌ Error checking session for API call:', error);
-      // Try refresh
-      const refreshed = await safeRefreshSession();
-      return !!refreshed;
+      return false;
     }
     
     if (!session) {
@@ -379,16 +253,6 @@ export async function ensureValidSessionForApiCall(): Promise<boolean> {
       // Try restore from storage
       const restored = await tryRestoreSessionFromStorage();
       return !!restored;
-    }
-    
-    // Check if token is about to expire (within 2 minutes)
-    const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
-    const twoMinutes = 2 * 60 * 1000;
-    
-    if (Date.now() > expiresAt - twoMinutes) {
-      console.log('🔄 Token expiring soon, refreshing before API call...');
-      const refreshed = await safeRefreshSession();
-      return !!refreshed;
     }
     
     return true;
