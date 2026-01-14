@@ -136,8 +136,28 @@ export default function Home() {
       return;
     }
 
+    if (!activeJob?.id) return;
+
     setUpdating(true);
-    await updateJobStatus(activeJob?.id, status);
+    const result = await updateJobStatus(activeJob.id, status);
+    
+    if (!result.success) {
+      // Handle locked completion attempt
+      if (result.errorCode === 'COMPLETION_LOCKED') {
+        toast({
+          title: "Work Locked",
+          description: result.error || "Work can be completed only after 30 minutes",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Update Failed",
+          description: result.error || "Failed to update status",
+          variant: "destructive",
+        });
+      }
+    }
+    
     await refetchWorker();
     setUpdating(false);
   };
