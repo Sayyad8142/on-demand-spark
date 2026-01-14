@@ -134,6 +134,26 @@ export default function OtpVerify() {
     }
   }, [otp]);
 
+  const withTimeout = async <T,>(
+    work: () => PromiseLike<T>,
+    ms = 15000,
+    label = "request"
+  ): Promise<T> => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error(`Timeout while ${label}. Please check internet and try again.`));
+      }, ms);
+    });
+
+    try {
+      return (await Promise.race([Promise.resolve(work()), timeoutPromise])) as T;
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  };
+
   const normalizePhone = (phone: string) => {
     const cleaned = phone.replace(/\D/g, '');
     return cleaned.startsWith('91') ? `+${cleaned}` : `+91${cleaned}`;
@@ -146,11 +166,15 @@ export default function OtpVerify() {
       setLoading(true);
       const phone = normalizePhone(state.phone);
 
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone,
-        token: otp,
-        type: 'sms'
-      });
+      const { data, error } = await withTimeout(
+        () => supabase.auth.verifyOtp({
+          phone,
+          token: otp,
+          type: 'sms'
+        }),
+        15000,
+        'verifying OTP'
+      );
 
       if (error) throw error;
       if (!data.user) throw new Error("No user returned");
@@ -300,9 +324,10 @@ export default function OtpVerify() {
         navigate("/home", { replace: true });
       }
     } catch (error: any) {
+      const status = error?.status ? ` (status ${error.status})` : "";
       toast({
-        title: t('auth.error', 'Error'),
-        description: error.message,
+        title: `${t('auth.error', 'Error')}${status}`,
+        description: error?.message || "Something went wrong",
         variant: "destructive"
       });
       setOtp("");
@@ -318,7 +343,11 @@ export default function OtpVerify() {
       setLoading(true);
       const phone = normalizePhone(state.phone);
 
-      const { error } = await supabase.auth.signInWithOtp({ phone });
+      const { error } = await withTimeout(
+        () => supabase.auth.signInWithOtp({ phone }),
+        15000,
+        'resending OTP'
+      );
       if (error) throw error;
 
       setResendTimer(30);
@@ -328,9 +357,10 @@ export default function OtpVerify() {
         description: t('auth.checkPhone', 'Check your phone for the verification code')
       });
     } catch (error: any) {
+      const status = error?.status ? ` (status ${error.status})` : "";
       toast({
-        title: t('auth.error', 'Error'),
-        description: error.message,
+        title: `${t('auth.error', 'Error')}${status}`,
+        description: error?.message || "Something went wrong",
         variant: "destructive"
       });
     } finally {
