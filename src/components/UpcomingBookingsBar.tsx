@@ -87,9 +87,9 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
   };
 
   return (
-    <div className="fixed bottom-[100px] left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-border">
+    <div className="fixed bottom-[72px] left-0 right-0 z-40 bg-background border-t border-border shadow-lg">
       <div 
-        className="flex gap-2 overflow-x-auto px-3 py-2" 
+        className="flex gap-2 overflow-x-auto px-3 py-3" 
         style={{ 
           scrollbarWidth: 'none', 
           msOverflowStyle: 'none',
@@ -102,16 +102,16 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
           return (
             <div
               key={booking.booking_id}
-              className="flex-shrink-0 bg-background border border-foreground rounded-full px-3 py-1.5 flex items-center gap-2"
+              className="flex-shrink-0 bg-background border-2 border-foreground/80 rounded-full px-4 py-2 flex items-center gap-2 min-h-[40px]"
             >
-              <span className="text-xs font-semibold text-primary whitespace-nowrap">
+              <span className="text-sm font-bold text-primary whitespace-nowrap">
                 {formatDate(booking.scheduled_date)}
               </span>
-              <span className="text-xs text-muted-foreground whitespace-nowrap">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">
                 {formatTime(booking.scheduled_time)}
               </span>
               {price !== null && price !== undefined && (
-                <span className="text-xs font-semibold text-green-600 whitespace-nowrap">
+                <span className="text-sm font-bold text-green-600 whitespace-nowrap">
                   ₹{price}
                 </span>
               )}
