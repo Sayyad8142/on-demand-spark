@@ -193,12 +193,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        // Too many SIGNED_OUT events - try one last recovery
-        if (signedOutCountRef.current > 5) {
-          console.error("⚠️ Too many SIGNED_OUT events, final recovery attempt...");
+        // Too many SIGNED_OUT events - increase tolerance before giving up
+        if (signedOutCountRef.current > 10) {
+          console.error("⚠️ Too many SIGNED_OUT events (>10), final recovery attempt...");
           
           if (Capacitor.isNativePlatform()) {
             try {
+              // Wait a bit to let any ongoing token rotation complete
+              await new Promise(resolve => setTimeout(resolve, 2000));
               await reloadSessionFromStorage();
               const recovered = await tryRestoreSessionFromStorage();
               if (recovered) {

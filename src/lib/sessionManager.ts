@@ -177,49 +177,93 @@ export async function forceClearNativeSession(): Promise<void> {
 /**
  * Try to restore session from persistent storage
  * Used when we get a transient SIGNED_OUT event
+ * Includes retry logic for "refresh_token_already_used" race condition
  */
 export async function tryRestoreSessionFromStorage(): Promise<Session | null> {
   if (!Capacitor.isNativePlatform()) return null;
   
   authLog.restoreAttempt('persistent storage');
   
-  try {
-    const rawSession = await getRawSessionFromStorage();
-    if (!rawSession) {
-      authLog.restoreResult('persistent storage', false);
-      return null;
-    }
-    
-    const parsed = JSON.parse(rawSession);
-    
-    if (parsed?.access_token && parsed?.refresh_token) {
-      console.log('🔄 Attempting to restore session from storage...');
-      
-      // Try to set the session - supabase-js will refresh if needed
-      const { data, error } = await supabase.auth.setSession({
-        access_token: parsed.access_token,
-        refresh_token: parsed.refresh_token,
-      });
-      
-      if (error) {
-        authLog.refreshError(error.name || 'SET_SESSION', error.message);
+  const maxAttempts = 3;
+  
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      // Re-read storage on each attempt (token might have been updated by another process)
+      const rawSession = await getRawSessionFromStorage();
+      if (!rawSession) {
+        authLog.restoreResult('persistent storage', false);
         return null;
       }
       
-      if (data.session) {
-        authLog.restoreResult('persistent storage', true, data.session.user?.id);
-        // Persist the restored (possibly refreshed) session
-        await persistSessionAtomic(data.session);
-        return data.session;
+      const parsed = JSON.parse(rawSession);
+      
+      if (parsed?.access_token && parsed?.refresh_token) {
+        console.log(`🔄 Restore attempt ${attempt}/${maxAttempts} from storage...`);
+        
+        // Try to set the session - supabase-js will refresh if needed
+        const { data, error } = await supabase.auth.setSession({
+          access_token: parsed.access_token,
+          refresh_token: parsed.refresh_token,
+        });
+        
+        if (error) {
+          const errorCode = error.message?.toLowerCase() || '';
+          const isRotationRace = errorCode.includes('refresh_token_already_used') || 
+                                  errorCode.includes('invalid_grant') ||
+                                  errorCode.includes('token is expired');
+          
+          // If it's a rotation race, wait and retry (token might sync)
+          if (isRotationRace && attempt < maxAttempts) {
+            console.warn(`⚠️ Token rotation race on attempt ${attempt}, waiting before retry...`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // 1s, 2s backoff
+            continue;
+          }
+          
+          authLog.refreshError(error.name || 'SET_SESSION', error.message);
+          
+          // Last attempt failed - check if we can use access token if still valid
+          if (attempt === maxAttempts && parsed.expires_at) {
+            const expiresAt = typeof parsed.expires_at === 'number' 
+              ? parsed.expires_at * 1000 
+              : new Date(parsed.expires_at).getTime();
+            
+            if (Date.now() < expiresAt - 60000) {
+              // Access token still valid for >1 min, try getSession instead
+              console.log('🔄 Access token might still be valid, trying getSession...');
+              const { data: getSessionData } = await supabase.auth.getSession();
+              if (getSessionData.session) {
+                authLog.restoreResult('getSession fallback', true, getSessionData.session.user?.id);
+                await persistSessionAtomic(getSessionData.session);
+                return getSessionData.session;
+              }
+            }
+          }
+          
+          return null;
+        }
+        
+        if (data.session) {
+          authLog.restoreResult('persistent storage', true, data.session.user?.id);
+          // Persist the restored (possibly refreshed) session
+          await persistSessionAtomic(data.session);
+          return data.session;
+        }
       }
+      
+      authLog.restoreResult('persistent storage', false);
+      return null;
+    } catch (error: any) {
+      if (attempt < maxAttempts) {
+        console.warn(`⚠️ Restore attempt ${attempt} error, retrying...`, error);
+        await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+        continue;
+      }
+      authLog.refreshError('RESTORE', error?.message || String(error));
+      return null;
     }
-    
-    authLog.restoreResult('persistent storage', false);
-    return null;
-  } catch (error: any) {
-    authLog.refreshError('RESTORE', error?.message || String(error));
-    return null;
   }
+  
+  return null;
 }
 
 /**
