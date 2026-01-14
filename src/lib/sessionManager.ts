@@ -210,8 +210,9 @@ export async function tryRestoreSessionFromStorage(): Promise<Session | null> {
       
       if (error) {
         authLog.refreshError(error.name || 'SET_SESSION', error.message);
-        // Don't return null - try refresh instead
-        return await safeRefreshSession();
+        // Avoid calling safeRefreshSession() from here (can cause recursion/refresh races).
+        // Let higher-level logic decide what to do next.
+        return null;
       }
       
       if (data.session) {
