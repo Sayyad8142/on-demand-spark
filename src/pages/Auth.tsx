@@ -335,6 +335,17 @@ export default function Auth() {
       setLoading(false);
     }
   };
+  const [lastAuthIssue, setLastAuthIssue] = useState<{ ts: string; kind: string; message: string } | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('auth_last_issue');
+      if (raw) setLastAuthIssue(JSON.parse(raw));
+    } catch {
+      // ignore
+    }
+  }, []);
+
   // OTP verification is now handled in OtpVerify page
   return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 p-4">
       <div className="w-full max-w-md space-y-4">
@@ -351,6 +362,22 @@ export default function Auth() {
             <UserRound className="h-4 w-4" />
           </Button>
         </div>
+
+        {lastAuthIssue && <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="font-medium">Last login issue</div>
+                <div className="text-xs text-muted-foreground">{new Date(lastAuthIssue.ts).toLocaleString()} • {lastAuthIssue.kind}</div>
+                <div className="text-muted-foreground break-words">{lastAuthIssue.message}</div>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => {
+            localStorage.removeItem('auth_last_issue');
+            setLastAuthIssue(null);
+          }}>
+                Clear
+              </Button>
+            </div>
+          </div>}
 
         <Card className="w-full">
         <CardHeader className="space-y-1">
