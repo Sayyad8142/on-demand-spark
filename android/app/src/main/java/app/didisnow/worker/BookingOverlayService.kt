@@ -260,8 +260,8 @@ class BookingOverlayService : Service() {
             finishAndStop("accepted")
         }
 
-        // Decline button - UI ONLY, delegates to web app
-        overlayView?.findViewById<Button>(R.id.btnDecline)?.setOnClickListener {
+        // Reject button - UI ONLY, delegates to web app
+        overlayView?.findViewById<Button>(R.id.btnReject)?.setOnClickListener {
             if (!OverlaySingleton.isShowing) return@setOnClickListener
             if (isShuttingDown || actionInFlight) return@setOnClickListener
             
