@@ -5,7 +5,6 @@ import android.content.Intent
 import android.graphics.Color
 import android.media.AudioAttributes
 import android.media.MediaPlayer
-import android.media.RingtoneManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -19,15 +18,18 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 
+/**
+ * BookingAlertActivity - UI-ONLY fallback for booking alerts when overlay cannot be shown
+ * 
+ * IMPORTANT: This activity does NOT make any Supabase/network calls.
+ * All booking actions (accept/decline) are delegated to the web app via Intent.
+ * This prevents:
+ * - Token refresh race conditions
+ * - 401 errors causing logout
+ * - Session conflicts between native and web
+ */
 @Suppress("SetTextI18n")
 class BookingAlertActivity : AppCompatActivity() {
     private var countdownHandler: Handler? = null
@@ -36,10 +38,9 @@ class BookingAlertActivity : AppCompatActivity() {
     private var mediaPlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
     
-    companion object {
-        private const val SUPABASE_URL = "https://paywwbuqycovjopryele.supabase.co"
-        private const val SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheXd3YnVxeWNvdmpvcHJ5ZWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkyNjksImV4cCI6MjA3MDc0NTI2OX0.js1MaTBkjuGlaDfQjrZpZ9_G8Jy9ygNAB8KpNDiQg8o"
-    }
+    // Single-flight guard to prevent double taps
+    @Volatile
+    private var actionInFlight = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -118,7 +119,7 @@ class BookingAlertActivity : AppCompatActivity() {
                     countdownText.text = "${secondsLeft}s"
                     countdownCircle.progress = secondsLeft
                     
-                    // Change countdown text and circle color based on time remaining
+                    // Change countdown text color based on time remaining
                     val textColor = when {
                         secondsLeft > 15 -> "#22C55E" // Green
                         secondsLeft > 10 -> "#F59E0B" // Orange
@@ -126,31 +127,23 @@ class BookingAlertActivity : AppCompatActivity() {
                     }
                     countdownText.setTextColor(Color.parseColor(textColor))
                     
-                    // Update circular progress bar color
-                    val progressDrawable = countdownCircle.progressDrawable
-                    if (progressDrawable is android.graphics.drawable.LayerDrawable) {
-                        val progressLayer = progressDrawable.findDrawableByLayerId(android.R.id.progress)
-                        if (progressLayer is android.graphics.drawable.RotateDrawable) {
-                            val shapeDrawable = progressLayer.drawable
-                            if (shapeDrawable is android.graphics.drawable.GradientDrawable) {
-                                shapeDrawable.setColor(Color.parseColor(textColor))
-                            }
-                        }
-                    }
-                    
                     Log.d("BookingAlert", "⏱️ Countdown: ${secondsLeft}s")
                     secondsLeft--
                     countdownHandler?.postDelayed(this, 1000)
                 } else {
-                    Log.d("BookingAlert", "⏱️ Countdown finished - auto closing")
-                    Toast.makeText(this@BookingAlertActivity, "Booking timed out", Toast.LENGTH_SHORT).show()
+                    Log.d("BookingAlert", "⏱️ Countdown finished - sending timeout to web app")
+                    sendActionToWebApp(bookingId, "timeout")
                     finish()
                 }
             }
         }
         countdownHandler?.post(countdownRunnable)
 
+        // Accept button - UI ONLY, delegates to web app
         btnAccept.setOnClickListener {
+            if (actionInFlight) return@setOnClickListener
+            actionInFlight = true
+            
             Log.d("BookingAlert", "✅ Accept button clicked")
             stopAlertSound()
             stopVibration()
@@ -166,11 +159,19 @@ class BookingAlertActivity : AppCompatActivity() {
             btnAccept.isEnabled = false
             btnReject.isEnabled = false
             
-            // Call the API to accept the booking
-            updateBooking(bookingId, "accepted")
+            // Show immediate feedback
+            Toast.makeText(this, "Accepting booking...", Toast.LENGTH_SHORT).show()
+            
+            // Send action to web app - NO network calls from native
+            sendActionToWebApp(bookingId, "accepted")
+            finish()
         }
 
+        // Decline button - UI ONLY, delegates to web app
         btnReject.setOnClickListener {
+            if (actionInFlight) return@setOnClickListener
+            actionInFlight = true
+            
             Log.d("BookingAlert", "❌ Reject button clicked")
             stopAlertSound()
             stopVibration()
@@ -180,8 +181,12 @@ class BookingAlertActivity : AppCompatActivity() {
             btnAccept.isEnabled = false
             btnReject.isEnabled = false
             
-            // Call the API to reject the booking
-            updateBooking(bookingId, "rejected")
+            // Show immediate feedback
+            Toast.makeText(this, "Declining booking...", Toast.LENGTH_SHORT).show()
+            
+            // Send action to web app - NO network calls from native
+            sendActionToWebApp(bookingId, "declined")
+            finish()
         }
     }
 
@@ -190,6 +195,35 @@ class BookingAlertActivity : AppCompatActivity() {
         stopAlertSound()
         stopVibration()
         super.onDestroy()
+    }
+
+    /**
+     * Send booking action to web app via Intent to MainActivity.
+     * The web app will handle the actual Supabase RPC call.
+     * This prevents token/session conflicts.
+     */
+    private fun sendActionToWebApp(bookingId: String, action: String) {
+        try {
+            Log.d("BookingAlert", "📤 Sending action to web app: bookingId=$bookingId, action=$action")
+            
+            // Send local broadcast for any in-app listeners
+            val broadcastIntent = Intent("booking-action")
+            broadcastIntent.putExtra("bookingId", bookingId)
+            broadcastIntent.putExtra("action", action)
+            LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent)
+            
+            // Launch MainActivity with booking action data
+            val mainIntent = Intent(this, MainActivity::class.java)
+            mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            mainIntent.putExtra("booking_action", action)
+            mainIntent.putExtra("booking_id", bookingId)
+            mainIntent.putExtra("navigate_to", "home")
+            startActivity(mainIntent)
+            
+            Log.d("BookingAlert", "✅ Action sent to web app successfully")
+        } catch (e: Exception) {
+            Log.e("BookingAlert", "❌ sendActionToWebApp error", e)
+        }
     }
 
     private fun playAlertSound() {
@@ -241,16 +275,13 @@ class BookingAlertActivity : AppCompatActivity() {
             vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
             
             // Create a strong vibration pattern: [delay, vibrate, pause, vibrate, ...]
-            // Pattern: wait 0ms, vibrate 1000ms, pause 500ms, repeat
             val pattern = longArrayOf(0, 1000, 500, 1000, 500)
             
             vibrator?.let {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    // For Android O and above, use VibrationEffect
                     val vibrationEffect = VibrationEffect.createWaveform(pattern, 0) // 0 = repeat from start
                     it.vibrate(vibrationEffect)
                 } else {
-                    // For older versions
                     @Suppress("DEPRECATION")
                     it.vibrate(pattern, 0)
                 }
@@ -268,328 +299,6 @@ class BookingAlertActivity : AppCompatActivity() {
             Log.d("BookingAlert", "📳 Vibration stopped")
         } catch (e: Exception) {
             Log.e("BookingAlert", "❌ Failed to stop vibration", e)
-        }
-    }
-    
-    /**
-     * Refresh the access token using the refresh token
-     * Returns the new access token, or null if refresh failed
-     */
-    private fun refreshAccessToken(): String? {
-        try {
-            val prefs = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
-            val sessionJson = prefs.getString("didi_session", null)
-            
-            if (sessionJson.isNullOrEmpty()) {
-                Log.e("BookingAlert", "❌ No session found for refresh")
-                return null
-            }
-            
-            val session = org.json.JSONObject(sessionJson)
-            val refreshToken = session.optString("refreshToken", "")
-            
-            if (refreshToken.isEmpty()) {
-                Log.e("BookingAlert", "❌ No refresh token in session")
-                return null
-            }
-            
-            Log.d("BookingAlert", "🔄 Refreshing access token...")
-            
-            val url = URL("$SUPABASE_URL/auth/v1/token?grant_type=refresh_token")
-            val connection = url.openConnection() as HttpURLConnection
-            
-            try {
-                connection.requestMethod = "POST"
-                connection.connectTimeout = 10000
-                connection.readTimeout = 10000
-                connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                connection.setRequestProperty("Content-Type", "application/json")
-                connection.doOutput = true
-                
-                val payload = """{"refresh_token":"$refreshToken"}"""
-                connection.outputStream.use { os ->
-                    os.write(payload.toByteArray())
-                }
-                
-                val responseCode = connection.responseCode
-                Log.d("BookingAlert", "🔄 Refresh response code: $responseCode")
-                
-                if (responseCode in 200..299) {
-                    val responseBody = connection.inputStream.bufferedReader().use { it.readText() }
-                    val newSession = org.json.JSONObject(responseBody)
-                    
-                    val newAccessToken = newSession.optString("access_token", "")
-                    val newRefreshToken = newSession.optString("refresh_token", refreshToken)
-                    val expiresIn = newSession.optInt("expires_in", 3600)
-                    
-                    if (newAccessToken.isNotEmpty()) {
-                        // Update stored session with new tokens
-                        val updatedSession = org.json.JSONObject().apply {
-                            put("accessToken", newAccessToken)
-                            put("refreshToken", newRefreshToken)
-                            put("expiresIn", expiresIn)
-                            // Preserve user info if present
-                            if (session.has("user")) {
-                                put("user", session.getJSONObject("user"))
-                            }
-                        }
-                        
-                        prefs.edit()
-                            .putString("didi_session", updatedSession.toString())
-                            .apply()
-                        
-                        // Also update worker_prefs for backward compatibility
-                        getSharedPreferences("worker_prefs", MODE_PRIVATE)
-                            .edit()
-                            .putString("supabase_jwt", newAccessToken)
-                            .apply()
-                        
-                        Log.d("BookingAlert", "✅ Token refreshed successfully! New token: ${newAccessToken.take(12)}...")
-                        return newAccessToken
-                    }
-                } else {
-                    val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
-                    Log.e("BookingAlert", "❌ Token refresh failed: $responseCode - $errorBody")
-                }
-            } finally {
-                connection.disconnect()
-            }
-        } catch (e: Exception) {
-            Log.e("BookingAlert", "❌ Token refresh exception", e)
-        }
-        
-        return null
-    }
-    
-    private fun updateBooking(bookingId: String, action: String) {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                Log.d("BookingAlert", "📤 Updating booking $bookingId with action: $action")
-                
-                // First, try to get JWT from worker_prefs
-                var jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE)
-                    .getString("supabase_jwt", null)
-                
-                // If not found, try CapacitorStorage
-                if (jwt.isNullOrEmpty()) {
-                    val sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
-                        .getString("didi_session", null)
-                    if (!sessionJson.isNullOrEmpty()) {
-                        try {
-                            val session = JSONObject(sessionJson)
-                            jwt = session.optString("accessToken", "")
-                        } catch (e: Exception) {
-                            Log.e("BookingAlert", "❌ Failed to parse session", e)
-                        }
-                    }
-                }
-                
-                Log.d("BookingAlert", "🔑 JWT token present: ${!jwt.isNullOrEmpty()}")
-                
-                // Always try to refresh the token first - it might be expired
-                Log.d("BookingAlert", "🔄 Proactively refreshing token...")
-                val refreshedToken = refreshAccessToken()
-                if (!refreshedToken.isNullOrEmpty()) {
-                    jwt = refreshedToken
-                    Log.d("BookingAlert", "✅ Using refreshed token")
-                }
-                
-                if (jwt.isNullOrEmpty()) {
-                    Log.w("BookingAlert", "⚠️ No Supabase JWT - cannot proceed")
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(
-                            this@BookingAlertActivity,
-                            "❌ Not authenticated - Please log in",
-                            Toast.LENGTH_LONG
-                        ).show()
-                        finish()
-                    }
-                    return@launch
-                }
-                
-                if (action == "accepted") {
-                    // Call try_accept_booking RPC
-                    val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/try_accept_booking")
-                    val connection = rpcUrl.openConnection() as HttpURLConnection
-                    
-                    connection.requestMethod = "POST"
-                    connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                    connection.setRequestProperty("Authorization", "Bearer $jwt")
-                    connection.setRequestProperty("Content-Type", "application/json")
-                    connection.doOutput = true
-
-                    val jsonPayload = """{"p_booking_id":"$bookingId"}"""
-                    connection.outputStream.use { os ->
-                        os.write(jsonPayload.toByteArray())
-                    }
-
-                    val responseCode = connection.responseCode
-                    Log.d("BookingAlert", "📡 RPC Response Code: $responseCode")
-                    
-                    val responseBody = if (responseCode in 200..299) {
-                        connection.inputStream.bufferedReader().use { it.readText() }
-                    } else {
-                        connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
-                    }
-                    connection.disconnect()
-
-                    Log.d("BookingAlert", "📄 RPC Response Body: $responseBody")
-
-                    withContext(Dispatchers.Main) {
-                        if (responseCode in 200..299) {
-                            try {
-                                val jsonResponse = JSONObject(responseBody)
-                                val success = jsonResponse.optBoolean("success", false)
-                                
-                                if (success) {
-                                    Toast.makeText(
-                                        this@BookingAlertActivity,
-                                        "✅ Booking accepted successfully!",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    Log.d("BookingAlert", "✅ Booking accepted successfully")
-                                } else {
-                                    val message = jsonResponse.optString("message", "Already taken")
-                                    Toast.makeText(
-                                        this@BookingAlertActivity,
-                                        "⚠️ $message",
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                    Log.w("BookingAlert", "⚠️ Accept failed: $message")
-                                }
-                            } catch (e: Exception) {
-                                Log.e("BookingAlert", "❌ Error parsing response", e)
-                                Toast.makeText(
-                                    this@BookingAlertActivity,
-                                    "✅ Booking accepted",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        } else {
-                            Toast.makeText(
-                                this@BookingAlertActivity,
-                                "❌ Failed to accept booking (Code: $responseCode)",
-                                Toast.LENGTH_LONG
-                            ).show()
-                            Log.e("BookingAlert", "❌ HTTP Error: $responseCode - $responseBody")
-                        }
-                        finish()
-                    }
-                } else if (action == "rejected") {
-                    // Extract user_id from JWT
-                    val userId = try {
-                        val parts = jwt.split(".")
-                        if (parts.size >= 2) {
-                            val payload = String(android.util.Base64.decode(parts[1], android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING))
-                            val jsonObj = JSONObject(payload)
-                            jsonObj.optString("sub", "")
-                        } else {
-                            ""
-                        }
-                    } catch (e: Exception) {
-                        Log.e("BookingAlert", "❌ Failed to extract user_id from JWT", e)
-                        ""
-                    }
-                    
-                    if (userId.isEmpty()) {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(
-                                this@BookingAlertActivity,
-                                "⚠️ Could not identify worker",
-                                Toast.LENGTH_LONG
-                            ).show()
-                            finish()
-                        }
-                        return@launch
-                    }
-                    
-                    Log.d("BookingAlert", "👤 Worker ID: $userId")
-                    
-                    // Call reject_booking_request RPC
-                    val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/reject_booking_request")
-                    val connection = rpcUrl.openConnection() as HttpURLConnection
-                    
-                    connection.requestMethod = "POST"
-                    connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                    connection.setRequestProperty("Authorization", "Bearer $jwt")
-                    connection.setRequestProperty("Content-Type", "application/json")
-                    connection.doOutput = true
-
-                    val jsonPayload = """{"p_booking_id":"$bookingId","p_worker_id":"$userId"}"""
-                    connection.outputStream.use { os ->
-                        os.write(jsonPayload.toByteArray())
-                    }
-
-                    val responseCode = connection.responseCode
-                    Log.d("BookingAlert", "📡 RPC Response Code: $responseCode")
-                    
-                    val responseBody = if (responseCode in 200..299) {
-                        connection.inputStream.bufferedReader().use { it.readText() }
-                    } else {
-                        connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
-                    }
-                    connection.disconnect()
-                    
-                    Log.d("BookingAlert", "📄 RPC Response Body: $responseBody")
-
-                    withContext(Dispatchers.Main) {
-                        if (responseCode in 200..299) {
-                            try {
-                                val jsonResponse = JSONObject(responseBody)
-                                val success = jsonResponse.optBoolean("success", false)
-                                val message = jsonResponse.optString("message", "")
-                                
-                                if (success) {
-                                    val toastMessage = when {
-                                        message.contains("next-tier-activated") -> "Booking offered to next available workers"
-                                        message.contains("no-more-tiers") -> "Booking rejected"
-                                        else -> "Booking rejected"
-                                    }
-                                    
-                                    Toast.makeText(
-                                        this@BookingAlertActivity,
-                                        toastMessage,
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    Log.d("BookingAlert", "✅ Booking rejected: $message")
-                                } else {
-                                    Toast.makeText(
-                                        this@BookingAlertActivity,
-                                        "⚠️ Failed to reject booking",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    Log.w("BookingAlert", "⚠️ Reject failed: ${jsonResponse.optString("error")}")
-                                }
-                            } catch (e: Exception) {
-                                Log.e("BookingAlert", "❌ Error parsing response", e)
-                                Toast.makeText(
-                                    this@BookingAlertActivity,
-                                    "Booking rejected",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        } else {
-                            Toast.makeText(
-                                this@BookingAlertActivity,
-                                "⚠️ Failed to reject booking (Code: $responseCode)",
-                                Toast.LENGTH_LONG
-                            ).show()
-                            Log.e("BookingAlert", "❌ HTTP Error: $responseCode - $responseBody")
-                        }
-                        finish()
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("BookingAlert", "❌ Error updating booking", e)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        this@BookingAlertActivity,
-                        "❌ Network error: ${e.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    finish()
-                }
-            }
         }
     }
 }

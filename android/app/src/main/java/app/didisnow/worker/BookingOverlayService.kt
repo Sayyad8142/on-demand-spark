@@ -24,16 +24,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import android.os.Looper
-import java.net.HttpURLConnection
-import java.net.URL
-import org.json.JSONObject
 
 /**
  * Singleton guard to prevent multiple overlays from being shown simultaneously
@@ -42,6 +33,16 @@ private object OverlaySingleton {
     @Volatile var isShowing: Boolean = false
 }
 
+/**
+ * BookingOverlayService - UI-ONLY overlay for booking alerts
+ * 
+ * IMPORTANT: This service does NOT make any Supabase/network calls.
+ * All booking actions (accept/decline) are delegated to the web app via Intent.
+ * This prevents:
+ * - Token refresh race conditions
+ * - 401 errors causing logout
+ * - Session conflicts between native and web
+ */
 class BookingOverlayService : Service() {
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
@@ -52,9 +53,6 @@ class BookingOverlayService : Service() {
     private var countdownHandler: Handler? = null
     private var countdownRunnable: Runnable? = null
     
-    // Booking status polling
-    private var statusCheckHandler: Handler? = null
-    private var statusCheckRunnable: Runnable? = null
     private var currentBookingId: String? = null
     
     // Track the startId so we can call stopSelfResult() with it
@@ -63,17 +61,11 @@ class BookingOverlayService : Service() {
     // Track ALL windows we add, so we can remove them all in cleanup
     private val addedWindows = mutableListOf<View>()
     
-    // Service-level coroutine scope with SupervisorJob
-    private val serviceJob = SupervisorJob()
-    private val serviceScope = CoroutineScope(Dispatchers.Main.immediate + serviceJob)
-    
     // Single-flight guard to prevent double taps
     @Volatile
-    private var acceptInFlight = false
+    private var actionInFlight = false
     
     companion object {
-        private const val SUPABASE_URL = "https://paywwbuqycovjopryele.supabase.co"
-        private const val SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheXd3YnVxeWNvdmpvcHJ5ZWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkyNjksImV4cCI6MjA3MDc0NTI2OX0.js1MaTBkjuGlaDfQjrZpZ9_G8Jy9ygNAB8KpNDiQg8o"
         private const val NOTIFICATION_CHANNEL_ID = "booking_overlay_channel"
         private const val NOTIFICATION_ID = 9001
     }
@@ -91,41 +83,6 @@ class BookingOverlayService : Service() {
             Handler(mainLooper).post {
                 if (!isShuttingDown) block()
             }
-        }
-    }
-    
-    /**
-     * Read the LATEST access token from storage JUST-IN-TIME
-     * This ensures we always use the most recent token, not a stale one
-     */
-    private fun getLatestAccessToken(): String? {
-        try {
-            // First try AuthBridge (most recently saved JWT)
-            val prefs = getSharedPreferences("worker_prefs", MODE_PRIVATE)
-            val authBridgeToken = prefs.getString("supabase_jwt", null)
-            if (!authBridgeToken.isNullOrEmpty()) {
-                android.util.Log.d("BookingOverlay", "🔑 Using token from AuthBridge")
-                return authBridgeToken
-            }
-            
-            // Fallback to didi_session in CapacitorStorage
-            val sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
-                .getString("didi_session", null)
-            
-            if (!sessionJson.isNullOrEmpty()) {
-                val session = JSONObject(sessionJson)
-                val token = session.optString("accessToken", "")
-                if (token.isNotEmpty()) {
-                    android.util.Log.d("BookingOverlay", "🔑 Using token from didi_session")
-                    return token
-                }
-            }
-            
-            android.util.Log.w("BookingOverlay", "⚠️ No access token found in storage")
-            return null
-        } catch (e: Exception) {
-            android.util.Log.e("BookingOverlay", "❌ Error reading access token", e)
-            return null
         }
     }
 
@@ -278,62 +235,47 @@ class BookingOverlayService : Service() {
                     secondsLeft--
                     countdownHandler?.postDelayed(this, 1000)
                 } else {
+                    // Timeout - send timeout action to web app
+                    sendActionToWebApp(bookingId, "timeout")
                     finishAndStop("countdown_expired")
                 }
             }
         }
 
-        // Accept button
+        // Accept button - UI ONLY, delegates to web app
         overlayView?.findViewById<Button>(R.id.btnAccept)?.setOnClickListener {
             if (!OverlaySingleton.isShowing) return@setOnClickListener
-            if (isShuttingDown || acceptInFlight) return@setOnClickListener
+            if (isShuttingDown || actionInFlight) return@setOnClickListener
             
-            acceptInFlight = true
+            actionInFlight = true
             android.util.Log.d("BookingOverlay", "✅ Accept button clicked for booking: $bookingId")
             
-            serviceScope.launch {
-                try {
-                    val success = updateBookingStatus(bookingId, "accepted")
-                    if (success) {
-                        android.util.Log.d("BookingOverlay", "✅ Booking accepted successfully")
-                        ui {
-                            Toast.makeText(this@BookingOverlayService, "✅ Booking Accepted!", Toast.LENGTH_SHORT).show()
-                        }
-                        notifyWebApp(bookingId, "accepted")
-                        finishAndStop("accepted")
-                    } else {
-                        android.util.Log.e("BookingOverlay", "❌ Failed to accept booking")
-                        ui {
-                            Toast.makeText(this@BookingOverlayService, "❌ Failed to accept", Toast.LENGTH_SHORT).show()
-                        }
-                        acceptInFlight = false
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e("BookingOverlay", "❌ Exception accepting booking", e)
-                    ui {
-                        Toast.makeText(this@BookingOverlayService, "❌ Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-                    acceptInFlight = false
-                }
+            // Show immediate feedback
+            ui {
+                Toast.makeText(this@BookingOverlayService, "Accepting booking...", Toast.LENGTH_SHORT).show()
             }
+            
+            // Send action to web app - NO network calls from native
+            sendActionToWebApp(bookingId, "accepted")
+            finishAndStop("accepted")
         }
 
-        // Decline button
+        // Decline button - UI ONLY, delegates to web app
         overlayView?.findViewById<Button>(R.id.btnDecline)?.setOnClickListener {
             if (!OverlaySingleton.isShowing) return@setOnClickListener
-            if (isShuttingDown) return@setOnClickListener
+            if (isShuttingDown || actionInFlight) return@setOnClickListener
             
-            android.util.Log.d("BookingOverlay", "❌ Decline button clicked")
+            actionInFlight = true
+            android.util.Log.d("BookingOverlay", "❌ Decline button clicked for booking: $bookingId")
             
-            serviceScope.launch {
-                try {
-                    updateBookingRequestStatus(bookingId, "declined")
-                } catch (e: Exception) {
-                    android.util.Log.e("BookingOverlay", "❌ Exception declining booking", e)
-                }
-                notifyWebApp(bookingId, "declined")
-                finishAndStop("declined")
+            // Show immediate feedback
+            ui {
+                Toast.makeText(this@BookingOverlayService, "Declining booking...", Toast.LENGTH_SHORT).show()
             }
+            
+            // Send action to web app - NO network calls from native
+            sendActionToWebApp(bookingId, "declined")
+            finishAndStop("declined")
         }
 
         try {
@@ -343,7 +285,6 @@ class BookingOverlayService : Service() {
             android.util.Log.d("BookingOverlay", "✅ Overlay view added successfully")
             
             countdownHandler?.post(countdownRunnable!!)
-            startStatusPolling(bookingId)
         } catch (e: Exception) {
             android.util.Log.e("BookingOverlay", "❌ Failed to add overlay view", e)
             OverlaySingleton.isShowing = false
@@ -351,153 +292,32 @@ class BookingOverlayService : Service() {
         }
     }
     
-    private fun startStatusPolling(bookingId: String) {
-        statusCheckHandler = Handler(mainLooper)
-        statusCheckRunnable = object : Runnable {
-            override fun run() {
-                if (isShuttingDown) return
-                
-                serviceScope.launch {
-                    try {
-                        val status = checkBookingStatus(bookingId)
-                        android.util.Log.d("BookingOverlay", "📊 Booking status: $status")
-                        
-                        if (status == "accepted" || status == "cancelled" || status == "assigned") {
-                            android.util.Log.d("BookingOverlay", "🔄 Booking status changed to $status - closing overlay")
-                            finishAndStop("status_changed_to_$status")
-                            return@launch
-                        }
-                    } catch (e: Exception) {
-                        android.util.Log.e("BookingOverlay", "❌ Status check failed", e)
-                    }
-                    
-                    if (!isShuttingDown) {
-                        statusCheckHandler?.postDelayed(this@Runnable, 3000)
-                    }
-                }
-            }
-        }
-        statusCheckHandler?.postDelayed(statusCheckRunnable!!, 3000)
-    }
-    
-    private suspend fun checkBookingStatus(bookingId: String): String? {
-        return withContext(Dispatchers.IO) {
-            try {
-                // Read LATEST token just-in-time
-                val accessToken = getLatestAccessToken()
-                if (accessToken.isNullOrEmpty()) {
-                    android.util.Log.w("BookingOverlay", "⚠️ No token for status check")
-                    return@withContext null
-                }
-                
-                val url = URL("$SUPABASE_URL/rest/v1/bookings?id=eq.$bookingId&select=status")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.requestMethod = "GET"
-                connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                connection.setRequestProperty("Authorization", "Bearer $accessToken")
-                connection.connectTimeout = 5000
-                connection.readTimeout = 5000
-                
-                val responseCode = connection.responseCode
-                if (responseCode == 200) {
-                    val response = connection.inputStream.bufferedReader().readText()
-                    val jsonArray = org.json.JSONArray(response)
-                    if (jsonArray.length() > 0) {
-                        return@withContext jsonArray.getJSONObject(0).optString("status")
-                    }
-                }
-                null
-            } catch (e: Exception) {
-                android.util.Log.e("BookingOverlay", "❌ checkBookingStatus error", e)
-                null
-            }
-        }
-    }
-    
-    private suspend fun updateBookingStatus(bookingId: String, status: String): Boolean {
-        return withContext(Dispatchers.IO) {
-            withTimeoutOrNull(10000L) {
-                try {
-                    // Read LATEST token just-in-time
-                    val accessToken = getLatestAccessToken()
-                    if (accessToken.isNullOrEmpty()) {
-                        android.util.Log.e("BookingOverlay", "❌ No access token for update")
-                        return@withTimeoutOrNull false
-                    }
-                    
-                    android.util.Log.d("BookingOverlay", "🔄 Updating booking $bookingId to $status")
-                    
-                    val url = URL("$SUPABASE_URL/rest/v1/bookings?id=eq.$bookingId")
-                    val connection = url.openConnection() as HttpURLConnection
-                    connection.requestMethod = "PATCH"
-                    connection.doOutput = true
-                    connection.setRequestProperty("Content-Type", "application/json")
-                    connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                    connection.setRequestProperty("Authorization", "Bearer $accessToken")
-                    connection.setRequestProperty("Prefer", "return=minimal")
-                    connection.connectTimeout = 8000
-                    connection.readTimeout = 8000
-                    
-                    val now = java.time.Instant.now().toString()
-                    val body = """{"status":"$status","accepted_at":"$now"}"""
-                    
-                    connection.outputStream.bufferedWriter().use { it.write(body) }
-                    
-                    val responseCode = connection.responseCode
-                    android.util.Log.d("BookingOverlay", "📡 Update response: $responseCode")
-                    
-                    responseCode in 200..299
-                } catch (e: Exception) {
-                    android.util.Log.e("BookingOverlay", "❌ updateBookingStatus error", e)
-                    false
-                }
-            } ?: false
-        }
-    }
-    
-    private suspend fun updateBookingRequestStatus(bookingId: String, status: String): Boolean {
-        return withContext(Dispatchers.IO) {
-            try {
-                val accessToken = getLatestAccessToken()
-                if (accessToken.isNullOrEmpty()) return@withContext false
-                
-                val url = URL("$SUPABASE_URL/rest/v1/booking_requests?booking_id=eq.$bookingId&status=eq.pending")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.requestMethod = "PATCH"
-                connection.doOutput = true
-                connection.setRequestProperty("Content-Type", "application/json")
-                connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                connection.setRequestProperty("Authorization", "Bearer $accessToken")
-                connection.setRequestProperty("Prefer", "return=minimal")
-                
-                val now = java.time.Instant.now().toString()
-                val body = """{"status":"$status","responded_at":"$now"}"""
-                
-                connection.outputStream.bufferedWriter().use { it.write(body) }
-                
-                connection.responseCode in 200..299
-            } catch (e: Exception) {
-                android.util.Log.e("BookingOverlay", "❌ updateBookingRequestStatus error", e)
-                false
-            }
-        }
-    }
-    
-    private fun notifyWebApp(bookingId: String, action: String) {
+    /**
+     * Send booking action to web app via Intent to MainActivity.
+     * The web app will handle the actual Supabase RPC call.
+     * This prevents token/session conflicts.
+     */
+    private fun sendActionToWebApp(bookingId: String, action: String) {
         try {
-            val intent = Intent("booking-action")
-            intent.putExtra("bookingId", bookingId)
-            intent.putExtra("action", action)
-            LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+            android.util.Log.d("BookingOverlay", "📤 Sending action to web app: bookingId=$bookingId, action=$action")
             
+            // Send local broadcast for any in-app listeners
+            val broadcastIntent = Intent("booking-action")
+            broadcastIntent.putExtra("bookingId", bookingId)
+            broadcastIntent.putExtra("action", action)
+            LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent)
+            
+            // Launch MainActivity with booking action data
             val mainIntent = Intent(this, MainActivity::class.java)
-            mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            mainIntent.putExtra("navigateTo", "home")
-            mainIntent.putExtra("bookingId", bookingId)
-            mainIntent.putExtra("action", action)
+            mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            mainIntent.putExtra("booking_action", action)
+            mainIntent.putExtra("booking_id", bookingId)
+            mainIntent.putExtra("navigate_to", "home")
             startActivity(mainIntent)
+            
+            android.util.Log.d("BookingOverlay", "✅ Action sent to web app successfully")
         } catch (e: Exception) {
-            android.util.Log.e("BookingOverlay", "❌ notifyWebApp error", e)
+            android.util.Log.e("BookingOverlay", "❌ sendActionToWebApp error", e)
         }
     }
     
@@ -583,11 +403,6 @@ class BookingOverlayService : Service() {
         countdownHandler = null
         countdownRunnable = null
         
-        // Stop status polling
-        statusCheckHandler?.removeCallbacks(statusCheckRunnable ?: {})
-        statusCheckHandler = null
-        statusCheckRunnable = null
-        
         // Stop sound and vibration
         stopAlertSound()
         stopVibration()
@@ -608,9 +423,6 @@ class BookingOverlayService : Service() {
         
         // Clear singleton flag
         OverlaySingleton.isShowing = false
-        
-        // Cancel coroutines
-        serviceJob.cancel()
         
         // Stop service
         stopSelfResult(startIdForStop)
