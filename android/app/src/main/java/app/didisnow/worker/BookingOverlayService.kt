@@ -399,7 +399,7 @@ class BookingOverlayService : Service() {
         android.util.Log.d("BookingOverlay", "🔚 finishAndStop called: $reason")
         
         // Stop countdown
-        countdownHandler?.removeCallbacks(countdownRunnable ?: {})
+        countdownRunnable?.let { countdownHandler?.removeCallbacks(it) }
         countdownHandler = null
         countdownRunnable = null
         
