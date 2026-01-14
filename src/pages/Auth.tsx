@@ -100,6 +100,26 @@ export default function Auth() {
     };
     fetchCommunities();
   }, []);
+  const withTimeout = async <T,>(
+    work: () => PromiseLike<T>,
+    ms = 15000,
+    label = "request"
+  ): Promise<T> => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error(`Timeout while ${label}. Please check internet and try again.`));
+      }, ms);
+    });
+
+    try {
+      return (await Promise.race([Promise.resolve(work()), timeoutPromise])) as T;
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  };
+
   const normalizePhone = (phone: string) => {
     const cleaned = phone.replace(/\D/g, '');
     return cleaned.startsWith('91') ? `+${cleaned}` : `+91${cleaned}`;
@@ -175,27 +195,31 @@ export default function Auth() {
       const phone = normalizePhone(signInPhone);
 
       // Check if worker with this phone exists (skip for demo number)
-      const {
-        data: existingWorker,
-        error: workerCheckError
-      } = await supabase.from('workers').select('id').eq('phone', phone).maybeSingle();
+      const { data: existingWorker, error: workerCheckError } = await withTimeout(
+        () => supabase.from('workers').select('id').eq('phone', phone).maybeSingle(),
+        15000,
+        'checking your account'
+      );
+
       if (workerCheckError) {
         console.error('Error checking worker:', workerCheckError);
       }
+
       if (!existingWorker) {
         toast({
           title: t('auth.accountNotRegistered', 'Account not registered'),
           description: t('auth.signUpFirst', 'Please sign up first to create your account'),
           variant: "destructive"
         });
-        setLoading(false);
         return;
       }
-      const {
-        error
-      } = await supabase.auth.signInWithOtp({
-        phone
-      });
+
+      const { error } = await withTimeout(
+        () => supabase.auth.signInWithOtp({ phone }),
+        15000,
+        'sending OTP'
+      );
+
       if (error) throw error;
 
       // Navigate to OTP verification page
@@ -210,9 +234,10 @@ export default function Auth() {
         description: "Check your phone for the verification code"
       });
     } catch (error: any) {
+      const status = error?.status ? ` (status ${error.status})` : "";
       toast({
-        title: "Error",
-        description: error.message,
+        title: `Error${status}`,
+        description: error?.message || "Something went wrong while sending OTP",
         variant: "destructive"
       });
     } finally {
@@ -262,19 +287,22 @@ export default function Auth() {
     try {
       setLoading(true);
       const phone = normalizePhone(signUpPhone);
-      const {
-        error
-      } = await supabase.auth.signInWithOtp({
-        phone,
-        options: {
-          data: {
-            full_name: signUpFullName.trim(),
-            upi_id: signUpUpiId?.trim() || null,
-            service_types: signUpServices,
-            communities: [signUpCommunity]
+      const { error } = await withTimeout(
+        () => supabase.auth.signInWithOtp({
+          phone,
+          options: {
+            data: {
+              full_name: signUpFullName.trim(),
+              upi_id: signUpUpiId?.trim() || null,
+              service_types: signUpServices,
+              communities: [signUpCommunity]
+            }
           }
-        }
-      });
+        }),
+        15000,
+        'sending OTP'
+      );
+
       if (error) throw error;
 
       // Navigate to OTP verification page with signup data
@@ -297,9 +325,10 @@ export default function Auth() {
         description: "Check your phone for the verification code"
       });
     } catch (error: any) {
+      const status = error?.status ? ` (status ${error.status})` : "";
       toast({
-        title: "Error",
-        description: error.message,
+        title: `Error${status}`,
+        description: error?.message || "Something went wrong while sending OTP",
         variant: "destructive"
       });
     } finally {
