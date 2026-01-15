@@ -243,39 +243,89 @@ class BookingOverlayService : Service() {
         }
 
         // Accept button - UI ONLY, delegates to web app
-        overlayView?.findViewById<Button>(R.id.btnAccept)?.setOnClickListener {
+        overlayView?.findViewById<Button>(R.id.btnAccept)?.setOnClickListener { button ->
             if (!OverlaySingleton.isShowing) return@setOnClickListener
             if (isShuttingDown || actionInFlight) return@setOnClickListener
             
             actionInFlight = true
+            button.isEnabled = false
             android.util.Log.d("BookingOverlay", "✅ Accept button clicked for booking: $bookingId")
             
-            // Show immediate feedback
-            ui {
-                Toast.makeText(this@BookingOverlayService, "Accepting booking...", Toast.LENGTH_SHORT).show()
-            }
+            // Stop alerts immediately for better UX
+            stopAlertSound()
+            stopVibration()
+            countdownRunnable?.let { countdownHandler?.removeCallbacks(it) }
             
-            // Send action to web app - NO network calls from native
-            sendActionToWebApp(bookingId, "accepted")
-            finishAndStop("accepted")
+            // Show immediate feedback
+            Toast.makeText(this@BookingOverlayService, "Accepting booking...", Toast.LENGTH_SHORT).show()
+            
+            // First close the overlay completely, then launch the app
+            Handler(mainLooper).post {
+                // Remove overlay first
+                try {
+                    for (view in addedWindows) {
+                        try { windowManager?.removeView(view) } catch (e: Exception) {}
+                    }
+                    addedWindows.clear()
+                    overlayView = null
+                    overlayAdded = false
+                } catch (e: Exception) {
+                    android.util.Log.e("BookingOverlay", "Error removing overlay", e)
+                }
+                
+                // Clear singleton flag
+                OverlaySingleton.isShowing = false
+                
+                // Then send action to web app AFTER overlay is removed
+                Handler(mainLooper).postDelayed({
+                    sendActionToWebApp(bookingId, "accepted")
+                    isShuttingDown = true
+                    stopSelfResult(startIdForStop)
+                }, 100)
+            }
         }
 
         // Reject button - UI ONLY, delegates to web app
-        overlayView?.findViewById<Button>(R.id.btnReject)?.setOnClickListener {
+        overlayView?.findViewById<Button>(R.id.btnReject)?.setOnClickListener { button ->
             if (!OverlaySingleton.isShowing) return@setOnClickListener
             if (isShuttingDown || actionInFlight) return@setOnClickListener
             
             actionInFlight = true
+            button.isEnabled = false
             android.util.Log.d("BookingOverlay", "❌ Decline button clicked for booking: $bookingId")
             
-            // Show immediate feedback
-            ui {
-                Toast.makeText(this@BookingOverlayService, "Declining booking...", Toast.LENGTH_SHORT).show()
-            }
+            // Stop alerts immediately for better UX
+            stopAlertSound()
+            stopVibration()
+            countdownRunnable?.let { countdownHandler?.removeCallbacks(it) }
             
-            // Send action to web app - NO network calls from native
-            sendActionToWebApp(bookingId, "declined")
-            finishAndStop("declined")
+            // Show immediate feedback
+            Toast.makeText(this@BookingOverlayService, "Declining booking...", Toast.LENGTH_SHORT).show()
+            
+            // First close the overlay completely, then launch the app
+            Handler(mainLooper).post {
+                // Remove overlay first
+                try {
+                    for (view in addedWindows) {
+                        try { windowManager?.removeView(view) } catch (e: Exception) {}
+                    }
+                    addedWindows.clear()
+                    overlayView = null
+                    overlayAdded = false
+                } catch (e: Exception) {
+                    android.util.Log.e("BookingOverlay", "Error removing overlay", e)
+                }
+                
+                // Clear singleton flag
+                OverlaySingleton.isShowing = false
+                
+                // Then send action to web app AFTER overlay is removed
+                Handler(mainLooper).postDelayed({
+                    sendActionToWebApp(bookingId, "declined")
+                    isShuttingDown = true
+                    stopSelfResult(startIdForStop)
+                }, 100)
+            }
         }
 
         try {
@@ -308,11 +358,17 @@ class BookingOverlayService : Service() {
             LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent)
             
             // Launch MainActivity with booking action data
-            val mainIntent = Intent(this, MainActivity::class.java)
-            mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            mainIntent.putExtra("booking_action", action)
-            mainIntent.putExtra("booking_id", bookingId)
-            mainIntent.putExtra("navigate_to", "home")
+            // Use FLAG_ACTIVITY_REORDER_TO_FRONT to bring existing instance to front without recreating
+            val mainIntent = Intent(this, MainActivity::class.java).apply {
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or 
+                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP
+                )
+                putExtra("booking_action", action)
+                putExtra("booking_id", bookingId)
+                putExtra("navigate_to", "home")
+            }
             startActivity(mainIntent)
             
             android.util.Log.d("BookingOverlay", "✅ Action sent to web app successfully")
