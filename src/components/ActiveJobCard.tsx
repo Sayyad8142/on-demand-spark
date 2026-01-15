@@ -128,13 +128,6 @@ export default function ActiveJobCard({
             <p className="text-sm text-amber-900 dark:text-amber-200">{booking.notes}</p>
           </div>}
 
-        {/* Countdown Timer Display (shown when locked) */}
-        {isLocked && (
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-lg py-2 px-3">
-            <Clock className="w-4 h-4 text-orange-500" />
-            <span>⏳ Starts after: <span className="font-bold text-gray-900 dark:text-gray-100">{formatCountdown(remainingSeconds)}</span></span>
-          </div>
-        )}
 
         {/* 4. Work Completed Button */}
         <Button 
