@@ -19,7 +19,7 @@ const STATUS_COLORS = {
   'started': 'bg-green-100 text-green-700 border-green-200'
 };
 
-const LOCK_DURATION_MINUTES = 30;
+const LOCK_DURATION_MINUTES = 20;
 
 function formatCountdown(seconds: number): string {
   const mins = Math.floor(seconds / 60);

@@ -164,8 +164,8 @@ export function useActiveJob(userId: string | undefined) {
       console.log("🔄 Updating job status:", bookingId, "to", newStatus);
 
       const { data, error } = await supabase.rpc("worker_set_booking_status", {
-        booking_id_param: bookingId,
-        new_status_param: newStatus,
+        p_booking_id: bookingId,
+        p_new_status: newStatus,
       });
 
       if (error) {
