@@ -27,7 +27,9 @@ class BookingActionPlugin : Plugin() {
         private const val TAG = "BookingActionPlugin"
         private const val PREFS_NAME = "booking_actions"
         private const val KEY_PENDING_ACTION = "pending_action"
-        private const val ACTION_EXPIRY_MS = 60_000L // 60 seconds
+        // App cold-start + login can easily take >60s on some devices.
+        // Keep actions longer so they can be processed once the session is restored.
+        private const val ACTION_EXPIRY_MS = 600_000L // 10 minutes
     }
     
     private fun getPrefs(): SharedPreferences {

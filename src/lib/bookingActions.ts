@@ -7,19 +7,24 @@ import { toast } from "@/hooks/use-toast";
  * Includes retry logic for cold start scenarios
  */
 export async function tryAccept(bookingId: string): Promise<{ success: boolean; error?: string }> {
-  const maxAttempts = 3;
-  
+  // Cold-start + token restore can be slow, especially when app was killed.
+  // Give it a bit more time before we declare failure.
+  const maxAttempts = 8;
+
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     console.log(`[tryAccept] Attempt ${attempt}/${maxAttempts} for booking ${bookingId}`);
-    
+
     const sessionValid = await ensureValidSessionForApiCall();
     if (!sessionValid) {
       if (attempt < maxAttempts) {
-        console.log(`[tryAccept] Session not valid on attempt ${attempt}, waiting and retrying...`);
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // 1s, 2s backoff
+        const waitMs = Math.min(500 * attempt, 2000);
+        console.log(
+          `[tryAccept] Session not valid on attempt ${attempt}, waiting ${waitMs}ms and retrying...`
+        );
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
         continue;
       }
-      
+
       toast({
         title: "Session issue",
         description: "Please try again. If the problem persists, close and reopen the app.",
@@ -36,9 +41,14 @@ export async function tryAccept(bookingId: string): Promise<{ success: boolean; 
         console.error("❌ RPC error accepting booking:", error);
         
         // Retry on network/transient errors
-        if (attempt < maxAttempts && (error.message?.includes('network') || error.message?.includes('fetch'))) {
+        if (
+          attempt < maxAttempts &&
+          (error.message?.includes("network") ||
+            error.message?.includes("fetch") ||
+            error.message?.includes("Failed to fetch"))
+        ) {
           console.log(`[tryAccept] Network error on attempt ${attempt}, retrying...`);
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise((resolve) => setTimeout(resolve, 750));
           continue;
         }
         
