@@ -75,7 +75,8 @@ export function useNativeBookingActions(workerId: string | undefined) {
     const { bookingId, action, wasQueued } = detail;
     const currentWorkerId = workerIdRef.current;
     
-    console.log(`[useNativeBookingActions] Processing action: ${action} for booking: ${bookingId}${wasQueued ? ' (was queued)' : ''}`);
+    console.log(`[useNativeBookingActions] 🎯 Processing action: ${action} for booking: ${bookingId}${wasQueued ? ' (was queued)' : ''}`);
+    console.log(`[useNativeBookingActions] Current workerId: ${currentWorkerId || 'NOT AVAILABLE'}`);
     
     // For decline, we need workerId
     if (action === "declined" && !currentWorkerId) {
@@ -86,6 +87,13 @@ export function useNativeBookingActions(workerId: string | undefined) {
         description: "Please wait while we process your response.",
       });
       return;
+    }
+    
+    // For accept, we don't need workerId but we need a valid session
+    // Wait a bit for session to be restored on cold start
+    if (action === "accepted" && wasQueued) {
+      console.log("[useNativeBookingActions] ⏳ Waiting for session to stabilize...");
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
     
     if (!bookingId) {

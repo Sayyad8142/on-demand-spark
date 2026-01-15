@@ -39,7 +39,7 @@ class MainActivity : BridgeActivity() {
     
     companion object {
         private const val TAG = "MainActivity"
-        private const val WEBVIEW_READY_DELAY_MS = 1500L // Wait for WebView + React to mount
+        private const val WEBVIEW_READY_DELAY_MS = 2500L // Wait longer for WebView + React + Auth to be ready
     }
     
     private var bookingActionPlugin: BookingActionPlugin? = null
@@ -156,24 +156,39 @@ class MainActivity : BridgeActivity() {
     
     /**
      * Dispatch a booking action to the web app via CustomEvent.
+     * Retries multiple times to ensure the event is caught.
      */
     private fun dispatchBookingAction(bookingId: String, action: String) {
         Log.d(TAG, "🚀 Dispatching booking action to web app: $action for $bookingId")
         
-        bridge?.webView?.post {
-            val js = """
-                (function() {
-                    console.log('[Native] Dispatching booking action: $action for $bookingId');
-                    window.dispatchEvent(new CustomEvent('native:booking-action', {
-                        detail: { 
-                            bookingId: '$bookingId', 
-                            action: '$action'
-                        }
-                    }));
-                })();
-            """.trimIndent()
-            bridge?.webView?.evaluateJavascript(js, null)
+        // Dispatch with retries to ensure the React hook catches it
+        var retryCount = 0
+        val maxRetries = 3
+        
+        fun doDispatch() {
+            bridge?.webView?.post {
+                val js = """
+                    (function() {
+                        console.log('[Native] Dispatching booking action (attempt ${retryCount + 1}): $action for $bookingId');
+                        window.dispatchEvent(new CustomEvent('native:booking-action', {
+                            detail: { 
+                                bookingId: '$bookingId', 
+                                action: '$action'
+                            }
+                        }));
+                    })();
+                """.trimIndent()
+                bridge?.webView?.evaluateJavascript(js, null)
+                
+                // Retry after a delay if not the last attempt
+                retryCount++
+                if (retryCount < maxRetries) {
+                    mainHandler.postDelayed({ doDispatch() }, 1000)
+                }
+            }
         }
+        
+        doDispatch()
     }
     
     /**
