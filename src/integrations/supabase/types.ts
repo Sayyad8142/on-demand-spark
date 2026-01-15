@@ -3429,7 +3429,7 @@ export type Database = {
         Returns: Json
       }
       worker_set_booking_status: {
-        Args: { booking_id_param: string; new_status_param: string }
+        Args: { p_booking_id: string; p_new_status: string }
         Returns: Json
       }
     }
