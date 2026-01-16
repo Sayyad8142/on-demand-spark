@@ -71,53 +71,35 @@ async function waitForSessionReady(
  * - Never triggers logout on errors
  */
 export function useNativeBookingActions(workerId: string | undefined) {
+  // All refs declared first - order must be consistent
   const authContext = useContext(AuthContext);
   const authReadyRef = useRef(false);
-
   const processingRef = useRef<Set<string>>(new Set());
   const queuedActionsRef = useRef<BookingActionDetail[]>([]);
   const workerIdRef = useRef<string | undefined>(workerId);
-
-  // Retry bookkeeping for cold-start/session restore issues (accept from overlay)
   const acceptRetryCountRef = useRef<Record<string, number>>({});
   const acceptRetryTimerRef = useRef<Record<string, number>>({});
-
-  // Deferred action - store pending action while waiting for auth
   const deferredActionRef = useRef<BookingActionDetail | null>(null);
-  
-  // Ref to hold the latest processAction function
   const processActionRef = useRef<((detail: BookingActionDetail) => Promise<void>) | null>(null);
+  
+  // Flag to track if we need to process deferred action
+  const shouldProcessDeferredRef = useRef(false);
 
-  // Keep workerIdRef in sync (moved up before the auth effect)
-  useEffect(() => {
-    workerIdRef.current = workerId;
-  }, [workerId]);
+  // Safely get authReady - handle case where context might not be ready yet
+  const authReady = authContext?.authReady ?? false;
 
-  // Update authReadyRef when authContext changes
-  // Process deferred action when auth becomes ready
-  useEffect(() => {
-    const isReady = authContext?.authReady ?? false;
-    const wasReady = authReadyRef.current;
-    authReadyRef.current = isReady;
-    console.log(`[useNativeBookingActions] authReady changed: ${wasReady} -> ${isReady}`);
-    
-    // When auth becomes ready for the first time, process any deferred action
-    if (isReady && !wasReady && deferredActionRef.current) {
-      console.log("[useNativeBookingActions] 🚀 Auth is ready, will process deferred action in 500ms");
-      const action = { ...deferredActionRef.current };
-      deferredActionRef.current = null;
-      
-      // Small delay to ensure all hooks have updated with latest session
-      setTimeout(() => {
-        console.log("[useNativeBookingActions] 🚀 Now processing deferred action:", action);
-        if (processActionRef.current) {
-          processActionRef.current(action);
-        } else {
-          console.error("[useNativeBookingActions] ❌ processActionRef not set yet!");
-        }
-      }, 500);
-    }
-  }, [authContext?.authReady]);
+  // Keep workerIdRef in sync
+  workerIdRef.current = workerId;
+  
+  // Update authReadyRef synchronously during render (not in useEffect)
+  // This ensures the ref is always current when callbacks access it
+  const wasAuthReady = authReadyRef.current;
+  authReadyRef.current = authReady;
+  
+  // Mark that we should process deferred action when auth becomes ready
+  if (authReady && !wasAuthReady && deferredActionRef.current) {
+    shouldProcessDeferredRef.current = true;
+  }
 
   /**
    * Acknowledge a processed action to prevent reprocessing.
@@ -422,6 +404,26 @@ export function useNativeBookingActions(workerId: string | undefined) {
   useEffect(() => {
     processActionRef.current = processAction;
   }, [processAction]);
+
+  // Process deferred action when auth becomes ready
+  useEffect(() => {
+    if (shouldProcessDeferredRef.current && deferredActionRef.current) {
+      console.log("[useNativeBookingActions] 🚀 Auth is ready, processing deferred action in 500ms");
+      const action = { ...deferredActionRef.current };
+      deferredActionRef.current = null;
+      shouldProcessDeferredRef.current = false;
+      
+      // Small delay to ensure all state has settled
+      const timeoutId = setTimeout(() => {
+        console.log("[useNativeBookingActions] 🚀 Now processing deferred action:", action);
+        if (processActionRef.current) {
+          processActionRef.current(action);
+        }
+      }, 500);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [authReady]);
 
   // Process queued actions when workerId becomes available
   useEffect(() => {
