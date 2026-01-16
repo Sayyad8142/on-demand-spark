@@ -345,10 +345,11 @@ export function useNativeBookingActions(workerId: string | undefined) {
     if (!Capacitor.isNativePlatform()) return false;
 
     try {
+      console.log("[useNativeBookingActions] 🔍 Checking for pending actions...");
       const pending = await BookingAction.getPendingAction();
 
       if (pending.bookingId && pending.action) {
-        console.log("[useNativeBookingActions] 🔍 Found pending action:", pending);
+        console.log("[useNativeBookingActions] 🎯 Found pending action:", pending);
         // Fire and forget: processAction has its own duplicate guards.
         void processAction({
           bookingId: pending.bookingId,
@@ -356,6 +357,8 @@ export function useNativeBookingActions(workerId: string | undefined) {
           wasQueued: true,
         });
         return true;
+      } else {
+        console.log("[useNativeBookingActions] No pending action found");
       }
     } catch (error) {
       console.warn("[useNativeBookingActions] Could not check pending actions:", error);
@@ -378,29 +381,35 @@ export function useNativeBookingActions(workerId: string | undefined) {
 
     window.addEventListener("native:booking-action", handler);
 
-    // Poll for pending actions for a short time window.
+    // Poll for pending actions for a longer time window.
     // This fixes cases where the first check happens before the native bridge is ready.
     let cancelled = false;
     let pollTimeoutId: number | null = null;
     let attempts = 0;
-    const maxAttempts = 20; // ~20s total
+    const maxAttempts = 40; // ~60s total with varying delays
 
     const poll = (delayMs: number) => {
       pollTimeoutId = window.setTimeout(async () => {
         if (cancelled) return;
 
         attempts++;
+        console.log(`[useNativeBookingActions] Polling for pending action (attempt ${attempts}/${maxAttempts})`);
         const found = await checkPendingActions();
-        if (found) return;
+        if (found) {
+          console.log("[useNativeBookingActions] ✅ Pending action found and processed");
+          return;
+        }
 
         if (attempts < maxAttempts) {
-          poll(1000);
+          // Faster polling initially, slower later
+          const nextDelay = attempts < 10 ? 1000 : attempts < 20 ? 1500 : 2000;
+          poll(nextDelay);
         }
       }, delayMs);
     };
 
     // Give React/Auth a moment, then start polling
-    poll(1200);
+    poll(800);
 
     return () => {
       cancelled = true;
