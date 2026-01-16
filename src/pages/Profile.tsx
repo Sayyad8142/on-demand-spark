@@ -580,181 +580,242 @@ export default function Profile() {
                   <Pencil className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{t('profile.edit')}</DialogTitle>
-                  <DialogDescription>
-                    {t('profile.profileInfo')}
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-name">{t('profile.name')}</Label>
-                    <Input id="edit-name" value={fullName} onChange={e => setFullName(e.target.value)} placeholder={t('auth.namePlaceholder')} />
-                  </div>
+              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 gap-0">
+                {/* Header */}
+                <div className="sticky top-0 bg-background z-10 px-6 py-4 border-b">
+                  <DialogHeader className="text-left">
+                    <DialogTitle className="text-lg font-semibold">{t('profile.edit')}</DialogTitle>
+                  </DialogHeader>
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-phone">{t('profile.phone')}</Label>
-                    <Input id="edit-phone" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Your mobile number" />
-                  </div>
-
-                  {/* Payment Details Section */}
-                  <div className="space-y-3">
-                    <Label className="flex items-center gap-2">
-                      <CreditCard className="w-4 h-4" />
-                      Payment Details
-                    </Label>
-                    
-                    {/* Manual UPI ID Input */}
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-upi">{t('auth.upiIdLabel', 'UPI ID')} ({t('common.optional', 'Optional')})</Label>
-                      <Input 
-                        id="edit-upi" 
-                        type="text" 
-                        placeholder={t('auth.upiPlaceholder', 'e.g., name@paytm')} 
-                        value={upiId} 
-                        onChange={e => setUpiId(e.target.value)} 
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {t('auth.upiHint', 'Enter manually if QR scan didn\'t detect it')}
-                      </p>
+                <div className="px-6 py-5 space-y-5">
+                  {/* Personal Info Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                      <User className="w-4 h-4" />
+                      <span>Personal Information</span>
                     </div>
+                    
+                    <div className="space-y-3 pl-1">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="edit-name" className="text-xs text-muted-foreground uppercase tracking-wide">{t('profile.name')}</Label>
+                        <Input 
+                          id="edit-name" 
+                          value={fullName} 
+                          onChange={e => setFullName(e.target.value)} 
+                          placeholder={t('auth.namePlaceholder')}
+                          className="h-11 bg-muted/30 border-muted-foreground/20 focus:bg-background transition-colors"
+                        />
+                      </div>
 
-                    {/* UPI QR Upload */}
-                    {!isGuestMode && worker && (
-                      <UpiQrUpload 
-                        currentUpiId={upiId} 
-                        currentQrUrl={upiQrUrl} 
-                        onUpiIdExtracted={newUpiId => setUpiId(newUpiId)} 
-                        onQrRemoved={() => setUpiQrUrl(null)} 
-                        onQrUrlSaved={url => setUpiQrUrl(url)}
-                        mode="profile" 
-                        workerId={worker.id} 
-                      />
-                    )}
+                      <div className="space-y-1.5">
+                        <Label htmlFor="edit-phone" className="text-xs text-muted-foreground uppercase tracking-wide">{t('profile.phone')}</Label>
+                        <div className="relative">
+                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input 
+                            id="edit-phone" 
+                            value={phone} 
+                            onChange={e => setPhone(e.target.value)} 
+                            placeholder="Your mobile number"
+                            className="h-11 pl-10 bg-muted/30 border-muted-foreground/20 focus:bg-background transition-colors"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>{t('profile.services')}</Label>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between">
-                          <span className="text-muted-foreground">
-                            {selectedServices.length > 0 ? `${selectedServices.length} selected` : "Select services"}
-                          </span>
-                          <ChevronDown className="h-4 w-4 opacity-50" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-full">
-                        <DropdownMenuLabel>Select Services</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {SERVICES.map(service => <DropdownMenuCheckboxItem key={service.value} checked={selectedServices.includes(service.value)} onCheckedChange={checked => {
-                        if (checked) {
-                          setSelectedServices([...selectedServices, service.value]);
-                        } else {
-                          setSelectedServices(selectedServices.filter(s => s !== service.value));
-                          // Clear cuisine tags if cook is deselected
-                          if (service.value === 'cook') {
-                            setSelectedCuisineTags([]);
-                          }
-                        }
-                      }}>
-                            {service.label}
-                          </DropdownMenuCheckboxItem>)}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    {selectedServices.length > 0 && <div className="flex flex-wrap gap-2 mt-2">
-                        {selectedServices.map(serviceValue => {
-                      const service = SERVICES.find(s => s.value === serviceValue);
-                      return <Badge key={serviceValue} variant="secondary" className="gap-1">
-                              {service?.label}
-                              <X className="h-3 w-3 cursor-pointer" onClick={() => setSelectedServices(selectedServices.filter(s => s !== serviceValue))} />
-                            </Badge>;
-                    })}
-                      </div>}
+                  <div className="h-px bg-border" />
+
+                  {/* Payment Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                      <Wallet className="w-4 h-4" />
+                      <span>Payment Details</span>
+                    </div>
+                    
+                    <div className="space-y-3 pl-1">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="edit-upi" className="text-xs text-muted-foreground uppercase tracking-wide">
+                          UPI ID
+                        </Label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
+                          <Input 
+                            id="edit-upi" 
+                            type="text" 
+                            placeholder={t('auth.upiPlaceholder', 'e.g., name@paytm')} 
+                            value={upiId} 
+                            onChange={e => setUpiId(e.target.value)}
+                            className="h-11 pl-8 bg-muted/30 border-muted-foreground/20 focus:bg-background transition-colors"
+                          />
+                        </div>
+                      </div>
+
+                      {/* UPI QR Upload - Compact */}
+                      {!isGuestMode && worker && (
+                        <div className="rounded-xl border border-dashed border-muted-foreground/30 bg-muted/20 p-4">
+                          <UpiQrUpload 
+                            currentUpiId={upiId} 
+                            currentQrUrl={upiQrUrl} 
+                            onUpiIdExtracted={newUpiId => setUpiId(newUpiId)} 
+                            onQrRemoved={() => setUpiQrUrl(null)} 
+                            onQrUrlSaved={url => setUpiQrUrl(url)}
+                            mode="profile" 
+                            workerId={worker.id} 
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>{t('profile.communities')}</Label>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between">
-                          <span className="text-muted-foreground">
-                            {selectedCommunities.length > 0 ? `${selectedCommunities.length} selected` : "Select communities"}
-                          </span>
-                          <ChevronDown className="h-4 w-4 opacity-50" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-full">
-                        <DropdownMenuLabel>Select Communities</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {communities.map(community => <DropdownMenuCheckboxItem key={community.id} checked={selectedCommunities.includes(community.value)} onCheckedChange={checked => {
-                        if (checked) {
-                          setSelectedCommunities([...selectedCommunities, community.value]);
-                        } else {
-                          setSelectedCommunities(selectedCommunities.filter(c => c !== community.value));
-                        }
-                      }}>
-                            {community.name}
-                          </DropdownMenuCheckboxItem>)}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    {selectedCommunities.length > 0 && <div className="flex flex-wrap gap-2 mt-2">
-                        {selectedCommunities.map(communityValue => {
-                      const community = communities.find(c => c.value === communityValue);
-                      return <Badge key={communityValue} variant="secondary" className="gap-1">
-                              {community?.name}
-                              <X className="h-3 w-3 cursor-pointer" onClick={() => setSelectedCommunities(selectedCommunities.filter(c => c !== communityValue))} />
-                            </Badge>;
-                    })}
-                      </div>}
+                  <div className="h-px bg-border" />
+
+                  {/* Services Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                      <Briefcase className="w-4 h-4" />
+                      <span>{t('profile.services')}</span>
+                    </div>
+                    
+                    <div className="pl-1 space-y-2">
+                      {SERVICES.map(service => (
+                        <label 
+                          key={service.value}
+                          className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                            selectedServices.includes(service.value) 
+                              ? 'border-primary bg-primary/5 shadow-sm' 
+                              : 'border-muted-foreground/20 hover:border-muted-foreground/40 hover:bg-muted/30'
+                          }`}
+                        >
+                          <input 
+                            type="checkbox" 
+                            checked={selectedServices.includes(service.value)}
+                            onChange={e => {
+                              if (e.target.checked) {
+                                setSelectedServices([...selectedServices, service.value]);
+                              } else {
+                                setSelectedServices(selectedServices.filter(s => s !== service.value));
+                                if (service.value === 'cook') {
+                                  setSelectedCuisineTags([]);
+                                }
+                              }
+                            }}
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                          <span className="text-sm font-medium">{service.label}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Cook Cuisine Specialization */}
-                  {selectedServices.includes('cook') && <div className="space-y-3">
-                      <Label>{t('profile.cuisineLabel', 'What type of cooking do you specialise in?')}</Label>
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
-                          <input type="checkbox" id="profile-cuisine-north" checked={selectedCuisineTags.includes('north_indian')} onChange={e => {
-                        if (e.target.checked) {
-                          setSelectedCuisineTags([...selectedCuisineTags, 'north_indian']);
-                        } else {
-                          setSelectedCuisineTags(selectedCuisineTags.filter(c => c !== 'north_indian'));
-                        }
-                      }} className="h-4 w-4 rounded border-gray-300" />
-                          <Label htmlFor="profile-cuisine-north" className="flex-1 cursor-pointer font-normal">
-                            {t('profile.cuisineNorth', 'North Indian')}
-                          </Label>
+                  {selectedServices.includes('cook') && (
+                    <>
+                      <div className="h-px bg-border" />
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-sm font-medium text-amber-600 dark:text-amber-400">
+                          <span className="text-lg">🍳</span>
+                          <span>{t('profile.cuisineLabel', 'Cuisine Specialization')}</span>
                         </div>
-                        <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
-                          <input type="checkbox" id="profile-cuisine-south" checked={selectedCuisineTags.includes('south_indian')} onChange={e => {
-                        if (e.target.checked) {
-                          setSelectedCuisineTags([...selectedCuisineTags, 'south_indian']);
-                        } else {
-                          setSelectedCuisineTags(selectedCuisineTags.filter(c => c !== 'south_indian'));
-                        }
-                      }} className="h-4 w-4 rounded border-gray-300" />
-                          <Label htmlFor="profile-cuisine-south" className="flex-1 cursor-pointer font-normal">
-                            {t('profile.cuisineSouth', 'South Indian')}
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
-                          <input type="checkbox" id="profile-cuisine-both" checked={selectedCuisineTags.includes('north_indian') && selectedCuisineTags.includes('south_indian')} onChange={e => {
-                        if (e.target.checked) {
-                          setSelectedCuisineTags(['north_indian', 'south_indian']);
-                        } else {
-                          setSelectedCuisineTags([]);
-                        }
-                      }} className="h-4 w-4 rounded border-gray-300" />
-                          <Label htmlFor="profile-cuisine-both" className="flex-1 cursor-pointer font-normal">
-                            {t('profile.cuisineBoth', 'Both')}
-                          </Label>
+                        
+                        <div className="pl-1 flex flex-wrap gap-2">
+                          {[
+                            { id: 'north_indian', label: t('profile.cuisineNorth', 'North Indian'), emoji: '🍛' },
+                            { id: 'south_indian', label: t('profile.cuisineSouth', 'South Indian'), emoji: '🍚' },
+                          ].map(cuisine => (
+                            <button
+                              key={cuisine.id}
+                              type="button"
+                              onClick={() => {
+                                if (selectedCuisineTags.includes(cuisine.id)) {
+                                  setSelectedCuisineTags(selectedCuisineTags.filter(c => c !== cuisine.id));
+                                } else {
+                                  setSelectedCuisineTags([...selectedCuisineTags, cuisine.id]);
+                                }
+                              }}
+                              className={`flex items-center gap-2 px-4 py-2.5 rounded-full border text-sm font-medium transition-all ${
+                                selectedCuisineTags.includes(cuisine.id)
+                                  ? 'border-amber-500 bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 shadow-sm'
+                                  : 'border-muted-foreground/20 hover:border-amber-300 hover:bg-amber-50/50 dark:hover:bg-amber-950/30'
+                              }`}
+                            >
+                              <span>{cuisine.emoji}</span>
+                              <span>{cuisine.label}</span>
+                            </button>
+                          ))}
                         </div>
                       </div>
-                    </div>}
+                    </>
+                  )}
 
-                  <Button onClick={handleUpdate} disabled={updating} className="w-full">
-                    {updating ? t('common.loading') : t('profile.updateProfile')}
+                  <div className="h-px bg-border" />
+
+                  {/* Communities Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                        <Settings className="w-4 h-4" />
+                        <span>{t('profile.communities')}</span>
+                      </div>
+                      {selectedCommunities.length > 0 && (
+                        <Badge variant="secondary" className="text-xs">
+                          {selectedCommunities.length} selected
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <div className="pl-1">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" className="w-full justify-between h-11 bg-muted/30 border-muted-foreground/20 hover:bg-muted/50">
+                            <span className="text-muted-foreground text-sm">
+                              {selectedCommunities.length > 0 
+                                ? communities.filter(c => selectedCommunities.includes(c.value)).map(c => c.name).join(', ')
+                                : "Tap to select communities"
+                              }
+                            </span>
+                            <ChevronDown className="h-4 w-4 opacity-50" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-full min-w-[280px] bg-background">
+                          <DropdownMenuLabel>Select Communities</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {communities.map(community => (
+                            <DropdownMenuCheckboxItem 
+                              key={community.id} 
+                              checked={selectedCommunities.includes(community.value)} 
+                              onCheckedChange={checked => {
+                                if (checked) {
+                                  setSelectedCommunities([...selectedCommunities, community.value]);
+                                } else {
+                                  setSelectedCommunities(selectedCommunities.filter(c => c !== community.value));
+                                }
+                              }}
+                            >
+                              {community.name}
+                            </DropdownMenuCheckboxItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sticky Footer */}
+                <div className="sticky bottom-0 bg-background border-t px-6 py-4">
+                  <Button 
+                    onClick={handleUpdate} 
+                    disabled={updating} 
+                    className="w-full h-12 text-base font-semibold shadow-lg"
+                  >
+                    {updating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      t('profile.updateProfile')
+                    )}
                   </Button>
                 </div>
               </DialogContent>
