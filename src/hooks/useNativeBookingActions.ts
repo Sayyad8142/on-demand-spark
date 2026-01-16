@@ -84,37 +84,40 @@ export function useNativeBookingActions(workerId: string | undefined) {
 
   // Deferred action - store pending action while waiting for auth
   const deferredActionRef = useRef<BookingActionDetail | null>(null);
+  
+  // Ref to hold the latest processAction function
+  const processActionRef = useRef<((detail: BookingActionDetail) => Promise<void>) | null>(null);
 
-  // Update authReadyRef when authContext changes
-  useEffect(() => {
-    const isReady = authContext?.authReady ?? false;
-    authReadyRef.current = isReady;
-    console.log(`[useNativeBookingActions] authReady changed: ${isReady}`);
-    
-    // When auth becomes ready, process any deferred action
-    if (isReady && deferredActionRef.current) {
-      console.log("[useNativeBookingActions] 🚀 Auth is ready, processing deferred action");
-      const action = deferredActionRef.current;
-      deferredActionRef.current = null;
-      processAction(action);
-    }
-  }, [authContext?.authReady]);
-
-  // Keep workerIdRef in sync
+  // Keep workerIdRef in sync (moved up before the auth effect)
   useEffect(() => {
     workerIdRef.current = workerId;
-    
-    // Process any queued actions when workerId becomes available
-    if (workerId && queuedActionsRef.current.length > 0) {
-      console.log("[useNativeBookingActions] workerId now available, processing queued actions");
-      const queue = [...queuedActionsRef.current];
-      queuedActionsRef.current = [];
-      
-      queue.forEach(action => {
-        processAction(action);
-      });
-    }
   }, [workerId]);
+
+  // Update authReadyRef when authContext changes
+  // Process deferred action when auth becomes ready
+  useEffect(() => {
+    const isReady = authContext?.authReady ?? false;
+    const wasReady = authReadyRef.current;
+    authReadyRef.current = isReady;
+    console.log(`[useNativeBookingActions] authReady changed: ${wasReady} -> ${isReady}`);
+    
+    // When auth becomes ready for the first time, process any deferred action
+    if (isReady && !wasReady && deferredActionRef.current) {
+      console.log("[useNativeBookingActions] 🚀 Auth is ready, will process deferred action in 500ms");
+      const action = { ...deferredActionRef.current };
+      deferredActionRef.current = null;
+      
+      // Small delay to ensure all hooks have updated with latest session
+      setTimeout(() => {
+        console.log("[useNativeBookingActions] 🚀 Now processing deferred action:", action);
+        if (processActionRef.current) {
+          processActionRef.current(action);
+        } else {
+          console.error("[useNativeBookingActions] ❌ processActionRef not set yet!");
+        }
+      }, 500);
+    }
+  }, [authContext?.authReady]);
 
   /**
    * Acknowledge a processed action to prevent reprocessing.
@@ -414,6 +417,24 @@ export function useNativeBookingActions(workerId: string | undefined) {
       }, 2000);
     }
   }, [acknowledgeAction]);
+
+  // Keep processActionRef updated with the latest processAction
+  useEffect(() => {
+    processActionRef.current = processAction;
+  }, [processAction]);
+
+  // Process queued actions when workerId becomes available
+  useEffect(() => {
+    if (workerId && queuedActionsRef.current.length > 0) {
+      console.log("[useNativeBookingActions] workerId now available, processing queued actions");
+      const queue = [...queuedActionsRef.current];
+      queuedActionsRef.current = [];
+      
+      queue.forEach(action => {
+        processAction(action);
+      });
+    }
+  }, [workerId, processAction]);
 
   const handleBookingAction = useCallback((event: CustomEvent<BookingActionDetail>) => {
     const detail = event.detail;
