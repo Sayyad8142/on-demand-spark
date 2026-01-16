@@ -94,7 +94,9 @@ export function useNativeBookingActions(workerId: string | undefined) {
 
     const scheduleAcceptRetry = (reason?: string) => {
       const next = (acceptRetryCountRef.current[bookingId] ?? 0) + 1;
-      const max = 10;
+      // Accept-from-overlay can require a long cold-start + session restore.
+      // Keep retrying for longer before giving up.
+      const max = 30;
 
       if (next > max) {
         console.warn("[useNativeBookingActions] Accept retry limit reached, giving up", {
@@ -113,7 +115,7 @@ export function useNativeBookingActions(workerId: string | undefined) {
         window.clearTimeout(existing);
       }
 
-      const waitMs = Math.min(1000 + next * 300, 3000);
+      const waitMs = Math.min(1000 + next * 400, 6000);
       toast({
         title: "Restoring session…",
         description: `Retrying accept (${next}/${max})`,
@@ -301,24 +303,31 @@ export function useNativeBookingActions(workerId: string | undefined) {
 
   /**
    * Check for pending actions on mount (for queued actions from cold start).
+   *
+   * IMPORTANT: On some devices WebView/Capacitor bridge initialization is slow,
+   * so we retry for a short window instead of checking only once.
    */
-  const checkPendingActions = useCallback(async () => {
-    if (!Capacitor.isNativePlatform()) return;
-    
+  const checkPendingActions = useCallback(async (): Promise<boolean> => {
+    if (!Capacitor.isNativePlatform()) return false;
+
     try {
       const pending = await BookingAction.getPendingAction();
-      
+
       if (pending.bookingId && pending.action) {
         console.log("[useNativeBookingActions] 🔍 Found pending action:", pending);
-        processAction({
+        // Fire and forget: processAction has its own duplicate guards.
+        void processAction({
           bookingId: pending.bookingId,
           action: pending.action,
           wasQueued: true,
         });
+        return true;
       }
     } catch (error) {
       console.warn("[useNativeBookingActions] Could not check pending actions:", error);
     }
+
+    return false;
   }, [processAction]);
 
   useEffect(() => {
@@ -335,15 +344,35 @@ export function useNativeBookingActions(workerId: string | undefined) {
 
     window.addEventListener("native:booking-action", handler);
 
-    // Check for pending actions after a longer delay (give React + Auth more time to mount on cold start)
-    const timeoutId = setTimeout(() => {
-      checkPendingActions();
-    }, 1500); // Increased from 500ms to 1500ms
+    // Poll for pending actions for a short time window.
+    // This fixes cases where the first check happens before the native bridge is ready.
+    let cancelled = false;
+    let pollTimeoutId: number | null = null;
+    let attempts = 0;
+    const maxAttempts = 20; // ~20s total
+
+    const poll = (delayMs: number) => {
+      pollTimeoutId = window.setTimeout(async () => {
+        if (cancelled) return;
+
+        attempts++;
+        const found = await checkPendingActions();
+        if (found) return;
+
+        if (attempts < maxAttempts) {
+          poll(1000);
+        }
+      }, delayMs);
+    };
+
+    // Give React/Auth a moment, then start polling
+    poll(1200);
 
     return () => {
+      cancelled = true;
       console.log("[useNativeBookingActions] Cleaning up native booking action listener");
       window.removeEventListener("native:booking-action", handler);
-      clearTimeout(timeoutId);
+      if (pollTimeoutId) window.clearTimeout(pollTimeoutId);
 
       // Cleanup any scheduled accept retries
       Object.values(acceptRetryTimerRef.current).forEach((id) => window.clearTimeout(id));
