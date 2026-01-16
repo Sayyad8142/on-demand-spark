@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Clock } from "lucide-react";
+import { Check, Clock, Phone } from "lucide-react";
 import { formatBookingAddress, parsePHFCode, BookingWithAddress } from "@/lib/address";
 import { useState, useEffect, useCallback } from "react";
 
@@ -153,6 +153,17 @@ export default function ActiveJobCard({
               Work Completed
             </>
           )}
+        </Button>
+
+        {/* 5. Call Manager Button */}
+        <Button
+          variant="outline"
+          size="lg"
+          className="w-full h-12 text-base font-medium rounded-xl border-2 border-primary text-primary hover:bg-primary/10"
+          onClick={() => window.open('tel:+919100001639', '_self')}
+        >
+          <Phone className="w-5 h-5 mr-2" />
+          Call Manager
         </Button>
       </div>
     </Card>;
