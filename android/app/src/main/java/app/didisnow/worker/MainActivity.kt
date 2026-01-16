@@ -39,7 +39,7 @@ class MainActivity : BridgeActivity() {
     
     companion object {
         private const val TAG = "MainActivity"
-        private const val WEBVIEW_READY_DELAY_MS = 2500L // Wait longer for WebView + React + Auth to be ready
+        private const val WEBVIEW_READY_DELAY_MS = 4000L // Wait longer for WebView + React + Auth to be ready
     }
     
     private var bookingActionPlugin: BookingActionPlugin? = null
@@ -156,20 +156,21 @@ class MainActivity : BridgeActivity() {
     
     /**
      * Dispatch a booking action to the web app via CustomEvent.
-     * Retries multiple times to ensure the event is caught.
+     * Retries multiple times with increasing delays to ensure the event is caught.
      */
     private fun dispatchBookingAction(bookingId: String, action: String) {
         Log.d(TAG, "🚀 Dispatching booking action to web app: $action for $bookingId")
         
         // Dispatch with retries to ensure the React hook catches it
         var retryCount = 0
-        val maxRetries = 3
+        val maxRetries = 8 // More retries for cold start
+        val delays = listOf(500L, 1000L, 1500L, 2000L, 2500L, 3000L, 4000L, 5000L)
         
         fun doDispatch() {
             bridge?.webView?.post {
                 val js = """
                     (function() {
-                        console.log('[Native] Dispatching booking action (attempt ${retryCount + 1}): $action for $bookingId');
+                        console.log('[Native] Dispatching booking action (attempt ${retryCount + 1}/$maxRetries): $action for $bookingId');
                         window.dispatchEvent(new CustomEvent('native:booking-action', {
                             detail: { 
                                 bookingId: '$bookingId', 
@@ -183,7 +184,8 @@ class MainActivity : BridgeActivity() {
                 // Retry after a delay if not the last attempt
                 retryCount++
                 if (retryCount < maxRetries) {
-                    mainHandler.postDelayed({ doDispatch() }, 1000)
+                    val delay = delays.getOrElse(retryCount) { 5000L }
+                    mainHandler.postDelayed({ doDispatch() }, delay)
                 }
             }
         }
