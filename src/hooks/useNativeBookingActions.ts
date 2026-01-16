@@ -146,10 +146,10 @@ export function useNativeBookingActions(workerId: string | undefined) {
     }
 
     // For accept, we don't need workerId but we need a valid session
-    // Wait a bit for session to be restored on cold start
+    // Wait longer for session to be restored on cold start
     if (action === "accepted" && wasQueued) {
       console.log("[useNativeBookingActions] ⏳ Waiting for session to stabilize...");
-      await new Promise((resolve) => setTimeout(resolve, 750));
+      await new Promise((resolve) => setTimeout(resolve, 1500)); // Increased wait time
     }
 
     if (!bookingId) {
@@ -332,10 +332,10 @@ export function useNativeBookingActions(workerId: string | undefined) {
 
     window.addEventListener("native:booking-action", handler);
 
-    // Check for pending actions after a short delay (give React time to mount)
+    // Check for pending actions after a longer delay (give React + Auth more time to mount on cold start)
     const timeoutId = setTimeout(() => {
       checkPendingActions();
-    }, 500);
+    }, 1500); // Increased from 500ms to 1500ms
 
     return () => {
       console.log("[useNativeBookingActions] Cleaning up native booking action listener");

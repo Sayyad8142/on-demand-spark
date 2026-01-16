@@ -235,8 +235,8 @@ class BookingOverlayService : Service() {
                     secondsLeft--
                     countdownHandler?.postDelayed(this, 1000)
                 } else {
-                    // Timeout - send timeout action to web app
-                    sendActionToWebApp(bookingId, "timeout")
+                    // Timeout - send timeout action to web app (don't open app)
+                    sendActionToWebApp(bookingId, "timeout", openApp = false)
                     finishAndStop("countdown_expired")
                 }
             }
@@ -276,9 +276,9 @@ class BookingOverlayService : Service() {
                 // Clear singleton flag
                 OverlaySingleton.isShowing = false
                 
-                // Then send action to web app AFTER overlay is removed
+                // Then send action to web app AFTER overlay is removed (open app for accept)
                 Handler(mainLooper).postDelayed({
-                    sendActionToWebApp(bookingId, "accepted")
+                    sendActionToWebApp(bookingId, "accepted", openApp = true)
                     isShuttingDown = true
                     stopSelfResult(startIdForStop)
                 }, 100)
@@ -286,6 +286,7 @@ class BookingOverlayService : Service() {
         }
 
         // Reject button - UI ONLY, delegates to web app
+        // NOTE: For reject, we do NOT open the app - action is queued and processed when user opens app later
         overlayView?.findViewById<Button>(R.id.btnReject)?.setOnClickListener { button ->
             if (!OverlaySingleton.isShowing) return@setOnClickListener
             if (isShuttingDown || actionInFlight) return@setOnClickListener
@@ -300,11 +301,10 @@ class BookingOverlayService : Service() {
             countdownRunnable?.let { countdownHandler?.removeCallbacks(it) }
             
             // Show immediate feedback
-            Toast.makeText(this@BookingOverlayService, "Declining booking...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this@BookingOverlayService, "Booking declined", Toast.LENGTH_SHORT).show()
             
-            // First close the overlay completely, then launch the app
+            // Remove overlay - do NOT open app for reject
             Handler(mainLooper).post {
-                // Remove overlay first
                 try {
                     for (view in addedWindows) {
                         try { windowManager?.removeView(view) } catch (e: Exception) {}
@@ -319,9 +319,9 @@ class BookingOverlayService : Service() {
                 // Clear singleton flag
                 OverlaySingleton.isShowing = false
                 
-                // Then send action to web app AFTER overlay is removed
+                // Queue action but do NOT open app (openApp = false)
                 Handler(mainLooper).postDelayed({
-                    sendActionToWebApp(bookingId, "declined")
+                    sendActionToWebApp(bookingId, "declined", openApp = false)
                     isShuttingDown = true
                     stopSelfResult(startIdForStop)
                 }, 100)
@@ -346,10 +346,17 @@ class BookingOverlayService : Service() {
      * Send booking action to web app via Intent to MainActivity.
      * The web app will handle the actual Supabase RPC call.
      * This prevents token/session conflicts.
+     * 
+     * @param bookingId The booking ID
+     * @param action The action (accepted/declined/timeout)
+     * @param openApp Whether to launch MainActivity (for accept we need the app open; for decline we don't)
      */
-    private fun sendActionToWebApp(bookingId: String, action: String) {
+    private fun sendActionToWebApp(bookingId: String, action: String, openApp: Boolean = true) {
         try {
-            android.util.Log.d("BookingOverlay", "📤 Sending action to web app: bookingId=$bookingId, action=$action")
+            android.util.Log.d("BookingOverlay", "📤 Sending action to web app: bookingId=$bookingId, action=$action, openApp=$openApp")
+            
+            // Always queue the action to SharedPreferences so it can be processed later
+            queueActionToPrefs(bookingId, action)
             
             // Send local broadcast for any in-app listeners
             val broadcastIntent = Intent("booking-action")
@@ -357,23 +364,45 @@ class BookingOverlayService : Service() {
             broadcastIntent.putExtra("action", action)
             LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent)
             
-            // Launch MainActivity with booking action data
-            // Use FLAG_ACTIVITY_REORDER_TO_FRONT to bring existing instance to front without recreating
-            val mainIntent = Intent(this, MainActivity::class.java).apply {
-                addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK or 
-                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP
-                )
-                putExtra("booking_action", action)
-                putExtra("booking_id", bookingId)
-                putExtra("navigate_to", "home")
+            // Only launch MainActivity if openApp is true
+            if (openApp) {
+                // Launch MainActivity with booking action data
+                // Use FLAG_ACTIVITY_REORDER_TO_FRONT to bring existing instance to front without recreating
+                val mainIntent = Intent(this, MainActivity::class.java).apply {
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or 
+                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    )
+                    putExtra("booking_action", action)
+                    putExtra("booking_id", bookingId)
+                    putExtra("navigate_to", "home")
+                }
+                startActivity(mainIntent)
             }
-            startActivity(mainIntent)
             
             android.util.Log.d("BookingOverlay", "✅ Action sent to web app successfully")
         } catch (e: Exception) {
             android.util.Log.e("BookingOverlay", "❌ sendActionToWebApp error", e)
+        }
+    }
+    
+    /**
+     * Queue action directly to SharedPreferences.
+     * This ensures the action is persisted even if the app is not running.
+     */
+    private fun queueActionToPrefs(bookingId: String, action: String) {
+        try {
+            val prefs = getSharedPreferences("booking_actions", Context.MODE_PRIVATE)
+            val json = org.json.JSONObject().apply {
+                put("bookingId", bookingId)
+                put("action", action)
+                put("createdAt", System.currentTimeMillis())
+            }
+            prefs.edit().putString("pending_action", json.toString()).apply()
+            android.util.Log.d("BookingOverlay", "✅ Action queued to prefs: $action for $bookingId")
+        } catch (e: Exception) {
+            android.util.Log.e("BookingOverlay", "❌ Error queueing action to prefs", e)
         }
     }
     
