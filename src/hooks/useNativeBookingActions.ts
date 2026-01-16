@@ -4,6 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { AuthContext } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureValidSessionForApiCall } from "@/lib/sessionManager";
 
 /**
  * Interface for the native BookingAction plugin.
@@ -22,8 +23,10 @@ interface BookingActionDetail {
 }
 
 /**
- * Wait for authReady + valid Supabase session with access_token.
- * Returns true if ready, false if timeout.
+ * Wait for a valid Supabase session with access_token.
+ *
+ * IMPORTANT: On native cold start, simply polling getSession() is not enough.
+ * We actively attempt to restore the session from storage via ensureValidSessionForApiCall().
  */
 async function waitForSessionReady(maxMs: number = 45000): Promise<boolean> {
   const startTime = Date.now();
@@ -31,16 +34,26 @@ async function waitForSessionReady(maxMs: number = 45000): Promise<boolean> {
 
   while (Date.now() - startTime < maxMs) {
     try {
+      // Fast path
       const { data } = await supabase.auth.getSession();
       if (data.session?.access_token) {
-        console.log("[waitForSessionReady] ✅ Session is ready");
+        console.log("[waitForSessionReady] ✅ Session is ready (getSession)");
+        return true;
+      }
+
+      // Slow path: actively restore from storage if needed
+      const restored = await ensureValidSessionForApiCall();
+      if (restored) {
+        console.log("[waitForSessionReady] ✅ Session is ready (restore)");
         return true;
       }
     } catch (e) {
-      console.warn("[waitForSessionReady] Error checking session:", e);
+      console.warn("[waitForSessionReady] Error checking/restoring session:", e);
     }
-    
-    console.log(`[waitForSessionReady] ⏳ Waiting for session... elapsed=${Date.now() - startTime}ms`);
+
+    console.log(
+      `[waitForSessionReady] ⏳ Waiting for session... elapsed=${Date.now() - startTime}ms`
+    );
     await new Promise((resolve) => setTimeout(resolve, pollInterval));
   }
 
