@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { useAuth } from "@/hooks/useAuth";
@@ -88,6 +88,23 @@ function NativeNavigationHandler() {
       window.removeEventListener("nativeNavigation", handleNativeNavigation as EventListener);
     };
   }, [navigate]);
+
+  return null;
+}
+
+function UpdateGate({ needsUpdate }: { needsUpdate: boolean }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (needsUpdate && location.pathname !== "/force-update") {
+      navigate("/force-update", { replace: true });
+    }
+
+    if (!needsUpdate && location.pathname === "/force-update") {
+      navigate("/auth", { replace: true });
+    }
+  }, [needsUpdate, location.pathname, navigate]);
 
   return null;
 }
@@ -177,30 +194,8 @@ function AppInner() {
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
-  // If update is required, show only the force update screen
-  if (needsUpdate) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <ForceUpdateScreen />
-        </TooltipProvider>
-      </QueryClientProvider>
-    );
-  }
-
-  // Show loading while checking for updates
-  if (updateCheckLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground">Checking for updates...</p>
-        </div>
-      </div>
-    );
-  }
+  // NOTE: We intentionally do NOT block app startup on update check.
+  // Blocking here can cause native overlay events to be missed on cold start.
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -209,7 +204,17 @@ function AppInner() {
         <Sonner />
         <BrowserRouter>
           <NativeNavigationHandler />
+          <UpdateGate needsUpdate={needsUpdate} />
+
+          {/* Non-blocking update check indicator */}
+          {updateCheckLoading && (
+            <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground shadow">
+              Checking update…
+            </div>
+          )}
+
           <Routes>
+            <Route path="/force-update" element={<ForceUpdateScreen />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/otp-verify" element={<OtpVerify />} />
             <Route
