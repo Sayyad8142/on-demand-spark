@@ -1,7 +1,9 @@
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useContext } from "react";
 import { tryAccept, rejectBooking } from "@/lib/bookingActions";
 import { toast } from "@/hooks/use-toast";
 import { Capacitor, registerPlugin } from "@capacitor/core";
+import { AuthContext } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Interface for the native BookingAction plugin.
@@ -20,6 +22,40 @@ interface BookingActionDetail {
 }
 
 /**
+ * Wait for authReady + valid Supabase session with access_token.
+ * Returns true if ready, false if timeout.
+ */
+async function waitForSessionReady(
+  getAuthReady: () => boolean,
+  maxMs: number = 45000
+): Promise<boolean> {
+  const startTime = Date.now();
+  const pollInterval = 500;
+
+  while (Date.now() - startTime < maxMs) {
+    const isAuthReady = getAuthReady();
+    
+    if (isAuthReady) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.access_token) {
+          console.log("[waitForSessionReady] ✅ Session is ready");
+          return true;
+        }
+      } catch (e) {
+        console.warn("[waitForSessionReady] Error checking session:", e);
+      }
+    }
+    
+    console.log(`[waitForSessionReady] ⏳ Waiting for session... authReady=${isAuthReady}, elapsed=${Date.now() - startTime}ms`);
+    await new Promise((resolve) => setTimeout(resolve, pollInterval));
+  }
+
+  console.warn("[waitForSessionReady] ⚠️ Timeout waiting for session");
+  return false;
+}
+
+/**
  * Hook to listen for booking actions from native Android overlay.
  * 
  * When the Android overlay's Accept/Decline button is pressed,
@@ -28,12 +64,16 @@ interface BookingActionDetail {
  * Supabase RPC calls (try_accept_booking, reject_booking_request).
  * 
  * Features:
+ * - WAITS for authReady before processing any action (cold-start fix)
  * - Queues actions if workerId isn't available yet
  * - Acknowledges processed actions to prevent duplicate processing
  * - Handles race conditions and retries
  * - Never triggers logout on errors
  */
 export function useNativeBookingActions(workerId: string | undefined) {
+  const authContext = useContext(AuthContext);
+  const authReadyRef = useRef(false);
+
   const processingRef = useRef<Set<string>>(new Set());
   const queuedActionsRef = useRef<BookingActionDetail[]>([]);
   const workerIdRef = useRef<string | undefined>(workerId);
@@ -41,6 +81,24 @@ export function useNativeBookingActions(workerId: string | undefined) {
   // Retry bookkeeping for cold-start/session restore issues (accept from overlay)
   const acceptRetryCountRef = useRef<Record<string, number>>({});
   const acceptRetryTimerRef = useRef<Record<string, number>>({});
+
+  // Deferred action - store pending action while waiting for auth
+  const deferredActionRef = useRef<BookingActionDetail | null>(null);
+
+  // Update authReadyRef when authContext changes
+  useEffect(() => {
+    const isReady = authContext?.authReady ?? false;
+    authReadyRef.current = isReady;
+    console.log(`[useNativeBookingActions] authReady changed: ${isReady}`);
+    
+    // When auth becomes ready, process any deferred action
+    if (isReady && deferredActionRef.current) {
+      console.log("[useNativeBookingActions] 🚀 Auth is ready, processing deferred action");
+      const action = deferredActionRef.current;
+      deferredActionRef.current = null;
+      processAction(action);
+    }
+  }, [authContext?.authReady]);
 
   // Keep workerIdRef in sync
   useEffect(() => {
@@ -79,40 +137,17 @@ export function useNativeBookingActions(workerId: string | undefined) {
     const { bookingId, action, wasQueued } = detail;
     const currentWorkerId = workerIdRef.current;
 
-    /**
-     * Detect errors that indicate session/auth is not ready - these are RETRYABLE.
-     */
-    const isTransientSessionOrNetworkError = (msg?: string) => {
-      const m = (msg || "").toLowerCase();
-      return (
-        m.includes("session") ||
-        m.includes("jwt") ||
-        m.includes("invalid") ||
-        m.includes("refresh") ||
-        m.includes("token") ||
-        m.includes("not authenticated") ||
-        m.includes("no session") ||
-        m.includes("unauthorized") ||
-        m.includes("not authorized") ||
-        m.includes("forbidden") ||
-        m.includes("permission denied") ||
-        m.includes("rls") ||
-        m.includes("status 401") ||
-        m.includes("status 403") ||
-        // Network errors - also retryable
-        m.includes("failed to fetch") ||
-        m.includes("network") ||
-        m.includes("timeout") ||
-        m.includes("connection") ||
-        m.includes("econnrefused") ||
-        m.includes("abort") ||
-        m.includes("offline") ||
-        m.includes("status 0") ||
-        m.includes("status 502") ||
-        m.includes("status 503") ||
-        m.includes("status 504")
-      );
-    };
+    // ========= AUTH READY GATE =========
+    // On cold start, auth may not be ready yet. Defer action until authReady.
+    if (!authReadyRef.current) {
+      console.log("[useNativeBookingActions] ⛔ auth not ready, deferring action", { bookingId, action });
+      deferredActionRef.current = detail;
+      toast({
+        title: "Please wait...",
+        description: "Initializing app, will accept automatically.",
+      });
+      return;
+    }
 
     /**
      * Detect TERMINAL errors - booking is no longer actionable, stop retrying.
@@ -179,7 +214,7 @@ export function useNativeBookingActions(workerId: string | undefined) {
     console.log(
       `[useNativeBookingActions] 🎯 Processing action: ${action} for booking: ${bookingId}${wasQueued ? " (was queued)" : ""}`
     );
-    console.log(`[useNativeBookingActions] Current workerId: ${currentWorkerId || "NOT AVAILABLE"}`);
+    console.log(`[useNativeBookingActions] Current workerId: ${currentWorkerId || "NOT AVAILABLE"}, authReady: ${authReadyRef.current}`);
 
     // For decline, we need workerId
     if (action === "declined" && !currentWorkerId) {
@@ -192,14 +227,24 @@ export function useNativeBookingActions(workerId: string | undefined) {
       return;
     }
 
-    // For accept, we don't need workerId but we need a valid session
-    // Wait longer for session to be restored on cold start (wasQueued = true means from overlay/cold start)
+    // For accept from cold start (wasQueued), wait for session to be fully ready
     if (action === "accepted" && wasQueued) {
-      // First attempt waits 2.5s, retries wait less since session should be more stable
-      const isFirstAttempt = (acceptRetryCountRef.current[bookingId] ?? 0) === 0;
-      const waitMs = isFirstAttempt ? 2500 : 1000;
-      console.log(`[useNativeBookingActions] ⏳ Waiting ${waitMs}ms for session to stabilize (first attempt: ${isFirstAttempt})...`);
-      await new Promise((resolve) => setTimeout(resolve, waitMs));
+      console.log("[useNativeBookingActions] ⏳ Cold-start accept: waiting for session to be fully ready...");
+      const sessionReady = await waitForSessionReady(() => authReadyRef.current, 45000);
+      
+      if (!sessionReady) {
+        console.warn("[useNativeBookingActions] ⚠️ Session not ready after waiting, keeping pending action for retry");
+        toast({
+          title: "Session not ready",
+          description: "Please wait a moment and try again.",
+          variant: "destructive",
+        });
+        // DO NOT clear pending action - keep it for manual retry or next poll
+        // Schedule a retry after a delay
+        scheduleAcceptRetry("Session not ready");
+        return;
+      }
+      console.log("[useNativeBookingActions] ✅ Session is ready, proceeding with accept");
     }
 
     if (!bookingId) {
