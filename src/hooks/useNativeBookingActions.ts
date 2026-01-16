@@ -173,13 +173,17 @@ export function useNativeBookingActions(workerId: string | undefined) {
       return;
     }
 
-    // For accept from cold start (wasQueued), wait for session to be fully ready
-    if (action === "accepted" && wasQueued) {
-      console.log("[useNativeBookingActions] ⏳ Cold-start accept: waiting for session to be fully ready...");
+    // For accept from cold start OR before authReady, wait for session to be fully ready
+    if (action === "accepted" && (wasQueued || !isAuthReady)) {
+      console.log(
+        "[useNativeBookingActions] ⏳ Cold-start accept: waiting for session to be fully ready..."
+      );
       const sessionReady = await waitForSessionReady(45000);
-      
+
       if (!sessionReady) {
-        console.warn("[useNativeBookingActions] ⚠️ Session not ready after waiting, scheduling retry");
+        console.warn(
+          "[useNativeBookingActions] ⚠️ Session not ready after waiting, scheduling retry"
+        );
         toast({
           title: "Session not ready",
           description: "Please wait a moment and try again.",
@@ -343,7 +347,7 @@ export function useNativeBookingActions(workerId: string | undefined) {
         processingRef.current.delete(actionKey);
       }, 2000);
     }
-  }, [acknowledgeAction]);
+  }, [acknowledgeAction, isAuthReady]);
 
   // Process queued actions when workerId becomes available
   useEffect(() => {
@@ -375,13 +379,21 @@ export function useNativeBookingActions(workerId: string | undefined) {
     const detail = event.detail;
     console.log(`[useNativeBookingActions] 📥 Received native event: ${detail.action} for ${detail.bookingId}`);
     
-    // If auth is not ready yet, defer the action
+    // If auth is not ready yet:
+    // - for ACCEPT: process immediately (processAction will wait for session)
+    // - for other actions: defer until authReady
     if (!isAuthReady) {
+      if (detail.action === "accepted") {
+        console.log("[useNativeBookingActions] ⏳ auth not ready, but accept received — processing with session wait");
+        void processAction({ ...detail, wasQueued: detail.wasQueued ?? true });
+        return;
+      }
+
       console.log("[useNativeBookingActions] ⛔ auth not ready, deferring action");
       deferredActionRef.current = detail;
       toast({
         title: "Please wait...",
-        description: "Initializing app, will accept automatically.",
+        description: "Initializing app, will process automatically.",
       });
       return;
     }
@@ -402,8 +414,22 @@ export function useNativeBookingActions(workerId: string | undefined) {
       if (pending.bookingId && pending.action) {
         console.log("[useNativeBookingActions] 🎯 Found pending action:", pending);
         
-        // If auth is not ready, defer the action
+        // If auth is not ready yet:
+        // - for ACCEPT: process immediately (processAction will wait for session)
+        // - for other actions: defer until authReady
         if (!isAuthReady) {
+          if (pending.action === "accepted") {
+            console.log(
+              "[useNativeBookingActions] ⏳ auth not ready, but pending accept found — processing with session wait"
+            );
+            void processAction({
+              bookingId: pending.bookingId,
+              action: pending.action,
+              wasQueued: true,
+            });
+            return true;
+          }
+
           console.log("[useNativeBookingActions] ⛔ auth not ready, deferring pending action");
           deferredActionRef.current = {
             bookingId: pending.bookingId,
@@ -412,7 +438,7 @@ export function useNativeBookingActions(workerId: string | undefined) {
           };
           toast({
             title: "Please wait...",
-            description: "Initializing app, will accept automatically.",
+            description: "Initializing app, will process automatically.",
           });
           return true;
         }
