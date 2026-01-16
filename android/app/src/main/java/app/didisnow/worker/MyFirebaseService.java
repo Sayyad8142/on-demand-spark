@@ -191,7 +191,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
       );
 
       String line1 = (serviceType != null && !serviceType.isEmpty()) ? serviceType : "Service";
-      String line2 = (flatNo != null && !flatNo.isEmpty()) ? ("Flat " + flatNo) : "";
+      String line2 = (flatNo != null && !flatNo.isEmpty()) ? flatNo : "";
       String line3 = price > 0 ? ("₹" + price) : "";
       String content = String.join(" • ", new String[]{ line1, line2, line3 }).replaceAll("( • )+", " • ").trim();
       if (content.isEmpty()) content = "Tap to open";
