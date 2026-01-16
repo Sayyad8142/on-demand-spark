@@ -88,6 +88,10 @@ public class MyFirebaseService extends FirebaseMessagingService {
           return;
         }
         
+        // Always show a heads-up notification as a reliable fallback
+        // (Some OEMs/background restrictions can prevent overlays from showing)
+        showBookingNotification(bookingId, customer, community, serviceType, flatNo, price, bookingType, scheduledTime);
+
         // Check overlay permission
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
           if (!android.provider.Settings.canDrawOverlays(this)) {
@@ -96,11 +100,11 @@ public class MyFirebaseService extends FirebaseMessagingService {
             return;
           }
         }
-        
+
         // Start BookingOverlayService - DO NOT pass access token
         // The overlay service will read the LATEST token from storage when needed
         Log.d(TAG, "🚀 Starting BookingOverlayService...");
-        
+
         Intent serviceIntent = new Intent(this, BookingOverlayService.class);
         serviceIntent.putExtra("mode", "show");
         serviceIntent.putExtra("booking_id", bookingId);
@@ -111,11 +115,11 @@ public class MyFirebaseService extends FirebaseMessagingService {
         serviceIntent.putExtra("flat_no", flatNo != null ? flatNo : "");
         serviceIntent.putExtra("price_inr", price);
         serviceIntent.putExtra("scheduled_time", scheduledTime != null ? scheduledTime : "");
-        
+
         // NOTE: We intentionally do NOT pass ACCESS_TOKEN here
         // The overlay service will read the latest token from storage just-in-time
         // This prevents using stale tokens that could cause refresh conflicts
-        
+
         try {
           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent);
@@ -167,7 +171,51 @@ public class MyFirebaseService extends FirebaseMessagingService {
     Log.d(TAG, "🔑 New FCM token received");
     // Token handled by Capacitor PushNotifications plugin
   }
-  
+
+  private void showBookingNotification(String bookingId, String customer, String community,
+                                       String serviceType, String flatNo, int price,
+                                       String bookingType, String scheduledTime) {
+    try {
+      createNotificationChannel();
+
+      Intent openIntent = new Intent(this, MainActivity.class);
+      openIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+      openIntent.putExtra("navigate_to", "home");
+      openIntent.putExtra("booking_id", bookingId);
+
+      PendingIntent pendingIntent = PendingIntent.getActivity(
+        this,
+        0,
+        openIntent,
+        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+      );
+
+      String line1 = (serviceType != null && !serviceType.isEmpty()) ? serviceType : "Service";
+      String line2 = (flatNo != null && !flatNo.isEmpty()) ? ("Flat " + flatNo) : "";
+      String line3 = price > 0 ? ("₹" + price) : "";
+      String content = String.join(" • ", new String[]{ line1, line2, line3 }).replaceAll("( • )+", " • ").trim();
+      if (content.isEmpty()) content = "Tap to open";
+
+      NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+        .setSmallIcon(R.drawable.ic_notification)
+        .setContentTitle("New Booking")
+        .setContentText(content)
+        .setStyle(new NotificationCompat.BigTextStyle().bigText(content))
+        .setPriority(NotificationCompat.PRIORITY_MAX)
+        .setCategory(NotificationCompat.CATEGORY_CALL)
+        .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+        .setAutoCancel(true)
+        .setContentIntent(pendingIntent);
+
+      NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+      if (notificationManager != null) {
+        notificationManager.notify(NOTIFICATION_ID, builder.build());
+      }
+    } catch (Exception e) {
+      Log.e(TAG, "❌ Failed to show booking notification", e);
+    }
+  }
+
   private void createNotificationChannel() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       CharSequence name = "Booking Alerts";
@@ -178,22 +226,22 @@ public class MyFirebaseService extends FirebaseMessagingService {
       channel.setLockscreenVisibility(NotificationCompat.VISIBILITY_PUBLIC);
       channel.enableVibration(true);
       channel.setBypassDnd(true);
-      
+
       NotificationManager notificationManager = getSystemService(NotificationManager.class);
       if (notificationManager != null) {
         notificationManager.createNotificationChannel(channel);
       }
     }
   }
-  
+
   private void showPermissionNotification() {
     createNotificationChannel();
-    
+
     Intent intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
     PendingIntent pendingIntent = PendingIntent.getActivity(
       this, 0, intent, PendingIntent.FLAG_IMMUTABLE
     );
-    
+
     NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
       .setSmallIcon(R.drawable.ic_notification)
       .setContentTitle("⚠️ Overlay Permission Required")
@@ -201,7 +249,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
       .setPriority(NotificationCompat.PRIORITY_HIGH)
       .setAutoCancel(true)
       .setContentIntent(pendingIntent);
-    
+
     NotificationManager notificationManager = getSystemService(NotificationManager.class);
     if (notificationManager != null) {
       notificationManager.notify(NOTIFICATION_ID + 1, builder.build());
