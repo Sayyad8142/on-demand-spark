@@ -79,7 +79,10 @@ export function useNativeBookingActions(workerId: string | undefined) {
     const { bookingId, action, wasQueued } = detail;
     const currentWorkerId = workerIdRef.current;
 
-    const isLikelySessionError = (msg?: string) => {
+    /**
+     * Detect errors that indicate session/auth is not ready - these are RETRYABLE.
+     */
+    const isTransientSessionOrNetworkError = (msg?: string) => {
       const m = (msg || "").toLowerCase();
       return (
         m.includes("session") ||
@@ -95,19 +98,37 @@ export function useNativeBookingActions(workerId: string | undefined) {
         m.includes("permission denied") ||
         m.includes("rls") ||
         m.includes("status 401") ||
-        m.includes("status 403")
+        m.includes("status 403") ||
+        // Network errors - also retryable
+        m.includes("failed to fetch") ||
+        m.includes("network") ||
+        m.includes("timeout") ||
+        m.includes("connection") ||
+        m.includes("econnrefused") ||
+        m.includes("abort") ||
+        m.includes("offline") ||
+        m.includes("status 0") ||
+        m.includes("status 502") ||
+        m.includes("status 503") ||
+        m.includes("status 504")
       );
     };
 
-    const isPermanentAcceptError = (msg?: string) => {
+    /**
+     * Detect TERMINAL errors - booking is no longer actionable, stop retrying.
+     */
+    const isTerminalAcceptError = (msg?: string) => {
       const m = (msg || "").toLowerCase();
       return (
-        m.includes("already") ||
-        m.includes("taken") ||
-        m.includes("assigned") ||
+        m.includes("already taken") ||
+        m.includes("already assigned") ||
+        m.includes("booking already") ||
         m.includes("not found") ||
         m.includes("cancelled") ||
-        m.includes("canceled")
+        m.includes("canceled") ||
+        m.includes("expired") ||
+        m.includes("no longer available") ||
+        m.includes("does not exist")
       );
     };
 
@@ -172,10 +193,13 @@ export function useNativeBookingActions(workerId: string | undefined) {
     }
 
     // For accept, we don't need workerId but we need a valid session
-    // Wait longer for session to be restored on cold start
+    // Wait longer for session to be restored on cold start (wasQueued = true means from overlay/cold start)
     if (action === "accepted" && wasQueued) {
-      console.log("[useNativeBookingActions] ⏳ Waiting for session to stabilize...");
-      await new Promise((resolve) => setTimeout(resolve, 1500)); // Increased wait time
+      // First attempt waits 2.5s, retries wait less since session should be more stable
+      const isFirstAttempt = (acceptRetryCountRef.current[bookingId] ?? 0) === 0;
+      const waitMs = isFirstAttempt ? 2500 : 1000;
+      console.log(`[useNativeBookingActions] ⏳ Waiting ${waitMs}ms for session to stabilize (first attempt: ${isFirstAttempt})...`);
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
     }
 
     if (!bookingId) {
@@ -222,34 +246,51 @@ export function useNativeBookingActions(workerId: string | undefined) {
         } else {
           console.error("[useNativeBookingActions] ❌ Accept failed:", result.error);
 
-          // If this is likely a cold-start/auth/session issue, keep the pending action
-          // and retry automatically. This prevents clearing the action after an
-          // unauthenticated RPC attempt (common when the app is just launching).
-          if (!isPermanentAcceptError(result.error) && scheduleAcceptRetry(result.error)) {
+          // Check if this is a TERMINAL error (booking gone, already taken, etc.)
+          // Only clear pending action for terminal errors.
+          if (isTerminalAcceptError(result.error)) {
+            console.log("[useNativeBookingActions] Terminal error detected, clearing pending action");
+            
+            const errorMsg = result.error?.toLowerCase() || "";
+            if (errorMsg.includes("already") || errorMsg.includes("taken") || errorMsg.includes("assigned")) {
+              toast({
+                title: "Booking already taken",
+                description: "Another worker accepted this booking first.",
+                variant: "destructive",
+              });
+            } else {
+              toast({
+                title: "Booking unavailable",
+                description: "This booking is no longer available.",
+                variant: "destructive",
+              });
+            }
+
+            // Stop retry bookkeeping and clear pending action
+            delete acceptRetryCountRef.current[bookingId];
+            const existing = acceptRetryTimerRef.current[bookingId];
+            if (existing) window.clearTimeout(existing);
+            delete acceptRetryTimerRef.current[bookingId];
+
+            await acknowledgeAction();
             return;
           }
 
-          // Permanent-ish failures: show a clear message and acknowledge to prevent loops
-          const errorMsg = result.error?.toLowerCase() || "";
-          if (errorMsg.includes("already") || errorMsg.includes("taken") || errorMsg.includes("assigned")) {
-            toast({
-              title: "Booking already taken",
-              description: "Another worker accepted this booking first.",
-              variant: "destructive",
-            });
-          } else if (errorMsg.includes("not found") || errorMsg.includes("cancelled") || errorMsg.includes("canceled")) {
-            toast({
-              title: "Booking unavailable",
-              description: "This booking is no longer available.",
-              variant: "destructive",
-            });
-          } else {
-            toast({
-              title: "Could not accept automatically",
-              description: result.error || "Please open the app and accept from the booking screen.",
-              variant: "destructive",
-            });
+          // NOT a terminal error - likely transient (session, network, etc.)
+          // DO NOT clear pending action - retry instead
+          console.log("[useNativeBookingActions] Transient error, scheduling retry (keeping pending action)");
+          if (scheduleAcceptRetry(result.error)) {
+            // Retry scheduled, DO NOT acknowledgeAction()
+            return;
           }
+
+          // Retries exhausted but not a terminal error - still clear to prevent infinite loop
+          console.warn("[useNativeBookingActions] Retries exhausted for transient error");
+          toast({
+            title: "Could not accept automatically",
+            description: result.error || "Please open the app and accept from the booking screen.",
+            variant: "destructive",
+          });
 
           // Stop retry bookkeeping
           delete acceptRetryCountRef.current[bookingId];
