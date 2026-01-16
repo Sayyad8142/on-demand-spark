@@ -129,7 +129,18 @@ export default function ActiveJobCard({
           </div>}
 
 
-        {/* 4. Work Completed Button */}
+        {/* 4. Call Manager Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full h-9 text-sm font-medium rounded-lg border border-green-500 text-green-600 hover:bg-green-50 hover:text-green-700"
+          onClick={() => window.open('tel:+918008180018', '_self')}
+        >
+          <Phone className="w-4 h-4 mr-1.5" />
+          Call Manager
+        </Button>
+
+        {/* 5. Work Completed Button */}
         <Button 
           size="lg" 
           className={`w-full h-14 text-lg font-bold shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98] ${
@@ -153,17 +164,6 @@ export default function ActiveJobCard({
               Work Completed
             </>
           )}
-        </Button>
-
-        {/* 5. Call Manager Button */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full h-9 text-sm font-medium rounded-lg border border-green-500 text-green-600 hover:bg-green-50 hover:text-green-700"
-          onClick={() => window.open('tel:+918008180018', '_self')}
-        >
-          <Phone className="w-4 h-4 mr-1.5" />
-          Call Manager
         </Button>
       </div>
     </Card>;
