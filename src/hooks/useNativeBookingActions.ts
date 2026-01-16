@@ -183,6 +183,9 @@ export function useNativeBookingActions(workerId: string | undefined) {
             description: "The booking has been assigned to you.",
           });
 
+          // Notify the UI to refetch/show the active job immediately
+          window.dispatchEvent(new CustomEvent("bookingAccepted", { detail: { bookingId } }));
+
           // Clear retry bookkeeping
           delete acceptRetryCountRef.current[bookingId];
           const existing = acceptRetryTimerRef.current[bookingId];
