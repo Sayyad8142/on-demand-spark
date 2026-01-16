@@ -36,10 +36,6 @@ export default function Home() {
   const worker = isGuestMode ? DEMO_WORKER : realWorker;
   const activeJob = isGuestMode ? null : realActiveJob;
   
-  // Listen for booking actions from native Android overlay
-  // When overlay Accept/Decline is pressed, this hook handles the Supabase RPC
-  useNativeBookingActions(worker?.id);
-  
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [showWebPushBanner, setShowWebPushBanner] = useState(false);
