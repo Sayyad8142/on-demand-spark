@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef, useContext } from "react";
+import { useEffect, useCallback, useRef, useContext, useState } from "react";
 import { tryAccept, rejectBooking } from "@/lib/bookingActions";
 import { toast } from "@/hooks/use-toast";
 import { Capacitor, registerPlugin } from "@capacitor/core";
@@ -25,29 +25,22 @@ interface BookingActionDetail {
  * Wait for authReady + valid Supabase session with access_token.
  * Returns true if ready, false if timeout.
  */
-async function waitForSessionReady(
-  getAuthReady: () => boolean,
-  maxMs: number = 45000
-): Promise<boolean> {
+async function waitForSessionReady(maxMs: number = 45000): Promise<boolean> {
   const startTime = Date.now();
   const pollInterval = 500;
 
   while (Date.now() - startTime < maxMs) {
-    const isAuthReady = getAuthReady();
-    
-    if (isAuthReady) {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (data.session?.access_token) {
-          console.log("[waitForSessionReady] ✅ Session is ready");
-          return true;
-        }
-      } catch (e) {
-        console.warn("[waitForSessionReady] Error checking session:", e);
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.access_token) {
+        console.log("[waitForSessionReady] ✅ Session is ready");
+        return true;
       }
+    } catch (e) {
+      console.warn("[waitForSessionReady] Error checking session:", e);
     }
     
-    console.log(`[waitForSessionReady] ⏳ Waiting for session... authReady=${isAuthReady}, elapsed=${Date.now() - startTime}ms`);
+    console.log(`[waitForSessionReady] ⏳ Waiting for session... elapsed=${Date.now() - startTime}ms`);
     await new Promise((resolve) => setTimeout(resolve, pollInterval));
   }
 
@@ -57,49 +50,33 @@ async function waitForSessionReady(
 
 /**
  * Hook to listen for booking actions from native Android overlay.
- * 
- * When the Android overlay's Accept/Decline button is pressed,
- * it sends a `native:booking-action` event to the web app.
- * This hook listens for that event and executes the actual
- * Supabase RPC calls (try_accept_booking, reject_booking_request).
- * 
- * Features:
- * - WAITS for authReady before processing any action (cold-start fix)
- * - Queues actions if workerId isn't available yet
- * - Acknowledges processed actions to prevent duplicate processing
- * - Handles race conditions and retries
- * - Never triggers logout on errors
  */
 export function useNativeBookingActions(workerId: string | undefined) {
-  // All refs declared first - order must be consistent
+  // Get auth context - may be undefined initially but that's ok
   const authContext = useContext(AuthContext);
-  const authReadyRef = useRef(false);
+  
+  // Track auth ready state
+  const [isAuthReady, setIsAuthReady] = useState(false);
+  
+  // Refs for tracking state without causing re-renders
   const processingRef = useRef<Set<string>>(new Set());
   const queuedActionsRef = useRef<BookingActionDetail[]>([]);
   const workerIdRef = useRef<string | undefined>(workerId);
   const acceptRetryCountRef = useRef<Record<string, number>>({});
   const acceptRetryTimerRef = useRef<Record<string, number>>({});
   const deferredActionRef = useRef<BookingActionDetail | null>(null);
-  const processActionRef = useRef<((detail: BookingActionDetail) => Promise<void>) | null>(null);
-  
-  // Flag to track if we need to process deferred action
-  const shouldProcessDeferredRef = useRef(false);
 
-  // Safely get authReady - handle case where context might not be ready yet
-  const authReady = authContext?.authReady ?? false;
+  // Update workerIdRef when workerId changes
+  useEffect(() => {
+    workerIdRef.current = workerId;
+  }, [workerId]);
 
-  // Keep workerIdRef in sync
-  workerIdRef.current = workerId;
-  
-  // Update authReadyRef synchronously during render (not in useEffect)
-  // This ensures the ref is always current when callbacks access it
-  const wasAuthReady = authReadyRef.current;
-  authReadyRef.current = authReady;
-  
-  // Mark that we should process deferred action when auth becomes ready
-  if (authReady && !wasAuthReady && deferredActionRef.current) {
-    shouldProcessDeferredRef.current = true;
-  }
+  // Track when auth becomes ready
+  useEffect(() => {
+    const ready = authContext?.authReady ?? false;
+    setIsAuthReady(ready);
+    console.log(`[useNativeBookingActions] authReady updated: ${ready}`);
+  }, [authContext?.authReady]);
 
   /**
    * Acknowledge a processed action to prevent reprocessing.
@@ -122,17 +99,10 @@ export function useNativeBookingActions(workerId: string | undefined) {
     const { bookingId, action, wasQueued } = detail;
     const currentWorkerId = workerIdRef.current;
 
-    // ========= AUTH READY GATE =========
-    // On cold start, auth may not be ready yet. Defer action until authReady.
-    if (!authReadyRef.current) {
-      console.log("[useNativeBookingActions] ⛔ auth not ready, deferring action", { bookingId, action });
-      deferredActionRef.current = detail;
-      toast({
-        title: "Please wait...",
-        description: "Initializing app, will accept automatically.",
-      });
-      return;
-    }
+    console.log(
+      `[useNativeBookingActions] 🎯 Processing action: ${action} for booking: ${bookingId}${wasQueued ? " (was queued)" : ""}`
+    );
+    console.log(`[useNativeBookingActions] Current workerId: ${currentWorkerId || "NOT AVAILABLE"}`);
 
     /**
      * Detect TERMINAL errors - booking is no longer actionable, stop retrying.
@@ -154,8 +124,6 @@ export function useNativeBookingActions(workerId: string | undefined) {
 
     const scheduleAcceptRetry = (reason?: string) => {
       const next = (acceptRetryCountRef.current[bookingId] ?? 0) + 1;
-      // Accept-from-overlay can require a long cold-start + session restore.
-      // Keep retrying for longer before giving up.
       const max = 30;
 
       if (next > max) {
@@ -174,7 +142,6 @@ export function useNativeBookingActions(workerId: string | undefined) {
 
       acceptRetryCountRef.current[bookingId] = next;
 
-      // Avoid multiple timers for same booking
       const existing = acceptRetryTimerRef.current[bookingId];
       if (existing) {
         window.clearTimeout(existing);
@@ -186,7 +153,6 @@ export function useNativeBookingActions(workerId: string | undefined) {
         description: `Attempt ${next}/${max}${reason ? ` • ${reason}` : ""}`,
       });
 
-      // Allow immediate retry by clearing the in-flight marker now
       processingRef.current.delete(`${bookingId}-accepted`);
 
       acceptRetryTimerRef.current[bookingId] = window.setTimeout(() => {
@@ -195,11 +161,6 @@ export function useNativeBookingActions(workerId: string | undefined) {
 
       return true;
     };
-
-    console.log(
-      `[useNativeBookingActions] 🎯 Processing action: ${action} for booking: ${bookingId}${wasQueued ? " (was queued)" : ""}`
-    );
-    console.log(`[useNativeBookingActions] Current workerId: ${currentWorkerId || "NOT AVAILABLE"}, authReady: ${authReadyRef.current}`);
 
     // For decline, we need workerId
     if (action === "declined" && !currentWorkerId) {
@@ -215,17 +176,15 @@ export function useNativeBookingActions(workerId: string | undefined) {
     // For accept from cold start (wasQueued), wait for session to be fully ready
     if (action === "accepted" && wasQueued) {
       console.log("[useNativeBookingActions] ⏳ Cold-start accept: waiting for session to be fully ready...");
-      const sessionReady = await waitForSessionReady(() => authReadyRef.current, 45000);
+      const sessionReady = await waitForSessionReady(45000);
       
       if (!sessionReady) {
-        console.warn("[useNativeBookingActions] ⚠️ Session not ready after waiting, keeping pending action for retry");
+        console.warn("[useNativeBookingActions] ⚠️ Session not ready after waiting, scheduling retry");
         toast({
           title: "Session not ready",
           description: "Please wait a moment and try again.",
           variant: "destructive",
         });
-        // DO NOT clear pending action - keep it for manual retry or next poll
-        // Schedule a retry after a delay
         scheduleAcceptRetry("Session not ready");
         return;
       }
@@ -263,10 +222,8 @@ export function useNativeBookingActions(workerId: string | undefined) {
             description: "The booking has been assigned to you.",
           });
 
-          // Notify the UI to refetch/show the active job immediately
           window.dispatchEvent(new CustomEvent("bookingAccepted", { detail: { bookingId } }));
 
-          // Clear retry bookkeeping
           delete acceptRetryCountRef.current[bookingId];
           const existing = acceptRetryTimerRef.current[bookingId];
           if (existing) window.clearTimeout(existing);
@@ -276,8 +233,6 @@ export function useNativeBookingActions(workerId: string | undefined) {
         } else {
           console.error("[useNativeBookingActions] ❌ Accept failed:", result.error);
 
-          // Check if this is a TERMINAL error (booking gone, already taken, etc.)
-          // Only clear pending action for terminal errors.
           if (isTerminalAcceptError(result.error)) {
             console.log("[useNativeBookingActions] Terminal error detected, clearing pending action");
             
@@ -296,7 +251,6 @@ export function useNativeBookingActions(workerId: string | undefined) {
               });
             }
 
-            // Stop retry bookkeeping and clear pending action
             delete acceptRetryCountRef.current[bookingId];
             const existing = acceptRetryTimerRef.current[bookingId];
             if (existing) window.clearTimeout(existing);
@@ -306,15 +260,11 @@ export function useNativeBookingActions(workerId: string | undefined) {
             return;
           }
 
-          // NOT a terminal error - likely transient (session, network, etc.)
-          // DO NOT clear pending action - retry instead
-          console.log("[useNativeBookingActions] Transient error, scheduling retry (keeping pending action)");
+          console.log("[useNativeBookingActions] Transient error, scheduling retry");
           if (scheduleAcceptRetry(result.error)) {
-            // Retry scheduled, DO NOT acknowledgeAction()
             return;
           }
 
-          // Retries exhausted but not a terminal error - still clear to prevent infinite loop
           console.warn("[useNativeBookingActions] Retries exhausted for transient error");
           toast({
             title: "Could not accept automatically",
@@ -322,7 +272,6 @@ export function useNativeBookingActions(workerId: string | undefined) {
             variant: "destructive",
           });
 
-          // Stop retry bookkeeping
           delete acceptRetryCountRef.current[bookingId];
           const existing = acceptRetryTimerRef.current[bookingId];
           if (existing) window.clearTimeout(existing);
@@ -352,7 +301,6 @@ export function useNativeBookingActions(workerId: string | undefined) {
             description: "Please try again from the app.",
             variant: "destructive",
           });
-          // Still acknowledge - decline failures are usually transient
           await acknowledgeAction();
         }
       } else if (action === "timeout") {
@@ -376,7 +324,6 @@ export function useNativeBookingActions(workerId: string | undefined) {
           return;
         }
 
-        // Retries exhausted: clear the pending action to avoid a loop.
         toast({
           title: "Could not accept automatically",
           description: "Please open the app and accept from the booking screen.",
@@ -391,39 +338,12 @@ export function useNativeBookingActions(workerId: string | undefined) {
         description: "Something went wrong. Please try again from the app.",
         variant: "destructive",
       });
-      // Non-accept actions can be acknowledged normally by their own branches.
     } finally {
-      // Allow re-processing after a delay (in case of retry)
       setTimeout(() => {
         processingRef.current.delete(actionKey);
       }, 2000);
     }
   }, [acknowledgeAction]);
-
-  // Keep processActionRef updated with the latest processAction
-  useEffect(() => {
-    processActionRef.current = processAction;
-  }, [processAction]);
-
-  // Process deferred action when auth becomes ready
-  useEffect(() => {
-    if (shouldProcessDeferredRef.current && deferredActionRef.current) {
-      console.log("[useNativeBookingActions] 🚀 Auth is ready, processing deferred action in 500ms");
-      const action = { ...deferredActionRef.current };
-      deferredActionRef.current = null;
-      shouldProcessDeferredRef.current = false;
-      
-      // Small delay to ensure all state has settled
-      const timeoutId = setTimeout(() => {
-        console.log("[useNativeBookingActions] 🚀 Now processing deferred action:", action);
-        if (processActionRef.current) {
-          processActionRef.current(action);
-        }
-      }, 500);
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [authReady]);
 
   // Process queued actions when workerId becomes available
   useEffect(() => {
@@ -438,17 +358,39 @@ export function useNativeBookingActions(workerId: string | undefined) {
     }
   }, [workerId, processAction]);
 
+  // Process deferred actions when auth becomes ready
+  useEffect(() => {
+    if (isAuthReady && deferredActionRef.current) {
+      console.log("[useNativeBookingActions] 🚀 Auth is ready, processing deferred action");
+      const action = { ...deferredActionRef.current };
+      deferredActionRef.current = null;
+      
+      setTimeout(() => {
+        processAction(action);
+      }, 500);
+    }
+  }, [isAuthReady, processAction]);
+
   const handleBookingAction = useCallback((event: CustomEvent<BookingActionDetail>) => {
     const detail = event.detail;
     console.log(`[useNativeBookingActions] 📥 Received native event: ${detail.action} for ${detail.bookingId}`);
+    
+    // If auth is not ready yet, defer the action
+    if (!isAuthReady) {
+      console.log("[useNativeBookingActions] ⛔ auth not ready, deferring action");
+      deferredActionRef.current = detail;
+      toast({
+        title: "Please wait...",
+        description: "Initializing app, will accept automatically.",
+      });
+      return;
+    }
+    
     processAction(detail);
-  }, [processAction]);
+  }, [isAuthReady, processAction]);
 
   /**
    * Check for pending actions on mount (for queued actions from cold start).
-   *
-   * IMPORTANT: On some devices WebView/Capacitor bridge initialization is slow,
-   * so we retry for a short window instead of checking only once.
    */
   const checkPendingActions = useCallback(async (): Promise<boolean> => {
     if (!Capacitor.isNativePlatform()) return false;
@@ -459,7 +401,22 @@ export function useNativeBookingActions(workerId: string | undefined) {
 
       if (pending.bookingId && pending.action) {
         console.log("[useNativeBookingActions] 🎯 Found pending action:", pending);
-        // Fire and forget: processAction has its own duplicate guards.
+        
+        // If auth is not ready, defer the action
+        if (!isAuthReady) {
+          console.log("[useNativeBookingActions] ⛔ auth not ready, deferring pending action");
+          deferredActionRef.current = {
+            bookingId: pending.bookingId,
+            action: pending.action,
+            wasQueued: true,
+          };
+          toast({
+            title: "Please wait...",
+            description: "Initializing app, will accept automatically.",
+          });
+          return true;
+        }
+        
         void processAction({
           bookingId: pending.bookingId,
           action: pending.action,
@@ -474,10 +431,10 @@ export function useNativeBookingActions(workerId: string | undefined) {
     }
 
     return false;
-  }, [processAction]);
+  }, [isAuthReady, processAction]);
 
+  // Set up native event listener and polling
   useEffect(() => {
-    // Only set up listener on native platforms
     if (!Capacitor.isNativePlatform()) {
       return;
     }
@@ -490,12 +447,10 @@ export function useNativeBookingActions(workerId: string | undefined) {
 
     window.addEventListener("native:booking-action", handler);
 
-    // Poll for pending actions for a longer time window.
-    // This fixes cases where the first check happens before the native bridge is ready.
     let cancelled = false;
     let pollTimeoutId: number | null = null;
     let attempts = 0;
-    const maxAttempts = 40; // ~60s total with varying delays
+    const maxAttempts = 40;
 
     const poll = (delayMs: number) => {
       pollTimeoutId = window.setTimeout(async () => {
@@ -510,14 +465,12 @@ export function useNativeBookingActions(workerId: string | undefined) {
         }
 
         if (attempts < maxAttempts) {
-          // Faster polling initially, slower later
           const nextDelay = attempts < 10 ? 1000 : attempts < 20 ? 1500 : 2000;
           poll(nextDelay);
         }
       }, delayMs);
     };
 
-    // Give React/Auth a moment, then start polling
     poll(800);
 
     return () => {
@@ -526,7 +479,6 @@ export function useNativeBookingActions(workerId: string | undefined) {
       window.removeEventListener("native:booking-action", handler);
       if (pollTimeoutId) window.clearTimeout(pollTimeoutId);
 
-      // Cleanup any scheduled accept retries
       Object.values(acceptRetryTimerRef.current).forEach((id) => window.clearTimeout(id));
       acceptRetryTimerRef.current = {};
       acceptRetryCountRef.current = {};
