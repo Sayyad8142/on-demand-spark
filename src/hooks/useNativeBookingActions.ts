@@ -88,7 +88,26 @@ export function useNativeBookingActions(workerId: string | undefined) {
         m.includes("refresh") ||
         m.includes("token") ||
         m.includes("not authenticated") ||
-        m.includes("no session")
+        m.includes("no session") ||
+        m.includes("unauthorized") ||
+        m.includes("not authorized") ||
+        m.includes("forbidden") ||
+        m.includes("permission denied") ||
+        m.includes("rls") ||
+        m.includes("status 401") ||
+        m.includes("status 403")
+      );
+    };
+
+    const isPermanentAcceptError = (msg?: string) => {
+      const m = (msg || "").toLowerCase();
+      return (
+        m.includes("already") ||
+        m.includes("taken") ||
+        m.includes("assigned") ||
+        m.includes("not found") ||
+        m.includes("cancelled") ||
+        m.includes("canceled")
       );
     };
 
@@ -103,7 +122,12 @@ export function useNativeBookingActions(workerId: string | undefined) {
           bookingId,
           reason,
         });
+
         delete acceptRetryCountRef.current[bookingId];
+        const existing = acceptRetryTimerRef.current[bookingId];
+        if (existing) window.clearTimeout(existing);
+        delete acceptRetryTimerRef.current[bookingId];
+
         return false;
       }
 
@@ -117,8 +141,8 @@ export function useNativeBookingActions(workerId: string | undefined) {
 
       const waitMs = Math.min(1000 + next * 400, 6000);
       toast({
-        title: "Restoring session…",
-        description: `Retrying accept (${next}/${max})`,
+        title: "Retrying accept…",
+        description: `Attempt ${next}/${max}${reason ? ` • ${reason}` : ""}`,
       });
 
       // Allow immediate retry by clearing the in-flight marker now
@@ -198,13 +222,14 @@ export function useNativeBookingActions(workerId: string | undefined) {
         } else {
           console.error("[useNativeBookingActions] ❌ Accept failed:", result.error);
 
-          // If this looks like a cold-start/session restore issue, do NOT acknowledge.
-          // Keep the pending action so we can retry automatically.
-          if (isLikelySessionError(result.error) && scheduleAcceptRetry(result.error)) {
+          // If this is likely a cold-start/auth/session issue, keep the pending action
+          // and retry automatically. This prevents clearing the action after an
+          // unauthenticated RPC attempt (common when the app is just launching).
+          if (!isPermanentAcceptError(result.error) && scheduleAcceptRetry(result.error)) {
             return;
           }
 
-          // Check for specific error types (non-retry / permanent)
+          // Permanent-ish failures: show a clear message and acknowledge to prevent loops
           const errorMsg = result.error?.toLowerCase() || "";
           if (errorMsg.includes("already") || errorMsg.includes("taken") || errorMsg.includes("assigned")) {
             toast({
@@ -212,7 +237,7 @@ export function useNativeBookingActions(workerId: string | undefined) {
               description: "Another worker accepted this booking first.",
               variant: "destructive",
             });
-          } else if (errorMsg.includes("not found") || errorMsg.includes("cancelled")) {
+          } else if (errorMsg.includes("not found") || errorMsg.includes("cancelled") || errorMsg.includes("canceled")) {
             toast({
               title: "Booking unavailable",
               description: "This booking is no longer available.",
@@ -220,13 +245,13 @@ export function useNativeBookingActions(workerId: string | undefined) {
             });
           } else {
             toast({
-              title: "Could not accept",
-              description: result.error || "Please try again from the app.",
+              title: "Could not accept automatically",
+              description: result.error || "Please open the app and accept from the booking screen.",
               variant: "destructive",
             });
           }
 
-          // Permanent-ish failure: acknowledge to prevent loops
+          // Stop retry bookkeeping
           delete acceptRetryCountRef.current[bookingId];
           const existing = acceptRetryTimerRef.current[bookingId];
           if (existing) window.clearTimeout(existing);
@@ -273,12 +298,21 @@ export function useNativeBookingActions(workerId: string | undefined) {
     } catch (error) {
       console.error("[useNativeBookingActions] Error processing action:", error);
 
-      // For accept, treat unexpected errors during cold start as retryable (best-effort)
       if (action === "accepted") {
         const msg = error instanceof Error ? error.message : String(error);
-        if (scheduleAcceptRetry(msg)) {
+        const scheduled = scheduleAcceptRetry(msg);
+        if (scheduled) {
           return;
         }
+
+        // Retries exhausted: clear the pending action to avoid a loop.
+        toast({
+          title: "Could not accept automatically",
+          description: "Please open the app and accept from the booking screen.",
+          variant: "destructive",
+        });
+        await acknowledgeAction();
+        return;
       }
 
       toast({
@@ -286,7 +320,7 @@ export function useNativeBookingActions(workerId: string | undefined) {
         description: "Something went wrong. Please try again from the app.",
         variant: "destructive",
       });
-      // Don't acknowledge on network errors - allow retry
+      // Non-accept actions can be acknowledged normally by their own branches.
     } finally {
       // Allow re-processing after a delay (in case of retry)
       setTimeout(() => {
