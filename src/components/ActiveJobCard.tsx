@@ -84,8 +84,8 @@ export default function ActiveJobCard({
       <div className="p-4 space-y-3">
         {/* 1. Flat Number Display - Wooden Door Style */}
         <div className="flat-door-style p-5">
-          <div className="text-center mb-4 relative z-10">
-            <p className="flat-number-text font-extrabold text-4xl tracking-wide uppercase">
+          <div className="text-center mb-3 relative z-10">
+            <p className="flat-number-text font-bold text-2xl tracking-wide uppercase">
               Flat no {booking.flat_no}
             </p>
           </div>
