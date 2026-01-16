@@ -10,6 +10,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useAppState } from "@/hooks/useAppState";
 import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
+import { useWorkerProfile } from "@/hooks/useWorkerProfile";
+import { useNativeBookingActions } from "@/hooks/useNativeBookingActions";
 import { initNativePush } from "@/native/push";
 import { requestAndroidOverlay } from "@/lib/overlay";
 import { tryAccept } from "@/lib/bookingActions";
@@ -61,26 +63,32 @@ function ProtectedRoute({ children, showNav = false }: { children: React.ReactNo
 // Component to handle native navigation events (must be inside BrowserRouter)
 function NativeNavigationHandler() {
   const navigate = useNavigate();
-  
+
   useEffect(() => {
-    const handleNativeNavigation = (event: CustomEvent) => {
-      console.log("📱 Native navigation event received:", event.detail);
-      
-      const { navigateTo, bookingId } = event.detail || {};
-      
-      if (navigateTo === "home") {
+    const handleNativeNavigation = (event: Event) => {
+      const detail = (event as CustomEvent).detail || {};
+      console.log("📱 Native navigation event received:", detail);
+
+      // Android dispatches: window.dispatchEvent(new CustomEvent('native:navigate', { detail: { screen, bookingId } }))
+      // Keep backward compatibility with older event shape too.
+      const screen = detail.screen ?? detail.navigateTo;
+      const bookingId = detail.bookingId;
+
+      if (screen === "home") {
         console.log("🏠 Navigating to home screen", bookingId ? `with booking ${bookingId}` : "");
         navigate("/home");
       }
     };
-    
+
+    window.addEventListener("native:navigate", handleNativeNavigation as EventListener);
     window.addEventListener("nativeNavigation", handleNativeNavigation as EventListener);
-    
+
     return () => {
+      window.removeEventListener("native:navigate", handleNativeNavigation as EventListener);
       window.removeEventListener("nativeNavigation", handleNativeNavigation as EventListener);
     };
   }, [navigate]);
-  
+
   return null;
 }
 
@@ -88,6 +96,11 @@ function AppInner() {
   const { session } = useAuth();
   useAppState(); // Refresh JWT when app comes to foreground
   const { needsUpdate, loading: updateCheckLoading } = useForceUpdateCheck();
+
+  // IMPORTANT: This must be mounted globally (not just on /home), otherwise
+  // overlay actions are lost on cold start when the app opens on /auth.
+  const { worker } = useWorkerProfile(session?.user?.id);
+  useNativeBookingActions(worker?.id);
 
   // Request location permissions on app startup for native platforms
   useEffect(() => {
