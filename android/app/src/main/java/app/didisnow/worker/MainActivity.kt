@@ -39,7 +39,7 @@ class MainActivity : BridgeActivity() {
     
     companion object {
         private const val TAG = "MainActivity"
-        private const val WEBVIEW_READY_DELAY_MS = 4000L // Wait longer for WebView + React + Auth to be ready
+        private const val WEBVIEW_READY_DELAY_MS = 7000L // Wait longer for WebView + React + Auth to be ready (increased for slow devices)
     }
     
     private var bookingActionPlugin: BookingActionPlugin? = null
