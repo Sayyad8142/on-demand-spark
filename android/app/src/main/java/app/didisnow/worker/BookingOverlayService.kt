@@ -2,6 +2,7 @@ package app.didisnow.worker
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -64,14 +65,80 @@ class BookingOverlayService : Service() {
     // Single-flight guard to prevent double taps
     @Volatile
     private var actionInFlight = false
-    
+
+    // Track whether we started as a foreground service (required on Android O+)
+    @Volatile
+    private var foregroundStarted = false
+
     companion object {
         private const val NOTIFICATION_CHANNEL_ID = "booking_overlay_channel"
         private const val NOTIFICATION_ID = 9001
     }
 
+    private fun ensureForegroundStarted(bookingId: String, serviceType: String, flatNo: String) {
+        if (foregroundStarted) return
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val mgr = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                val channel = NotificationChannel(
+                    NOTIFICATION_CHANNEL_ID,
+                    "Booking alerts",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Keeps booking alert overlay running"
+                    enableVibration(false)
+                    setSound(null, null)
+                }
+                mgr.createNotificationChannel(channel)
+            }
+
+            val openIntent = Intent(this, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                putExtra("navigate_to", "home")
+                putExtra("booking_id", bookingId)
+            }
+
+            val pendingIntent = PendingIntent.getActivity(
+                this,
+                0,
+                openIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val contentText = listOf(serviceType.ifBlank { "Service" }, flatNo.takeIf { it.isNotBlank() }?.let { "Flat $it" })
+                .filterNotNull()
+                .joinToString(" • ")
+
+            val notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("New Booking")
+                .setContentText(contentText.ifBlank { "Tap to open" })
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setOngoing(true)
+                .setAutoCancel(false)
+                .setContentIntent(pendingIntent)
+                .build()
+
+            startForeground(NOTIFICATION_ID, notification)
+            foregroundStarted = true
+        } catch (e: Exception) {
+            android.util.Log.e("BookingOverlay", "❌ Failed to start foreground", e)
+        }
+    }
+
+    private fun stopForegroundIfNeeded() {
+        if (!foregroundStarted) return
+        try {
+            stopForeground(true)
+        } catch (_: Exception) {
+        } finally {
+            foregroundStarted = false
+        }
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
-    
+
     /**
      * Helper function to safely run UI updates on main thread
      */
@@ -116,7 +183,7 @@ class BookingOverlayService : Service() {
                     val serviceType = intent?.getStringExtra("service_type") ?: ""
                     val flatNo = intent?.getStringExtra("flat_no") ?: ""
                     val price = intent?.getIntExtra("price_inr", 0) ?: 0
-                    
+
                     if (bookingId.isEmpty()) {
                         android.util.Log.e("BookingOverlay", "❌ No booking ID provided")
                         stopSelf()
@@ -124,7 +191,10 @@ class BookingOverlayService : Service() {
                     }
 
                     currentBookingId = bookingId
-                    
+
+                    // Android O+ cannot start a background service from FCM; we must become foreground fast.
+                    ensureForegroundStarted(bookingId, serviceType, flatNo)
+
                     try {
                         showOverlay(bookingId, customer, community, serviceType, flatNo, price)
                     } catch (e: Exception) {
@@ -509,7 +579,8 @@ class BookingOverlayService : Service() {
         // Clear singleton flag
         OverlaySingleton.isShowing = false
         
-        // Stop service
+        // Stop service (and foreground notification if any)
+        stopForegroundIfNeeded()
         stopSelfResult(startIdForStop)
     }
     

@@ -117,7 +117,11 @@ public class MyFirebaseService extends FirebaseMessagingService {
         // This prevents using stale tokens that could cause refresh conflicts
         
         try {
-          startService(serviceIntent);
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+          } else {
+            startService(serviceIntent);
+          }
           Log.d(TAG, "✅ BookingOverlayService started");
         } catch (Exception se) {
           Log.e(TAG, "❌ startService failed, falling back to Activity", se);
