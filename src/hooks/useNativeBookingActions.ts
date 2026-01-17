@@ -23,29 +23,55 @@ interface BookingActionDetail {
 }
 
 /**
- * Wait for a valid Supabase session with access_token.
+ * Wait for a valid Supabase session with access_token AND verify it works.
  *
  * IMPORTANT: On native cold start, simply polling getSession() is not enough.
- * We actively attempt to restore the session from storage via ensureValidSessionForApiCall().
+ * We actively attempt to restore the session from storage via ensureValidSessionForApiCall()
+ * AND verify the session is actually functional by doing a simple query.
  */
 async function waitForSessionReady(maxMs: number = 45000): Promise<boolean> {
   const startTime = Date.now();
-  const pollInterval = 500;
+  const pollInterval = 600;
 
   while (Date.now() - startTime < maxMs) {
     try {
-      // Fast path
+      // Fast path - check if getSession returns a valid session
       const { data } = await supabase.auth.getSession();
       if (data.session?.access_token) {
-        console.log("[waitForSessionReady] ✅ Session is ready (getSession)");
-        return true;
+        // CRITICAL: Verify the session actually works by testing a simple query
+        // This catches cases where session exists but isn't synced with Supabase yet
+        try {
+          // Use a simple query that requires authentication to verify session works
+          const { error: testError } = await supabase
+            .from("workers")
+            .select("id")
+            .limit(1)
+            .maybeSingle();
+          
+          // If no auth error, the session is functional
+          if (!testError || !testError.message?.includes("not authenticated")) {
+            console.log("[waitForSessionReady] ✅ Session is ready and verified (getSession)");
+            return true;
+          }
+          
+          // If we get an auth error, session isn't ready yet
+          console.log("[waitForSessionReady] ⚠️ Session exists but not authenticated yet, continuing...");
+        } catch (verifyError) {
+          // If verification fails with unknown error, assume ready
+          console.log("[waitForSessionReady] ℹ️ Session verification error, assuming ready");
+          return true;
+        }
       }
 
       // Slow path: actively restore from storage if needed
       const restored = await ensureValidSessionForApiCall();
       if (restored) {
-        console.log("[waitForSessionReady] ✅ Session is ready (restore)");
-        return true;
+        // Double-check by getting the session again
+        const { data: verifyData } = await supabase.auth.getSession();
+        if (verifyData.session?.access_token) {
+          console.log("[waitForSessionReady] ✅ Session is ready (restore + verify)");
+          return true;
+        }
       }
     } catch (e) {
       console.warn("[waitForSessionReady] Error checking/restoring session:", e);
