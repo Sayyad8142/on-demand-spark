@@ -9,15 +9,18 @@ import { toast } from "@/hooks/use-toast";
 export async function tryAccept(bookingId: string): Promise<{ success: boolean; error?: string }> {
   // Cold-start + token restore can be slow, especially when app was killed.
   // Give it a bit more time before we declare failure.
-  const maxAttempts = 8;
+  const maxAttempts = 10;
+  const initialBackoffMs = 600;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     console.log(`[tryAccept] Attempt ${attempt}/${maxAttempts} for booking ${bookingId}`);
 
+    // Check session before each attempt
     const sessionValid = await ensureValidSessionForApiCall();
+    
     if (!sessionValid) {
       if (attempt < maxAttempts) {
-        const waitMs = Math.min(500 * attempt, 2000);
+        const waitMs = Math.min(initialBackoffMs * attempt, 3000);
         console.log(
           `[tryAccept] Session not valid on attempt ${attempt}, waiting ${waitMs}ms and retrying...`
         );
@@ -33,22 +36,37 @@ export async function tryAccept(bookingId: string): Promise<{ success: boolean; 
       return { success: false, error: "Session needs refresh. Please try again." };
     }
     
+    // Double-check we have a session with access token
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session?.access_token) {
+      console.log(`[tryAccept] No access token on attempt ${attempt}, retrying...`);
+      if (attempt < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        continue;
+      }
+      return { success: false, error: "Session not available" };
+    }
+    
     try {
-      console.log(`[tryAccept] Calling RPC try_accept_booking for ${bookingId}`);
+      console.log(`[tryAccept] Calling RPC try_accept_booking for ${bookingId} (user: ${sessionData.session.user?.id})`);
       const { data, error } = await supabase.rpc("try_accept_booking", { p_booking_id: bookingId });
       
       if (error) {
-        console.error("❌ RPC error accepting booking:", error);
+        console.error("❌ RPC error accepting booking:", error.message, error);
         
-        // Retry on network/transient errors
-        if (
-          attempt < maxAttempts &&
-          (error.message?.includes("network") ||
-            error.message?.includes("fetch") ||
-            error.message?.includes("Failed to fetch"))
-        ) {
-          console.log(`[tryAccept] Network error on attempt ${attempt}, retrying...`);
-          await new Promise((resolve) => setTimeout(resolve, 750));
+        // Retry on network/transient errors OR auth errors (session might not be synced yet)
+        const isRetryable = 
+          error.message?.includes("network") ||
+          error.message?.includes("fetch") ||
+          error.message?.includes("Failed to fetch") ||
+          error.message?.includes("not authenticated") ||
+          error.message?.includes("JWT") ||
+          error.code === "PGRST301"; // JWT auth error
+        
+        if (attempt < maxAttempts && isRetryable) {
+          const waitMs = Math.min(700 * attempt, 3000);
+          console.log(`[tryAccept] Retryable error on attempt ${attempt}, waiting ${waitMs}ms...`);
+          await new Promise((resolve) => setTimeout(resolve, waitMs));
           continue;
         }
         
@@ -68,8 +86,9 @@ export async function tryAccept(bookingId: string): Promise<{ success: boolean; 
       console.error("❌ Unexpected error accepting booking:", error);
       
       if (attempt < maxAttempts) {
-        console.log(`[tryAccept] Unexpected error on attempt ${attempt}, retrying...`);
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        const waitMs = Math.min(1000 * attempt, 3000);
+        console.log(`[tryAccept] Unexpected error on attempt ${attempt}, waiting ${waitMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, waitMs));
         continue;
       }
       
