@@ -1,11 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { MapPin, Home, User, Check, ChevronDown } from "lucide-react";
-import { Database } from "@/integrations/supabase/types";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useState } from "react";
-import { formatBookingAddress, parsePHFCode, BookingWithAddress } from "@/lib/address";
+import { Check, Phone } from "lucide-react";
+import { BookingWithAddress } from "@/lib/address";
+import { parsePHFCode } from "@/lib/address";
 
 type Booking = BookingWithAddress;
 interface ActiveJobCardProps {
@@ -13,20 +10,14 @@ interface ActiveJobCardProps {
   onStatusUpdate: (newStatus: string) => Promise<void>;
   updating: boolean;
 }
-const STATUS_COLORS = {
-  'assigned': 'bg-blue-100 text-blue-700 border-blue-200',
-  'accepted': 'bg-blue-100 text-blue-700 border-blue-200',
-  'on_the_way': 'bg-purple-100 text-purple-700 border-purple-200',
-  'started': 'bg-green-100 text-green-700 border-green-200'
-};
+
+const MANAGER_PHONE = "8008180018";
+
 export default function ActiveJobCard({
   booking,
   onStatusUpdate,
   updating
 }: ActiveJobCardProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const statusColor = STATUS_COLORS[booking.status as keyof typeof STATUS_COLORS] || 'bg-secondary';
-
   // Don't show for completed or cancelled bookings
   if (!['assigned', 'accepted', 'on_the_way', 'started'].includes(booking.status)) {
     console.log('🚫 ActiveJobCard: Not showing card, status is:', booking.status);
@@ -35,14 +26,18 @@ export default function ActiveJobCard({
   console.log('✅ ActiveJobCard: Showing card, status is:', booking.status);
   
   const phfParsed = parsePHFCode(booking.flat_no);
+
+  const handleCallManager = () => {
+    window.location.href = `tel:${MANAGER_PHONE}`;
+  };
   
   return <Card className="shadow-lg overflow-hidden border-0">
       <div className="p-4 space-y-3">
         {/* 1. Flat Number Display - Wooden Door Style */}
         <div className="flat-door-style p-5">
           <div className="text-center mb-4 relative z-10">
-            <p className="flat-number-text font-extrabold text-4xl tracking-wide uppercase">
-              Flat no {booking.flat_no}
+            <p className="flat-number-text font-extrabold text-3xl tracking-wide uppercase">
+              Flat {booking.flat_no}
             </p>
           </div>
           {phfParsed && (
@@ -77,43 +72,21 @@ export default function ActiveJobCard({
           </div>
           </div>}
 
-        {/* 3. Customer Details - Dropdown */}
-        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" className="w-full justify-between h-12 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-              <span className="font-semibold text-base">Customer Details</span>
-              <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 space-y-3 mt-2 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0">
-                  <User className="w-5 h-5 text-red-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Customer Name</p>
-                  <p className="font-semibold text-base text-gray-900 dark:text-gray-100 truncate">{booking.cust_name}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0">
-                  <MapPin className="w-5 h-5 text-red-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Community</p>
-                  <p className="font-semibold text-base text-gray-900 dark:text-gray-100 truncate">{booking.community}</p>
-                </div>
-              </div>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-
         {/* Notes */}
         {booking.notes && <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
             <p className="text-xs font-bold text-amber-800 dark:text-amber-400 mb-2">NOTES:</p>
             <p className="text-sm text-amber-900 dark:text-amber-200">{booking.notes}</p>
           </div>}
+
+        {/* 3. Call Manager Button */}
+        <Button 
+          size="lg" 
+          className="w-full h-12 text-base font-bold bg-green-500 hover:bg-green-600 text-white shadow-md rounded-xl transition-all duration-200 active:scale-[0.98]" 
+          onClick={handleCallManager}
+        >
+          <Phone className="w-5 h-5 mr-2" />
+          Call Manager
+        </Button>
 
         {/* 4. Work Completed Button */}
         <Button 
