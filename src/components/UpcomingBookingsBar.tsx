@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Clock, IndianRupee, Home, Utensils, SprayCan, Bath } from "lucide-react";
+import { Clock, IndianRupee } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
 
 type UpcomingBooking = {
@@ -18,12 +18,6 @@ interface UpcomingBookingsBarProps {
   limit?: number;
 }
 
-const SERVICE_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  maid: { label: "Maid", icon: Home, color: "text-blue-600" },
-  cook: { label: "Cook", icon: Utensils, color: "text-orange-600" },
-  cleaning: { label: "Cleaning", icon: SprayCan, color: "text-purple-600" },
-  bathroom_cleaning: { label: "Bathroom", icon: Bath, color: "text-cyan-600" },
-};
 
 export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
   const [bookings, setBookings] = useState<UpcomingBooking[]>([]);
@@ -89,18 +83,10 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
 
   return (
     <div className="fixed bottom-16 left-0 right-0 z-10 bg-gradient-to-t from-background via-background to-background/95 backdrop-blur-sm border-t border-border shadow-lg safe-area-inset-bottom">
-      <div className="px-3 py-2.5 pb-3">
-        {/* Header */}
-        <div className="flex items-center justify-center gap-2 mb-2.5">
-          <Calendar className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold text-foreground">
-            Upcoming Bookings ({bookings.length})
-          </span>
-        </div>
-
-        {/* Scrollable Cards */}
+      <div className="px-3 py-2 pb-2.5">
+        {/* Scrollable Cards - No Header */}
         <div 
-          className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1" 
+          className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1" 
           style={{ 
             scrollbarWidth: 'none', 
             msOverflowStyle: 'none',
@@ -109,39 +95,25 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
         >
           {bookings.map((booking) => {
             const price = booking.price_inr ?? booking.payout_amount;
-            const serviceConfig = SERVICE_CONFIG[booking.service_type] || { 
-              label: booking.service_type, 
-              icon: Home, 
-              color: "text-muted-foreground" 
-            };
-            const ServiceIcon = serviceConfig.icon;
             const dateStr = formatDate(booking.scheduled_date);
             const isUrgent = dateStr === "Today";
 
             return (
               <div
                 key={booking.booking_id}
-                className={`flex-shrink-0 min-w-[160px] max-w-[180px] bg-card border rounded-xl p-3 shadow-sm transition-all ${
+                className={`flex-shrink-0 bg-card border rounded-lg px-3 py-2 shadow-sm flex items-center gap-3 ${
                   isUrgent 
                     ? "border-primary/50 bg-primary/5" 
                     : "border-border"
                 }`}
               >
-                {/* Service Type Badge */}
-                <div className={`flex items-center gap-1.5 mb-2 ${serviceConfig.color}`}>
-                  <ServiceIcon className="h-4 w-4 flex-shrink-0" />
-                  <span className="text-xs font-semibold truncate">
-                    {serviceConfig.label}
-                  </span>
-                </div>
-
-                {/* Date & Time Row */}
-                <div className="flex items-center justify-between gap-2 mb-2">
+                {/* Date & Time */}
+                <div className="flex items-center gap-2">
                   <span className={`text-sm font-bold ${isUrgent ? "text-primary" : "text-foreground"}`}>
                     {dateStr}
                   </span>
                   <div className="flex items-center gap-1 text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                    <Clock className="h-3.5 w-3.5" />
                     <span className="text-xs font-medium">
                       {formatTime(booking.scheduled_time)}
                     </span>
@@ -150,9 +122,9 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
 
                 {/* Price */}
                 {price !== null && price !== undefined && (
-                  <div className="flex items-center gap-0.5 text-green-600 bg-green-50 dark:bg-green-900/20 rounded-md px-2 py-1 w-fit">
-                    <IndianRupee className="h-3.5 w-3.5 flex-shrink-0" />
-                    <span className="text-sm font-bold">{price}</span>
+                  <div className="flex items-center gap-0.5 text-green-600 font-bold text-sm">
+                    <IndianRupee className="h-3.5 w-3.5" />
+                    <span>{price}</span>
                   </div>
                 )}
               </div>
