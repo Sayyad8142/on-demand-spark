@@ -127,7 +127,15 @@ export default function ActiveJobCard({
           Call Manager
         </Button>
 
-        {/* 4. Work Completed Button with Countdown */}
+        {/* Timer indicator when cooldown active */}
+        {remainingSeconds > 0 && (
+          <div className="flex items-center justify-center gap-2 text-muted-foreground text-sm">
+            <Clock className="w-4 h-4 animate-pulse" />
+            <span>Please wait {formatCountdown(remainingSeconds)}</span>
+          </div>
+        )}
+
+        {/* 4. Work Completed Button */}
         <Button 
           size="lg" 
           className={`w-full h-14 text-lg font-bold shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98] ${
@@ -138,14 +146,7 @@ export default function ActiveJobCard({
           onClick={() => onStatusUpdate('completed')} 
           disabled={isWorkCompletedDisabled}
         >
-          {updating ? (
-            "Updating..."
-          ) : remainingSeconds > 0 ? (
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 animate-pulse" />
-              <span>Wait {formatCountdown(remainingSeconds)}</span>
-            </div>
-          ) : (
+          {updating ? "Updating..." : (
             <>
               <Check className="w-6 h-6 mr-2" />
               Work Completed
