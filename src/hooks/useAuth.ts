@@ -107,6 +107,10 @@ export function useAuth() {
       try {
         console.log('🔐 Initializing auth...');
         
+        // First, reload session from storage to ensure we have latest data
+        await reloadSessionFromStorage();
+        console.log('📦 Storage reloaded:', getStorageCacheDebug());
+        
         // Get initial session with retry logic
         let retryCount = 0;
         let currentSession = null;
@@ -121,18 +125,23 @@ export function useAuth() {
           }
           currentSession = data.session;
           
-          // If session exists but might be expired, try to refresh
-          if (currentSession && currentSession.expires_at) {
-            const expiresAt = currentSession.expires_at * 1000;
-            const now = Date.now();
-            const fiveMinutes = 5 * 60 * 1000;
+          // ALWAYS try to refresh session on startup to ensure fresh tokens
+          // This is critical for workers who open the app after hours/overnight
+          if (currentSession) {
+            console.log('🔄 Refreshing session on startup to ensure fresh tokens...');
+            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
             
-            if (expiresAt - now < fiveMinutes) {
-              console.log('🔄 Session expires soon, refreshing...');
-              const { data: refreshData } = await supabase.auth.refreshSession();
-              if (refreshData.session) {
-                currentSession = refreshData.session;
+            if (refreshError) {
+              console.error('⚠️ Session refresh failed:', refreshError.message);
+              // If refresh fails with invalid_grant, the refresh token expired
+              if (refreshError.message.includes('invalid') || refreshError.message.includes('expired')) {
+                console.log('❌ Refresh token expired, user needs to re-login');
+                currentSession = null;
               }
+              // Otherwise keep the existing session if it's still valid
+            } else if (refreshData.session) {
+              console.log('✅ Session refreshed successfully on startup');
+              currentSession = refreshData.session;
             }
           }
           break;
@@ -145,12 +154,13 @@ export function useAuth() {
           
           if (currentSession) {
             console.log('✅ Session restored, user:', currentSession.user?.id);
+            console.log('📅 Token expires at:', new Date(currentSession.expires_at! * 1000).toISOString());
             await saveSession(currentSession);
             if (currentSession.access_token) {
               await saveJWT(currentSession.access_token);
             }
           } else {
-            console.log('ℹ️ No session found');
+            console.log('ℹ️ No session found - user needs to login');
           }
         }
       } catch (error) {
