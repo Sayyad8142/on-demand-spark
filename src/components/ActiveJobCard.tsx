@@ -1,8 +1,9 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Phone } from "lucide-react";
+import { Check, Phone, Clock } from "lucide-react";
 import { BookingWithAddress } from "@/lib/address";
 import { parsePHFCode } from "@/lib/address";
+import { useState, useEffect, useMemo } from "react";
 
 type Booking = BookingWithAddress;
 interface ActiveJobCardProps {
@@ -12,12 +13,42 @@ interface ActiveJobCardProps {
 }
 
 const MANAGER_PHONE = "8008180018";
+const COOLDOWN_MINUTES = 20;
 
 export default function ActiveJobCard({
   booking,
   onStatusUpdate,
   updating
 }: ActiveJobCardProps) {
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(0);
+
+  // Calculate initial remaining time based on accepted_at timestamp
+  const cooldownEndTime = useMemo(() => {
+    if (booking.accepted_at) {
+      const acceptedTime = new Date(booking.accepted_at).getTime();
+      return acceptedTime + COOLDOWN_MINUTES * 60 * 1000;
+    }
+    return null;
+  }, [booking.accepted_at]);
+
+  useEffect(() => {
+    if (!cooldownEndTime) {
+      setRemainingSeconds(0);
+      return;
+    }
+
+    const updateRemaining = () => {
+      const now = Date.now();
+      const diff = Math.max(0, Math.ceil((cooldownEndTime - now) / 1000));
+      setRemainingSeconds(diff);
+    };
+
+    updateRemaining();
+    const interval = setInterval(updateRemaining, 1000);
+
+    return () => clearInterval(interval);
+  }, [cooldownEndTime]);
+
   // Don't show for completed or cancelled bookings
   if (!['assigned', 'accepted', 'on_the_way', 'started'].includes(booking.status)) {
     console.log('🚫 ActiveJobCard: Not showing card, status is:', booking.status);
@@ -29,6 +60,14 @@ export default function ActiveJobCard({
 
   const handleCallManager = () => {
     window.location.href = `tel:${MANAGER_PHONE}`;
+  };
+
+  const isWorkCompletedDisabled = updating || remainingSeconds > 0;
+
+  const formatCountdown = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
   
   return <Card className="shadow-lg overflow-hidden border-0">
@@ -88,17 +127,30 @@ export default function ActiveJobCard({
           Call Manager
         </Button>
 
-        {/* 4. Work Completed Button */}
+        {/* 4. Work Completed Button with Countdown */}
         <Button 
           size="lg" 
-          className="w-full h-14 text-lg font-bold bg-red-500 hover:bg-red-600 text-white shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98]" 
+          className={`w-full h-14 text-lg font-bold shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98] ${
+            isWorkCompletedDisabled 
+              ? "bg-gray-400 hover:bg-gray-400 cursor-not-allowed text-white/80" 
+              : "bg-red-500 hover:bg-red-600 text-white"
+          }`}
           onClick={() => onStatusUpdate('completed')} 
-          disabled={updating}
+          disabled={isWorkCompletedDisabled}
         >
-          {updating ? "Updating..." : <>
+          {updating ? (
+            "Updating..."
+          ) : remainingSeconds > 0 ? (
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5 animate-pulse" />
+              <span>Wait {formatCountdown(remainingSeconds)}</span>
+            </div>
+          ) : (
+            <>
               <Check className="w-6 h-6 mr-2" />
               Work Completed
-            </>}
+            </>
+          )}
         </Button>
       </div>
     </Card>;
