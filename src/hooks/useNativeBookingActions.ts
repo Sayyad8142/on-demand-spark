@@ -186,17 +186,10 @@ export function useNativeBookingActions(workerId: string | undefined) {
       return;
     }
 
-    // CRITICAL: Accept also needs workerId for RPC to succeed
-    // On cold start, worker profile may not be loaded yet
-    if (action === "accepted" && !currentWorkerId) {
-      console.warn("[useNativeBookingActions] workerId not available yet for accept, queueing action");
-      queuedActionsRef.current.push(detail);
-      toast({
-        title: "Loading profile...",
-        description: "Preparing to accept booking...",
-      });
-      return;
-    }
+
+    // NOTE: Accept does NOT require workerId (it relies on auth.uid() inside the RPC).
+    // On cold start the worker profile can take time to load; don't block accept on that.
+
 
     // For accept from cold start OR before authReady, wait for session to be fully ready
     if (action === "accepted" && (wasQueued || !isAuthReady)) {
