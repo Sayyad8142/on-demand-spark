@@ -100,26 +100,6 @@ export default function Auth() {
     };
     fetchCommunities();
   }, []);
-  const withTimeout = async <T,>(
-    work: () => PromiseLike<T>,
-    ms = 15000,
-    label = "request"
-  ): Promise<T> => {
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => {
-        reject(new Error(`Timeout while ${label}. Please check internet and try again.`));
-      }, ms);
-    });
-
-    try {
-      return (await Promise.race([Promise.resolve(work()), timeoutPromise])) as T;
-    } finally {
-      if (timeoutId) clearTimeout(timeoutId);
-    }
-  };
-
   const normalizePhone = (phone: string) => {
     const cleaned = phone.replace(/\D/g, '');
     return cleaned.startsWith('91') ? `+${cleaned}` : `+91${cleaned}`;
@@ -195,31 +175,27 @@ export default function Auth() {
       const phone = normalizePhone(signInPhone);
 
       // Check if worker with this phone exists (skip for demo number)
-      const { data: existingWorker, error: workerCheckError } = await withTimeout(
-        () => supabase.from('workers').select('id').eq('phone', phone).maybeSingle(),
-        15000,
-        'checking your account'
-      );
-
+      const {
+        data: existingWorker,
+        error: workerCheckError
+      } = await supabase.from('workers').select('id').eq('phone', phone).maybeSingle();
       if (workerCheckError) {
         console.error('Error checking worker:', workerCheckError);
       }
-
       if (!existingWorker) {
         toast({
           title: t('auth.accountNotRegistered', 'Account not registered'),
           description: t('auth.signUpFirst', 'Please sign up first to create your account'),
           variant: "destructive"
         });
+        setLoading(false);
         return;
       }
-
-      const { error } = await withTimeout(
-        () => supabase.auth.signInWithOtp({ phone }),
-        15000,
-        'sending OTP'
-      );
-
+      const {
+        error
+      } = await supabase.auth.signInWithOtp({
+        phone
+      });
       if (error) throw error;
 
       // Navigate to OTP verification page
@@ -234,10 +210,9 @@ export default function Auth() {
         description: "Check your phone for the verification code"
       });
     } catch (error: any) {
-      const status = error?.status ? ` (status ${error.status})` : "";
       toast({
-        title: `Error${status}`,
-        description: error?.message || "Something went wrong while sending OTP",
+        title: "Error",
+        description: error.message,
         variant: "destructive"
       });
     } finally {
@@ -287,22 +262,19 @@ export default function Auth() {
     try {
       setLoading(true);
       const phone = normalizePhone(signUpPhone);
-      const { error } = await withTimeout(
-        () => supabase.auth.signInWithOtp({
-          phone,
-          options: {
-            data: {
-              full_name: signUpFullName.trim(),
-              upi_id: signUpUpiId?.trim() || null,
-              service_types: signUpServices,
-              communities: [signUpCommunity]
-            }
+      const {
+        error
+      } = await supabase.auth.signInWithOtp({
+        phone,
+        options: {
+          data: {
+            full_name: signUpFullName.trim(),
+            upi_id: signUpUpiId?.trim() || null,
+            service_types: signUpServices,
+            communities: [signUpCommunity]
           }
-        }),
-        15000,
-        'sending OTP'
-      );
-
+        }
+      });
       if (error) throw error;
 
       // Navigate to OTP verification page with signup data
@@ -325,27 +297,15 @@ export default function Auth() {
         description: "Check your phone for the verification code"
       });
     } catch (error: any) {
-      const status = error?.status ? ` (status ${error.status})` : "";
       toast({
-        title: `Error${status}`,
-        description: error?.message || "Something went wrong while sending OTP",
+        title: "Error",
+        description: error.message,
         variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-  const [lastAuthIssue, setLastAuthIssue] = useState<{ ts: string; kind: string; message: string } | null>(null);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('auth_last_issue');
-      if (raw) setLastAuthIssue(JSON.parse(raw));
-    } catch {
-      // ignore
-    }
-  }, []);
-
   // OTP verification is now handled in OtpVerify page
   return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 p-4">
       <div className="w-full max-w-md space-y-4">
@@ -362,22 +322,6 @@ export default function Auth() {
             <UserRound className="h-4 w-4" />
           </Button>
         </div>
-
-        {lastAuthIssue && <div className="rounded-lg border bg-muted/30 p-3 text-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <div className="font-medium">Last login issue</div>
-                <div className="text-xs text-muted-foreground">{new Date(lastAuthIssue.ts).toLocaleString()} • {lastAuthIssue.kind}</div>
-                <div className="text-muted-foreground break-words">{lastAuthIssue.message}</div>
-              </div>
-              <Button variant="outline" size="sm" onClick={() => {
-            localStorage.removeItem('auth_last_issue');
-            setLastAuthIssue(null);
-          }}>
-                Clear
-              </Button>
-            </div>
-          </div>}
 
         <Card className="w-full">
         <CardHeader className="space-y-1">

@@ -1,7 +1,6 @@
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import { initializeStorageCache, isStorageInitialized, getStorageCacheDebug, storageReadyPromise } from "./lib/capacitorStorage";
-import { Capacitor } from "@capacitor/core";
+import { initializeStorageCache, isStorageInitialized, getStorageCacheDebug } from "./lib/capacitorStorage";
 
 // CRITICAL: Initialize storage cache BEFORE importing anything that uses Supabase
 // This ensures the session is loaded into memory before Supabase client is created
@@ -9,18 +8,10 @@ const bootstrap = async () => {
   console.log('🚀 Bootstrap starting...');
   
   // Step 1: Initialize storage cache first (loads session from Preferences into memory)
-  // This now has retry logic and will properly signal when ready
   await initializeStorageCache();
   console.log('✅ Storage initialized:', getStorageCacheDebug());
   
-  // Step 2: On native, ensure storageReady promise is resolved before continuing
-  if (Capacitor.isNativePlatform()) {
-    console.log('⏳ Waiting for storage ready promise...');
-    await storageReadyPromise;
-    console.log('✅ Storage ready promise resolved');
-  }
-  
-  // Step 3: Now dynamically import i18n (may depend on storage)
+  // Step 2: Now dynamically import i18n (may depend on storage)
   const { default: i18n } = await import("./i18n/config");
   
   // Helper to ensure i18n is initialized
@@ -34,11 +25,11 @@ const bootstrap = async () => {
   await waitForI18n();
   console.log('✅ i18n initialized');
   
-  // Step 4: NOW import App (which imports Supabase client)
+  // Step 3: NOW import App (which imports Supabase client)
   // At this point, storage cache has the session loaded
   const { default: App } = await import("./App.tsx");
   
-  console.log('✅ App imported, storage status:', isStorageInitialized(), getStorageCacheDebug());
+  console.log('✅ App imported, storage status:', isStorageInitialized());
   
   createRoot(document.getElementById("root")!).render(<App />);
 };

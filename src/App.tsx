@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-route
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { useAuth } from "@/hooks/useAuth";
-import { AuthProvider } from "@/contexts/AuthContext";
 import { useAppState } from "@/hooks/useAppState";
 import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
 import { initNativePush } from "@/native/push";
@@ -84,7 +83,7 @@ function NativeNavigationHandler() {
   return null;
 }
 
-function AppInner() {
+const App = () => {
   const { session } = useAuth();
   useAppState(); // Refresh JWT when app comes to foreground
   const { needsUpdate, loading: updateCheckLoading } = useForceUpdateCheck();
@@ -109,11 +108,11 @@ function AppInner() {
     if (!userId) return;
 
     console.log("User logged in:", userId);
-
+    
     if (Capacitor.isNativePlatform()) {
       console.log("🔔 Initializing native push for user:", userId);
       initNativePush(userId);
-
+      
       // Request overlay permission on Android
       if (Capacitor.getPlatform() === 'android') {
         requestAndroidOverlay();
@@ -125,29 +124,27 @@ function AppInner() {
   // Handle deep links for booking acceptance
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
-
+    
     const sub = CapApp.addListener('appUrlOpen', async (data) => {
       try {
         const url = new URL(data.url);
-        if (url.protocol === 'didinow:' && url.hostname === 'accept') {
-          const bookingId = url.searchParams.get('bookingId') || '';
-          if (bookingId) {
-            console.log('🔗 Deep link accept for bookingId:', bookingId);
-            const result = await tryAccept(bookingId);
-            if (!result.success) {
-              console.warn('Booking accept failed:', result.error);
-            } else {
-              window.dispatchEvent(new CustomEvent('bookingAccepted', { detail: { bookingId } }));
+          if (url.protocol === 'didinow:' && url.hostname === 'accept') {
+            const bookingId = url.searchParams.get('bookingId') || '';
+            if (bookingId) {
+              console.log('🔗 Deep link accept for bookingId:', bookingId);
+              const result = await tryAccept(bookingId);
+              if (!result.success) {
+                console.warn('Booking accept failed:', result.error);
+              } else {
+                window.dispatchEvent(new CustomEvent('bookingAccepted', { detail: { bookingId } }));
+              }
             }
           }
-        }
       } catch (e) {
         console.error('appUrlOpen parse error', e);
       }
     });
-    return () => {
-      sub.then((s) => s.remove());
-    };
+    return () => { sub.then(s => s.remove()); };
   }, []);
 
   // Listen for push notification messages
@@ -275,13 +272,6 @@ function AppInner() {
       </TooltipProvider>
     </QueryClientProvider>
   );
-}
-
-const App = () => (
-  <AuthProvider>
-    <AppInner />
-  </AuthProvider>
-);
+};
 
 export default App;
-

@@ -4,9 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
 import androidx.core.content.ContextCompat
 import com.getcapacitor.BridgeActivity
 import com.getcapacitor.Plugin
@@ -36,16 +33,6 @@ class ForegroundServicePlugin : Plugin() {
 }
 
 class MainActivity : BridgeActivity() {
-    
-    companion object {
-        private const val TAG = "MainActivity"
-        private const val WEBVIEW_READY_DELAY_MS = 1500L // Wait for WebView + React to mount
-    }
-    
-    private var bookingActionPlugin: BookingActionPlugin? = null
-    private var webViewReady = false
-    private val mainHandler = Handler(Looper.getMainLooper())
-    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         registerPlugin(ForegroundServicePlugin::class.java)
@@ -53,144 +40,40 @@ class MainActivity : BridgeActivity() {
         registerPlugin(AuthBridge::class.java)
         registerPlugin(LocationPlugin::class.java)
         registerPlugin(SmsRetrieverPlugin::class.java)
-        registerPlugin(BookingActionPlugin::class.java)
         
-        Log.d(TAG, "🚀 App starting - checking permissions")
+        android.util.Log.d("MainActivity", "🚀 App starting - checking permissions")
         
         // Show unified permissions dialog (battery + overlay)
         BatteryOptimizationHelper.showPermissionsDialog(this)
         
         // Handle intent if launched from overlay
-        handleIntent(intent)
-        
-        // Schedule WebView ready check after delay
-        scheduleWebViewReadyCheck()
-    }
-    
-    override fun onStart() {
-        super.onStart()
-        // Also check for pending actions when app comes to foreground
-        scheduleWebViewReadyCheck()
+        handleNavigationIntent(intent)
     }
     
     // IMPORTANT: must match BridgeActivity/Activity signature (non-null Intent)
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        Log.d(TAG, "🟡 onNewIntent called")
-        setIntent(intent) // Update the intent so handleIntent uses the new one
-        handleIntent(intent)
+        android.util.Log.d("MainActivity", "🟡 onNewIntent called")
+        handleNavigationIntent(intent)
     }
     
-    /**
-     * Schedule a check for pending actions after WebView is likely ready.
-     * This ensures queued actions are dispatched even if the immediate dispatch fails.
-     */
-    private fun scheduleWebViewReadyCheck() {
-        mainHandler.postDelayed({
-            Log.d(TAG, "⏰ WebView ready check - dispatching any pending actions")
-            webViewReady = true
-            
-            // Get the plugin instance and dispatch any pending actions
-            try {
-                val plugin = bridge?.getPlugin("BookingAction")?.instance as? BookingActionPlugin
-                plugin?.dispatchPendingActionIfExists(bridge)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error dispatching pending action", e)
-            }
-        }, WEBVIEW_READY_DELAY_MS)
-    }
-    
-    /**
-     * Handle intents from native services (overlay, FCM, etc.)
-     * Dispatches booking actions and navigation to the web app.
-     * 
-     * If WebView isn't ready, queues the action for later dispatch.
-     */
-    private fun handleIntent(intent: Intent?) {
-        if (intent == null) return
+    // Accept nullable Intent and guard reads
+    private fun handleNavigationIntent(intent: Intent?) {
+        val navigateTo = intent?.getStringExtra("navigate_to")
+        val bookingId = intent?.getStringExtra("booking_id")
         
-        val bookingAction = intent.getStringExtra("booking_action")
-        val bookingId = intent.getStringExtra("booking_id")
-        val navigateTo = intent.getStringExtra("navigate_to")
+        android.util.Log.d("MainActivity", "🧭 Navigation intent: navigateTo=$navigateTo, bookingId=$bookingId")
         
-        Log.d(TAG, "🧭 handleIntent: action=$bookingAction, bookingId=$bookingId, navigateTo=$navigateTo")
+        if (navigateTo.isNullOrEmpty()) return
         
-        // Handle booking action from overlay (accept/decline/timeout)
-        if (!bookingAction.isNullOrEmpty() && !bookingId.isNullOrEmpty()) {
-            Log.d(TAG, "📤 Processing booking action")
-            
-            // Always queue the action first (safety net)
-            try {
-                val plugin = bridge?.getPlugin("BookingAction")?.instance as? BookingActionPlugin
-                plugin?.queueAction(bookingId, bookingAction)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error queueing action", e)
-                // Fall back to SharedPreferences directly
-                queueActionToPrefs(bookingId, bookingAction)
-            }
-            
-            // Try to dispatch immediately if WebView is ready
-            if (webViewReady && bridge?.webView != null) {
-                dispatchBookingAction(bookingId, bookingAction)
-            } else {
-                Log.d(TAG, "⏳ WebView not ready, action queued for later dispatch")
-            }
-            
-            // Clear the action extras so they don't re-trigger on next onNewIntent
-            intent.removeExtra("booking_action")
-            intent.removeExtra("booking_id")
-        }
-        
-        // Handle navigation (from any source)
-        if (!navigateTo.isNullOrEmpty()) {
-            bridge?.webView?.post {
-                val js = """
-                    window.dispatchEvent(new CustomEvent('native:navigate', {
-                        detail: { screen: '$navigateTo', bookingId: '${bookingId ?: ""}' }
-                    }));
-                """.trimIndent()
-                bridge?.webView?.evaluateJavascript(js, null)
-            }
-        }
-    }
-    
-    /**
-     * Dispatch a booking action to the web app via CustomEvent.
-     */
-    private fun dispatchBookingAction(bookingId: String, action: String) {
-        Log.d(TAG, "🚀 Dispatching booking action to web app: $action for $bookingId")
-        
+        // Send event to WebView/JS
         bridge?.webView?.post {
             val js = """
-                (function() {
-                    console.log('[Native] Dispatching booking action: $action for $bookingId');
-                    window.dispatchEvent(new CustomEvent('native:booking-action', {
-                        detail: { 
-                            bookingId: '$bookingId', 
-                            action: '$action'
-                        }
-                    }));
-                })();
+                window.dispatchEvent(new CustomEvent('native:navigate', {
+                  detail: { screen: '$navigateTo', bookingId: '${bookingId ?: ""}' }
+                }));
             """.trimIndent()
             bridge?.webView?.evaluateJavascript(js, null)
-        }
-    }
-    
-    /**
-     * Fallback: queue action directly to SharedPreferences if plugin not available.
-     */
-    private fun queueActionToPrefs(bookingId: String, action: String) {
-        try {
-            val prefs = getSharedPreferences("booking_actions", Context.MODE_PRIVATE)
-            val json = org.json.JSONObject().apply {
-                put("bookingId", bookingId)
-                put("action", action)
-                put("createdAt", System.currentTimeMillis())
-            }
-            prefs.edit().putString("pending_action", json.toString()).apply()
-            Log.d(TAG, "Action queued via fallback prefs")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error in fallback queue", e)
         }
     }
 }

@@ -1,71 +1,59 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
-import { reloadSessionFromStorage } from '@/lib/capacitorStorage';
-import { persistSessionAtomic, tryRestoreSessionFromStorage } from '@/lib/sessionManager';
 
 /**
  * Hook to handle app lifecycle events (foreground/background)
- * On resume, ensures storage cache is fresh and lets supabase-js handle refresh
- * NEVER triggers logout on any error
+ * Ensures JWT token is refreshed when app comes to foreground
  */
 export function useAppState() {
-  const isHandlingRef = useRef(false);
-  const lastResumeTimeRef = useRef(0);
-
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
+
+    // @ts-ignore - Capacitor bridge
+    const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
     
     let listener: any;
     
     const setupListener = async () => {
       listener = await CapApp.addListener('appStateChange', async ({ isActive }) => {
         if (isActive) {
-          const now = Date.now();
+          console.log('📱 App became active, refreshing JWT...');
           
-          // Debounce - don't handle if we just handled within 3 seconds
-          if (now - lastResumeTimeRef.current < 3000) {
-            console.log('📱 App resume debounced (too soon)');
-            return;
-          }
-          
-          // Prevent concurrent handling
-          if (isHandlingRef.current) {
-            console.log('📱 App state change already being handled');
-            return;
-          }
-          
-          isHandlingRef.current = true;
-          lastResumeTimeRef.current = now;
-          console.log('📱 App became active, syncing session...');
-          
-          try {
-            // Reload from persistent storage to ensure memory cache is fresh
-            await reloadSessionFromStorage();
-            
-            // Just get the current session - supabase-js will auto-refresh if needed
-            const { data, error } = await supabase.auth.getSession();
-            
-            if (error) {
-              console.warn('⚠️ Error getting session on resume:', error);
-              // Try restore from storage
-              const restored = await tryRestoreSessionFromStorage();
-              if (restored) {
-                console.log('✅ Session restored on resume');
+          // Refresh session and save JWT when app comes to foreground
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token && AuthBridge) {
+            // Retry up to 3 times
+            for (let attempt = 1; attempt <= 3; attempt++) {
+              try {
+                console.log(`💾 [Foreground - Attempt ${attempt}/3] Saving JWT...`);
+                console.log('🔑 Token preview:', session.access_token.substring(0, 50) + '...');
+                
+                await AuthBridge.saveToken({ token: session.access_token });
+                
+                // Wait a bit for the write to complete
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Verify it was actually saved
+                const verify = await AuthBridge.getToken();
+                if (verify?.token === session.access_token) {
+                  console.log(`✅ JWT refreshed and verified on foreground (attempt ${attempt})`);
+                  break; // Success, exit loop
+                } else {
+                  console.error(`❌ JWT verification failed on foreground (attempt ${attempt})`);
+                }
+              } catch (error) {
+                console.error(`❌ Failed to refresh JWT on foreground (attempt ${attempt}):`, error);
               }
-            } else if (data.session) {
-              // Ensure native storage is in sync with latest tokens
-              await persistSessionAtomic(data.session);
-              console.log('✅ Session synced on resume');
-            } else {
-              console.log('ℹ️ No session on resume (user may not be logged in)');
+
+              // Wait before retry (except on last attempt)
+              if (attempt < 3) {
+                await new Promise(resolve => setTimeout(resolve, 300));
+              }
             }
-          } catch (error) {
-            console.error('❌ Error handling app resume:', error);
-            // Don't do anything drastic - just log
-          } finally {
-            isHandlingRef.current = false;
+          } else {
+            console.warn('⚠️ No session or AuthBridge when app came to foreground');
           }
         }
       });
@@ -80,3 +68,4 @@ export function useAppState() {
     };
   }, []);
 }
+

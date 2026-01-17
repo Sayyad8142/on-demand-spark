@@ -2,12 +2,9 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { capacitorStorage } from '@/lib/capacitorStorage';
-import { Capacitor } from '@capacitor/core';
 
 const SUPABASE_URL = "https://paywwbuqycovjopryele.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheXd3YnVxeWNvdmpvcHJ5ZWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkyNjksImV4cCI6MjA3MDc0NTI2OX0.js1MaTBkjuGlaDfQjrZpZ9_G8Jy9ygNAB8KpNDiQg8o";
-
-const IS_NATIVE = Capacitor.isNativePlatform();
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
@@ -16,16 +13,9 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   auth: {
     storage: capacitorStorage,
     persistSession: true,
-
-    // Enable auto refresh on ALL platforms - supabase-js handles refresh properly
-    // We persist tokens on TOKEN_REFRESHED event via capacitorStorage
     autoRefreshToken: true,
-
     storageKey: 'didi-worker-session',
-
-    // URL detection only needed on web (OAuth/PKCE redirect). On native this can be noisy.
-    detectSessionInUrl: !IS_NATIVE,
-
+    detectSessionInUrl: true,
     flowType: 'pkce',
   }
 });
