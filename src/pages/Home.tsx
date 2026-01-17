@@ -36,6 +36,10 @@ export default function Home() {
   const worker = isGuestMode ? DEMO_WORKER : realWorker;
   const activeJob = isGuestMode ? null : realActiveJob;
   
+  // Listen for booking actions from native Android overlay
+  // When overlay Accept/Decline is pressed, this hook handles the Supabase RPC
+  useNativeBookingActions(worker?.id);
+  
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [showWebPushBanner, setShowWebPushBanner] = useState(false);
@@ -132,28 +136,8 @@ export default function Home() {
       return;
     }
 
-    if (!activeJob?.id) return;
-
     setUpdating(true);
-    const result = await updateJobStatus(activeJob.id, status);
-    
-    if (!result.success) {
-      // Handle locked completion attempt
-      if (result.errorCode === 'COMPLETION_LOCKED') {
-        toast({
-          title: "Work Locked",
-          description: result.error || "Work can be completed only after 30 minutes",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Update Failed",
-          description: result.error || "Failed to update status",
-          variant: "destructive",
-        });
-      }
-    }
-    
+    await updateJobStatus(activeJob?.id, status);
     await refetchWorker();
     setUpdating(false);
   };

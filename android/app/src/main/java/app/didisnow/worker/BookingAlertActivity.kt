@@ -132,7 +132,7 @@ class BookingAlertActivity : AppCompatActivity() {
                     countdownHandler?.postDelayed(this, 1000)
                 } else {
                     Log.d("BookingAlert", "⏱️ Countdown finished - sending timeout to web app")
-                    sendActionToWebApp(bookingId, "timeout", openApp = false)
+                    sendActionToWebApp(bookingId, "timeout")
                     finish()
                 }
             }
@@ -162,12 +162,12 @@ class BookingAlertActivity : AppCompatActivity() {
             // Show immediate feedback
             Toast.makeText(this, "Accepting booking...", Toast.LENGTH_SHORT).show()
             
-            // Send action to web app - open app for accept
-            sendActionToWebApp(bookingId, "accepted", openApp = true)
+            // Send action to web app - NO network calls from native
+            sendActionToWebApp(bookingId, "accepted")
             finish()
         }
 
-        // Decline button - UI ONLY, does NOT open app
+        // Decline button - UI ONLY, delegates to web app
         btnReject.setOnClickListener {
             if (actionInFlight) return@setOnClickListener
             actionInFlight = true
@@ -182,10 +182,10 @@ class BookingAlertActivity : AppCompatActivity() {
             btnReject.isEnabled = false
             
             // Show immediate feedback
-            Toast.makeText(this, "Booking declined", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Declining booking...", Toast.LENGTH_SHORT).show()
             
-            // Queue action but do NOT open app
-            sendActionToWebApp(bookingId, "declined", openApp = false)
+            // Send action to web app - NO network calls from native
+            sendActionToWebApp(bookingId, "declined")
             finish()
         }
     }
@@ -201,17 +201,10 @@ class BookingAlertActivity : AppCompatActivity() {
      * Send booking action to web app via Intent to MainActivity.
      * The web app will handle the actual Supabase RPC call.
      * This prevents token/session conflicts.
-     * 
-     * @param bookingId The booking ID
-     * @param action The action (accepted/declined/timeout)
-     * @param openApp Whether to launch MainActivity (for accept we need the app open; for decline we don't)
      */
-    private fun sendActionToWebApp(bookingId: String, action: String, openApp: Boolean = true) {
+    private fun sendActionToWebApp(bookingId: String, action: String) {
         try {
-            Log.d("BookingAlert", "📤 Sending action to web app: bookingId=$bookingId, action=$action, openApp=$openApp")
-            
-            // Always queue the action to SharedPreferences
-            queueActionToPrefs(bookingId, action)
+            Log.d("BookingAlert", "📤 Sending action to web app: bookingId=$bookingId, action=$action")
             
             // Send local broadcast for any in-app listeners
             val broadcastIntent = Intent("booking-action")
@@ -219,37 +212,17 @@ class BookingAlertActivity : AppCompatActivity() {
             broadcastIntent.putExtra("action", action)
             LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent)
             
-            // Only launch MainActivity if openApp is true
-            if (openApp) {
-                val mainIntent = Intent(this, MainActivity::class.java)
-                mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                mainIntent.putExtra("booking_action", action)
-                mainIntent.putExtra("booking_id", bookingId)
-                mainIntent.putExtra("navigate_to", "home")
-                startActivity(mainIntent)
-            }
+            // Launch MainActivity with booking action data
+            val mainIntent = Intent(this, MainActivity::class.java)
+            mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            mainIntent.putExtra("booking_action", action)
+            mainIntent.putExtra("booking_id", bookingId)
+            mainIntent.putExtra("navigate_to", "home")
+            startActivity(mainIntent)
             
             Log.d("BookingAlert", "✅ Action sent to web app successfully")
         } catch (e: Exception) {
             Log.e("BookingAlert", "❌ sendActionToWebApp error", e)
-        }
-    }
-    
-    /**
-     * Queue action directly to SharedPreferences.
-     */
-    private fun queueActionToPrefs(bookingId: String, action: String) {
-        try {
-            val prefs = getSharedPreferences("booking_actions", Context.MODE_PRIVATE)
-            val json = org.json.JSONObject().apply {
-                put("bookingId", bookingId)
-                put("action", action)
-                put("createdAt", System.currentTimeMillis())
-            }
-            prefs.edit().putString("pending_action", json.toString()).apply()
-            Log.d("BookingAlert", "✅ Action queued to prefs: $action for $bookingId")
-        } catch (e: Exception) {
-            Log.e("BookingAlert", "❌ Error queueing action to prefs", e)
         }
     }
 

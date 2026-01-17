@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
                   token,
                   android: {
                     priority: "HIGH" as const,
-                    ttl: "600s",
+                    ttl: "60s",
                   },
                   data: baseData,
                 },
@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
                   notification: { title, body },
                   android: {
                     priority: "HIGH" as const,
-                    ttl: "600s",
+                    ttl: "60s",
                   },
                   data: baseData,
                 },

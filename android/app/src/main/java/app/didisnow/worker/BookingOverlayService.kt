@@ -2,7 +2,6 @@ package app.didisnow.worker
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -65,80 +64,14 @@ class BookingOverlayService : Service() {
     // Single-flight guard to prevent double taps
     @Volatile
     private var actionInFlight = false
-
-    // Track whether we started as a foreground service (required on Android O+)
-    @Volatile
-    private var foregroundStarted = false
-
+    
     companion object {
         private const val NOTIFICATION_CHANNEL_ID = "booking_overlay_channel"
         private const val NOTIFICATION_ID = 9001
     }
 
-    private fun ensureForegroundStarted(bookingId: String, serviceType: String, flatNo: String) {
-        if (foregroundStarted) return
-
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val mgr = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                val channel = NotificationChannel(
-                    NOTIFICATION_CHANNEL_ID,
-                    "Booking alerts",
-                    NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = "Keeps booking alert overlay running"
-                    enableVibration(false)
-                    setSound(null, null)
-                }
-                mgr.createNotificationChannel(channel)
-            }
-
-            val openIntent = Intent(this, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                putExtra("navigate_to", "home")
-                putExtra("booking_id", bookingId)
-            }
-
-            val pendingIntent = PendingIntent.getActivity(
-                this,
-                0,
-                openIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-
-            val contentText = listOf(serviceType.ifBlank { "Service" }, flatNo.takeIf { it.isNotBlank() }?.let { "Flat $it" })
-                .filterNotNull()
-                .joinToString(" • ")
-
-            val notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle("New Booking")
-                .setContentText(contentText.ifBlank { "Tap to open" })
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setOngoing(true)
-                .setAutoCancel(false)
-                .setContentIntent(pendingIntent)
-                .build()
-
-            startForeground(NOTIFICATION_ID, notification)
-            foregroundStarted = true
-        } catch (e: Exception) {
-            android.util.Log.e("BookingOverlay", "❌ Failed to start foreground", e)
-        }
-    }
-
-    private fun stopForegroundIfNeeded() {
-        if (!foregroundStarted) return
-        try {
-            stopForeground(true)
-        } catch (_: Exception) {
-        } finally {
-            foregroundStarted = false
-        }
-    }
-
     override fun onBind(intent: Intent?): IBinder? = null
-
+    
     /**
      * Helper function to safely run UI updates on main thread
      */
@@ -183,7 +116,7 @@ class BookingOverlayService : Service() {
                     val serviceType = intent?.getStringExtra("service_type") ?: ""
                     val flatNo = intent?.getStringExtra("flat_no") ?: ""
                     val price = intent?.getIntExtra("price_inr", 0) ?: 0
-
+                    
                     if (bookingId.isEmpty()) {
                         android.util.Log.e("BookingOverlay", "❌ No booking ID provided")
                         stopSelf()
@@ -191,10 +124,7 @@ class BookingOverlayService : Service() {
                     }
 
                     currentBookingId = bookingId
-
-                    // Android O+ cannot start a background service from FCM; we must become foreground fast.
-                    ensureForegroundStarted(bookingId, serviceType, flatNo)
-
+                    
                     try {
                         showOverlay(bookingId, customer, community, serviceType, flatNo, price)
                     } catch (e: Exception) {
@@ -305,121 +235,47 @@ class BookingOverlayService : Service() {
                     secondsLeft--
                     countdownHandler?.postDelayed(this, 1000)
                 } else {
-                    // Timeout - send timeout action to web app (don't open app)
-                    sendActionToWebApp(bookingId, "timeout", openApp = false)
+                    // Timeout - send timeout action to web app
+                    sendActionToWebApp(bookingId, "timeout")
                     finishAndStop("countdown_expired")
                 }
             }
         }
 
-        // Accept button - tries native accept first (works even if app WebView isn't running)
-        overlayView?.findViewById<Button>(R.id.btnAccept)?.setOnClickListener { button ->
+        // Accept button - UI ONLY, delegates to web app
+        overlayView?.findViewById<Button>(R.id.btnAccept)?.setOnClickListener {
             if (!OverlaySingleton.isShowing) return@setOnClickListener
             if (isShuttingDown || actionInFlight) return@setOnClickListener
-
+            
             actionInFlight = true
-            button.isEnabled = false
             android.util.Log.d("BookingOverlay", "✅ Accept button clicked for booking: $bookingId")
-
-            // Stop alerts immediately for better UX
-            stopAlertSound()
-            stopVibration()
-            countdownRunnable?.let { countdownHandler?.removeCallbacks(it) }
-
+            
             // Show immediate feedback
-            Toast.makeText(this@BookingOverlayService, "Accepting booking...", Toast.LENGTH_SHORT).show()
-
-            // First close the overlay completely, then attempt native accept.
-            Handler(mainLooper).post {
-                // Remove overlay first
-                try {
-                    for (view in addedWindows) {
-                        try { windowManager?.removeView(view) } catch (_: Exception) {}
-                    }
-                    addedWindows.clear()
-                    overlayView = null
-                    overlayAdded = false
-                } catch (e: Exception) {
-                    android.util.Log.e("BookingOverlay", "Error removing overlay", e)
-                }
-
-                // Clear singleton flag
-                OverlaySingleton.isShowing = false
-
-                // Attempt native RPC accept using stored JWT.
-                SupabaseBookingApi.tryAcceptBookingAsync(this@BookingOverlayService, bookingId) { ok, err ->
-                    if (ok) {
-                        android.util.Log.d("BookingOverlay", "✅ Native accept succeeded for booking: $bookingId")
-                        Toast.makeText(this@BookingOverlayService, "✅ Booking accepted", Toast.LENGTH_SHORT).show()
-
-                        // Optionally bring app to front for next steps/UX, but acceptance already happened.
-                        try {
-                            val mainIntent = Intent(this@BookingOverlayService, MainActivity::class.java).apply {
-                                addFlags(
-                                    Intent.FLAG_ACTIVITY_NEW_TASK or
-                                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
-                                        Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                )
-                                putExtra("navigate_to", "home")
-                                putExtra("booking_id", bookingId)
-                            }
-                            startActivity(mainIntent)
-                        } catch (e: Exception) {
-                            android.util.Log.e("BookingOverlay", "Failed to open app after accept", e)
-                        }
-                    } else {
-                        android.util.Log.w("BookingOverlay", "⚠️ Native accept failed (${err ?: "unknown"}); falling back to web flow")
-                        // Fall back to the existing web flow (queues action + opens app)
-                        sendActionToWebApp(bookingId, "accepted", openApp = true)
-                    }
-
-                    isShuttingDown = true
-                    stopSelfResult(startIdForStop)
-                }
+            ui {
+                Toast.makeText(this@BookingOverlayService, "Accepting booking...", Toast.LENGTH_SHORT).show()
             }
+            
+            // Send action to web app - NO network calls from native
+            sendActionToWebApp(bookingId, "accepted")
+            finishAndStop("accepted")
         }
 
-        // Reject button - UI ONLY, delegates to web app
-        // NOTE: For reject, we do NOT open the app - action is queued and processed when user opens app later
-        overlayView?.findViewById<Button>(R.id.btnReject)?.setOnClickListener { button ->
+        // Decline button - UI ONLY, delegates to web app
+        overlayView?.findViewById<Button>(R.id.btnDecline)?.setOnClickListener {
             if (!OverlaySingleton.isShowing) return@setOnClickListener
             if (isShuttingDown || actionInFlight) return@setOnClickListener
             
             actionInFlight = true
-            button.isEnabled = false
             android.util.Log.d("BookingOverlay", "❌ Decline button clicked for booking: $bookingId")
             
-            // Stop alerts immediately for better UX
-            stopAlertSound()
-            stopVibration()
-            countdownRunnable?.let { countdownHandler?.removeCallbacks(it) }
-            
             // Show immediate feedback
-            Toast.makeText(this@BookingOverlayService, "Booking declined", Toast.LENGTH_SHORT).show()
-            
-            // Remove overlay - do NOT open app for reject
-            Handler(mainLooper).post {
-                try {
-                    for (view in addedWindows) {
-                        try { windowManager?.removeView(view) } catch (e: Exception) {}
-                    }
-                    addedWindows.clear()
-                    overlayView = null
-                    overlayAdded = false
-                } catch (e: Exception) {
-                    android.util.Log.e("BookingOverlay", "Error removing overlay", e)
-                }
-                
-                // Clear singleton flag
-                OverlaySingleton.isShowing = false
-                
-                // Queue action but do NOT open app (openApp = false)
-                Handler(mainLooper).postDelayed({
-                    sendActionToWebApp(bookingId, "declined", openApp = false)
-                    isShuttingDown = true
-                    stopSelfResult(startIdForStop)
-                }, 100)
+            ui {
+                Toast.makeText(this@BookingOverlayService, "Declining booking...", Toast.LENGTH_SHORT).show()
             }
+            
+            // Send action to web app - NO network calls from native
+            sendActionToWebApp(bookingId, "declined")
+            finishAndStop("declined")
         }
 
         try {
@@ -440,17 +296,10 @@ class BookingOverlayService : Service() {
      * Send booking action to web app via Intent to MainActivity.
      * The web app will handle the actual Supabase RPC call.
      * This prevents token/session conflicts.
-     * 
-     * @param bookingId The booking ID
-     * @param action The action (accepted/declined/timeout)
-     * @param openApp Whether to launch MainActivity (for accept we need the app open; for decline we don't)
      */
-    private fun sendActionToWebApp(bookingId: String, action: String, openApp: Boolean = true) {
+    private fun sendActionToWebApp(bookingId: String, action: String) {
         try {
-            android.util.Log.d("BookingOverlay", "📤 Sending action to web app: bookingId=$bookingId, action=$action, openApp=$openApp")
-            
-            // Always queue the action to SharedPreferences so it can be processed later
-            queueActionToPrefs(bookingId, action)
+            android.util.Log.d("BookingOverlay", "📤 Sending action to web app: bookingId=$bookingId, action=$action")
             
             // Send local broadcast for any in-app listeners
             val broadcastIntent = Intent("booking-action")
@@ -458,45 +307,17 @@ class BookingOverlayService : Service() {
             broadcastIntent.putExtra("action", action)
             LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent)
             
-            // Only launch MainActivity if openApp is true
-            if (openApp) {
-                // Launch MainActivity with booking action data
-                // Use FLAG_ACTIVITY_REORDER_TO_FRONT to bring existing instance to front without recreating
-                val mainIntent = Intent(this, MainActivity::class.java).apply {
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK or 
-                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    )
-                    putExtra("booking_action", action)
-                    putExtra("booking_id", bookingId)
-                    putExtra("navigate_to", "home")
-                }
-                startActivity(mainIntent)
-            }
+            // Launch MainActivity with booking action data
+            val mainIntent = Intent(this, MainActivity::class.java)
+            mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            mainIntent.putExtra("booking_action", action)
+            mainIntent.putExtra("booking_id", bookingId)
+            mainIntent.putExtra("navigate_to", "home")
+            startActivity(mainIntent)
             
             android.util.Log.d("BookingOverlay", "✅ Action sent to web app successfully")
         } catch (e: Exception) {
             android.util.Log.e("BookingOverlay", "❌ sendActionToWebApp error", e)
-        }
-    }
-    
-    /**
-     * Queue action directly to SharedPreferences.
-     * This ensures the action is persisted even if the app is not running.
-     */
-    private fun queueActionToPrefs(bookingId: String, action: String) {
-        try {
-            val prefs = getSharedPreferences("booking_actions", Context.MODE_PRIVATE)
-            val json = org.json.JSONObject().apply {
-                put("bookingId", bookingId)
-                put("action", action)
-                put("createdAt", System.currentTimeMillis())
-            }
-            prefs.edit().putString("pending_action", json.toString()).apply()
-            android.util.Log.d("BookingOverlay", "✅ Action queued to prefs: $action for $bookingId")
-        } catch (e: Exception) {
-            android.util.Log.e("BookingOverlay", "❌ Error queueing action to prefs", e)
         }
     }
     
@@ -578,7 +399,7 @@ class BookingOverlayService : Service() {
         android.util.Log.d("BookingOverlay", "🔚 finishAndStop called: $reason")
         
         // Stop countdown
-        countdownRunnable?.let { countdownHandler?.removeCallbacks(it) }
+        countdownHandler?.removeCallbacks(countdownRunnable ?: {})
         countdownHandler = null
         countdownRunnable = null
         
@@ -603,8 +424,7 @@ class BookingOverlayService : Service() {
         // Clear singleton flag
         OverlaySingleton.isShowing = false
         
-        // Stop service (and foreground notification if any)
-        stopForegroundIfNeeded()
+        // Stop service
         stopSelfResult(startIdForStop)
     }
     

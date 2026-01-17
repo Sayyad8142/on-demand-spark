@@ -16,8 +16,6 @@ export type AuthContextValue = {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  /** True ONLY after initAuth finishes and session has been loaded/restored (or confirmed null) */
-  authReady: boolean;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<Session | null>;
 };
@@ -28,7 +26,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [authReady, setAuthReady] = useState(false);
 
   // Track if we're currently attempting recovery from SIGNED_OUT
   const recoveringSignedOutRef = useRef(false);
@@ -121,8 +118,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(currentSession?.user ?? null);
           setLoading(false);
           initCompletedRef.current = true;
-          setAuthReady(true);
-          console.log("✅ AuthProvider: authReady=true (initAuth completed)", { hasSession: !!currentSession });
 
           if (currentSession) {
             authLog.routeDecision('/home', `session restored for ${currentSession.user?.id}`);
@@ -135,8 +130,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (mounted) {
           setLoading(false);
           initCompletedRef.current = true;
-          setAuthReady(true);
-          console.log("✅ AuthProvider: authReady=true (initAuth error fallback)");
         }
       }
     };
@@ -312,8 +305,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, session, loading, authReady, signOut, refreshSession }),
-    [user, session, loading, authReady, signOut, refreshSession]
+    () => ({ user, session, loading, signOut, refreshSession }),
+    [user, session, loading, signOut, refreshSession]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

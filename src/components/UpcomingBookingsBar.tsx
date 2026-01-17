@@ -87,9 +87,9 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
   };
 
   return (
-    <div className="fixed left-0 right-0 z-40 bg-background border-t border-border shadow-lg" style={{ bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))' }}>
+    <div className="fixed bottom-[100px] left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-border">
       <div 
-        className="flex gap-2 overflow-x-auto px-3 py-3" 
+        className="flex gap-2 overflow-x-auto px-3 py-2" 
         style={{ 
           scrollbarWidth: 'none', 
           msOverflowStyle: 'none',
@@ -102,7 +102,7 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
           return (
             <div
               key={booking.booking_id}
-              className="flex-shrink-0 bg-background border border-foreground/60 rounded-full px-3 py-1.5 flex items-center gap-1.5"
+              className="flex-shrink-0 bg-background border border-foreground rounded-full px-3 py-1.5 flex items-center gap-2"
             >
               <span className="text-xs font-semibold text-primary whitespace-nowrap">
                 {formatDate(booking.scheduled_date)}

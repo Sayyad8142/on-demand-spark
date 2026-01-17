@@ -39,7 +39,7 @@ class MainActivity : BridgeActivity() {
     
     companion object {
         private const val TAG = "MainActivity"
-        private const val WEBVIEW_READY_DELAY_MS = 7000L // Wait longer for WebView + React + Auth to be ready (increased for slow devices)
+        private const val WEBVIEW_READY_DELAY_MS = 1500L // Wait for WebView + React to mount
     }
     
     private var bookingActionPlugin: BookingActionPlugin? = null
@@ -117,26 +117,24 @@ class MainActivity : BridgeActivity() {
         
         // Handle booking action from overlay (accept/decline/timeout)
         if (!bookingAction.isNullOrEmpty() && !bookingId.isNullOrEmpty()) {
-            Log.d(TAG, "📤 Processing booking action - QUEUEING ONLY (no immediate dispatch)")
+            Log.d(TAG, "📤 Processing booking action")
             
-            // COLD START FIX: Only queue the action, do NOT dispatch immediately.
-            // The scheduled WebView ready check (scheduleWebViewReadyCheck) will dispatch
-            // via dispatchPendingActionIfExists() after WebView + React + Auth are ready.
+            // Always queue the action first (safety net)
             try {
                 val plugin = bridge?.getPlugin("BookingAction")?.instance as? BookingActionPlugin
                 plugin?.queueAction(bookingId, bookingAction)
-                Log.d(TAG, "✅ Action queued via plugin")
             } catch (e: Exception) {
-                Log.e(TAG, "Error queueing action via plugin", e)
+                Log.e(TAG, "Error queueing action", e)
                 // Fall back to SharedPreferences directly
                 queueActionToPrefs(bookingId, bookingAction)
-                Log.d(TAG, "✅ Action queued via fallback prefs")
             }
             
-            // DO NOT dispatch immediately - even if webViewReady is true.
-            // On cold start, webViewReady might be true but Supabase auth is not ready.
-            // Let the scheduled check handle it after sufficient delay.
-            Log.d(TAG, "⏳ Action queued for dispatch via scheduleWebViewReadyCheck()")
+            // Try to dispatch immediately if WebView is ready
+            if (webViewReady && bridge?.webView != null) {
+                dispatchBookingAction(bookingId, bookingAction)
+            } else {
+                Log.d(TAG, "⏳ WebView not ready, action queued for later dispatch")
+            }
             
             // Clear the action extras so they don't re-trigger on next onNewIntent
             intent.removeExtra("booking_action")
@@ -158,49 +156,24 @@ class MainActivity : BridgeActivity() {
     
     /**
      * Dispatch a booking action to the web app via CustomEvent.
-     * Retries multiple times with increasing delays to ensure the event is caught.
      */
-    /**
-     * Dispatch a booking action to the web app via CustomEvent.
-     * 
-     * NOTE: This is now only used as a fallback/utility. The primary dispatch path
-     * is through BookingActionPlugin.dispatchPendingActionIfExists() which includes
-     * wasQueued: true in the event detail.
-     */
-    private fun dispatchBookingAction(bookingId: String, action: String, wasQueued: Boolean = true) {
-        Log.d(TAG, "🚀 Dispatching booking action to web app: $action for $bookingId (wasQueued=$wasQueued)")
+    private fun dispatchBookingAction(bookingId: String, action: String) {
+        Log.d(TAG, "🚀 Dispatching booking action to web app: $action for $bookingId")
         
-        // Dispatch with retries to ensure the React hook catches it
-        var retryCount = 0
-        val maxRetries = 8 // More retries for cold start
-        val delays = listOf(500L, 1000L, 1500L, 2000L, 2500L, 3000L, 4000L, 5000L)
-        
-        fun doDispatch() {
-            bridge?.webView?.post {
-                val js = """
-                    (function() {
-                        console.log('[Native] Dispatching booking action (attempt ${retryCount + 1}/$maxRetries): $action for $bookingId, wasQueued=$wasQueued');
-                        window.dispatchEvent(new CustomEvent('native:booking-action', {
-                            detail: { 
-                                bookingId: '$bookingId', 
-                                action: '$action',
-                                wasQueued: $wasQueued
-                            }
-                        }));
-                    })();
-                """.trimIndent()
-                bridge?.webView?.evaluateJavascript(js, null)
-                
-                // Retry after a delay if not the last attempt
-                retryCount++
-                if (retryCount < maxRetries) {
-                    val delay = delays.getOrElse(retryCount) { 5000L }
-                    mainHandler.postDelayed({ doDispatch() }, delay)
-                }
-            }
+        bridge?.webView?.post {
+            val js = """
+                (function() {
+                    console.log('[Native] Dispatching booking action: $action for $bookingId');
+                    window.dispatchEvent(new CustomEvent('native:booking-action', {
+                        detail: { 
+                            bookingId: '$bookingId', 
+                            action: '$action'
+                        }
+                    }));
+                })();
+            """.trimIndent()
+            bridge?.webView?.evaluateJavascript(js, null)
         }
-        
-        doDispatch()
     }
     
     /**
