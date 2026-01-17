@@ -117,7 +117,8 @@ function AppInner() {
   // IMPORTANT: This must be mounted globally (not just on /home), otherwise
   // overlay actions are lost on cold start when the app opens on /auth.
   const { worker } = useWorkerProfile(session?.user?.id);
-  useNativeBookingActions(worker?.id);
+  const workerIdForNativeActions = worker?.id ?? session?.user?.id;
+  useNativeBookingActions(workerIdForNativeActions);
 
   // Request location permissions on app startup for native platforms
   useEffect(() => {
