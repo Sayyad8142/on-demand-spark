@@ -312,29 +312,29 @@ class BookingOverlayService : Service() {
             }
         }
 
-        // Accept button - UI ONLY, delegates to web app
+        // Accept button - tries native accept first (works even if app WebView isn't running)
         overlayView?.findViewById<Button>(R.id.btnAccept)?.setOnClickListener { button ->
             if (!OverlaySingleton.isShowing) return@setOnClickListener
             if (isShuttingDown || actionInFlight) return@setOnClickListener
-            
+
             actionInFlight = true
             button.isEnabled = false
             android.util.Log.d("BookingOverlay", "✅ Accept button clicked for booking: $bookingId")
-            
+
             // Stop alerts immediately for better UX
             stopAlertSound()
             stopVibration()
             countdownRunnable?.let { countdownHandler?.removeCallbacks(it) }
-            
+
             // Show immediate feedback
             Toast.makeText(this@BookingOverlayService, "Accepting booking...", Toast.LENGTH_SHORT).show()
-            
-            // First close the overlay completely, then launch the app
+
+            // First close the overlay completely, then attempt native accept.
             Handler(mainLooper).post {
                 // Remove overlay first
                 try {
                     for (view in addedWindows) {
-                        try { windowManager?.removeView(view) } catch (e: Exception) {}
+                        try { windowManager?.removeView(view) } catch (_: Exception) {}
                     }
                     addedWindows.clear()
                     overlayView = null
@@ -342,16 +342,40 @@ class BookingOverlayService : Service() {
                 } catch (e: Exception) {
                     android.util.Log.e("BookingOverlay", "Error removing overlay", e)
                 }
-                
+
                 // Clear singleton flag
                 OverlaySingleton.isShowing = false
-                
-                // Then send action to web app AFTER overlay is removed (open app for accept)
-                Handler(mainLooper).postDelayed({
-                    sendActionToWebApp(bookingId, "accepted", openApp = true)
+
+                // Attempt native RPC accept using stored JWT.
+                SupabaseBookingApi.tryAcceptBookingAsync(this@BookingOverlayService, bookingId) { ok, err ->
+                    if (ok) {
+                        android.util.Log.d("BookingOverlay", "✅ Native accept succeeded for booking: $bookingId")
+                        Toast.makeText(this@BookingOverlayService, "✅ Booking accepted", Toast.LENGTH_SHORT).show()
+
+                        // Optionally bring app to front for next steps/UX, but acceptance already happened.
+                        try {
+                            val mainIntent = Intent(this@BookingOverlayService, MainActivity::class.java).apply {
+                                addFlags(
+                                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                                        Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                )
+                                putExtra("navigate_to", "home")
+                                putExtra("booking_id", bookingId)
+                            }
+                            startActivity(mainIntent)
+                        } catch (e: Exception) {
+                            android.util.Log.e("BookingOverlay", "Failed to open app after accept", e)
+                        }
+                    } else {
+                        android.util.Log.w("BookingOverlay", "⚠️ Native accept failed (${err ?: "unknown"}); falling back to web flow")
+                        // Fall back to the existing web flow (queues action + opens app)
+                        sendActionToWebApp(bookingId, "accepted", openApp = true)
+                    }
+
                     isShuttingDown = true
                     stopSelfResult(startIdForStop)
-                }, 100)
+                }
             }
         }
 
