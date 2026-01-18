@@ -68,21 +68,51 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Get FCM tokens for these workers
-    const { data: tokens, error: tokenError } = await supabase
+    // Get FCM tokens from workers table (primary source, more reliable)
+    // The workers.fcm_token column is updated by the app on login
+    const { data: workersData, error: workerTokenError } = await supabase
+      .from("workers")
+      .select("user_id, fcm_token")
+      .in("user_id", workerIds)
+      .not("fcm_token", "is", null);
+
+    // Also try fcm_tokens table as fallback for workers not in workers table
+    const { data: fcmTokensData, error: fcmTokenError } = await supabase
       .from("fcm_tokens")
       .select("token, user_id")
       .in("user_id", workerIds);
 
-    if (tokenError) {
-      console.error("Error fetching tokens:", tokenError);
-      return new Response(
-        JSON.stringify({ error: "Failed to fetch tokens" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (workerTokenError) {
+      console.error("Error fetching worker tokens:", workerTokenError);
+    }
+    if (fcmTokenError) {
+      console.error("Error fetching fcm_tokens:", fcmTokenError);
     }
 
-    if (!tokens || tokens.length === 0) {
+    // Merge tokens: prefer workers table, fallback to fcm_tokens table
+    const tokenMap = new Map<string, string>();
+    
+    // First add from fcm_tokens (lower priority)
+    if (fcmTokensData) {
+      for (const row of fcmTokensData) {
+        if (row.token) {
+          tokenMap.set(row.user_id, row.token);
+        }
+      }
+    }
+    
+    // Then override with workers table (higher priority, more recent)
+    if (workersData) {
+      for (const row of workersData) {
+        if (row.fcm_token) {
+          tokenMap.set(row.user_id, row.fcm_token);
+        }
+      }
+    }
+
+    const tokens = Array.from(tokenMap.entries()).map(([user_id, token]) => ({ user_id, token }));
+
+    if (tokens.length === 0) {
       console.log("⚠️ No FCM tokens found for workers:", workerIds);
       return new Response(
         JSON.stringify({ error: "No tokens found" }),
@@ -90,7 +120,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`✅ Found ${tokens.length} FCM tokens`);
+    console.log(`✅ Found ${tokens.length} FCM tokens (from workers table + fcm_tokens fallback)`);
 
     // Get Firebase service account key from secrets
     const serviceAccountJson = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_KEY");
@@ -188,11 +218,14 @@ Deno.serve(async (req) => {
           if (!response.ok) {
             console.error(`❌ FCM error for user ${user_id}:`, result);
             
-            // If token is invalid/not registered, delete it from database
+            // If token is invalid/not registered, delete it from both tables
             if (result.error?.code === 404 || 
                 result.error?.details?.some((d: any) => d.errorCode === "UNREGISTERED")) {
               console.log(`🗑️ Deleting stale FCM token for user ${user_id}`);
+              // Delete from fcm_tokens table
               await supabase.from("fcm_tokens").delete().eq("user_id", user_id);
+              // Also clear from workers table
+              await supabase.from("workers").update({ fcm_token: null }).eq("user_id", user_id);
             }
             
             return { user_id, success: false, error: result };
