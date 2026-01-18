@@ -82,8 +82,13 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
   };
 
   return (
-    <div className="fixed bottom-16 left-0 right-0 z-10 bg-gradient-to-t from-background via-background to-background/95 backdrop-blur-sm border-t border-border shadow-lg safe-area-inset-bottom">
-      <div className="px-3 py-2 pb-2.5">
+    <div 
+      className="fixed left-0 right-0 z-40 bg-gradient-to-t from-background via-background to-background/95 backdrop-blur-sm border-t border-border shadow-lg"
+      style={{ 
+        bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))'
+      }}
+    >
+      <div className="px-3 py-2.5">
         {/* Scrollable Cards - No Header */}
         <div 
           className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1" 
