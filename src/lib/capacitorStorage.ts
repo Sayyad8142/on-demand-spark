@@ -36,7 +36,7 @@ export const initializeStorageCache = async (): Promise<void> => {
     try {
       console.log('🔄 Initializing storage cache...');
       
-      // Load all known session keys
+      // Load all known session keys - include the exact key Supabase uses
       const keysToLoad = ['didi-worker-session', 'didi_session'];
       
       for (const key of keysToLoad) {
@@ -45,6 +45,20 @@ export const initializeStorageCache = async (): Promise<void> => {
           if (value) {
             memoryCache[key] = value;
             console.log(`✅ Loaded ${key} into memory cache (${value.length} chars)`);
+            
+            // Try to parse and validate the session
+            if (key === 'didi-worker-session') {
+              try {
+                const parsed = JSON.parse(value);
+                if (parsed?.access_token || parsed?.user) {
+                  console.log('✅ Session appears valid, has access_token/user');
+                } else {
+                  console.log('⚠️ Session structure:', Object.keys(parsed));
+                }
+              } catch (parseError) {
+                console.log('⚠️ Could not parse session for validation');
+              }
+            }
           } else {
             console.log(`ℹ️ No value found for ${key}`);
           }
@@ -54,7 +68,7 @@ export const initializeStorageCache = async (): Promise<void> => {
       }
       
       initialized = true;
-      console.log('✅ Storage cache initialized with', Object.keys(memoryCache).length, 'keys');
+      console.log('✅ Storage cache initialized with', Object.keys(memoryCache).length, 'keys:', Object.keys(memoryCache));
     } catch (error) {
       console.error('❌ Failed to initialize storage cache:', error);
       initialized = true; // Mark as initialized even on failure to prevent infinite loops
@@ -72,9 +86,22 @@ export const reloadSessionFromStorage = async (): Promise<void> => {
     const { value } = await Preferences.get({ key: 'didi-worker-session' });
     if (value) {
       memoryCache['didi-worker-session'] = value;
-      console.log('🔄 Session reloaded from persistent storage');
+      console.log('🔄 Session reloaded from persistent storage (', value.length, 'chars)');
+      
+      // Also reload didi_session if it exists
+      const { value: sessionValue } = await Preferences.get({ key: 'didi_session' });
+      if (sessionValue) {
+        memoryCache['didi_session'] = sessionValue;
+      }
     } else {
       console.log('⚠️ No session found in persistent storage during reload');
+      // List all keys to debug
+      try {
+        const keys = await Preferences.keys();
+        console.log('📦 Available Preferences keys:', keys.keys);
+      } catch (e) {
+        // Ignore
+      }
     }
   } catch (error) {
     console.error('❌ Failed to reload session:', error);

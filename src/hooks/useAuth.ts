@@ -109,7 +109,8 @@ export function useAuth() {
         
         // First, reload session from storage to ensure we have latest data
         await reloadSessionFromStorage();
-        console.log('📦 Storage reloaded:', getStorageCacheDebug());
+        const storageDebug = getStorageCacheDebug();
+        console.log('📦 Storage reloaded:', storageDebug);
         
         // Get initial session with retry logic
         let retryCount = 0;
@@ -129,19 +130,27 @@ export function useAuth() {
           // This is critical for workers who open the app after hours/overnight
           if (currentSession) {
             console.log('🔄 Refreshing session on startup to ensure fresh tokens...');
-            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-            
-            if (refreshError) {
-              console.error('⚠️ Session refresh failed:', refreshError.message);
-              // If refresh fails with invalid_grant, the refresh token expired
-              if (refreshError.message.includes('invalid') || refreshError.message.includes('expired')) {
-                console.log('❌ Refresh token expired, user needs to re-login');
-                currentSession = null;
+            try {
+              const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+              
+              if (refreshError) {
+                console.error('⚠️ Session refresh failed:', refreshError.message);
+                // If refresh fails with "already used" error, just use existing session
+                if (refreshError.message.includes('already_used') || refreshError.message.includes('abuse')) {
+                  console.log('ℹ️ Refresh token already used, keeping current session');
+                  // Keep the existing session, don't invalidate it
+                } else if (refreshError.message.includes('invalid') || refreshError.message.includes('expired')) {
+                  console.log('❌ Refresh token expired, user needs to re-login');
+                  currentSession = null;
+                }
+                // Otherwise keep the existing session if it's still valid
+              } else if (refreshData.session) {
+                console.log('✅ Session refreshed successfully on startup');
+                currentSession = refreshData.session;
               }
-              // Otherwise keep the existing session if it's still valid
-            } else if (refreshData.session) {
-              console.log('✅ Session refreshed successfully on startup');
-              currentSession = refreshData.session;
+            } catch (refreshErr) {
+              console.error('⚠️ Session refresh threw error:', refreshErr);
+              // Keep existing session on error
             }
           }
           break;
@@ -161,6 +170,7 @@ export function useAuth() {
             }
           } else {
             console.log('ℹ️ No session found - user needs to login');
+            console.log('📦 Storage keys at failure:', storageDebug.keys);
           }
         }
       } catch (error) {
