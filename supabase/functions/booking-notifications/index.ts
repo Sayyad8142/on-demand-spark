@@ -236,8 +236,9 @@ Deno.serve(async (req) => {
 
   // Add availability filter - only include workers in the available set
   if (availableWorkerIds.size > 0) {
-    workersQuery = workersQuery.in("id", Array.from(availableWorkerIds));
-    console.log(`🔍 Filtering by ${availableWorkerIds.size} workers with matching availability`);
+    const availableIds = Array.from(availableWorkerIds);
+    console.log(`🔍 Filtering by ${availableIds.length} workers with matching availability:`, availableIds);
+    workersQuery = workersQuery.in("id", availableIds);
   } else {
     console.log("⚠️ No workers have availability set for current time slot - no notifications will be sent");
     return new Response(
@@ -249,6 +250,15 @@ Deno.serve(async (req) => {
     );
   }
   
+  console.log("🔍 Final query conditions:", {
+    is_active: true,
+    is_available: true,
+    is_busy: false,
+    service_type: b.service_type,
+    selected_community_id: communityData?.id,
+    availableWorkerIds: Array.from(availableWorkerIds)
+  });
+  
   const { data: workers, error: we } = await workersQuery;
       
     if (we) {
@@ -258,6 +268,9 @@ Deno.serve(async (req) => {
     
     const totalAvailable = workers?.length || 0;
     console.log(`📊 Total available workers: ${totalAvailable}`);
+    if (workers && workers.length > 0) {
+      console.log("📋 Workers found:", workers.map(w => ({ id: w.id, name: w.full_name })));
+    }
 
     if (!workers?.length) {
       console.log("⚠️ No eligible workers found");
