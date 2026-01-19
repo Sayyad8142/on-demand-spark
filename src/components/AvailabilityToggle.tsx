@@ -34,13 +34,20 @@ export function AvailabilityToggle({
   const handleToggle = async (checked: boolean) => {
     setLoading(true);
     try {
-      const {
-        data,
-        error
-      } = await supabase.rpc("update_worker_availability", {
-        p_is_available: checked
+      // Use the RPC that takes worker_id_param directly since we have workerId prop
+      // This works with Firebase auth (no Supabase session needed)
+      const { data, error } = await supabase.rpc("update_worker_availability", {
+        worker_id_param: workerId,
+        is_available_param: checked
       });
+      
       if (error) throw error;
+      
+      // The RPC returns boolean (FOUND), check if update was successful
+      if (data === false) {
+        throw new Error("Worker not found");
+      }
+      
       setIsAvailable(checked);
       toast({
         title: checked ? "Now Available" : "Now Unavailable",
