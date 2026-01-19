@@ -92,6 +92,23 @@ export function useWorkerProfile(userId: string | undefined) {
 
       if (data) {
         console.log('✅ Worker fetched:', data.full_name, '| user_id:', data.user_id);
+        
+        // Heartbeat: Update last_active_at to mark worker as "online"
+        // This ensures admin panel shows worker as active when they open the app
+        try {
+          const { error: heartbeatError } = await supabase
+            .from('workers')
+            .update({ last_active_at: new Date().toISOString() })
+            .eq('id', data.id);
+          
+          if (heartbeatError) {
+            console.warn('⚠️ Heartbeat update failed:', heartbeatError.message);
+          } else {
+            console.log('💓 Heartbeat: last_active_at updated');
+          }
+        } catch (hbErr) {
+          console.warn('⚠️ Heartbeat error:', hbErr);
+        }
       } else {
         console.log('⚠️ No worker found for user:', userId);
       }
