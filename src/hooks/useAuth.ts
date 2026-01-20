@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Capacitor } from '@capacitor/core';
-import { capacitorStorage, reloadSessionFromStorage, getStorageCacheDebug } from '@/lib/capacitorStorage';
+import { capacitorStorage, reloadSessionFromStorage, getStorageCacheDebug, forcePersistSession } from '@/lib/capacitorStorage';
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -31,6 +31,10 @@ export function useAuth() {
       };
       
       await capacitorStorage.setItem('didi_session', JSON.stringify(sessionData));
+      
+      // Also force persist main session
+      await forcePersistSession();
+      
       return true;
     } catch (error) {
       console.error('❌ Failed to save session:', error);
@@ -69,6 +73,8 @@ export function useAuth() {
   // Refresh session and tokens - can be called externally
   const refreshSession = useCallback(async (): Promise<Session | null> => {
     try {
+      console.log('🔄 Manual session refresh requested...');
+      
       // First try to reload from storage in case it was updated elsewhere
       await reloadSessionFromStorage();
       
@@ -76,7 +82,21 @@ export function useAuth() {
       const { data, error } = await supabase.auth.refreshSession();
       
       if (error) {
-        console.error('❌ Session refresh error:', error);
+        console.error('❌ Session refresh error:', error.message);
+        
+        // If refresh fails with certain errors, try to get existing session
+        if (error.message.includes('already_used') || error.message.includes('abuse')) {
+          console.log('ℹ️ Refresh token already used, getting existing session');
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData.session) {
+            await saveSession(sessionData.session);
+            if (sessionData.session.access_token) {
+              await saveJWT(sessionData.session.access_token);
+            }
+          }
+          return sessionData.session;
+        }
+        
         // Try getting existing session
         const { data: sessionData } = await supabase.auth.getSession();
         return sessionData.session;
@@ -114,45 +134,79 @@ export function useAuth() {
         
         // Get initial session with retry logic
         let retryCount = 0;
-        let currentSession = null;
+        let currentSession: Session | null = null;
         
         while (retryCount < 3 && !currentSession && mounted) {
+          console.log(`🔄 Attempting to get session (attempt ${retryCount + 1}/3)...`);
+          
           const { data, error } = await supabase.auth.getSession();
+          
           if (error) {
-            console.error('❌ Error getting session:', error);
+            console.error('❌ Error getting session:', error.message);
             retryCount++;
             await new Promise(resolve => setTimeout(resolve, 500));
             continue;
           }
+          
           currentSession = data.session;
           
-          // ALWAYS try to refresh session on startup to ensure fresh tokens
-          // This is critical for workers who open the app after hours/overnight
           if (currentSession) {
-            console.log('🔄 Refreshing session on startup to ensure fresh tokens...');
-            try {
-              const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-              
-              if (refreshError) {
-                console.error('⚠️ Session refresh failed:', refreshError.message);
-                // If refresh fails with "already used" error, just use existing session
-                if (refreshError.message.includes('already_used') || refreshError.message.includes('abuse')) {
-                  console.log('ℹ️ Refresh token already used, keeping current session');
-                  // Keep the existing session, don't invalidate it
-                } else if (refreshError.message.includes('invalid') || refreshError.message.includes('expired')) {
-                  console.log('❌ Refresh token expired, user needs to re-login');
+            console.log('✅ Found existing session, user:', currentSession.user?.id);
+            console.log('📅 Token expires at:', new Date(currentSession.expires_at! * 1000).toISOString());
+            
+            // Check if session is expired or about to expire
+            const now = Date.now() / 1000;
+            const expiresAt = currentSession.expires_at || 0;
+            const isExpired = expiresAt < now;
+            const isExpiringSoon = expiresAt < now + (10 * 60); // 10 minutes
+            
+            if (isExpired) {
+              console.log('⚠️ Session is expired, attempting refresh...');
+            } else if (isExpiringSoon) {
+              console.log('⚠️ Session expiring soon, refreshing...');
+            }
+            
+            // Always try to refresh on startup for workers who open app after hours
+            if (isExpired || isExpiringSoon) {
+              try {
+                const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+                
+                if (refreshError) {
+                  console.error('⚠️ Session refresh failed:', refreshError.message);
+                  
+                  // Handle specific error cases
+                  if (refreshError.message.includes('already_used') || 
+                      refreshError.message.includes('abuse') ||
+                      refreshError.message.includes('invalid claim')) {
+                    console.log('ℹ️ Refresh token issue, keeping current session if still valid');
+                    // Keep the existing session if it hasn't fully expired
+                    if (!isExpired) {
+                      // Session is still valid, just couldn't refresh
+                      console.log('✅ Session still valid, continuing with existing session');
+                    } else {
+                      console.log('❌ Session fully expired and cannot refresh');
+                      currentSession = null;
+                    }
+                  } else if (refreshError.message.includes('expired') || 
+                             refreshError.message.includes('invalid')) {
+                    console.log('❌ Refresh token expired, user needs to re-login');
+                    currentSession = null;
+                  }
+                  // Otherwise keep existing session
+                } else if (refreshData.session) {
+                  console.log('✅ Session refreshed successfully on startup');
+                  currentSession = refreshData.session;
+                }
+              } catch (refreshErr) {
+                console.error('⚠️ Session refresh threw error:', refreshErr);
+                // Keep existing session on error if not fully expired
+                if (isExpired) {
                   currentSession = null;
                 }
-                // Otherwise keep the existing session if it's still valid
-              } else if (refreshData.session) {
-                console.log('✅ Session refreshed successfully on startup');
-                currentSession = refreshData.session;
               }
-            } catch (refreshErr) {
-              console.error('⚠️ Session refresh threw error:', refreshErr);
-              // Keep existing session on error
             }
           }
+          
           break;
         }
         
@@ -162,14 +216,13 @@ export function useAuth() {
           setLoading(false);
           
           if (currentSession) {
-            console.log('✅ Session restored, user:', currentSession.user?.id);
-            console.log('📅 Token expires at:', new Date(currentSession.expires_at! * 1000).toISOString());
+            console.log('✅ Auth initialized with session, user:', currentSession.user?.id);
             await saveSession(currentSession);
             if (currentSession.access_token) {
               await saveJWT(currentSession.access_token);
             }
           } else {
-            console.log('ℹ️ No session found - user needs to login');
+            console.log('ℹ️ No valid session found - user needs to login');
             console.log('📦 Storage keys at failure:', storageDebug.keys);
           }
         }
@@ -186,7 +239,7 @@ export function useAuth() {
     // Set up auth state listener - SYNCHRONOUS only, no async calls inside
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
-        console.log('🔄 Auth state changed:', event);
+        console.log('🔄 Auth state changed:', event, newSession ? 'with session' : 'no session');
         
         if (!mounted) return;
         
@@ -200,10 +253,11 @@ export function useAuth() {
             await saveSession(newSession);
             await saveJWT(newSession.access_token);
           }, 0);
-        } else if (Capacitor.isNativePlatform()) {
+        } else if (Capacitor.isNativePlatform() && event === 'SIGNED_OUT') {
           setTimeout(async () => {
             try {
               await capacitorStorage.removeItem('didi_session');
+              await capacitorStorage.removeItem('didi-worker-session');
               if (AuthBridge) {
                 await AuthBridge.clearToken();
               }
@@ -219,28 +273,32 @@ export function useAuth() {
     const intervalId = setInterval(async () => {
       if (!mounted) return;
       
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      if (currentSession && Capacitor.isNativePlatform()) {
-        // Check if token is about to expire (within 10 minutes)
-        const expiresAt = currentSession.expires_at ? currentSession.expires_at * 1000 : 0;
-        const tenMinutes = 10 * 60 * 1000;
-        
-        if (Date.now() > expiresAt - tenMinutes) {
-          console.log('🔄 Token expiring soon, refreshing...');
-          const { data } = await supabase.auth.refreshSession();
-          if (data.session) {
-            await saveSession(data.session);
-            if (data.session.access_token) {
-              await saveJWT(data.session.access_token);
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        if (currentSession) {
+          // Check if token is about to expire (within 10 minutes)
+          const expiresAt = currentSession.expires_at ? currentSession.expires_at * 1000 : 0;
+          const tenMinutes = 10 * 60 * 1000;
+          
+          if (Date.now() > expiresAt - tenMinutes) {
+            console.log('🔄 Token expiring soon, refreshing...');
+            const { data } = await supabase.auth.refreshSession();
+            if (data.session) {
+              await saveSession(data.session);
+              if (data.session.access_token) {
+                await saveJWT(data.session.access_token);
+              }
+            }
+          } else if (Capacitor.isNativePlatform()) {
+            // Just save existing tokens to ensure persistence
+            await saveSession(currentSession);
+            if (currentSession.access_token) {
+              await saveJWT(currentSession.access_token);
             }
           }
-        } else {
-          // Just save existing tokens
-          await saveSession(currentSession);
-          if (currentSession.access_token) {
-            await saveJWT(currentSession.access_token);
-          }
         }
+      } catch (e) {
+        console.error('❌ Periodic session refresh failed:', e);
       }
     }, 5 * 60 * 1000); // Every 5 minutes
 
@@ -252,7 +310,16 @@ export function useAuth() {
   }, [saveSession, saveJWT]);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('❌ Sign out error:', error);
+      // Clear local storage anyway
+      if (Capacitor.isNativePlatform()) {
+        await capacitorStorage.removeItem('didi_session');
+        await capacitorStorage.removeItem('didi-worker-session');
+      }
+    }
   }, []);
 
   return { user, session, loading, signOut, refreshSession };

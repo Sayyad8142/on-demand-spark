@@ -35,15 +35,24 @@ import BottomNav from "./components/BottomNav";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children, showNav = false }: { children: React.ReactNode; showNav?: boolean }) {
-  const { user, loading } = useAuth();
+  const { user, session, loading } = useAuth();
   const isGuestMode = localStorage.getItem('guest_mode') === 'true';
 
+  // Show loading state while checking auth
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Loading session...</p>
+        </div>
+      </div>
+    );
   }
 
   // Allow guest mode access to /home only
-  if (!user && !isGuestMode) {
+  if (!user && !session && !isGuestMode) {
+    console.log('🚫 ProtectedRoute: No user/session, redirecting to /auth');
     return <Navigate to="/auth" replace />;
   }
 

@@ -7,6 +7,10 @@ let memoryCache: Record<string, string> = {};
 let initialized = false;
 let initializationPromise: Promise<void> | null = null;
 
+// The exact key Supabase uses for session storage
+const SESSION_KEY = 'didi-worker-session';
+const LEGACY_SESSION_KEY = 'didi_session';
+
 // Synchronous getItem for Supabase - returns from memory cache immediately
 // This is critical because Supabase auth calls getItem synchronously on startup
 const getItemSync = (key: string): string | null => {
@@ -36,8 +40,16 @@ export const initializeStorageCache = async (): Promise<void> => {
     try {
       console.log('🔄 Initializing storage cache...');
       
+      // First, list ALL available keys for debugging
+      try {
+        const allKeys = await Preferences.keys();
+        console.log('📦 All available Preferences keys:', allKeys.keys);
+      } catch (e) {
+        console.log('⚠️ Could not list keys:', e);
+      }
+      
       // Load all known session keys - include the exact key Supabase uses
-      const keysToLoad = ['didi-worker-session', 'didi_session'];
+      const keysToLoad = [SESSION_KEY, LEGACY_SESSION_KEY, 'sb-paywwbuqycovjopryele-auth-token'];
       
       for (const key of keysToLoad) {
         try {
@@ -47,17 +59,16 @@ export const initializeStorageCache = async (): Promise<void> => {
             console.log(`✅ Loaded ${key} into memory cache (${value.length} chars)`);
             
             // Try to parse and validate the session
-            if (key === 'didi-worker-session') {
-              try {
-                const parsed = JSON.parse(value);
-                if (parsed?.access_token || parsed?.user) {
-                  console.log('✅ Session appears valid, has access_token/user');
-                } else {
-                  console.log('⚠️ Session structure:', Object.keys(parsed));
-                }
-              } catch (parseError) {
-                console.log('⚠️ Could not parse session for validation');
+            try {
+              const parsed = JSON.parse(value);
+              if (parsed?.access_token || parsed?.user) {
+                console.log(`✅ ${key} session appears valid, has access_token/user`);
+                console.log(`📅 Expires at: ${parsed.expires_at ? new Date(parsed.expires_at * 1000).toISOString() : 'unknown'}`);
+              } else {
+                console.log(`⚠️ ${key} session structure:`, Object.keys(parsed));
               }
+            } catch (parseError) {
+              console.log(`⚠️ Could not parse ${key} for validation`);
             }
           } else {
             console.log(`ℹ️ No value found for ${key}`);
@@ -83,25 +94,25 @@ export const reloadSessionFromStorage = async (): Promise<void> => {
   if (!Capacitor.isNativePlatform()) return;
   
   try {
-    const { value } = await Preferences.get({ key: 'didi-worker-session' });
-    if (value) {
-      memoryCache['didi-worker-session'] = value;
-      console.log('🔄 Session reloaded from persistent storage (', value.length, 'chars)');
-      
-      // Also reload didi_session if it exists
-      const { value: sessionValue } = await Preferences.get({ key: 'didi_session' });
-      if (sessionValue) {
-        memoryCache['didi_session'] = sessionValue;
+    console.log('🔄 Reloading session from persistent storage...');
+    
+    // Try multiple keys
+    const keysToLoad = [SESSION_KEY, LEGACY_SESSION_KEY, 'sb-paywwbuqycovjopryele-auth-token'];
+    
+    for (const key of keysToLoad) {
+      const { value } = await Preferences.get({ key });
+      if (value) {
+        memoryCache[key] = value;
+        console.log(`🔄 Reloaded ${key} (${value.length} chars)`);
       }
-    } else {
-      console.log('⚠️ No session found in persistent storage during reload');
-      // List all keys to debug
-      try {
-        const keys = await Preferences.keys();
-        console.log('📦 Available Preferences keys:', keys.keys);
-      } catch (e) {
-        // Ignore
-      }
+    }
+    
+    // List all keys for debugging
+    try {
+      const keys = await Preferences.keys();
+      console.log('📦 Available Preferences keys after reload:', keys.keys);
+    } catch (e) {
+      // Ignore
     }
   } catch (error) {
     console.error('❌ Failed to reload session:', error);
@@ -112,17 +123,33 @@ export const reloadSessionFromStorage = async (): Promise<void> => {
 export const isStorageInitialized = (): boolean => initialized;
 
 // Get memory cache contents for debugging
-export const getStorageCacheDebug = (): { keys: string[]; initialized: boolean } => ({
+export const getStorageCacheDebug = (): { keys: string[]; initialized: boolean; hasSession: boolean } => ({
   keys: Object.keys(memoryCache),
-  initialized
+  initialized,
+  hasSession: Boolean(memoryCache[SESSION_KEY])
 });
+
+// Force persist current memory cache to storage
+export const forcePersistSession = async (): Promise<void> => {
+  if (!Capacitor.isNativePlatform()) return;
+  
+  const sessionData = memoryCache[SESSION_KEY];
+  if (sessionData) {
+    try {
+      await Preferences.set({ key: SESSION_KEY, value: sessionData });
+      console.log('✅ Force persisted session to storage');
+    } catch (e) {
+      console.error('❌ Failed to force persist session:', e);
+    }
+  }
+};
 
 export const capacitorStorage = {
   // Supabase calls this synchronously, so we MUST return synchronously from cache
   getItem(key: string): string | null {
     const value = getItemSync(key);
     if (Capacitor.isNativePlatform()) {
-      console.log(`📖 Storage GET [${key}]: ${value ? 'found' : 'not found'} (init: ${initialized})`);
+      console.log(`📖 Storage GET [${key}]: ${value ? `found (${value.length} chars)` : 'not found'} (init: ${initialized})`);
     }
     return value;
   },
@@ -133,10 +160,29 @@ export const capacitorStorage = {
         // Update memory cache immediately for sync access
         memoryCache[key] = value;
         
-        // Persist to storage asynchronously
-        await Preferences.set({ key, value });
-        
-        console.log(`✅ Storage SET [${key}] (${value.length} chars)`);
+        // Persist to storage asynchronously but with retry
+        let retries = 3;
+        while (retries > 0) {
+          try {
+            await Preferences.set({ key, value });
+            
+            // Verify the write succeeded
+            const verify = await Preferences.get({ key });
+            if (verify.value === value) {
+              console.log(`✅ Storage SET [${key}] (${value.length} chars) - verified`);
+              break;
+            } else {
+              console.warn(`⚠️ Storage SET [${key}] verification failed, retrying...`);
+              retries--;
+            }
+          } catch (writeError) {
+            console.error(`❌ Storage SET [${key}] write failed:`, writeError);
+            retries--;
+            if (retries > 0) {
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+          }
+        }
       } else {
         localStorage.setItem(key, value);
       }
