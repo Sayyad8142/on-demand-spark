@@ -30,6 +30,7 @@ import ContactSupport from "./pages/ContactSupport";
 import ForceUpdateScreen from "./pages/ForceUpdateScreen";
 import CustomerReviews from "./pages/CustomerReviews";
 import AdminUploadQr from "./pages/AdminUploadQr";
+import AuthDebug from "./pages/AuthDebug";
 import BottomNav from "./components/BottomNav";
 
 const queryClient = new QueryClient();
@@ -274,6 +275,7 @@ const App = () => {
             <Route path="/contact-support" element={<ProtectedRoute><ContactSupport /></ProtectedRoute>} />
             <Route path="/customer-reviews" element={<ProtectedRoute><CustomerReviews /></ProtectedRoute>} />
             <Route path="/admin-upload-qr" element={<AdminUploadQr />} />
+            <Route path="/auth-debug" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
             <Route path="/" element={<Navigate to="/auth" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

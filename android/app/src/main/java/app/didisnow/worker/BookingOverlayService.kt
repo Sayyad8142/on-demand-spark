@@ -72,6 +72,11 @@ class BookingOverlayService : Service() {
     @Volatile
     private var acceptInFlight = false
     
+    // Token refresh throttling
+    @Volatile
+    private var lastRefreshTime: Long = 0
+    private val REFRESH_THROTTLE_MS = 30_000L // 30 seconds minimum between refreshes
+    
     companion object {
         private const val SUPABASE_URL = "https://paywwbuqycovjopryele.supabase.co"
         private const val SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheXd3YnVxeWNvdmpvcHJ5ZWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkyNjksImV4cCI6MjA3MDc0NTI2OX0.js1MaTBkjuGlaDfQjrZpZ9_G8Jy9ygNAB8KpNDiQg8o"
@@ -710,6 +715,23 @@ class BookingOverlayService : Service() {
      * Returns the new access token, or null if refresh failed
      */
     private fun refreshAccessToken(): String? {
+        // Throttle: don't refresh if we refreshed within last 30 seconds
+        val now = System.currentTimeMillis()
+        if (now - lastRefreshTime < REFRESH_THROTTLE_MS) {
+            android.util.Log.d("BookingOverlay", "⏳ Refresh throttled - last refresh ${(now - lastRefreshTime) / 1000}s ago")
+            // Return current token from storage
+            val sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
+                .getString("didi_session", null)
+            if (!sessionJson.isNullOrEmpty()) {
+                try {
+                    return JSONObject(sessionJson).optString("accessToken", "")
+                } catch (e: Exception) {
+                    return null
+                }
+            }
+            return null
+        }
+        
         try {
             val prefs = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
             val sessionJson = prefs.getString("didi_session", null)
@@ -720,14 +742,23 @@ class BookingOverlayService : Service() {
             }
             
             val session = JSONObject(sessionJson)
+            val currentAccessToken = session.optString("accessToken", "")
+            val expiresAt = session.optLong("expiresAt", 0)
             val refreshToken = session.optString("refreshToken", "")
+            
+            // Check if token expires in next 2 minutes (120 seconds)
+            val expiresInSeconds = expiresAt - (now / 1000)
+            if (expiresInSeconds > 120 && currentAccessToken.isNotEmpty()) {
+                android.util.Log.d("BookingOverlay", "✅ Token still valid for ${expiresInSeconds}s - skipping refresh")
+                return currentAccessToken
+            }
             
             if (refreshToken.isEmpty()) {
                 android.util.Log.e("BookingOverlay", "❌ No refresh token in session")
                 return null
             }
             
-            android.util.Log.d("BookingOverlay", "🔄 Refreshing access token...")
+            android.util.Log.d("BookingOverlay", "🔄 Refreshing access token (expires in ${expiresInSeconds}s)...")
             
             val url = URL("$SUPABASE_URL/auth/v1/token?grant_type=refresh_token")
             val connection = url.openConnection() as HttpURLConnection
@@ -766,9 +797,10 @@ class BookingOverlayService : Service() {
                         )
                         
                         // Update cached token
-                        currentAccessToken = newAccessToken
+                        this@BookingOverlayService.currentAccessToken = newAccessToken
+                        lastRefreshTime = System.currentTimeMillis()
                         
-                        android.util.Log.d("BookingOverlay", "✅ [NATIVE] Token refreshed -> wrote didi_session + didi-worker-session")
+                        android.util.Log.d("BookingOverlay", "✅ [NATIVE] Token refreshed -> wrote didi_session + didi-worker-session (RT last 6: ${newRefreshToken.takeLast(6)})")
                         return newAccessToken
                     }
                 } else {

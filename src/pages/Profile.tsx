@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
@@ -20,6 +20,7 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import BottomNav from "@/components/BottomNav";
 import UpiQrUpload from "@/components/UpiQrUpload";
+import { CURRENT_VERSION_CODE } from "@/config/version";
 const SERVICES = [{
   value: "maid",
   label: "Maid Service"
@@ -69,6 +70,29 @@ export default function Profile() {
   const [upiQrUrl, setUpiQrUrl] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  
+  // Hidden debug screen trigger - tap version 5 times
+  const versionTapCount = useRef(0);
+  const versionTapTimeout = useRef<NodeJS.Timeout | null>(null);
+  
+  const handleVersionTap = () => {
+    versionTapCount.current++;
+    
+    if (versionTapTimeout.current) {
+      clearTimeout(versionTapTimeout.current);
+    }
+    
+    if (versionTapCount.current >= 5) {
+      versionTapCount.current = 0;
+      navigate('/auth-debug');
+      return;
+    }
+    
+    // Reset count after 2 seconds of no taps
+    versionTapTimeout.current = setTimeout(() => {
+      versionTapCount.current = 0;
+    }, 2000);
+  };
 
   // Earnings data
   const [totalEarnings, setTotalEarnings] = useState(0);
@@ -858,6 +882,14 @@ export default function Profile() {
               Call Support: 8008180018
             </Button>
           </a>
+          
+          {/* Version - tap 5 times for debug */}
+          <p 
+            className="text-xs text-center text-muted-foreground cursor-pointer select-none"
+            onClick={handleVersionTap}
+          >
+            Version {CURRENT_VERSION_CODE}
+          </p>
         </div>
       </main>
       <BottomNav />
