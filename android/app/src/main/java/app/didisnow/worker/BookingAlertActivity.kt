@@ -36,6 +36,10 @@ class BookingAlertActivity : AppCompatActivity() {
     private var mediaPlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
     
+    // Token refresh throttling
+    private var lastRefreshTime: Long = 0
+    private val REFRESH_THROTTLE_MS = 30_000L
+    
     companion object {
         private const val SUPABASE_URL = "https://paywwbuqycovjopryele.supabase.co"
         private const val SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheXd3YnVxeWNvdmpvcHJ5ZWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkyNjksImV4cCI6MjA3MDc0NTI2OX0.js1MaTBkjuGlaDfQjrZpZ9_G8Jy9ygNAB8KpNDiQg8o"
@@ -321,6 +325,17 @@ class BookingAlertActivity : AppCompatActivity() {
      * Returns the new access token, or null if refresh failed
      */
     private fun refreshAccessToken(): String? {
+        val now = System.currentTimeMillis()
+        if (now - lastRefreshTime < REFRESH_THROTTLE_MS) {
+            Log.d("BookingAlert", "⏳ Refresh throttled")
+            val sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
+                .getString("didi_session", null)
+            if (!sessionJson.isNullOrEmpty()) {
+                try { return org.json.JSONObject(sessionJson).optString("accessToken", "") } catch (e: Exception) { return null }
+            }
+            return null
+        }
+        
         try {
             val prefs = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
             val sessionJson = prefs.getString("didi_session", null)
@@ -376,7 +391,8 @@ class BookingAlertActivity : AppCompatActivity() {
                             if (session.has("user")) session.optJSONObject("user") else null
                         )
                         
-                        Log.d("BookingAlert", "✅ [NATIVE] Token refreshed -> wrote didi_session + didi-worker-session")
+                        lastRefreshTime = System.currentTimeMillis()
+                        Log.d("BookingAlert", "✅ [NATIVE] Token refreshed -> wrote didi_session + didi-worker-session (RT last 6: ${newRefreshToken.takeLast(6)})")
                         return newAccessToken
                     }
                 } else {
