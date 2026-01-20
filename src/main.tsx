@@ -1,15 +1,29 @@
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import { initializeStorageCache, isStorageInitialized, getStorageCacheDebug } from "./lib/capacitorStorage";
+import { Capacitor } from '@capacitor/core';
 
 // CRITICAL: Initialize storage cache BEFORE importing anything that uses Supabase
 // This ensures the session is loaded into memory before Supabase client is created
 const bootstrap = async () => {
   console.log('🚀 Bootstrap starting...');
+  console.log('📱 Platform:', Capacitor.getPlatform());
+  console.log('📱 Is Native:', Capacitor.isNativePlatform());
   
   // Step 1: Initialize storage cache first (loads session from Preferences into memory)
-  await initializeStorageCache();
-  console.log('✅ Storage initialized:', getStorageCacheDebug());
+  try {
+    await initializeStorageCache();
+    const storageDebug = getStorageCacheDebug();
+    console.log('✅ Storage initialized:', storageDebug);
+    
+    if (storageDebug.hasSession) {
+      console.log('✅ Session found in storage cache');
+    } else {
+      console.log('ℹ️ No session in storage cache - user may need to login');
+    }
+  } catch (e) {
+    console.error('❌ Storage initialization failed:', e);
+  }
   
   // Step 2: Now dynamically import i18n (may depend on storage)
   const { default: i18n } = await import("./i18n/config");
