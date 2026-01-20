@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, RefreshCw, Trash2, Copy, Check, AlertCircle, CheckCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getStorageCacheDebug, reloadSessionFromStorage } from "@/lib/capacitorStorage";
@@ -59,14 +60,23 @@ interface StorageSync {
   parseError: string | null;
 }
 
+// Type for storage cache debug info
+interface StorageCacheDebug {
+  keys: string[];
+  initialized: boolean;
+  hasSession: boolean;
+}
+
 export default function AuthDebug() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, session, refreshSession } = useAuth();
-  const [storageDebug, setStorageDebug] = useState<ReturnType<typeof getStorageCacheDebug> | null>(null);
+  const [storageDebug, setStorageDebug] = useState<StorageCacheDebug | null>(null);
   const [storageSync, setStorageSync] = useState<StorageSync | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const loadDebugInfo = useCallback(async () => {
     setLoading(true);
@@ -167,9 +177,31 @@ export default function AuthDebug() {
     setLoading(false);
   }, [toast]);
 
+  // Initial load
   useEffect(() => {
     loadDebugInfo();
   }, [loadDebugInfo]);
+
+  // Auto-refresh interval (30 seconds)
+  useEffect(() => {
+    if (autoRefresh) {
+      autoRefreshIntervalRef.current = setInterval(() => {
+        loadDebugInfo();
+      }, 30000);
+    } else {
+      if (autoRefreshIntervalRef.current) {
+        clearInterval(autoRefreshIntervalRef.current);
+        autoRefreshIntervalRef.current = null;
+      }
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (autoRefreshIntervalRef.current) {
+        clearInterval(autoRefreshIntervalRef.current);
+      }
+    };
+  }, [autoRefresh, loadDebugInfo]);
 
   const handleForceRefresh = async () => {
     setLoading(true);
@@ -259,6 +291,12 @@ export default function AuthDebug() {
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </Button>
       </header>
+
+      {/* Auto-refresh toggle */}
+      <div className="flex items-center justify-between mb-4 p-3 bg-muted/50 rounded-lg">
+        <span className="text-sm">Auto refresh (30s)</span>
+        <Switch checked={autoRefresh} onCheckedChange={setAutoRefresh} />
+      </div>
 
       <div className="space-y-4">
         {/* Session Info */}

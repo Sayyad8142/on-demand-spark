@@ -317,7 +317,7 @@ class BookingAlertActivity : AppCompatActivity() {
             .putString("supabase_jwt", accessToken)
             .apply()
         
-        Log.d("BookingAlert", "💾 Saved session to ALL stores: didi_session, didi-worker-session, worker_prefs")
+        Log.d("BookingAlert", "💾 Session synced to both stores (RT last 6: ${refreshToken.takeLast(6)})")
     }
     
     /**

@@ -707,7 +707,7 @@ class BookingOverlayService : Service() {
             .putString("supabase_jwt", accessToken)
             .apply()
         
-        android.util.Log.d("BookingOverlay", "💾 Saved session to ALL stores: didi_session, didi-worker-session, worker_prefs")
+        android.util.Log.d("BookingOverlay", "💾 Session synced to both stores (RT last 6: ${refreshToken.takeLast(6)})")
     }
     
     /**
