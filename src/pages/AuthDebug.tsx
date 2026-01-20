@@ -60,12 +60,8 @@ interface StorageSync {
   parseError: string | null;
 }
 
-// Type for storage cache debug info
-interface StorageCacheDebug {
-  keys: string[];
-  initialized: boolean;
-  hasSession: boolean;
-}
+// Derive type from the actual function return
+type StorageCacheDebug = ReturnType<typeof getStorageCacheDebug>;
 
 export default function AuthDebug() {
   const navigate = useNavigate();
@@ -76,7 +72,7 @@ export default function AuthDebug() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const autoRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadDebugInfo = useCallback(async () => {
     setLoading(true);
@@ -292,10 +288,16 @@ export default function AuthDebug() {
         </Button>
       </header>
 
-      {/* Auto-refresh toggle */}
+      {/* Auto-refresh toggle with manual refresh button */}
       <div className="flex items-center justify-between mb-4 p-3 bg-muted/50 rounded-lg">
-        <span className="text-sm">Auto refresh (30s)</span>
-        <Switch checked={autoRefresh} onCheckedChange={setAutoRefresh} />
+        <div className="flex items-center gap-2">
+          <span className="text-sm">Auto refresh (30s)</span>
+          <Switch checked={autoRefresh} onCheckedChange={setAutoRefresh} />
+        </div>
+        <Button variant="ghost" size="sm" onClick={loadDebugInfo} disabled={loading}>
+          <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
+          <span className="text-xs">Refresh</span>
+        </Button>
       </div>
 
       <div className="space-y-4">
