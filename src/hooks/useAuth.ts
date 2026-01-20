@@ -127,11 +127,44 @@ export function useAuth() {
         if (error) {
           console.error('❌ Session refresh error:', error.message);
           
-          // Token was revoked - clear everything and force re-login
+          // Token was revoked - try recovery before clearing
           if (error.message.includes('already_used') || 
               error.message.includes('abuse') ||
               error.message.includes('revoked')) {
-            console.log('🚫 Token revoked by Supabase - clearing session');
+            console.log('⚠️ Refresh token issue detected - attempting recovery...');
+            
+            // RECOVERY: Reload from storage - native may have updated it
+            await reloadSessionFromStorage();
+            
+            // Try getting session again after reload
+            const { data: recoveryData, error: recoveryError } = await supabase.auth.getSession();
+            
+            if (recoveryData.session && !recoveryError) {
+              // Check if the recovered session has a different refresh token (newer)
+              console.log('🔄 [RECOVERY] Found session after storage reload, trying refresh...');
+              
+              // Small delay to let native storage sync complete
+              await new Promise(resolve => setTimeout(resolve, 500));
+              
+              // Reload again and try one more refresh
+              await reloadSessionFromStorage();
+              const { data: retryData, error: retryError } = await supabase.auth.refreshSession();
+              
+              if (retryData.session && !retryError) {
+                console.log('✅ [RECOVERY] Session recovered successfully!');
+                if (mountedRef.current) {
+                  setSession(retryData.session);
+                  setUser(retryData.session.user);
+                }
+                await saveSession(retryData.session);
+                if (retryData.session.access_token) {
+                  await saveJWT(retryData.session.access_token);
+                }
+                return retryData.session;
+              }
+            }
+            
+            console.log('🚫 [RECOVERY FAILED] Token revoked by Supabase - clearing session');
             await clearSessionCompletely();
             return null;
           }
@@ -214,13 +247,26 @@ export function useAuth() {
               if (refreshError) {
                 console.error('⚠️ Refresh failed:', refreshError.message);
                 
-                // Token was revoked - user MUST re-login
+                // Token was revoked - try recovery before forcing re-login
                 if (refreshError.message.includes('already_used') || 
                     refreshError.message.includes('abuse') ||
                     refreshError.message.includes('revoked')) {
-                  console.log('🚫 Token revoked - forcing re-login');
-                  await clearSessionCompletely();
-                  currentSession = null;
+                  console.log('⚠️ [INIT] Refresh token issue - attempting recovery...');
+                  
+                  // Wait and reload - native may have updated storage
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                  await reloadSessionFromStorage();
+                  
+                  const { data: retryData, error: retryError } = await supabase.auth.refreshSession();
+                  
+                  if (retryData.session && !retryError) {
+                    console.log('✅ [INIT RECOVERY] Session recovered!');
+                    currentSession = retryData.session;
+                  } else {
+                    console.log('🚫 [INIT] Recovery failed - forcing re-login');
+                    await clearSessionCompletely();
+                    currentSession = null;
+                  }
                 } else if (!isExpired) {
                   // Token not fully expired, keep using it
                   console.log('ℹ️ Keeping existing session (not yet expired)');

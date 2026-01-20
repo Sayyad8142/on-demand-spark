@@ -272,6 +272,51 @@ class BookingAlertActivity : AppCompatActivity() {
     }
     
     /**
+     * Save session to ALL storage keys - keeps native and web in sync.
+     * This prevents "already_used" refresh token errors.
+     */
+    private fun saveSessionToAllStores(
+        accessToken: String,
+        refreshToken: String,
+        expiresIn: Int,
+        user: JSONObject?
+    ) {
+        val prefs = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
+        val expiresAt = (System.currentTimeMillis() / 1000) + expiresIn
+        
+        // 1. Native format for didi_session (used by overlay/activity)
+        val nativeSession = JSONObject().apply {
+            put("accessToken", accessToken)
+            put("refreshToken", refreshToken)
+            put("expiresIn", expiresIn)
+            if (user != null) put("user", user)
+        }
+        
+        // 2. Supabase JS format for didi-worker-session (used by web layer)
+        val webSession = JSONObject().apply {
+            put("access_token", accessToken)
+            put("refresh_token", refreshToken)
+            put("expires_at", expiresAt)
+            put("expires_in", expiresIn)
+            put("token_type", "bearer")
+            if (user != null) put("user", user)
+        }
+        
+        prefs.edit()
+            .putString("didi_session", nativeSession.toString())
+            .putString("didi-worker-session", webSession.toString())
+            .apply()
+        
+        // Also update worker_prefs for legacy access
+        getSharedPreferences("worker_prefs", MODE_PRIVATE)
+            .edit()
+            .putString("supabase_jwt", accessToken)
+            .apply()
+        
+        Log.d("BookingAlert", "💾 Saved session to ALL stores: didi_session, didi-worker-session, worker_prefs")
+    }
+    
+    /**
      * Refresh the access token using the refresh token
      * Returns the new access token, or null if refresh failed
      */
@@ -323,28 +368,15 @@ class BookingAlertActivity : AppCompatActivity() {
                     val expiresIn = newSession.optInt("expires_in", 3600)
                     
                     if (newAccessToken.isNotEmpty()) {
-                        // Update stored session with new tokens
-                        val updatedSession = org.json.JSONObject().apply {
-                            put("accessToken", newAccessToken)
-                            put("refreshToken", newRefreshToken)
-                            put("expiresIn", expiresIn)
-                            // Preserve user info if present
-                            if (session.has("user")) {
-                                put("user", session.getJSONObject("user"))
-                            }
-                        }
+                        // Save to ALL storage keys to keep web + native in sync
+                        saveSessionToAllStores(
+                            newAccessToken, 
+                            newRefreshToken, 
+                            expiresIn, 
+                            if (session.has("user")) session.optJSONObject("user") else null
+                        )
                         
-                        prefs.edit()
-                            .putString("didi_session", updatedSession.toString())
-                            .apply()
-                        
-                        // Also update worker_prefs for backward compatibility
-                        getSharedPreferences("worker_prefs", MODE_PRIVATE)
-                            .edit()
-                            .putString("supabase_jwt", newAccessToken)
-                            .apply()
-                        
-                        Log.d("BookingAlert", "✅ Token refreshed successfully! New token: ${newAccessToken.take(12)}...")
+                        Log.d("BookingAlert", "✅ [NATIVE] Token refreshed -> wrote didi_session + didi-worker-session")
                         return newAccessToken
                     }
                 } else {
