@@ -143,16 +143,19 @@ export type Database = {
       bathroom_pricing_settings: {
         Row: {
           community: string
+          glass_partition_price_inr: number
           unit_price_inr: number
           updated_at: string
         }
         Insert: {
           community?: string
+          glass_partition_price_inr?: number
           unit_price_inr?: number
           updated_at?: string
         }
         Update: {
           community?: string
+          glass_partition_price_inr?: number
           unit_price_inr?: number
           updated_at?: string
         }
@@ -395,6 +398,8 @@ export type Database = {
           flat_no: string
           flat_size: string | null
           food_pref: string | null
+          glass_partition_fee: number | null
+          has_glass_partition: boolean | null
           id: string
           is_demo: boolean
           maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
@@ -416,10 +421,13 @@ export type Database = {
           service_type: string
           started_at: string | null
           status: string
+          surcharge_amount: number | null
+          surcharge_reason: string | null
           updated_at: string
           user_id: string
           user_marked_paid_at: string | null
           user_payment_utr: string | null
+          user_reminder_sent: boolean | null
           worker_id: string | null
           worker_name: string | null
           worker_phone: string | null
@@ -449,6 +457,8 @@ export type Database = {
           flat_no: string
           flat_size?: string | null
           food_pref?: string | null
+          glass_partition_fee?: number | null
+          has_glass_partition?: boolean | null
           id?: string
           is_demo?: boolean
           maid_tasks?: Database["public"]["Enums"]["maid_task"][] | null
@@ -470,10 +480,13 @@ export type Database = {
           service_type: string
           started_at?: string | null
           status?: string
+          surcharge_amount?: number | null
+          surcharge_reason?: string | null
           updated_at?: string
           user_id: string
           user_marked_paid_at?: string | null
           user_payment_utr?: string | null
+          user_reminder_sent?: boolean | null
           worker_id?: string | null
           worker_name?: string | null
           worker_phone?: string | null
@@ -503,6 +516,8 @@ export type Database = {
           flat_no?: string
           flat_size?: string | null
           food_pref?: string | null
+          glass_partition_fee?: number | null
+          has_glass_partition?: boolean | null
           id?: string
           is_demo?: boolean
           maid_tasks?: Database["public"]["Enums"]["maid_task"][] | null
@@ -524,10 +539,13 @@ export type Database = {
           service_type?: string
           started_at?: string | null
           status?: string
+          surcharge_amount?: number | null
+          surcharge_reason?: string | null
           updated_at?: string
           user_id?: string
           user_marked_paid_at?: string | null
           user_payment_utr?: string | null
+          user_reminder_sent?: boolean | null
           worker_id?: string | null
           worker_name?: string | null
           worker_phone?: string | null
@@ -2018,6 +2036,13 @@ export type Database = {
             referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "support_threads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       tenants: {
@@ -2762,6 +2787,8 @@ export type Database = {
               flat_no: string
               flat_size: string | null
               food_pref: string | null
+              glass_partition_fee: number | null
+              has_glass_partition: boolean | null
               id: string
               is_demo: boolean
               maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
@@ -2783,10 +2810,13 @@ export type Database = {
               service_type: string
               started_at: string | null
               status: string
+              surcharge_amount: number | null
+              surcharge_reason: string | null
               updated_at: string
               user_id: string
               user_marked_paid_at: string | null
               user_payment_utr: string | null
+              user_reminder_sent: boolean | null
               worker_id: string | null
               worker_name: string | null
               worker_phone: string | null
@@ -3334,6 +3364,8 @@ export type Database = {
           flat_no: string
           flat_size: string | null
           food_pref: string | null
+          glass_partition_fee: number | null
+          has_glass_partition: boolean | null
           id: string
           is_demo: boolean
           maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
@@ -3355,10 +3387,13 @@ export type Database = {
           service_type: string
           started_at: string | null
           status: string
+          surcharge_amount: number | null
+          surcharge_reason: string | null
           updated_at: string
           user_id: string
           user_marked_paid_at: string | null
           user_payment_utr: string | null
+          user_reminder_sent: boolean | null
           worker_id: string | null
           worker_name: string | null
           worker_phone: string | null
