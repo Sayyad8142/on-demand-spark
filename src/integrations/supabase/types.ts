@@ -2308,6 +2308,51 @@ export type Database = {
           },
         ]
       }
+      worker_busy_log: {
+        Row: {
+          booking_id: string | null
+          created_at: string
+          id: string
+          new_value: boolean
+          old_value: boolean | null
+          source: string
+          worker_id: string
+        }
+        Insert: {
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          new_value: boolean
+          old_value?: boolean | null
+          source: string
+          worker_id: string
+        }
+        Update: {
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          new_value?: boolean
+          old_value?: boolean | null
+          source?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_busy_log_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_busy_log_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_contact_access_log: {
         Row: {
           accessed_at: string
@@ -2832,6 +2877,14 @@ export type Database = {
           }
       auto_complete_assigned: { Args: never; Returns: undefined }
       auto_handle_overdue_bookings: { Args: never; Returns: number }
+      auto_heal_stale_worker_busy: {
+        Args: never
+        Returns: {
+          was_fixed: boolean
+          worker_id: string
+          worker_name: string
+        }[]
+      }
       bath_total_price: {
         Args: { p_community?: string; p_count: number }
         Returns: number
@@ -2839,6 +2892,7 @@ export type Database = {
       bytea_to_text: { Args: { data: string }; Returns: string }
       check_expired_assignments: { Args: never; Returns: Json }
       cleanup_old_support_chats: { Args: never; Returns: undefined }
+      cleanup_old_worker_busy_logs: { Args: never; Returns: undefined }
       cleanup_stale_worker_busy_flags: {
         Args: never
         Returns: {
@@ -2852,6 +2906,7 @@ export type Database = {
       ensure_worker_profile: { Args: never; Returns: Json }
       escalate_overdue_bookings: { Args: never; Returns: undefined }
       export_my_data: { Args: never; Returns: Json }
+      get_active_booking_statuses: { Args: never; Returns: string[] }
       get_app_setting: { Args: { k: string }; Returns: string }
       get_assigned_worker_info: {
         Args: { booking_id: string }
@@ -3188,6 +3243,10 @@ export type Database = {
           p_thread_id: string
           p_title: string
         }
+        Returns: undefined
+      }
+      recompute_worker_busy: {
+        Args: { p_booking_id?: string; p_source?: string; p_worker_id: string }
         Returns: undefined
       }
       register_worker: {
