@@ -8,7 +8,7 @@ export async function ensureServiceWorker() {
 
 export async function subscribeWebPush(userId: string, vapidPublicKey: string) {
   const reg = await navigator.serviceWorker.ready;
-  const sub = await reg.pushManager.subscribe({
+  const sub = await (reg as any).pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
   });
@@ -38,7 +38,7 @@ function urlBase64ToUint8Array(base64String: string) {
 export async function getCurrentSubscription(): Promise<PushSubscription | null> {
   if (!("serviceWorker" in navigator)) return null;
   const reg = await navigator.serviceWorker.ready;
-  return reg.pushManager.getSubscription();
+  return (reg as any).pushManager.getSubscription();
 }
 
 export async function unsubscribeWebPush(): Promise<boolean> {
