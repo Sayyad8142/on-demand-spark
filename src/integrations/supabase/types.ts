@@ -394,6 +394,8 @@ export type Database = {
           created_at: string
           cust_name: string
           cust_phone: string
+          dish_intensity: string | null
+          dish_intensity_extra_inr: number | null
           family_count: number | null
           flat_no: string
           flat_size: string | null
@@ -453,6 +455,8 @@ export type Database = {
           created_at?: string
           cust_name: string
           cust_phone: string
+          dish_intensity?: string | null
+          dish_intensity_extra_inr?: number | null
           family_count?: number | null
           flat_no: string
           flat_size?: string | null
@@ -512,6 +516,8 @@ export type Database = {
           created_at?: string
           cust_name?: string
           cust_phone?: string
+          dish_intensity?: string | null
+          dish_intensity_extra_inr?: number | null
           family_count?: number | null
           flat_no?: string
           flat_size?: string | null
@@ -2828,6 +2834,8 @@ export type Database = {
               created_at: string
               cust_name: string
               cust_phone: string
+              dish_intensity: string | null
+              dish_intensity_extra_inr: number | null
               family_count: number | null
               flat_no: string
               flat_size: string | null
@@ -3419,6 +3427,8 @@ export type Database = {
           created_at: string
           cust_name: string
           cust_phone: string
+          dish_intensity: string | null
+          dish_intensity_extra_inr: number | null
           family_count: number | null
           flat_no: string
           flat_size: string | null

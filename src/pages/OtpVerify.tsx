@@ -193,7 +193,9 @@ export default function OtpVerify() {
           .eq('phone', phone)
           .maybeSingle();
 
-        const finalCuisineTags = services.includes('cook') ? cuisineTags : [];
+        // Filter out cook service (discontinued)
+        const validServices = services.filter((s: string) => s !== 'cook');
+        const finalCuisineTags: string[] = [];
         
         // Prepare QR data fields
         let upiQrUrl: string | null = null;
@@ -234,7 +236,7 @@ export default function OtpVerify() {
             upi_qr_url: upiQrUrl || existingWorker.upi_qr_url,
             upi_qr_payload: upiQrPayload || existingWorker.upi_qr_payload,
             upi_qr_uploaded_at: upiQrUploadedAt || existingWorker.upi_qr_uploaded_at,
-            service_types: services,
+            service_types: validServices,
             communities: [community],
             selected_community_id: communityData.id,
             cook_cuisine_tags: finalCuisineTags,
@@ -253,7 +255,7 @@ export default function OtpVerify() {
             upi_qr_url: upiQrUrl,
             upi_qr_payload: upiQrPayload,
             upi_qr_uploaded_at: upiQrUploadedAt,
-            service_types: services,
+            service_types: validServices,
             communities: [community],
             selected_community_id: communityData.id,
             cook_cuisine_tags: finalCuisineTags,

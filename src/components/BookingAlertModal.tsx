@@ -40,12 +40,24 @@ export function BookingAlertModal({
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-md rounded-3xl border-0 shadow-2xl p-0 gap-0">
-        {/* Header with service type */}
+        {/* Header with service type and badge */}
         <div className="bg-primary/10 px-6 py-4 rounded-t-3xl">
           <h2 className="text-2xl font-bold text-center">New Booking</h2>
-          <p className="text-center text-lg font-semibold mt-1 text-primary capitalize">
-            {booking.service_type}
-          </p>
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <span className="text-2xl">{booking.service_type === 'bathroom_cleaning' ? '🧼' : '🧹'}</span>
+            <p className="text-lg font-semibold text-primary capitalize">
+              {booking.service_type === 'bathroom_cleaning' ? 'Bathroom Cleaning' : 'Maid Service'}
+            </p>
+          </div>
+          <div className="flex justify-center mt-2">
+            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
+              booking.service_type === 'bathroom_cleaning' 
+                ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900 dark:text-cyan-300' 
+                : 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
+            }`}>
+              {booking.service_type === 'bathroom_cleaning' ? '🧼 Deep Cleaning' : '⚡ Instant Booking'}
+            </span>
+          </div>
         </div>
 
         {/* Price - Large and prominent */}
