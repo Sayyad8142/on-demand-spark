@@ -228,7 +228,7 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
       <div className="flex items-center justify-between text-xs border-t pt-2">
         <div className="flex items-center gap-3">
           <span className="text-muted-foreground">
-            {booking.service_type.replace('_', ' ')}
+            {booking.service_type === 'cook' ? '📦 Legacy Booking' : booking.service_type.replace('_', ' ')}
           </span>
           <div className="flex items-center gap-1 text-muted-foreground">
             <Calendar className="w-3 h-3" />

@@ -23,13 +23,12 @@ import UpiQrUpload from "@/components/UpiQrUpload";
 import { CURRENT_VERSION_CODE } from "@/config/version";
 const SERVICES = [{
   value: "maid",
-  label: "Maid Service"
-}, {
-  value: "cook",
-  label: "Cook Service"
+  label: "Maid Service",
+  icon: "🧹"
 }, {
   value: "bathroom_cleaning",
-  label: "Bathroom Cleaning"
+  label: "Bathroom Cleaning",
+  icon: "🧼"
 }];
 interface Community {
   id: string;
@@ -175,7 +174,7 @@ export default function Profile() {
         created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
         bookings: {
           cust_name: 'Priya Sharma',
-          service_type: 'cook',
+          service_type: 'maid',
           flat_no: 'B-205',
           community: 'downtown'
         }
@@ -373,15 +372,15 @@ export default function Profile() {
     }
     try {
       setUpdating(true);
-      // Clear cuisine tags if cook is not in services
-      const cuisineTags = selectedServices.includes('cook') ? selectedCuisineTags : [];
+      // Filter out any legacy cook selection
+      const validServices = selectedServices.filter(s => s !== 'cook');
       await updateWorker({
         full_name: fullName,
         phone: phone,
         upi_id: upiId,
-        service_types: selectedServices,
+        service_types: validServices,
         communities: selectedCommunities,
-        cook_cuisine_tags: cuisineTags
+        cook_cuisine_tags: []
       });
       toast({
         title: "Success",
@@ -640,20 +639,16 @@ export default function Profile() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="w-full">
-                        <DropdownMenuLabel>Select Services</DropdownMenuLabel>
+                    <DropdownMenuLabel>Select Services</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         {SERVICES.map(service => <DropdownMenuCheckboxItem key={service.value} checked={selectedServices.includes(service.value)} onCheckedChange={checked => {
                         if (checked) {
                           setSelectedServices([...selectedServices, service.value]);
                         } else {
                           setSelectedServices(selectedServices.filter(s => s !== service.value));
-                          // Clear cuisine tags if cook is deselected
-                          if (service.value === 'cook') {
-                            setSelectedCuisineTags([]);
-                          }
                         }
                       }}>
-                            {service.label}
+                            {service.icon} {service.label}
                           </DropdownMenuCheckboxItem>)}
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -704,48 +699,6 @@ export default function Profile() {
                       </div>}
                   </div>
 
-                  {/* Cook Cuisine Specialization */}
-                  {selectedServices.includes('cook') && <div className="space-y-3">
-                      <Label>{t('profile.cuisineLabel', 'What type of cooking do you specialise in?')}</Label>
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
-                          <input type="checkbox" id="profile-cuisine-north" checked={selectedCuisineTags.includes('north_indian')} onChange={e => {
-                        if (e.target.checked) {
-                          setSelectedCuisineTags([...selectedCuisineTags, 'north_indian']);
-                        } else {
-                          setSelectedCuisineTags(selectedCuisineTags.filter(c => c !== 'north_indian'));
-                        }
-                      }} className="h-4 w-4 rounded border-gray-300" />
-                          <Label htmlFor="profile-cuisine-north" className="flex-1 cursor-pointer font-normal">
-                            {t('profile.cuisineNorth', 'North Indian')}
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
-                          <input type="checkbox" id="profile-cuisine-south" checked={selectedCuisineTags.includes('south_indian')} onChange={e => {
-                        if (e.target.checked) {
-                          setSelectedCuisineTags([...selectedCuisineTags, 'south_indian']);
-                        } else {
-                          setSelectedCuisineTags(selectedCuisineTags.filter(c => c !== 'south_indian'));
-                        }
-                      }} className="h-4 w-4 rounded border-gray-300" />
-                          <Label htmlFor="profile-cuisine-south" className="flex-1 cursor-pointer font-normal">
-                            {t('profile.cuisineSouth', 'South Indian')}
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
-                          <input type="checkbox" id="profile-cuisine-both" checked={selectedCuisineTags.includes('north_indian') && selectedCuisineTags.includes('south_indian')} onChange={e => {
-                        if (e.target.checked) {
-                          setSelectedCuisineTags(['north_indian', 'south_indian']);
-                        } else {
-                          setSelectedCuisineTags([]);
-                        }
-                      }} className="h-4 w-4 rounded border-gray-300" />
-                          <Label htmlFor="profile-cuisine-both" className="flex-1 cursor-pointer font-normal">
-                            {t('profile.cuisineBoth', 'Both')}
-                          </Label>
-                        </div>
-                      </div>
-                    </div>}
 
                   <Button onClick={handleUpdate} disabled={updating} className="w-full">
                     {updating ? t('common.loading') : t('profile.updateProfile')}

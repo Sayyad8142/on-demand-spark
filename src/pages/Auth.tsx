@@ -23,13 +23,14 @@ const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
 const SmsRetrieverPlugin = (window as any).Capacitor?.Plugins?.SmsRetrieverPlugin;
 const SERVICES = [{
   value: "maid",
-  label: "auth.services.maid"
-}, {
-  value: "cook",
-  label: "auth.services.cook"
+  label: "auth.services.maid",
+  icon: "🧹",
+  description: "Sweeping, mopping, dishes & more"
 }, {
   value: "bathroom_cleaning",
-  label: "auth.services.bathroom_cleaning"
+  label: "auth.services.bathroom_cleaning",
+  icon: "🧼",
+  description: "Deep bathroom cleaning"
 }];
 
 // SECURITY: Input validation schemas
@@ -76,7 +77,7 @@ export default function Auth() {
   const [signUpUpiId, setSignUpUpiId] = useState("");
   const [signUpCommunity, setSignUpCommunity] = useState("");
   const [signUpServices, setSignUpServices] = useState<string[]>([]);
-  const [signUpCuisineTags, setSignUpCuisineTags] = useState<string[]>([]);
+  // Cook cuisine tags removed - cook service discontinued
   
   // QR Code upload state
   const [signUpQrData, setSignUpQrData] = useState<{
@@ -287,7 +288,7 @@ export default function Auth() {
             upiId: signUpUpiId,
             community: signUpCommunity,
             services: signUpServices,
-            cuisineTags: signUpCuisineTags,
+            cuisineTags: [],
             qrData: signUpQrData
           }
         }
@@ -403,68 +404,42 @@ export default function Auth() {
 
               <div className="space-y-3">
                 <Label>{t('auth.serviceLabel')}</Label>
-                <div className="space-y-2">
-                  {SERVICES.map(service => <div key={service.value} className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
-                      <Checkbox id={`service-${service.value}`} checked={signUpServices.includes(service.value)} onCheckedChange={checked => {
-                      if (checked) {
-                        setSignUpServices(prev => [...prev, service.value]);
-                      } else {
-                        setSignUpServices(prev => prev.filter(s => s !== service.value));
-                        // Clear cuisine tags if cook is deselected
-                        if (service.value === 'cook') {
-                          setSignUpCuisineTags([]);
-                        }
-                      }
-                    }} disabled={loading} />
-                      <Label htmlFor={`service-${service.value}`} className="flex-1 cursor-pointer font-normal">
-                        {t(service.label)}
-                      </Label>
-                    </div>)}
+                <div className="grid grid-cols-2 gap-3">
+                  {SERVICES.map(service => {
+                    const isSelected = signUpServices.includes(service.value);
+                    return (
+                      <button
+                        key={service.value}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            setSignUpServices(prev => prev.filter(s => s !== service.value));
+                          } else {
+                            setSignUpServices(prev => [...prev, service.value]);
+                          }
+                        }}
+                        disabled={loading}
+                        className={`relative p-4 rounded-2xl border-2 transition-all duration-200 text-left ${
+                          isSelected
+                            ? 'border-primary bg-primary/5 shadow-md ring-2 ring-primary/20'
+                            : 'border-border bg-background hover:border-primary/40 hover:bg-muted/50'
+                        }`}
+                      >
+                        <div className="text-2xl mb-2">{service.icon}</div>
+                        <p className="font-semibold text-sm">{t(service.label)}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{service.description}</p>
+                        {isSelected && (
+                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                            <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-
-              {/* Cook Cuisine Specialization */}
-              {signUpServices.includes('cook') && <div className="space-y-3">
-                  <Label>{t('auth.cuisineLabel', 'What type of cooking do you specialise in?')}</Label>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
-                      <Checkbox id="cuisine-north" checked={signUpCuisineTags.includes('north_indian')} onCheckedChange={checked => {
-                      if (checked) {
-                        setSignUpCuisineTags(prev => [...prev, 'north_indian']);
-                      } else {
-                        setSignUpCuisineTags(prev => prev.filter(c => c !== 'north_indian'));
-                      }
-                    }} disabled={loading} />
-                      <Label htmlFor="cuisine-north" className="flex-1 cursor-pointer font-normal">
-                        {t('auth.cuisineNorth', 'North Indian')}
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
-                      <Checkbox id="cuisine-south" checked={signUpCuisineTags.includes('south_indian')} onCheckedChange={checked => {
-                      if (checked) {
-                        setSignUpCuisineTags(prev => [...prev, 'south_indian']);
-                      } else {
-                        setSignUpCuisineTags(prev => prev.filter(c => c !== 'south_indian'));
-                      }
-                    }} disabled={loading} />
-                      <Label htmlFor="cuisine-south" className="flex-1 cursor-pointer font-normal">
-                        {t('auth.cuisineSouth', 'South Indian')}
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-3 p-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors">
-                      <Checkbox id="cuisine-both" checked={signUpCuisineTags.includes('north_indian') && signUpCuisineTags.includes('south_indian')} onCheckedChange={checked => {
-                      if (checked) {
-                        setSignUpCuisineTags(['north_indian', 'south_indian']);
-                      } else {
-                        setSignUpCuisineTags([]);
-                      }
-                    }} disabled={loading} />
-                      <Label htmlFor="cuisine-both" className="flex-1 cursor-pointer font-normal">
-                        {t('auth.cuisineBoth', 'Both')}
-                      </Label>
-                    </div>
-                  </div>
-                </div>}
 
               <Button onClick={handleSignUpSendOtp} disabled={loading || !signUpFullName || !signUpPhone || !signUpCommunity || signUpServices.length === 0} className="w-full">
                 {loading ? t('auth.sending') : t('auth.sendOtp')}
