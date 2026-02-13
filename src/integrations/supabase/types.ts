@@ -2991,6 +2991,13 @@ export type Database = {
           terms_url: string
         }[]
       }
+      get_online_workers_count: {
+        Args: { p_community: string }
+        Returns: {
+          online_count: number
+          service: string
+        }[]
+      }
       get_ops_setting: { Args: { p_key: string }; Returns: string }
       get_profile_id: { Args: never; Returns: string }
       get_setting: {
