@@ -1018,6 +1018,7 @@ export type Database = {
           display_name: string | null
           door: number | null
           flat_no: string
+          flat_size: string | null
           floor: number | null
           id: string
           tower: number | null
@@ -1030,6 +1031,7 @@ export type Database = {
           display_name?: string | null
           door?: number | null
           flat_no: string
+          flat_size?: string | null
           floor?: number | null
           id?: string
           tower?: number | null
@@ -1042,6 +1044,7 @@ export type Database = {
           display_name?: string | null
           door?: number | null
           flat_no?: string
+          flat_size?: string | null
           floor?: number | null
           id?: string
           tower?: number | null
@@ -1571,6 +1574,7 @@ export type Database = {
           id: string
           is_admin: boolean
           is_blocked: boolean | null
+          is_flat_locked: boolean
           legal_version: string | null
           phone: string
           privacy_accepted_at: string | null
@@ -1591,6 +1595,7 @@ export type Database = {
           id?: string
           is_admin?: boolean
           is_blocked?: boolean | null
+          is_flat_locked?: boolean
           legal_version?: string | null
           phone: string
           privacy_accepted_at?: string | null
@@ -1611,6 +1616,7 @@ export type Database = {
           id?: string
           is_admin?: boolean
           is_blocked?: boolean | null
+          is_flat_locked?: boolean
           legal_version?: string | null
           phone?: string
           privacy_accepted_at?: string | null
@@ -2911,6 +2917,10 @@ export type Database = {
       }
       create_admin_email_user: { Args: never; Returns: undefined }
       delete_my_data: { Args: never; Returns: undefined }
+      delete_worker_cascade: {
+        Args: { p_worker_id: string }
+        Returns: undefined
+      }
       ensure_worker_profile: { Args: never; Returns: Json }
       escalate_overdue_bookings: { Args: never; Returns: undefined }
       export_my_data: { Args: never; Returns: Json }
