@@ -290,6 +290,7 @@ export type Database = {
           booking_id: string
           created_at: string | null
           id: string
+          notified_at: string | null
           offered_at: string | null
           order_sequence: number
           responded_at: string | null
@@ -301,6 +302,7 @@ export type Database = {
           booking_id: string
           created_at?: string | null
           id?: string
+          notified_at?: string | null
           offered_at?: string | null
           order_sequence: number
           responded_at?: string | null
@@ -312,6 +314,7 @@ export type Database = {
           booking_id?: string
           created_at?: string | null
           id?: string
+          notified_at?: string | null
           offered_at?: string | null
           order_sequence?: number
           responded_at?: string | null
@@ -378,6 +381,7 @@ export type Database = {
         Row: {
           accepted_at: string | null
           assigned_at: string | null
+          assignment_method: string
           auto_complete_after_minutes: number | null
           auto_complete_at: string | null
           bathroom_count: number | null
@@ -396,6 +400,9 @@ export type Database = {
           cust_phone: string
           dish_intensity: string | null
           dish_intensity_extra_inr: number | null
+          dispatch_attempts: number
+          dispatch_expires_at: string | null
+          dispatch_status: string
           family_count: number | null
           flat_no: string
           flat_size: string | null
@@ -404,6 +411,7 @@ export type Database = {
           has_glass_partition: boolean | null
           id: string
           is_demo: boolean
+          last_dispatch_at: string | null
           maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
           notes: string | null
           on_the_way_at: string | null
@@ -434,11 +442,13 @@ export type Database = {
           worker_name: string | null
           worker_phone: string | null
           worker_photo_url: string | null
+          worker_rejected_count: number
           worker_upi: string | null
         }
         Insert: {
           accepted_at?: string | null
           assigned_at?: string | null
+          assignment_method?: string
           auto_complete_after_minutes?: number | null
           auto_complete_at?: string | null
           bathroom_count?: number | null
@@ -457,6 +467,9 @@ export type Database = {
           cust_phone: string
           dish_intensity?: string | null
           dish_intensity_extra_inr?: number | null
+          dispatch_attempts?: number
+          dispatch_expires_at?: string | null
+          dispatch_status?: string
           family_count?: number | null
           flat_no: string
           flat_size?: string | null
@@ -465,6 +478,7 @@ export type Database = {
           has_glass_partition?: boolean | null
           id?: string
           is_demo?: boolean
+          last_dispatch_at?: string | null
           maid_tasks?: Database["public"]["Enums"]["maid_task"][] | null
           notes?: string | null
           on_the_way_at?: string | null
@@ -495,11 +509,13 @@ export type Database = {
           worker_name?: string | null
           worker_phone?: string | null
           worker_photo_url?: string | null
+          worker_rejected_count?: number
           worker_upi?: string | null
         }
         Update: {
           accepted_at?: string | null
           assigned_at?: string | null
+          assignment_method?: string
           auto_complete_after_minutes?: number | null
           auto_complete_at?: string | null
           bathroom_count?: number | null
@@ -518,6 +534,9 @@ export type Database = {
           cust_phone?: string
           dish_intensity?: string | null
           dish_intensity_extra_inr?: number | null
+          dispatch_attempts?: number
+          dispatch_expires_at?: string | null
+          dispatch_status?: string
           family_count?: number | null
           flat_no?: string
           flat_size?: string | null
@@ -526,6 +545,7 @@ export type Database = {
           has_glass_partition?: boolean | null
           id?: string
           is_demo?: boolean
+          last_dispatch_at?: string | null
           maid_tasks?: Database["public"]["Enums"]["maid_task"][] | null
           notes?: string | null
           on_the_way_at?: string | null
@@ -556,6 +576,7 @@ export type Database = {
           worker_name?: string | null
           worker_phone?: string | null
           worker_photo_url?: string | null
+          worker_rejected_count?: number
           worker_upi?: string | null
         }
         Relationships: [
@@ -2397,6 +2418,41 @@ export type Database = {
           },
         ]
       }
+      worker_presence_logs: {
+        Row: {
+          community: string | null
+          created_at: string
+          id: string
+          service: string | null
+          status: string
+          worker_id: string
+        }
+        Insert: {
+          community?: string | null
+          created_at?: string
+          id?: string
+          service?: string | null
+          status: string
+          worker_id: string
+        }
+        Update: {
+          community?: string | null
+          created_at?: string
+          id?: string
+          service?: string | null
+          status?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_presence_logs_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_ratings: {
         Row: {
           booking_id: string
@@ -2824,6 +2880,7 @@ export type Database = {
             Returns: {
               accepted_at: string | null
               assigned_at: string | null
+              assignment_method: string
               auto_complete_after_minutes: number | null
               auto_complete_at: string | null
               bathroom_count: number | null
@@ -2842,6 +2899,9 @@ export type Database = {
               cust_phone: string
               dish_intensity: string | null
               dish_intensity_extra_inr: number | null
+              dispatch_attempts: number
+              dispatch_expires_at: string | null
+              dispatch_status: string
               family_count: number | null
               flat_no: string
               flat_size: string | null
@@ -2850,6 +2910,7 @@ export type Database = {
               has_glass_partition: boolean | null
               id: string
               is_demo: boolean
+              last_dispatch_at: string | null
               maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
               notes: string | null
               on_the_way_at: string | null
@@ -2880,6 +2941,7 @@ export type Database = {
               worker_name: string | null
               worker_phone: string | null
               worker_photo_url: string | null
+              worker_rejected_count: number
               worker_upi: string | null
             }
             SetofOptions: {
@@ -2994,6 +3056,32 @@ export type Database = {
         }[]
       }
       get_booking_status: { Args: { p_booking_id: string }; Returns: Json }
+      get_cancel_reason_breakdown:
+        | {
+            Args: {
+              p_community?: string
+              p_end: string
+              p_service?: string
+              p_start: string
+            }
+            Returns: {
+              count: number
+              reason: string
+            }[]
+          }
+        | {
+            Args: {
+              p_cancel_source?: string
+              p_community?: string
+              p_end: string
+              p_service?: string
+              p_start: string
+            }
+            Returns: {
+              count: number
+              reason: string
+            }[]
+          }
       get_legal_pdfs: {
         Args: never
         Returns: {
@@ -3008,8 +3096,45 @@ export type Database = {
           service: string
         }[]
       }
+      get_ops_hourly_metrics: {
+        Args: {
+          p_community?: string
+          p_end: string
+          p_service?: string
+          p_start: string
+        }
+        Returns: {
+          acceptance_rate_pct: number
+          assigned_auto_count: number
+          assigned_manual_count: number
+          avg_response_time_seconds: number
+          bookings_instant: number
+          bookings_scheduled: number
+          bookings_total: number
+          cancel_by_user_count: number
+          cancel_by_worker_count: number
+          cancel_total: number
+          hour_label: string
+          hour_start: string
+          not_assigned_count: number
+          rejection_count: number
+          risk_score: number
+          workers_available_count: number
+          workers_busy_count: number
+          workers_online_count: number
+        }[]
+      }
       get_ops_setting: { Args: { p_key: string }; Returns: string }
       get_profile_id: { Args: never; Returns: string }
+      get_realtime_active_workers: {
+        Args: { p_community?: string; p_service?: string }
+        Returns: {
+          active_workers: number
+          available_workers: number
+          busy_workers: number
+          offline_workers: number
+        }[]
+      }
       get_setting: {
         Args: { p_default: string; p_key: string }
         Returns: string
@@ -3428,6 +3553,7 @@ export type Database = {
         Returns: {
           accepted_at: string | null
           assigned_at: string | null
+          assignment_method: string
           auto_complete_after_minutes: number | null
           auto_complete_at: string | null
           bathroom_count: number | null
@@ -3446,6 +3572,9 @@ export type Database = {
           cust_phone: string
           dish_intensity: string | null
           dish_intensity_extra_inr: number | null
+          dispatch_attempts: number
+          dispatch_expires_at: string | null
+          dispatch_status: string
           family_count: number | null
           flat_no: string
           flat_size: string | null
@@ -3454,6 +3583,7 @@ export type Database = {
           has_glass_partition: boolean | null
           id: string
           is_demo: boolean
+          last_dispatch_at: string | null
           maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
           notes: string | null
           on_the_way_at: string | null
@@ -3484,6 +3614,7 @@ export type Database = {
           worker_name: string | null
           worker_phone: string | null
           worker_photo_url: string | null
+          worker_rejected_count: number
           worker_upi: string | null
         }
         SetofOptions: {
