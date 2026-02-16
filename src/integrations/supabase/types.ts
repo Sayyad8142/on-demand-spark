@@ -290,36 +290,39 @@ export type Database = {
           booking_id: string
           created_at: string | null
           id: string
+          notification_status: string
           notified_at: string | null
           offered_at: string | null
           order_sequence: number
           responded_at: string | null
           status: string | null
-          timeout_at: string | null
+          timeout_at: string
           worker_id: string
         }
         Insert: {
           booking_id: string
           created_at?: string | null
           id?: string
+          notification_status?: string
           notified_at?: string | null
           offered_at?: string | null
           order_sequence: number
           responded_at?: string | null
           status?: string | null
-          timeout_at?: string | null
+          timeout_at?: string
           worker_id: string
         }
         Update: {
           booking_id?: string
           created_at?: string | null
           id?: string
+          notification_status?: string
           notified_at?: string | null
           offered_at?: string | null
           order_sequence?: number
           responded_at?: string | null
           status?: string | null
-          timeout_at?: string | null
+          timeout_at?: string
           worker_id?: string
         }
         Relationships: [
@@ -402,6 +405,7 @@ export type Database = {
           dish_intensity_extra_inr: number | null
           dispatch_attempts: number
           dispatch_expires_at: string | null
+          dispatch_started_at: string | null
           dispatch_status: string
           family_count: number | null
           flat_no: string
@@ -469,6 +473,7 @@ export type Database = {
           dish_intensity_extra_inr?: number | null
           dispatch_attempts?: number
           dispatch_expires_at?: string | null
+          dispatch_started_at?: string | null
           dispatch_status?: string
           family_count?: number | null
           flat_no: string
@@ -536,6 +541,7 @@ export type Database = {
           dish_intensity_extra_inr?: number | null
           dispatch_attempts?: number
           dispatch_expires_at?: string | null
+          dispatch_started_at?: string | null
           dispatch_status?: string
           family_count?: number | null
           flat_no?: string
@@ -2901,6 +2907,7 @@ export type Database = {
               dish_intensity_extra_inr: number | null
               dispatch_attempts: number
               dispatch_expires_at: string | null
+              dispatch_started_at: string | null
               dispatch_status: string
               family_count: number | null
               flat_no: string
@@ -2951,6 +2958,18 @@ export type Database = {
               isSetofReturn: false
             }
           }
+      atomic_accept_booking: {
+        Args: {
+          p_booking_id: string
+          p_worker_id: string
+          p_worker_name?: string
+          p_worker_phone?: string
+        }
+        Returns: {
+          accepted: boolean
+          message: string
+        }[]
+      }
       auto_complete_assigned: { Args: never; Returns: undefined }
       auto_handle_overdue_bookings: { Args: never; Returns: number }
       auto_heal_stale_worker_busy: {
@@ -3547,6 +3566,7 @@ export type Database = {
         }[]
       }
       text_to_bytea: { Args: { data: string }; Returns: string }
+      timeout_expired_booking_requests: { Args: never; Returns: number }
       try_accept_booking: { Args: { p_booking_id: string }; Returns: Json }
       try_accept_pending: {
         Args: { p_booking_id: string }
@@ -3574,6 +3594,7 @@ export type Database = {
           dish_intensity_extra_inr: number | null
           dispatch_attempts: number
           dispatch_expires_at: string | null
+          dispatch_started_at: string | null
           dispatch_status: string
           family_count: number | null
           flat_no: string
