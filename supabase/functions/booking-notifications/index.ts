@@ -250,13 +250,17 @@ Deno.serve(async (req) => {
         timeoutSeconds = TIER_TIMEOUT_SECONDS * 2;
       }
 
+      // Always set timeout_at - column is NOT NULL with default now()+45s
+      // For tier 1: timeout from now; for tier 2/3: staggered future timeout
+      const timeoutAt = new Date(currentTime.getTime() + timeoutSeconds * 1000).toISOString();
+
       return {
         booking_id,
         worker_id: worker.id,
         order_sequence: tier,
         status: 'pending',
         offered_at: tier === 1 ? currentTime.toISOString() : null,
-        timeout_at: tier === 1 ? new Date(currentTime.getTime() + timeoutSeconds * 1000).toISOString() : null,
+        timeout_at: timeoutAt,
       };
     });
 
