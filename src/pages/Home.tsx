@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { useBookingAlerts } from "@/hooks/useBookingAlerts";
 import { useActiveJob } from "@/hooks/useActiveJob";
+import { useHeartbeat } from "@/hooks/useHeartbeat";
 import { BookingAlertModal } from "@/components/BookingAlertModal";
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
@@ -34,6 +35,9 @@ export default function Home() {
   
   const worker = isGuestMode ? DEMO_WORKER : realWorker;
   const activeJob = isGuestMode ? null : realActiveJob;
+
+  // NO-GPS heartbeat: update last_seen_at every 2 min while app is open
+  useHeartbeat(isGuestMode ? undefined : worker?.id);
   
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
