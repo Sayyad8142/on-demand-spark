@@ -1,0 +1,1 @@
+ALTER TABLE public.workers ALTER COLUMN rating SET DEFAULT 5.0;
