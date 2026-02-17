@@ -148,15 +148,50 @@ export function useActiveJob(userId: string | undefined) {
   }, [workerId]);
 
   // Native overlay accept triggers custom event; refresh active job when that fires
+  // Use retry logic because workerId may not be resolved yet on cold start
   useEffect(() => {
     const onBookingAccepted = () => {
-      setTimeout(() => {
+      console.log('📡 bookingAccepted event received, will retry fetchActiveJob...');
+      let attempts = 0;
+      const maxAttempts = 5;
+      const tryFetch = () => {
+        attempts++;
+        console.log(`🔄 bookingAccepted fetch attempt ${attempts}/${maxAttempts}`);
         fetchActiveJob();
-      }, 400);
+        if (attempts < maxAttempts) {
+          setTimeout(tryFetch, 1000);
+        }
+      };
+      // Start after a short delay to let workerId resolve
+      setTimeout(tryFetch, 500);
     };
 
     window.addEventListener("bookingAccepted", onBookingAccepted);
     return () => window.removeEventListener("bookingAccepted", onBookingAccepted);
+  }, [fetchActiveJob]);
+
+  // Refetch active job when app comes back to foreground (native)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const onResume = () => {
+      console.log('📱 App resumed, refetching active job...');
+      // Small delay to let session/auth settle
+      setTimeout(() => fetchActiveJob(), 800);
+    };
+
+    // Capacitor fires appStateChange, but we also listen for visibilitychange (web fallback)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') onResume();
+    });
+
+    // Listen for native navigation events (overlay opens app -> navigates to /home)
+    window.addEventListener('nativeNavigation', onResume);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onResume);
+      window.removeEventListener('nativeNavigation', onResume);
+    };
   }, [fetchActiveJob]);
 
   const updateJobStatus = async (bookingId: string, newStatus: string) => {
