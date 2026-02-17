@@ -3200,6 +3200,17 @@ export type Database = {
         Args: { p_default: number; p_key: string }
         Returns: number
       }
+      get_supply_gap_analysis: {
+        Args: never
+        Returns: {
+          acceptance_pct: number
+          accepted: number
+          hour_ist: number
+          missed: number
+          rejected: number
+          total_requests: number
+        }[]
+      }
       get_worker_contact: { Args: { p_booking_id: string }; Returns: Json }
       get_worker_online_hourly: {
         Args: { p_community?: string; p_date: string }
@@ -3211,6 +3222,36 @@ export type Database = {
           hour_start: string
           offline_workers_count: number
           online_workers_count: number
+        }[]
+      }
+      get_worker_performance_summary: {
+        Args: never
+        Returns: {
+          acceptance_rate: number
+          accepted: number
+          community: string
+          completed: number
+          completion_rate: number
+          full_name: string
+          id: string
+          is_active: boolean
+          is_available: boolean
+          is_busy: boolean
+          last_seen_at: string
+          missed: number
+          rating: number
+          rejected: number
+          req_accepted: number
+          service_types: string[]
+          total_earnings: number
+          total_ratings: number
+        }[]
+      }
+      get_worker_rating_distribution: {
+        Args: never
+        Returns: {
+          rating_range: string
+          worker_count: number
         }[]
       }
       get_worker_upcoming_scheduled_bookings: {
