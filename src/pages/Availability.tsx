@@ -371,8 +371,8 @@ export default function Availability() {
             <Check className="h-4 w-4 mr-1" />
             Select All
           </Button>
-          <Button variant="outline" size="sm" onClick={() => clearDay(activeDay)} className="flex-1">
-            Clear Day
+          <Button variant="outline" size="sm" onClick={selectAllWeek} className="flex-1">
+            All Week
           </Button>
           <Button variant="outline" size="sm" onClick={() => copyToAllDays(activeDay)} className="flex-1">
             Copy to All
@@ -407,14 +407,6 @@ export default function Availability() {
 
       {/* Bottom Actions */}
       <div className="fixed bottom-16 left-0 right-0 bg-background/95 backdrop-blur-sm border-t p-4 space-y-2 shadow-lg">
-        <div className="flex gap-2 max-w-2xl mx-auto">
-          <Button variant="outline" onClick={selectAllWeek} className="flex-1">
-            All Week
-          </Button>
-          <Button variant="outline" onClick={clearAllWeek} className="flex-1">
-            Clear Week
-          </Button>
-        </div>
         <Button onClick={saveAvailability} disabled={saving} className="w-full max-w-2xl mx-auto" size="lg">
           {saving ? "Saving..." : "Save Availability"}
         </Button>
