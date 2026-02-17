@@ -2459,6 +2459,39 @@ export type Database = {
           },
         ]
       }
+      worker_presence_snapshots: {
+        Row: {
+          community: string | null
+          created_at: string
+          id: string
+          is_available: boolean | null
+          is_busy: boolean | null
+          last_seen_at: string | null
+          service_type: string | null
+          worker_id: string
+        }
+        Insert: {
+          community?: string | null
+          created_at?: string
+          id?: string
+          is_available?: boolean | null
+          is_busy?: boolean | null
+          last_seen_at?: string | null
+          service_type?: string | null
+          worker_id: string
+        }
+        Update: {
+          community?: string | null
+          created_at?: string
+          id?: string
+          is_available?: boolean | null
+          is_busy?: boolean | null
+          last_seen_at?: string | null
+          service_type?: string | null
+          worker_id?: string
+        }
+        Relationships: []
+      }
       worker_ratings: {
         Row: {
           booking_id: string
@@ -2606,6 +2639,7 @@ export type Database = {
           last_active_at: string | null
           last_lat: number | null
           last_lng: number | null
+          last_offer_at: string | null
           last_seen_at: string | null
           location_enabled: boolean | null
           phone: string
@@ -2639,6 +2673,7 @@ export type Database = {
           last_active_at?: string | null
           last_lat?: number | null
           last_lng?: number | null
+          last_offer_at?: string | null
           last_seen_at?: string | null
           location_enabled?: boolean | null
           phone: string
@@ -2672,6 +2707,7 @@ export type Database = {
           last_active_at?: string | null
           last_lat?: number | null
           last_lng?: number | null
+          last_offer_at?: string | null
           last_seen_at?: string | null
           location_enabled?: boolean | null
           phone?: string
@@ -2791,6 +2827,7 @@ export type Database = {
               last_active_at: string | null
               last_lat: number | null
               last_lng: number | null
+              last_offer_at: string | null
               last_seen_at: string | null
               location_enabled: boolean | null
               phone: string
@@ -2833,6 +2870,7 @@ export type Database = {
               last_active_at: string | null
               last_lat: number | null
               last_lng: number | null
+              last_offer_at: string | null
               last_seen_at: string | null
               location_enabled: boolean | null
               phone: string
@@ -3163,6 +3201,18 @@ export type Database = {
         Returns: number
       }
       get_worker_contact: { Args: { p_booking_id: string }; Returns: Json }
+      get_worker_online_hourly: {
+        Args: { p_community?: string; p_date: string }
+        Returns: {
+          available_workers_count: number
+          busy_workers_count: number
+          demand_count: number
+          hour_label: string
+          hour_start: string
+          offline_workers_count: number
+          online_workers_count: number
+        }[]
+      }
       get_worker_upcoming_scheduled_bookings: {
         Args: { p_limit?: number }
         Returns: {
@@ -3379,6 +3429,8 @@ export type Database = {
       norm_phone: { Args: { p: string }; Returns: string }
       notify_next_worker: { Args: { p_booking_id: string }; Returns: Json }
       pending_sla_minutes: { Args: never; Returns: number }
+      pg_advisory_unlock_dispatch: { Args: never; Returns: boolean }
+      pg_try_advisory_lock_dispatch: { Args: never; Returns: boolean }
       pushcut_notify_support:
         | {
             Args: {
@@ -3412,6 +3464,10 @@ export type Database = {
           p_thread_id: string
           p_title: string
         }
+        Returns: undefined
+      }
+      recalc_worker_rating: {
+        Args: { p_worker_id: string }
         Returns: undefined
       }
       recompute_worker_busy: {
