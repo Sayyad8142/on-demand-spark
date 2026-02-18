@@ -17,10 +17,10 @@ type Slot = {
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const DAYS_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-// Generate 30-min slots from 6:00 AM to endHour (default 7:00 PM, cooks get 9:00 PM)
+// Generate 30-min slots from 7:00 AM to endHour (default 7:00 PM, cooks get 9:00 PM)
 const generateSlots = (endHour: number = 19): Slot[] => {
   const slots: Slot[] = [];
-  for (let hour = 6; hour < endHour; hour++) {
+  for (let hour = 7; hour < endHour; hour++) {
     for (let min = 0; min < 60; min += 30) {
       const h = hour.toString().padStart(2, "0");
       const m = min.toString().padStart(2, "0");
