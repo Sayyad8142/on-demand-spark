@@ -38,7 +38,6 @@
     "back": "Back",
     "services": {
       "maid": "Maid Service",
-      "cook": "Cook Service",
       "bathroom_cleaning": "Bathroom Cleaning"
     }
   },
