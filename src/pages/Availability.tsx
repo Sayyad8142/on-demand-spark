@@ -331,7 +331,7 @@ export default function Availability() {
         <p className="text-muted-foreground">Loading...</p>
       </div>;
   }
-  return <div className="min-h-screen bg-background pb-24">
+  return <div className="min-h-screen bg-background pb-40">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b">
         <div className="flex items-center gap-3 p-4">
@@ -406,7 +406,7 @@ export default function Availability() {
       </div>
 
       {/* Bottom Actions */}
-      <div className="fixed bottom-16 left-0 right-0 bg-background/95 backdrop-blur-sm border-t p-4 space-y-2 shadow-lg">
+      <div className="fixed bottom-20 left-0 right-0 bg-background/95 backdrop-blur-sm border-t p-4 space-y-2 shadow-lg z-10">
         <Button onClick={saveAvailability} disabled={saving} className="w-full max-w-2xl mx-auto" size="lg">
           {saving ? "Saving..." : "Save Availability"}
         </Button>
