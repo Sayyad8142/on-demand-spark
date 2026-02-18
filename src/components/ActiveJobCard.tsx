@@ -127,15 +127,7 @@ export default function ActiveJobCard({
           Call Manager
         </Button>
 
-        {/* Timer indicator when cooldown active */}
-        {remainingSeconds > 0 && (
-          <div className="flex items-center justify-center gap-2 text-muted-foreground text-sm">
-            <Clock className="w-4 h-4 animate-pulse" />
-            <span>Please wait {formatCountdown(remainingSeconds)}</span>
-          </div>
-        )}
-
-        {/* 4. Work Completed Button */}
+        {/* 4. Work Completed Button with inline timer */}
         <Button 
           size="lg" 
           className={`w-full h-14 text-lg font-bold shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98] ${
@@ -150,6 +142,9 @@ export default function ActiveJobCard({
             <>
               <Check className="w-6 h-6 mr-2" />
               Work Completed
+              {remainingSeconds > 0 && (
+                <span className="ml-2 text-sm font-normal opacity-80">({formatCountdown(remainingSeconds)})</span>
+              )}
             </>
           )}
         </Button>
