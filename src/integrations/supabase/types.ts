@@ -401,6 +401,8 @@ export type Database = {
           created_at: string
           cust_name: string
           cust_phone: string
+          discount_inr: number
+          discount_reason: string | null
           dish_intensity: string | null
           dish_intensity_extra_inr: number | null
           dispatch_attempts: number
@@ -469,6 +471,8 @@ export type Database = {
           created_at?: string
           cust_name: string
           cust_phone: string
+          discount_inr?: number
+          discount_reason?: string | null
           dish_intensity?: string | null
           dish_intensity_extra_inr?: number | null
           dispatch_attempts?: number
@@ -537,6 +541,8 @@ export type Database = {
           created_at?: string
           cust_name?: string
           cust_phone?: string
+          discount_inr?: number
+          discount_reason?: string | null
           dish_intensity?: string | null
           dish_intensity_extra_inr?: number | null
           dispatch_attempts?: number
@@ -2084,6 +2090,42 @@ export type Database = {
           },
         ]
       }
+      surge_pricing_rules: {
+        Row: {
+          community: string | null
+          created_at: string
+          day_of_week: number
+          hour: number
+          id: string
+          is_active: boolean
+          multiplier: number
+          service_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          community?: string | null
+          created_at?: string
+          day_of_week: number
+          hour: number
+          id?: string
+          is_active?: boolean
+          multiplier?: number
+          service_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          community?: string | null
+          created_at?: string
+          day_of_week?: number
+          hour?: number
+          id?: string
+          is_active?: boolean
+          multiplier?: number
+          service_type?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tenants: {
         Row: {
           active: boolean | null
@@ -2956,6 +2998,8 @@ export type Database = {
               created_at: string
               cust_name: string
               cust_phone: string
+              discount_inr: number
+              discount_reason: string | null
               dish_intensity: string | null
               dish_intensity_extra_inr: number | null
               dispatch_attempts: number
@@ -3164,6 +3208,27 @@ export type Database = {
           p_type?: string
         }
         Returns: Json
+      }
+      get_hourly_supply_demand: {
+        Args: {
+          p_booking_type?: string
+          p_community?: string
+          p_end_ts: string
+          p_service_type?: string
+          p_start_ts: string
+        }
+        Returns: {
+          bookings_assigned: number
+          bookings_completed: number
+          bookings_created: number
+          busy_workers: number
+          hour_label: string
+          hour_ts: string
+          online_workers: number
+          shortage_score: number
+          total_active_workers: number
+          utilization_pct: number
+        }[]
       }
       get_hourly_worker_online_metrics: {
         Args: never
@@ -3755,6 +3820,8 @@ export type Database = {
           created_at: string
           cust_name: string
           cust_phone: string
+          discount_inr: number
+          discount_reason: string | null
           dish_intensity: string | null
           dish_intensity_extra_inr: number | null
           dispatch_attempts: number
