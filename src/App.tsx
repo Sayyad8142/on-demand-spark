@@ -96,7 +96,7 @@ function NativeNavigationHandler() {
 const App = () => {
   const { session } = useAuth();
   useAppState(); // Refresh JWT when app comes to foreground
-  const { needsUpdate, loading: updateCheckLoading } = useForceUpdateCheck();
+  const { needsUpdate } = useForceUpdateCheck();
 
   // Request location permissions on app startup for native platforms
   useEffect(() => {
@@ -184,17 +184,6 @@ const App = () => {
     );
   }
 
-  // Show loading while checking for updates
-  if (updateCheckLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground">Checking for updates...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <QueryClientProvider client={queryClient}>
