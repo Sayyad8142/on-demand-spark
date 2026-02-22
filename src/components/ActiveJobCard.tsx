@@ -68,25 +68,49 @@ export default function ActiveJobCard({
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
     const lang = i18n.language;
+    const voices = window.speechSynthesis.getVoices();
+    
     let text: string;
+    let utteranceLang: string;
+    
     if (lang === 'te') {
-      text = `ఫ్లాట్ నంబర్ ${booking.flat_no}`;
-      if (phfParsed) {
-        text += `. టవర్ ${phfParsed.tower}. ఫ్లోర్ ${phfParsed.floor}. డోర్ నంబర్ ${phfParsed.door}.`;
+      // Check if Telugu voice is available
+      const teVoice = voices.find(v => v.lang.startsWith('te'));
+      if (teVoice) {
+        text = `ఫ్లాట్ నంబర్ ${booking.flat_no}`;
+        if (phfParsed) {
+          text += `. టవర్ ${phfParsed.tower}. ఫ్లోర్ ${phfParsed.floor}. డోర్ నంబర్ ${phfParsed.door}.`;
+        }
+        utteranceLang = 'te-IN';
+      } else {
+        // Fallback to Hindi if Telugu voice not available
+        text = `फ्लैट नंबर ${booking.flat_no}`;
+        if (phfParsed) {
+          text += `. टावर ${phfParsed.tower}. फ्लोर ${phfParsed.floor}. डोर नंबर ${phfParsed.door}.`;
+        }
+        utteranceLang = 'hi-IN';
       }
     } else if (lang === 'hi') {
       text = `फ्लैट नंबर ${booking.flat_no}`;
       if (phfParsed) {
         text += `. टावर ${phfParsed.tower}. फ्लोर ${phfParsed.floor}. डोर नंबर ${phfParsed.door}.`;
       }
+      utteranceLang = 'hi-IN';
     } else {
       text = `Flat number ${booking.flat_no}`;
       if (phfParsed) {
         text += `. Tower ${phfParsed.tower}. Floor ${phfParsed.floor}. Door number ${phfParsed.door}.`;
       }
+      utteranceLang = 'en-IN';
     }
+    
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lang === 'te' ? 'te-IN' : lang === 'hi' ? 'hi-IN' : 'en-IN';
+    utterance.lang = utteranceLang;
+    
+    // Explicitly set voice if found
+    const matchingVoice = voices.find(v => v.lang.startsWith(utteranceLang.split('-')[0]));
+    if (matchingVoice) utterance.voice = matchingVoice;
+    
     utterance.rate = 0.9;
     utterance.volume = 1;
     window.speechSynthesis.speak(utterance);
