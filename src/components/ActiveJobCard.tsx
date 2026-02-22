@@ -134,7 +134,7 @@ export default function ActiveJobCard({
             </p>
             <button
               onClick={speakFlatNo}
-              className="p-2 rounded-full bg-[#5A3423]/60 hover:bg-[#5A3423] transition-colors active:scale-90"
+              className="p-2 rounded-full bg-[#5A3423]/60 hover:bg-[#5A3423] transition-colors active:scale-90 ml-2"
               aria-label="Speak flat number"
             >
               <Volume2 className="w-5 h-5 text-[#D6B88A]" />
