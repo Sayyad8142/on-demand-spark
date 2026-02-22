@@ -4,6 +4,7 @@ import { Check, Phone, Clock, Volume2 } from "lucide-react";
 import { BookingWithAddress } from "@/lib/address";
 import { parsePHFCode } from "@/lib/address";
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 type Booking = BookingWithAddress;
 interface ActiveJobCardProps {
@@ -21,6 +22,7 @@ export default function ActiveJobCard({
   updating
 }: ActiveJobCardProps) {
   const [remainingSeconds, setRemainingSeconds] = useState<number>(0);
+  const { i18n } = useTranslation();
 
   // Calculate initial remaining time based on accepted_at timestamp
   const cooldownEndTime = useMemo(() => {
@@ -65,11 +67,26 @@ export default function ActiveJobCard({
   const speakFlatNo = () => {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
-    let text = `Flat number ${booking.flat_no}`;
-    if (phfParsed) {
-      text += `. Tower ${phfParsed.tower}. Floor ${phfParsed.floor}. Door number ${phfParsed.door}.`;
+    const lang = i18n.language;
+    let text: string;
+    if (lang === 'te') {
+      text = `ఫ్లాట్ నంబర్ ${booking.flat_no}`;
+      if (phfParsed) {
+        text += `. టవర్ ${phfParsed.tower}. ఫ్లోర్ ${phfParsed.floor}. డోర్ నంబర్ ${phfParsed.door}.`;
+      }
+    } else if (lang === 'hi') {
+      text = `फ्लैट नंबर ${booking.flat_no}`;
+      if (phfParsed) {
+        text += `. टावर ${phfParsed.tower}. फ्लोर ${phfParsed.floor}. डोर नंबर ${phfParsed.door}.`;
+      }
+    } else {
+      text = `Flat number ${booking.flat_no}`;
+      if (phfParsed) {
+        text += `. Tower ${phfParsed.tower}. Floor ${phfParsed.floor}. Door number ${phfParsed.door}.`;
+      }
     }
     const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang === 'te' ? 'te-IN' : lang === 'hi' ? 'hi-IN' : 'en-IN';
     utterance.rate = 0.9;
     utterance.volume = 1;
     window.speechSynthesis.speak(utterance);
