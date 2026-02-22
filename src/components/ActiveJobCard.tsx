@@ -107,11 +107,15 @@ export default function ActiveJobCard({
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = utteranceLang;
     
-    // Explicitly set voice if found
-    const matchingVoice = voices.find(v => v.lang.startsWith(utteranceLang.split('-')[0]));
-    if (matchingVoice) utterance.voice = matchingVoice;
+    // Prefer Indian voices for natural pronunciation
+    const langPrefix = utteranceLang.split('-')[0];
+    const indianVoice = voices.find(v => v.lang === utteranceLang) 
+      || voices.find(v => v.lang.startsWith(langPrefix) && v.lang.includes('IN'))
+      || voices.find(v => v.lang.startsWith(langPrefix));
+    if (indianVoice) utterance.voice = indianVoice;
     
-    utterance.rate = 0.9;
+    utterance.rate = 0.85;
+    utterance.pitch = 1.0;
     utterance.volume = 1;
     window.speechSynthesis.speak(utterance);
   };
