@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "react-i18next";
 import BottomNav from "@/components/BottomNav";
 type DayKey = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 type Slot = {
@@ -14,8 +15,8 @@ type Slot = {
   end: string;
   selected: boolean;
 };
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const DAYS_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAY_KEYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+const DAY_SHORT_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 // Generate 30-min slots from 7:00 AM to endHour (default 7:00 PM, cooks get 9:00 PM)
 const generateSlots = (endHour: number = 19): Slot[] => {
@@ -58,12 +59,16 @@ export default function Availability() {
   const {
     user
   } = useAuth();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isCook, setIsCook] = useState(false);
   const [weekData, setWeekData] = useState<Record<DayKey, Slot[]>>(generateInitialWeekData());
   const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1 as DayKey);
   const [workerId, setWorkerId] = useState<string | null>(null);
+
+  const getDayName = (index: number) => t(`availability.days.${DAY_KEYS[index]}`);
+  const getDayShort = (index: number) => t(`availability.daysShort.${DAY_SHORT_KEYS[index]}`);
 
   useEffect(() => {
     loadWorkerAndAvailability();
@@ -234,8 +239,8 @@ export default function Availability() {
     }
     setWeekData(newWeekData);
     toast({
-      title: "Copied",
-      description: "Applied this day to all days"
+      title: t('availability.copied'),
+      description: t('availability.copiedDesc')
     });
   };
   const selectAllWeek = () => {
@@ -268,8 +273,8 @@ export default function Availability() {
     const hasAnySlot = Object.values(weekData).some(slots => slots.some(s => s.selected));
     if (!hasAnySlot) {
       toast({
-        title: "No slots selected",
-        description: "Please select at least one time slot",
+        title: t('availability.noSlotsError'),
+        description: t('availability.noSlotsErrorDesc'),
         variant: "destructive"
       });
       return;
@@ -294,8 +299,8 @@ export default function Availability() {
       });
       if (error) throw error;
       toast({
-        title: "Availability saved",
-        description: "Your free time slots have been updated"
+        title: t('availability.saved'),
+        description: t('availability.savedDesc')
       });
 
       // Redirect to home after saving
@@ -324,11 +329,11 @@ export default function Availability() {
         }
       }
     });
-    return summary.length > 0 ? summary.join(", ") : "No slots selected";
+    return summary.length > 0 ? summary.join(", ") : t('availability.noSlotsSelected');
   };
   if (loading) {
     return <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+        <p className="text-muted-foreground">{t('common.loading')}</p>
       </div>;
   }
   return <div className="min-h-screen bg-background pb-40">
@@ -337,7 +342,7 @@ export default function Availability() {
         <div className="flex items-center gap-3 p-4">
           
           <div className="flex-1">
-            <h1 className="text-xl font-semibold">Set Your Available Time Slots</h1>
+            <h1 className="text-xl font-semibold">{t('availability.title')}</h1>
             
           </div>
         </div>
@@ -346,18 +351,18 @@ export default function Availability() {
       {/* Day Selector */}
       <div className="p-4">
         <Card className="p-4">
-          <h2 className="text-base font-semibold mb-4">Select days of the week</h2>
+          <h2 className="text-base font-semibold mb-4">{t('availability.selectDays')}</h2>
           <div className="grid grid-cols-4 gap-2 mb-2">
-            {DAYS.slice(0, 4).map((day, i) => <button key={i} onClick={() => setActiveDay(i as DayKey)} className={`w-full h-16 rounded-lg border-2 transition-all flex flex-col items-center justify-center ${activeDay === i ? "bg-primary border-primary text-primary-foreground shadow-md" : "bg-background border-border hover:border-primary/50"}`}>
+            {[0, 1, 2, 3].map((i) => <button key={i} onClick={() => setActiveDay(i as DayKey)} className={`w-full h-16 rounded-lg border-2 transition-all flex flex-col items-center justify-center ${activeDay === i ? "bg-primary border-primary text-primary-foreground shadow-md" : "bg-background border-border hover:border-primary/50"}`}>
                 <span className="text-xs font-medium uppercase">
-                  {DAYS_SHORT[i]}
+                  {getDayShort(i)}
                 </span>
               </button>)}
           </div>
           <div className="grid grid-cols-3 gap-2">
-            {DAYS.slice(4, 7).map((day, i) => <button key={i + 4} onClick={() => setActiveDay(i + 4 as DayKey)} className={`w-full h-16 rounded-lg border-2 transition-all flex flex-col items-center justify-center ${activeDay === i + 4 ? "bg-primary border-primary text-primary-foreground shadow-md" : "bg-background border-border hover:border-primary/50"}`}>
+            {[4, 5, 6].map((i) => <button key={i} onClick={() => setActiveDay(i as DayKey)} className={`w-full h-16 rounded-lg border-2 transition-all flex flex-col items-center justify-center ${activeDay === i ? "bg-primary border-primary text-primary-foreground shadow-md" : "bg-background border-border hover:border-primary/50"}`}>
                 <span className="text-xs font-medium uppercase">
-                  {DAYS_SHORT[i + 4]}
+                  {getDayShort(i)}
                 </span>
               </button>)}
           </div>
@@ -369,13 +374,13 @@ export default function Availability() {
         <div className="flex gap-2">
           <Button variant="secondary" size="sm" onClick={() => selectAllDay(activeDay)} className="flex-1">
             <Check className="h-4 w-4 mr-1" />
-            Select All
+            {t('availability.selectAll')}
           </Button>
           <Button variant="outline" size="sm" onClick={selectAllWeek} className="flex-1">
-            All Week
+            {t('availability.allWeek')}
           </Button>
           <Button variant="outline" size="sm" onClick={() => copyToAllDays(activeDay)} className="flex-1">
-            Copy to All
+            {t('availability.copyToAll')}
           </Button>
         </div>
       </div>
@@ -385,7 +390,7 @@ export default function Availability() {
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-4">
             <Clock className="h-5 w-5 text-muted-foreground" />
-            <span className="text-base font-semibold">Select time slots for {DAYS[activeDay]}</span>
+            <span className="text-base font-semibold">{t('availability.selectTimeSlots', { day: getDayName(activeDay) })}</span>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {weekData[activeDay].map((slot, i) => <button key={i} className={`px-3 py-3 rounded-xl text-sm font-medium transition-all border-2 ${slot.selected ? "bg-primary/10 border-primary text-primary" : "bg-background border-border hover:border-primary/30 text-foreground"}`} onClick={() => toggleSlot(activeDay, i)}>
@@ -399,7 +404,7 @@ export default function Availability() {
       <div className="px-4 pb-4">
         <Card className="p-4 bg-primary/5 border-primary/20">
           <p className="text-sm font-semibold text-foreground mb-2">
-            Selected time slots for {DAYS[activeDay]}:
+            {t('availability.selectedTimeSlots', { day: getDayName(activeDay) })}
           </p>
           <p className="text-sm text-muted-foreground">{getSummary()}</p>
         </Card>
@@ -408,7 +413,7 @@ export default function Availability() {
       {/* Bottom Actions */}
       <div className="fixed bottom-20 left-0 right-0 bg-background/95 backdrop-blur-sm border-t p-4 space-y-2 shadow-lg z-10">
         <Button onClick={saveAvailability} disabled={saving} className="w-full max-w-2xl mx-auto" size="lg">
-          {saving ? "Saving..." : "Save Availability"}
+          {saving ? t('availability.saving') : t('availability.saveAvailability')}
         </Button>
       </div>
 

@@ -125,6 +125,42 @@
     "profile": "प्रोफ़ाइल",
     "settings": "सेटिंग्स"
   },
+  "availability": {
+    "title": "अपने उपलब्ध समय स्लॉट सेट करें",
+    "selectDays": "सप्ताह के दिन चुनें",
+    "selectAll": "सभी चुनें",
+    "allWeek": "पूरा सप्ताह",
+    "copyToAll": "सभी में कॉपी करें",
+    "selectTimeSlots": "{{day}} के लिए समय स्लॉट चुनें",
+    "selectedTimeSlots": "{{day}} के लिए चुने गए समय स्लॉट:",
+    "noSlotsSelected": "कोई स्लॉट नहीं चुना गया",
+    "saveAvailability": "उपलब्धता सहेजें",
+    "saving": "सहेजा जा रहा है...",
+    "saved": "उपलब्धता सहेजी गई",
+    "savedDesc": "आपके खाली समय स्लॉट अपडेट हो गए हैं",
+    "copied": "कॉपी किया गया",
+    "copiedDesc": "इस दिन को सभी दिनों में लागू किया गया",
+    "noSlotsError": "कोई स्लॉट नहीं चुना गया",
+    "noSlotsErrorDesc": "कृपया कम से कम एक समय स्लॉट चुनें",
+    "days": {
+      "monday": "सोमवार",
+      "tuesday": "मंगलवार",
+      "wednesday": "बुधवार",
+      "thursday": "गुरुवार",
+      "friday": "शुक्रवार",
+      "saturday": "शनिवार",
+      "sunday": "रविवार"
+    },
+    "daysShort": {
+      "mon": "सोम",
+      "tue": "मंगल",
+      "wed": "बुध",
+      "thu": "गुरु",
+      "fri": "शुक्र",
+      "sat": "शनि",
+      "sun": "रवि"
+    }
+  },
   "common": {
     "loading": "लोड हो रहा है...",
     "error": "त्रुटि",
