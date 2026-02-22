@@ -136,7 +136,7 @@
     "selectDays": "Select days of the week",
     "selectAll": "Select All",
     "allWeek": "All Week",
-    "copyToAll": "Copy to All",
+    "copyToAll": "Copy same to everyday",
     "selectTimeSlots": "Select time slots for {{day}}",
     "selectedTimeSlots": "Selected time slots for {{day}}:",
     "noSlotsSelected": "No slots selected",

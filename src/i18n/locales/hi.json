@@ -136,7 +136,7 @@
     "selectDays": "सप्ताह के दिन चुनें",
     "selectAll": "सभी चुनें",
     "allWeek": "पूरा सप्ताह",
-    "copyToAll": "सभी में कॉपी करें",
+    "copyToAll": "सभी दिनों में कॉपी करें",
     "selectTimeSlots": "{{day}} के लिए समय स्लॉट चुनें",
     "selectedTimeSlots": "{{day}} के लिए चुने गए समय स्लॉट:",
     "noSlotsSelected": "कोई स्लॉट नहीं चुना गया",
