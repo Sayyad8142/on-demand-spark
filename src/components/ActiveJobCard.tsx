@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Phone, Clock } from "lucide-react";
+import { Check, Phone, Clock, Volume2 } from "lucide-react";
 import { BookingWithAddress } from "@/lib/address";
 import { parsePHFCode } from "@/lib/address";
 import { useState, useEffect, useMemo } from "react";
@@ -62,6 +62,19 @@ export default function ActiveJobCard({
     window.location.href = `tel:${MANAGER_PHONE}`;
   };
 
+  const speakFlatNo = () => {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    let text = `Flat number ${booking.flat_no}`;
+    if (phfParsed) {
+      text += `. Tower ${phfParsed.tower}. Floor ${phfParsed.floor}. Door number ${phfParsed.door}.`;
+    }
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.9;
+    utterance.volume = 1;
+    window.speechSynthesis.speak(utterance);
+  };
+
   const isWorkCompletedDisabled = updating || remainingSeconds > 0;
 
   const formatCountdown = (seconds: number) => {
@@ -74,10 +87,17 @@ export default function ActiveJobCard({
       <div className="p-4 space-y-3">
         {/* 1. Flat Number Display - Wooden Door Style */}
         <div className="flat-door-style p-5">
-          <div className="text-center mb-4 relative z-10">
+          <div className="text-center mb-4 relative z-10 flex items-center justify-center gap-2">
             <p className="flat-number-text font-extrabold text-3xl tracking-wide uppercase">
               Flat {booking.flat_no}
             </p>
+            <button
+              onClick={speakFlatNo}
+              className="p-2 rounded-full bg-[#5A3423]/60 hover:bg-[#5A3423] transition-colors active:scale-90"
+              aria-label="Speak flat number"
+            >
+              <Volume2 className="w-5 h-5 text-[#D6B88A]" />
+            </button>
           </div>
           {phfParsed && (
             <div className="grid grid-cols-3 gap-3 relative z-10">
