@@ -125,6 +125,42 @@
     "profile": "Profile",
     "settings": "Settings"
   },
+  "availability": {
+    "title": "Set Your Available Time Slots",
+    "selectDays": "Select days of the week",
+    "selectAll": "Select All",
+    "allWeek": "All Week",
+    "copyToAll": "Copy to All",
+    "selectTimeSlots": "Select time slots for {{day}}",
+    "selectedTimeSlots": "Selected time slots for {{day}}:",
+    "noSlotsSelected": "No slots selected",
+    "saveAvailability": "Save Availability",
+    "saving": "Saving...",
+    "saved": "Availability saved",
+    "savedDesc": "Your free time slots have been updated",
+    "copied": "Copied",
+    "copiedDesc": "Applied this day to all days",
+    "noSlotsError": "No slots selected",
+    "noSlotsErrorDesc": "Please select at least one time slot",
+    "days": {
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
+    },
+    "daysShort": {
+      "mon": "MON",
+      "tue": "TUE",
+      "wed": "WED",
+      "thu": "THU",
+      "fri": "FRI",
+      "sat": "SAT",
+      "sun": "SUN"
+    }
+  },
   "common": {
     "loading": "Loading...",
     "error": "Error",
