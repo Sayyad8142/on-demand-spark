@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Phone, Clock, Volume2, User } from "lucide-react";
+import { Check, Phone, Clock, Volume2 } from "lucide-react";
 import { BookingWithAddress } from "@/lib/address";
 import { parsePHFCode } from "@/lib/address";
 import { useState, useEffect, useMemo } from "react";
@@ -74,11 +74,22 @@ export default function ActiveJobCard({
     let utteranceLang: string;
     
     if (lang === 'te') {
-      text = `ఫ్లాట్ నంబర్ ${booking.flat_no}`;
-      if (phfParsed) {
-        text += `. టవర్ ${phfParsed.tower}. ఫ్లోర్ ${phfParsed.floor}. డోర్ నంబర్ ${phfParsed.door}.`;
+      // Check if Telugu voice is available
+      const teVoice = voices.find(v => v.lang.startsWith('te'));
+      if (teVoice) {
+        text = `ఫ్లాట్ నంబర్ ${booking.flat_no}`;
+        if (phfParsed) {
+          text += `. టవర్ ${phfParsed.tower}. ఫ్లోర్ ${phfParsed.floor}. డోర్ నంబర్ ${phfParsed.door}.`;
+        }
+        utteranceLang = 'te-IN';
+      } else {
+        // Fallback to Hindi if Telugu voice not available
+        text = `फ्लैट नंबर ${booking.flat_no}`;
+        if (phfParsed) {
+          text += `. टावर ${phfParsed.tower}. फ्लोर ${phfParsed.floor}. डोर नंबर ${phfParsed.door}.`;
+        }
+        utteranceLang = 'hi-IN';
       }
-      utteranceLang = 'te-IN';
     } else if (lang === 'hi') {
       text = `फ्लैट नंबर ${booking.flat_no}`;
       if (phfParsed) {
@@ -161,19 +172,11 @@ export default function ActiveJobCard({
           </div>
           </div>}
 
-        {/* Customer Details */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <p className="text-xs font-bold text-blue-800 dark:text-blue-400">CUSTOMER</p>
-          </div>
-          <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">{booking.cust_name}</p>
-          {booking.cust_phone && (
-            <a href={`tel:${booking.cust_phone}`} className="text-sm text-blue-600 dark:text-blue-300 underline">
-              {booking.cust_phone}
-            </a>
-          )}
-        </div>
+        {/* Notes */}
+        {booking.notes && <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+            <p className="text-xs font-bold text-amber-800 dark:text-amber-400 mb-2">NOTES:</p>
+            <p className="text-sm text-amber-900 dark:text-amber-200">{booking.notes}</p>
+          </div>}
 
         {/* 3. Call Manager Button */}
         <Button 
