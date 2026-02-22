@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "react-i18next";
 
 interface AvailabilityToggleProps {
   workerId: string;
@@ -13,6 +14,7 @@ export function AvailabilityToggle({ workerId, className }: AvailabilityTogglePr
   const [loading, setLoading] = useState(false);
   const [pressed, setPressed] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   useEffect(() => {
     loadAvailability();
@@ -47,10 +49,10 @@ export function AvailabilityToggle({ workerId, className }: AvailabilityTogglePr
       if (data === false) throw new Error("Worker not found");
       setIsAvailable(newValue);
       toast({
-        title: newValue ? "Now Available" : "Now Unavailable",
+        title: newValue ? t("home.nowAvailable") : t("home.nowUnavailable"),
         description: newValue
-          ? "You will receive booking alerts"
-          : "You will not receive booking alerts",
+          ? t("home.willReceiveAlerts")
+          : t("home.willNotReceiveAlerts"),
       });
     } catch (error: any) {
       console.error("Error updating availability:", error);
@@ -77,7 +79,7 @@ export function AvailabilityToggle({ workerId, className }: AvailabilityTogglePr
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Label className="text-base font-bold cursor-pointer select-none text-white">
-            {isAvailable ? "Available for Bookings" : "Currently Unavailable"}
+            {isAvailable ? t("home.availableForBookings") : t("home.currentlyUnavailable")}
           </Label>
           <span
             className="inline-block h-2.5 w-2.5 rounded-full bg-white"
