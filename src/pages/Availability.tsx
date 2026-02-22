@@ -376,9 +376,6 @@ export default function Availability() {
             <Check className="h-4 w-4 mr-1" />
             {t('availability.selectAll')}
           </Button>
-          <Button variant="outline" size="sm" onClick={selectAllWeek} className="flex-1">
-            {t('availability.allWeek')}
-          </Button>
           <Button variant="outline" size="sm" onClick={() => copyToAllDays(activeDay)} className="flex-1">
             {t('availability.copyToAll')}
           </Button>
