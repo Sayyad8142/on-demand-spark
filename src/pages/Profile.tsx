@@ -215,9 +215,13 @@ export default function Profile() {
         data,
         error
       } = await supabase.from('worker_rating_stats').select('avg_rating, ratings_count').eq('worker_id', workerId).maybeSingle();
-      if (!error && data) {
+      if (!error && data && Number(data.ratings_count) > 0) {
         setWorkerRating(Number(data.avg_rating) || 0);
         setRatingsCount(Number(data.ratings_count) || 0);
+      } else {
+        // Fallback to worker.rating from workers table (default 5.0)
+        setWorkerRating(Number(realWorker?.rating) || 0);
+        setRatingsCount(0);
       }
     };
     const fetchReviews = async () => {
