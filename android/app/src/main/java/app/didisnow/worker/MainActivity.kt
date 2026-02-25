@@ -34,8 +34,8 @@ class ForegroundServicePlugin : Plugin() {
 
 class MainActivity : BridgeActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Restore OTA bundle path BEFORE super.onCreate so Capacitor loads from it
-        restoreOtaBundlePath()
+        // OTA: Check boot health and restore/rollback BEFORE Capacitor loads the WebView
+        handleOtaBootHealth()
         
         super.onCreate(savedInstanceState)
         registerPlugin(ForegroundServicePlugin::class.java)
@@ -43,7 +43,7 @@ class MainActivity : BridgeActivity() {
         registerPlugin(AuthBridge::class.java)
         registerPlugin(LocationPlugin::class.java)
         registerPlugin(SmsRetrieverPlugin::class.java)
-        registerPlugin(LiveUpdatePlugin::class.java)
+        registerPlugin(LiveUpdatePlugin::class.java) // registered as "DidiLiveUpdate" via annotation
         
         android.util.Log.d("MainActivity", "🚀 App starting - checking permissions")
         
@@ -82,31 +82,69 @@ class MainActivity : BridgeActivity() {
     }
     
     /**
-     * Restore OTA bundle path from SharedPreferences before Capacitor initializes.
-     * This ensures the WebView loads from the downloaded bundle instead of the APK assets.
+     * OTA Boot Health Check — runs BEFORE super.onCreate() / WebView load.
+     * 
+     * Logic:
+     * 1. If there is a pending_version and boot was NOT confirmed last run → rollback.
+     *    This means the previous OTA bundle crashed before React could call confirmBoot().
+     * 2. If there is a confirmed active path with valid index.html → restore it via
+     *    CapWebViewSettings so Capacitor loads from the OTA bundle.
+     * 3. Otherwise → use built-in APK bundle (default).
      */
-    private fun restoreOtaBundlePath() {
+    private fun handleOtaBootHealth() {
         try {
-            val prefs = getSharedPreferences("live_update_prefs", Context.MODE_PRIVATE)
+            val prefs = getSharedPreferences("didi_live_update_prefs", Context.MODE_PRIVATE)
+            val pendingVersion = prefs.getString("pending_bundle_version", null)
+            val bootConfirmed = prefs.getBoolean("boot_confirmed", true) // default true = no pending
             val activePath = prefs.getString("active_bundle_path", null)
+            val activeVersion = prefs.getString("active_bundle_version", null)
             
+            android.util.Log.d("MainActivity", "📦 OTA boot check: pending=$pendingVersion confirmed=$bootConfirmed active=$activeVersion path=$activePath")
+            
+            // Case 1: Pending version exists but boot was NOT confirmed → ROLLBACK
+            if (!pendingVersion.isNullOrEmpty() && !bootConfirmed) {
+                android.util.Log.w("MainActivity", "📦 OTA: Boot NOT confirmed for $pendingVersion — ROLLING BACK")
+                
+                // Clear OTA state
+                prefs.edit().clear().apply()
+                
+                // Delete all downloaded bundles
+                val bundlesRoot = java.io.File(filesDir, "ota_bundles")
+                if (bundlesRoot.exists()) {
+                    bundlesRoot.deleteRecursively()
+                }
+                
+                // Clear CapWebViewSettings so Capacitor loads from built-in
+                val capPrefs = getSharedPreferences("CapWebViewSettings", Context.MODE_PRIVATE)
+                capPrefs.edit().remove("serverBasePath").apply()
+                
+                // Store the failed version in Capacitor Preferences so JS side skips it
+                // (Capacitor Preferences are stored in a different SharedPreferences file)
+                android.util.Log.w("MainActivity", "📦 OTA: Rolled back to built-in bundle")
+                return
+            }
+            
+            // Case 2: Active path exists and is valid → restore it
             if (!activePath.isNullOrEmpty()) {
                 val bundleDir = java.io.File(activePath)
                 val indexFile = java.io.File(bundleDir, "index.html")
                 
                 if (bundleDir.exists() && indexFile.exists()) {
-                    // Set the Capacitor server path to the OTA bundle
-                    val configPrefs = getSharedPreferences("CapWebViewSettings", Context.MODE_PRIVATE)
-                    configPrefs.edit().putString("serverBasePath", activePath).apply()
+                    val capPrefs = getSharedPreferences("CapWebViewSettings", Context.MODE_PRIVATE)
+                    capPrefs.edit().putString("serverBasePath", activePath).apply()
                     android.util.Log.d("MainActivity", "📦 OTA: Restored bundle path: $activePath")
                 } else {
-                    // Bundle is corrupted/missing, clear it
+                    // Bundle corrupted/missing → clear and use built-in
                     prefs.edit().clear().apply()
-                    android.util.Log.w("MainActivity", "📦 OTA: Bundle path invalid, cleared")
+                    val capPrefs = getSharedPreferences("CapWebViewSettings", Context.MODE_PRIVATE)
+                    capPrefs.edit().remove("serverBasePath").apply()
+                    android.util.Log.w("MainActivity", "📦 OTA: Bundle path invalid, cleared → using built-in")
                 }
             }
+            // Case 3: No OTA bundle active → Capacitor defaults to built-in (no action needed)
+            
         } catch (e: Exception) {
-            android.util.Log.e("MainActivity", "📦 OTA: Error restoring bundle path", e)
+            android.util.Log.e("MainActivity", "📦 OTA: Error in boot health check", e)
         }
     }
 }

@@ -1,14 +1,15 @@
 /**
- * Bridge to native LiveUpdatePlugin (Android)
- * Handles downloading zip bundles, extracting, and swapping WebView path
+ * Bridge to native DidiLiveUpdate plugin (Android)
+ * Handles downloading zip bundles, extracting, swapping WebView path, and integrity checks
  */
 import { registerPlugin } from '@capacitor/core';
 
-interface LiveUpdatePluginInterface {
-  downloadAndApply(options: { url: string; version: string }): Promise<{ success: boolean; path?: string; error?: string }>;
+interface DidiLiveUpdatePluginInterface {
+  downloadAndApply(options: { url: string; version: string; sha256?: string }): Promise<{ success: boolean; path?: string; error?: string }>;
   reload(): Promise<void>;
   reset(): Promise<void>;
   getCurrentPath(): Promise<{ path: string }>;
+  confirmBoot(): Promise<void>;
 }
 
-export const LiveUpdatePlugin = registerPlugin<LiveUpdatePluginInterface>('LiveUpdate');
+export const DidiLiveUpdatePlugin = registerPlugin<DidiLiveUpdatePluginInterface>('DidiLiveUpdate');

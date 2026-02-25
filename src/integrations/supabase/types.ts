@@ -51,6 +51,8 @@ export type Database = {
           is_mandatory: boolean
           message: string | null
           platform: string
+          sha256: string | null
+          size_bytes: number | null
           version: string
         }
         Insert: {
@@ -62,6 +64,8 @@ export type Database = {
           is_mandatory?: boolean
           message?: string | null
           platform?: string
+          sha256?: string | null
+          size_bytes?: number | null
           version: string
         }
         Update: {
@@ -73,6 +77,8 @@ export type Database = {
           is_mandatory?: boolean
           message?: string | null
           platform?: string
+          sha256?: string | null
+          size_bytes?: number | null
           version?: string
         }
         Relationships: []

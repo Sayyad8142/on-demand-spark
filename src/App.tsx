@@ -13,7 +13,7 @@ import { initNativePush } from "@/native/push";
 import { requestAndroidOverlay } from "@/lib/overlay";
 import { tryAccept } from "@/lib/bookingActions";
 import { requestLocationPermissions } from "@/lib/backgroundLocation";
-import { initOtaCheck, type UpdateCheckResult } from "@/lib/liveUpdate";
+import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
 import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
 import Auth from "./pages/Auth";
 import OtpVerify from "./pages/OtpVerify";
@@ -101,13 +101,17 @@ const App = () => {
   const { needsUpdate } = useForceUpdateCheck();
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
 
-  // OTA live update check on startup
+  // OTA: confirm boot success + check for updates on startup
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
-      initOtaCheck().then(result => {
-        if (result?.isMandatory) {
-          setOtaResult(result);
-        }
+      // First confirm this boot succeeded (clears pending marker)
+      markOtaBootSuccess().then(() => {
+        // Then check for new updates
+        initOtaCheck().then(result => {
+          if (result?.isMandatory) {
+            setOtaResult(result);
+          }
+        });
       });
     }
   }, []);

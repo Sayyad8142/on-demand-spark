@@ -1,15 +1,14 @@
 /**
- * OTA Live Update System
+ * OTA Live Update System (hardened)
  * 
  * Downloads and applies new React/Vite bundles from Supabase Storage
  * without requiring a Play Store update.
  * 
- * Architecture:
- * - Supabase table `app_bundles` tracks available versions
- * - Supabase Storage bucket `ota-bundles` stores zip files
- * - On app launch, checks for newer version
- * - Downloads zip → extracts via native plugin → swaps WebView path → reloads
- * - Falls back to built-in bundle if anything fails
+ * Safety features:
+ * - SHA-256 integrity check before extraction
+ * - Boot health marker with automatic rollback
+ * - Failed version tracking to avoid retry loops
+ * - Graceful fallback to built-in bundle
  * 
  * What updates OTA: React components, Tailwind styles, JS logic, assets
  * What still needs Play Store: Native Kotlin/Java plugins, AndroidManifest, Gradle deps
@@ -29,6 +28,8 @@ export interface BundleInfo {
   bundle_url: string;
   is_mandatory: boolean;
   message: string | null;
+  sha256: string | null;
+  size_bytes: number | null;
   created_at: string;
 }
 
@@ -114,7 +115,8 @@ export async function checkForUpdate(): Promise<UpdateCheckResult> {
 }
 
 /**
- * Download and apply a bundle update using the native LiveUpdate plugin
+ * Download and apply a bundle update using the native DidiLiveUpdate plugin.
+ * The native side handles SHA-256 verification if sha256 is provided.
  */
 export async function downloadAndApplyUpdate(
   bundleInfo: BundleInfo,
@@ -129,36 +131,34 @@ export async function downloadAndApplyUpdate(
     onProgress?.('Downloading update...');
     console.log('📦 OTA: Downloading bundle', bundleInfo.version, 'from', bundleInfo.bundle_url);
 
-    // Call native plugin to download and extract
-    const { LiveUpdatePlugin } = await import('@/native/liveUpdateBridge');
+    const { DidiLiveUpdatePlugin } = await import('@/native/liveUpdateBridge');
     
-    const result = await LiveUpdatePlugin.downloadAndApply({
+    const result = await DidiLiveUpdatePlugin.downloadAndApply({
       url: bundleInfo.bundle_url,
       version: bundleInfo.version,
+      sha256: bundleInfo.sha256 || undefined,
     });
 
     if (!result.success) {
       console.error('📦 OTA: Native download/apply failed:', result.error);
-      onProgress?.('Update failed');
-      // Mark this version as failed to avoid retry loops
+      onProgress?.('Update failed: ' + (result.error || 'unknown'));
       await Preferences.set({ key: OTA_CONFIG.PREF_FAILED_VERSION, value: bundleInfo.version });
       return false;
     }
 
-    // Save the new version
-    await Preferences.set({ key: OTA_CONFIG.PREF_BUNDLE_VERSION, value: bundleInfo.version });
+    // Set pending version for boot health check — NOT confirmed until React loads
+    await Preferences.set({ key: OTA_CONFIG.PREF_PENDING_VERSION, value: bundleInfo.version });
     await Preferences.set({ key: OTA_CONFIG.PREF_BUNDLE_PATH, value: result.path || '' });
     // Clear any previous failure flag
     await Preferences.remove({ key: OTA_CONFIG.PREF_FAILED_VERSION });
 
     onProgress?.('Update applied! Reloading...');
-    console.log('📦 OTA: Bundle applied successfully, reloading...');
+    console.log('📦 OTA: Bundle applied, pending boot confirmation, reloading...');
 
-    // Short delay then reload
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    // Reload the WebView to use the new bundle
-    await LiveUpdatePlugin.reload();
+    // Reload the WebView via setServerBasePath + reload (no direct loadUrl)
+    await DidiLiveUpdatePlugin.reload();
 
     return true;
   } catch (err) {
@@ -170,17 +170,46 @@ export async function downloadAndApplyUpdate(
 }
 
 /**
+ * Called by App.tsx after React successfully mounts.
+ * Confirms the OTA boot was successful and promotes pending → confirmed version.
+ * If pending version exists but React crashed before calling this, the native side
+ * will roll back on next launch.
+ */
+export async function markOtaBootSuccess(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return;
+
+  try {
+    const { value: pendingVersion } = await Preferences.get({ key: OTA_CONFIG.PREF_PENDING_VERSION });
+    
+    if (pendingVersion) {
+      // Promote pending → confirmed
+      await Preferences.set({ key: OTA_CONFIG.PREF_BUNDLE_VERSION, value: pendingVersion });
+      await Preferences.remove({ key: OTA_CONFIG.PREF_PENDING_VERSION });
+      
+      // Tell native side boot is confirmed
+      const { DidiLiveUpdatePlugin } = await import('@/native/liveUpdateBridge');
+      await DidiLiveUpdatePlugin.confirmBoot();
+      
+      console.log('📦 OTA: Boot confirmed for version', pendingVersion);
+    }
+  } catch (err) {
+    console.error('📦 OTA: markOtaBootSuccess error:', err);
+  }
+}
+
+/**
  * Reset to the built-in bundle (shipped with APK)
  */
 export async function resetToBuiltInBundle(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
 
   try {
-    const { LiveUpdatePlugin } = await import('@/native/liveUpdateBridge');
-    await LiveUpdatePlugin.reset();
+    const { DidiLiveUpdatePlugin } = await import('@/native/liveUpdateBridge');
+    await DidiLiveUpdatePlugin.reset();
     await Preferences.remove({ key: OTA_CONFIG.PREF_BUNDLE_VERSION });
     await Preferences.remove({ key: OTA_CONFIG.PREF_BUNDLE_PATH });
     await Preferences.remove({ key: OTA_CONFIG.PREF_FAILED_VERSION });
+    await Preferences.remove({ key: OTA_CONFIG.PREF_PENDING_VERSION });
     console.log('📦 OTA: Reset to built-in bundle');
   } catch (err) {
     console.error('📦 OTA: Reset failed:', err);
@@ -204,7 +233,6 @@ export async function initOtaCheck(): Promise<UpdateCheckResult | null> {
       });
     }
     
-    // Return result so App.tsx can handle mandatory updates
     return result;
   } catch (err) {
     console.error('📦 OTA: Init check failed:', err);
