@@ -44,8 +44,27 @@ const bootstrap = async () => {
   const { default: App } = await import("./App.tsx");
   
   console.log('✅ App imported, storage status:', isStorageInitialized());
-  console.log('🔗 SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
-  
+  console.log('🔗 SUPABASE_URL:', 'https://api.didisnow.com');
+
+  // Runtime connectivity test — non-blocking
+  const supabaseUrl = 'https://api.didisnow.com';
+  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+  // Test REST endpoint
+  fetch(`${supabaseUrl}/rest/v1/`, {
+    method: 'HEAD',
+    headers: { 'apikey': anonKey },
+  })
+    .then(r => console.log(`✅ Supabase custom domain connection: ${r.ok ? 'SUCCESS' : 'FAILED'} (${r.status})`))
+    .catch(e => console.error('❌ Supabase custom domain connection: FAILED', e));
+
+  // Test edge function reachability
+  fetch(`${supabaseUrl}/functions/v1/booking-notifications`, {
+    method: 'OPTIONS',
+  })
+    .then(r => console.log(`✅ Edge function reachable: ${r.ok || r.status === 204 ? 'YES' : 'NO'} (${r.status})`))
+    .catch(e => console.error('❌ Edge function reachable: NO', e));
+
   createRoot(document.getElementById("root")!).render(<App />);
 };
 
