@@ -1,32 +1,31 @@
 #!/usr/bin/env node
 
 /**
- * OTA Bundle Builder
+ * OTA Bundle Builder (with SHA-256 integrity hash)
  * 
  * Usage: node scripts/build-ota.js [version]
  * Example: node scripts/build-ota.js 1.0.5
  * 
  * Steps:
- * 1) Builds the Vite project (npm run build)
- * 2) Zips the dist/ folder
- * 3) Outputs: ota-bundles/bundle-<version>.zip
+ * 1) Updates BUNDLE_VERSION in src/config/ota.ts
+ * 2) Builds the Vite project (npm run build)
+ * 3) Zips the dist/ folder
+ * 4) Computes SHA-256 hash of the zip
+ * 5) Outputs: ota-bundles/bundle-<version>.zip
+ * 6) Prints the SQL INSERT with sha256 + size_bytes
  * 
  * After running this script:
  * 1. Upload the zip to Supabase Storage bucket 'ota-bundles'
- * 2. Insert a row in the `app_bundles` table:
- *    INSERT INTO app_bundles (app_id, platform, channel, version, bundle_url, is_mandatory, message)
- *    VALUES ('worker', 'android', 'production', '1.0.5', 
- *            'https://api.didisnow.com/storage/v1/object/public/ota-bundles/bundle-1.0.5.zip',
- *            false, 'Bug fixes and UI improvements');
+ * 2. Run the printed SQL to publish the update
  * 3. Workers will receive the update on next app open!
  */
 
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { createWriteStream } = require('fs');
+const crypto = require('crypto');
 
-// Get version from CLI args or from ota config
+// Get version from CLI args
 const version = process.argv[2];
 if (!version) {
   console.error('❌ Usage: node scripts/build-ota.js <version>');
@@ -83,34 +82,34 @@ async function build() {
   // Step 5: Zip the dist folder
   console.log('📦 Creating zip bundle...');
   try {
-    // Remove old zip if exists
     if (fs.existsSync(outputFile)) {
       fs.unlinkSync(outputFile);
     }
-    
-    // Use system zip command (available on macOS/Linux)
     execSync(`cd "${distDir}" && zip -r "${outputFile}" .`, { stdio: 'inherit' });
   } catch (e) {
     console.error('❌ Zip failed. Make sure "zip" command is available.');
-    console.error('   On macOS/Linux it should be pre-installed.');
-    console.error('   On Windows, install via: choco install zip');
     process.exit(1);
   }
 
-  const stats = fs.statSync(outputFile);
-  const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+  // Step 6: Compute SHA-256
+  const fileBuffer = fs.readFileSync(outputFile);
+  const sha256 = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+  const sizeBytes = fileBuffer.length;
+  const sizeMB = (sizeBytes / (1024 * 1024)).toFixed(2);
 
   console.log(`\n✅ OTA bundle created successfully!`);
   console.log(`   📁 File: ${outputFile}`);
-  console.log(`   📏 Size: ${sizeMB} MB`);
+  console.log(`   📏 Size: ${sizeMB} MB (${sizeBytes} bytes)`);
+  console.log(`   🔒 SHA-256: ${sha256}`);
   console.log(`   🏷️  Version: ${version}`);
   console.log(`\n📋 Next steps:`);
   console.log(`   1. Upload ${path.basename(outputFile)} to Supabase Storage bucket 'ota-bundles'`);
-  console.log(`   2. Run this SQL to publish the update:`);
-  console.log(`\n   INSERT INTO app_bundles (app_id, platform, channel, version, bundle_url, is_mandatory, message)`);
+  console.log(`   2. Run this SQL to publish the update:\n`);
+  console.log(`   INSERT INTO app_bundles (app_id, platform, channel, version, bundle_url, is_mandatory, message, sha256, size_bytes)`);
   console.log(`   VALUES ('worker', 'android', 'production', '${version}',`);
   console.log(`           'https://api.didisnow.com/storage/v1/object/public/ota-bundles/bundle-${version}.zip',`);
-  console.log(`           false, 'Bug fixes and UI improvements');`);
+  console.log(`           false, 'Bug fixes and UI improvements',`);
+  console.log(`           '${sha256}', ${sizeBytes});`);
   console.log('');
 }
 

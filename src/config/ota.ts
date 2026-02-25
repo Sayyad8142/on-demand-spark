@@ -13,4 +13,5 @@ export const OTA_CONFIG = {
   PREF_BUNDLE_PATH: 'ota_bundle_path',
   PREF_LAST_CHECK: 'ota_last_check',
   PREF_FAILED_VERSION: 'ota_failed_version',
+  PREF_PENDING_VERSION: 'ota_pending_version',
 } as const;
