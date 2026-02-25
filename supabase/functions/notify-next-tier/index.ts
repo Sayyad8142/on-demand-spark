@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
     // Get booking data
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
-      .select("id, service_type, community, cust_name, flat_no, price_inr, status")
+      .select("id, service_type, community, cust_name, flat_no, price_inr, status, booking_type, scheduled_date, scheduled_time")
       .eq("id", booking_id)
       .single();
 
@@ -70,14 +70,17 @@ Deno.serve(async (req) => {
           type: "BOOKING_ALERT",
           bookingId: booking_id,
           booking_id: booking_id,
+          booking_type: booking.booking_type || "instant",
           customer: booking.cust_name || "New Customer",
           community: booking.community,
           serviceType: booking.service_type,
           service_type: booking.service_type,
-          location: "", // Removed flat_no for privacy - only show in overlay
-          flat_no: booking.flat_no || "", // Keep flat_no for overlay to read
+          location: "",
+          flat_no: booking.flat_no || "",
           price: String(booking.price_inr || 0),
-          tier: String(tier)
+          tier: String(tier),
+          scheduled_date: booking.scheduled_date || "",
+          scheduled_time_raw: booking.scheduled_time || ""
         },
       }),
     });
