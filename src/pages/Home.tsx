@@ -184,7 +184,7 @@ export default function Home() {
 
       {/* Fixed Availability Toggle - Hidden in guest mode */}
       {!isGuestMode && (
-        <div className="fixed top-0 left-0 right-0 z-10 bg-background border-b border-border">
+        <div className="fixed top-0 left-0 right-0 z-20 bg-background border-b border-border">
           <div className="p-2 px-4">
             <AvailabilityToggle workerId={user?.id || 'demo-worker-id'} />
           </div>
