@@ -233,29 +233,23 @@ export default function ActiveJobCard({
           )}
         </div>
 
-        {/* 2. Earnings */}
-        {booking.price_inr && <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Earnings</p>
-            <p className="font-bold text-green-500 text-2xl">₹{booking.price_inr}</p>
-          </div>
-        </div>}
-
-        {/* Notes */}
-        {booking.notes && <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
-            <p className="text-xs font-bold text-amber-800 dark:text-amber-400 mb-2">NOTES:</p>
-            <p className="text-sm text-amber-900 dark:text-amber-200">{booking.notes}</p>
-          </div>}
-
-        {/* 3. Call Manager Button */}
-        <Button 
-          size="lg" 
-          className="w-full h-12 text-base font-bold bg-green-500 hover:bg-green-600 text-white shadow-md rounded-xl transition-all duration-200 active:scale-[0.98]" 
-          onClick={handleCallManager}
-        >
-          <Phone className="w-5 h-5 mr-2" />
-          Call Manager
-        </Button>
+        {/* Earnings + Call Manager in one row */}
+        <div className="flex gap-2">
+          {booking.price_inr && (
+            <div className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 shadow-sm flex items-center justify-between">
+              <p className="text-xs font-medium text-gray-500">Earnings</p>
+              <p className="font-bold text-green-500 text-lg">₹{booking.price_inr}</p>
+            </div>
+          )}
+          <Button 
+            size="sm" 
+            className="flex-1 h-auto py-2 text-sm font-bold bg-green-500 hover:bg-green-600 text-white shadow-md rounded-xl transition-all duration-200 active:scale-[0.98]" 
+            onClick={handleCallManager}
+          >
+            <Phone className="w-4 h-4 mr-1.5" />
+            Call Manager
+          </Button>
+        </div>
 
         {/* 4. Work Completed Button */}
         <Button 
