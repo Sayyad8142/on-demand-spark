@@ -298,7 +298,7 @@ export default function ActiveJobCard({
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                     <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
                       <p className="text-white font-bold text-lg drop-shadow-lg">{task.label}</p>
-                      {task.price && (
+                      {task.price != null && task.price > 0 && (
                         <span className="bg-white/20 backdrop-blur-sm text-white font-bold text-base px-3 py-1 rounded-lg">
                           ₹{task.price}
                         </span>
