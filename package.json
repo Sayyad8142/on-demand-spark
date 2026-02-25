@@ -16,6 +16,7 @@
     "@capacitor/cli": "^7.4.3",
     "@capacitor/core": "^7.4.3",
     "@capacitor/device": "^7.0.2",
+    "@capacitor/filesystem": "^8.1.2",
     "@capacitor/geolocation": "^7.1.5",
     "@capacitor/ios": "^7.4.3",
     "@capacitor/preferences": "^7.0.2",
