@@ -301,20 +301,7 @@ export default function ActiveJobCard({
                 ))}
               </div>
 
-              {/* Dots */}
-              {tasks.length > 1 && (
-                <div className="absolute bottom-2 right-4 flex gap-1.5">
-                  {tasks.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setCurrentSlide(i)}
-                      className={`w-2 h-2 rounded-full transition-all ${
-                        i === currentSlide ? "bg-white w-4" : "bg-white/50"
-                      }`}
-                    />
-                  ))}
-                </div>
-              )}
+
             </div>
           </div>
         )}
