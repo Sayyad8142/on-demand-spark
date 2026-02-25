@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Phone, Volume2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, Phone, Volume2 } from "lucide-react";
 import { BookingWithAddress } from "@/lib/address";
 import { parsePHFCode } from "@/lib/address";
 import { useState, useEffect, useMemo } from "react";
@@ -289,9 +289,8 @@ export default function ActiveJobCard({
                       alt={task.label}
                       className="w-full h-44 object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
-                      <p className="text-white font-bold text-lg drop-shadow-lg">{task.label}</p>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                    <div className="absolute bottom-0 right-0 p-3">
                       {task.price != null && task.price > 0 && (
                         <span className="bg-white/20 backdrop-blur-sm text-white font-bold text-base px-3 py-1 rounded-lg">
                           ₹{task.price}
@@ -301,24 +300,6 @@ export default function ActiveJobCard({
                   </div>
                 ))}
               </div>
-
-              {/* Arrows */}
-              {tasks.length > 1 && (
-                <>
-                  <button
-                    onClick={() => setCurrentSlide((prev) => (prev - 1 + tasks.length) % tasks.length)}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-1 transition-colors"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => setCurrentSlide((prev) => (prev + 1) % tasks.length)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-1 transition-colors"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                </>
-              )}
 
               {/* Dots */}
               {tasks.length > 1 && (
