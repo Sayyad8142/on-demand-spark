@@ -4,6 +4,7 @@ import { Check, Phone, Volume2, ChevronLeft, ChevronRight } from "lucide-react";
 import { BookingWithAddress } from "@/lib/address";
 import { parsePHFCode } from "@/lib/address";
 import { useState, useEffect, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
 import serviceDishWashing from "@/assets/service-dish-washing.webp";
 import serviceFloorCleaning from "@/assets/service-floor-cleaning.webp";
@@ -37,21 +38,60 @@ export default function ActiveJobCard({
 }: ActiveJobCardProps) {
   const [remainingSeconds, setRemainingSeconds] = useState<number>(0);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [taskPrices, setTaskPrices] = useState<Record<string, number>>({});
   const { i18n } = useTranslation();
+
+  // Fetch per-task prices
+  useEffect(() => {
+    if (!booking.maid_tasks || booking.maid_tasks.length === 0) return;
+    const flatSize = booking.flat_size || '2BHK';
+    const community = booking.community || '';
+
+    const fetchPrices = async () => {
+      // Try community-specific first, fallback to default
+      const { data } = await supabase
+        .from('maid_pricing_tasks')
+        .select('task, price_inr')
+        .eq('flat_size', flatSize)
+        .eq('active', true)
+        .in('community', [community, '']);
+
+      if (data) {
+        const prices: Record<string, number> = {};
+        // Community-specific overrides default
+        data.forEach((row) => {
+          if (!prices[row.task] || row.task) {
+            prices[row.task] = row.price_inr;
+          }
+        });
+        // Prefer community-specific
+        data.forEach((row) => {
+          if ((row as any).community === community && community) {
+            prices[row.task] = row.price_inr;
+          }
+        });
+        setTaskPrices(prices);
+      }
+    };
+    fetchPrices();
+  }, [booking.maid_tasks, booking.flat_size, booking.community]);
 
   // Build tasks list
   const tasks = useMemo(() => {
-    const result: { label: string; img: string }[] = [];
+    const result: { label: string; img: string; price?: number }[] = [];
     if (booking.maid_tasks && booking.maid_tasks.length > 0) {
       booking.maid_tasks.forEach((t) => {
         const cfg = TASK_CONFIG[t];
-        if (cfg) result.push(cfg);
+        if (cfg) result.push({ ...cfg, price: taskPrices[t] });
       });
     } else if (booking.service_type && SERVICE_TASKS[booking.service_type]) {
-      result.push(...SERVICE_TASKS[booking.service_type]);
+      result.push(...SERVICE_TASKS[booking.service_type].map(s => ({
+        ...s,
+        price: booking.price_inr ?? undefined,
+      })));
     }
     return result;
-  }, [booking.maid_tasks, booking.service_type]);
+  }, [booking.maid_tasks, booking.service_type, booking.price_inr, taskPrices]);
 
   // Auto-slide every 3s
   useEffect(() => {
@@ -256,8 +296,13 @@ export default function ActiveJobCard({
                       className="w-full h-44 object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
                       <p className="text-white font-bold text-lg drop-shadow-lg">{task.label}</p>
+                      {task.price && (
+                        <span className="bg-white/20 backdrop-blur-sm text-white font-bold text-base px-3 py-1 rounded-lg">
+                          ₹{task.price}
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}
