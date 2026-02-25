@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ShieldAlert, Smartphone, Loader2, Bell, Bug, Send } from "lucide-react";
+import { ArrowLeft, ShieldAlert, Smartphone, Loader2, Bell, Bug, Send, Download, Check, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -20,6 +20,7 @@ import {
 import { usePushRegister } from "@/hooks/usePushRegister";
 import { supabase } from "@/integrations/supabase/client";
 import { SimulatedOverlayModal } from "@/components/SimulatedOverlayModal";
+import { checkForUpdate, downloadAndApplyUpdate, getCurrentBundleVersion, type UpdateCheckResult } from "@/lib/liveUpdate";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -34,6 +35,11 @@ export default function Settings() {
   const [showToken, setShowToken] = useState(false);
   const [testingServerPush, setTestingServerPush] = useState(false);
   const [simulatedBooking, setSimulatedBooking] = useState<any>(null);
+  const [otaStatus, setOtaStatus] = useState<string>('');
+  const [otaChecking, setOtaChecking] = useState(false);
+  const [otaUpdating, setOtaUpdating] = useState(false);
+  const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
+  const [currentBundleVersion, setCurrentBundleVersion] = useState<string>('');
   const isNative = Capacitor.isNativePlatform();
 
   useEffect(() => {
@@ -41,6 +47,8 @@ export default function Settings() {
     if (user?.id) {
       checkRegistrationStatus();
     }
+    // Load current bundle version
+    getCurrentBundleVersion().then(v => setCurrentBundleVersion(v));
   }, [user?.id, checkRegistrationStatus]);
 
   const checkStatus = async () => {
@@ -126,6 +134,38 @@ export default function Settings() {
         variant: "destructive"
       });
       console.error('Push registration error:', error);
+    }
+  };
+  const handleCheckOtaUpdate = async () => {
+    setOtaChecking(true);
+    setOtaStatus('Checking...');
+    try {
+      const result = await checkForUpdate();
+      setOtaResult(result);
+      setCurrentBundleVersion(result.currentVersion);
+      if (result.updateAvailable) {
+        setOtaStatus(`Update ${result.latestVersion} available!`);
+      } else {
+        setOtaStatus('You are up to date ✓');
+      }
+    } catch (err) {
+      setOtaStatus('Check failed');
+    } finally {
+      setOtaChecking(false);
+    }
+  };
+
+  const handleApplyOtaUpdate = async () => {
+    if (!otaResult?.bundleInfo) return;
+    setOtaUpdating(true);
+    const success = await downloadAndApplyUpdate(otaResult.bundleInfo, setOtaStatus);
+    if (!success) {
+      setOtaUpdating(false);
+      toast({
+        title: "Update failed",
+        description: "Could not apply update. Try again later.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -330,6 +370,72 @@ export default function Settings() {
                   "Re-register Push Token"
                 )}
               </Button>
+            </div>
+          </div>
+        </Card>
+
+        {/* App Updates (OTA) */}
+        <Card className="p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Download className="w-6 h-6 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold mb-1">App Updates</h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                Check for the latest app improvements
+              </p>
+              
+              <div className="text-xs font-mono bg-muted p-3 rounded mb-3 space-y-1">
+                <div><strong>Current version:</strong> {currentBundleVersion || '...'}</div>
+                {otaResult?.latestVersion && (
+                  <div><strong>Latest available:</strong> {otaResult.latestVersion}</div>
+                )}
+                {otaStatus && (
+                  <div className="mt-1 font-sans font-medium">{otaStatus}</div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Button
+                  onClick={handleCheckOtaUpdate}
+                  disabled={otaChecking || otaUpdating}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {otaChecking ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Checking...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Check for Updates
+                    </>
+                  )}
+                </Button>
+
+                {otaResult?.updateAvailable && (
+                  <Button
+                    onClick={handleApplyOtaUpdate}
+                    disabled={otaUpdating}
+                    className="w-full"
+                  >
+                    {otaUpdating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-2" />
+                        Update to {otaResult.latestVersion}
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </Card>

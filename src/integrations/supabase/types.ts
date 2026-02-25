@@ -41,6 +41,42 @@ export type Database = {
         }
         Relationships: []
       }
+      app_bundles: {
+        Row: {
+          app_id: string
+          bundle_url: string
+          channel: string
+          created_at: string
+          id: string
+          is_mandatory: boolean
+          message: string | null
+          platform: string
+          version: string
+        }
+        Insert: {
+          app_id?: string
+          bundle_url: string
+          channel?: string
+          created_at?: string
+          id?: string
+          is_mandatory?: boolean
+          message?: string | null
+          platform?: string
+          version: string
+        }
+        Update: {
+          app_id?: string
+          bundle_url?: string
+          channel?: string
+          created_at?: string
+          id?: string
+          is_mandatory?: boolean
+          message?: string | null
+          platform?: string
+          version?: string
+        }
+        Relationships: []
+      }
       app_config: {
         Row: {
           created_at: string | null

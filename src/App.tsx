@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +13,8 @@ import { initNativePush } from "@/native/push";
 import { requestAndroidOverlay } from "@/lib/overlay";
 import { tryAccept } from "@/lib/bookingActions";
 import { requestLocationPermissions } from "@/lib/backgroundLocation";
+import { initOtaCheck, type UpdateCheckResult } from "@/lib/liveUpdate";
+import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
 import Auth from "./pages/Auth";
 import OtpVerify from "./pages/OtpVerify";
 import Home from "./pages/Home";
@@ -97,6 +99,18 @@ const App = () => {
   const { session } = useAuth();
   useAppState(); // Refresh JWT when app comes to foreground
   const { needsUpdate } = useForceUpdateCheck();
+  const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
+
+  // OTA live update check on startup
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      initOtaCheck().then(result => {
+        if (result?.isMandatory) {
+          setOtaResult(result);
+        }
+      });
+    }
+  }, []);
 
   // Request location permissions on app startup for native platforms
   useEffect(() => {
@@ -171,7 +185,7 @@ const App = () => {
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
-  // If update is required, show only the force update screen
+  // If Play Store update is required, show force update screen
   if (needsUpdate) {
     return (
       <QueryClientProvider client={queryClient}>
@@ -184,12 +198,16 @@ const App = () => {
     );
   }
 
+  // If mandatory OTA update is required, show OTA modal over the app
+  const showOtaMandatory = otaResult?.isMandatory && otaResult?.bundleInfo;
+
 
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        {showOtaMandatory && <OtaMandatoryModal bundleInfo={otaResult.bundleInfo!} />}
         <BrowserRouter>
           <NativeNavigationHandler />
           <Routes>
