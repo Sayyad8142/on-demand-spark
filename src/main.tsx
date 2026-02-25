@@ -44,6 +44,7 @@ const bootstrap = async () => {
   const { default: App } = await import("./App.tsx");
   
   console.log('✅ App imported, storage status:', isStorageInitialized());
+  console.log('🔗 SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
   
   createRoot(document.getElementById("root")!).render(<App />);
 };
