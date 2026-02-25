@@ -15,7 +15,7 @@ import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
 import { Phone, UserRound } from "lucide-react";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
-import UpiQrUpload from "@/components/UpiQrUpload";
+
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -79,12 +79,6 @@ export default function Auth() {
   const [signUpServices, setSignUpServices] = useState<string[]>([]);
   // Cook cuisine tags removed - cook service discontinued
   
-  // QR Code upload state
-  const [signUpQrData, setSignUpQrData] = useState<{
-    file: File;
-    payload: string;
-    extractedUpiId: string;
-  } | null>(null);
 
   // Auto OTP detection moved to OtpVerify page
   useEffect(() => {
@@ -289,7 +283,7 @@ export default function Auth() {
             community: signUpCommunity,
             services: signUpServices,
             cuisineTags: [],
-            qrData: signUpQrData
+            qrData: null
           }
         }
       });
@@ -363,14 +357,6 @@ export default function Auth() {
                 <Input id="signup-phone" type="tel" placeholder={t('auth.phonePlaceholder')} value={signUpPhone} onChange={e => setSignUpPhone(e.target.value)} maxLength={10} disabled={loading} />
               </div>
 
-              {/* UPI QR Code Upload */}
-              <UpiQrUpload
-                currentUpiId={signUpUpiId}
-                onUpiIdExtracted={(upiId) => setSignUpUpiId(upiId)}
-                onQrDataReady={(data) => setSignUpQrData(data)}
-                onQrRemoved={() => setSignUpQrData(null)}
-                mode="signup"
-              />
 
               {/* Manual UPI ID Input */}
               <div className="space-y-2">
