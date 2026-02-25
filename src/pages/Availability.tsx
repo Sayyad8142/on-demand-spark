@@ -407,8 +407,8 @@ export default function Availability() {
         </Card>
       </div>
 
-      {/* Bottom Actions */}
-      <div className="fixed bottom-16 left-0 right-0 bg-background/95 backdrop-blur-sm border-t p-4 space-y-2 shadow-lg z-10">
+      {/* Bottom Actions - positioned above BottomNav (h-16 + safe area) */}
+      <div className="fixed left-0 right-0 bg-background/95 backdrop-blur-sm border-t px-4 py-3 shadow-lg z-40" style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}>
         <Button onClick={saveAvailability} disabled={saving} className="w-full max-w-2xl mx-auto" size="lg">
           {saving ? t('availability.saving') : t('availability.saveAvailability')}
         </Button>
