@@ -1,19 +1,23 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Phone, Clock, Volume2, Droplets, SprayCan } from "lucide-react";
+import { Check, Phone, Clock, Volume2 } from "lucide-react";
 import { BookingWithAddress } from "@/lib/address";
 import { parsePHFCode } from "@/lib/address";
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import taskDishWashing from "@/assets/task-dish-washing.png";
+import taskFloorCleaning from "@/assets/task-floor-cleaning.png";
+import taskBathroomCleaning from "@/assets/task-bathroom-cleaning.png";
+import taskCooking from "@/assets/task-cooking.png";
 
-const TASK_CONFIG: Record<string, { label: string; emoji: string; color: string }> = {
-  dish_washing: { label: "Dish Washing", emoji: "🍽️", color: "bg-blue-50 border-blue-200 text-blue-700" },
-  floor_cleaning: { label: "Jhadu Pocha", emoji: "🧹", color: "bg-amber-50 border-amber-200 text-amber-700" },
+const TASK_CONFIG: Record<string, { label: string; img: string; color: string }> = {
+  dish_washing: { label: "Dish Washing", img: taskDishWashing, color: "bg-blue-50 border-blue-200 text-blue-700" },
+  floor_cleaning: { label: "Jhadu Pocha", img: taskFloorCleaning, color: "bg-amber-50 border-amber-200 text-amber-700" },
 };
 
-const SERVICE_TASKS: Record<string, { label: string; emoji: string; color: string }[]> = {
-  bathroom_cleaning: [{ label: "Bathroom Clean", emoji: "🚿", color: "bg-cyan-50 border-cyan-200 text-cyan-700" }],
-  cook: [{ label: "Cooking", emoji: "🍳", color: "bg-orange-50 border-orange-200 text-orange-700" }],
+const SERVICE_TASKS: Record<string, { label: string; img: string; color: string }[]> = {
+  bathroom_cleaning: [{ label: "Bathroom Clean", img: taskBathroomCleaning, color: "bg-cyan-50 border-cyan-200 text-cyan-700" }],
+  cook: [{ label: "Cooking", img: taskCooking, color: "bg-orange-50 border-orange-200 text-orange-700" }],
 };
 
 type Booking = BookingWithAddress;
@@ -181,7 +185,7 @@ export default function ActiveJobCard({
 
         {/* Work Tasks Visual Cards */}
         {(() => {
-          const tasks: { label: string; emoji: string; color: string }[] = [];
+          const tasks: { label: string; img: string; color: string }[] = [];
           if (booking.maid_tasks && booking.maid_tasks.length > 0) {
             booking.maid_tasks.forEach((t) => {
               const cfg = TASK_CONFIG[t];
@@ -196,9 +200,9 @@ export default function ActiveJobCard({
               {tasks.map((t) => (
                 <div
                   key={t.label}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-semibold ${t.color}`}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-semibold ${t.color}`}
                 >
-                  <span className="text-base">{t.emoji}</span>
+                  <img src={t.img} alt={t.label} className="w-8 h-8 rounded object-cover" />
                   <span>{t.label}</span>
                 </div>
               ))}
