@@ -428,6 +428,7 @@ export type Database = {
           payment_status: string | null
           payout_amount: number | null
           prealert_sent: boolean
+          preferred_worker_id: string | null
           price_inr: number | null
           reach_confirmed_at: string | null
           reach_confirmed_by: string | null
@@ -498,6 +499,7 @@ export type Database = {
           payment_status?: string | null
           payout_amount?: number | null
           prealert_sent?: boolean
+          preferred_worker_id?: string | null
           price_inr?: number | null
           reach_confirmed_at?: string | null
           reach_confirmed_by?: string | null
@@ -568,6 +570,7 @@ export type Database = {
           payment_status?: string | null
           payout_amount?: number | null
           prealert_sent?: boolean
+          preferred_worker_id?: string | null
           price_inr?: number | null
           reach_confirmed_at?: string | null
           reach_confirmed_by?: string | null
@@ -592,6 +595,13 @@ export type Database = {
           worker_upi?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "bookings_preferred_worker_id_fkey"
+            columns: ["preferred_worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bookings_worker_id_fkey"
             columns: ["worker_id"]
@@ -2679,6 +2689,9 @@ export type Database = {
           is_active: boolean
           is_available: boolean | null
           is_busy: boolean | null
+          is_core_worker: boolean
+          last_7_days_completed_bookings: number
+          last_7_days_online_hours: number
           last_active_at: string | null
           last_booking_completed_at: string | null
           last_lat: number | null
@@ -2688,6 +2701,7 @@ export type Database = {
           location_enabled: boolean | null
           phone: string
           photo_url: string | null
+          priority_score: number
           rating: number | null
           respect_availability: boolean | null
           selected_community_id: string | null
@@ -2716,6 +2730,9 @@ export type Database = {
           is_active?: boolean
           is_available?: boolean | null
           is_busy?: boolean | null
+          is_core_worker?: boolean
+          last_7_days_completed_bookings?: number
+          last_7_days_online_hours?: number
           last_active_at?: string | null
           last_booking_completed_at?: string | null
           last_lat?: number | null
@@ -2725,6 +2742,7 @@ export type Database = {
           location_enabled?: boolean | null
           phone: string
           photo_url?: string | null
+          priority_score?: number
           rating?: number | null
           respect_availability?: boolean | null
           selected_community_id?: string | null
@@ -2753,6 +2771,9 @@ export type Database = {
           is_active?: boolean
           is_available?: boolean | null
           is_busy?: boolean | null
+          is_core_worker?: boolean
+          last_7_days_completed_bookings?: number
+          last_7_days_online_hours?: number
           last_active_at?: string | null
           last_booking_completed_at?: string | null
           last_lat?: number | null
@@ -2762,6 +2783,7 @@ export type Database = {
           location_enabled?: boolean | null
           phone?: string
           photo_url?: string | null
+          priority_score?: number
           rating?: number | null
           respect_availability?: boolean | null
           selected_community_id?: string | null
@@ -2852,6 +2874,10 @@ export type Database = {
         Args: { force?: boolean; new_version: string }
         Returns: undefined
       }
+      admin_set_worker_rating: {
+        Args: { p_rating: number; p_worker_id: string }
+        Returns: undefined
+      }
       admin_upsert_worker:
         | {
             Args: {
@@ -2876,6 +2902,9 @@ export type Database = {
               is_active: boolean
               is_available: boolean | null
               is_busy: boolean | null
+              is_core_worker: boolean
+              last_7_days_completed_bookings: number
+              last_7_days_online_hours: number
               last_active_at: string | null
               last_booking_completed_at: string | null
               last_lat: number | null
@@ -2885,6 +2914,7 @@ export type Database = {
               location_enabled: boolean | null
               phone: string
               photo_url: string | null
+              priority_score: number
               rating: number | null
               respect_availability: boolean | null
               selected_community_id: string | null
@@ -2922,6 +2952,9 @@ export type Database = {
               is_active: boolean
               is_available: boolean | null
               is_busy: boolean | null
+              is_core_worker: boolean
+              last_7_days_completed_bookings: number
+              last_7_days_online_hours: number
               last_active_at: string | null
               last_booking_completed_at: string | null
               last_lat: number | null
@@ -2931,6 +2964,7 @@ export type Database = {
               location_enabled: boolean | null
               phone: string
               photo_url: string | null
+              priority_score: number
               rating: number | null
               respect_availability: boolean | null
               selected_community_id: string | null
@@ -3025,6 +3059,7 @@ export type Database = {
               payment_status: string | null
               payout_amount: number | null
               prealert_sent: boolean
+              preferred_worker_id: string | null
               price_inr: number | null
               reach_confirmed_at: string | null
               reach_confirmed_by: string | null
@@ -3099,6 +3134,7 @@ export type Database = {
         Args: { p_worker_id: string }
         Returns: undefined
       }
+      dispatch_booking: { Args: { p_booking_id: string }; Returns: undefined }
       ensure_worker_profile: { Args: never; Returns: Json }
       escalate_overdue_bookings: { Args: never; Returns: undefined }
       export_my_data: { Args: never; Returns: Json }
@@ -3209,6 +3245,18 @@ export type Database = {
         }
         Returns: Json
       }
+      get_eligible_workers: {
+        Args: { p_community: string; p_limit?: number; p_service: string }
+        Returns: {
+          completed_bookings_count: number
+          full_name: string
+          last_seen_at: string
+          photo_url: string
+          rating_avg: number
+          rating_count: number
+          worker_id: string
+        }[]
+      }
       get_hourly_supply_demand: {
         Args: {
           p_booking_type?: string
@@ -3291,6 +3339,13 @@ export type Database = {
           available_workers: number
           busy_workers: number
           offline_workers: number
+        }[]
+      }
+      get_scheduled_slot_availability: {
+        Args: { p_community: string; p_date: string; p_service_type: string }
+        Returns: {
+          slot_time: string
+          worker_count: number
         }[]
       }
       get_setting: {
@@ -3640,6 +3695,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      recalc_worker_priority_scores: { Args: never; Returns: undefined }
       recalc_worker_rating: {
         Args: { p_worker_id: string }
         Returns: undefined
@@ -3762,6 +3818,7 @@ export type Database = {
         }
       }
       support_mark_seen: { Args: { p_thread: string }; Returns: undefined }
+      sweep_preferred_timeouts: { Args: never; Returns: number }
       test_booking_assignment_system: {
         Args: {
           p_community?: string
@@ -3847,6 +3904,7 @@ export type Database = {
           payment_status: string | null
           payout_amount: number | null
           prealert_sent: boolean
+          preferred_worker_id: string | null
           price_inr: number | null
           reach_confirmed_at: string | null
           reach_confirmed_by: string | null

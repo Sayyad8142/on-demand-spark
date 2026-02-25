@@ -1025,8 +1025,8 @@ cd android
 
 ### D. Environment Variables
 
-**Frontend** (not used - hardcoded):
-- Supabase URL: `https://paywwbuqycovjopryele.supabase.co`
+**Frontend** (via env var VITE_SUPABASE_URL):
+- Supabase URL: `https://api.didisnow.com`
 - Supabase Anon Key: `eyJhbGciOi...`
 
 **Edge Functions** (via Supabase secrets):
