@@ -287,7 +287,7 @@ export default function ActiveJobCard({
                     <img
                 src={task.img}
                 alt={task.label}
-                className="w-full h-44 object-cover" />
+                className="w-full h-28 object-cover" />
 
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
                     <div className="absolute bottom-0 right-0 p-3">
