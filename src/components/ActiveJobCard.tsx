@@ -1,23 +1,23 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Phone, Clock, Volume2 } from "lucide-react";
+import { Check, Phone, Volume2, ChevronLeft, ChevronRight } from "lucide-react";
 import { BookingWithAddress } from "@/lib/address";
 import { parsePHFCode } from "@/lib/address";
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import taskDishWashing from "@/assets/task-dish-washing.png";
-import taskFloorCleaning from "@/assets/task-floor-cleaning.png";
-import taskBathroomCleaning from "@/assets/task-bathroom-cleaning.png";
-import taskCooking from "@/assets/task-cooking.png";
+import serviceDishWashing from "@/assets/service-dish-washing.webp";
+import serviceFloorCleaning from "@/assets/service-floor-cleaning.webp";
+import serviceBathroomCleaning from "@/assets/service-bathroom-cleaning.webp";
+import serviceCooking from "@/assets/service-cooking.webp";
 
-const TASK_CONFIG: Record<string, { label: string; img: string; color: string }> = {
-  dish_washing: { label: "Dish Washing", img: taskDishWashing, color: "bg-blue-50 border-blue-200 text-blue-700" },
-  floor_cleaning: { label: "Jhadu Pocha", img: taskFloorCleaning, color: "bg-amber-50 border-amber-200 text-amber-700" },
+const TASK_CONFIG: Record<string, { label: string; img: string }> = {
+  dish_washing: { label: "Dish Washing", img: serviceDishWashing },
+  floor_cleaning: { label: "Jhadu Pocha", img: serviceFloorCleaning },
 };
 
-const SERVICE_TASKS: Record<string, { label: string; img: string; color: string }[]> = {
-  bathroom_cleaning: [{ label: "Bathroom Clean", img: taskBathroomCleaning, color: "bg-cyan-50 border-cyan-200 text-cyan-700" }],
-  cook: [{ label: "Cooking", img: taskCooking, color: "bg-orange-50 border-orange-200 text-orange-700" }],
+const SERVICE_TASKS: Record<string, { label: string; img: string }[]> = {
+  bathroom_cleaning: [{ label: "Bathroom Cleaning", img: serviceBathroomCleaning }],
+  cook: [{ label: "Cooking", img: serviceCooking }],
 };
 
 type Booking = BookingWithAddress;
@@ -36,7 +36,31 @@ export default function ActiveJobCard({
   updating
 }: ActiveJobCardProps) {
   const [remainingSeconds, setRemainingSeconds] = useState<number>(0);
+  const [currentSlide, setCurrentSlide] = useState(0);
   const { i18n } = useTranslation();
+
+  // Build tasks list
+  const tasks = useMemo(() => {
+    const result: { label: string; img: string }[] = [];
+    if (booking.maid_tasks && booking.maid_tasks.length > 0) {
+      booking.maid_tasks.forEach((t) => {
+        const cfg = TASK_CONFIG[t];
+        if (cfg) result.push(cfg);
+      });
+    } else if (booking.service_type && SERVICE_TASKS[booking.service_type]) {
+      result.push(...SERVICE_TASKS[booking.service_type]);
+    }
+    return result;
+  }, [booking.maid_tasks, booking.service_type]);
+
+  // Auto-slide every 3s
+  useEffect(() => {
+    if (tasks.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % tasks.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [tasks.length]);
 
   // Calculate initial remaining time based on accepted_at timestamp
   const cooldownEndTime = useMemo(() => {
@@ -88,46 +112,33 @@ export default function ActiveJobCard({
     let utteranceLang: string;
     
     if (lang === 'te') {
-      // Check if Telugu voice is available
       const teVoice = voices.find(v => v.lang.startsWith('te'));
       if (teVoice) {
         text = `ఫ్లాట్ నంబర్ ${booking.flat_no}`;
-        if (phfParsed) {
-          text += `. టవర్ ${phfParsed.tower}. ఫ్లోర్ ${phfParsed.floor}. డోర్ నంబర్ ${phfParsed.door}.`;
-        }
+        if (phfParsed) text += `. టవర్ ${phfParsed.tower}. ఫ్లోర్ ${phfParsed.floor}. డోర్ నంబర్ ${phfParsed.door}.`;
         utteranceLang = 'te-IN';
       } else {
-        // Fallback to Hindi if Telugu voice not available
         text = `फ्लैट नंबर ${booking.flat_no}`;
-        if (phfParsed) {
-          text += `. टावर ${phfParsed.tower}. फ्लोर ${phfParsed.floor}. डोर नंबर ${phfParsed.door}.`;
-        }
+        if (phfParsed) text += `. टावर ${phfParsed.tower}. फ्लोर ${phfParsed.floor}. डोर नंबर ${phfParsed.door}.`;
         utteranceLang = 'hi-IN';
       }
     } else if (lang === 'hi') {
       text = `फ्लैट नंबर ${booking.flat_no}`;
-      if (phfParsed) {
-        text += `. टावर ${phfParsed.tower}. फ्लोर ${phfParsed.floor}. डोर नंबर ${phfParsed.door}.`;
-      }
+      if (phfParsed) text += `. टावर ${phfParsed.tower}. फ्लोर ${phfParsed.floor}. डोर नंबर ${phfParsed.door}.`;
       utteranceLang = 'hi-IN';
     } else {
       text = `Flat number ${booking.flat_no}`;
-      if (phfParsed) {
-        text += `. Tower ${phfParsed.tower}. Floor ${phfParsed.floor}. Door number ${phfParsed.door}.`;
-      }
+      if (phfParsed) text += `. Tower ${phfParsed.tower}. Floor ${phfParsed.floor}. Door number ${phfParsed.door}.`;
       utteranceLang = 'en-IN';
     }
     
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = utteranceLang;
-    
-    // Prefer Indian voices for natural pronunciation
     const langPrefix = utteranceLang.split('-')[0];
     const indianVoice = voices.find(v => v.lang === utteranceLang) 
       || voices.find(v => v.lang.startsWith(langPrefix) && v.lang.includes('IN'))
       || voices.find(v => v.lang.startsWith(langPrefix));
     if (indianVoice) utterance.voice = indianVoice;
-    
     utterance.rate = 0.85;
     utterance.pitch = 1.0;
     utterance.volume = 1;
@@ -182,41 +193,13 @@ export default function ActiveJobCard({
           )}
         </div>
 
-
-        {/* Work Tasks Visual Cards */}
-        {(() => {
-          const tasks: { label: string; img: string; color: string }[] = [];
-          if (booking.maid_tasks && booking.maid_tasks.length > 0) {
-            booking.maid_tasks.forEach((t) => {
-              const cfg = TASK_CONFIG[t];
-              if (cfg) tasks.push(cfg);
-            });
-          } else if (booking.service_type && SERVICE_TASKS[booking.service_type]) {
-            tasks.push(...SERVICE_TASKS[booking.service_type]);
-          }
-          if (tasks.length === 0) return null;
-          return (
-            <div className="flex flex-wrap gap-2">
-              {tasks.map((t) => (
-                <div
-                  key={t.label}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-semibold ${t.color}`}
-                >
-                  <img src={t.img} alt={t.label} className="w-8 h-8 rounded object-cover" />
-                  <span>{t.label}</span>
-                </div>
-              ))}
-            </div>
-          );
-        })()}
-
         {/* 2. Earnings */}
         {booking.price_inr && <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Earnings</p>
             <p className="font-bold text-green-500 text-2xl">₹{booking.price_inr}</p>
           </div>
-          </div>}
+        </div>}
 
         {/* Notes */}
         {booking.notes && <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
@@ -234,7 +217,7 @@ export default function ActiveJobCard({
           Call Manager
         </Button>
 
-        {/* 4. Work Completed Button with inline timer */}
+        {/* 4. Work Completed Button */}
         <Button 
           size="lg" 
           className={`w-full h-14 text-lg font-bold shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98] ${
@@ -255,6 +238,66 @@ export default function ActiveJobCard({
             </>
           )}
         </Button>
+
+        {/* 5. Work Tasks — Sliding Banner */}
+        {tasks.length > 0 && (
+          <div>
+            <p className="text-xs font-bold text-muted-foreground mb-2 tracking-wider uppercase">Today's Work</p>
+            <div className="relative rounded-2xl overflow-hidden shadow-md">
+              <div
+                className="flex transition-transform duration-500 ease-in-out"
+                style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+              >
+                {tasks.map((task) => (
+                  <div key={task.label} className="w-full flex-shrink-0 relative">
+                    <img
+                      src={task.img}
+                      alt={task.label}
+                      className="w-full h-44 object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                      <p className="text-white font-bold text-lg drop-shadow-lg">{task.label}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Arrows */}
+              {tasks.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setCurrentSlide((prev) => (prev - 1 + tasks.length) % tasks.length)}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-1 transition-colors"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentSlide((prev) => (prev + 1) % tasks.length)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-1 transition-colors"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </>
+              )}
+
+              {/* Dots */}
+              {tasks.length > 1 && (
+                <div className="absolute bottom-2 right-4 flex gap-1.5">
+                  {tasks.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentSlide(i)}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        i === currentSlide ? "bg-white w-4" : "bg-white/50"
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </Card>;
 }
