@@ -1,10 +1,20 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Phone, Clock, Volume2 } from "lucide-react";
+import { Check, Phone, Clock, Volume2, Droplets, SprayCan } from "lucide-react";
 import { BookingWithAddress } from "@/lib/address";
 import { parsePHFCode } from "@/lib/address";
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+
+const TASK_CONFIG: Record<string, { label: string; emoji: string; color: string }> = {
+  dish_washing: { label: "Dish Washing", emoji: "🍽️", color: "bg-blue-50 border-blue-200 text-blue-700" },
+  floor_cleaning: { label: "Jhadu Pocha", emoji: "🧹", color: "bg-amber-50 border-amber-200 text-amber-700" },
+};
+
+const SERVICE_TASKS: Record<string, { label: string; emoji: string; color: string }[]> = {
+  bathroom_cleaning: [{ label: "Bathroom Clean", emoji: "🚿", color: "bg-cyan-50 border-cyan-200 text-cyan-700" }],
+  cook: [{ label: "Cooking", emoji: "🍳", color: "bg-orange-50 border-orange-200 text-orange-700" }],
+};
 
 type Booking = BookingWithAddress;
 interface ActiveJobCardProps {
@@ -167,6 +177,34 @@ export default function ActiveJobCard({
             </div>
           )}
         </div>
+
+
+        {/* Work Tasks Visual Cards */}
+        {(() => {
+          const tasks: { label: string; emoji: string; color: string }[] = [];
+          if (booking.maid_tasks && booking.maid_tasks.length > 0) {
+            booking.maid_tasks.forEach((t) => {
+              const cfg = TASK_CONFIG[t];
+              if (cfg) tasks.push(cfg);
+            });
+          } else if (booking.service_type && SERVICE_TASKS[booking.service_type]) {
+            tasks.push(...SERVICE_TASKS[booking.service_type]);
+          }
+          if (tasks.length === 0) return null;
+          return (
+            <div className="flex flex-wrap gap-2">
+              {tasks.map((t) => (
+                <div
+                  key={t.label}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-semibold ${t.color}`}
+                >
+                  <span className="text-base">{t.emoji}</span>
+                  <span>{t.label}</span>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* 2. Earnings */}
         {booking.price_inr && <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm">
