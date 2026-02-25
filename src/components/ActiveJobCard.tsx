@@ -275,7 +275,7 @@ export default function ActiveJobCard({
 
         {/* 5. Work Tasks — Sliding Banner */}
         {tasks.length > 0 && (
-          <div className="mt-4">
+          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
             <p className="text-xs font-bold text-muted-foreground mb-2 tracking-wider uppercase">Today's Work</p>
             <div className="relative rounded-2xl overflow-hidden shadow-md">
               <div
