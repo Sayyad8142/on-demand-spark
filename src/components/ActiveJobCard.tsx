@@ -194,38 +194,38 @@ export default function ActiveJobCard({
   };
 
   return <Card className="shadow-lg overflow-hidden border-0">
-      <div className="space-y-3 py-0 px-0 my-0 mx-0">
+      <div className="space-y-2 py-0 px-0 my-0 mx-0">
         {/* 1. Flat Number Display - Wooden Door Style */}
-        <div className="flat-door-style p-5">
-          <div className="text-center mb-4 relative z-10 flex items-center justify-center gap-2">
-            <p className="flat-number-text font-extrabold text-3xl tracking-wide uppercase">
+        <div className="flat-door-style p-3 pb-3">
+          <div className="text-center mb-2 relative z-10 flex items-center justify-center gap-2">
+            <p className="flat-number-text font-extrabold text-2xl tracking-wide uppercase">
               Flat {booking.flat_no}
             </p>
             <button
               onClick={speakFlatNo}
-              className="p-2 rounded-full bg-[#5A3423]/60 hover:bg-[#5A3423] transition-colors active:scale-90 ml-2"
+              className="p-1.5 rounded-full bg-[#5A3423]/60 hover:bg-[#5A3423] transition-colors active:scale-90 ml-1"
               aria-label="Speak flat number">
-              <Volume2 className="w-5 h-5 text-[#D6B88A]" />
+              <Volume2 className="w-4 h-4 text-[#D6B88A]" />
             </button>
           </div>
           {phfParsed &&
-            <div className="grid grid-cols-3 gap-3 relative z-10">
+            <div className="grid grid-cols-3 gap-2 relative z-10">
               <div className="text-center">
-                <p className="text-[10px] font-bold text-[#D6B88A] mb-2 tracking-wider">TOWER</p>
-                <div className="bg-[#5A3423] rounded-xl py-4 shadow-inner border-2 border-[#D6B88A]/50">
-                  <p className="text-3xl font-extrabold flat-number-text">{phfParsed.tower}</p>
+                <p className="text-[9px] font-bold text-[#D6B88A] mb-1 tracking-wider">TOWER</p>
+                <div className="bg-[#5A3423] rounded-lg py-2.5 shadow-inner border-2 border-[#D6B88A]/50">
+                  <p className="text-2xl font-extrabold flat-number-text">{phfParsed.tower}</p>
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-[10px] font-bold text-[#D6B88A] mb-2 tracking-wider">FLOOR</p>
-                <div className="bg-[#5A3423] rounded-xl py-4 shadow-inner border-2 border-[#D6B88A]/50">
-                  <p className="text-3xl font-extrabold flat-number-text">{phfParsed.floor}</p>
+                <p className="text-[9px] font-bold text-[#D6B88A] mb-1 tracking-wider">FLOOR</p>
+                <div className="bg-[#5A3423] rounded-lg py-2.5 shadow-inner border-2 border-[#D6B88A]/50">
+                  <p className="text-2xl font-extrabold flat-number-text">{phfParsed.floor}</p>
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-[10px] font-bold text-[#D6B88A] mb-2 tracking-wider">DOOR</p>
-                <div className="bg-[#5A3423] rounded-xl py-4 shadow-inner border-2 border-[#D6B88A]/50">
-                  <p className="text-3xl font-extrabold flat-number-text">{phfParsed.door}</p>
+                <p className="text-[9px] font-bold text-[#D6B88A] mb-1 tracking-wider">DOOR</p>
+                <div className="bg-[#5A3423] rounded-lg py-2.5 shadow-inner border-2 border-[#D6B88A]/50">
+                  <p className="text-2xl font-extrabold flat-number-text">{phfParsed.door}</p>
                 </div>
               </div>
             </div>
@@ -234,17 +234,17 @@ export default function ActiveJobCard({
 
         {/* 2. Work Tasks — Sliding Banner */}
         {tasks.length > 0 &&
-          <div className="relative rounded-2xl overflow-hidden shadow-md mx-3">
+          <div className="relative rounded-xl overflow-hidden shadow-md mx-2">
             <div
               className="flex transition-transform duration-500 ease-in-out"
               style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
               {tasks.map((task) =>
                 <div key={task.label} className="w-full flex-shrink-0 relative">
-                  <img src={task.img} alt={task.label} className="w-full h-28 object-cover" />
+                  <img src={task.img} alt={task.label} className="w-full h-20 object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                  <div className="absolute bottom-0 right-0 p-3">
+                  <div className="absolute bottom-0 right-0 p-2">
                     {task.price != null && task.price > 0 &&
-                      <span className="bg-white/20 backdrop-blur-sm text-white font-bold text-base px-3 py-1 rounded-lg">
+                      <span className="bg-white/20 backdrop-blur-sm text-white font-bold text-sm px-2 py-0.5 rounded-lg">
                         ₹{task.price}
                       </span>
                     }
@@ -255,30 +255,27 @@ export default function ActiveJobCard({
           </div>
         }
 
-        {/* 3. Earnings */}
-        {booking.price_inr &&
-          <div className="mx-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 shadow-sm flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-500">Earnings</p>
-            <p className="font-bold text-green-500 text-xl">₹{booking.price_inr}</p>
-          </div>
-        }
-
-        {/* 4. Call Manager Button */}
-        <div className="px-3">
+        {/* 3. Earnings + Call Manager in one row */}
+        <div className="flex gap-2 px-2">
+          {booking.price_inr &&
+            <div className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 shadow-sm flex items-center justify-between">
+              <p className="text-xs font-medium text-gray-500">Earnings</p>
+              <p className="font-bold text-green-500 text-lg">₹{booking.price_inr}</p>
+            </div>
+          }
           <Button
-            size="lg"
-            className="w-full h-12 text-base font-bold bg-green-500 hover:bg-green-600 text-white shadow-md rounded-xl transition-all duration-200 active:scale-[0.98]"
+            className="flex-1 h-auto py-2 text-sm font-bold bg-green-500 hover:bg-green-600 text-white shadow-md rounded-xl transition-all duration-200 active:scale-[0.98]"
             onClick={handleCallManager}>
-            <Phone className="w-5 h-5 mr-2" />
+            <Phone className="w-4 h-4 mr-1.5" />
             Call Manager
           </Button>
         </div>
 
-        {/* 5. Work Completed Button */}
-        <div className="px-3 pb-3">
+        {/* 4. Work Completed Button */}
+        <div className="px-2 pb-2">
           <Button
             size="lg"
-            className={`w-full h-14 text-lg font-bold shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98] ${
+            className={`w-full h-12 text-base font-bold shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98] ${
               isWorkCompletedDisabled ?
               "bg-gray-400 hover:bg-gray-400 cursor-not-allowed text-white/80" :
               "bg-red-500 hover:bg-red-600 text-white"}`
@@ -287,7 +284,7 @@ export default function ActiveJobCard({
             disabled={isWorkCompletedDisabled}>
             {updating ? "Updating..." :
               <>
-                <Check className="w-6 h-6 mr-2" />
+                <Check className="w-5 h-5 mr-2" />
                 Work Completed
                 {remainingSeconds > 0 &&
                   <span className="ml-2 text-sm font-normal opacity-80">({formatCountdown(remainingSeconds)})</span>
