@@ -3504,6 +3504,14 @@ export type Database = {
         }[]
       }
       get_worker_contact: { Args: { p_booking_id: string }; Returns: Json }
+      get_worker_live_stats: {
+        Args: never
+        Returns: {
+          completed_7d: number
+          live_priority_score: number
+          worker_id: string
+        }[]
+      }
       get_worker_online_hourly: {
         Args: { p_community?: string; p_date: string }
         Returns: {
