@@ -478,6 +478,8 @@ export type Database = {
           scheduled_date: string | null
           scheduled_time: string | null
           service_type: string
+          slot_surge_amount: number
+          slot_surge_time: string | null
           started_at: string | null
           status: string
           surcharge_amount: number | null
@@ -549,6 +551,8 @@ export type Database = {
           scheduled_date?: string | null
           scheduled_time?: string | null
           service_type: string
+          slot_surge_amount?: number
+          slot_surge_time?: string | null
           started_at?: string | null
           status?: string
           surcharge_amount?: number | null
@@ -620,6 +624,8 @@ export type Database = {
           scheduled_date?: string | null
           scheduled_time?: string | null
           service_type?: string
+          slot_surge_amount?: number
+          slot_surge_time?: string | null
           started_at?: string | null
           status?: string
           surcharge_amount?: number | null
@@ -835,6 +841,36 @@ export type Database = {
           platform?: string
           token?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      dish_intensity_pricing: {
+        Row: {
+          community: string
+          description: string
+          extra_inr: number
+          id: string
+          intensity: string
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          community?: string
+          description?: string
+          extra_inr?: number
+          id?: string
+          intensity: string
+          label?: string
+          updated_at?: string
+        }
+        Update: {
+          community?: string
+          description?: string
+          extra_inr?: number
+          id?: string
+          intensity?: string
+          label?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -2044,6 +2080,47 @@ export type Database = {
         }
         Relationships: []
       }
+      slot_surge_pricing: {
+        Row: {
+          community_id: string
+          id: string
+          is_active: boolean
+          service_key: string
+          slot_period: string
+          slot_time: string
+          surge_amount: number
+          updated_at: string
+        }
+        Insert: {
+          community_id: string
+          id?: string
+          is_active?: boolean
+          service_key?: string
+          slot_period: string
+          slot_time: string
+          surge_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          community_id?: string
+          id?: string
+          is_active?: boolean
+          service_key?: string
+          slot_period?: string
+          slot_time?: string
+          surge_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slot_surge_pricing_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_messages: {
         Row: {
           created_at: string
@@ -3109,6 +3186,8 @@ export type Database = {
               scheduled_date: string | null
               scheduled_time: string | null
               service_type: string
+              slot_surge_amount: number
+              slot_surge_time: string | null
               started_at: string | null
               status: string
               surcharge_amount: number | null
@@ -3160,6 +3239,7 @@ export type Database = {
       }
       bytea_to_text: { Args: { data: string }; Returns: string }
       check_expired_assignments: { Args: never; Returns: Json }
+      check_instant_supply: { Args: { p_community: string }; Returns: number }
       cleanup_old_support_chats: { Args: never; Returns: undefined }
       cleanup_old_worker_busy_logs: { Args: never; Returns: undefined }
       cleanup_stale_worker_busy_flags: {
@@ -3292,6 +3372,20 @@ export type Database = {
         Returns: {
           completed_bookings_count: number
           full_name: string
+          last_seen_at: string
+          photo_url: string
+          rating_avg: number
+          rating_count: number
+          worker_id: string
+        }[]
+      }
+      get_favorite_workers: {
+        Args: { p_community: string; p_service: string }
+        Returns: {
+          completed_bookings_count: number
+          full_name: string
+          is_online: boolean
+          last_booking_at: string
           last_seen_at: string
           photo_url: string
           rating_avg: number
@@ -3954,6 +4048,8 @@ export type Database = {
           scheduled_date: string | null
           scheduled_time: string | null
           service_type: string
+          slot_surge_amount: number
+          slot_surge_time: string | null
           started_at: string | null
           status: string
           surcharge_amount: number | null
