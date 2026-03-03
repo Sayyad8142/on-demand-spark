@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Phone, Volume2, Utensils, Zap, PlusCircle } from "lucide-react";
+import { Check, Phone, Volume2, Utensils, Zap, PlusCircle, Sparkles, CookingPot } from "lucide-react";
 import { BookingWithAddress } from "@/lib/address";
 import { parsePHFCode } from "@/lib/address";
 import { useState, useEffect, useMemo } from "react";
@@ -11,9 +11,9 @@ import serviceFloorCleaning from "@/assets/service-floor-cleaning.webp";
 import serviceBathroomCleaning from "@/assets/service-bathroom-cleaning.webp";
 import serviceCooking from "@/assets/service-cooking.webp";
 
-const TASK_CONFIG: Record<string, {label: string;img: string;}> = {
-  dish_washing: { label: "Dish Washing", img: serviceDishWashing },
-  floor_cleaning: { label: "Jhadu Pocha", img: serviceFloorCleaning }
+const TASK_CONFIG: Record<string, {label: string; img: string; icon: typeof Utensils}> = {
+  dish_washing: { label: "Dish Washing", img: serviceDishWashing, icon: Utensils },
+  floor_cleaning: { label: "Jhadu Pocha", img: serviceFloorCleaning, icon: Sparkles }
 };
 
 const SERVICE_TASKS: Record<string, {label: string;img: string;}[]> = {
@@ -269,7 +269,7 @@ export default function ActiveJobCard({
                   const price = taskPrices[t];
                   if (price && price > 0) {
                     const cfg = TASK_CONFIG[t];
-                    chips.push({ icon: Utensils, label: cfg?.label || t, amount: price });
+                    chips.push({ icon: cfg?.icon || Utensils, label: cfg?.label || t, amount: price });
                   }
                 });
               } else {
