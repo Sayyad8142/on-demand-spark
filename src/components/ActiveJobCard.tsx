@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Phone, Volume2 } from "lucide-react";
+import { Check, Phone, Volume2, Utensils, Zap, PlusCircle } from "lucide-react";
 import { BookingWithAddress } from "@/lib/address";
 import { parsePHFCode } from "@/lib/address";
 import { useState, useEffect, useMemo } from "react";
@@ -232,7 +232,7 @@ export default function ActiveJobCard({
           }
         </div>
 
-        {/* 2. Work Tasks — Sliding Banner */}
+        {/* 2. Work Tasks — Sliding Banner (shows TOTAL only) */}
         {tasks.length > 0 &&
           <div className="relative rounded-2xl overflow-hidden shadow-md mx-3">
             <div
@@ -243,9 +243,9 @@ export default function ActiveJobCard({
                   <img src={task.img} alt={task.label} className="w-full h-28 object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
                   <div className="absolute bottom-0 right-0 p-3">
-                    {task.price != null && task.price > 0 &&
+                    {booking.price_inr != null && booking.price_inr > 0 &&
                       <span className="bg-white/20 backdrop-blur-sm text-white font-bold text-base px-3 py-1 rounded-lg">
-                        ₹{task.price}
+                        ₹{booking.price_inr}
                       </span>
                     }
                   </div>
@@ -255,11 +255,37 @@ export default function ActiveJobCard({
           </div>
         }
 
-        {/* 3. Earnings */}
-        {booking.price_inr &&
-          <div className="mx-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 shadow-sm flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-500">Earnings</p>
-            <p className="font-bold text-green-500 text-xl">₹{booking.price_inr}</p>
+        {/* 3. Earnings with Breakup */}
+        {booking.price_inr != null && booking.price_inr > 0 &&
+          <div className="mx-3 bg-card border border-border rounded-xl px-4 py-3 shadow-sm space-y-1.5">
+            {/* Breakup chips row */}
+            {(() => {
+              const surge = booking.slot_surge_amount || 0;
+              const extra = (booking.dish_intensity_extra_inr || 0) + (booking.surcharge_amount || 0);
+              const base = booking.price_inr! - surge - extra;
+              const chips: { icon: typeof Utensils; label: string; amount: number }[] = [];
+              if (base > 0) chips.push({ icon: Utensils, label: 'Base', amount: base });
+              if (surge > 0) chips.push({ icon: Zap, label: 'Surge', amount: surge });
+              if (extra > 0) chips.push({ icon: PlusCircle, label: 'Extra', amount: extra });
+              return chips.length > 1 ? (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {chips.map((chip) => {
+                    const Icon = chip.icon;
+                    return (
+                      <span key={chip.label} className="inline-flex items-center gap-1 bg-muted text-muted-foreground text-xs font-medium px-2 py-0.5 rounded-full">
+                        <Icon className="w-3 h-3" />
+                        ₹{chip.amount}
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : null;
+            })()}
+            {/* Total */}
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-muted-foreground">Earnings</p>
+              <p className="font-bold text-green-500 text-xl">₹{booking.price_inr}</p>
+            </div>
           </div>
         }
 
