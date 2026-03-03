@@ -262,9 +262,20 @@ export default function ActiveJobCard({
             {(() => {
               const surge = booking.slot_surge_amount || 0;
               const extra = (booking.dish_intensity_extra_inr || 0) + (booking.surcharge_amount || 0);
-              const base = booking.price_inr! - surge - extra;
               const chips: { icon: typeof Utensils; label: string; amount: number }[] = [];
-              if (base > 0) chips.push({ icon: Utensils, label: 'Base', amount: base });
+              // Show individual task prices if available
+              if (booking.maid_tasks && booking.maid_tasks.length > 0) {
+                booking.maid_tasks.forEach((t) => {
+                  const price = taskPrices[t];
+                  if (price && price > 0) {
+                    const cfg = TASK_CONFIG[t];
+                    chips.push({ icon: Utensils, label: cfg?.label || t, amount: price });
+                  }
+                });
+              } else {
+                const base = booking.price_inr! - surge - extra;
+                if (base > 0) chips.push({ icon: Utensils, label: 'Base', amount: base });
+              }
               if (surge > 0) chips.push({ icon: Zap, label: 'Surge', amount: surge });
               if (extra > 0) chips.push({ icon: PlusCircle, label: 'Extra', amount: extra });
               return chips.length >= 1 ? (
@@ -274,7 +285,7 @@ export default function ActiveJobCard({
                     return (
                       <span key={chip.label} className="inline-flex items-center gap-1 bg-muted text-muted-foreground text-xs font-medium px-2 py-0.5 rounded-full">
                         <Icon className="w-3 h-3" />
-                        ₹{chip.amount}
+                        {chip.label} ₹{chip.amount}
                       </span>
                     );
                   })}
