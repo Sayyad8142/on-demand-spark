@@ -257,7 +257,7 @@ export default function ActiveJobCard({
 
         {/* 3. Earnings with Breakup */}
         {booking.price_inr != null && booking.price_inr > 0 &&
-          <div className="mx-3 bg-card border border-border rounded-xl px-4 py-3 shadow-sm space-y-1.5">
+          <div className="mx-3 -mt-1.5 bg-card border border-border rounded-xl px-4 py-3 shadow-sm space-y-1.5">
             {/* Breakup chips row */}
             {(() => {
               const surge = booking.slot_surge_amount || 0;
