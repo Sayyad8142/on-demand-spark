@@ -262,22 +262,12 @@ export default function ActiveJobCard({
             {(() => {
               const surge = booking.slot_surge_amount || 0;
               const extra = (booking.dish_intensity_extra_inr || 0) + (booking.surcharge_amount || 0);
+              const glassPartition = booking.glass_partition_fee || 0;
               const chips: { icon: typeof Utensils; label: string; amount: number }[] = [];
-              // Show individual task prices if available
-              if (booking.maid_tasks && booking.maid_tasks.length > 0) {
-                booking.maid_tasks.forEach((t) => {
-                  const price = taskPrices[t];
-                  if (price && price > 0) {
-                    const cfg = TASK_CONFIG[t];
-                    chips.push({ icon: cfg?.icon || Utensils, label: cfg?.label || t, amount: price });
-                  }
-                });
-              } else {
-                const base = booking.price_inr! - surge - extra;
-                if (base > 0) chips.push({ icon: Utensils, label: 'Base', amount: base });
-              }
+              // Only show add-on chips (surge, extra, glass partition) — not base task prices
               if (surge > 0) chips.push({ icon: Zap, label: 'Surge', amount: surge });
               if (extra > 0) chips.push({ icon: PlusCircle, label: 'Extra', amount: extra });
+              if (glassPartition > 0) chips.push({ icon: Sparkles, label: 'Glass Partition', amount: glassPartition });
               return chips.length >= 1 ? (
                 <div className="flex flex-wrap items-center gap-1.5">
                   {chips.map((chip) => {
