@@ -243,9 +243,9 @@ export default function ActiveJobCard({
                   <img src={task.img} alt={task.label} className="w-full h-28 object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
                   <div className="absolute bottom-0 right-0 p-3">
-                    {booking.price_inr != null && booking.price_inr > 0 &&
+                    {task.price != null && task.price > 0 &&
                       <span className="bg-white/20 backdrop-blur-sm text-white font-bold text-base px-3 py-1 rounded-lg">
-                        ₹{booking.price_inr}
+                        ₹{task.price}
                       </span>
                     }
                   </div>
@@ -267,7 +267,7 @@ export default function ActiveJobCard({
               if (base > 0) chips.push({ icon: Utensils, label: 'Base', amount: base });
               if (surge > 0) chips.push({ icon: Zap, label: 'Surge', amount: surge });
               if (extra > 0) chips.push({ icon: PlusCircle, label: 'Extra', amount: extra });
-              return chips.length > 1 ? (
+              return chips.length >= 1 ? (
                 <div className="flex flex-wrap items-center gap-1.5">
                   {chips.map((chip) => {
                     const Icon = chip.icon;
