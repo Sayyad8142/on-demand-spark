@@ -232,73 +232,67 @@ export default function ActiveJobCard({
           }
         </div>
 
-        {/* 2. Work Tasks — Sliding Banner (shows TOTAL only) */}
-        {tasks.length > 0 &&
-          <div className="relative rounded-2xl overflow-hidden shadow-md mx-3">
-            <div
-              className="flex transition-transform duration-500 ease-in-out"
-              style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
-              {tasks.map((task) =>
-                <div key={task.label} className="w-full flex-shrink-0 relative">
-                  <img src={task.img} alt={task.label} className="w-full h-28 object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                  <div className="absolute bottom-0 right-0 p-3">
-                    {task.price != null && task.price > 0 &&
-                      <span className="bg-white/20 backdrop-blur-sm text-white font-bold text-base px-3 py-1 rounded-lg">
-                        ₹{task.price}
-                      </span>
-                    }
+        {/* 2. Combined Work + Earnings */}
+        <div className="mx-3 rounded-2xl overflow-hidden shadow-md border border-border">
+          {/* Sliding banner — compact */}
+          {tasks.length > 0 &&
+            <div className="relative">
+              <div
+                className="flex transition-transform duration-500 ease-in-out"
+                style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
+                {tasks.map((task) =>
+                  <div key={task.label} className="w-full flex-shrink-0 relative">
+                    <img src={task.img} alt={task.label} className="w-full h-20 object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                   </div>
+                )}
+              </div>
+              {/* Total earnings overlay on banner */}
+              {booking.price_inr != null && booking.price_inr > 0 &&
+                <div className="absolute bottom-0 left-0 right-0 px-3 py-1.5 flex items-center justify-between">
+                  <div className="flex flex-wrap items-center gap-1">
+                    {(() => {
+                      const surge = booking.slot_surge_amount || 0;
+                      const extra = (booking.dish_intensity_extra_inr || 0) + (booking.surcharge_amount || 0);
+                      const chips: { icon: typeof Utensils; label: string; amount: number }[] = [];
+                      if (booking.maid_tasks && booking.maid_tasks.length > 0) {
+                        booking.maid_tasks.forEach((t) => {
+                          const price = taskPrices[t];
+                          if (price && price > 0) {
+                            const cfg = TASK_CONFIG[t];
+                            chips.push({ icon: cfg?.icon || Utensils, label: cfg?.label || t, amount: price });
+                          }
+                        });
+                      } else {
+                        const base = booking.price_inr! - surge - extra;
+                        if (base > 0) chips.push({ icon: Utensils, label: 'Base', amount: base });
+                      }
+                      if (surge > 0) chips.push({ icon: Zap, label: 'Surge', amount: surge });
+                      if (extra > 0) chips.push({ icon: PlusCircle, label: 'Extra', amount: extra });
+                      return chips.map((chip) => {
+                        const Icon = chip.icon;
+                        return (
+                          <span key={chip.label} className="inline-flex items-center gap-1 bg-black/40 backdrop-blur-sm text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full">
+                            <Icon className="w-2.5 h-2.5" />
+                            {chip.label} ₹{chip.amount}
+                          </span>
+                        );
+                      });
+                    })()}
+                  </div>
+                  <span className="font-bold text-green-400 text-lg drop-shadow-md">₹{booking.price_inr}</span>
                 </div>
-              )}
-            </div>
-          </div>
-        }
-
-        {/* 3. Earnings with Breakup */}
-        {booking.price_inr != null && booking.price_inr > 0 &&
-          <div className="mx-3 bg-card border border-border rounded-xl px-4 py-3 shadow-sm space-y-1.5">
-            {/* Breakup chips row */}
-            {(() => {
-              const surge = booking.slot_surge_amount || 0;
-              const extra = (booking.dish_intensity_extra_inr || 0) + (booking.surcharge_amount || 0);
-              const chips: { icon: typeof Utensils; label: string; amount: number }[] = [];
-              // Show individual task prices if available
-              if (booking.maid_tasks && booking.maid_tasks.length > 0) {
-                booking.maid_tasks.forEach((t) => {
-                  const price = taskPrices[t];
-                  if (price && price > 0) {
-                    const cfg = TASK_CONFIG[t];
-                    chips.push({ icon: cfg?.icon || Utensils, label: cfg?.label || t, amount: price });
-                  }
-                });
-              } else {
-                const base = booking.price_inr! - surge - extra;
-                if (base > 0) chips.push({ icon: Utensils, label: 'Base', amount: base });
               }
-              if (surge > 0) chips.push({ icon: Zap, label: 'Surge', amount: surge });
-              if (extra > 0) chips.push({ icon: PlusCircle, label: 'Extra', amount: extra });
-              return chips.length >= 1 ? (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {chips.map((chip) => {
-                    const Icon = chip.icon;
-                    return (
-                      <span key={chip.label} className="inline-flex items-center gap-1 bg-muted text-muted-foreground text-xs font-medium px-2 py-0.5 rounded-full">
-                        <Icon className="w-3 h-3" />
-                        {chip.label} ₹{chip.amount}
-                      </span>
-                    );
-                  })}
-                </div>
-              ) : null;
-            })()}
-            {/* Total */}
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-muted-foreground">Earnings</p>
-              <p className="font-bold text-green-500 text-xl">₹{booking.price_inr}</p>
             </div>
-          </div>
-        }
+          }
+          {/* Fallback if no tasks but has price */}
+          {tasks.length === 0 && booking.price_inr != null && booking.price_inr > 0 &&
+            <div className="px-3 py-2 bg-card flex items-center justify-between">
+              <p className="text-sm font-medium text-muted-foreground">Earnings</p>
+              <p className="font-bold text-green-500 text-lg">₹{booking.price_inr}</p>
+            </div>
+          }
+        </div>
 
         {/* 4. Call Manager Button */}
         <div className="px-3">
