@@ -87,17 +87,29 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          min_user_version_code: number
+          min_user_version_name: string
           min_worker_version_code: number
+          play_store_url_user: string
+          user_update_message: string
         }
         Insert: {
           created_at?: string | null
           id?: string
+          min_user_version_code?: number
+          min_user_version_name?: string
           min_worker_version_code?: number
+          play_store_url_user?: string
+          user_update_message?: string
         }
         Update: {
           created_at?: string | null
           id?: string
+          min_user_version_code?: number
+          min_user_version_name?: string
           min_worker_version_code?: number
+          play_store_url_user?: string
+          user_update_message?: string
         }
         Relationships: []
       }
@@ -2977,6 +2989,7 @@ export type Database = {
           web_version: string
         }[]
       }
+      admin_quick_stats: { Args: never; Returns: Json }
       admin_reject_worker_registration: {
         Args: { p_rejection_reason: string; p_request_id: string }
         Returns: undefined
@@ -3240,6 +3253,7 @@ export type Database = {
       bytea_to_text: { Args: { data: string }; Returns: string }
       check_expired_assignments: { Args: never; Returns: Json }
       check_instant_supply: { Args: { p_community: string }; Returns: number }
+      cleanup_old_presence_snapshots: { Args: never; Returns: number }
       cleanup_old_support_chats: { Args: never; Returns: undefined }
       cleanup_old_worker_busy_logs: { Args: never; Returns: undefined }
       cleanup_stale_worker_busy_flags: {
