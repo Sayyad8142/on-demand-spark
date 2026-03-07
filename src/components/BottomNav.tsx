@@ -62,9 +62,11 @@ export default function BottomNav() {
             }
           }}
           className={`flex flex-col items-center justify-center flex-1 h-full transition-colors relative ${
-          !isExternal && isActive(path) ?
-          "text-primary" :
-          "text-muted-foreground hover:text-foreground"}`
+          isExternal
+          ? "text-green-600"
+          : isActive(path)
+          ? "text-primary"
+          : "text-muted-foreground hover:text-foreground"}`
           }>
           
             <div className="relative">
