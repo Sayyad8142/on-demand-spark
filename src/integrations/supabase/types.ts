@@ -2808,6 +2808,7 @@ export type Database = {
       }
       workers: {
         Row: {
+          admin_override_rating: number | null
           communities: string[] | null
           community: string | null
           cook_cuisine_tags: string[]
@@ -2849,6 +2850,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          admin_override_rating?: number | null
           communities?: string[] | null
           community?: string | null
           cook_cuisine_tags?: string[]
@@ -2890,6 +2892,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          admin_override_rating?: number | null
           communities?: string[] | null
           community?: string | null
           cook_cuisine_tags?: string[]
@@ -2975,6 +2978,10 @@ export type Database = {
         Args: { p_booking_id: string; p_reason: string }
         Returns: undefined
       }
+      admin_clear_worker_rating: {
+        Args: { p_worker_id: string }
+        Returns: undefined
+      }
       admin_get_legal_pdfs: {
         Args: never
         Returns: {
@@ -3022,6 +3029,7 @@ export type Database = {
               p_upi_id: string
             }
             Returns: {
+              admin_override_rating: number | null
               communities: string[] | null
               community: string | null
               cook_cuisine_tags: string[]
@@ -3072,6 +3080,7 @@ export type Database = {
         | {
             Args: { p_worker: Json }
             Returns: {
+              admin_override_rating: number | null
               communities: string[] | null
               community: string | null
               cook_cuisine_tags: string[]
