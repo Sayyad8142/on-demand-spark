@@ -68,7 +68,7 @@ export default function BottomNav() {
             }`}
           >
             <div className="relative">
-              <Icon className={`w-6 h-6 ${!isExternal && isActive(path) ? "stroke-[2.5]" : ""}`} />
+              <Icon className={`w-6 h-6 ${isExternal ? "text-green-500" : isActive(path) ? "stroke-[2.5]" : ""}`} />
               {showBadge && (
                 <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
               )}
