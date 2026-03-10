@@ -122,7 +122,7 @@ export default function Profile() {
 
   // Priority metrics hook
   const primaryCommunity = worker?.communities?.[0] ?? worker?.community ?? undefined;
-  const primaryService = worker?.service_types?.[0] ?? worker?.service_type ?? undefined;
+  const primaryService = worker?.service_types?.[0] ?? undefined;
   const { metrics: priorityMetrics, loading: priorityLoading } = useWorkerPriorityMetrics(
     worker?.id,
     primaryCommunity,
