@@ -12,6 +12,7 @@ interface AvailabilityToggleProps {
 export function AvailabilityToggle({ workerId, className }: AvailabilityToggleProps) {
   const [isAvailable, setIsAvailable] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [pressed, setPressed] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation();
