@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
+import { useWorkerPriorityMetrics } from "@/hooks/useWorkerPriorityMetrics";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import BottomNav from "@/components/BottomNav";
 import UpiQrUpload from "@/components/UpiQrUpload";
 import { CURRENT_VERSION_CODE } from "@/config/version";
+import BookingPriorityCard from "@/components/profile/BookingPriorityCard";
+import WorkerRankCard from "@/components/profile/WorkerRankCard";
+import WeeklyPerformanceCard from "@/components/profile/WeeklyPerformanceCard";
+import HowToGetMoreBookingsCard from "@/components/profile/HowToGetMoreBookingsCard";
+import MotivationCard from "@/components/profile/MotivationCard";
 const SERVICES = [{
   value: "maid",
   label: "Maid Service",
