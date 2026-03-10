@@ -69,6 +69,12 @@ export function AvailabilityToggle({ workerId, className }: AvailabilityTogglePr
     }
   };
 
+  if (initialLoading) {
+    return (
+      <div className={`rounded-xl p-4 bg-muted animate-pulse ${className || ""}`} style={{ height: 62 }} />
+    );
+  }
+
   return (
     <div
       className={`rounded-xl p-4 transition-all duration-300 ease-in-out ${className || ""}`}
