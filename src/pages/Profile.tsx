@@ -120,6 +120,18 @@ export default function Profile() {
     1: 0
   });
 
+  // Priority metrics hook
+  const primaryCommunity = worker?.communities?.[0] ?? worker?.community ?? undefined;
+  const primaryService = worker?.service_types?.[0] ?? worker?.service_type ?? undefined;
+  const { metrics: priorityMetrics, loading: priorityLoading } = useWorkerPriorityMetrics(
+    worker?.id,
+    primaryCommunity,
+    primaryService,
+    workerRating || Number(worker?.rating) || 5.0,
+    ratingsCount,
+    worker?.last_active_at
+  );
+
   // Fetch communities from Supabase with real-time updates
   useEffect(() => {
     const fetchCommunities = async () => {
