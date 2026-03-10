@@ -803,16 +803,16 @@ export default function Profile() {
                     <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
                   </div>
                   <div>
-                    <p className="font-semibold text-sm">⭐ {workerRating.toFixed(1)} Rating</p>
+                    <p className="font-semibold text-sm">⭐ {workerRating.toFixed(1)} {t('profile.rating')}</p>
                     <p className="text-xs text-muted-foreground">
-                      {ratingsCount > 0 ? `${ratingsCount} review${ratingsCount !== 1 ? 's' : ''}` : 'No reviews yet'}
+                      {ratingsCount > 0 ? `${ratingsCount} ${t('profile.reviews').toLowerCase()}` : 'No reviews yet'}
                     </p>
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-muted-foreground" />
               </div>
               <p className="text-[11px] text-primary font-medium mt-2 ml-13">
-                Workers with 4.5★+ ratings receive priority in bookings
+                {t('profile.ratingPriority')}
               </p>
             </CardContent>
           </Card>
