@@ -233,8 +233,32 @@ public class MyFirebaseService extends FirebaseMessagingService {
   @Override
   public void onNewToken(String token) {
     Log.d(TAG, "🔑 New FCM token received: " + token.substring(0, Math.min(30, token.length())) + "...");
-    Log.d(TAG, "💡 Token should be saved by Capacitor PushNotifications plugin");
-    // Token is already handled by Capacitor PushNotifications plugin
+    
+    // RELIABILITY FIX: Persist token natively so it survives backgrounded/killed states.
+    // The JS layer will pick this up on next app start via AuthBridge.getPendingFCMToken()
+    // and sync it to both `workers.fcm_token` (primary) and `fcm_tokens` table (fallback).
+    try {
+      android.content.SharedPreferences prefs = getSharedPreferences("worker_prefs", MODE_PRIVATE);
+      String previousToken = prefs.getString("pending_fcm_token", null);
+      
+      // Only write if token actually changed (avoid noisy repeated writes)
+      if (!token.equals(previousToken)) {
+        boolean saved = prefs.edit()
+            .putString("pending_fcm_token", token)
+            .putLong("pending_fcm_token_timestamp", System.currentTimeMillis())
+            .commit(); // commit() = synchronous, guaranteed before method returns
+        
+        if (saved) {
+          Log.d(TAG, "✅ FCM token persisted to SharedPreferences for JS sync");
+        } else {
+          Log.e(TAG, "❌ Failed to persist FCM token to SharedPreferences");
+        }
+      } else {
+        Log.d(TAG, "ℹ️ FCM token unchanged, skipping SharedPreferences write");
+      }
+    } catch (Exception e) {
+      Log.e(TAG, "❌ Exception persisting FCM token", e);
+    }
   }
   
   private void createNotificationChannel() {
