@@ -1,7 +1,17 @@
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
-import { supabase } from '@/integrations/supabase/client';
 
+/**
+ * initNativePush — Registers the device for push notifications and sets up
+ * foreground/tap listeners. 
+ *
+ * Fix 3: Token persistence is NO LONGER done here. The `registration` listener
+ * only logs for debugging. Actual token sync to backend is handled exclusively
+ * by useFCMTokenSync (which reads the natively-persisted pending token).
+ *
+ * This avoids duplicate writes that previously existed across push.ts, fcm.ts,
+ * and useFCMTokenSync.
+ */
 export async function initNativePush(userId?: string) {
   if (!Capacitor.isNativePlatform()) {
     console.log('⏭️ Not native platform, skipping push init');
@@ -27,46 +37,11 @@ export async function initNativePush(userId?: string) {
   console.log('📝 Registering for push notifications...');
   await PushNotifications.register();
 
-  PushNotifications.addListener('registration', async (token) => {
-    console.log('🎯 FCM token received:', token.value.substring(0, 30) + '...');
-    
-    try {
-      if (!userId) {
-        console.error('❌ No userId provided, cannot save token');
-        return;
-      }
-      
-      console.log('💾 Saving FCM token for user:', userId);
-      
-      // Save to fcm_tokens table (legacy)
-      const { error: fcmError } = await supabase.from('fcm_tokens').upsert(
-        { user_id: userId, token: token.value },
-        { onConflict: 'user_id' }
-      );
-      
-      if (fcmError) {
-        console.error('❌ Failed to save FCM token to fcm_tokens:', fcmError);
-      } else {
-        console.log('✅ FCM token saved to fcm_tokens table');
-      }
-
-      // Save to workers table
-      const { error: workerError } = await supabase
-        .from('workers')
-        .update({
-          fcm_token: token.value,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', userId);
-
-      if (workerError) {
-        console.error('❌ Failed to save FCM token to workers:', workerError);
-      } else {
-        console.log('✅ FCM token saved to workers table');
-      }
-    } catch (e) {
-      console.error('❌ Exception saving FCM token:', e);
-    }
+  // Debug-only listener — token sync is handled by useFCMTokenSync
+  PushNotifications.addListener('registration', (token) => {
+    console.log('🎯 [push.ts] FCM token received (debug only):', token.value.substring(0, 30) + '...');
+    // Token is persisted natively by MyFirebaseService.onNewToken()
+    // and synced to backend by useFCMTokenSync hook. No DB writes here.
   });
 
   PushNotifications.addListener('registrationError', (err) => {
