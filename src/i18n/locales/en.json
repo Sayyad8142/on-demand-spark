@@ -102,7 +102,50 @@
     "deleteConfirm": "Are you sure you want to delete your account? This action cannot be undone.",
     "cancel": "Cancel",
     "language": "Language",
-    "selectLanguage": "Select Language"
+    "selectLanguage": "Select Language",
+    "priority": {
+      "title": "Booking Priority",
+      "subtitle": "Higher score = more bookings",
+      "completedJobs": "Completed Jobs (7 days)",
+      "jobs": "Jobs",
+      "onlineHours": "Online Hours (7 days)",
+      "hours": "Hours",
+      "acceptanceRate": "Acceptance Rate",
+      "rating": "Rating",
+      "recentActivity": "Recent Activity",
+      "activeRecently": "Active Recently",
+      "offlineOften": "Offline Often",
+      "excellent": "Excellent",
+      "needsImprovement": "Needs Improvement",
+      "lowAcceptMore": "Low – Accept More!",
+      "speakerExplanation": "This is your Booking Priority score. It shows how likely you are to receive new bookings. Your score is {{score}} out of 100. You completed {{jobs}} jobs this week. You were online for {{hours}} hours. Your acceptance rate is {{rate}} percent. Your rating is {{rating}} stars. To get more bookings: accept requests quickly, stay online longer, complete more jobs, and keep your rating above 4.5 stars."
+    },
+    "rank": {
+      "title": "Your Rank in Community",
+      "rankOf": "of {{total}} workers",
+      "topPercent": "You're in the top {{percent}}%! Keep it up 🎉"
+    },
+    "weeklyPerformance": {
+      "title": "Your Weekly Performance",
+      "completedJobs": "Completed Jobs",
+      "onlineHours": "Online Hours",
+      "acceptanceRate": "Acceptance Rate"
+    },
+    "motivation": {
+      "nextTarget": "Next Target",
+      "topPerformer": "Amazing work! You're a top performer. Keep accepting bookings to maintain your rank! 🚀",
+      "completeMore": "Complete {{count}} more booking(s) this week to increase your booking priority and receive more booking alerts.",
+      "greatProgress": "Great progress! Stay online and accept requests quickly to climb higher in the rankings."
+    },
+    "tips": {
+      "title": "How To Get More Bookings",
+      "tip1": "Accept booking requests quickly",
+      "tip2": "Stay online longer to receive more offers",
+      "tip3": "Complete more bookings every week",
+      "tip4": "Maintain rating above 4.5★",
+      "tip5": "Avoid rejecting booking alerts"
+    },
+    "ratingPriority": "Workers with 4.5★+ ratings receive priority in bookings"
   },
   "settings": {
     "title": "Settings",
