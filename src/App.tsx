@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-route
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { useAuth } from "@/hooks/useAuth";
+import { useFCMTokenSync } from "@/hooks/useFCMTokenSync";
 import { useAppState } from "@/hooks/useAppState";
 import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
 import { initNativePush } from "@/native/push";
