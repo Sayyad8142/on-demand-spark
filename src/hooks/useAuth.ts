@@ -365,24 +365,29 @@ export function useAuth() {
   }, [saveSession, saveJWT, refreshSession, clearSessionCompletely]);
 
   const signOut = useCallback(async () => {
-    // Fix 1: Clear FCM token from backend BEFORE clearing session
-    // (we still have auth credentials at this point)
+    // ─── FCM TOKEN CLEANUP ON LOGOUT ───
+    //
+    // Architecture: single-device-per-user model.
+    //   - workers.fcm_token: one column per worker row (PRIMARY, used by send-fcm)
+    //   - fcm_tokens table: PK is user_id, so one row per user (FALLBACK)
+    //
+    // Because both sources store exactly one token per user, cleanup is
+    // user-level (not device-specific). We null out / delete by user_id.
+    //
+    // This means if a worker somehow had two devices (not currently supported),
+    // logout on one device would clear the token for both. This is acceptable
+    // given the single-token-per-user schema.
+    //
+    // Cleanup runs BEFORE signOut so we still have valid auth credentials.
+    // Failures are logged but never block logout.
+    //
     try {
       const userId = session?.user?.id;
       if (userId) {
         console.log('🗑️ [Logout] Clearing FCM token from backend for user:', userId);
-        
-        // Get current device token to match against (avoid clearing other devices)
-        let currentToken: string | null = null;
-        if (Capacitor.isNativePlatform() && AuthBridge) {
-          try {
-            const pending = await AuthBridge.getPendingFCMToken();
-            currentToken = pending?.token ?? null;
-          } catch (_) { /* ignore */ }
-        }
 
         // Clear workers.fcm_token (PRIMARY source of truth)
-        const { error: wErr, count: wCount } = await supabase
+        const { error: wErr } = await supabase
           .from('workers')
           .update({ fcm_token: null, updated_at: new Date().toISOString() })
           .eq('user_id', userId);
@@ -390,10 +395,10 @@ export function useAuth() {
         if (wErr) {
           console.warn('⚠️ [Logout] Failed to clear workers.fcm_token:', wErr.message);
         } else {
-          console.log(`✅ [Logout] Cleared workers.fcm_token (rows: ${wCount ?? 'unknown'})`);
+          console.log('✅ [Logout] Cleared workers.fcm_token');
         }
 
-        // Delete from fcm_tokens table (FALLBACK source)
+        // Delete from fcm_tokens table (FALLBACK source, one row per user_id)
         const { error: fErr } = await supabase
           .from('fcm_tokens')
           .delete()

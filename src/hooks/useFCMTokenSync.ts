@@ -44,13 +44,16 @@ export function useFCMTokenSync(userId: string | undefined) {
         );
 
         // Write to PRIMARY source: workers.fcm_token
-        const { error: workerError } = await supabase
+        // Architecture note: workers table has one fcm_token column per worker row.
+        // This is a single-device-per-user model — only the latest token is kept.
+        const { error: workerError, data: workerData } = await supabase
           .from('workers')
           .update({
             fcm_token: pendingToken,
             updated_at: new Date().toISOString(),
           })
-          .eq('user_id', userId);
+          .eq('user_id', userId)
+          .select('id');
 
         if (workerError) {
           console.error('❌ [FCMSync] Failed to save token to workers:', workerError);
@@ -58,7 +61,16 @@ export function useFCMTokenSync(userId: string | undefined) {
           return;
         }
 
-        // Write to FALLBACK source: fcm_tokens table
+        if (!workerData || workerData.length === 0) {
+          console.warn(
+            '⚠️ [FCMSync] workers update matched 0 rows — user_id may not have a worker record.',
+            'userId:', userId
+          );
+        } else {
+          console.log('✅ [FCMSync] Token saved to workers table, worker id:', workerData[0].id);
+        }
+
+        // Write to FALLBACK source: fcm_tokens table (one row per user_id)
         const { error: fcmError } = await supabase.from('fcm_tokens').upsert(
           { user_id: userId, token: pendingToken },
           { onConflict: 'user_id' }
@@ -66,7 +78,6 @@ export function useFCMTokenSync(userId: string | undefined) {
 
         if (fcmError) {
           console.warn('⚠️ [FCMSync] Failed to save token to fcm_tokens (non-critical):', fcmError);
-          // Non-critical — workers table is primary
         }
 
         console.log('✅ [FCMSync] Token synced to backend successfully');
