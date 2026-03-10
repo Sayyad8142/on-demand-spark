@@ -1,23 +1,23 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Target } from "lucide-react";
 import { WorkerPriorityMetrics } from "@/hooks/useWorkerPriorityMetrics";
+import { useTranslation } from "react-i18next";
 
 interface MotivationCardProps {
   metrics: WorkerPriorityMetrics;
 }
 
 export default function MotivationCard({ metrics }: MotivationCardProps) {
+  const { t } = useTranslation();
   const remainingJobs = Math.max(8 - metrics.completions7d, 0);
 
   let message: string;
   if (metrics.priorityScore >= 80) {
-    message =
-      "Amazing work! You're a top performer. Keep accepting bookings to maintain your rank! 🚀";
+    message = t("profile.motivation.topPerformer");
   } else if (remainingJobs > 0) {
-    message = `Complete ${remainingJobs} more booking${remainingJobs > 1 ? "s" : ""} this week to increase your booking priority and receive more booking alerts.`;
+    message = t("profile.motivation.completeMore", { count: remainingJobs });
   } else {
-    message =
-      "Great progress! Stay online and accept requests quickly to climb higher in the rankings.";
+    message = t("profile.motivation.greatProgress");
   }
 
   return (
@@ -28,7 +28,9 @@ export default function MotivationCard({ metrics }: MotivationCardProps) {
             <Target className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <p className="text-sm font-bold text-foreground mb-1">Next Target</p>
+            <p className="text-sm font-bold text-foreground mb-1">
+              {t("profile.motivation.nextTarget")}
+            </p>
             <p className="text-sm text-muted-foreground leading-relaxed">
               {message}
             </p>
