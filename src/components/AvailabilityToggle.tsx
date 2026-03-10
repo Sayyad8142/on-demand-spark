@@ -32,6 +32,8 @@ export function AvailabilityToggle({ workerId, className }: AvailabilityTogglePr
       setIsAvailable(data?.is_available || false);
     } catch (error) {
       console.error("Error loading availability:", error);
+    } finally {
+      setInitialLoading(false);
     }
   };
 
