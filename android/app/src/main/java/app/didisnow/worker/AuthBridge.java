@@ -54,12 +54,45 @@ public class AuthBridge extends Plugin {
 
     @PluginMethod
     public void clearToken(PluginCall call) {
-        boolean success = prefs().edit().remove("supabase_jwt").commit();
+        boolean success = prefs().edit()
+            .remove("supabase_jwt")
+            .remove("pending_fcm_token")
+            .remove("pending_fcm_token_timestamp")
+            .commit();
         if (success) {
-            android.util.Log.d("AuthBridge", "🗑️ Cleared JWT token");
+            android.util.Log.d("AuthBridge", "🗑️ Cleared JWT + pending FCM token");
         } else {
-            android.util.Log.e("AuthBridge", "❌ Failed to clear JWT token");
+            android.util.Log.e("AuthBridge", "❌ Failed to clear tokens");
         }
+        JSObject ret = new JSObject();
+        ret.put("ok", success);
+        call.resolve(ret);
+    }
+
+    /**
+     * Returns the pending FCM token saved natively by MyFirebaseService.onNewToken().
+     * JS layer calls this on app start to sync token to backend when session is available.
+     */
+    @PluginMethod
+    public void getPendingFCMToken(PluginCall call) {
+        String token = prefs().getString("pending_fcm_token", null);
+        long timestamp = prefs().getLong("pending_fcm_token_timestamp", 0);
+        JSObject ret = new JSObject();
+        ret.put("token", token);
+        ret.put("timestamp", timestamp);
+        call.resolve(ret);
+    }
+
+    /**
+     * Clears only the pending FCM token after successful sync to backend.
+     * Does NOT clear the JWT token.
+     */
+    @PluginMethod
+    public void clearPendingFCMToken(PluginCall call) {
+        boolean success = prefs().edit()
+            .remove("pending_fcm_token")
+            .remove("pending_fcm_token_timestamp")
+            .commit();
         JSObject ret = new JSObject();
         ret.put("ok", success);
         call.resolve(ret);
