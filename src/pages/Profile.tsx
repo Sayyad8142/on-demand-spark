@@ -794,23 +794,44 @@ export default function Profile() {
         </div>
 
         <div className="px-4 mt-4 space-y-4">
-          {/* Ratings & Reviews Link */}
+          {/* Booking Priority Card */}
+          <BookingPriorityCard metrics={priorityMetrics} />
+
+          {/* Worker Rank Card */}
+          <WorkerRankCard
+            rank={priorityMetrics.rank}
+            totalWorkers={priorityMetrics.totalWorkersInCommunity}
+          />
+
+          {/* Weekly Performance Card */}
+          <WeeklyPerformanceCard metrics={priorityMetrics} />
+
+          {/* Motivation / Next Target Card */}
+          <MotivationCard metrics={priorityMetrics} />
+
+          {/* How To Get More Bookings Card */}
+          <HowToGetMoreBookingsCard />
+
+          {/* Enhanced Ratings & Reviews Link */}
           <Card className="border-0 shadow-lg cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => navigate('/customer-reviews')}>
             <CardContent className="py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                    <Star className="w-5 h-5 text-amber-500" />
+                    <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
                   </div>
                   <div>
-                    <p className="font-semibold text-sm">Ratings & Reviews</p>
+                    <p className="font-semibold text-sm">⭐ {workerRating.toFixed(1)} Rating</p>
                     <p className="text-xs text-muted-foreground">
-                      {ratingsCount > 0 ? `${workerRating.toFixed(1)} ★ • ${ratingsCount} review${ratingsCount !== 1 ? 's' : ''}` : 'No reviews yet'}
+                      {ratingsCount > 0 ? `${ratingsCount} review${ratingsCount !== 1 ? 's' : ''}` : 'No reviews yet'}
                     </p>
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-muted-foreground" />
               </div>
+              <p className="text-[11px] text-primary font-medium mt-2 ml-13">
+                Workers with 4.5★+ ratings receive priority in bookings
+              </p>
             </CardContent>
           </Card>
 
