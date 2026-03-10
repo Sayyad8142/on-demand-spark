@@ -793,6 +793,43 @@ export default function Profile() {
           </Card>
         </div>
 
+        {/* Language Selection - top of content */}
+        <div className="px-4 mt-4">
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Languages className="w-5 h-5" />
+                {t('profile.language')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2">
+                {[{
+                code: 'en',
+                label: 'EN',
+                toast: 'Language changed to English'
+              }, {
+                code: 'hi',
+                label: 'हि',
+                toast: 'भाषा हिंदी में बदल गई'
+              }, {
+                code: 'te',
+                label: 'తె',
+                toast: 'భాష తెలుగులోకి మార్చబడింది'
+              }].map(lang => <button key={lang.code} onClick={() => {
+                i18n.changeLanguage(lang.code);
+                localStorage.setItem('language', lang.code);
+                toast({
+                  title: lang.toast
+                });
+              }} className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all ${i18n.language === lang.code ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
+                    {lang.label}
+                  </button>)}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="px-4 mt-4 space-y-4">
           {/* Booking Priority Card */}
           <BookingPriorityCard metrics={priorityMetrics} />
@@ -834,42 +871,6 @@ export default function Profile() {
               </p>
             </CardContent>
           </Card>
-
-          {/* Language Selection */}
-          <Card className="border-0 shadow-lg">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Languages className="w-5 h-5" />
-                {t('profile.language')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2">
-                {[{
-                code: 'en',
-                label: 'EN',
-                toast: 'Language changed to English'
-              }, {
-                code: 'hi',
-                label: 'हि',
-                toast: 'भाषा हिंदी में बदल गई'
-              }, {
-                code: 'te',
-                label: 'తె',
-                toast: 'భాష తెలుగులోకి మార్చబడింది'
-              }].map(lang => <button key={lang.code} onClick={() => {
-                i18n.changeLanguage(lang.code);
-                localStorage.setItem('language', lang.code);
-                toast({
-                  title: lang.toast
-                });
-              }} className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all ${i18n.language === lang.code ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
-                    {lang.label}
-                  </button>)}
-              </div>
-            </CardContent>
-          </Card>
-
 
           {/* Call Support Button */}
           <a href="tel:8008180018" className="block">
