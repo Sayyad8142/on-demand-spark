@@ -39,7 +39,9 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log("═══════════════════════════════════════════════════════════");
     console.log("📥 booking-notifications invoked");
+    console.log("═══════════════════════════════════════════════════════════");
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -72,7 +74,7 @@ Deno.serve(async (req) => {
       return new Response("skip - not pending", { status: 200, headers: corsHeaders });
     }
 
-    // VALIDATION: Reject cook bookings
+    // VALIDATION: Reject unsupported services
     if (!SUPPORTED_SERVICES.includes(b.service_type)) {
       console.error(`❌ Unsupported service type: ${b.service_type}`);
       return new Response(
@@ -89,6 +91,7 @@ Deno.serve(async (req) => {
       community: b.community,
       scheduled_date: b.scheduled_date,
       scheduled_time: b.scheduled_time,
+      price_inr: b.price_inr,
     });
 
     // Fetch community details
@@ -106,11 +109,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log("✅ Community found:", { name: communityData.name });
+    console.log("✅ Community found:", { id: communityData.id, name: communityData.name });
 
     const hasCommunityCenter = communityData?.center_lat && communityData?.center_lng;
 
-    // Determine check time
+    // Determine check time for availability
     let checkTimeString: string;
     let checkDayOfWeek: number;
     
@@ -121,7 +124,7 @@ Deno.serve(async (req) => {
       const jsDay = scheduledDate.getUTCDay();
       const dayMapping: Record<number, number> = { 0: 6, 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5 };
       checkDayOfWeek = dayMapping[jsDay];
-      console.log(`📅 Scheduled booking - checking: ${b.scheduled_date} ${b.scheduled_time} (IST), day: ${checkDayOfWeek}`);
+      console.log(`📅 Scheduled booking — checking availability for: ${b.scheduled_date} ${b.scheduled_time} (IST), day: ${checkDayOfWeek}`);
     } else {
       const now = new Date();
       const formatter = new Intl.DateTimeFormat('en-US', {
@@ -132,19 +135,17 @@ Deno.serve(async (req) => {
       const weekday = dayFormatter.format(now);
       const weekdayMap: Record<string, number> = { 'Mon': 0, 'Tue': 1, 'Wed': 2, 'Thu': 3, 'Fri': 4, 'Sat': 5, 'Sun': 6 };
       checkDayOfWeek = weekdayMap[weekday];
-      console.log(`📅 Instant booking - current IST time`);
+      console.log(`📅 Instant booking — current IST time: ${checkTimeString}`);
     }
 
-    console.log(`📅 Check: ${checkTimeString} on day ${checkDayOfWeek}`);
-
-    // Get workers with availability
+    // Get workers with matching availability slots
     const { data: availableWorkers, error: availError } = await supabase
       .from('worker_availability')
       .select('worker_id, slots')
       .eq('day_of_week', checkDayOfWeek);
 
     if (availError) {
-      console.error('Error fetching availability:', availError);
+      console.error('❌ Error fetching availability:', availError);
       return new Response(JSON.stringify({ error: 'Failed to fetch availability' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -169,12 +170,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`Found ${availableWorkerIds.size} workers available at ${checkTimeString}`);
+    console.log(`📊 Workers with availability at ${checkTimeString}: ${availableWorkerIds.size}`);
 
-    // Query eligible workers - no cook_cuisine_tags needed
+    // Query eligible workers
     let workersQuery = supabase
       .from("workers")
-      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng")
+      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng, fcm_token")
       .eq("is_active", true)
       .eq("is_available", true)
       .eq("is_busy", false)
@@ -187,7 +188,6 @@ Deno.serve(async (req) => {
 
     if (availableWorkerIds.size > 0) {
       const availableIds = Array.from(availableWorkerIds);
-      console.log(`🔍 Filtering by ${availableIds.length} workers with matching availability`);
       workersQuery = workersQuery.in("id", availableIds);
     } else {
       console.log("⚠️ No workers have availability for this time slot");
@@ -204,11 +204,16 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: we.message }), { status: 500 });
     }
     
-    console.log(`📊 Total available workers: ${workers?.length || 0}`);
-
     if (!workers?.length) {
-      console.log("⚠️ No eligible workers found");
+      console.log("⚠️ No eligible workers found after all filters");
       return new Response("no-workers", { status: 200 });
+    }
+
+    // Log each eligible worker with token status
+    console.log(`📊 ${workers.length} eligible workers:`);
+    for (const w of workers) {
+      const hasToken = !!w.fcm_token;
+      console.log(`  ${w.full_name} (${w.id}): rating=${w.rating}, fcm_token=${hasToken ? "YES" : "NO"}, community=${w.selected_community_id}`);
     }
 
     // Sort workers by rating (highest first), then distance
@@ -222,8 +227,6 @@ Deno.serve(async (req) => {
       }
       return (b.total_ratings || 0) - (a.total_ratings || 0);
     });
-
-    console.log(`✅ Sorted ${sortedWorkers.length} workers`);
 
     // Standard rating-based tiers
     const TIER_TIMEOUT_SECONDS = 30;
@@ -250,8 +253,6 @@ Deno.serve(async (req) => {
         timeoutSeconds = TIER_TIMEOUT_SECONDS * 2;
       }
 
-      // Always set timeout_at - column is NOT NULL with default now()+45s
-      // For tier 1: timeout from now; for tier 2/3: staggered future timeout
       const timeoutAt = new Date(currentTime.getTime() + timeoutSeconds * 1000).toISOString();
 
       return {
@@ -270,20 +271,23 @@ Deno.serve(async (req) => {
 
     if (reqError) {
       console.error("❌ Error creating booking requests:", reqError);
+    } else {
+      console.log(`✅ Created ${bookingRequests.length} booking_requests`);
     }
 
-    // Notify Tier 1 first
+    // Notify Tier 1 first, fall back to Tier 2, then all
     const tier1UserIds = tier1Workers
       .map((w) => normalizeWorkerTargetId(w))
       .filter((id) => uuidRegex.test(id));
 
     if (tier1UserIds.length === 0) {
-      console.log("⚠️ No Tier 1 workers, notifying Tier 2...");
+      console.log("⚠️ No Tier 1 workers, trying Tier 2...");
       const tier2UserIds = tier2Workers
         .map((w) => normalizeWorkerTargetId(w))
         .filter((id) => uuidRegex.test(id));
 
       if (tier2UserIds.length === 0) {
+        console.log("⚠️ No Tier 2 workers, notifying ALL...");
         const allUserIds = sortedWorkers
           .map((w) => normalizeWorkerTargetId(w))
           .filter((id) => uuidRegex.test(id));
@@ -293,7 +297,7 @@ Deno.serve(async (req) => {
       return await sendNotifications(tier2UserIds, b, booking_id, bookingType);
     }
 
-    console.log(`🎯 Notifying Tier 1 (${tier1UserIds.length} workers, ${TIER_TIMEOUT_SECONDS}s window)`);
+    console.log(`🎯 Notifying Tier 1: ${tier1UserIds.length} workers`);
     return await sendNotifications(tier1UserIds, b, booking_id, bookingType);
   } catch (e) {
     console.error("❌ Exception:", e);
@@ -301,10 +305,11 @@ Deno.serve(async (req) => {
   }
 });
 
-// Helper function to send FCM notifications
+// Helper function to send FCM notifications via send-fcm edge function
 async function sendNotifications(userIds: string[], booking: any, bookingId: string, bookingType: string) {
   const fcmUrl = `${SUPABASE_URL}/functions/v1/send-fcm`;
-  console.log(`📤 Calling send-fcm for ${bookingType} booking, user IDs:`, userIds);
+  console.log(`📤 Calling send-fcm for ${bookingType} booking ${bookingId}`);
+  console.log(`   Target worker IDs: [${userIds.join(", ")}]`);
   
   let scheduledTimeDisplay = "";
   if (booking.scheduled_date && booking.scheduled_time) {
@@ -337,8 +342,6 @@ async function sendNotifications(userIds: string[], booking: any, bookingId: str
     },
   };
   
-  console.log(`📦 FCM payload:`, JSON.stringify(fcmPayload, null, 2));
-  
   const sendResponse = await fetch(fcmUrl, {
     method: "POST",
     headers: {
@@ -348,17 +351,37 @@ async function sendNotifications(userIds: string[], booking: any, bookingId: str
     body: JSON.stringify(fcmPayload),
   });
 
+  const responseText = await sendResponse.text();
+  
   if (!sendResponse.ok) {
-    const error = await sendResponse.text();
-    console.error("❌ FCM send error:", error);
-    return new Response(JSON.stringify({ error }), { status: 500, headers: corsHeaders });
+    console.error(`❌ send-fcm returned ${sendResponse.status}: ${responseText}`);
+    return new Response(JSON.stringify({ error: responseText }), { status: 500, headers: corsHeaders });
   }
 
-  const result = await sendResponse.json();
-  console.log("✅ FCM notifications sent:", result);
+  let result;
+  try {
+    result = JSON.parse(responseText);
+  } catch {
+    result = { raw: responseText };
+  }
   
+  // Log FCM result summary
+  console.log(`📊 send-fcm result for booking ${bookingId}:`);
+  console.log(`   firebase_project: ${result.firebase_project || "unknown"}`);
+  console.log(`   sent: ${result.sent || 0}, failed: ${result.failed || 0}`);
+  
+  if (result.results) {
+    for (const r of result.results) {
+      if (r.success) {
+        console.log(`   ✅ ${r.worker_name} (${r.user_id})`);
+      } else {
+        console.error(`   ❌ ${r.worker_name} (${r.user_id}): ${r.error_code || r.error}`);
+      }
+    }
+  }
+
   return new Response(
-    JSON.stringify({ success: true, booking_type: bookingType, sent: userIds.length, result }), 
-    { status: 200, headers: corsHeaders }
+    JSON.stringify({ success: true, booking_type: bookingType, booking_id: bookingId, sent: userIds.length, result }), 
+    { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
 }

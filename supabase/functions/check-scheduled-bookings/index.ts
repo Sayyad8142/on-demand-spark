@@ -10,17 +10,17 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const startTime = new Date().toISOString();
+    console.log("═══════════════════════════════════════════════════════════");
     console.log(`🕐 check-scheduled-bookings: Starting at ${startTime}`);
+    console.log("═══════════════════════════════════════════════════════════");
 
-    // Find bookings that need alerts (scheduled to start in 10 minutes)
-    // We need to combine scheduled_date and scheduled_time, subtract 10 minutes, and compare to now
+    // Find pending scheduled bookings not yet alerted
     const { data: bookings, error: fetchError } = await supabase
       .from('bookings')
       .select('id, scheduled_date, scheduled_time, service_type, community, cust_name, flat_no, price_inr')
@@ -47,111 +47,109 @@ Deno.serve(async (req) => {
 
     console.log(`📋 Found ${bookings.length} scheduled bookings to check`);
 
-    // Get current time
     const now = new Date();
-    const alertsSent = [];
+    let workerAlertCount = 0;
+    let userReminderCount = 0;
+    const results: Array<{ booking_id: string; status: string; detail?: string }> = [];
 
-    // Check each booking to see if it needs an alert
     for (const booking of bookings) {
-      // Combine date and time strings - interpret as IST (Asia/Kolkata timezone)
-      // The database stores times without timezone, but users enter times in IST
+      // Parse scheduled time in IST and convert to UTC
       const scheduledDateTimeStr = `${booking.scheduled_date}T${booking.scheduled_time}`;
-      
-      // Parse the time in IST and convert to UTC for comparison
-      // IST is UTC+5:30, so we need to subtract 5 hours 30 minutes to get UTC
       const [datePart, timePart] = scheduledDateTimeStr.split('T');
       const [year, month, day] = datePart.split('-').map(Number);
       const [hours, minutes, seconds] = timePart.split(':').map(Number);
       
-      // Create date in IST by adding the offset
-      // IST = UTC + 5:30, so UTC = IST - 5:30
+      // IST = UTC + 5:30
       const istDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds || 0));
-      // Subtract IST offset (5 hours 30 minutes = 330 minutes) to get UTC
       const scheduledDateTime = new Date(istDate.getTime() - (5.5 * 60 * 60 * 1000));
-      
-      // Calculate 10 minutes before scheduled time
       const alertTime = new Date(scheduledDateTime.getTime() - 10 * 60 * 1000);
       
-      console.log(`📊 Booking ${booking.id}:`);
-      console.log(`   scheduled_ist=${scheduledDateTimeStr}`);
-      console.log(`   scheduled_utc=${scheduledDateTime.toISOString()}`);
-      console.log(`   alert_utc=${alertTime.toISOString()}`);
-      console.log(`   now_utc=${now.toISOString()}`);
-      console.log(`   should_alert=${now >= alertTime}`);
+      const shouldAlert = now >= alertTime;
+      const minutesUntilAlert = Math.round((alertTime.getTime() - now.getTime()) / 60000);
 
-      // If current time is past the alert time, send notification
-      if (now >= alertTime) {
-        console.log(`🚨 TRIGGERING PRE-ALERT for scheduled booking ${booking.id}`);
-        console.log(`   Service: ${booking.service_type}`);
-        console.log(`   Community: ${booking.community}`);
-        console.log(`   Customer: ${booking.cust_name}`);
-        console.log(`   Flat: ${booking.flat_no}`);
-        console.log(`   Price: ₹${booking.price_inr}`);
+      if (!shouldAlert) {
+        console.log(`⏳ Booking ${booking.id}: ${minutesUntilAlert}min until pre-alert (${booking.scheduled_time} IST)`);
+        results.push({ booking_id: booking.id, status: "waiting", detail: `${minutesUntilAlert}min remaining` });
+        continue;
+      }
 
-        // Call booking-notifications function with direct HTTP (like the database trigger does)
-        // This ensures the Authorization header is properly included
+      console.log("───────────────────────────────────────────────────────");
+      console.log(`🚨 TRIGGERING pre-alert for booking ${booking.id}`);
+      console.log(`   Service: ${booking.service_type} | Community: ${booking.community}`);
+      console.log(`   Scheduled: ${booking.scheduled_date} ${booking.scheduled_time} IST`);
+      console.log(`   Customer: ${booking.cust_name} | Flat: ${booking.flat_no} | ₹${booking.price_inr}`);
+
+      try {
+        const notifyResponse = await fetch(`${SUPABASE_URL}/functions/v1/booking-notifications`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({ booking_id: booking.id }),
+        });
+
+        const responseText = await notifyResponse.text();
+
+        if (!notifyResponse.ok) {
+          console.error(`❌ booking-notifications returned ${notifyResponse.status} for ${booking.id}: ${responseText}`);
+          results.push({ booking_id: booking.id, status: "error", detail: `HTTP ${notifyResponse.status}` });
+          continue;
+        }
+
+        // Parse and log the result
+        let notifyResult: any = {};
         try {
-          console.log(`📤 Calling booking-notifications for booking ${booking.id}...`);
-          
-          const notifyResponse = await fetch(`${SUPABASE_URL}/functions/v1/booking-notifications`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${serviceKey}`,
-            },
-            body: JSON.stringify({ booking_id: booking.id }),
-          });
+          notifyResult = JSON.parse(responseText);
+        } catch { /* non-JSON response */ }
 
-          const responseText = await notifyResponse.text();
-          console.log(`📥 booking-notifications response (${notifyResponse.status}): ${responseText}`);
+        const sent = notifyResult?.result?.sent ?? notifyResult?.sent ?? "?";
+        const failed = notifyResult?.result?.failed ?? "?";
+        const firebaseProject = notifyResult?.result?.firebase_project ?? "unknown";
 
-          if (!notifyResponse.ok) {
-            console.error(`❌ Failed to send notification for booking ${booking.id}: ${notifyResponse.status} - ${responseText}`);
-            continue;
+        console.log(`✅ Notification sent for ${booking.id}: sent=${sent}, failed=${failed}, firebase_project=${firebaseProject}`);
+        
+        // Check for SENDER_ID_MISMATCH in results
+        if (notifyResult?.result?.results) {
+          const senderMismatchCount = notifyResult.result.results.filter(
+            (r: any) => r.error_code === "SENDER_ID_MISMATCH"
+          ).length;
+          if (senderMismatchCount > 0) {
+            console.error(`⚠️ SENDER_ID_MISMATCH detected for ${senderMismatchCount} workers — Firebase service account project does NOT match worker app!`);
           }
-
-          // Try to parse as JSON for detailed logging
-          try {
-            const notifyResult = JSON.parse(responseText);
-            console.log(`✅ Notification result for booking ${booking.id}:`, JSON.stringify(notifyResult, null, 2));
-          } catch {
-            console.log(`✅ Notification sent for booking ${booking.id} (non-JSON response)`);
-          }
-        } catch (notifyError) {
-          console.error(`❌ Exception calling booking-notifications for booking ${booking.id}:`, notifyError);
-          continue;
         }
 
-        // Mark as prealert sent
-        const { error: updateError } = await supabase
-          .from('bookings')
-          .update({ prealert_sent: true })
-          .eq('id', booking.id);
+        workerAlertCount++;
+        results.push({ booking_id: booking.id, status: "sent", detail: `sent=${sent}, failed=${failed}` });
+      } catch (notifyError) {
+        console.error(`❌ Exception calling booking-notifications for ${booking.id}:`, notifyError);
+        results.push({ booking_id: booking.id, status: "exception", detail: String(notifyError) });
+        continue;
+      }
 
-        if (updateError) {
-          console.error(`❌ Failed to update prealert_sent for booking ${booking.id}:`, updateError);
-          continue;
-        }
+      // Mark as prealert sent
+      const { error: updateError } = await supabase
+        .from('bookings')
+        .update({ prealert_sent: true })
+        .eq('id', booking.id);
 
-        alertsSent.push(booking.id);
-        console.log(`✅ Successfully processed scheduled booking ${booking.id} - prealert_sent set to true`);
-      } else {
-        const minutesRemaining = Math.round((alertTime.getTime() - now.getTime()) / 60000);
-        console.log(`⏳ Booking ${booking.id} not ready yet (${minutesRemaining} minutes until pre-alert)`);
+      if (updateError) {
+        console.error(`❌ Failed to update prealert_sent for ${booking.id}:`, updateError);
       }
     }
 
-    console.log(`📊 Summary: Checked ${bookings.length} bookings, sent ${alertsSent.length} alerts`);
-    if (alertsSent.length > 0) {
-      console.log(`📋 Alerted booking IDs: ${alertsSent.join(', ')}`);
-    }
+    const endTime = Date.now() - new Date(startTime).getTime();
+    console.log("═══════════════════════════════════════════════════════════");
+    console.log(`✅ Completed in ${endTime}ms, worker_alerts=${workerAlertCount}, user_reminders=${userReminderCount}`);
+    console.log("═══════════════════════════════════════════════════════════");
 
     return new Response(
       JSON.stringify({
         message: 'Scheduled bookings check complete',
         checked: bookings.length,
-        alerts_sent: alertsSent.length,
-        booking_ids: alertsSent
+        alerts_sent: workerAlertCount,
+        duration_ms: endTime,
+        results,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

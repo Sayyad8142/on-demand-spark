@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
   try {
     const { booking_id, tier } = await req.json();
     
-    console.log(`📢 Notifying tier ${tier} workers for booking ${booking_id}`);
+    console.log(`📢 notify-next-tier: tier=${tier}, booking=${booking_id}`);
 
     // Get booking data
     const { data: booking, error: bookingError } = await supabase
@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
     }
 
     if (booking.status !== "pending") {
-      console.log("⏭️ Booking already accepted, skipping notification");
+      console.log("⏭️ Booking already accepted, skipping");
       return new Response("booking-accepted", { status: 200, headers: corsHeaders });
     }
 
@@ -47,12 +47,22 @@ Deno.serve(async (req) => {
       .eq("status", "pending");
 
     if (requestsError || !requests?.length) {
-      console.log("⚠️ No workers found for tier", tier);
+      console.log(`⚠️ No workers found for tier ${tier}`);
       return new Response("no-workers", { status: 200, headers: corsHeaders });
     }
 
     const workerIds = requests.map(r => r.worker_id);
-    console.log(`🎯 Sending notifications to ${workerIds.length} tier ${tier} workers`);
+    console.log(`🎯 Sending to ${workerIds.length} tier ${tier} workers: [${workerIds.join(", ")}]`);
+
+    // Build scheduled time display
+    let scheduledTimeDisplay = "";
+    if (booking.scheduled_date && booking.scheduled_time) {
+      const dateObj = new Date(`${booking.scheduled_date}T${booking.scheduled_time}`);
+      scheduledTimeDisplay = dateObj.toLocaleString('en-IN', {
+        month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+        hour12: true, timeZone: 'Asia/Kolkata'
+      });
+    }
 
     // Send FCM notifications
     const fcmUrl = `${SUPABASE_URL}/functions/v1/send-fcm`;
@@ -79,6 +89,7 @@ Deno.serve(async (req) => {
           flat_no: booking.flat_no || "",
           price: String(booking.price_inr || 0),
           tier: String(tier),
+          scheduled_time: scheduledTimeDisplay,
           scheduled_date: booking.scheduled_date || "",
           scheduled_time_raw: booking.scheduled_time || ""
         },
@@ -87,12 +98,21 @@ Deno.serve(async (req) => {
 
     if (!sendResponse.ok) {
       const error = await sendResponse.text();
-      console.error("❌ FCM send error:", error);
+      console.error(`❌ send-fcm returned ${sendResponse.status}: ${error}`);
       return new Response(JSON.stringify({ error }), { status: 500, headers: corsHeaders });
     }
 
     const result = await sendResponse.json();
-    console.log(`✅ Tier ${tier} notifications sent:`, result);
+    
+    console.log(`📊 notify-next-tier result: sent=${result.sent}, failed=${result.failed}, firebase_project=${result.firebase_project}`);
+    
+    // Flag SENDER_ID_MISMATCH
+    if (result.results) {
+      const mismatchCount = result.results.filter((r: any) => r.error_code === "SENDER_ID_MISMATCH").length;
+      if (mismatchCount > 0) {
+        console.error(`⚠️ SENDER_ID_MISMATCH for ${mismatchCount}/${result.results.length} workers — wrong Firebase service account!`);
+      }
+    }
 
     return new Response(
       JSON.stringify({ success: true, tier, sent: workerIds.length, result }),
