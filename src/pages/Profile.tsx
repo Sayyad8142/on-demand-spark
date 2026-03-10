@@ -793,6 +793,31 @@ export default function Profile() {
           </Card>
         </div>
 
+        {/* Enhanced Ratings & Reviews Link - top */}
+        <div className="px-4 mt-4">
+          <Card className="border-0 shadow-lg cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => navigate('/customer-reviews')}>
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                    <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">⭐ {workerRating.toFixed(1)} Rating</p>
+                    <p className="text-xs text-muted-foreground">
+                      {ratingsCount > 0 ? `${ratingsCount} review${ratingsCount !== 1 ? 's' : ''}` : 'No reviews yet'}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <p className="text-[11px] text-primary font-medium mt-2 ml-13">
+                Workers with 4.5★+ ratings receive priority in bookings
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Language Selection - top of content */}
         <div className="px-4 mt-4">
           <Card className="border-0 shadow-lg">
@@ -849,28 +874,7 @@ export default function Profile() {
           {/* How To Get More Bookings Card */}
           <HowToGetMoreBookingsCard />
 
-          {/* Enhanced Ratings & Reviews Link */}
-          <Card className="border-0 shadow-lg cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => navigate('/customer-reviews')}>
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                    <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">⭐ {workerRating.toFixed(1)} Rating</p>
-                    <p className="text-xs text-muted-foreground">
-                      {ratingsCount > 0 ? `${ratingsCount} review${ratingsCount !== 1 ? 's' : ''}` : 'No reviews yet'}
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <p className="text-[11px] text-primary font-medium mt-2 ml-13">
-                Workers with 4.5★+ ratings receive priority in bookings
-              </p>
-            </CardContent>
-          </Card>
+
 
           {/* Call Support Button */}
           <a href="tel:8008180018" className="block">
