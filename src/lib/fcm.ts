@@ -1,6 +1,20 @@
+/**
+ * FCM initialization module.
+ *
+ * Fix 3: All token registration listeners and saveFCMToken logic have been
+ * removed from this file to eliminate duplicate writes.
+ *
+ * Token lifecycle is now:
+ *   Native:  MyFirebaseService.onNewToken() → SharedPreferences
+ *   JS sync: useFCMTokenSync hook → workers.fcm_token + fcm_tokens table
+ *
+ * This file retains only foreground notification routing (postMessage for
+ * BOOKING_ALERT) and notification-tap handling. Permission + registration
+ * are handled by initNativePush() in src/native/push.ts.
+ */
+
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
-import { supabase } from '@/integrations/supabase/client';
 
 let fcmInitialized = false;
 
@@ -15,30 +29,9 @@ export async function initFCM() {
     return;
   }
   
-  console.log('🔔 Initializing FCM...');
+  console.log('🔔 Initializing FCM notification handlers...');
   
-  // Request permission
-  const permStatus = await PushNotifications.requestPermissions();
-  
-  if (permStatus.receive !== 'granted') {
-    console.warn('⚠️ Push notification permission not granted');
-    return;
-  }
-  
-  // Register with FCM
-  await PushNotifications.register();
-  
-  // Handle registration success
-  PushNotifications.addListener('registration', async (token) => {
-    console.log('✅ FCM token received:', token.value.substring(0, 20) + '...');
-  });
-  
-  // Handle registration error
-  PushNotifications.addListener('registrationError', (error) => {
-    console.error('❌ FCM registration error:', error);
-  });
-  
-  // Handle notification received (foreground)
+  // Handle notification received (foreground) — route booking alerts via postMessage
   PushNotifications.addListener('pushNotificationReceived', (notification) => {
     console.log('🔔 Foreground notification:', notification);
     const bookingId = notification.data?.bookingId || notification.data?.booking_id;
@@ -49,7 +42,7 @@ export async function initFCM() {
     }
   });
   
-  // Handle notification clicked
+  // Handle notification clicked — route booking alerts via postMessage
   PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
     console.log('🔔 Notification clicked:', notification);
     const bookingId = notification.notification.data?.bookingId || notification.notification.data?.booking_id;
@@ -61,39 +54,13 @@ export async function initFCM() {
   });
   
   fcmInitialized = true;
-  console.log('✅ FCM initialized');
+  console.log('✅ FCM notification handlers initialized');
 }
 
-export async function saveFCMToken(userId: string) {
-  if (!Capacitor.isNativePlatform()) {
-    console.log('FCM: not native platform, skipping token save');
-    return;
-  }
-  
-  try {
-    // Get delivered notifications to ensure we have permission
-    const delivered = await PushNotifications.getDeliveredNotifications();
-    console.log('📱 Delivered notifications count:', delivered.notifications.length);
-    
-    // The token is received via the 'registration' listener
-    // We need to store it when received
-    PushNotifications.addListener('registration', async (token) => {
-      console.log('💾 Saving FCM token for user:', userId);
-      
-      const { error } = await supabase
-        .from('fcm_tokens')
-        .upsert({ 
-          user_id: userId, 
-          token: token.value 
-        });
-      
-      if (error) {
-        console.error('❌ Error saving FCM token:', error);
-      } else {
-        console.log('✅ FCM token saved to database');
-      }
-    });
-  } catch (error) {
-    console.error('❌ FCM token save error:', error);
-  }
+/**
+ * @deprecated Token saving is now handled by useFCMTokenSync hook.
+ * This function is kept as a no-op for backward compatibility.
+ */
+export async function saveFCMToken(_userId: string) {
+  console.log('ℹ️ saveFCMToken() is deprecated — token sync handled by useFCMTokenSync hook');
 }

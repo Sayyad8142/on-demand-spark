@@ -19,6 +19,14 @@ public class MyFirebaseService extends FirebaseMessagingService {
   private static final int NOTIFICATION_ID = 12345;
 
   @Override
+  public void onCreate() {
+    super.onCreate();
+    // Fix 2: Pre-create notification channel early so fallback notifications
+    // never fail silently on Android 8+ due to missing channel.
+    createNotificationChannel();
+  }
+
+  @Override
   public void onMessageReceived(RemoteMessage message) {
     Log.d(TAG, "═══════════════════════════════════════════════════════════");
     Log.d(TAG, "📩 FCM MESSAGE RECEIVED");

@@ -365,13 +365,58 @@ export function useAuth() {
   }, [saveSession, saveJWT, refreshSession, clearSessionCompletely]);
 
   const signOut = useCallback(async () => {
+    // Fix 1: Clear FCM token from backend BEFORE clearing session
+    // (we still have auth credentials at this point)
+    try {
+      const userId = session?.user?.id;
+      if (userId) {
+        console.log('🗑️ [Logout] Clearing FCM token from backend for user:', userId);
+        
+        // Get current device token to match against (avoid clearing other devices)
+        let currentToken: string | null = null;
+        if (Capacitor.isNativePlatform() && AuthBridge) {
+          try {
+            const pending = await AuthBridge.getPendingFCMToken();
+            currentToken = pending?.token ?? null;
+          } catch (_) { /* ignore */ }
+        }
+
+        // Clear workers.fcm_token (PRIMARY source of truth)
+        const { error: wErr, count: wCount } = await supabase
+          .from('workers')
+          .update({ fcm_token: null, updated_at: new Date().toISOString() })
+          .eq('user_id', userId);
+        
+        if (wErr) {
+          console.warn('⚠️ [Logout] Failed to clear workers.fcm_token:', wErr.message);
+        } else {
+          console.log(`✅ [Logout] Cleared workers.fcm_token (rows: ${wCount ?? 'unknown'})`);
+        }
+
+        // Delete from fcm_tokens table (FALLBACK source)
+        const { error: fErr } = await supabase
+          .from('fcm_tokens')
+          .delete()
+          .eq('user_id', userId);
+        
+        if (fErr) {
+          console.warn('⚠️ [Logout] Failed to delete fcm_tokens row:', fErr.message);
+        } else {
+          console.log('✅ [Logout] Deleted fcm_tokens row');
+        }
+      }
+    } catch (error) {
+      // Never block logout due to token cleanup failure
+      console.error('⚠️ [Logout] FCM cleanup error (non-blocking):', error);
+    }
+
     try {
       await supabase.auth.signOut();
     } catch (error) {
       console.error('❌ Sign out error:', error);
     }
     await clearSessionCompletely();
-  }, [clearSessionCompletely]);
+  }, [clearSessionCompletely, session]);
 
   return { user, session, loading, signOut, refreshSession };
 }
