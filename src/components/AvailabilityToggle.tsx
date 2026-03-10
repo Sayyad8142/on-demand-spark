@@ -12,6 +12,7 @@ interface AvailabilityToggleProps {
 export function AvailabilityToggle({ workerId, className }: AvailabilityToggleProps) {
   const [isAvailable, setIsAvailable] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [pressed, setPressed] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -31,6 +32,8 @@ export function AvailabilityToggle({ workerId, className }: AvailabilityTogglePr
       setIsAvailable(data?.is_available || false);
     } catch (error) {
       console.error("Error loading availability:", error);
+    } finally {
+      setInitialLoading(false);
     }
   };
 
@@ -65,6 +68,12 @@ export function AvailabilityToggle({ workerId, className }: AvailabilityTogglePr
       setLoading(false);
     }
   };
+
+  if (initialLoading) {
+    return (
+      <div className={`rounded-xl p-4 bg-muted animate-pulse ${className || ""}`} style={{ height: 62 }} />
+    );
+  }
 
   return (
     <div
