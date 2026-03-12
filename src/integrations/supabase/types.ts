@@ -86,29 +86,41 @@ export type Database = {
       app_config: {
         Row: {
           created_at: string | null
+          force_update: boolean
           id: string
+          latest_version_name: string
           min_user_version_code: number
           min_user_version_name: string
           min_worker_version_code: number
           play_store_url_user: string
+          soft_update_message: string
+          update_title: string
           user_update_message: string
         }
         Insert: {
           created_at?: string | null
+          force_update?: boolean
           id?: string
+          latest_version_name?: string
           min_user_version_code?: number
           min_user_version_name?: string
           min_worker_version_code?: number
           play_store_url_user?: string
+          soft_update_message?: string
+          update_title?: string
           user_update_message?: string
         }
         Update: {
           created_at?: string | null
+          force_update?: boolean
           id?: string
+          latest_version_name?: string
           min_user_version_code?: number
           min_user_version_name?: string
           min_worker_version_code?: number
           play_store_url_user?: string
+          soft_update_message?: string
+          update_title?: string
           user_update_message?: string
         }
         Relationships: []
@@ -484,6 +496,9 @@ export type Database = {
           prealert_sent: boolean
           preferred_worker_id: string | null
           price_inr: number | null
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          razorpay_signature: string | null
           reach_confirmed_at: string | null
           reach_confirmed_by: string | null
           reach_status: string | null
@@ -557,6 +572,9 @@ export type Database = {
           prealert_sent?: boolean
           preferred_worker_id?: string | null
           price_inr?: number | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          razorpay_signature?: string | null
           reach_confirmed_at?: string | null
           reach_confirmed_by?: string | null
           reach_status?: string | null
@@ -630,6 +648,9 @@ export type Database = {
           prealert_sent?: boolean
           preferred_worker_id?: string | null
           price_inr?: number | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          razorpay_signature?: string | null
           reach_confirmed_at?: string | null
           reach_confirmed_by?: string | null
           reach_status?: string | null
@@ -1656,6 +1677,48 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_intents: {
+        Row: {
+          amount_inr: number
+          booking_data: Json
+          created_at: string
+          expires_at: string
+          id: string
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          amount_inr: number
+          booking_data: Json
+          created_at?: string
+          expires_at?: string
+          id?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          amount_inr?: number
+          booking_data?: Json
+          created_at?: string
+          expires_at?: string
+          id?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       pricing: {
         Row: {
           active: boolean
@@ -2412,6 +2475,32 @@ export type Database = {
         }
         Relationships: []
       }
+      user_wallets: {
+        Row: {
+          balance_inr: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance_inr?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance_inr?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_wallets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           created_at: string | null
@@ -2441,6 +2530,51 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      wallet_transactions: {
+        Row: {
+          amount_inr: number
+          booking_id: string | null
+          created_at: string
+          id: string
+          reason: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount_inr: number
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          reason?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount_inr?: number
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          reason?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       web_push_subscriptions: {
         Row: {
@@ -3202,6 +3336,9 @@ export type Database = {
               prealert_sent: boolean
               preferred_worker_id: string | null
               price_inr: number | null
+              razorpay_order_id: string | null
+              razorpay_payment_id: string | null
+              razorpay_signature: string | null
               reach_confirmed_at: string | null
               reach_confirmed_by: string | null
               reach_status: string | null
@@ -3263,9 +3400,11 @@ export type Database = {
       bytea_to_text: { Args: { data: string }; Returns: string }
       check_expired_assignments: { Args: never; Returns: Json }
       check_instant_supply: { Args: { p_community: string }; Returns: number }
+      cleanup_old_booking_requests: { Args: never; Returns: undefined }
       cleanup_old_presence_snapshots: { Args: never; Returns: number }
       cleanup_old_support_chats: { Args: never; Returns: undefined }
       cleanup_old_worker_busy_logs: { Args: never; Returns: undefined }
+      cleanup_payment_intents: { Args: never; Returns: undefined }
       cleanup_stale_worker_busy_flags: {
         Args: never
         Returns: {
@@ -3275,6 +3414,14 @@ export type Database = {
         }[]
       }
       create_admin_email_user: { Args: never; Returns: undefined }
+      credit_wallet_on_cancel: {
+        Args: { p_booking_id: string; p_reason?: string }
+        Returns: undefined
+      }
+      debit_wallet_for_booking: {
+        Args: { p_amount: number; p_booking_id: string }
+        Returns: undefined
+      }
       delete_my_data: { Args: never; Returns: undefined }
       delete_worker_cascade: {
         Args: { p_worker_id: string }
@@ -4089,6 +4236,9 @@ export type Database = {
           prealert_sent: boolean
           preferred_worker_id: string | null
           price_inr: number | null
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          razorpay_signature: string | null
           reach_confirmed_at: string | null
           reach_confirmed_by: string | null
           reach_status: string | null
