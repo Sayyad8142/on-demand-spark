@@ -1,14 +1,14 @@
 // Single source of truth for Supabase connection config
-const CUSTOM_DOMAIN = "https://api.didisnow.com";
+const DEFAULT_URL = "https://paywwbuqycovjopryele.supabase.co";
 const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheXd3YnVxeWNvdmpvcHJ5ZWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkyNjksImV4cCI6MjA3MDc0NTI2OX0.js1MaTBkjuGlaDfQjrZpZ9_G8Jy9ygNAB8KpNDiQg8o";
 
 export function getSupabaseUrl(): string {
   const envUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-  // Use env var only if it points to our custom domain; ignore platform-injected supabase.co URLs
-  if (envUrl && envUrl.includes("api.didisnow.com")) {
+  // Use env var only if it points to our project URL
+  if (envUrl && envUrl.includes("paywwbuqycovjopryele")) {
     return envUrl;
   }
-  return CUSTOM_DOMAIN;
+  return DEFAULT_URL;
 }
 
 export function getSupabaseAnonKey(): string {
