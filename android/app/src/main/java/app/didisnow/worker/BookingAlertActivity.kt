@@ -41,7 +41,7 @@ class BookingAlertActivity : AppCompatActivity() {
     private val REFRESH_THROTTLE_MS = 30_000L
     
     companion object {
-        private const val SUPABASE_URL = "https://api.didisnow.com"
+        private const val SUPABASE_URL = "https://paywwbuqycovjopryele.supabase.co"
         private const val SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheXd3YnVxeWNvdmpvcHJ5ZWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkyNjksImV4cCI6MjA3MDc0NTI2OX0.js1MaTBkjuGlaDfQjrZpZ9_G8Jy9ygNAB8KpNDiQg8o"
     }
 

@@ -151,7 +151,7 @@ class LocationUpdateWorker(
                 return
             }
             
-            val url = URL("https://api.didisnow.com/rest/v1/rpc/update_worker_location")
+            val url = URL("https://paywwbuqycovjopryele.supabase.co/rest/v1/rpc/update_worker_location")
             val connection = url.openConnection() as HttpURLConnection
             
             connection.apply {
