@@ -19,7 +19,7 @@ serve(async (req) => {
     console.log('📨 Sending web push to workers:', workerIds);
     
     const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "https://api.didisnow.com",
+      Deno.env.get("SUPABASE_URL") ?? "https://paywwbuqycovjopryele.supabase.co",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
