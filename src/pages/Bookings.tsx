@@ -246,12 +246,17 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
         </div>
         <div className="flex items-center gap-2">
           {/* Customer Rating */}
-          {booking.rating && (
+          {booking.rating != null && booking.rating > 0 ? (
             <div className="flex items-center gap-1 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
               <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
               <span className="font-semibold text-amber-600 dark:text-amber-400">{booking.rating}</span>
             </div>
-          )}
+          ) : booking.status === 'completed' ? (
+            <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded-full">
+              <Star className="w-3 h-3 text-gray-300" />
+              <span className="text-xs text-muted-foreground">—</span>
+            </div>
+          ) : null}
           {booking.price_inr && (
             <span className={`font-bold ${numberColor} text-base`}>₹{booking.price_inr}</span>
           )}
