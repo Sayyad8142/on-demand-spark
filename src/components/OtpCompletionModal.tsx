@@ -122,7 +122,7 @@ export default function OtpCompletionModal({ open, onClose, bookingId, onComplet
 
               <Button
                 onClick={handleSubmit}
-                disabled={loading || otp.length < 4}
+                disabled={loading || otp.length < 3}
                 className="w-full h-12 text-base font-bold"
               >
                 {loading ? (
