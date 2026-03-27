@@ -88,39 +88,51 @@ export type Database = {
           created_at: string | null
           force_update: boolean
           id: string
+          ios_store_url: string
           latest_version_name: string
           min_user_version_code: number
           min_user_version_name: string
           min_worker_version_code: number
           play_store_url_user: string
+          release_notes: string | null
+          soft_update_enabled: boolean
           soft_update_message: string
           update_title: string
+          updated_at: string
           user_update_message: string
         }
         Insert: {
           created_at?: string | null
           force_update?: boolean
           id?: string
+          ios_store_url?: string
           latest_version_name?: string
           min_user_version_code?: number
           min_user_version_name?: string
           min_worker_version_code?: number
           play_store_url_user?: string
+          release_notes?: string | null
+          soft_update_enabled?: boolean
           soft_update_message?: string
           update_title?: string
+          updated_at?: string
           user_update_message?: string
         }
         Update: {
           created_at?: string | null
           force_update?: boolean
           id?: string
+          ios_store_url?: string
           latest_version_name?: string
           min_user_version_code?: number
           min_user_version_name?: string
           min_worker_version_code?: number
           play_store_url_user?: string
+          release_notes?: string | null
+          soft_update_enabled?: boolean
           soft_update_message?: string
           update_title?: string
+          updated_at?: string
           user_update_message?: string
         }
         Relationships: []
@@ -2741,6 +2753,131 @@ export type Database = {
           },
         ]
       }
+      worker_payout_events: {
+        Row: {
+          created_at: string
+          from_status: string | null
+          id: string
+          notes: string | null
+          payout_id: string
+          performed_by: string | null
+          to_status: string
+        }
+        Insert: {
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          notes?: string | null
+          payout_id: string
+          performed_by?: string | null
+          to_status: string
+        }
+        Update: {
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          notes?: string | null
+          payout_id?: string
+          performed_by?: string | null
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_payout_events_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_payouts: {
+        Row: {
+          admin_notes: string | null
+          approved_at: string | null
+          booking_amount: number
+          booking_id: string
+          created_at: string
+          external_reference: string | null
+          failed_at: string | null
+          failure_reason: string | null
+          held_at: string | null
+          hold_reason: string | null
+          id: string
+          paid_at: string | null
+          payout_amount: number
+          payout_method: string | null
+          platform_fee: number
+          processed_at: string | null
+          processed_by_admin_id: string | null
+          reversed_at: string | null
+          status: string
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          approved_at?: string | null
+          booking_amount: number
+          booking_id: string
+          created_at?: string
+          external_reference?: string | null
+          failed_at?: string | null
+          failure_reason?: string | null
+          held_at?: string | null
+          hold_reason?: string | null
+          id?: string
+          paid_at?: string | null
+          payout_amount: number
+          payout_method?: string | null
+          platform_fee?: number
+          processed_at?: string | null
+          processed_by_admin_id?: string | null
+          reversed_at?: string | null
+          status?: string
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          approved_at?: string | null
+          booking_amount?: number
+          booking_id?: string
+          created_at?: string
+          external_reference?: string | null
+          failed_at?: string | null
+          failure_reason?: string | null
+          held_at?: string | null
+          hold_reason?: string | null
+          id?: string
+          paid_at?: string | null
+          payout_amount?: number
+          payout_method?: string | null
+          platform_fee?: number
+          processed_at?: string | null
+          processed_by_admin_id?: string | null
+          reversed_at?: string | null
+          status?: string
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_payouts_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_payouts_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_presence_logs: {
         Row: {
           community: string | null
@@ -3262,6 +3399,10 @@ export type Database = {
               isSetofReturn: false
             }
           }
+      approve_worker_payout: {
+        Args: { p_admin_notes?: string; p_payout_id: string }
+        Returns: Json
+      }
       assign_booking_to_next_worker: {
         Args: { p_booking_id: string }
         Returns: {
@@ -3400,6 +3541,7 @@ export type Database = {
       bytea_to_text: { Args: { data: string }; Returns: string }
       check_expired_assignments: { Args: never; Returns: Json }
       check_instant_supply: { Args: { p_community: string }; Returns: number }
+      check_payout_eligibility: { Args: { p_payout_id: string }; Returns: Json }
       cleanup_old_booking_requests: { Args: never; Returns: undefined }
       cleanup_old_presence_snapshots: { Args: never; Returns: number }
       cleanup_old_support_chats: { Args: never; Returns: undefined }
@@ -3653,6 +3795,7 @@ export type Database = {
         }[]
       }
       get_ops_setting: { Args: { p_key: string }; Returns: string }
+      get_payout_summary: { Args: never; Returns: Json }
       get_profile_id: { Args: never; Returns: string }
       get_realtime_active_workers: {
         Args: { p_community?: string; p_service?: string }
@@ -3835,6 +3978,14 @@ export type Database = {
         Args: { lat1: number; lat2: number; lng1: number; lng2: number }
         Returns: number
       }
+      hold_worker_payout: {
+        Args: {
+          p_admin_notes?: string
+          p_hold_reason: string
+          p_payout_id: string
+        }
+        Returns: Json
+      }
       http: {
         Args: { request: Database["public"]["CompositeTypes"]["http_request"] }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
@@ -3985,6 +4136,27 @@ export type Database = {
         Args: { p_thread_id: string }
         Returns: undefined
       }
+      mark_worker_payout_failed: {
+        Args: {
+          p_admin_notes?: string
+          p_failure_reason: string
+          p_payout_id: string
+        }
+        Returns: Json
+      }
+      mark_worker_payout_paid: {
+        Args: {
+          p_admin_notes?: string
+          p_external_reference?: string
+          p_payout_id: string
+          p_payout_method?: string
+        }
+        Returns: Json
+      }
+      mark_worker_payout_processing: {
+        Args: { p_admin_notes?: string; p_payout_id: string }
+        Returns: Json
+      }
       norm_phone: { Args: { p: string }; Returns: string }
       notify_next_worker: { Args: { p_booking_id: string }; Returns: Json }
       pending_sla_minutes: { Args: never; Returns: number }
@@ -4056,6 +4228,10 @@ export type Database = {
       }
       reject_booking_request: {
         Args: { p_booking_id: string; p_worker_id: string }
+        Returns: Json
+      }
+      release_worker_payout: {
+        Args: { p_admin_notes?: string; p_payout_id: string }
         Returns: Json
       }
       respond_to_booking_assignment: {
