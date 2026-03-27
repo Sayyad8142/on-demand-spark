@@ -11,7 +11,7 @@ import { ArrowLeft, Search, MapPin, Calendar, Loader2, User, Star } from "lucide
 import { DEMO_BOOKINGS } from "@/config/demoData";
 import { formatBookingAddress, BookingWithAddress } from "@/lib/address";
 
-type Booking = BookingWithAddress & { rating?: number | null };
+type Booking = BookingWithAddress & { rating?: number | null; payout_status?: string | null; payout_amount?: number | null };
 
 export default function Bookings() {
   const navigate = useNavigate();
