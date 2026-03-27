@@ -100,7 +100,7 @@ export default function OtpCompletionModal({ open, onClose, bookingId, onComplet
                 Complete Job with OTP
               </DialogTitle>
               <DialogDescription>
-                Ask the customer for their 4-digit completion OTP to finish this job.
+                Ask the customer for their 3-digit completion OTP to finish this job.
               </DialogDescription>
             </DialogHeader>
 
