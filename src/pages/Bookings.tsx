@@ -271,6 +271,34 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
           )}
         </div>
       </div>
+
+      {/* Payment & Payout Status */}
+      <div className="flex flex-wrap gap-1.5 mt-2">
+        {booking.payment_method && (
+          <Badge variant="outline" className="text-[10px] gap-0.5 h-5">
+            <CreditCard className="w-2.5 h-2.5" />
+            {booking.payment_method === 'pay_after_service' ? 'Pay After' : booking.payment_method.replace('_', ' ')}
+          </Badge>
+        )}
+        {booking.payment_status === 'paid' && (
+          <Badge className="bg-green-100 text-green-700 text-[10px] gap-0.5 h-5">
+            <CheckCircle2 className="w-2.5 h-2.5" />
+            Paid
+          </Badge>
+        )}
+        {booking.payout_status && (
+          <Badge className={`text-[10px] gap-0.5 h-5 ${
+            booking.payout_status === 'paid' ? 'bg-green-100 text-green-700' :
+            booking.payout_status === 'held' ? 'bg-orange-100 text-orange-700' :
+            booking.payout_status === 'failed' ? 'bg-red-100 text-red-700' :
+            'bg-amber-100 text-amber-700'
+          }`}>
+            <Clock className="w-2.5 h-2.5" />
+            Payout: {booking.payout_status}
+            {booking.payout_amount != null && ` ₹${booking.payout_amount}`}
+          </Badge>
+        )}
+      </div>
     </Card>
   );
 }
