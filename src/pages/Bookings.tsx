@@ -79,11 +79,20 @@ export default function Bookings() {
           .select('booking_id, rating')
           .in('booking_id', bookingIds);
         
-        // Merge ratings into bookings
+        // Fetch payout info
+        const { data: payouts } = await supabase
+          .from('worker_payouts')
+          .select('booking_id, status, payout_amount')
+          .in('booking_id', bookingIds);
+        
+        // Merge ratings and payouts into bookings
         const ratingsMap = new Map(ratings?.map(r => [r.booking_id, r.rating]) || []);
+        const payoutsMap = new Map(payouts?.map(p => [p.booking_id, { status: p.status, amount: p.payout_amount }]) || []);
         const bookingsWithRatings = (data || []).map(b => ({
           ...b,
-          rating: ratingsMap.get(b.id) ?? null
+          rating: ratingsMap.get(b.id) ?? null,
+          payout_status: payoutsMap.get(b.id)?.status ?? null,
+          payout_amount: payoutsMap.get(b.id)?.amount ?? null,
         }));
         
         setBookings(bookingsWithRatings);
