@@ -659,7 +659,68 @@ export default function Profile() {
                         workerId={worker.id} 
                       />
                     )}
-                  </div>
+                    </div>
+
+                    {/* Payout Details Section */}
+                    <div className="space-y-3 border-t pt-3">
+                      <Label className="flex items-center gap-2 text-sm font-semibold">
+                        <Wallet className="w-4 h-4" />
+                        Payout Details
+                      </Label>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-account-name">Account Holder Name</Label>
+                        <Input
+                          id="edit-account-name"
+                          value={accountHolderName}
+                          onChange={(e) => setAccountHolderName(e.target.value)}
+                          placeholder="Name on bank account"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-bank-account">Bank Account Number (Optional)</Label>
+                        <Input
+                          id="edit-bank-account"
+                          value={bankAccountNumber}
+                          onChange={(e) => setBankAccountNumber(e.target.value)}
+                          placeholder="Account number"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-ifsc">IFSC Code (Optional)</Label>
+                        <Input
+                          id="edit-ifsc"
+                          value={ifscCode}
+                          onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
+                          placeholder="e.g., SBIN0001234"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Preferred Payout Method</Label>
+                        <div className="flex gap-2">
+                          {[
+                            { value: "upi", label: "UPI" },
+                            { value: "bank_transfer", label: "Bank Transfer" },
+                          ].map((m) => (
+                            <button
+                              key={m.value}
+                              type="button"
+                              onClick={() => setPreferredPayoutMethod(m.value)}
+                              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all border ${
+                                preferredPayoutMethod === m.value
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "bg-muted text-muted-foreground border-border hover:border-primary/50"
+                              }`}
+                            >
+                              {m.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
 
                   <div className="space-y-2">
                     <Label>{t('profile.services')}</Label>
