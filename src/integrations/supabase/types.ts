@@ -528,6 +528,9 @@ export type Database = {
           user_marked_paid_at: string | null
           user_payment_utr: string | null
           user_reminder_sent: boolean | null
+          worker_collected_at: string | null
+          worker_collected_payment: boolean | null
+          worker_collection_method: string | null
           worker_id: string | null
           worker_name: string | null
           worker_phone: string | null
@@ -604,6 +607,9 @@ export type Database = {
           user_marked_paid_at?: string | null
           user_payment_utr?: string | null
           user_reminder_sent?: boolean | null
+          worker_collected_at?: string | null
+          worker_collected_payment?: boolean | null
+          worker_collection_method?: string | null
           worker_id?: string | null
           worker_name?: string | null
           worker_phone?: string | null
@@ -680,6 +686,9 @@ export type Database = {
           user_marked_paid_at?: string | null
           user_payment_utr?: string | null
           user_reminder_sent?: boolean | null
+          worker_collected_at?: string | null
+          worker_collected_payment?: boolean | null
+          worker_collection_method?: string | null
           worker_id?: string | null
           worker_name?: string | null
           worker_phone?: string | null
@@ -3079,7 +3088,9 @@ export type Database = {
       }
       workers: {
         Row: {
+          account_holder_name: string | null
           admin_override_rating: number | null
+          bank_account_number: string | null
           communities: string[] | null
           community: string | null
           cook_cuisine_tags: string[]
@@ -3088,6 +3099,7 @@ export type Database = {
           first_booking_completed_at: string | null
           full_name: string
           id: string
+          ifsc_code: string | null
           in_geofence: boolean | null
           is_active: boolean
           is_available: boolean | null
@@ -3104,6 +3116,7 @@ export type Database = {
           location_enabled: boolean | null
           phone: string
           photo_url: string | null
+          preferred_payout_method: string | null
           priority_score: number
           rating: number | null
           respect_availability: boolean | null
@@ -3121,7 +3134,9 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          account_holder_name?: string | null
           admin_override_rating?: number | null
+          bank_account_number?: string | null
           communities?: string[] | null
           community?: string | null
           cook_cuisine_tags?: string[]
@@ -3130,6 +3145,7 @@ export type Database = {
           first_booking_completed_at?: string | null
           full_name: string
           id?: string
+          ifsc_code?: string | null
           in_geofence?: boolean | null
           is_active?: boolean
           is_available?: boolean | null
@@ -3146,6 +3162,7 @@ export type Database = {
           location_enabled?: boolean | null
           phone: string
           photo_url?: string | null
+          preferred_payout_method?: string | null
           priority_score?: number
           rating?: number | null
           respect_availability?: boolean | null
@@ -3163,7 +3180,9 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          account_holder_name?: string | null
           admin_override_rating?: number | null
+          bank_account_number?: string | null
           communities?: string[] | null
           community?: string | null
           cook_cuisine_tags?: string[]
@@ -3172,6 +3191,7 @@ export type Database = {
           first_booking_completed_at?: string | null
           full_name?: string
           id?: string
+          ifsc_code?: string | null
           in_geofence?: boolean | null
           is_active?: boolean
           is_available?: boolean | null
@@ -3188,6 +3208,7 @@ export type Database = {
           location_enabled?: boolean | null
           phone?: string
           photo_url?: string | null
+          preferred_payout_method?: string | null
           priority_score?: number
           rating?: number | null
           respect_availability?: boolean | null
@@ -3300,7 +3321,9 @@ export type Database = {
               p_upi_id: string
             }
             Returns: {
+              account_holder_name: string | null
               admin_override_rating: number | null
+              bank_account_number: string | null
               communities: string[] | null
               community: string | null
               cook_cuisine_tags: string[]
@@ -3309,6 +3332,7 @@ export type Database = {
               first_booking_completed_at: string | null
               full_name: string
               id: string
+              ifsc_code: string | null
               in_geofence: boolean | null
               is_active: boolean
               is_available: boolean | null
@@ -3325,6 +3349,7 @@ export type Database = {
               location_enabled: boolean | null
               phone: string
               photo_url: string | null
+              preferred_payout_method: string | null
               priority_score: number
               rating: number | null
               respect_availability: boolean | null
@@ -3351,7 +3376,9 @@ export type Database = {
         | {
             Args: { p_worker: Json }
             Returns: {
+              account_holder_name: string | null
               admin_override_rating: number | null
+              bank_account_number: string | null
               communities: string[] | null
               community: string | null
               cook_cuisine_tags: string[]
@@ -3360,6 +3387,7 @@ export type Database = {
               first_booking_completed_at: string | null
               full_name: string
               id: string
+              ifsc_code: string | null
               in_geofence: boolean | null
               is_active: boolean
               is_available: boolean | null
@@ -3376,6 +3404,7 @@ export type Database = {
               location_enabled: boolean | null
               phone: string
               photo_url: string | null
+              preferred_payout_method: string | null
               priority_score: number
               rating: number | null
               respect_availability: boolean | null
@@ -3497,6 +3526,9 @@ export type Database = {
               user_marked_paid_at: string | null
               user_payment_utr: string | null
               user_reminder_sent: boolean | null
+              worker_collected_at: string | null
+              worker_collected_payment: boolean | null
+              worker_collection_method: string | null
               worker_id: string | null
               worker_name: string | null
               worker_phone: string | null
@@ -4432,6 +4464,9 @@ export type Database = {
           user_marked_paid_at: string | null
           user_payment_utr: string | null
           user_reminder_sent: boolean | null
+          worker_collected_at: string | null
+          worker_collected_payment: boolean | null
+          worker_collection_method: string | null
           worker_id: string | null
           worker_name: string | null
           worker_phone: string | null
