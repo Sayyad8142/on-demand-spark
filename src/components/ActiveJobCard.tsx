@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Phone, Volume2, Utensils, Zap, PlusCircle, Sparkles, CookingPot } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Check, Phone, Volume2, Utensils, Zap, PlusCircle, Sparkles, CookingPot, KeyRound, Banknote, CreditCard } from "lucide-react";
 import { BookingWithAddress } from "@/lib/address";
 import { parsePHFCode } from "@/lib/address";
 import { useState, useEffect, useMemo } from "react";
@@ -10,6 +11,8 @@ import serviceDishWashing from "@/assets/service-dish-washing.webp";
 import serviceFloorCleaning from "@/assets/service-floor-cleaning.webp";
 import serviceBathroomCleaning from "@/assets/service-bathroom-cleaning.webp";
 import serviceCooking from "@/assets/service-cooking.webp";
+import OtpCompletionModal from "@/components/OtpCompletionModal";
+import PaymentCollectionModal from "@/components/PaymentCollectionModal";
 
 const TASK_CONFIG: Record<string, {label: string; img: string; icon: typeof Utensils}> = {
   dish_washing: { label: "Dish Washing", img: serviceDishWashing, icon: Utensils },
