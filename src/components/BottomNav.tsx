@@ -40,7 +40,7 @@ export default function BottomNav() {
 
   const navItems = [
   { path: "/home", icon: Home, label: t('nav.home') },
-  { path: "tel:8008180018", icon: Phone, label: t('nav.call', 'Call'), isExternal: true },
+  { path: "/earnings", icon: Wallet, label: t('nav.earnings', 'Earnings') },
   { path: "/bookings", icon: Calendar, label: t('nav.bookings') },
   { path: "/availability", icon: Clock, label: t('nav.availability'), showBadge: hasAvailability },
   { path: "/profile", icon: User, label: t('nav.profile') }];
