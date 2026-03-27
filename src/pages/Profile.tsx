@@ -410,8 +410,12 @@ export default function Profile() {
         upi_id: upiId,
         service_types: validServices,
         communities: selectedCommunities,
-        cook_cuisine_tags: []
-      });
+        cook_cuisine_tags: [],
+        account_holder_name: accountHolderName || null,
+        bank_account_number: bankAccountNumber || null,
+        ifsc_code: ifscCode || null,
+        preferred_payout_method: preferredPayoutMethod,
+      } as any);
       toast({
         title: "Success",
         description: "Profile updated successfully"
