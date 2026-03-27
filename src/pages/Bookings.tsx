@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Search, MapPin, Calendar, Loader2, User, Star } from "lucide-react";
+import { ArrowLeft, Search, MapPin, Calendar, Loader2, User, Star, CreditCard, CheckCircle2, Clock } from "lucide-react";
 import { DEMO_BOOKINGS } from "@/config/demoData";
 import { formatBookingAddress, BookingWithAddress } from "@/lib/address";
 
