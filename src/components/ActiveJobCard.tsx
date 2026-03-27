@@ -42,6 +42,8 @@ export default function ActiveJobCard({
   const [remainingSeconds, setRemainingSeconds] = useState<number>(0);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [taskPrices, setTaskPrices] = useState<Record<string, number>>({});
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const { i18n } = useTranslation();
 
   // Fetch per-task prices
