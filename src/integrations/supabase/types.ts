@@ -473,6 +473,7 @@ export type Database = {
           cancelled_at: string | null
           community: string
           completed_at: string | null
+          completion_otp: string | null
           confirmed_at: string | null
           cook_cuisine_pref: string | null
           cook_gender_pref: string | null
@@ -552,6 +553,7 @@ export type Database = {
           cancelled_at?: string | null
           community: string
           completed_at?: string | null
+          completion_otp?: string | null
           confirmed_at?: string | null
           cook_cuisine_pref?: string | null
           cook_gender_pref?: string | null
@@ -631,6 +633,7 @@ export type Database = {
           cancelled_at?: string | null
           community?: string
           completed_at?: string | null
+          completion_otp?: string | null
           confirmed_at?: string | null
           cook_cuisine_pref?: string | null
           cook_gender_pref?: string | null
@@ -3471,6 +3474,7 @@ export type Database = {
               cancelled_at: string | null
               community: string
               completed_at: string | null
+              completion_otp: string | null
               confirmed_at: string | null
               cook_cuisine_pref: string | null
               cook_gender_pref: string | null
@@ -4409,6 +4413,7 @@ export type Database = {
           cancelled_at: string | null
           community: string
           completed_at: string | null
+          completion_otp: string | null
           confirmed_at: string | null
           cook_cuisine_pref: string | null
           cook_gender_pref: string | null

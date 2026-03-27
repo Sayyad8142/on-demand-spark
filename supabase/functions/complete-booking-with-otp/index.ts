@@ -22,10 +22,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Create admin client
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-    // Get user from JWT
     const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
       global: { headers: { Authorization: authHeader } },
     });
@@ -99,30 +97,20 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify OTP - check against booking_otp table or the booking's completion_otp field
-    // Try booking_otps table first
-    const { data: otpRecord } = await adminClient
-      .from("booking_otps")
-      .select("*")
-      .eq("booking_id", booking_id)
-      .eq("otp", otp)
-      .eq("used", false)
-      .maybeSingle();
-
-    if (!otpRecord) {
-      // Fallback: check if OTP matches a code stored in booking notes or a simple verification
-      // For now, return wrong OTP error
-      return new Response(JSON.stringify({ error: "Invalid OTP. Please check with the customer." }), {
+    // ── Single source of truth: bookings.completion_otp ──
+    if (!booking.completion_otp) {
+      return new Response(JSON.stringify({ error: "No completion OTP has been generated for this booking." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Mark OTP as used
-    await adminClient
-      .from("booking_otps")
-      .update({ used: true, used_at: new Date().toISOString() })
-      .eq("id", otpRecord.id);
+    if (String(otp).trim() !== String(booking.completion_otp).trim()) {
+      return new Response(JSON.stringify({ error: "Invalid OTP. Please check with the customer." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Complete the booking
     const now = new Date().toISOString();
@@ -154,7 +142,7 @@ Deno.serve(async (req) => {
 
     // Create worker payout record
     const bookingAmount = booking.price_inr || 0;
-    const platformFeePercent = 20; // 20% platform fee
+    const platformFeePercent = 20;
     const platformFee = Math.round(bookingAmount * platformFeePercent / 100);
     const payoutAmount = bookingAmount - platformFee;
 
