@@ -75,6 +75,10 @@ export default function Profile() {
   const [upiQrUrl, setUpiQrUrl] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [accountHolderName, setAccountHolderName] = useState("");
+  const [bankAccountNumber, setBankAccountNumber] = useState("");
+  const [ifscCode, setIfscCode] = useState("");
+  const [preferredPayoutMethod, setPreferredPayoutMethod] = useState("upi");
   
   // Hidden debug screen trigger - tap version 5 times
   const versionTapCount = useRef(0);
