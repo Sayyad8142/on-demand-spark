@@ -27,8 +27,8 @@ export default function OtpCompletionModal({ open, onClose, bookingId, onComplet
   const [payout, setPayout] = useState<PayoutSummary | null>(null);
 
   const handleSubmit = async () => {
-    if (otp.length < 4) {
-      setError("Please enter the complete OTP");
+    if (otp.length < 3) {
+      setError("Please enter the complete 3-digit OTP");
       return;
     }
 
@@ -100,17 +100,16 @@ export default function OtpCompletionModal({ open, onClose, bookingId, onComplet
                 Complete Job with OTP
               </DialogTitle>
               <DialogDescription>
-                Ask the customer for their 4-digit completion OTP to finish this job.
+                Ask the customer for their 3-digit completion OTP to finish this job.
               </DialogDescription>
             </DialogHeader>
 
             <div className="flex flex-col items-center gap-4 py-4">
-              <InputOTP maxLength={4} value={otp} onChange={setOtp}>
+              <InputOTP maxLength={3} value={otp} onChange={setOtp}>
                 <InputOTPGroup>
                   <InputOTPSlot index={0} />
                   <InputOTPSlot index={1} />
                   <InputOTPSlot index={2} />
-                  <InputOTPSlot index={3} />
                 </InputOTPGroup>
               </InputOTP>
 
@@ -123,7 +122,7 @@ export default function OtpCompletionModal({ open, onClose, bookingId, onComplet
 
               <Button
                 onClick={handleSubmit}
-                disabled={loading || otp.length < 4}
+                disabled={loading || otp.length < 3}
                 className="w-full h-12 text-base font-bold"
               >
                 {loading ? (
