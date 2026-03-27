@@ -27,8 +27,8 @@ export default function OtpCompletionModal({ open, onClose, bookingId, onComplet
   const [payout, setPayout] = useState<PayoutSummary | null>(null);
 
   const handleSubmit = async () => {
-    if (otp.length < 4) {
-      setError("Please enter the complete OTP");
+    if (otp.length < 3) {
+      setError("Please enter the complete 3-digit OTP");
       return;
     }
 
