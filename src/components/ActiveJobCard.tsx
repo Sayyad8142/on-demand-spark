@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Phone, Volume2, Utensils, Zap, PlusCircle, Sparkles, CookingPot } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Check, Phone, Volume2, Utensils, Zap, PlusCircle, Sparkles, CookingPot, KeyRound, Banknote, CreditCard } from "lucide-react";
 import { BookingWithAddress } from "@/lib/address";
 import { parsePHFCode } from "@/lib/address";
 import { useState, useEffect, useMemo } from "react";
@@ -10,6 +11,8 @@ import serviceDishWashing from "@/assets/service-dish-washing.webp";
 import serviceFloorCleaning from "@/assets/service-floor-cleaning.webp";
 import serviceBathroomCleaning from "@/assets/service-bathroom-cleaning.webp";
 import serviceCooking from "@/assets/service-cooking.webp";
+import OtpCompletionModal from "@/components/OtpCompletionModal";
+import PaymentCollectionModal from "@/components/PaymentCollectionModal";
 
 const TASK_CONFIG: Record<string, {label: string; img: string; icon: typeof Utensils}> = {
   dish_washing: { label: "Dish Washing", img: serviceDishWashing, icon: Utensils },
@@ -39,6 +42,8 @@ export default function ActiveJobCard({
   const [remainingSeconds, setRemainingSeconds] = useState<number>(0);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [taskPrices, setTaskPrices] = useState<Record<string, number>>({});
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const { i18n } = useTranslation();
 
   // Fetch per-task prices
@@ -300,7 +305,46 @@ export default function ActiveJobCard({
           </Button>
         </div>
 
-        {/* 5. Work Completed Button */}
+        {/* Payment & Status Info */}
+        <div className="px-3 space-y-2">
+          <div className="flex flex-wrap gap-1.5">
+            {booking.payment_method && (
+              <Badge variant="outline" className="text-xs gap-1">
+                <CreditCard className="w-3 h-3" />
+                {booking.payment_method === 'pay_after_service' ? 'Pay After Service' : booking.payment_method.replace('_', ' ')}
+              </Badge>
+            )}
+            {booking.payment_status === 'paid' && (
+              <Badge className="bg-green-100 text-green-700 text-xs gap-1">
+                <Check className="w-3 h-3" />
+                User Paid
+              </Badge>
+            )}
+            {(booking as any).worker_collected_payment && (
+              <Badge className="bg-blue-100 text-blue-700 text-xs gap-1">
+                <Banknote className="w-3 h-3" />
+                Collected
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        {/* Pay After Service: Collect Payment Button */}
+        {booking.payment_method === 'pay_after_service' && !(booking as any).worker_collected_payment && (
+          <div className="px-3">
+            <Button
+              size="lg"
+              variant="outline"
+              className="w-full h-12 text-base font-bold border-2 border-blue-500 text-blue-600 hover:bg-blue-50 rounded-xl"
+              onClick={() => setShowPaymentModal(true)}
+            >
+              <Banknote className="w-5 h-5 mr-2" />
+              Collect Payment (₹{booking.price_inr})
+            </Button>
+          </div>
+        )}
+
+        {/* 5. Complete with OTP Button */}
         <div className="px-3 pb-3">
           <Button
             size="lg"
@@ -309,12 +353,12 @@ export default function ActiveJobCard({
               "bg-gray-400 hover:bg-gray-400 cursor-not-allowed text-white/80" :
               "bg-red-500 hover:bg-red-600 text-white"}`
             }
-            onClick={() => onStatusUpdate('completed')}
+            onClick={() => setShowOtpModal(true)}
             disabled={isWorkCompletedDisabled}>
             {updating ? "Updating..." :
               <>
-                <Check className="w-6 h-6 mr-2" />
-                Work Completed
+                <KeyRound className="w-6 h-6 mr-2" />
+                Complete with OTP
                 {remainingSeconds > 0 &&
                   <span className="ml-2 text-sm font-normal opacity-80">({formatCountdown(remainingSeconds)})</span>
                 }
@@ -323,5 +367,22 @@ export default function ActiveJobCard({
           </Button>
         </div>
       </div>
+
+      {/* OTP Completion Modal */}
+      <OtpCompletionModal
+        open={showOtpModal}
+        onClose={() => setShowOtpModal(false)}
+        bookingId={booking.id}
+        onCompleted={() => onStatusUpdate('completed')}
+      />
+
+      {/* Payment Collection Modal */}
+      <PaymentCollectionModal
+        open={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        bookingId={booking.id}
+        amount={booking.price_inr || 0}
+        onCollected={() => {}}
+      />
     </Card>;
 }

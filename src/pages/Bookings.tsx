@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Search, MapPin, Calendar, Loader2, User, Star } from "lucide-react";
+import { ArrowLeft, Search, MapPin, Calendar, Loader2, User, Star, CreditCard, CheckCircle2, Clock } from "lucide-react";
 import { DEMO_BOOKINGS } from "@/config/demoData";
 import { formatBookingAddress, BookingWithAddress } from "@/lib/address";
 
-type Booking = BookingWithAddress & { rating?: number | null };
+type Booking = BookingWithAddress & { rating?: number | null; payout_status?: string | null; payout_amount?: number | null };
 
 export default function Bookings() {
   const navigate = useNavigate();
@@ -79,11 +79,20 @@ export default function Bookings() {
           .select('booking_id, rating')
           .in('booking_id', bookingIds);
         
-        // Merge ratings into bookings
+        // Fetch payout info
+        const { data: payouts } = await supabase
+          .from('worker_payouts')
+          .select('booking_id, status, payout_amount')
+          .in('booking_id', bookingIds);
+        
+        // Merge ratings and payouts into bookings
         const ratingsMap = new Map(ratings?.map(r => [r.booking_id, r.rating]) || []);
+        const payoutsMap = new Map(payouts?.map(p => [p.booking_id, { status: p.status, amount: p.payout_amount }]) || []);
         const bookingsWithRatings = (data || []).map(b => ({
           ...b,
-          rating: ratingsMap.get(b.id) ?? null
+          rating: ratingsMap.get(b.id) ?? null,
+          payout_status: payoutsMap.get(b.id)?.status ?? null,
+          payout_amount: payoutsMap.get(b.id)?.amount ?? null,
         }));
         
         setBookings(bookingsWithRatings);
@@ -261,6 +270,34 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
             <span className={`font-bold ${numberColor} text-base`}>₹{booking.price_inr}</span>
           )}
         </div>
+      </div>
+
+      {/* Payment & Payout Status */}
+      <div className="flex flex-wrap gap-1.5 mt-2">
+        {booking.payment_method && (
+          <Badge variant="outline" className="text-[10px] gap-0.5 h-5">
+            <CreditCard className="w-2.5 h-2.5" />
+            {booking.payment_method === 'pay_after_service' ? 'Pay After' : booking.payment_method.replace('_', ' ')}
+          </Badge>
+        )}
+        {booking.payment_status === 'paid' && (
+          <Badge className="bg-green-100 text-green-700 text-[10px] gap-0.5 h-5">
+            <CheckCircle2 className="w-2.5 h-2.5" />
+            Paid
+          </Badge>
+        )}
+        {booking.payout_status && (
+          <Badge className={`text-[10px] gap-0.5 h-5 ${
+            booking.payout_status === 'paid' ? 'bg-green-100 text-green-700' :
+            booking.payout_status === 'held' ? 'bg-orange-100 text-orange-700' :
+            booking.payout_status === 'failed' ? 'bg-red-100 text-red-700' :
+            'bg-amber-100 text-amber-700'
+          }`}>
+            <Clock className="w-2.5 h-2.5" />
+            Payout: {booking.payout_status}
+            {booking.payout_amount != null && ` ₹${booking.payout_amount}`}
+          </Badge>
+        )}
       </div>
     </Card>
   );

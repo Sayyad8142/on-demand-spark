@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Calendar, User, Clock, Phone } from "lucide-react";
+import { Home, Calendar, User, Clock, Wallet } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,7 +40,7 @@ export default function BottomNav() {
 
   const navItems = [
   { path: "/home", icon: Home, label: t('nav.home') },
-  { path: "tel:8008180018", icon: Phone, label: t('nav.call', 'Call'), isExternal: true },
+  { path: "/earnings", icon: Wallet, label: t('nav.earnings', 'Earnings') },
   { path: "/bookings", icon: Calendar, label: t('nav.bookings') },
   { path: "/availability", icon: Clock, label: t('nav.availability'), showBadge: hasAvailability },
   { path: "/profile", icon: User, label: t('nav.profile') }];
@@ -51,26 +51,18 @@ export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 safe-area-pb">
       <div className="flex justify-around items-center h-16 max-w-md mx-auto">
-        {navItems.map(({ path, icon: Icon, label, showBadge, isExternal }) =>
+        {navItems.map(({ path, icon: Icon, label, showBadge }) =>
         <button
           key={path}
-          onClick={() => {
-            if (isExternal) {
-              window.location.href = path;
-            } else {
-              navigate(path);
-            }
-          }}
+          onClick={() => navigate(path)}
           className={`flex flex-col items-center justify-center flex-1 h-full transition-colors relative ${
-          isExternal
-          ? "text-green-600"
-          : isActive(path)
+          isActive(path)
           ? "text-primary"
           : "text-muted-foreground hover:text-foreground"}`
           }>
           
             <div className="relative">
-              <Icon className={`w-6 h-6 ${!isExternal && isActive(path) ? "stroke-[2.5]" : ""}`} />
+              <Icon className={`w-6 h-6 ${isActive(path) ? "stroke-[2.5]" : ""}`} />
               {showBadge
 
             }

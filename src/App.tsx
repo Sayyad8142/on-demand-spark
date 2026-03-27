@@ -34,6 +34,7 @@ import ForceUpdateScreen from "./pages/ForceUpdateScreen";
 import CustomerReviews from "./pages/CustomerReviews";
 import AdminUploadQr from "./pages/AdminUploadQr";
 import AuthDebug from "./pages/AuthDebug";
+import Earnings from "./pages/Earnings";
 import BottomNav from "./components/BottomNav";
 
 const queryClient = new QueryClient();
@@ -280,6 +281,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <DevCacheReset />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/earnings"
+              element={
+                <ProtectedRoute>
+                  <Earnings />
                 </ProtectedRoute>
               }
             />

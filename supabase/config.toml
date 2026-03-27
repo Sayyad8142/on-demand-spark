@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.notify-next-tier]
 verify_jwt = false
+
+[functions.complete-booking-with-otp]
+verify_jwt = false
+
+[functions.send-webpush]
+verify_jwt = false

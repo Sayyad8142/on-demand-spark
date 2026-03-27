@@ -75,6 +75,10 @@ export default function Profile() {
   const [upiQrUrl, setUpiQrUrl] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [accountHolderName, setAccountHolderName] = useState("");
+  const [bankAccountNumber, setBankAccountNumber] = useState("");
+  const [ifscCode, setIfscCode] = useState("");
+  const [preferredPayoutMethod, setPreferredPayoutMethod] = useState("upi");
   
   // Hidden debug screen trigger - tap version 5 times
   const versionTapCount = useRef(0);
@@ -168,6 +172,10 @@ export default function Profile() {
       setSelectedCuisineTags(worker.cook_cuisine_tags || []);
       setTotalEarnings(worker.total_earnings || 0);
       setPhotoUrl(worker.photo_url || null);
+      setAccountHolderName((worker as any).account_holder_name || "");
+      setBankAccountNumber((worker as any).bank_account_number || "");
+      setIfscCode((worker as any).ifsc_code || "");
+      setPreferredPayoutMethod((worker as any).preferred_payout_method || "upi");
     }
   }, [worker]);
   useEffect(() => {
@@ -402,8 +410,12 @@ export default function Profile() {
         upi_id: upiId,
         service_types: validServices,
         communities: selectedCommunities,
-        cook_cuisine_tags: []
-      });
+        cook_cuisine_tags: [],
+        account_holder_name: accountHolderName || null,
+        bank_account_number: bankAccountNumber || null,
+        ifsc_code: ifscCode || null,
+        preferred_payout_method: preferredPayoutMethod,
+      } as any);
       toast({
         title: "Success",
         description: "Profile updated successfully"
@@ -647,7 +659,68 @@ export default function Profile() {
                         workerId={worker.id} 
                       />
                     )}
-                  </div>
+                    </div>
+
+                    {/* Payout Details Section */}
+                    <div className="space-y-3 border-t pt-3">
+                      <Label className="flex items-center gap-2 text-sm font-semibold">
+                        <Wallet className="w-4 h-4" />
+                        Payout Details
+                      </Label>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-account-name">Account Holder Name</Label>
+                        <Input
+                          id="edit-account-name"
+                          value={accountHolderName}
+                          onChange={(e) => setAccountHolderName(e.target.value)}
+                          placeholder="Name on bank account"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-bank-account">Bank Account Number (Optional)</Label>
+                        <Input
+                          id="edit-bank-account"
+                          value={bankAccountNumber}
+                          onChange={(e) => setBankAccountNumber(e.target.value)}
+                          placeholder="Account number"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-ifsc">IFSC Code (Optional)</Label>
+                        <Input
+                          id="edit-ifsc"
+                          value={ifscCode}
+                          onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
+                          placeholder="e.g., SBIN0001234"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Preferred Payout Method</Label>
+                        <div className="flex gap-2">
+                          {[
+                            { value: "upi", label: "UPI" },
+                            { value: "bank_transfer", label: "Bank Transfer" },
+                          ].map((m) => (
+                            <button
+                              key={m.value}
+                              type="button"
+                              onClick={() => setPreferredPayoutMethod(m.value)}
+                              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all border ${
+                                preferredPayoutMethod === m.value
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "bg-muted text-muted-foreground border-border hover:border-primary/50"
+                              }`}
+                            >
+                              {m.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
 
                   <div className="space-y-2">
                     <Label>{t('profile.services')}</Label>
