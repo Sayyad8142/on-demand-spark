@@ -172,6 +172,10 @@ export default function Profile() {
       setSelectedCuisineTags(worker.cook_cuisine_tags || []);
       setTotalEarnings(worker.total_earnings || 0);
       setPhotoUrl(worker.photo_url || null);
+      setAccountHolderName((worker as any).account_holder_name || "");
+      setBankAccountNumber((worker as any).bank_account_number || "");
+      setIfscCode((worker as any).ifsc_code || "");
+      setPreferredPayoutMethod((worker as any).preferred_payout_method || "upi");
     }
   }, [worker]);
   useEffect(() => {
