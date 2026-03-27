@@ -105,12 +105,11 @@ export default function OtpCompletionModal({ open, onClose, bookingId, onComplet
             </DialogHeader>
 
             <div className="flex flex-col items-center gap-4 py-4">
-              <InputOTP maxLength={4} value={otp} onChange={setOtp}>
+              <InputOTP maxLength={3} value={otp} onChange={setOtp}>
                 <InputOTPGroup>
                   <InputOTPSlot index={0} />
                   <InputOTPSlot index={1} />
                   <InputOTPSlot index={2} />
-                  <InputOTPSlot index={3} />
                 </InputOTPGroup>
               </InputOTP>
 
