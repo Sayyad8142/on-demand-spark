@@ -51,26 +51,18 @@ export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 safe-area-pb">
       <div className="flex justify-around items-center h-16 max-w-md mx-auto">
-        {navItems.map(({ path, icon: Icon, label, showBadge, isExternal }) =>
+        {navItems.map(({ path, icon: Icon, label, showBadge }) =>
         <button
           key={path}
-          onClick={() => {
-            if (isExternal) {
-              window.location.href = path;
-            } else {
-              navigate(path);
-            }
-          }}
+          onClick={() => navigate(path)}
           className={`flex flex-col items-center justify-center flex-1 h-full transition-colors relative ${
-          isExternal
-          ? "text-green-600"
-          : isActive(path)
+          isActive(path)
           ? "text-primary"
           : "text-muted-foreground hover:text-foreground"}`
           }>
           
             <div className="relative">
-              <Icon className={`w-6 h-6 ${!isExternal && isActive(path) ? "stroke-[2.5]" : ""}`} />
+              <Icon className={`w-6 h-6 ${isActive(path) ? "stroke-[2.5]" : ""}`} />
               {showBadge
 
             }
