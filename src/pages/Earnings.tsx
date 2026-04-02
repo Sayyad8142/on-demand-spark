@@ -311,6 +311,5 @@ function PayoutList({ payouts, renderStatusBadge, recentlyPaidIds }: { payouts: 
         );
       })}
     </>
-    </>
   );
 }
