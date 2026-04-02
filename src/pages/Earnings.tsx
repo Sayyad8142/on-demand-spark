@@ -251,7 +251,7 @@ function SummaryCard({ label, amount, icon: Icon, colorClass }: { label: string;
   );
 }
 
-function PayoutList({ payouts, renderStatusBadge }: { payouts: PayoutRow[]; renderStatusBadge: (s: string) => React.ReactNode }) {
+function PayoutList({ payouts, renderStatusBadge, recentlyPaidIds }: { payouts: PayoutRow[]; renderStatusBadge: (s: string) => React.ReactNode; recentlyPaidIds: Set<string> }) {
   if (payouts.length === 0) {
     return (
       <div className="text-center py-8">
@@ -263,14 +263,21 @@ function PayoutList({ payouts, renderStatusBadge }: { payouts: PayoutRow[]; rend
 
   return (
     <>
-      {payouts.map((p) => (
-        <Card key={p.id} className="border shadow-sm">
+      {payouts.map((p) => {
+        const isJustPaid = recentlyPaidIds.has(p.id);
+        return (
+        <Card key={p.id} className={`border shadow-sm transition-all duration-500 ${isJustPaid ? "ring-2 ring-green-500 bg-green-50 dark:bg-green-950" : ""}`}>
           <CardContent className="p-3 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground font-mono">
                 #{p.booking_id.slice(0, 8)}
               </span>
-              {renderStatusBadge(p.status)}
+              <div className="flex items-center gap-1.5">
+                {isJustPaid && (
+                  <Badge className="bg-green-500 text-white text-[10px] px-1.5 py-0 animate-pulse">Just Paid</Badge>
+                )}
+                {renderStatusBadge(p.status)}
+              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-2 text-sm">
