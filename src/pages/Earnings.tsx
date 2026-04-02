@@ -87,6 +87,7 @@ export default function Earnings() {
       setSummary(sum);
     }
     setLoading(false);
+    initialLoadDone.current = true;
   }, [workerId]);
 
   // Initial fetch
