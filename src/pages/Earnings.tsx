@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Loader2, Wallet, Clock, AlertTriangle, CheckCircle2, XCircle, IndianRupee } from "lucide-react";
+import { ArrowLeft, Loader2, Wallet, Clock, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getPayoutStatus } from "@/lib/payoutStatus";
 
 interface PayoutRow {
   id: string;
@@ -41,7 +42,6 @@ export default function Earnings() {
     if (!user) return;
 
     const resolveAndFetch = async () => {
-      // Resolve worker ID
       const { data: w } = await supabase
         .from("workers")
         .select("id")
@@ -50,7 +50,6 @@ export default function Earnings() {
 
       const wid = w?.id ?? null;
       if (!wid) {
-        // Try legacy
         const { data: wLegacy } = await supabase
           .from("workers")
           .select("id")
@@ -65,53 +64,94 @@ export default function Earnings() {
     resolveAndFetch();
   }, [user]);
 
+  const fetchPayouts = useCallback(async () => {
+    if (!workerId) return;
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("worker_payouts")
+      .select("*")
+      .eq("worker_id", workerId)
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setPayouts(data);
+
+      const sum: EarningsSummary = { pending: 0, paid: 0, held: 0, failed: 0 };
+      data.forEach((p) => {
+        const bucket = getPayoutStatus(p.status).bucket;
+        sum[bucket] += p.payout_amount;
+      });
+      setSummary(sum);
+    }
+    setLoading(false);
+  }, [workerId]);
+
+  // Initial fetch
   useEffect(() => {
     if (!workerId) {
       setLoading(false);
       return;
     }
-
-    const fetchPayouts = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("worker_payouts")
-        .select("*")
-        .eq("worker_id", workerId)
-        .order("created_at", { ascending: false });
-
-      if (!error && data) {
-        setPayouts(data);
-
-        const sum: EarningsSummary = { pending: 0, paid: 0, held: 0, failed: 0 };
-        data.forEach((p) => {
-          if (p.status === "paid") sum.paid += p.payout_amount;
-          else if (p.status === "held") sum.held += p.payout_amount;
-          else if (p.status === "failed") sum.failed += p.payout_amount;
-          else sum.pending += p.payout_amount; // pending, approved, processing
-        });
-        setSummary(sum);
-      }
-      setLoading(false);
-    };
-
     fetchPayouts();
-  }, [workerId]);
+  }, [workerId, fetchPayouts]);
 
-  const getStatusBadge = (status: string) => {
-    const config: Record<string, { class: string; icon: typeof CheckCircle2; label: string }> = {
-      pending: { class: "bg-amber-100 text-amber-700", icon: Clock, label: "Pending" },
-      approved: { class: "bg-blue-100 text-blue-700", icon: Clock, label: "Approved" },
-      processing: { class: "bg-purple-100 text-purple-700", icon: Clock, label: "Processing" },
-      paid: { class: "bg-green-100 text-green-700", icon: CheckCircle2, label: "Paid" },
-      held: { class: "bg-orange-100 text-orange-700", icon: AlertTriangle, label: "Held" },
-      failed: { class: "bg-red-100 text-red-700", icon: XCircle, label: "Failed" },
+  // Refetch on page focus / visibility change
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && workerId) {
+        fetchPayouts();
+      }
     };
-    const c = config[status] || config.pending;
-    const Icon = c.icon;
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [workerId, fetchPayouts]);
+
+  // Realtime subscription for payout status changes
+  useEffect(() => {
+    if (!workerId) return;
+
+    const channel = supabase
+      .channel(`worker-payouts:${workerId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "worker_payouts",
+          filter: `worker_id=eq.${workerId}`,
+        },
+        () => {
+          console.log("📡 Payout status changed, refetching...");
+          fetchPayouts();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "worker_payouts",
+          filter: `worker_id=eq.${workerId}`,
+        },
+        () => {
+          console.log("📡 New payout created, refetching...");
+          fetchPayouts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [workerId, fetchPayouts]);
+
+  const renderStatusBadge = (status: string) => {
+    const cfg = getPayoutStatus(status);
+    const Icon = cfg.icon;
     return (
-      <Badge className={`${c.class} gap-1`}>
+      <Badge className={`${cfg.badgeClass} gap-1`}>
         <Icon className="w-3 h-3" />
-        {c.label}
+        {cfg.label}
       </Badge>
     );
   };
@@ -139,8 +179,8 @@ export default function Earnings() {
         {/* Summary Cards */}
         <div className="grid grid-cols-2 gap-3">
           <SummaryCard label="Pending" amount={summary.pending} icon={Clock} colorClass="text-amber-600 bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800" />
-          <SummaryCard label="Paid" amount={summary.paid} icon={CheckCircle2} colorClass="text-green-600 bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800" />
-          <SummaryCard label="Held" amount={summary.held} icon={AlertTriangle} colorClass="text-orange-600 bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800" />
+          <SummaryCard label="Paid to You" amount={summary.paid} icon={CheckCircle2} colorClass="text-green-600 bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800" />
+          <SummaryCard label="On Hold" amount={summary.held} icon={AlertTriangle} colorClass="text-orange-600 bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800" />
           <SummaryCard label="Failed" amount={summary.failed} icon={XCircle} colorClass="text-red-600 bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800" />
         </div>
 
@@ -154,16 +194,16 @@ export default function Earnings() {
           </TabsList>
 
           <TabsContent value="all" className="space-y-3 mt-3">
-            <PayoutList payouts={payouts} getStatusBadge={getStatusBadge} />
+            <PayoutList payouts={payouts} renderStatusBadge={renderStatusBadge} />
           </TabsContent>
           <TabsContent value="pending" className="space-y-3 mt-3">
-            <PayoutList payouts={payouts.filter((p) => ["pending", "approved", "processing"].includes(p.status))} getStatusBadge={getStatusBadge} />
+            <PayoutList payouts={payouts.filter((p) => ["pending", "approved", "processing"].includes(p.status))} renderStatusBadge={renderStatusBadge} />
           </TabsContent>
           <TabsContent value="paid" className="space-y-3 mt-3">
-            <PayoutList payouts={payouts.filter((p) => p.status === "paid")} getStatusBadge={getStatusBadge} />
+            <PayoutList payouts={payouts.filter((p) => p.status === "paid")} renderStatusBadge={renderStatusBadge} />
           </TabsContent>
           <TabsContent value="issues" className="space-y-3 mt-3">
-            <PayoutList payouts={payouts.filter((p) => ["held", "failed"].includes(p.status))} getStatusBadge={getStatusBadge} />
+            <PayoutList payouts={payouts.filter((p) => ["held", "failed", "reversed"].includes(p.status))} renderStatusBadge={renderStatusBadge} />
           </TabsContent>
         </Tabs>
       </main>
@@ -185,7 +225,7 @@ function SummaryCard({ label, amount, icon: Icon, colorClass }: { label: string;
   );
 }
 
-function PayoutList({ payouts, getStatusBadge }: { payouts: PayoutRow[]; getStatusBadge: (s: string) => React.ReactNode }) {
+function PayoutList({ payouts, renderStatusBadge }: { payouts: PayoutRow[]; renderStatusBadge: (s: string) => React.ReactNode }) {
   if (payouts.length === 0) {
     return (
       <div className="text-center py-8">
@@ -204,7 +244,7 @@ function PayoutList({ payouts, getStatusBadge }: { payouts: PayoutRow[]; getStat
               <span className="text-xs text-muted-foreground font-mono">
                 #{p.booking_id.slice(0, 8)}
               </span>
-              {getStatusBadge(p.status)}
+              {renderStatusBadge(p.status)}
             </div>
 
             <div className="grid grid-cols-3 gap-2 text-sm">
@@ -217,7 +257,7 @@ function PayoutList({ payouts, getStatusBadge }: { payouts: PayoutRow[]; getStat
                 <p className="font-semibold text-destructive">-₹{p.platform_fee}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Payout</p>
+                <p className="text-xs text-muted-foreground">Your Payout</p>
                 <p className="font-bold text-green-600">₹{p.payout_amount}</p>
               </div>
             </div>
@@ -228,7 +268,7 @@ function PayoutList({ payouts, getStatusBadge }: { payouts: PayoutRow[]; getStat
               </p>
             )}
             {p.hold_reason && (
-              <p className="text-xs text-orange-600">Hold: {p.hold_reason}</p>
+              <p className="text-xs text-orange-600">Reason: {p.hold_reason}</p>
             )}
             {p.failure_reason && (
               <p className="text-xs text-destructive">Reason: {p.failure_reason}</p>
