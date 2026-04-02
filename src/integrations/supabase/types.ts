@@ -3959,6 +3959,17 @@ export type Database = {
           worker_count: number
         }[]
       }
+      get_worker_slot_supply: {
+        Args: {
+          p_community: string
+          p_day_of_week: number
+          p_service_type: string
+        }
+        Returns: {
+          slot_time: string
+          worker_count: number
+        }[]
+      }
       get_worker_supply_health: {
         Args: never
         Returns: {
@@ -3992,6 +4003,25 @@ export type Database = {
         Returns: {
           fcm_token: string
           worker_id: string
+        }[]
+      }
+      get_workers_for_slot: {
+        Args: {
+          p_community: string
+          p_day_of_week: number
+          p_service_type: string
+          p_slot_time: string
+        }
+        Returns: {
+          communities: string[]
+          full_name: string
+          id: string
+          is_available: boolean
+          is_busy: boolean
+          phone: string
+          photo_url: string
+          rating: number
+          service_types: string[]
         }[]
       }
       get_workers_never_received_booking: {
