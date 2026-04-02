@@ -37,7 +37,9 @@ export default function Earnings() {
   const [payouts, setPayouts] = useState<PayoutRow[]>([]);
   const [summary, setSummary] = useState<EarningsSummary>({ pending: 0, paid: 0, held: 0, failed: 0 });
   const [loading, setLoading] = useState(true);
-  const [workerId, setWorkerId] = useState<string | null>(null);
+  const [recentlyPaidIds, setRecentlyPaidIds] = useState<Set<string>>(new Set());
+  const initialLoadDone = useRef(false);
+  const notifiedIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user) return;
