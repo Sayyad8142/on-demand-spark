@@ -385,7 +385,7 @@ export default function ActiveJobCard({
         onClose={() => setShowPaymentModal(false)}
         bookingId={booking.id}
         amount={booking.price_inr || 0}
-        onCollected={() => {}}
+        onCollected={() => onRefresh?.()}
       />
     </Card>;
 }
