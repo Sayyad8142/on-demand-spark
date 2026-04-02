@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Loader2, Wallet, Clock, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getPayoutStatus } from "@/lib/payoutStatus";
+import { toast } from "sonner";
 
 interface PayoutRow {
   id: string;
@@ -37,6 +38,9 @@ export default function Earnings() {
   const [summary, setSummary] = useState<EarningsSummary>({ pending: 0, paid: 0, held: 0, failed: 0 });
   const [loading, setLoading] = useState(true);
   const [workerId, setWorkerId] = useState<string | null>(null);
+  const [recentlyPaidIds, setRecentlyPaidIds] = useState<Set<string>>(new Set());
+  const initialLoadDone = useRef(false);
+  const notifiedIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user) return;
@@ -84,6 +88,7 @@ export default function Earnings() {
       setSummary(sum);
     }
     setLoading(false);
+    initialLoadDone.current = true;
   }, [workerId]);
 
   // Initial fetch
@@ -106,7 +111,7 @@ export default function Earnings() {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [workerId, fetchPayouts]);
 
-  // Realtime subscription for payout status changes
+  // Realtime subscription for payout status changes + paid toast
   useEffect(() => {
     if (!workerId) return;
 
@@ -120,7 +125,28 @@ export default function Earnings() {
           table: "worker_payouts",
           filter: `worker_id=eq.${workerId}`,
         },
-        () => {
+        (payload) => {
+          const newRow = payload.new as PayoutRow;
+          // Toast only when status becomes "paid" and we haven't notified for this id yet
+          if (
+            initialLoadDone.current &&
+            newRow.status === "paid" &&
+            !notifiedIds.current.has(newRow.id)
+          ) {
+            notifiedIds.current.add(newRow.id);
+            setRecentlyPaidIds((prev) => new Set(prev).add(newRow.id));
+            toast.success("Payment received", {
+              description: `₹${newRow.payout_amount} has been credited to you`,
+            });
+            // Clear highlight after 30s
+            setTimeout(() => {
+              setRecentlyPaidIds((prev) => {
+                const next = new Set(prev);
+                next.delete(newRow.id);
+                return next;
+              });
+            }, 30000);
+          }
           console.log("📡 Payout status changed, refetching...");
           fetchPayouts();
         }
@@ -194,16 +220,16 @@ export default function Earnings() {
           </TabsList>
 
           <TabsContent value="all" className="space-y-3 mt-3">
-            <PayoutList payouts={payouts} renderStatusBadge={renderStatusBadge} />
+            <PayoutList payouts={payouts} renderStatusBadge={renderStatusBadge} recentlyPaidIds={recentlyPaidIds} />
           </TabsContent>
           <TabsContent value="pending" className="space-y-3 mt-3">
-            <PayoutList payouts={payouts.filter((p) => ["pending", "approved", "processing"].includes(p.status))} renderStatusBadge={renderStatusBadge} />
+            <PayoutList payouts={payouts.filter((p) => ["pending", "approved", "processing"].includes(p.status))} renderStatusBadge={renderStatusBadge} recentlyPaidIds={recentlyPaidIds} />
           </TabsContent>
           <TabsContent value="paid" className="space-y-3 mt-3">
-            <PayoutList payouts={payouts.filter((p) => p.status === "paid")} renderStatusBadge={renderStatusBadge} />
+            <PayoutList payouts={payouts.filter((p) => p.status === "paid")} renderStatusBadge={renderStatusBadge} recentlyPaidIds={recentlyPaidIds} />
           </TabsContent>
           <TabsContent value="issues" className="space-y-3 mt-3">
-            <PayoutList payouts={payouts.filter((p) => ["held", "failed", "reversed"].includes(p.status))} renderStatusBadge={renderStatusBadge} />
+            <PayoutList payouts={payouts.filter((p) => ["held", "failed", "reversed"].includes(p.status))} renderStatusBadge={renderStatusBadge} recentlyPaidIds={recentlyPaidIds} />
           </TabsContent>
         </Tabs>
       </main>
@@ -225,7 +251,7 @@ function SummaryCard({ label, amount, icon: Icon, colorClass }: { label: string;
   );
 }
 
-function PayoutList({ payouts, renderStatusBadge }: { payouts: PayoutRow[]; renderStatusBadge: (s: string) => React.ReactNode }) {
+function PayoutList({ payouts, renderStatusBadge, recentlyPaidIds }: { payouts: PayoutRow[]; renderStatusBadge: (s: string) => React.ReactNode; recentlyPaidIds: Set<string> }) {
   if (payouts.length === 0) {
     return (
       <div className="text-center py-8">
@@ -237,14 +263,21 @@ function PayoutList({ payouts, renderStatusBadge }: { payouts: PayoutRow[]; rend
 
   return (
     <>
-      {payouts.map((p) => (
-        <Card key={p.id} className="border shadow-sm">
+      {payouts.map((p) => {
+        const isJustPaid = recentlyPaidIds.has(p.id);
+        return (
+        <Card key={p.id} className={`border shadow-sm transition-all duration-500 ${isJustPaid ? "ring-2 ring-green-500 bg-green-50 dark:bg-green-950" : ""}`}>
           <CardContent className="p-3 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground font-mono">
                 #{p.booking_id.slice(0, 8)}
               </span>
-              {renderStatusBadge(p.status)}
+              <div className="flex items-center gap-1.5">
+                {isJustPaid && (
+                  <Badge className="bg-green-500 text-white text-[10px] px-1.5 py-0 animate-pulse">Just Paid</Badge>
+                )}
+                {renderStatusBadge(p.status)}
+              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-2 text-sm">
@@ -275,7 +308,8 @@ function PayoutList({ payouts, renderStatusBadge }: { payouts: PayoutRow[]; rend
             )}
           </CardContent>
         </Card>
-      ))}
+        );
+      })}
     </>
   );
 }
