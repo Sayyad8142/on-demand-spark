@@ -30,6 +30,7 @@ interface ActiveJobCardProps {
   booking: Booking;
   onStatusUpdate: (newStatus: string) => Promise<void>;
   updating: boolean;
+  onRefresh?: () => void;
 }
 
 const MANAGER_PHONE = "8008180018";
@@ -38,7 +39,8 @@ const COOLDOWN_MINUTES = 20;
 export default function ActiveJobCard({
   booking,
   onStatusUpdate,
-  updating
+  updating,
+  onRefresh
 }: ActiveJobCardProps) {
   const [remainingSeconds, setRemainingSeconds] = useState<number>(0);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -383,7 +385,7 @@ export default function ActiveJobCard({
         onClose={() => setShowPaymentModal(false)}
         bookingId={booking.id}
         amount={booking.price_inr || 0}
-        onCollected={() => {}}
+        onCollected={() => onRefresh?.()}
       />
     </Card>;
 }
