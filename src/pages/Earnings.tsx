@@ -308,7 +308,9 @@ function PayoutList({ payouts, renderStatusBadge, recentlyPaidIds }: { payouts: 
             )}
           </CardContent>
         </Card>
-      ))}
+        );
+      })}
+    </>
     </>
   );
 }
