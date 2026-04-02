@@ -221,18 +221,27 @@ export default function Profile() {
     if (!user) return;
     const workerId = realWorker?.id ?? user.id;
     const fetchEarnings = async () => {
+      // Count completed jobs from bookings
       const {
-        data,
-        error
-      } = await supabase.from('bookings').select('price_inr, completed_at').eq('worker_id', workerId).eq('status', 'completed');
-      if (!error && data) {
-        setCompletedJobs(data.length);
-        const total = data.reduce((sum, b) => sum + (b.price_inr || 0), 0);
+        data: bookingsData,
+        error: bookingsError
+      } = await supabase.from('bookings').select('id, completed_at').eq('worker_id', workerId).eq('status', 'completed');
+      if (!bookingsError && bookingsData) {
+        setCompletedJobs(bookingsData.length);
+      }
+
+      // Use real payout data for earnings (net amounts after platform fee)
+      const {
+        data: payoutsData,
+        error: payoutsError
+      } = await supabase.from('worker_payouts').select('payout_amount, created_at').eq('worker_id', workerId);
+      if (!payoutsError && payoutsData) {
+        const total = payoutsData.reduce((sum, p) => sum + (p.payout_amount || 0), 0);
         setTotalEarnings(total);
 
-        // Calculate today's earnings
+        // Calculate today's earnings from payouts
         const today = new Date().toISOString().split('T')[0];
-        const todayTotal = data.filter(b => b.completed_at && b.completed_at.startsWith(today)).reduce((sum, b) => sum + (b.price_inr || 0), 0);
+        const todayTotal = payoutsData.filter(p => p.created_at && p.created_at.startsWith(today)).reduce((sum, p) => sum + (p.payout_amount || 0), 0);
         setTodayEarnings(todayTotal);
       }
     };

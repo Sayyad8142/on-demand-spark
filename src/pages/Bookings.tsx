@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Search, MapPin, Calendar, Loader2, User, Star, CreditCard, CheckCircle2, Clock } from "lucide-react";
 import { DEMO_BOOKINGS } from "@/config/demoData";
 import { formatBookingAddress, BookingWithAddress } from "@/lib/address";
+import { calcWorkerPayout } from "@/lib/payoutCalc";
 
 type Booking = BookingWithAddress & { rating?: number | null; payout_status?: string | null; payout_amount?: number | null };
 
@@ -266,9 +267,11 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
               <span className="text-xs text-muted-foreground">—</span>
             </div>
           ) : null}
-          {booking.price_inr && (
-            <span className={`font-bold ${numberColor} text-base`}>₹{booking.price_inr}</span>
-          )}
+          {booking.payout_amount != null ? (
+            <span className={`font-bold ${numberColor} text-base`}>₹{booking.payout_amount}</span>
+          ) : booking.price_inr ? (
+            <span className={`font-bold ${numberColor} text-base`}>~₹{calcWorkerPayout(booking.price_inr)}</span>
+          ) : null}
         </div>
       </div>
 

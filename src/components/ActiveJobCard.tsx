@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Phone, Volume2, Utensils, Zap, PlusCircle, Sparkles, CookingPot, KeyRound, Banknote, CreditCard } from "lucide-react";
 import { BookingWithAddress } from "@/lib/address";
 import { parsePHFCode } from "@/lib/address";
+import { calcWorkerPayout } from "@/lib/payoutCalc";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
@@ -287,8 +288,8 @@ export default function ActiveJobCard({
               })()}
               {/* Total */}
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-muted-foreground">Earnings</p>
-                <p className="font-bold text-green-500 text-xl">₹{booking.price_inr}</p>
+                <p className="text-sm font-medium text-muted-foreground">Your Earnings</p>
+                <p className="font-bold text-green-500 text-xl">₹{calcWorkerPayout(booking.price_inr)}</p>
               </div>
             </div>
           }
