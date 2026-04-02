@@ -59,6 +59,8 @@ export default function OtpCompletionModal({ open, onClose, bookingId, onComplet
       if (data?.error) {
         if (data.already_completed) {
           setError("This booking is already completed.");
+        } else if (data.payment_required) {
+          setError("Please collect payment before completing this job.");
         } else {
           setError(data.error);
         }
