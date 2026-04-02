@@ -47,6 +47,8 @@ export default function OtpCompletionModal({ open, onClose, bookingId, onComplet
           setError("This booking is already completed.");
         } else if (errorBody.includes("Invalid OTP")) {
           setError("Wrong OTP. Please ask the customer for the correct code.");
+        } else if (errorBody.includes("Payment not collected") || errorBody.includes("Payment not completed")) {
+          setError("Please collect payment before completing this job.");
         } else {
           setError(errorBody);
         }
@@ -57,6 +59,8 @@ export default function OtpCompletionModal({ open, onClose, bookingId, onComplet
       if (data?.error) {
         if (data.already_completed) {
           setError("This booking is already completed.");
+        } else if (data.payment_required) {
+          setError("Please collect payment before completing this job.");
         } else {
           setError(data.error);
         }

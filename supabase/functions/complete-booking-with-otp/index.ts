@@ -112,6 +112,31 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── Payment safety gate ──
+    const paymentMethod = booking.payment_method || "";
+    if (paymentMethod === "online") {
+      const validOnlineStatuses = ["paid", "captured", "settled"];
+      if (!validOnlineStatuses.includes(booking.payment_status || "")) {
+        return new Response(
+          JSON.stringify({
+            error: "Payment not completed. Customer has not paid online yet.",
+            payment_required: true,
+          }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else if (paymentMethod === "pay_after_service") {
+      if (!booking.worker_collected_payment) {
+        return new Response(
+          JSON.stringify({
+            error: "Payment not collected. Please collect payment before completing the job.",
+            payment_required: true,
+          }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // Complete the booking
     const now = new Date().toISOString();
     const { error: updateError } = await adminClient
