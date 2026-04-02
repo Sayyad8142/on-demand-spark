@@ -1584,39 +1584,54 @@ export type Database = {
           booking_id: string | null
           created_at: string | null
           delivered_at: string | null
+          error_code: string | null
           fcm_message_id: string | null
+          fcm_status: string | null
           id: string
           notification_type: string
           opened_at: string | null
           response_action: string | null
           response_at: string | null
+          retry_attempt: number | null
           sent_at: string | null
+          token_source: string | null
+          token_used: string | null
           worker_id: string | null
         }
         Insert: {
           booking_id?: string | null
           created_at?: string | null
           delivered_at?: string | null
+          error_code?: string | null
           fcm_message_id?: string | null
+          fcm_status?: string | null
           id?: string
           notification_type: string
           opened_at?: string | null
           response_action?: string | null
           response_at?: string | null
+          retry_attempt?: number | null
           sent_at?: string | null
+          token_source?: string | null
+          token_used?: string | null
           worker_id?: string | null
         }
         Update: {
           booking_id?: string | null
           created_at?: string | null
           delivered_at?: string | null
+          error_code?: string | null
           fcm_message_id?: string | null
+          fcm_status?: string | null
           id?: string
           notification_type?: string
           opened_at?: string | null
           response_action?: string | null
           response_at?: string | null
+          retry_attempt?: number | null
           sent_at?: string | null
+          token_source?: string | null
+          token_used?: string | null
           worker_id?: string | null
         }
         Relationships: [
@@ -2561,6 +2576,7 @@ export type Database = {
           booking_id: string | null
           created_at: string
           id: string
+          performed_by: string | null
           reason: string | null
           type: string
           user_id: string
@@ -2570,6 +2586,7 @@ export type Database = {
           booking_id?: string | null
           created_at?: string
           id?: string
+          performed_by?: string | null
           reason?: string | null
           type: string
           user_id: string
@@ -2579,6 +2596,7 @@ export type Database = {
           booking_id?: string | null
           created_at?: string
           id?: string
+          performed_by?: string | null
           reason?: string | null
           type?: string
           user_id?: string
@@ -3277,6 +3295,24 @@ export type Database = {
         Args: { p_worker_id: string }
         Returns: undefined
       }
+      admin_credit_wallet: {
+        Args: {
+          p_amount: number
+          p_booking_id?: string
+          p_reason?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      admin_debit_wallet: {
+        Args: {
+          p_amount: number
+          p_booking_id?: string
+          p_reason?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       admin_get_legal_pdfs: {
         Args: never
         Returns: {
@@ -3593,8 +3629,12 @@ export type Database = {
       }
       create_admin_email_user: { Args: never; Returns: undefined }
       credit_wallet_on_cancel: {
-        Args: { p_booking_id: string; p_reason?: string }
-        Returns: undefined
+        Args: {
+          p_booking_id: string
+          p_reason?: string
+          p_skip_booking_update?: boolean
+        }
+        Returns: Json
       }
       debit_wallet_for_booking: {
         Args: { p_amount: number; p_booking_id: string }
