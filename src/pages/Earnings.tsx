@@ -109,7 +109,7 @@ export default function Earnings() {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [workerId, fetchPayouts]);
 
-  // Realtime subscription for payout status changes
+  // Realtime subscription for payout status changes + paid toast
   useEffect(() => {
     if (!workerId) return;
 
@@ -123,7 +123,28 @@ export default function Earnings() {
           table: "worker_payouts",
           filter: `worker_id=eq.${workerId}`,
         },
-        () => {
+        (payload) => {
+          const newRow = payload.new as PayoutRow;
+          // Toast only when status becomes "paid" and we haven't notified for this id yet
+          if (
+            initialLoadDone.current &&
+            newRow.status === "paid" &&
+            !notifiedIds.current.has(newRow.id)
+          ) {
+            notifiedIds.current.add(newRow.id);
+            setRecentlyPaidIds((prev) => new Set(prev).add(newRow.id));
+            toast.success("Payment received", {
+              description: `₹${newRow.payout_amount} has been credited to you`,
+            });
+            // Clear highlight after 30s
+            setTimeout(() => {
+              setRecentlyPaidIds((prev) => {
+                const next = new Set(prev);
+                next.delete(newRow.id);
+                return next;
+              });
+            }, 30000);
+          }
           console.log("📡 Payout status changed, refetching...");
           fetchPayouts();
         }
