@@ -39,7 +39,8 @@ const COOLDOWN_MINUTES = 20;
 export default function ActiveJobCard({
   booking,
   onStatusUpdate,
-  updating
+  updating,
+  onRefresh
 }: ActiveJobCardProps) {
   const [remainingSeconds, setRemainingSeconds] = useState<number>(0);
   const [currentSlide, setCurrentSlide] = useState(0);
