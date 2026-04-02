@@ -30,6 +30,7 @@ interface ActiveJobCardProps {
   booking: Booking;
   onStatusUpdate: (newStatus: string) => Promise<void>;
   updating: boolean;
+  onRefresh?: () => void;
 }
 
 const MANAGER_PHONE = "8008180018";
