@@ -220,16 +220,16 @@ export default function Earnings() {
           </TabsList>
 
           <TabsContent value="all" className="space-y-3 mt-3">
-            <PayoutList payouts={payouts} renderStatusBadge={renderStatusBadge} />
+            <PayoutList payouts={payouts} renderStatusBadge={renderStatusBadge} recentlyPaidIds={recentlyPaidIds} />
           </TabsContent>
           <TabsContent value="pending" className="space-y-3 mt-3">
-            <PayoutList payouts={payouts.filter((p) => ["pending", "approved", "processing"].includes(p.status))} renderStatusBadge={renderStatusBadge} />
+            <PayoutList payouts={payouts.filter((p) => ["pending", "approved", "processing"].includes(p.status))} renderStatusBadge={renderStatusBadge} recentlyPaidIds={recentlyPaidIds} />
           </TabsContent>
           <TabsContent value="paid" className="space-y-3 mt-3">
-            <PayoutList payouts={payouts.filter((p) => p.status === "paid")} renderStatusBadge={renderStatusBadge} />
+            <PayoutList payouts={payouts.filter((p) => p.status === "paid")} renderStatusBadge={renderStatusBadge} recentlyPaidIds={recentlyPaidIds} />
           </TabsContent>
           <TabsContent value="issues" className="space-y-3 mt-3">
-            <PayoutList payouts={payouts.filter((p) => ["held", "failed", "reversed"].includes(p.status))} renderStatusBadge={renderStatusBadge} />
+            <PayoutList payouts={payouts.filter((p) => ["held", "failed", "reversed"].includes(p.status))} renderStatusBadge={renderStatusBadge} recentlyPaidIds={recentlyPaidIds} />
           </TabsContent>
         </Tabs>
       </main>
