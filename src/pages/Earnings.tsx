@@ -283,7 +283,7 @@ function PayoutList({ payouts, renderStatusBadge, recentlyPaidIds }: { payouts: 
             <div className="grid grid-cols-3 gap-2 text-sm">
               <div>
                 <p className="text-xs text-muted-foreground">Booking</p>
-                <p className="font-semibold">₹{p.booking_amount}</p>
+                <p className="font-semibold">₹{p.gross_amount}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Fee</p>
