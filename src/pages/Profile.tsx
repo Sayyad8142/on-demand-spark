@@ -939,6 +939,20 @@ export default function Profile() {
         </div>
 
         <div className="px-4 mt-4 space-y-4">
+          {/* Payout Setup Card */}
+          {!isGuestMode && worker && (
+            <PayoutSetupCard
+              workerId={worker.id}
+              payoutReady={(worker as any).payout_ready ?? false}
+              currentAccountName={(worker as any).account_holder_name || ""}
+              currentUpiId={worker.upi_id || ""}
+              onSetupComplete={() => {
+                // Refetch worker profile
+                window.location.reload();
+              }}
+            />
+          )}
+
           {/* Booking Priority Card */}
           <BookingPriorityCard metrics={priorityMetrics} />
 
