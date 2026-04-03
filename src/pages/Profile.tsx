@@ -947,10 +947,7 @@ export default function Profile() {
               payoutReady={(worker as any).payout_ready ?? false}
               currentAccountName={(worker as any).account_holder_name || ""}
               currentUpiId={worker.upi_id || ""}
-              onSetupComplete={() => {
-                // Refetch worker profile
-                window.location.reload();
-              }}
+              onSetupComplete={() => refetchWorker()}
             />
           )}
 
