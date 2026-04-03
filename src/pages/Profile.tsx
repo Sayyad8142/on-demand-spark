@@ -55,7 +55,8 @@ export default function Profile() {
   const {
     worker: realWorker,
     loading: realWorkerLoading,
-    updateWorker
+    updateWorker,
+    refetch: refetchWorker
   } = useWorkerProfile(!isGuestMode ? user?.id : undefined);
   const worker = isGuestMode ? DEMO_WORKER : realWorker;
   const workerLoading = isGuestMode ? false : realWorkerLoading;
