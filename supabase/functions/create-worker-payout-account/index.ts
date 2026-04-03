@@ -153,8 +153,8 @@ Deno.serve(async (req) => {
         payout_ready: true,
         payout_verified_at: new Date().toISOString(),
         payout_last_error: null,
-        razorpayx_contact_id: contactData.id,
-        razorpayx_fund_account_id: fundData.id,
+        razorpay_contact_id: contactData.id,
+        razorpay_fund_account_id: fundData.id,
       })
       .eq("id", worker_id);
 

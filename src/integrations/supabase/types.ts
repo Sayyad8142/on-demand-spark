@@ -3160,8 +3160,6 @@ export type Database = {
           rating: number | null
           razorpay_contact_id: string | null
           razorpay_fund_account_id: string | null
-          razorpayx_contact_id: string | null
-          razorpayx_fund_account_id: string | null
           respect_availability: boolean | null
           selected_community_id: string | null
           service_types: string[]
@@ -3213,8 +3211,6 @@ export type Database = {
           rating?: number | null
           razorpay_contact_id?: string | null
           razorpay_fund_account_id?: string | null
-          razorpayx_contact_id?: string | null
-          razorpayx_fund_account_id?: string | null
           respect_availability?: boolean | null
           selected_community_id?: string | null
           service_types?: string[]
@@ -3266,8 +3262,6 @@ export type Database = {
           rating?: number | null
           razorpay_contact_id?: string | null
           razorpay_fund_account_id?: string | null
-          razorpayx_contact_id?: string | null
-          razorpayx_fund_account_id?: string | null
           respect_availability?: boolean | null
           selected_community_id?: string | null
           service_types?: string[]
@@ -3432,8 +3426,6 @@ export type Database = {
               rating: number | null
               razorpay_contact_id: string | null
               razorpay_fund_account_id: string | null
-              razorpayx_contact_id: string | null
-              razorpayx_fund_account_id: string | null
               respect_availability: boolean | null
               selected_community_id: string | null
               service_types: string[]
@@ -3494,8 +3486,6 @@ export type Database = {
               rating: number | null
               razorpay_contact_id: string | null
               razorpay_fund_account_id: string | null
-              razorpayx_contact_id: string | null
-              razorpayx_fund_account_id: string | null
               respect_availability: boolean | null
               selected_community_id: string | null
               service_types: string[]
