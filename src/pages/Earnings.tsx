@@ -13,7 +13,7 @@ import { toast } from "sonner";
 interface PayoutRow {
   id: string;
   booking_id: string;
-  booking_amount: number;
+  gross_amount: number;
   platform_fee: number;
   payout_amount: number;
   status: string;
