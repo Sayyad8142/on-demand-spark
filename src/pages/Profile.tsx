@@ -27,6 +27,7 @@ import WorkerRankCard from "@/components/profile/WorkerRankCard";
 import WeeklyPerformanceCard from "@/components/profile/WeeklyPerformanceCard";
 import HowToGetMoreBookingsCard from "@/components/profile/HowToGetMoreBookingsCard";
 import MotivationCard from "@/components/profile/MotivationCard";
+import PayoutSetupCard from "@/components/profile/PayoutSetupCard";
 const SERVICES = [{
   value: "maid",
   label: "Maid Service",
@@ -54,7 +55,8 @@ export default function Profile() {
   const {
     worker: realWorker,
     loading: realWorkerLoading,
-    updateWorker
+    updateWorker,
+    refetch: refetchWorker
   } = useWorkerProfile(!isGuestMode ? user?.id : undefined);
   const worker = isGuestMode ? DEMO_WORKER : realWorker;
   const workerLoading = isGuestMode ? false : realWorkerLoading;
@@ -938,6 +940,17 @@ export default function Profile() {
         </div>
 
         <div className="px-4 mt-4 space-y-4">
+          {/* Payout Setup Card */}
+          {!isGuestMode && worker && (
+            <PayoutSetupCard
+              workerId={worker.id}
+              payoutReady={(worker as any).payout_ready ?? false}
+              currentAccountName={(worker as any).account_holder_name || ""}
+              currentUpiId={worker.upi_id || ""}
+              onSetupComplete={() => refetchWorker()}
+            />
+          )}
+
           {/* Booking Priority Card */}
           <BookingPriorityCard metrics={priorityMetrics} />
 
