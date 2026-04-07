@@ -38,72 +38,36 @@ export default function PayoutSetupCard({
       toast.error("UPI ID is required");
       return;
     }
-    if (!/^[\w.\-]+@[\w]+$/.test(upiId.trim())) {
-      toast.error("Invalid UPI ID format. Example: name@paytm");
+    if (!upiId.includes("@")) {
+      toast.error("Invalid UPI ID. It must contain '@'. Example: name@paytm");
       return;
     }
 
     try {
       setSaving(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("Please log in again");
-        return;
-      }
 
-      const { data, error } = await supabase.functions.invoke(
-        "create-worker-payout-account",
-        {
-          body: {
-            worker_id: workerId,
-            account_holder_name: accountName.trim(),
-            upi_id: upiId.trim(),
-          },
-        }
-      );
+      const bothFilled = !!accountName.trim() && !!upiId.trim();
 
-      if (error) {
-        throw new Error(error.message || "Failed to set up payout");
-      }
+      const { error } = await supabase
+        .from("workers")
+        .update({
+          account_holder_name: accountName.trim(),
+          upi_id: upiId.trim(),
+          payout_ready: bothFilled,
+        })
+        .eq("id", workerId);
 
-      if (data?.error) {
-        throw new Error(data.error);
-      }
+      if (error) throw error;
 
-      toast.success("Payout setup completed");
+      toast.success("Payout details saved successfully");
       onSetupComplete();
     } catch (err: any) {
-      console.error("Payout setup error:", err);
-      toast.error(err.message || "Failed to set up payout account");
+      console.error("Payout save error:", err);
+      toast.error(err.message || "Failed to save payout details");
     } finally {
       setSaving(false);
     }
   };
-
-  if (payoutReady) {
-    return (
-      <Card className="border-0 shadow-lg">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Wallet className="w-5 h-5" />
-            Payout Details
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2 mb-3">
-            <Badge className="bg-green-100 text-green-700 gap-1">
-              <CheckCircle2 className="w-3 h-3" />
-              Payout setup completed
-            </Badge>
-          </div>
-          <div className="space-y-1 text-sm text-muted-foreground">
-            <p><span className="font-medium text-foreground">Name:</span> {currentAccountName}</p>
-            <p><span className="font-medium text-foreground">UPI:</span> {currentUpiId}</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card className="border-0 shadow-lg">
@@ -114,9 +78,14 @@ export default function PayoutSetupCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-xs text-muted-foreground">
-          Set up your payout details to receive earnings directly via UPI.
-        </p>
+        {payoutReady && (
+          <div className="flex items-center gap-2 mb-1">
+            <Badge className="bg-green-100 text-green-700 gap-1">
+              <CheckCircle2 className="w-3 h-3" />
+              Payout details saved
+            </Badge>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="payout-name">Account Holder Name</Label>
@@ -147,7 +116,7 @@ export default function PayoutSetupCard({
               Saving...
             </>
           ) : (
-            "Save Payout Details"
+            "Save Details"
           )}
         </Button>
       </CardContent>
