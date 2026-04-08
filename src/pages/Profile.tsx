@@ -411,6 +411,14 @@ export default function Profile() {
       });
       return;
     }
+    if (!upiId.trim() || !upiId.includes("@")) {
+      toast({
+        title: "UPI ID Required",
+        description: "Please enter a valid UPI ID (must contain '@'). Example: name@paytm",
+        variant: "destructive"
+      });
+      return;
+    }
     try {
       setUpdating(true);
       // Filter out any legacy cook selection
