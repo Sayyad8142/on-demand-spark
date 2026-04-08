@@ -243,16 +243,14 @@ export default function Auth() {
       });
       return;
     }
-    if (signUpUpiId) {
-      const upiValidation = upiSchema.safeParse(signUpUpiId);
-      if (!upiValidation.success) {
-        toast({
-          title: "Invalid UPI ID",
-          description: upiValidation.error.errors[0].message,
-          variant: "destructive"
-        });
-        return;
-      }
+    const upiValidation = upiSchema.safeParse(signUpUpiId);
+    if (!upiValidation.success) {
+      toast({
+        title: "Invalid UPI ID",
+        description: upiValidation.error.errors[0].message,
+        variant: "destructive"
+      });
+      return;
     }
     try {
       setLoading(true);
