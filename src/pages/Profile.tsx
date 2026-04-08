@@ -411,6 +411,14 @@ export default function Profile() {
       });
       return;
     }
+    if (!upiId.trim() || !upiId.includes("@")) {
+      toast({
+        title: "UPI ID Required",
+        description: "Please enter a valid UPI ID (must contain '@'). Example: name@paytm",
+        variant: "destructive"
+      });
+      return;
+    }
     try {
       setUpdating(true);
       // Filter out any legacy cook selection
@@ -645,7 +653,7 @@ export default function Profile() {
                     
                     {/* Manual UPI ID Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="edit-upi">{t('auth.upiIdLabel', 'UPI ID')} ({t('common.optional', 'Optional')})</Label>
+                      <Label htmlFor="edit-upi">{t('auth.upiIdLabel', 'UPI ID')} *</Label>
                       <Input 
                         id="edit-upi" 
                         type="text" 
@@ -654,7 +662,7 @@ export default function Profile() {
                         onChange={e => setUpiId(e.target.value)} 
                       />
                       <p className="text-xs text-muted-foreground">
-                        {t('auth.upiHint', 'Enter manually if QR scan didn\'t detect it')}
+                        Required for receiving payouts
                       </p>
                     </div>
 
