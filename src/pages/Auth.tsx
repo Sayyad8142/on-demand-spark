@@ -36,7 +36,7 @@ const SERVICES = [{
 // SECURITY: Input validation schemas
 const phoneSchema = z.string().regex(/^[6-9]\d{9}$/, 'Invalid phone number. Must be 10 digits starting with 6-9').length(10, 'Phone number must be exactly 10 digits');
 const nameSchema = z.string().trim().min(2, 'Name must be at least 2 characters').max(100, 'Name must not exceed 100 characters').regex(/^[a-zA-Z\s]+$/, 'Name can only contain letters and spaces');
-const upiSchema = z.string().regex(/^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/, 'Invalid UPI ID format (e.g., name@bank)').optional().or(z.literal(''));
+const upiSchema = z.string().min(1, 'UPI ID is required').regex(/^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/, 'Invalid UPI ID format (e.g., name@bank)');
 const otpSchema = z.string().regex(/^\d{6}$/, 'OTP must be exactly 6 digits').length(6);
 export default function Auth() {
   const navigate = useNavigate();
@@ -243,16 +243,14 @@ export default function Auth() {
       });
       return;
     }
-    if (signUpUpiId) {
-      const upiValidation = upiSchema.safeParse(signUpUpiId);
-      if (!upiValidation.success) {
-        toast({
-          title: "Invalid UPI ID",
-          description: upiValidation.error.errors[0].message,
-          variant: "destructive"
-        });
-        return;
-      }
+    const upiValidation = upiSchema.safeParse(signUpUpiId);
+    if (!upiValidation.success) {
+      toast({
+        title: "Invalid UPI ID",
+        description: upiValidation.error.errors[0].message,
+        variant: "destructive"
+      });
+      return;
     }
     try {
       setLoading(true);
@@ -360,7 +358,7 @@ export default function Auth() {
 
               {/* Manual UPI ID Input */}
               <div className="space-y-2">
-                <Label htmlFor="signup-upi">{t('auth.upiIdLabel', 'UPI ID')} ({t('common.optional', 'Optional')})</Label>
+                <Label htmlFor="signup-upi">{t('auth.upiIdLabel', 'UPI ID')} *</Label>
                 <Input 
                   id="signup-upi" 
                   type="text" 
@@ -370,7 +368,7 @@ export default function Auth() {
                   disabled={loading} 
                 />
                 <p className="text-xs text-muted-foreground">
-                  {t('auth.upiHint', 'Enter manually if QR scan didn\'t detect it')}
+                  {t('auth.upiHint', 'Required for receiving payouts')}
                 </p>
               </div>
 
