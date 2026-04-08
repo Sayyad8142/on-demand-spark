@@ -7,9 +7,11 @@ import { useTranslation } from "react-i18next";
 interface AvailabilityToggleProps {
   workerId: string;
   className?: string;
+  payoutReady?: boolean;
+  onPayoutRequired?: () => void;
 }
 
-export function AvailabilityToggle({ workerId, className }: AvailabilityToggleProps) {
+export function AvailabilityToggle({ workerId, className, payoutReady = true, onPayoutRequired }: AvailabilityToggleProps) {
   const [isAvailable, setIsAvailable] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -40,6 +42,18 @@ export function AvailabilityToggle({ workerId, className }: AvailabilityTogglePr
   const handleToggle = async () => {
     if (loading) return;
     const newValue = !isAvailable;
+
+    // Block going online if payout not ready
+    if (newValue && !payoutReady) {
+      toast({
+        title: "Payout setup required",
+        description: "Please add your payout details to start receiving bookings.",
+        variant: "destructive",
+      });
+      onPayoutRequired?.();
+      return;
+    }
+
     setPressed(true);
     setTimeout(() => setPressed(false), 200);
     setLoading(true);
