@@ -4125,7 +4125,11 @@ export type Database = {
         Returns: number
       }
       hold_worker_payout: {
-        Args: { p_admin_notes?: string; p_payout_id: string; p_reason: string }
+        Args: {
+          p_admin_notes?: string
+          p_hold_reason: string
+          p_payout_id: string
+        }
         Returns: Json
       }
       http: {
