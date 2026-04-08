@@ -358,7 +358,7 @@ export default function Auth() {
 
               {/* Manual UPI ID Input */}
               <div className="space-y-2">
-                <Label htmlFor="signup-upi">{t('auth.upiIdLabel', 'UPI ID')} ({t('common.optional', 'Optional')})</Label>
+                <Label htmlFor="signup-upi">{t('auth.upiIdLabel', 'UPI ID')} *</Label>
                 <Input 
                   id="signup-upi" 
                   type="text" 
@@ -368,7 +368,7 @@ export default function Auth() {
                   disabled={loading} 
                 />
                 <p className="text-xs text-muted-foreground">
-                  {t('auth.upiHint', 'Enter manually if QR scan didn\'t detect it')}
+                  {t('auth.upiHint', 'Required for receiving payouts')}
                 </p>
               </div>
 
