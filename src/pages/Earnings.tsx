@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -232,7 +233,9 @@ export default function Earnings() {
             <PayoutList payouts={payouts.filter((p) => ["held", "failed", "reversed"].includes(p.status))} renderStatusBadge={renderStatusBadge} recentlyPaidIds={recentlyPaidIds} />
           </TabsContent>
         </Tabs>
+        <div className="h-20" />
       </main>
+      <BottomNav />
     </div>
   );
 }
