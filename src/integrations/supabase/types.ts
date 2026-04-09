@@ -3875,6 +3875,23 @@ export type Database = {
           terms_url: string
         }[]
       }
+      get_my_wallet_balance: {
+        Args: never
+        Returns: {
+          balance_inr: number
+        }[]
+      }
+      get_my_wallet_transactions: {
+        Args: never
+        Returns: {
+          amount_inr: number
+          booking_id: string
+          created_at: string
+          id: string
+          reason: string
+          type: string
+        }[]
+      }
       get_online_workers_count: {
         Args: { p_community: string }
         Returns: {
@@ -3936,6 +3953,44 @@ export type Database = {
       get_setting_int: {
         Args: { p_default: number; p_key: string }
         Returns: number
+      }
+      get_slot_bookings_drilldown: {
+        Args: {
+          p_community: string
+          p_end_date: string
+          p_service_type: string
+          p_slot_time: string
+          p_start_date: string
+        }
+        Returns: {
+          booking_id: string
+          booking_type: string
+          cancel_reason: string
+          cancel_source: string
+          created_at: string
+          cust_name: string
+          cust_phone: string
+          scheduled_date: string
+          scheduled_time: string
+          status: string
+          worker_id: string
+          worker_name: string
+        }[]
+      }
+      get_slot_demand_analytics: {
+        Args: {
+          p_community: string
+          p_end_date: string
+          p_service_type: string
+          p_start_date: string
+        }
+        Returns: {
+          bookings_cancelled: number
+          bookings_completed: number
+          bookings_created: number
+          cancel_reasons: Json
+          slot_time: string
+        }[]
       }
       get_supply_gap_analysis: {
         Args: never

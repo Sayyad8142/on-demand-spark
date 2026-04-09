@@ -52,6 +52,7 @@ export default function Auth() {
     i18n
   } = useTranslation();
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("signin");
   const [communities, setCommunities] = useState<Array<{
     name: string;
     value: string;
@@ -183,6 +184,9 @@ export default function Auth() {
           description: t('auth.signUpFirst', 'Please sign up first to create your account'),
           variant: "destructive"
         });
+        // Pre-fill phone in sign up and switch tab
+        setSignUpPhone(signInPhone);
+        setActiveTab("signup");
         setLoading(false);
         return;
       }
@@ -325,7 +329,7 @@ export default function Auth() {
           
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">{t('auth.signIn')}</TabsTrigger>
               <TabsTrigger value="signup">{t('auth.signUp')}</TabsTrigger>
