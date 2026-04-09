@@ -666,18 +666,6 @@ export default function Profile() {
                       </p>
                     </div>
 
-                    {/* UPI QR Upload */}
-                    {!isGuestMode && worker && (
-                      <UpiQrUpload 
-                        currentUpiId={upiId} 
-                        currentQrUrl={upiQrUrl} 
-                        onUpiIdExtracted={newUpiId => setUpiId(newUpiId)} 
-                        onQrRemoved={() => setUpiQrUrl(null)} 
-                        onQrUrlSaved={url => setUpiQrUrl(url)}
-                        mode="profile" 
-                        workerId={worker.id} 
-                      />
-                    )}
                     </div>
 
                     {/* Payout Details Section */}
