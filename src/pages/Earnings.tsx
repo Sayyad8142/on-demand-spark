@@ -233,7 +233,9 @@ export default function Earnings() {
             <PayoutList payouts={payouts.filter((p) => ["held", "failed", "reversed"].includes(p.status))} renderStatusBadge={renderStatusBadge} recentlyPaidIds={recentlyPaidIds} />
           </TabsContent>
         </Tabs>
+        <div className="h-20" />
       </main>
+      <BottomNav />
     </div>
   );
 }
