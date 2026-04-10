@@ -4699,6 +4699,10 @@ export type Database = {
         Args: { p_booking_id: string; p_reason: string }
         Returns: undefined
       }
+      worker_collect_payment: {
+        Args: { p_booking_id: string; p_method: string }
+        Returns: Json
+      }
       worker_respond_to_booking: {
         Args: {
           p_assignment_id: string
