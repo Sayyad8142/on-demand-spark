@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface PayoutSummary {
   payout_amount: number;
   platform_fee: number;
-  booking_amount: number;
+  gross_amount: number;
   status: string;
 }
 
@@ -154,7 +154,7 @@ export default function OtpCompletionModal({ open, onClose, bookingId, onComplet
               <div className="w-full bg-muted rounded-xl p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Booking Amount</span>
-                  <span className="font-medium">₹{payout.booking_amount}</span>
+                  <span className="font-medium">₹{payout.gross_amount}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Platform Fee</span>
