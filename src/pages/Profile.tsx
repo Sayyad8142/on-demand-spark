@@ -961,7 +961,7 @@ export default function Profile() {
             <PayoutSetupCard
               workerId={worker.id}
               payoutReady={(worker as any).payout_ready ?? false}
-              currentAccountName={(worker as any).account_holder_name || ""}
+              currentAccountName={(worker as any).account_holder_name || worker.full_name || ""}
               currentUpiId={worker.upi_id || ""}
               onSetupComplete={() => refetchWorker()}
             />
