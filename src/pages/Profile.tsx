@@ -665,10 +665,7 @@ export default function Profile() {
                           accept="image/*"
                           className="hidden"
                           disabled={uploadingPhoto}
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handlePhotoUpload(file);
-                          }}
+                          onChange={handlePhotoUpload}
                         />
                         <p className="text-xs text-muted-foreground mt-1">JPG or PNG, max 5MB</p>
                       </div>
