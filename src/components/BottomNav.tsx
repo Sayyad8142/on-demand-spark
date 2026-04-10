@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Calendar, User, Clock, Wallet } from "lucide-react";
+import { Home, Calendar, User, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,7 +40,6 @@ export default function BottomNav() {
 
   const navItems = [
   { path: "/home", icon: Home, label: t('nav.home') },
-  { path: "/earnings", icon: Wallet, label: t('nav.earnings', 'Earnings') },
   { path: "/bookings", icon: Calendar, label: t('nav.bookings') },
   { path: "/availability", icon: Clock, label: t('nav.availability'), showBadge: hasAvailability },
   { path: "/profile", icon: User, label: t('nav.profile') }];
