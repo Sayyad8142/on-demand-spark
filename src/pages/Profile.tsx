@@ -978,8 +978,6 @@ export default function Profile() {
           {/* Motivation / Next Target Card */}
           <MotivationCard metrics={priorityMetrics} />
 
-          {/* How To Get More Bookings Card */}
-          <HowToGetMoreBookingsCard />
 
 
 
