@@ -165,28 +165,6 @@ export default function BookingPriorityCard({ metrics }: BookingPriorityCardProp
           barColor="bg-amber-500"
         />
 
-        {/* Recent Activity */}
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-            <Zap className="w-4 h-4 text-primary" />
-          </div>
-          <div className="flex-1">
-            <p className="text-xs font-medium text-foreground">
-              {t("profile.priority.recentActivity")}
-            </p>
-          </div>
-          <span
-            className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-              metrics.isRecentlyActive
-                ? "bg-green-100 text-green-700"
-                : "bg-red-100 text-red-600"
-            }`}
-          >
-            {metrics.isRecentlyActive
-              ? t("profile.priority.activeRecently")
-              : t("profile.priority.offlineOften")}
-          </span>
-        </div>
       </CardContent>
     </Card>
   );
