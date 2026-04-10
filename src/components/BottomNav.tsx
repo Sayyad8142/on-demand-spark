@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Calendar, User, Clock } from "lucide-react";
+import { Home, Calendar, User, Clock, Phone } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,6 +40,7 @@ export default function BottomNav() {
 
   const navItems = [
   { path: "/home", icon: Home, label: t('nav.home') },
+  { path: "tel:8008180018", icon: Phone, label: "Call", isExternal: true },
   { path: "/bookings", icon: Calendar, label: t('nav.bookings') },
   { path: "/availability", icon: Clock, label: t('nav.availability'), showBadge: hasAvailability },
   { path: "/profile", icon: User, label: t('nav.profile') }];
@@ -50,10 +51,10 @@ export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 safe-area-pb">
       <div className="flex justify-around items-center h-16 max-w-md mx-auto">
-        {navItems.map(({ path, icon: Icon, label, showBadge }) =>
+        {navItems.map(({ path, icon: Icon, label, showBadge, isExternal }) =>
         <button
           key={path}
-          onClick={() => navigate(path)}
+          onClick={() => isExternal ? window.location.href = path : navigate(path)}
           className={`flex flex-col items-center justify-center flex-1 h-full transition-colors relative ${
           isActive(path)
           ? "text-primary"

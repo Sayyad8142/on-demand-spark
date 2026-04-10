@@ -4407,6 +4407,7 @@ export type Database = {
         Args: { p_booking_id?: string; p_source?: string; p_worker_id: string }
         Returns: undefined
       }
+      redispatch_booking: { Args: { p_booking_id: string }; Returns: undefined }
       register_worker: {
         Args: {
           p_community: string
