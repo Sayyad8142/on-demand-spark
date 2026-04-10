@@ -966,17 +966,6 @@ export default function Profile() {
           {/* Booking Priority Card */}
           <BookingPriorityCard metrics={priorityMetrics} />
 
-          {/* Worker Rank Card */}
-          <WorkerRankCard
-            rank={priorityMetrics.rank}
-            totalWorkers={priorityMetrics.totalWorkersInCommunity}
-          />
-
-          {/* Weekly Performance Card */}
-          <WeeklyPerformanceCard metrics={priorityMetrics} />
-
-          {/* Motivation / Next Target Card */}
-          <MotivationCard metrics={priorityMetrics} />
 
 
 
