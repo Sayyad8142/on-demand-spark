@@ -879,27 +879,7 @@ export default function Profile() {
           </Card>
         </div>
 
-        {/* Earnings Link */}
-        <div className="px-4 mt-4">
-          <Card className="border-0 shadow-lg cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => navigate('/earnings')}>
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                    <Wallet className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">Earnings & Payouts</p>
-                    <p className="text-xs text-muted-foreground">Track your instant UPI payouts</p>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Language Selection - moved after Earnings */}
+        {/* Language Selection */}
         <div className="px-4 mt-4">
           <Card className="border-0 shadow-lg">
             <CardHeader className="pb-3">
@@ -931,6 +911,26 @@ export default function Profile() {
               }} className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all ${i18n.language === lang.code ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
                     {lang.label}
                   </button>)}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Earnings Link */}
+        <div className="px-4 mt-4">
+          <Card className="border-0 shadow-lg cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => navigate('/earnings')}>
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <Wallet className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">Earnings & Payouts</p>
+                    <p className="text-xs text-muted-foreground">Track your instant UPI payouts</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
               </div>
             </CardContent>
           </Card>
