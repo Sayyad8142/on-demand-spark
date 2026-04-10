@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
         .insert({
           booking_id,
           worker_id: worker.id,
-          booking_amount: bookingAmount,
+          gross_amount: bookingAmount,
           platform_fee: platformFee,
           payout_amount: payoutAmount,
           status: "pending",
@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
           ? {
               payout_amount: payoutRecord.payout_amount,
               platform_fee: payoutRecord.platform_fee,
-              booking_amount: payoutRecord.booking_amount,
+              gross_amount: payoutRecord.gross_amount,
               status: payoutRecord.status,
             }
           : null,
