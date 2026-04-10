@@ -257,7 +257,7 @@ export default function Profile() {
         setRatingsCount(Number(data.ratings_count) || 0);
       } else {
         // Fallback to worker.rating from workers table (default 5.0)
-        setWorkerRating(Number(realWorker?.rating) || 0);
+        setWorkerRating(Number(realWorker?.rating) || 5.0);
         setRatingsCount(0);
       }
     };
