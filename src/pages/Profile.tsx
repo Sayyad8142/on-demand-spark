@@ -108,6 +108,7 @@ export default function Profile() {
   // Earnings data
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [todayEarnings, setTodayEarnings] = useState(0);
+  const [monthEarnings, setMonthEarnings] = useState(0);
   const [completedJobs, setCompletedJobs] = useState(0);
   const [workerRating, setWorkerRating] = useState<number>(0);
   const [ratingsCount, setRatingsCount] = useState<number>(0);
@@ -245,6 +246,11 @@ export default function Profile() {
         const today = new Date().toISOString().split('T')[0];
         const todayTotal = payoutsData.filter(p => p.created_at && p.created_at.startsWith(today)).reduce((sum, p) => sum + (p.payout_amount || 0), 0);
         setTodayEarnings(todayTotal);
+
+        // Calculate this month's earnings
+        const monthPrefix = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+        const monthTotal = payoutsData.filter(p => p.created_at && p.created_at.startsWith(monthPrefix)).reduce((sum, p) => sum + (p.payout_amount || 0), 0);
+        setMonthEarnings(monthTotal);
       }
     };
     const fetchRating = async () => {
@@ -850,10 +856,10 @@ export default function Profile() {
                     <Wallet className="w-5 h-5 text-white" />
                   </div>
                   <p className="text-xl font-extrabold text-green-600 dark:text-green-400 text-center mb-1">
-                    ₹{totalEarnings}
+                    ₹{monthEarnings}
                   </p>
                   <p className="text-[9px] text-muted-foreground font-semibold text-center uppercase tracking-tight leading-tight">
-                    {t('profile.totalEarned')}
+                    THIS MONTH
                   </p>
                 </div>
 
