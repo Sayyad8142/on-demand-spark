@@ -640,6 +640,41 @@ export default function Profile() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
+                  {/* Profile Photo Upload */}
+                  <div className="space-y-2">
+                    <Label>Profile Photo</Label>
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center border-2 border-border">
+                        {photoUrl ? (
+                          <img src={photoUrl} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                          <Camera className="w-6 h-6 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <label htmlFor="edit-photo-upload" className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all ${uploadingPhoto ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}>
+                          {uploadingPhoto ? (
+                            <>Uploading...</>
+                          ) : (
+                            <><Camera className="w-4 h-4" />{photoUrl ? 'Change Photo' : 'Upload Photo'}</>
+                          )}
+                        </label>
+                        <input
+                          id="edit-photo-upload"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={uploadingPhoto}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handlePhotoUpload(file);
+                          }}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">JPG or PNG, max 5MB</p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="edit-name">{t('profile.name')}</Label>
                     <Input id="edit-name" value={fullName} onChange={e => setFullName(e.target.value)} placeholder={t('auth.namePlaceholder')} />
