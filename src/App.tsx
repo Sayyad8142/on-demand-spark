@@ -6,8 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { useAuth } from "@/hooks/useAuth";
-import { useFCMTokenSync } from "@/hooks/useFCMTokenSync";
 import { useAppState } from "@/hooks/useAppState";
 import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
 import { initNativePush } from "@/native/push";
@@ -97,7 +97,7 @@ function NativeNavigationHandler() {
   return null;
 }
 
-const App = () => {
+function AppInner() {
   const { session } = useAuth();
   useAppState(); // Refresh JWT when app comes to foreground
   useFCMTokenSync(session?.user?.id); // Sync any natively-persisted FCM token to backend
