@@ -196,13 +196,11 @@ function AppInner() {
   // If Play Store update is required, show force update screen
   if (needsUpdate) {
     return (
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <ForceUpdateScreen />
-        </TooltipProvider>
-      </QueryClientProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <ForceUpdateScreen />
+      </TooltipProvider>
     );
   }
 
@@ -211,100 +209,35 @@ function AppInner() {
 
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        {showOtaMandatory && <OtaMandatoryModal bundleInfo={otaResult.bundleInfo!} />}
-        <BrowserRouter>
-          <NativeNavigationHandler />
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/otp-verify" element={<OtpVerify />} />
-            <Route
-              path="/home"
-              element={
-                <ProtectedRoute showNav={true}>
-                  <Home />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/bookings"
-              element={
-                <ProtectedRoute showNav={true}>
-                  <Bookings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute showNav={true}>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/troubleshoot"
-              element={
-                <ProtectedRoute>
-                  <Troubleshoot />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/availability"
-              element={
-                <ProtectedRoute>
-                  <Availability />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/verify-push"
-              element={
-                <ProtectedRoute>
-                  <VerifyPush />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dev-cache-reset"
-              element={
-                <ProtectedRoute>
-                  <DevCacheReset />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/earnings"
-              element={
-                <ProtectedRoute>
-                  <Earnings />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/terms-of-service" element={<TermsOfService />} />
-            <Route path="/contact-support" element={<ProtectedRoute><ContactSupport /></ProtectedRoute>} />
-            <Route path="/customer-reviews" element={<ProtectedRoute><CustomerReviews /></ProtectedRoute>} />
-            <Route path="/admin-upload-qr" element={<AdminUploadQr />} />
-            <Route path="/auth-debug" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
-            <Route path="/" element={<Navigate to="/auth" replace />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      {showOtaMandatory && <OtaMandatoryModal bundleInfo={otaResult.bundleInfo!} />}
+      <BrowserRouter>
+        <NativeNavigationHandler />
+        <Routes>
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/otp-verify" element={<OtpVerify />} />
+          <Route path="/home" element={<ProtectedRoute showNav={true}><Home /></ProtectedRoute>} />
+          <Route path="/bookings" element={<ProtectedRoute showNav={true}><Bookings /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute showNav={true}><Profile /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/troubleshoot" element={<ProtectedRoute><Troubleshoot /></ProtectedRoute>} />
+          <Route path="/availability" element={<ProtectedRoute><Availability /></ProtectedRoute>} />
+          <Route path="/verify-push" element={<ProtectedRoute><VerifyPush /></ProtectedRoute>} />
+          <Route path="/dev-cache-reset" element={<ProtectedRoute><DevCacheReset /></ProtectedRoute>} />
+          <Route path="/earnings" element={<ProtectedRoute><Earnings /></ProtectedRoute>} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
+          <Route path="/contact-support" element={<ProtectedRoute><ContactSupport /></ProtectedRoute>} />
+          <Route path="/customer-reviews" element={<ProtectedRoute><CustomerReviews /></ProtectedRoute>} />
+          <Route path="/admin-upload-qr" element={<AdminUploadQr />} />
+          <Route path="/auth-debug" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
+          <Route path="/" element={<Navigate to="/auth" replace />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
   );
 }
 
