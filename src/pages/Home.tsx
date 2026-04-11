@@ -5,7 +5,7 @@ import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { useBookingAlerts } from "@/hooks/useBookingAlerts";
 import { useActiveJob } from "@/hooks/useActiveJob";
 import { useHeartbeat } from "@/hooks/useHeartbeat";
-import { BookingAlertModal } from "@/components/BookingAlertModal";
+
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { UpcomingBookingsBar } from "@/components/UpcomingBookingsBar";
@@ -143,30 +143,6 @@ export default function Home() {
     setUpdating(false);
   };
   
-  const handleAccept = async () => {
-    if (isGuestMode) {
-      toast({
-        title: "Guest Mode",
-        description: "Create an account to accept real bookings",
-        variant: "default",
-      });
-      return;
-    }
-
-    // Block accepting if payout not ready
-    if (!payoutReady) {
-      toast({
-        title: "Payout setup required",
-        description: "Please complete payout setup before accepting bookings.",
-        variant: "destructive",
-      });
-      clearAlert();
-      return;
-    }
-
-    await accept();
-    await Promise.all([refetchActiveJob(), refetchWorker()]);
-  };
 
   const handleLogoutFromGuest = () => {
     localStorage.removeItem('guest_mode');
@@ -275,8 +251,6 @@ export default function Home() {
         </Button>
       )}
       
-      {/* Only show in-app modal on web platform; Android uses native overlay */}
-      {!Capacitor.isNativePlatform() && <BookingAlertModal open={!!pending} booking={pending} onAccept={handleAccept} onReject={reject} onClose={clearAlert} />}
       </div>
 
       {/* Upcoming Bookings Bar */}
