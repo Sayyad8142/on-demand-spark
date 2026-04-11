@@ -143,30 +143,6 @@ export default function Home() {
     setUpdating(false);
   };
   
-  const handleAccept = async () => {
-    if (isGuestMode) {
-      toast({
-        title: "Guest Mode",
-        description: "Create an account to accept real bookings",
-        variant: "default",
-      });
-      return;
-    }
-
-    // Block accepting if payout not ready
-    if (!payoutReady) {
-      toast({
-        title: "Payout setup required",
-        description: "Please complete payout setup before accepting bookings.",
-        variant: "destructive",
-      });
-      clearAlert();
-      return;
-    }
-
-    await accept();
-    await Promise.all([refetchActiveJob(), refetchWorker()]);
-  };
 
   const handleLogoutFromGuest = () => {
     localStorage.removeItem('guest_mode');
