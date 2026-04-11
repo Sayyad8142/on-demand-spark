@@ -305,6 +305,16 @@ function AppInner() {
       </TooltipProvider>
     </QueryClientProvider>
   );
+}
+
+const App = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <AppInner />
+      </AuthProvider>
+    </QueryClientProvider>
+  );
 };
 
 export default App;
