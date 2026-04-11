@@ -30,13 +30,13 @@ export default function Home() {
   const isGuestMode = localStorage.getItem('guest_mode') === 'true';
   
   // Use demo data in guest mode, real data otherwise
-  const { worker: realWorker, updateAvailability, refetch: refetchWorker } = useWorkerProfile(user?.id);
+  const { worker: realWorker, loading: workerLoading, updateAvailability, refetch: refetchWorker } = useWorkerProfile(user?.id);
   const { activeJob: realActiveJob, updateJobStatus, refetch: refetchActiveJob } = useActiveJob(user?.id);
   
   const worker = isGuestMode ? DEMO_WORKER : realWorker;
   const activeJob = isGuestMode ? null : realActiveJob;
 
-  const payoutReady = isGuestMode ? true : !!(worker as any)?.payout_ready;
+  const payoutReady = isGuestMode ? true : workerLoading ? true : !!(worker as any)?.payout_ready;
 
   // NO-GPS heartbeat: update last_seen_at every 2 min while app is open
   useHeartbeat(isGuestMode ? undefined : worker?.id);
