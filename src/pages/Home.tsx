@@ -5,7 +5,7 @@ import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { useBookingAlerts } from "@/hooks/useBookingAlerts";
 import { useActiveJob } from "@/hooks/useActiveJob";
 import { useHeartbeat } from "@/hooks/useHeartbeat";
-import { BookingAlertModal } from "@/components/BookingAlertModal";
+
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { UpcomingBookingsBar } from "@/components/UpcomingBookingsBar";
@@ -275,8 +275,6 @@ export default function Home() {
         </Button>
       )}
       
-      {/* Only show in-app modal on web platform; Android uses native overlay */}
-      {!Capacitor.isNativePlatform() && <BookingAlertModal open={!!pending} booking={pending} onAccept={handleAccept} onReject={reject} onClose={clearAlert} />}
       </div>
 
       {/* Upcoming Bookings Bar */}
