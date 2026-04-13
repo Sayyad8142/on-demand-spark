@@ -27,7 +27,6 @@ import WorkerRankCard from "@/components/profile/WorkerRankCard";
 import WeeklyPerformanceCard from "@/components/profile/WeeklyPerformanceCard";
 import HowToGetMoreBookingsCard from "@/components/profile/HowToGetMoreBookingsCard";
 import MotivationCard from "@/components/profile/MotivationCard";
-import PayoutSetupCard from "@/components/profile/PayoutSetupCard";
 const SERVICES = [{
   value: "maid",
   label: "Maid Service",
@@ -55,8 +54,7 @@ export default function Profile() {
   const {
     worker: realWorker,
     loading: realWorkerLoading,
-    updateWorker,
-    refetch: refetchWorker
+    updateWorker
   } = useWorkerProfile(!isGuestMode ? user?.id : undefined);
   const worker = isGuestMode ? DEMO_WORKER : realWorker;
   const workerLoading = isGuestMode ? false : realWorkerLoading;
@@ -223,27 +221,18 @@ export default function Profile() {
     if (!user) return;
     const workerId = realWorker?.id ?? user.id;
     const fetchEarnings = async () => {
-      // Count completed jobs from bookings
       const {
-        data: bookingsData,
-        error: bookingsError
-      } = await supabase.from('bookings').select('id, completed_at').eq('worker_id', workerId).eq('status', 'completed');
-      if (!bookingsError && bookingsData) {
-        setCompletedJobs(bookingsData.length);
-      }
-
-      // Use real payout data for earnings (net amounts after platform fee)
-      const {
-        data: payoutsData,
-        error: payoutsError
-      } = await supabase.from('worker_payouts').select('payout_amount, created_at').eq('worker_id', workerId);
-      if (!payoutsError && payoutsData) {
-        const total = payoutsData.reduce((sum, p) => sum + (p.payout_amount || 0), 0);
+        data,
+        error
+      } = await supabase.from('bookings').select('price_inr, completed_at').eq('worker_id', workerId).eq('status', 'completed');
+      if (!error && data) {
+        setCompletedJobs(data.length);
+        const total = data.reduce((sum, b) => sum + (b.price_inr || 0), 0);
         setTotalEarnings(total);
 
-        // Calculate today's earnings from payouts
+        // Calculate today's earnings
         const today = new Date().toISOString().split('T')[0];
-        const todayTotal = payoutsData.filter(p => p.created_at && p.created_at.startsWith(today)).reduce((sum, p) => sum + (p.payout_amount || 0), 0);
+        const todayTotal = data.filter(b => b.completed_at && b.completed_at.startsWith(today)).reduce((sum, b) => sum + (b.price_inr || 0), 0);
         setTodayEarnings(todayTotal);
       }
     };
@@ -407,14 +396,6 @@ export default function Profile() {
       toast({
         title: "Error",
         description: "Select at least one community",
-        variant: "destructive"
-      });
-      return;
-    }
-    if (!upiId.trim() || !upiId.includes("@")) {
-      toast({
-        title: "UPI ID Required",
-        description: "Please enter a valid UPI ID (must contain '@'). Example: name@paytm",
         variant: "destructive"
       });
       return;
@@ -653,7 +634,7 @@ export default function Profile() {
                     
                     {/* Manual UPI ID Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="edit-upi">{t('auth.upiIdLabel', 'UPI ID')} *</Label>
+                      <Label htmlFor="edit-upi">{t('auth.upiIdLabel', 'UPI ID')} ({t('common.optional', 'Optional')})</Label>
                       <Input 
                         id="edit-upi" 
                         type="text" 
@@ -662,7 +643,7 @@ export default function Profile() {
                         onChange={e => setUpiId(e.target.value)} 
                       />
                       <p className="text-xs text-muted-foreground">
-                        Required for receiving payouts
+                        {t('auth.upiHint', 'Enter manually if QR scan didn\'t detect it')}
                       </p>
                     </div>
 
@@ -948,17 +929,6 @@ export default function Profile() {
         </div>
 
         <div className="px-4 mt-4 space-y-4">
-          {/* Payout Setup Card */}
-          {!isGuestMode && worker && (
-            <PayoutSetupCard
-              workerId={worker.id}
-              payoutReady={(worker as any).payout_ready ?? false}
-              currentAccountName={(worker as any).account_holder_name || ""}
-              currentUpiId={worker.upi_id || ""}
-              onSetupComplete={() => refetchWorker()}
-            />
-          )}
-
           {/* Booking Priority Card */}
           <BookingPriorityCard metrics={priorityMetrics} />
 

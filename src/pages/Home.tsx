@@ -11,7 +11,7 @@ import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { UpcomingBookingsBar } from "@/components/UpcomingBookingsBar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Bell, X, LogOut, AlertTriangle } from "lucide-react";
+import { Bell, X, LogOut } from "lucide-react";
 import { Capacitor } from '@capacitor/core';
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
@@ -35,8 +35,6 @@ export default function Home() {
   
   const worker = isGuestMode ? DEMO_WORKER : realWorker;
   const activeJob = isGuestMode ? null : realActiveJob;
-
-  const payoutReady = isGuestMode ? true : !!(worker as any)?.payout_ready;
 
   // NO-GPS heartbeat: update last_seen_at every 2 min while app is open
   useHeartbeat(isGuestMode ? undefined : worker?.id);
@@ -152,18 +150,6 @@ export default function Home() {
       });
       return;
     }
-
-    // Block accepting if payout not ready
-    if (!payoutReady) {
-      toast({
-        title: "Payout setup required",
-        description: "Please complete payout setup before accepting bookings.",
-        variant: "destructive",
-      });
-      clearAlert();
-      return;
-    }
-
     await accept();
     await Promise.all([refetchActiveJob(), refetchWorker()]);
   };
@@ -200,41 +186,13 @@ export default function Home() {
       {!isGuestMode && (
         <div className="fixed top-0 left-0 right-0 z-20 bg-background border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 24px)' }}>
           <div className="p-2 px-4">
-            <AvailabilityToggle
-              workerId={worker?.id || user?.id || 'demo-worker-id'}
-              payoutReady={payoutReady}
-              onPayoutRequired={() => navigate('/profile')}
-            />
+            <AvailabilityToggle workerId={user?.id || 'demo-worker-id'} />
           </div>
         </div>
       )}
 
       {/* Main Content with top padding for fixed header */}
       <div className={`p-4 space-y-4 pb-32 ${isGuestMode ? 'pt-4' : 'pt-28'}`}>
-
-      {/* Payout Setup Warning Banner */}
-      {!isGuestMode && !payoutReady && (
-        <Card className="p-4 bg-amber-50 dark:bg-amber-950 border-amber-300 dark:border-amber-700">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <h3 className="font-semibold text-sm text-amber-900 dark:text-amber-100 mb-1">
-                Payout setup incomplete
-              </h3>
-              <p className="text-xs text-amber-700 dark:text-amber-300 mb-2">
-                Please add your payout details to start receiving bookings.
-              </p>
-              <Button
-                size="sm"
-                onClick={() => navigate('/profile')}
-                className="bg-amber-600 hover:bg-amber-700 text-white h-8 text-xs"
-              >
-                Complete Payout Setup
-              </Button>
-            </div>
-          </div>
-        </Card>
-      )}
         
       {/* Web Push Banner */}
       {showWebPushBanner && <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 relative">
@@ -260,7 +218,7 @@ export default function Home() {
           </div>
         </Card>}
 
-      {activeJob && <ActiveJobCard booking={activeJob} onStatusUpdate={handleStatusUpdate} updating={updating} onRefresh={refetchActiveJob} />}
+      {activeJob && <ActiveJobCard booking={activeJob} onStatusUpdate={handleStatusUpdate} updating={updating} />}
       
       {/* Guest Mode Logout Button - Big Red */}
       {isGuestMode && (

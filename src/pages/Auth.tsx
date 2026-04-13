@@ -36,7 +36,7 @@ const SERVICES = [{
 // SECURITY: Input validation schemas
 const phoneSchema = z.string().regex(/^[6-9]\d{9}$/, 'Invalid phone number. Must be 10 digits starting with 6-9').length(10, 'Phone number must be exactly 10 digits');
 const nameSchema = z.string().trim().min(2, 'Name must be at least 2 characters').max(100, 'Name must not exceed 100 characters').regex(/^[a-zA-Z\s]+$/, 'Name can only contain letters and spaces');
-const upiSchema = z.string().min(1, 'UPI ID is required').regex(/^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/, 'Invalid UPI ID format (e.g., name@bank)');
+const upiSchema = z.string().regex(/^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/, 'Invalid UPI ID format (e.g., name@bank)').optional().or(z.literal(''));
 const otpSchema = z.string().regex(/^\d{6}$/, 'OTP must be exactly 6 digits').length(6);
 export default function Auth() {
   const navigate = useNavigate();
@@ -52,7 +52,6 @@ export default function Auth() {
     i18n
   } = useTranslation();
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("signin");
   const [communities, setCommunities] = useState<Array<{
     name: string;
     value: string;
@@ -184,9 +183,6 @@ export default function Auth() {
           description: t('auth.signUpFirst', 'Please sign up first to create your account'),
           variant: "destructive"
         });
-        // Pre-fill phone in sign up and switch tab
-        setSignUpPhone(signInPhone);
-        setActiveTab("signup");
         setLoading(false);
         return;
       }
@@ -247,14 +243,16 @@ export default function Auth() {
       });
       return;
     }
-    const upiValidation = upiSchema.safeParse(signUpUpiId);
-    if (!upiValidation.success) {
-      toast({
-        title: "Invalid UPI ID",
-        description: upiValidation.error.errors[0].message,
-        variant: "destructive"
-      });
-      return;
+    if (signUpUpiId) {
+      const upiValidation = upiSchema.safeParse(signUpUpiId);
+      if (!upiValidation.success) {
+        toast({
+          title: "Invalid UPI ID",
+          description: upiValidation.error.errors[0].message,
+          variant: "destructive"
+        });
+        return;
+      }
     }
     try {
       setLoading(true);
@@ -329,7 +327,7 @@ export default function Auth() {
           
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs defaultValue="signin" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">{t('auth.signIn')}</TabsTrigger>
               <TabsTrigger value="signup">{t('auth.signUp')}</TabsTrigger>
@@ -362,7 +360,7 @@ export default function Auth() {
 
               {/* Manual UPI ID Input */}
               <div className="space-y-2">
-                <Label htmlFor="signup-upi">{t('auth.upiIdLabel', 'UPI ID')} *</Label>
+                <Label htmlFor="signup-upi">{t('auth.upiIdLabel', 'UPI ID')} ({t('common.optional', 'Optional')})</Label>
                 <Input 
                   id="signup-upi" 
                   type="text" 
@@ -372,7 +370,7 @@ export default function Auth() {
                   disabled={loading} 
                 />
                 <p className="text-xs text-muted-foreground">
-                  {t('auth.upiHint', 'Required for receiving payouts')}
+                  {t('auth.upiHint', 'Enter manually if QR scan didn\'t detect it')}
                 </p>
               </div>
 

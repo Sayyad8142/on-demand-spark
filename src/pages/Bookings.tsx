@@ -8,10 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Search, MapPin, Calendar, Loader2, User, Star, CreditCard, CheckCircle2, Clock } from "lucide-react";
-import { getPayoutStatus, PAYOUT_ESTIMATING_LABEL } from "@/lib/payoutStatus";
 import { DEMO_BOOKINGS } from "@/config/demoData";
 import { formatBookingAddress, BookingWithAddress } from "@/lib/address";
-import { calcWorkerPayout } from "@/lib/payoutCalc";
 
 type Booking = BookingWithAddress & { rating?: number | null; payout_status?: string | null; payout_amount?: number | null };
 
@@ -268,11 +266,9 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
               <span className="text-xs text-muted-foreground">—</span>
             </div>
           ) : null}
-          {booking.payout_amount != null ? (
-            <span className={`font-bold ${numberColor} text-base`}>₹{booking.payout_amount}</span>
-          ) : booking.price_inr ? (
-            <span className={`font-bold ${numberColor} text-base`}>~₹{calcWorkerPayout(booking.price_inr)}</span>
-          ) : null}
+          {booking.price_inr && (
+            <span className={`font-bold ${numberColor} text-base`}>₹{booking.price_inr}</span>
+          )}
         </div>
       </div>
 
@@ -290,22 +286,18 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
             Paid
           </Badge>
         )}
-        {booking.payout_status ? (() => {
-          const cfg = getPayoutStatus(booking.payout_status);
-          const Icon = cfg.icon;
-          return (
-            <Badge className={`text-[10px] gap-0.5 h-5 ${cfg.badgeClass}`}>
-              <Icon className="w-2.5 h-2.5" />
-              {cfg.label}
-              {booking.payout_amount != null && ` ₹${booking.payout_amount}`}
-            </Badge>
-          );
-        })() : booking.status === 'completed' ? (
-          <Badge className="text-[10px] gap-0.5 h-5 bg-amber-100 text-amber-700">
+        {booking.payout_status && (
+          <Badge className={`text-[10px] gap-0.5 h-5 ${
+            booking.payout_status === 'paid' ? 'bg-green-100 text-green-700' :
+            booking.payout_status === 'held' ? 'bg-orange-100 text-orange-700' :
+            booking.payout_status === 'failed' ? 'bg-red-100 text-red-700' :
+            'bg-amber-100 text-amber-700'
+          }`}>
             <Clock className="w-2.5 h-2.5" />
-            {PAYOUT_ESTIMATING_LABEL}
+            Payout: {booking.payout_status}
+            {booking.payout_amount != null && ` ₹${booking.payout_amount}`}
           </Badge>
-        ) : null}
+        )}
       </div>
     </Card>
   );
