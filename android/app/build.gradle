@@ -3,16 +3,6 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
-}
-
-kotlin {
-    jvmToolchain(17)
-}
-
 android {
     namespace "app.didisnow.worker"
     compileSdk 35
