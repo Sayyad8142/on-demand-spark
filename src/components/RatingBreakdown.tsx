@@ -15,14 +15,8 @@ interface RatingBreakdownProps {
 export default function RatingBreakdown({ ratings, totalRatings }: RatingBreakdownProps) {
   if (totalRatings === 0) {
     return (
-      <div className="text-center py-4">
-        <div className="flex items-center justify-center gap-1 mb-1">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Star key={i} className="w-5 h-5 fill-amber-400 text-amber-400" />
-          ))}
-        </div>
-        <p className="text-sm font-semibold">5.0</p>
-        <p className="text-xs text-muted-foreground">Default rating for new workers</p>
+      <div className="text-center text-sm text-muted-foreground py-4">
+        No ratings yet
       </div>
     );
   }

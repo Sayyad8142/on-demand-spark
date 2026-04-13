@@ -931,57 +931,6 @@ export type Database = {
         }
         Relationships: []
       }
-      dispatch_config: {
-        Row: {
-          community: string
-          created_at: string
-          dispatch_cooldown_seconds: number
-          first_batch_size: number
-          id: string
-          instant_expiry_minutes: number
-          is_active: boolean
-          max_consecutive_timeouts: number
-          max_dispatch_attempts: number
-          max_total_requests: number
-          retry_batch_size: number
-          service_type: string
-          updated_at: string
-          worker_ttl_seconds: number
-        }
-        Insert: {
-          community?: string
-          created_at?: string
-          dispatch_cooldown_seconds?: number
-          first_batch_size?: number
-          id?: string
-          instant_expiry_minutes?: number
-          is_active?: boolean
-          max_consecutive_timeouts?: number
-          max_dispatch_attempts?: number
-          max_total_requests?: number
-          retry_batch_size?: number
-          service_type?: string
-          updated_at?: string
-          worker_ttl_seconds?: number
-        }
-        Update: {
-          community?: string
-          created_at?: string
-          dispatch_cooldown_seconds?: number
-          first_batch_size?: number
-          id?: string
-          instant_expiry_minutes?: number
-          is_active?: boolean
-          max_consecutive_timeouts?: number
-          max_dispatch_attempts?: number
-          max_total_requests?: number
-          retry_batch_size?: number
-          service_type?: string
-          updated_at?: string
-          worker_ttl_seconds?: number
-        }
-        Relationships: []
-      }
       events_ingestion: {
         Row: {
           error_count: number | null
@@ -3847,19 +3796,6 @@ export type Database = {
         }
         Returns: Json
       }
-      get_dispatch_config: {
-        Args: { p_community: string; p_service_type: string }
-        Returns: {
-          dispatch_cooldown_seconds: number
-          first_batch_size: number
-          instant_expiry_minutes: number
-          max_consecutive_timeouts: number
-          max_dispatch_attempts: number
-          max_total_requests: number
-          retry_batch_size: number
-          worker_ttl_seconds: number
-        }[]
-      }
       get_eligible_workers: {
         Args: { p_community: string; p_limit?: number; p_service: string }
         Returns: {
@@ -4471,7 +4407,6 @@ export type Database = {
         Args: { p_booking_id?: string; p_source?: string; p_worker_id: string }
         Returns: undefined
       }
-      redispatch_booking: { Args: { p_booking_id: string }; Returns: undefined }
       register_worker: {
         Args: {
           p_community: string
@@ -4763,10 +4698,6 @@ export type Database = {
       user_cancel_booking: {
         Args: { p_booking_id: string; p_reason: string }
         Returns: undefined
-      }
-      worker_collect_payment: {
-        Args: { p_booking_id: string; p_method: string }
-        Returns: Json
       }
       worker_respond_to_booking: {
         Args: {

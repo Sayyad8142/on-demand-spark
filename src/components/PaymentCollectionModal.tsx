@@ -23,17 +23,16 @@ export default function PaymentCollectionModal({ open, onClose, bookingId, amoun
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc("worker_collect_payment", {
-        p_booking_id: bookingId,
-        p_method: selectedMethod,
-      });
+      const { error } = await supabase
+        .from("bookings")
+        .update({
+          worker_collected_payment: true,
+          worker_collection_method: selectedMethod,
+          worker_collected_at: new Date().toISOString(),
+        })
+        .eq("id", bookingId);
 
       if (error) throw error;
-
-      const result = data as { success?: boolean; error?: string; already_collected?: boolean } | null;
-      if (!result?.success) {
-        throw new Error(result?.error || "Failed to collect payment");
-      }
 
       toast({ title: "Payment Collected", description: `₹${amount} marked as collected via ${selectedMethod}` });
       onCollected();

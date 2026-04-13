@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface PayoutSummary {
   payout_amount: number;
   platform_fee: number;
-  gross_amount: number;
+  booking_amount: number;
   status: string;
 }
 
@@ -25,17 +25,13 @@ export default function OtpCompletionModal({ open, onClose, bookingId, onComplet
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [payout, setPayout] = useState<PayoutSummary | null>(null);
-  const submitLockRef = useRef(false);
 
   const handleSubmit = async () => {
-    if (submitLockRef.current || loading) return;
-
     if (otp.length < 3) {
       setError("Please enter the complete 3-digit OTP");
       return;
     }
 
-    submitLockRef.current = true;
     setLoading(true);
     setError(null);
 
@@ -48,10 +44,7 @@ export default function OtpCompletionModal({ open, onClose, bookingId, onComplet
         // Parse the error from the edge function response
         const errorBody = fnError.message || "Something went wrong";
         if (errorBody.includes("already completed")) {
-          setSuccess(true);
-          if (data?.payout) {
-            setPayout(data.payout);
-          }
+          setError("This booking is already completed.");
         } else if (errorBody.includes("Invalid OTP")) {
           setError("Wrong OTP. Please ask the customer for the correct code.");
         } else if (errorBody.includes("Payment not collected") || errorBody.includes("Payment not completed")) {
@@ -65,25 +58,17 @@ export default function OtpCompletionModal({ open, onClose, bookingId, onComplet
 
       if (data?.error) {
         if (data.already_completed) {
-          setSuccess(true);
-          if (data?.payout) {
-            setPayout(data.payout);
-          }
+          setError("This booking is already completed.");
         } else if (data.payment_required) {
           setError("Please collect payment before completing this job.");
         } else {
           setError(data.error);
         }
-        if (!data.already_completed) {
-          setLoading(false);
-          return;
-        }
+        setLoading(false);
+        return;
       }
 
-      if (!data?.error) {
-        setSuccess(true);
-      }
-
+      setSuccess(true);
       if (data?.payout) {
         setPayout(data.payout);
       }
@@ -96,13 +81,11 @@ export default function OtpCompletionModal({ open, onClose, bookingId, onComplet
     } catch (err: any) {
       setError(err.message || "Network error. Please try again.");
     } finally {
-      submitLockRef.current = false;
       setLoading(false);
     }
   };
 
   const handleClose = () => {
-    submitLockRef.current = false;
     setOtp("");
     setError(null);
     setSuccess(false);
@@ -171,7 +154,7 @@ export default function OtpCompletionModal({ open, onClose, bookingId, onComplet
               <div className="w-full bg-muted rounded-xl p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Booking Amount</span>
-                  <span className="font-medium">₹{payout.gross_amount}</span>
+                  <span className="font-medium">₹{payout.booking_amount}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Platform Fee</span>
