@@ -2825,21 +2825,26 @@ export type Database = {
         Row: {
           admin_notes: string | null
           approved_at: string | null
-          booking_amount: number
           booking_id: string
           created_at: string
+          currency: string
           external_reference: string | null
           failed_at: string | null
           failure_reason: string | null
+          gross_amount: number
           held_at: string | null
           hold_reason: string | null
           id: string
+          idempotency_key: string | null
           paid_at: string | null
           payout_amount: number
           payout_method: string | null
           platform_fee: number
           processed_at: string | null
           processed_by_admin_id: string | null
+          raw_response: Json | null
+          razorpay_payout_id: string | null
+          reference_id: string | null
           reversed_at: string | null
           status: string
           updated_at: string
@@ -2848,21 +2853,26 @@ export type Database = {
         Insert: {
           admin_notes?: string | null
           approved_at?: string | null
-          booking_amount: number
           booking_id: string
           created_at?: string
+          currency?: string
           external_reference?: string | null
           failed_at?: string | null
           failure_reason?: string | null
+          gross_amount: number
           held_at?: string | null
           hold_reason?: string | null
           id?: string
+          idempotency_key?: string | null
           paid_at?: string | null
           payout_amount: number
           payout_method?: string | null
           platform_fee?: number
           processed_at?: string | null
           processed_by_admin_id?: string | null
+          raw_response?: Json | null
+          razorpay_payout_id?: string | null
+          reference_id?: string | null
           reversed_at?: string | null
           status?: string
           updated_at?: string
@@ -2871,21 +2881,26 @@ export type Database = {
         Update: {
           admin_notes?: string | null
           approved_at?: string | null
-          booking_amount?: number
           booking_id?: string
           created_at?: string
+          currency?: string
           external_reference?: string | null
           failed_at?: string | null
           failure_reason?: string | null
+          gross_amount?: number
           held_at?: string | null
           hold_reason?: string | null
           id?: string
+          idempotency_key?: string | null
           paid_at?: string | null
           payout_amount?: number
           payout_method?: string | null
           platform_fee?: number
           processed_at?: string | null
           processed_by_admin_id?: string | null
+          raw_response?: Json | null
+          razorpay_payout_id?: string | null
+          reference_id?: string | null
           reversed_at?: string | null
           status?: string
           updated_at?: string
@@ -2895,7 +2910,7 @@ export type Database = {
           {
             foreignKeyName: "worker_payouts_booking_id_fkey"
             columns: ["booking_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
@@ -3135,11 +3150,16 @@ export type Database = {
           last_offer_at: string | null
           last_seen_at: string | null
           location_enabled: boolean | null
+          payout_last_error: string | null
+          payout_ready: boolean
+          payout_verified_at: string | null
           phone: string
           photo_url: string | null
           preferred_payout_method: string | null
           priority_score: number
           rating: number | null
+          razorpay_contact_id: string | null
+          razorpay_fund_account_id: string | null
           respect_availability: boolean | null
           selected_community_id: string | null
           service_types: string[]
@@ -3181,11 +3201,16 @@ export type Database = {
           last_offer_at?: string | null
           last_seen_at?: string | null
           location_enabled?: boolean | null
+          payout_last_error?: string | null
+          payout_ready?: boolean
+          payout_verified_at?: string | null
           phone: string
           photo_url?: string | null
           preferred_payout_method?: string | null
           priority_score?: number
           rating?: number | null
+          razorpay_contact_id?: string | null
+          razorpay_fund_account_id?: string | null
           respect_availability?: boolean | null
           selected_community_id?: string | null
           service_types?: string[]
@@ -3227,11 +3252,16 @@ export type Database = {
           last_offer_at?: string | null
           last_seen_at?: string | null
           location_enabled?: boolean | null
+          payout_last_error?: string | null
+          payout_ready?: boolean
+          payout_verified_at?: string | null
           phone?: string
           photo_url?: string | null
           preferred_payout_method?: string | null
           priority_score?: number
           rating?: number | null
+          razorpay_contact_id?: string | null
+          razorpay_fund_account_id?: string | null
           respect_availability?: boolean | null
           selected_community_id?: string | null
           service_types?: string[]
@@ -3386,11 +3416,16 @@ export type Database = {
               last_offer_at: string | null
               last_seen_at: string | null
               location_enabled: boolean | null
+              payout_last_error: string | null
+              payout_ready: boolean
+              payout_verified_at: string | null
               phone: string
               photo_url: string | null
               preferred_payout_method: string | null
               priority_score: number
               rating: number | null
+              razorpay_contact_id: string | null
+              razorpay_fund_account_id: string | null
               respect_availability: boolean | null
               selected_community_id: string | null
               service_types: string[]
@@ -3441,11 +3476,16 @@ export type Database = {
               last_offer_at: string | null
               last_seen_at: string | null
               location_enabled: boolean | null
+              payout_last_error: string | null
+              payout_ready: boolean
+              payout_verified_at: string | null
               phone: string
               photo_url: string | null
               preferred_payout_method: string | null
               priority_score: number
               rating: number | null
+              razorpay_contact_id: string | null
+              razorpay_fund_account_id: string | null
               respect_availability: boolean | null
               selected_community_id: string | null
               service_types: string[]
@@ -3835,6 +3875,23 @@ export type Database = {
           terms_url: string
         }[]
       }
+      get_my_wallet_balance: {
+        Args: never
+        Returns: {
+          balance_inr: number
+        }[]
+      }
+      get_my_wallet_transactions: {
+        Args: never
+        Returns: {
+          amount_inr: number
+          booking_id: string
+          created_at: string
+          id: string
+          reason: string
+          type: string
+        }[]
+      }
       get_online_workers_count: {
         Args: { p_community: string }
         Returns: {
@@ -3896,6 +3953,44 @@ export type Database = {
       get_setting_int: {
         Args: { p_default: number; p_key: string }
         Returns: number
+      }
+      get_slot_bookings_drilldown: {
+        Args: {
+          p_community: string
+          p_end_date: string
+          p_service_type: string
+          p_slot_time: string
+          p_start_date: string
+        }
+        Returns: {
+          booking_id: string
+          booking_type: string
+          cancel_reason: string
+          cancel_source: string
+          created_at: string
+          cust_name: string
+          cust_phone: string
+          scheduled_date: string
+          scheduled_time: string
+          status: string
+          worker_id: string
+          worker_name: string
+        }[]
+      }
+      get_slot_demand_analytics: {
+        Args: {
+          p_community: string
+          p_end_date: string
+          p_service_type: string
+          p_start_date: string
+        }
+        Returns: {
+          bookings_cancelled: number
+          bookings_completed: number
+          bookings_created: number
+          cancel_reasons: Json
+          slot_time: string
+        }[]
       }
       get_supply_gap_analysis: {
         Args: never
@@ -3959,6 +4054,17 @@ export type Database = {
           worker_count: number
         }[]
       }
+      get_worker_slot_supply: {
+        Args: {
+          p_community: string
+          p_day_of_week: number
+          p_service_type: string
+        }
+        Returns: {
+          slot_time: string
+          worker_count: number
+        }[]
+      }
       get_worker_supply_health: {
         Args: never
         Returns: {
@@ -3992,6 +4098,25 @@ export type Database = {
         Returns: {
           fcm_token: string
           worker_id: string
+        }[]
+      }
+      get_workers_for_slot: {
+        Args: {
+          p_community: string
+          p_day_of_week: number
+          p_service_type: string
+          p_slot_time: string
+        }
+        Returns: {
+          communities: string[]
+          full_name: string
+          id: string
+          is_available: boolean
+          is_busy: boolean
+          phone: string
+          photo_url: string
+          rating: number
+          service_types: string[]
         }[]
       }
       get_workers_never_received_booking: {
@@ -4282,6 +4407,7 @@ export type Database = {
         Args: { p_booking_id?: string; p_source?: string; p_worker_id: string }
         Returns: undefined
       }
+      redispatch_booking: { Args: { p_booking_id: string }; Returns: undefined }
       register_worker: {
         Args: {
           p_community: string
@@ -4573,6 +4699,10 @@ export type Database = {
       user_cancel_booking: {
         Args: { p_booking_id: string; p_reason: string }
         Returns: undefined
+      }
+      worker_collect_payment: {
+        Args: { p_booking_id: string; p_method: string }
+        Returns: Json
       }
       worker_respond_to_booking: {
         Args: {

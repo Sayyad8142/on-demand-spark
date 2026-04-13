@@ -27,6 +27,7 @@ import WorkerRankCard from "@/components/profile/WorkerRankCard";
 import WeeklyPerformanceCard from "@/components/profile/WeeklyPerformanceCard";
 import HowToGetMoreBookingsCard from "@/components/profile/HowToGetMoreBookingsCard";
 import MotivationCard from "@/components/profile/MotivationCard";
+import PayoutSetupCard from "@/components/profile/PayoutSetupCard";
 const SERVICES = [{
   value: "maid",
   label: "Maid Service",
@@ -54,7 +55,8 @@ export default function Profile() {
   const {
     worker: realWorker,
     loading: realWorkerLoading,
-    updateWorker
+    updateWorker,
+    refetch: refetchWorker
   } = useWorkerProfile(!isGuestMode ? user?.id : undefined);
   const worker = isGuestMode ? DEMO_WORKER : realWorker;
   const workerLoading = isGuestMode ? false : realWorkerLoading;
@@ -221,18 +223,27 @@ export default function Profile() {
     if (!user) return;
     const workerId = realWorker?.id ?? user.id;
     const fetchEarnings = async () => {
+      // Count completed jobs from bookings
       const {
-        data,
-        error
-      } = await supabase.from('bookings').select('price_inr, completed_at').eq('worker_id', workerId).eq('status', 'completed');
-      if (!error && data) {
-        setCompletedJobs(data.length);
-        const total = data.reduce((sum, b) => sum + (b.price_inr || 0), 0);
+        data: bookingsData,
+        error: bookingsError
+      } = await supabase.from('bookings').select('id, completed_at').eq('worker_id', workerId).eq('status', 'completed');
+      if (!bookingsError && bookingsData) {
+        setCompletedJobs(bookingsData.length);
+      }
+
+      // Use real payout data for earnings (net amounts after platform fee)
+      const {
+        data: payoutsData,
+        error: payoutsError
+      } = await supabase.from('worker_payouts').select('payout_amount, created_at').eq('worker_id', workerId);
+      if (!payoutsError && payoutsData) {
+        const total = payoutsData.reduce((sum, p) => sum + (p.payout_amount || 0), 0);
         setTotalEarnings(total);
 
-        // Calculate today's earnings
+        // Calculate today's earnings from payouts
         const today = new Date().toISOString().split('T')[0];
-        const todayTotal = data.filter(b => b.completed_at && b.completed_at.startsWith(today)).reduce((sum, b) => sum + (b.price_inr || 0), 0);
+        const todayTotal = payoutsData.filter(p => p.created_at && p.created_at.startsWith(today)).reduce((sum, p) => sum + (p.payout_amount || 0), 0);
         setTodayEarnings(todayTotal);
       }
     };
@@ -246,7 +257,7 @@ export default function Profile() {
         setRatingsCount(Number(data.ratings_count) || 0);
       } else {
         // Fallback to worker.rating from workers table (default 5.0)
-        setWorkerRating(Number(realWorker?.rating) || 0);
+        setWorkerRating(Number(realWorker?.rating) || 5.0);
         setRatingsCount(0);
       }
     };
@@ -396,6 +407,14 @@ export default function Profile() {
       toast({
         title: "Error",
         description: "Select at least one community",
+        variant: "destructive"
+      });
+      return;
+    }
+    if (!upiId.trim() || !upiId.includes("@")) {
+      toast({
+        title: "UPI ID Required",
+        description: "Please enter a valid UPI ID (must contain '@'). Example: name@paytm",
         variant: "destructive"
       });
       return;
@@ -634,7 +653,7 @@ export default function Profile() {
                     
                     {/* Manual UPI ID Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="edit-upi">{t('auth.upiIdLabel', 'UPI ID')} ({t('common.optional', 'Optional')})</Label>
+                      <Label htmlFor="edit-upi">{t('auth.upiIdLabel', 'UPI ID')} *</Label>
                       <Input 
                         id="edit-upi" 
                         type="text" 
@@ -643,22 +662,10 @@ export default function Profile() {
                         onChange={e => setUpiId(e.target.value)} 
                       />
                       <p className="text-xs text-muted-foreground">
-                        {t('auth.upiHint', 'Enter manually if QR scan didn\'t detect it')}
+                        Required for receiving payouts
                       </p>
                     </div>
 
-                    {/* UPI QR Upload */}
-                    {!isGuestMode && worker && (
-                      <UpiQrUpload 
-                        currentUpiId={upiId} 
-                        currentQrUrl={upiQrUrl} 
-                        onUpiIdExtracted={newUpiId => setUpiId(newUpiId)} 
-                        onQrRemoved={() => setUpiQrUrl(null)} 
-                        onQrUrlSaved={url => setUpiQrUrl(url)}
-                        mode="profile" 
-                        workerId={worker.id} 
-                      />
-                    )}
                     </div>
 
                     {/* Payout Details Section */}
@@ -866,7 +873,27 @@ export default function Profile() {
           </Card>
         </div>
 
-        {/* Enhanced Ratings & Reviews Link - top */}
+        {/* Earnings Link */}
+        <div className="px-4 mt-4">
+          <Card className="border-0 shadow-lg cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => navigate('/earnings')}>
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <Wallet className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">Earnings & Payouts</p>
+                    <p className="text-xs text-muted-foreground">Track your instant UPI payouts</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Enhanced Ratings & Reviews Link */}
         <div className="px-4 mt-4">
           <Card className="border-0 shadow-lg cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => navigate('/customer-reviews')}>
             <CardContent className="py-4">
@@ -929,6 +956,7 @@ export default function Profile() {
         </div>
 
         <div className="px-4 mt-4 space-y-4">
+
           {/* Booking Priority Card */}
           <BookingPriorityCard metrics={priorityMetrics} />
 
