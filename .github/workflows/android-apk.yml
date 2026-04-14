@@ -9,7 +9,7 @@ jobs:
   build-apk:
     runs-on: ubuntu-latest
     env:
-      JAVA_VERSION: '17'
+      JAVA_VERSION: '21'
       GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON || '' }}
 
     steps:
@@ -48,41 +48,17 @@ jobs:
             npx cap add android
           fi
           npx cap sync android
-          echo "---- list android tree ----"
-          ls -la android || true
-          ls -la android/app || true
-
-      # 🔧 Force a minimal, valid settings.gradle that *includes :app* and Capacitor
-      - name: Fix settings.gradle (must include :app)
-        run: |
-          printf "rootProject.name='android'\ninclude ':app'\napply from: 'capacitor.settings.gradle'\n" > android/settings.gradle
-          # Remove any leftover Cordova bridge reference from build files
-          sed -i "/capacitor-cordova-android-plugins/d" android/settings.gradle || true
-          for F in android/build.gradle android/app/build.gradle; do
-            if [ -f "$F" ]; then
-              sed -i "/capacitor-cordova-android-plugins/d" "$F" || true
-              # Drop any empty/invalid flatDir blocks that cause 'You must specify at least one directory'
-              perl -0777 -pe "s/[ \t]*flatDir[ \t]*\{[^}]*\}\n//g" -i "$F"
-            fi
-          done
-          echo "---- android/settings.gradle ----"
-          cat android/settings.gradle
 
       - name: Inject google-services.json (optional)
         if: ${{ env.GOOGLE_SERVICES_JSON != '' }}
         run: |
           mkdir -p android/app
           echo "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
-          ls -la android/app/google-services.json || true
 
       - name: Ensure Gradle wrapper
         run: |
           if [ ! -f "android/gradlew" ]; then
-            echo "gradlew not found — creating wrapper"
-            cd android
-            gradle wrapper
-            chmod +x gradlew
-            cd ..
+            cd android && gradle wrapper && chmod +x gradlew && cd ..
           else
             chmod +x android/gradlew
           fi
