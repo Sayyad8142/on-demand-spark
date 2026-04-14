@@ -17,6 +17,7 @@ import { tryAccept } from "@/lib/bookingActions";
 import { requestLocationPermissions } from "@/lib/backgroundLocation";
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
 import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
+import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import Auth from "./pages/Auth";
 import OtpVerify from "./pages/OtpVerify";
 import Home from "./pages/Home";
@@ -36,6 +37,7 @@ import CustomerReviews from "./pages/CustomerReviews";
 import AdminUploadQr from "./pages/AdminUploadQr";
 import AuthDebug from "./pages/AuthDebug";
 import Earnings from "./pages/Earnings";
+import WorkerBlocked from "./pages/WorkerBlocked";
 import BottomNav from "./components/BottomNav";
 
 const queryClient = new QueryClient();
@@ -103,6 +105,7 @@ function AppInner() {
   useAppState(); // Refresh JWT when app comes to foreground
   useFCMTokenSync(session?.user?.id); // Sync any natively-persisted FCM token to backend
   const { needsUpdate } = useForceUpdateCheck();
+  const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
 
   // OTA: confirm boot success + check for updates on startup
@@ -204,9 +207,20 @@ function AppInner() {
     );
   }
 
+  // If worker is blocked, show blocked screen (after loading completes)
+  const isBlocked = !workerLoading && session?.user?.id && (worker as any)?.is_blocked === true;
+  if (isBlocked) {
+    return (
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <WorkerBlocked reason={(worker as any)?.blocked_reason} />
+      </TooltipProvider>
+    );
+  }
+
   // If mandatory OTA update is required, show OTA modal over the app
   const showOtaMandatory = otaResult?.isMandatory && otaResult?.bundleInfo;
-
 
   return (
     <TooltipProvider>

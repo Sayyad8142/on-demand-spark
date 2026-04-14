@@ -3178,6 +3178,9 @@ export type Database = {
           account_holder_name: string | null
           admin_override_rating: number | null
           bank_account_number: string | null
+          blocked_at: string | null
+          blocked_by: string | null
+          blocked_reason: string | null
           communities: string[] | null
           community: string | null
           cook_cuisine_tags: string[]
@@ -3190,6 +3193,7 @@ export type Database = {
           in_geofence: boolean | null
           is_active: boolean
           is_available: boolean | null
+          is_blocked: boolean
           is_busy: boolean | null
           is_core_worker: boolean
           last_7_days_completed_bookings: number
@@ -3229,6 +3233,9 @@ export type Database = {
           account_holder_name?: string | null
           admin_override_rating?: number | null
           bank_account_number?: string | null
+          blocked_at?: string | null
+          blocked_by?: string | null
+          blocked_reason?: string | null
           communities?: string[] | null
           community?: string | null
           cook_cuisine_tags?: string[]
@@ -3241,6 +3248,7 @@ export type Database = {
           in_geofence?: boolean | null
           is_active?: boolean
           is_available?: boolean | null
+          is_blocked?: boolean
           is_busy?: boolean | null
           is_core_worker?: boolean
           last_7_days_completed_bookings?: number
@@ -3280,6 +3288,9 @@ export type Database = {
           account_holder_name?: string | null
           admin_override_rating?: number | null
           bank_account_number?: string | null
+          blocked_at?: string | null
+          blocked_by?: string | null
+          blocked_reason?: string | null
           communities?: string[] | null
           community?: string | null
           cook_cuisine_tags?: string[]
@@ -3292,6 +3303,7 @@ export type Database = {
           in_geofence?: boolean | null
           is_active?: boolean
           is_available?: boolean | null
+          is_blocked?: boolean
           is_busy?: boolean | null
           is_core_worker?: boolean
           last_7_days_completed_bookings?: number
@@ -3444,6 +3456,9 @@ export type Database = {
               account_holder_name: string | null
               admin_override_rating: number | null
               bank_account_number: string | null
+              blocked_at: string | null
+              blocked_by: string | null
+              blocked_reason: string | null
               communities: string[] | null
               community: string | null
               cook_cuisine_tags: string[]
@@ -3456,6 +3471,7 @@ export type Database = {
               in_geofence: boolean | null
               is_active: boolean
               is_available: boolean | null
+              is_blocked: boolean
               is_busy: boolean | null
               is_core_worker: boolean
               last_7_days_completed_bookings: number
@@ -3504,6 +3520,9 @@ export type Database = {
               account_holder_name: string | null
               admin_override_rating: number | null
               bank_account_number: string | null
+              blocked_at: string | null
+              blocked_by: string | null
+              blocked_reason: string | null
               communities: string[] | null
               community: string | null
               cook_cuisine_tags: string[]
@@ -3516,6 +3535,7 @@ export type Database = {
               in_geofence: boolean | null
               is_active: boolean
               is_available: boolean | null
+              is_blocked: boolean
               is_busy: boolean | null
               is_core_worker: boolean
               last_7_days_completed_bookings: number

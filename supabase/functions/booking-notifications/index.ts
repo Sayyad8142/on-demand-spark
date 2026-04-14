@@ -179,6 +179,7 @@ Deno.serve(async (req) => {
       .eq("is_active", true)
       .eq("is_available", true)
       .eq("is_busy", false)
+      .neq("is_blocked", true)
       .contains("service_types", [b.service_type]);
     
     if (communityData?.id) {
