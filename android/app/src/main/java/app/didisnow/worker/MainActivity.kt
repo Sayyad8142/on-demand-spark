@@ -44,6 +44,7 @@ class MainActivity : BridgeActivity() {
         registerPlugin(LocationPlugin::class.java)
         registerPlugin(SmsRetrieverPlugin::class.java)
         registerPlugin(LiveUpdatePlugin::class.java) // registered as "DidiLiveUpdate" via annotation
+        registerPlugin(StepCounterPlugin::class.java)
         
         android.util.Log.d("MainActivity", "🚀 App starting - checking permissions")
         

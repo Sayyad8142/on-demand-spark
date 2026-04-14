@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { startMovementMonitoring } from "@/lib/stepMonitoring";
 
 // Helper to ensure session is valid before making API calls
 async function ensureValidSession(): Promise<boolean> {
@@ -30,7 +31,7 @@ async function ensureValidSession(): Promise<boolean> {
   }
 }
 
-export async function tryAccept(bookingId: string): Promise<{ success: boolean; error?: string }> {
+export async function tryAccept(bookingId: string, workerId?: string): Promise<{ success: boolean; error?: string }> {
   // Ensure valid session before accepting
   const sessionValid = await ensureValidSession();
   if (!sessionValid) {
@@ -52,7 +53,33 @@ export async function tryAccept(bookingId: string): Promise<{ success: boolean; 
   }
   
   console.log("✅ Booking accepted successfully");
+
+  // Fire-and-forget: start step-based movement monitoring
+  resolveWorkerIdAndMonitor(bookingId, workerId).catch(() => {});
+
   return { success: true };
+}
+
+async function resolveWorkerIdAndMonitor(bookingId: string, workerId?: string) {
+  try {
+    let wId = workerId;
+    if (!wId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from("workers")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        wId = data?.id;
+      }
+    }
+    if (wId) {
+      await startMovementMonitoring(bookingId, wId);
+    }
+  } catch (e) {
+    console.error("📊 Failed to resolve worker for monitoring:", e);
+  }
 }
 
 export async function rejectBooking(bookingId: string, workerId: string) {
