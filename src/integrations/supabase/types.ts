@@ -458,6 +458,84 @@ export type Database = {
           },
         ]
       }
+      booking_worker_movement_checks: {
+        Row: {
+          accepted_at: string
+          baseline_step_value: number | null
+          booking_id: string
+          checked_at: string | null
+          created_at: string
+          final_step_value: number | null
+          id: string
+          low_movement_flag: boolean
+          low_movement_reason: string | null
+          min_required_steps: number
+          monitoring_window_seconds: number
+          movement_status: string
+          permission_granted: boolean
+          raw_meta: Json | null
+          sensor_supported: boolean
+          sensor_type_used: string | null
+          steps_in_window: number | null
+          worker_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          baseline_step_value?: number | null
+          booking_id: string
+          checked_at?: string | null
+          created_at?: string
+          final_step_value?: number | null
+          id?: string
+          low_movement_flag?: boolean
+          low_movement_reason?: string | null
+          min_required_steps?: number
+          monitoring_window_seconds?: number
+          movement_status?: string
+          permission_granted?: boolean
+          raw_meta?: Json | null
+          sensor_supported?: boolean
+          sensor_type_used?: string | null
+          steps_in_window?: number | null
+          worker_id: string
+        }
+        Update: {
+          accepted_at?: string
+          baseline_step_value?: number | null
+          booking_id?: string
+          checked_at?: string | null
+          created_at?: string
+          final_step_value?: number | null
+          id?: string
+          low_movement_flag?: boolean
+          low_movement_reason?: string | null
+          min_required_steps?: number
+          monitoring_window_seconds?: number
+          movement_status?: string
+          permission_granted?: boolean
+          raw_meta?: Json | null
+          sensor_supported?: boolean
+          sensor_type_used?: string | null
+          steps_in_window?: number | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_worker_movement_checks_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_worker_movement_checks_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           accepted_at: string | null
