@@ -17,6 +17,7 @@ import { tryAccept } from "@/lib/bookingActions";
 import { requestLocationPermissions } from "@/lib/backgroundLocation";
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
 import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
+import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import Auth from "./pages/Auth";
 import OtpVerify from "./pages/OtpVerify";
 import Home from "./pages/Home";
@@ -36,6 +37,7 @@ import CustomerReviews from "./pages/CustomerReviews";
 import AdminUploadQr from "./pages/AdminUploadQr";
 import AuthDebug from "./pages/AuthDebug";
 import Earnings from "./pages/Earnings";
+import WorkerBlocked from "./pages/WorkerBlocked";
 import BottomNav from "./components/BottomNav";
 
 const queryClient = new QueryClient();
