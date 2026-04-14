@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { tryAccept, rejectBooking } from "@/lib/bookingActions";
 
-export function useBookingAlerts(userId: string | undefined, isOnline: boolean, match: (b:any)=>boolean) {
+export function useBookingAlerts(userId: string | undefined, isOnline: boolean, match: (b:any)=>boolean, workerId?: string | null) {
   const [pending, setPending] = useState<any|null>(null);
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export function useBookingAlerts(userId: string | undefined, isOnline: boolean, 
   const accept = useCallback(async () => {
     if (!pending) return;
 
-    const result = await tryAccept(pending.id);
+    const result = await tryAccept(pending.id, workerId || undefined);
     if (!result.success) {
       toast({ title: result.error || "Booking already taken", variant: "destructive" });
     } else {
@@ -42,7 +42,7 @@ export function useBookingAlerts(userId: string | undefined, isOnline: boolean, 
     }
 
     setPending(null);
-  }, [pending]);
+  }, [pending, workerId]);
 
   const reject = useCallback(async () => {
     if (!pending || !userId) return;
