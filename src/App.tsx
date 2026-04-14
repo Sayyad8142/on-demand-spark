@@ -105,6 +105,7 @@ function AppInner() {
   useAppState(); // Refresh JWT when app comes to foreground
   useFCMTokenSync(session?.user?.id); // Sync any natively-persisted FCM token to backend
   const { needsUpdate } = useForceUpdateCheck();
+  const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
 
   // OTA: confirm boot success + check for updates on startup
