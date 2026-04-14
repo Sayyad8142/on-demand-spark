@@ -108,6 +108,7 @@ export default function Profile() {
   // Earnings data
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [todayEarnings, setTodayEarnings] = useState(0);
+  const [monthEarnings, setMonthEarnings] = useState(0);
   const [completedJobs, setCompletedJobs] = useState(0);
   const [workerRating, setWorkerRating] = useState<number>(0);
   const [ratingsCount, setRatingsCount] = useState<number>(0);
@@ -245,6 +246,11 @@ export default function Profile() {
         const today = new Date().toISOString().split('T')[0];
         const todayTotal = payoutsData.filter(p => p.created_at && p.created_at.startsWith(today)).reduce((sum, p) => sum + (p.payout_amount || 0), 0);
         setTodayEarnings(todayTotal);
+
+        // Calculate this month's earnings
+        const monthPrefix = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+        const monthTotal = payoutsData.filter(p => p.created_at && p.created_at.startsWith(monthPrefix)).reduce((sum, p) => sum + (p.payout_amount || 0), 0);
+        setMonthEarnings(monthTotal);
       }
     };
     const fetchRating = async () => {
@@ -634,6 +640,38 @@ export default function Profile() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
+                  {/* Profile Photo Upload */}
+                  <div className="space-y-2">
+                    <Label>Profile Photo</Label>
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center border-2 border-border">
+                        {photoUrl ? (
+                          <img src={photoUrl} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                          <Camera className="w-6 h-6 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <label htmlFor="edit-photo-upload" className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all ${uploadingPhoto ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}>
+                          {uploadingPhoto ? (
+                            <>Uploading...</>
+                          ) : (
+                            <><Camera className="w-4 h-4" />{photoUrl ? 'Change Photo' : 'Upload Photo'}</>
+                          )}
+                        </label>
+                        <input
+                          id="edit-photo-upload"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={uploadingPhoto}
+                          onChange={handlePhotoUpload}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">JPG or PNG, max 5MB</p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="edit-name">{t('profile.name')}</Label>
                     <Input id="edit-name" value={fullName} onChange={e => setFullName(e.target.value)} placeholder={t('auth.namePlaceholder')} />
@@ -668,66 +706,6 @@ export default function Profile() {
 
                     </div>
 
-                    {/* Payout Details Section */}
-                    <div className="space-y-3 border-t pt-3">
-                      <Label className="flex items-center gap-2 text-sm font-semibold">
-                        <Wallet className="w-4 h-4" />
-                        Payout Details
-                      </Label>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-account-name">Account Holder Name</Label>
-                        <Input
-                          id="edit-account-name"
-                          value={accountHolderName}
-                          onChange={(e) => setAccountHolderName(e.target.value)}
-                          placeholder="Name on bank account"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-bank-account">Bank Account Number (Optional)</Label>
-                        <Input
-                          id="edit-bank-account"
-                          value={bankAccountNumber}
-                          onChange={(e) => setBankAccountNumber(e.target.value)}
-                          placeholder="Account number"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-ifsc">IFSC Code (Optional)</Label>
-                        <Input
-                          id="edit-ifsc"
-                          value={ifscCode}
-                          onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
-                          placeholder="e.g., SBIN0001234"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Preferred Payout Method</Label>
-                        <div className="flex gap-2">
-                          {[
-                            { value: "upi", label: "UPI" },
-                            { value: "bank_transfer", label: "Bank Transfer" },
-                          ].map((m) => (
-                            <button
-                              key={m.value}
-                              type="button"
-                              onClick={() => setPreferredPayoutMethod(m.value)}
-                              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all border ${
-                                preferredPayoutMethod === m.value
-                                  ? "bg-primary text-primary-foreground border-primary"
-                                  : "bg-muted text-muted-foreground border-border hover:border-primary/50"
-                              }`}
-                            >
-                              {m.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
 
                   <div className="space-y-2">
                     <Label>{t('profile.services')}</Label>
@@ -850,10 +828,10 @@ export default function Profile() {
                     <Wallet className="w-5 h-5 text-white" />
                   </div>
                   <p className="text-xl font-extrabold text-green-600 dark:text-green-400 text-center mb-1">
-                    ₹{totalEarnings}
+                    ₹{monthEarnings}
                   </p>
                   <p className="text-[9px] text-muted-foreground font-semibold text-center uppercase tracking-tight leading-tight">
-                    {t('profile.totalEarned')}
+                    THIS MONTH
                   </p>
                 </div>
 
@@ -868,6 +846,43 @@ export default function Profile() {
                     {t('profile.rating')}
                   </p>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Language Selection */}
+        <div className="px-4 mt-4">
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Languages className="w-5 h-5" />
+                {t('profile.language')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2">
+                {[{
+                code: 'en',
+                label: 'EN',
+                toast: 'Language changed to English'
+              }, {
+                code: 'hi',
+                label: 'हि',
+                toast: 'भाषा हिंदी में बदल गई'
+              }, {
+                code: 'te',
+                label: 'తె',
+                toast: 'భాష తెలుగులోకి మార్చబడింది'
+              }].map(lang => <button key={lang.code} onClick={() => {
+                i18n.changeLanguage(lang.code);
+                localStorage.setItem('language', lang.code);
+                toast({
+                  title: lang.toast
+                });
+              }} className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all ${i18n.language === lang.code ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
+                    {lang.label}
+                  </button>)}
               </div>
             </CardContent>
           </Card>
@@ -918,62 +933,12 @@ export default function Profile() {
           </Card>
         </div>
 
-        {/* Language Selection - top of content */}
-        <div className="px-4 mt-4">
-          <Card className="border-0 shadow-lg">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Languages className="w-5 h-5" />
-                {t('profile.language')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2">
-                {[{
-                code: 'en',
-                label: 'EN',
-                toast: 'Language changed to English'
-              }, {
-                code: 'hi',
-                label: 'हि',
-                toast: 'भाषा हिंदी में बदल गई'
-              }, {
-                code: 'te',
-                label: 'తె',
-                toast: 'భాష తెలుగులోకి మార్చబడింది'
-              }].map(lang => <button key={lang.code} onClick={() => {
-                i18n.changeLanguage(lang.code);
-                localStorage.setItem('language', lang.code);
-                toast({
-                  title: lang.toast
-                });
-              }} className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all ${i18n.language === lang.code ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
-                    {lang.label}
-                  </button>)}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         <div className="px-4 mt-4 space-y-4">
 
           {/* Booking Priority Card */}
           <BookingPriorityCard metrics={priorityMetrics} />
 
-          {/* Worker Rank Card */}
-          <WorkerRankCard
-            rank={priorityMetrics.rank}
-            totalWorkers={priorityMetrics.totalWorkersInCommunity}
-          />
 
-          {/* Weekly Performance Card */}
-          <WeeklyPerformanceCard metrics={priorityMetrics} />
-
-          {/* Motivation / Next Target Card */}
-          <MotivationCard metrics={priorityMetrics} />
-
-          {/* How To Get More Bookings Card */}
-          <HowToGetMoreBookingsCard />
 
 
 
