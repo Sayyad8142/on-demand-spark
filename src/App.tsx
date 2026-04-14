@@ -207,9 +207,20 @@ function AppInner() {
     );
   }
 
+  // If worker is blocked, show blocked screen (after loading completes)
+  const isBlocked = !workerLoading && session?.user?.id && (worker as any)?.is_blocked === true;
+  if (isBlocked) {
+    return (
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <WorkerBlocked reason={(worker as any)?.blocked_reason} />
+      </TooltipProvider>
+    );
+  }
+
   // If mandatory OTA update is required, show OTA modal over the app
   const showOtaMandatory = otaResult?.isMandatory && otaResult?.bundleInfo;
-
 
   return (
     <TooltipProvider>
