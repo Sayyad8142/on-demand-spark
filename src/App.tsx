@@ -38,6 +38,7 @@ import AdminUploadQr from "./pages/AdminUploadQr";
 import AuthDebug from "./pages/AuthDebug";
 import Earnings from "./pages/Earnings";
 import WorkerBlocked from "./pages/WorkerBlocked";
+import DeviceReadiness from "./pages/DeviceReadiness";
 import BottomNav from "./components/BottomNav";
 
 const queryClient = new QueryClient();
@@ -251,6 +252,7 @@ function AppInner() {
           <Route path="/customer-reviews" element={<ProtectedRoute><CustomerReviews /></ProtectedRoute>} />
           <Route path="/admin-upload-qr" element={<AdminUploadQr />} />
           <Route path="/auth-debug" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
+          <Route path="/device-readiness" element={<ProtectedRoute><DeviceReadiness /></ProtectedRoute>} />
           <Route path="/" element={<Navigate to="/auth" replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

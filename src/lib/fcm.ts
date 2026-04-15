@@ -1,20 +1,14 @@
 /**
  * FCM initialization module.
  *
- * Fix 3: All token registration listeners and saveFCMToken logic have been
- * removed from this file to eliminate duplicate writes.
- *
- * Token lifecycle is now:
- *   Native:  MyFirebaseService.onNewToken() → SharedPreferences
- *   JS sync: useFCMTokenSync hook → workers.fcm_token + fcm_tokens table
- *
- * This file retains only foreground notification routing (postMessage for
- * BOOKING_ALERT) and notification-tap handling. Permission + registration
- * are handled by initNativePush() in src/native/push.ts.
+ * Token lifecycle is handled by useFCMTokenSync.
+ * This file handles foreground notification routing and notification-tap handling,
+ * now routing through the centralized BookingAlertCoordinator for dedup.
  */
 
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
+import { processIncomingBooking } from '@/services/bookingAlertCoordinator';
 
 let fcmInitialized = false;
 
@@ -31,25 +25,43 @@ export async function initFCM() {
   
   console.log('🔔 Initializing FCM notification handlers...');
   
-  // Handle notification received (foreground) — route booking alerts via postMessage
-  PushNotifications.addListener('pushNotificationReceived', (notification) => {
+  // Handle notification received (foreground) — route through coordinator
+  PushNotifications.addListener('pushNotificationReceived', async (notification) => {
     console.log('🔔 Foreground notification:', notification);
-    const bookingId = notification.data?.bookingId || notification.data?.booking_id;
+    const data = notification.data || {};
+    const bookingId = data.bookingId || data.booking_id;
     
     if (bookingId) {
-      console.log('📬 Foreground booking alert:', bookingId);
-      window.postMessage({ type: 'BOOKING_ALERT', bookingId }, '*');
+      console.log('📬 Foreground booking alert via FCM:', bookingId);
+      await processIncomingBooking({
+        bookingId,
+        custName: data.cust_name || data.custName || 'Customer',
+        community: data.community || '',
+        serviceType: data.service_type || data.serviceType || '',
+        flatNo: data.flat_no || data.flatNo || '',
+        priceInr: parseInt(data.price_inr || data.priceInr || '0', 10),
+        source: 'fcm',
+      });
     }
   });
   
-  // Handle notification clicked — route booking alerts via postMessage
-  PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+  // Handle notification clicked — route through coordinator
+  PushNotifications.addListener('pushNotificationActionPerformed', async (notification) => {
     console.log('🔔 Notification clicked:', notification);
-    const bookingId = notification.notification.data?.bookingId || notification.notification.data?.booking_id;
+    const data = notification.notification.data || {};
+    const bookingId = data.bookingId || data.booking_id;
     
     if (bookingId) {
       console.log('📬 Booking alert clicked:', bookingId);
-      window.postMessage({ type: 'BOOKING_ALERT', bookingId }, '*');
+      await processIncomingBooking({
+        bookingId,
+        custName: data.cust_name || data.custName || 'Customer',
+        community: data.community || '',
+        serviceType: data.service_type || data.serviceType || '',
+        flatNo: data.flat_no || data.flatNo || '',
+        priceInr: parseInt(data.price_inr || data.priceInr || '0', 10),
+        source: 'fcm',
+      });
     }
   });
   
@@ -59,7 +71,6 @@ export async function initFCM() {
 
 /**
  * @deprecated Token saving is now handled by useFCMTokenSync hook.
- * This function is kept as a no-op for backward compatibility.
  */
 export async function saveFCMToken(_userId: string) {
   console.log('ℹ️ saveFCMToken() is deprecated — token sync handled by useFCMTokenSync hook');

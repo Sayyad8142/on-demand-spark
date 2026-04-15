@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
-import { useBookingAlerts } from "@/hooks/useBookingAlerts";
+import { useUnifiedBookingAlerts } from "@/hooks/useUnifiedBookingAlerts";
 import { useActiveJob } from "@/hooks/useActiveJob";
-import { useHeartbeat } from "@/hooks/useHeartbeat";
+import { useEnhancedHeartbeat } from "@/hooks/useEnhancedHeartbeat";
+import { useBookingRequestsRealtime } from "@/hooks/useBookingRequestsRealtime";
 
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
@@ -38,13 +39,16 @@ export default function Home() {
 
   const payoutReady = isGuestMode ? true : workerLoading ? true : !!(worker as any)?.payout_ready;
 
-  // NO-GPS heartbeat: update last_seen_at every 2 min while app is open
-  useHeartbeat(isGuestMode ? undefined : worker?.id);
+  // Enhanced heartbeat: 45s interval with device info + pending booking fallback
+  const isOnline = !!worker?.is_available;
+  useEnhancedHeartbeat(isGuestMode ? undefined : worker?.id, isOnline);
+
+  // Layer 2: Realtime subscription on booking_requests
+  useBookingRequestsRealtime(isGuestMode ? undefined : worker?.id, isOnline);
   
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [showWebPushBanner, setShowWebPushBanner] = useState(false);
-  const isOnline = !!worker?.is_available;
 
   // Note: FCM initialization is handled in App.tsx, no need to duplicate here
 
@@ -111,7 +115,7 @@ export default function Home() {
     accept,
     reject,
     clearAlert
-  } = useBookingAlerts(user?.id, isOnline, matches, worker?.id);
+  } = useUnifiedBookingAlerts(user?.id, isOnline, matches, worker?.id);
   const handleToggle = async (value: boolean) => {
     if (isGuestMode) {
       toast({
