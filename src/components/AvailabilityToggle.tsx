@@ -9,9 +9,11 @@ interface AvailabilityToggleProps {
   className?: string;
   payoutReady?: boolean;
   onPayoutRequired?: () => void;
+  pushHealthy?: boolean;
+  onPushUnhealthy?: () => void;
 }
 
-export function AvailabilityToggle({ workerId, className, payoutReady = true, onPayoutRequired }: AvailabilityToggleProps) {
+export function AvailabilityToggle({ workerId, className, payoutReady = true, onPayoutRequired, pushHealthy = true, onPushUnhealthy }: AvailabilityToggleProps) {
   const [isAvailable, setIsAvailable] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -51,6 +53,17 @@ export function AvailabilityToggle({ workerId, className, payoutReady = true, on
         variant: "destructive",
       });
       onPayoutRequired?.();
+      return;
+    }
+
+    // Block going online if push notifications are not healthy
+    if (newValue && !pushHealthy) {
+      toast({
+        title: "Booking alerts not active",
+        description: "Please refresh notifications before going online.",
+        variant: "destructive",
+      });
+      onPushUnhealthy?.();
       return;
     }
 
