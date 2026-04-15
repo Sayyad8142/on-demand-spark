@@ -24,7 +24,7 @@ export function useFCMTokenSync(userId: string | undefined) {
   const mountedRef = useRef(true);
 
   const syncToken = useCallback(async (reason: string) => {
-    if (!Capacitor.isNativePlatform() || !AuthBridge || !userId) return;
+    if (!Capacitor.isNativePlatform() || !userId) return;
 
     try {
       console.log(`🔄 [FCMSync] ${reason}: checking pending native token`);
