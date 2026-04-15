@@ -112,14 +112,18 @@ export async function startMovementMonitoring(
       return;
     }
 
-    // Create initial record
+    // Fetch dynamic threshold from backend
+    const minSteps = await fetchMinSteps();
+    console.log("📊 Using min_movement_steps threshold:", minSteps);
+
+    // Create initial record with the actual threshold used
     await saveMovementCheck(bookingId, workerId, {
       sensor_supported: true,
       permission_granted: true,
       movement_status: "monitoring",
       sensor_type_used: sensorType,
       monitoring_window_seconds: MONITORING_WINDOW_SECONDS,
-      min_required_steps: MIN_REQUIRED_STEPS,
+      min_required_steps: minSteps,
     });
 
     // Listen for completion
@@ -130,7 +134,7 @@ export async function startMovementMonitoring(
         listenerHandle.remove();
 
         const steps = result.stepsInWindow ?? 0;
-        const isLowMovement = steps < MIN_REQUIRED_STEPS;
+        const isLowMovement = steps < minSteps;
 
         await updateMovementCheck(bookingId, workerId, {
           baseline_step_value: result.baselineStepValue,
@@ -139,7 +143,7 @@ export async function startMovementMonitoring(
           movement_status: isLowMovement ? "low_movement" : "ok",
           low_movement_flag: isLowMovement,
           low_movement_reason: isLowMovement
-            ? `Only ${steps} steps in ${MONITORING_WINDOW_SECONDS / 60} min (min: ${MIN_REQUIRED_STEPS})`
+            ? `Only ${steps} steps in ${MONITORING_WINDOW_SECONDS / 60} min (min: ${minSteps})`
             : null,
           checked_at: new Date().toISOString(),
         });
