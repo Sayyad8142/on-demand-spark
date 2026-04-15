@@ -237,6 +237,51 @@ export default function Home() {
           </div>
         </Card>
       )}
+
+      {/* Push Health Warning Banner */}
+      {!isGuestMode && !pushHealth.isChecking && !pushHealth.isHealthy && (
+        <Card className="p-4 bg-destructive/10 border-2 border-destructive">
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-sm text-destructive mb-1">
+                Booking alerts are not active
+              </h3>
+              <p className="text-xs text-muted-foreground mb-1">
+                {!pushHealth.permissionGranted
+                  ? "Notification permission is not granted. Please enable it in settings."
+                  : !pushHealth.tokenExists
+                  ? "Push token is missing. Tap below to refresh."
+                  : !pushHealth.tokenSyncedToBackend
+                  ? "Token not synced to server. Tap below to fix."
+                  : "Token is marked invalid. Tap below to refresh."}
+              </p>
+              {pushHealth.lastError && (
+                <p className="text-xs text-destructive/70 mb-2">Error: {pushHealth.lastError}</p>
+              )}
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={repairing}
+                onClick={async () => {
+                  setRepairing(true);
+                  const ok = await pushHealth.repair();
+                  setRepairing(false);
+                  toast({
+                    title: ok ? "Booking alerts restored ✅" : "Repair failed ❌",
+                    description: ok ? "You can now go online and receive bookings." : "Please try again or restart the app.",
+                    variant: ok ? "default" : "destructive",
+                  });
+                }}
+                className="h-8 text-xs"
+              >
+                <RefreshCw className={`w-3 h-3 mr-1 ${repairing ? 'animate-spin' : ''}`} />
+                {repairing ? "Refreshing..." : "Refresh Booking Alerts"}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
         
       {/* Web Push Banner */}
       {showWebPushBanner && <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 relative">
