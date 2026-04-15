@@ -690,7 +690,7 @@ export default function Profile() {
                         <input
                           id="edit-photo-upload"
                           type="file"
-                          accept="image/*"
+                          accept="image/jpeg,image/png,image/webp"
                           className="hidden"
                           disabled={uploadingPhoto}
                           onChange={handlePhotoUpload}
@@ -823,7 +823,7 @@ export default function Profile() {
                   <label htmlFor="photo-upload" className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                     {uploadingPhoto ? <Loader2 className="w-6 h-6 text-white animate-spin" /> : <Camera className="w-6 h-6 text-white" />}
                   </label>
-                  <input id="photo-upload" type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto} className="hidden" />
+                  <input id="photo-upload" type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhotoUpload} disabled={uploadingPhoto} className="hidden" />
                 </div>
                 <div className="flex-1 pt-2">
                   <h2 className="text-2xl font-bold mb-1">{worker?.full_name}</h2>
