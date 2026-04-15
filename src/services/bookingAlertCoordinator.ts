@@ -141,27 +141,18 @@ export async function sendDeliveryAck(
     if (!worker) return;
 
     const now = new Date().toISOString();
-    const payload: Record<string, any> = {
-      booking_id: alert.bookingId,
-      worker_id: worker.id,
-      received_on_device: true,
-      app_state: document.visibilityState === "visible" ? "foreground" : "background",
-      app_version: String((await import("@/config/version")).CURRENT_VERSION_CODE),
-    };
-
-    if (alert.bookingRequestId) {
-      payload.booking_request_id = alert.bookingRequestId;
-    }
-
-    if (eventType === "received") {
-      payload.received_at = now;
-    } else {
-      payload.opened_at = now;
-    }
-
     const { error } = await supabase
       .from("booking_request_delivery_events")
-      .insert(payload);
+      .insert({
+        booking_id: alert.bookingId,
+        worker_id: worker.id,
+        received_on_device: true,
+        app_state: document.visibilityState === "visible" ? "foreground" : "background",
+        app_version: String((await import("@/config/version")).CURRENT_VERSION_CODE),
+        booking_request_id: alert.bookingRequestId || null,
+        received_at: eventType === "received" ? now : null,
+        opened_at: eventType === "opened" ? now : null,
+      });
 
     if (error) {
       console.warn(`⚠️ [Coordinator] Ack ${eventType} insert failed:`, error.message);
