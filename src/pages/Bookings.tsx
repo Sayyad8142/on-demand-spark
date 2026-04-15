@@ -179,10 +179,15 @@ export default function Bookings() {
 
 function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusColor: (status: string) => string }) {
   const isCompleted = booking.status === 'completed';
+  const isCancelled = booking.status === 'cancelled';
   const numberColor = isCompleted ? 'text-green-500' : 'text-red-500';
   
+  const cardClass = isCancelled
+    ? "p-3 shadow-lg border-2 border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900"
+    : "p-3 shadow-lg border-0";
+  
   return (
-    <Card className="p-3 shadow-lg border-0">
+    <Card className={cardClass}>
       <div className="flex items-center justify-between mb-2">
         {/* Worker Photo */}
         {booking.worker_name && (
