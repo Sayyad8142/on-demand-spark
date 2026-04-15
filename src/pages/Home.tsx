@@ -197,6 +197,15 @@ export default function Home() {
               workerId={worker?.id || user?.id || 'demo-worker-id'}
               payoutReady={payoutReady}
               onPayoutRequired={() => navigate('/profile')}
+              pushHealthy={pushHealth.isHealthy || pushHealth.isChecking}
+              onPushUnhealthy={async () => {
+                setRepairing(true);
+                const ok = await pushHealth.repair();
+                setRepairing(false);
+                if (ok) {
+                  toast({ title: "Booking alerts restored", description: "You can now go online." });
+                }
+              }}
             />
           </div>
         </div>
