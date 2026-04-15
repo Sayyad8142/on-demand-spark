@@ -6,13 +6,14 @@ import { useUnifiedBookingAlerts } from "@/hooks/useUnifiedBookingAlerts";
 import { useActiveJob } from "@/hooks/useActiveJob";
 import { useEnhancedHeartbeat } from "@/hooks/useEnhancedHeartbeat";
 import { useBookingRequestsRealtime } from "@/hooks/useBookingRequestsRealtime";
+import { usePushHealthGuard } from "@/hooks/usePushHealthGuard";
 
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { UpcomingBookingsBar } from "@/components/UpcomingBookingsBar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Bell, X, LogOut, AlertTriangle } from "lucide-react";
+import { Bell, X, LogOut, AlertTriangle, RefreshCw, ShieldAlert } from "lucide-react";
 import { Capacitor } from '@capacitor/core';
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
@@ -39,6 +40,10 @@ export default function Home() {
 
   const payoutReady = isGuestMode ? true : workerLoading ? true : !!(worker as any)?.payout_ready;
 
+  // Push health guard: mandatory token validation
+  const pushHealth = usePushHealthGuard(isGuestMode ? undefined : user?.id);
+  const [repairing, setRepairing] = useState(false);
+
   // Enhanced heartbeat: 45s interval with device info + pending booking fallback
   const isOnline = !!worker?.is_available;
   useEnhancedHeartbeat(isGuestMode ? undefined : worker?.id, isOnline);
@@ -49,6 +54,14 @@ export default function Home() {
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [showWebPushBanner, setShowWebPushBanner] = useState(false);
+
+  // Auto-repair: if worker is online but push is unhealthy, attempt repair
+  useEffect(() => {
+    if (!isGuestMode && isOnline && !pushHealth.isHealthy && !pushHealth.isChecking && !repairing) {
+      console.log('⚠️ Worker online but push unhealthy, auto-repairing...');
+      pushHealth.repair();
+    }
+  }, [isOnline, pushHealth.isHealthy, pushHealth.isChecking]);
 
   // Note: FCM initialization is handled in App.tsx, no need to duplicate here
 
@@ -184,6 +197,15 @@ export default function Home() {
               workerId={worker?.id || user?.id || 'demo-worker-id'}
               payoutReady={payoutReady}
               onPayoutRequired={() => navigate('/profile')}
+              pushHealthy={pushHealth.isHealthy || pushHealth.isChecking}
+              onPushUnhealthy={async () => {
+                setRepairing(true);
+                const ok = await pushHealth.repair();
+                setRepairing(false);
+                if (ok) {
+                  toast({ title: "Booking alerts restored", description: "You can now go online." });
+                }
+              }}
             />
           </div>
         </div>
@@ -210,6 +232,51 @@ export default function Home() {
                 className="bg-amber-600 hover:bg-amber-700 text-white h-8 text-xs"
               >
                 Complete Payout Setup
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Push Health Warning Banner */}
+      {!isGuestMode && !pushHealth.isChecking && !pushHealth.isHealthy && (
+        <Card className="p-4 bg-destructive/10 border-2 border-destructive">
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-sm text-destructive mb-1">
+                Booking alerts are not active
+              </h3>
+              <p className="text-xs text-muted-foreground mb-1">
+                {!pushHealth.permissionGranted
+                  ? "Notification permission is not granted. Please enable it in settings."
+                  : !pushHealth.tokenExists
+                  ? "Push token is missing. Tap below to refresh."
+                  : !pushHealth.tokenSyncedToBackend
+                  ? "Token not synced to server. Tap below to fix."
+                  : "Token is marked invalid. Tap below to refresh."}
+              </p>
+              {pushHealth.lastError && (
+                <p className="text-xs text-destructive/70 mb-2">Error: {pushHealth.lastError}</p>
+              )}
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={repairing}
+                onClick={async () => {
+                  setRepairing(true);
+                  const ok = await pushHealth.repair();
+                  setRepairing(false);
+                  toast({
+                    title: ok ? "Booking alerts restored ✅" : "Repair failed ❌",
+                    description: ok ? "You can now go online and receive bookings." : "Please try again or restart the app.",
+                    variant: ok ? "default" : "destructive",
+                  });
+                }}
+                className="h-8 text-xs"
+              >
+                <RefreshCw className={`w-3 h-3 mr-1 ${repairing ? 'animate-spin' : ''}`} />
+                {repairing ? "Refreshing..." : "Refresh Booking Alerts"}
               </Button>
             </div>
           </div>
