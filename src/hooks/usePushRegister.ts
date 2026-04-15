@@ -50,11 +50,14 @@ export function usePushRegister() {
       // Register token with backend (saves to fcm_tokens table)
       await pushService.registerToken(token, user.id);
 
-      // Also save to workers table
+      // Also save to workers table with health tracking
       const { error: workerError } = await supabase
         .from('workers')
         .update({
           fcm_token: token,
+          fcm_token_status: 'active',
+          fcm_token_updated_at: new Date().toISOString(),
+          fcm_token_platform: Capacitor.isNativePlatform() ? 'android' : 'web',
           updated_at: new Date().toISOString(),
         })
         .eq('user_id', user.id);

@@ -243,7 +243,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const userId = session?.user?.id;
       if (userId) {
-        await supabase.from('workers').update({ fcm_token: null, updated_at: new Date().toISOString() }).eq('user_id', userId);
+        // Clear token and mark status as missing for clean logout
+        await supabase.from('workers').update({ 
+          fcm_token: null, 
+          fcm_token_status: 'missing',
+          updated_at: new Date().toISOString() 
+        }).eq('user_id', userId);
         await supabase.from('fcm_tokens').delete().eq('user_id', userId);
       }
     } catch (error) {

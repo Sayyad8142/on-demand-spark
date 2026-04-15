@@ -48,14 +48,24 @@ export class NativePushService implements PushService {
 
   async registerToken(token: string, userId: string): Promise<void> {
     try {
+      // Primary: workers.fcm_token with health tracking
+      await supabase.from('workers').update({
+        fcm_token: token,
+        fcm_token_status: 'active',
+        fcm_token_updated_at: new Date().toISOString(),
+        fcm_token_platform: 'android',
+        updated_at: new Date().toISOString(),
+      }).eq('user_id', userId);
+
+      // Fallback: fcm_tokens table (legacy)
       const { error } = await supabase.from('fcm_tokens').upsert({
         user_id: userId,
         token: token,
         updated_at: new Date().toISOString(),
       });
 
-      if (error) throw error;
-      console.log('✅ Native push token registered');
+      if (error) console.warn('⚠️ fcm_tokens fallback write failed:', error);
+      console.log('✅ Native push token registered with health tracking');
     } catch (error) {
       console.error('❌ Error registering push token:', error);
       throw error;
