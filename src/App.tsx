@@ -162,6 +162,11 @@ function AppInner() {
     
     const sub = CapApp.addListener('appUrlOpen', async (data) => {
       try {
+        // Block deep-link actions if worker is blocked
+        if (worker?.is_blocked) {
+          console.log('🚫 Deep link blocked: worker is blocked');
+          return;
+        }
         const url = new URL(data.url);
           if (url.protocol === 'didinow:' && url.hostname === 'accept') {
             const bookingId = url.searchParams.get('bookingId') || '';
@@ -180,7 +185,7 @@ function AppInner() {
       }
     });
     return () => { sub.then(s => s.remove()); };
-  }, []);
+  }, [worker?.is_blocked]);
 
   // Listen for push notification messages
   useEffect(() => {
@@ -208,13 +213,12 @@ function AppInner() {
   }
 
   // If worker is blocked, show blocked screen (after loading completes)
-  const isBlocked = !workerLoading && session?.user?.id && (worker as any)?.is_blocked === true;
-  if (isBlocked) {
+  if (!workerLoading && session?.user?.id && worker?.is_blocked === true) {
     return (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <WorkerBlocked reason={(worker as any)?.blocked_reason} />
+        <WorkerBlocked reason={worker?.blocked_reason} />
       </TooltipProvider>
     );
   }
