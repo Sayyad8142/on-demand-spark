@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { getPushHealthSnapshot } from '@/lib/pushToken';
 import {
   getPushRepairStatus,
@@ -48,6 +49,7 @@ const INITIAL_STATE: PushHealthState = {
 export function usePushHealthGuard(userId: string | undefined) {
   const [state, setState] = useState<PushHealthState>(INITIAL_STATE);
   const mountedRef = useRef(true);
+  const isNative = Capacitor.isNativePlatform();
 
   const set = (patch: Partial<PushHealthState>) => {
     if (!mountedRef.current) return;
@@ -62,7 +64,7 @@ export function usePushHealthGuard(userId: string | undefined) {
    * Full health check: permission → local token → backend token status
    */
   const checkHealth = useCallback(async (options?: { autoRepair?: boolean; source?: string }): Promise<boolean> => {
-    if (!userId) return false;
+    if (!userId || !isNative) return true;
     set({ isChecking: true, lastError: null });
 
     try {
@@ -97,7 +99,7 @@ export function usePushHealthGuard(userId: string | undefined) {
    * Full repair: request permission → re-register → get token → sync to backend
    */
   const repair = useCallback(async (): Promise<boolean> => {
-    if (!userId) return false;
+    if (!userId || !isNative) return true;
     console.log('🔧 [PushHealth] Starting manual repair fallback...');
     const ok = await triggerManualPushRepair(userId);
     if (ok) {
@@ -107,8 +109,8 @@ export function usePushHealthGuard(userId: string | undefined) {
   }, [userId]);
 
   useEffect(() => {
-    if (!userId) {
-      setState(INITIAL_STATE);
+    if (!userId || !isNative) {
+      setState(prev => ({ ...prev, isHealthy: true, isChecking: false }));
       return;
     }
 
@@ -132,7 +134,7 @@ export function usePushHealthGuard(userId: string | undefined) {
   // Run check on mount, userId change, and app resume
   useEffect(() => {
     mountedRef.current = true;
-    if (!userId) return;
+    if (!userId || !isNative) return;
 
     // Initial check with delay for auth to settle
     const timer = setTimeout(() => checkHealth({ autoRepair: true, source: 'push-guard-mount' }), 1200);

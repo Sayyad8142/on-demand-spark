@@ -3,9 +3,6 @@ import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 import { clearPendingNativeFcmToken, syncTokenToBackend, waitForNativeFcmToken } from '@/lib/pushToken';
 
-// @ts-ignore - Capacitor bridge
-const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
-
 /**
  * useFCMTokenSync — Robust FCM token lifecycle manager.
  *
