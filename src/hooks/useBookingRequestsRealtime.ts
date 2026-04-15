@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { processIncomingBooking } from "@/services/bookingAlertCoordinator";
+import { processIncomingBooking, dismissAlert } from "@/services/bookingAlertCoordinator";
 
 /**
  * Realtime subscription on booking_requests table for this worker.
@@ -78,9 +78,7 @@ export function useBookingRequestsRealtime(
         },
         (payload) => {
           const req = payload.new as any;
-          // If this request is no longer pending, dismiss the alert
           if (req.status !== "pending") {
-            const { dismissAlert } = require("@/services/bookingAlertCoordinator");
             dismissAlert(req.booking_id);
           }
         }
