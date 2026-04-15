@@ -682,7 +682,7 @@ export default function Profile() {
                       <div className="flex-1">
                         <label htmlFor="edit-photo-upload" className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all ${uploadingPhoto ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}>
                           {uploadingPhoto ? (
-                            <>Uploading...</>
+                            <><Loader2 className="w-4 h-4 animate-spin" />Uploading...</>
                           ) : (
                             <><Camera className="w-4 h-4" />{photoUrl ? 'Change Photo' : 'Upload Photo'}</>
                           )}
