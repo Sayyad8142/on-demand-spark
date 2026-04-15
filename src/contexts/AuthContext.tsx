@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef, ty
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Capacitor } from '@capacitor/core';
+import { triggerAutomaticPushRepair } from '@/services/pushRepairCoordinator';
 import { capacitorStorage, reloadSessionFromStorage, getStorageCacheDebug, forcePersistSession } from '@/lib/capacitorStorage';
 
 // @ts-ignore - Capacitor bridge
@@ -212,6 +213,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await saveSession(newSession);
           await saveJWT(newSession.access_token);
         }, 0);
+
+        // Immediately trigger FCM token capture on login/token-refresh (new device, reinstall, etc.)
+        if (Capacitor.isNativePlatform() && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+          const uid = newSession.user?.id;
+          if (uid) {
+            console.log(`🔔 [Auth] ${event}: triggering FCM token sync for new device/session`);
+            setTimeout(() => {
+              void triggerAutomaticPushRepair(uid, `auth-${event.toLowerCase()}`);
+            }, 1500); // small delay for Firebase to be ready
+          }
+        }
       } else if (Capacitor.isNativePlatform() && event === 'SIGNED_OUT') {
         setTimeout(() => clearSessionCompletely(), 0);
       }
