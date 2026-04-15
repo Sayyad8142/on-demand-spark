@@ -3311,7 +3311,13 @@ export type Database = {
           community: string | null
           cook_cuisine_tags: string[]
           created_at: string
+          fcm_last_fail_at: string | null
+          fcm_last_fail_reason: string | null
+          fcm_last_send_at: string | null
           fcm_token: string | null
+          fcm_token_platform: string | null
+          fcm_token_status: string
+          fcm_token_updated_at: string | null
           first_booking_completed_at: string | null
           full_name: string
           id: string
@@ -3366,7 +3372,13 @@ export type Database = {
           community?: string | null
           cook_cuisine_tags?: string[]
           created_at?: string
+          fcm_last_fail_at?: string | null
+          fcm_last_fail_reason?: string | null
+          fcm_last_send_at?: string | null
           fcm_token?: string | null
+          fcm_token_platform?: string | null
+          fcm_token_status?: string
+          fcm_token_updated_at?: string | null
           first_booking_completed_at?: string | null
           full_name: string
           id?: string
@@ -3421,7 +3433,13 @@ export type Database = {
           community?: string | null
           cook_cuisine_tags?: string[]
           created_at?: string
+          fcm_last_fail_at?: string | null
+          fcm_last_fail_reason?: string | null
+          fcm_last_send_at?: string | null
           fcm_token?: string | null
+          fcm_token_platform?: string | null
+          fcm_token_status?: string
+          fcm_token_updated_at?: string | null
           first_booking_completed_at?: string | null
           full_name?: string
           id?: string
@@ -3589,7 +3607,13 @@ export type Database = {
               community: string | null
               cook_cuisine_tags: string[]
               created_at: string
+              fcm_last_fail_at: string | null
+              fcm_last_fail_reason: string | null
+              fcm_last_send_at: string | null
               fcm_token: string | null
+              fcm_token_platform: string | null
+              fcm_token_status: string
+              fcm_token_updated_at: string | null
               first_booking_completed_at: string | null
               full_name: string
               id: string
@@ -3653,7 +3677,13 @@ export type Database = {
               community: string | null
               cook_cuisine_tags: string[]
               created_at: string
+              fcm_last_fail_at: string | null
+              fcm_last_fail_reason: string | null
+              fcm_last_send_at: string | null
               fcm_token: string | null
+              fcm_token_platform: string | null
+              fcm_token_status: string
+              fcm_token_updated_at: string | null
               first_booking_completed_at: string | null
               full_name: string
               id: string
