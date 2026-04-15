@@ -6,13 +6,14 @@ import { useUnifiedBookingAlerts } from "@/hooks/useUnifiedBookingAlerts";
 import { useActiveJob } from "@/hooks/useActiveJob";
 import { useEnhancedHeartbeat } from "@/hooks/useEnhancedHeartbeat";
 import { useBookingRequestsRealtime } from "@/hooks/useBookingRequestsRealtime";
+import { usePushHealthGuard } from "@/hooks/usePushHealthGuard";
 
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { UpcomingBookingsBar } from "@/components/UpcomingBookingsBar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Bell, X, LogOut, AlertTriangle } from "lucide-react";
+import { Bell, X, LogOut, AlertTriangle, RefreshCw, ShieldAlert } from "lucide-react";
 import { Capacitor } from '@capacitor/core';
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
