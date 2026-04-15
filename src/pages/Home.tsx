@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
-import { useBookingAlerts } from "@/hooks/useBookingAlerts";
+import { useUnifiedBookingAlerts } from "@/hooks/useUnifiedBookingAlerts";
 import { useActiveJob } from "@/hooks/useActiveJob";
-import { useHeartbeat } from "@/hooks/useHeartbeat";
+import { useEnhancedHeartbeat } from "@/hooks/useEnhancedHeartbeat";
+import { useBookingRequestsRealtime } from "@/hooks/useBookingRequestsRealtime";
 
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
