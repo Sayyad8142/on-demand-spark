@@ -115,7 +115,7 @@ export default function Home() {
     accept,
     reject,
     clearAlert
-  } = useBookingAlerts(user?.id, isOnline, matches, worker?.id);
+  } = useUnifiedBookingAlerts(user?.id, isOnline, matches, worker?.id);
   const handleToggle = async (value: boolean) => {
     if (isGuestMode) {
       toast({
