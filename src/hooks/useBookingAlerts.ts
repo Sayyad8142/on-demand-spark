@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { tryAccept, rejectBooking } from "@/lib/bookingActions";
+import { Capacitor } from "@capacitor/core";
 
 export function useBookingAlerts(userId: string | undefined, isOnline: boolean, match: (b:any)=>boolean, workerId?: string | null) {
   const [pending, setPending] = useState<any|null>(null);
