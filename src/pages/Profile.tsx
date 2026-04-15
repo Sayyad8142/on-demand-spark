@@ -369,12 +369,13 @@ export default function Profile() {
         }
       } = supabase.storage.from('worker-photos').getPublicUrl(filePath);
 
-      // Update worker profile
+      // Update worker profile using worker's actual ID (not auth uid)
+      const workerId = worker?.id || user.id;
       const {
         error: updateError
       } = await supabase.from('workers').update({
         photo_url: publicUrl
-      }).eq('id', user.id);
+      }).eq('id', workerId);
       if (updateError) throw updateError;
       setPhotoUrl(publicUrl);
       toast({
