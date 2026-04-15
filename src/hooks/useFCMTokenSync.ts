@@ -3,9 +3,6 @@ import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 import { clearPendingNativeFcmToken, syncTokenToBackend, waitForNativeFcmToken } from '@/lib/pushToken';
 
-// @ts-ignore - Capacitor bridge
-const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
-
 /**
  * useFCMTokenSync — Robust FCM token lifecycle manager.
  *
@@ -27,7 +24,7 @@ export function useFCMTokenSync(userId: string | undefined) {
   const mountedRef = useRef(true);
 
   const syncToken = useCallback(async (reason: string) => {
-    if (!Capacitor.isNativePlatform() || !AuthBridge || !userId) return;
+    if (!Capacitor.isNativePlatform() || !userId) return;
 
     try {
       console.log(`🔄 [FCMSync] ${reason}: checking pending native token`);

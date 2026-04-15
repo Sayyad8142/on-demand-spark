@@ -7,7 +7,7 @@ export function useAutoPushRepair(userId: string | undefined) {
   const previousUserIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    if (!userId) {
+    if (!userId || !Capacitor.isNativePlatform()) {
       previousUserIdRef.current = undefined;
       return;
     }
@@ -20,7 +20,7 @@ export function useAutoPushRepair(userId: string | undefined) {
   }, [userId]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !Capacitor.isNativePlatform()) return;
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
