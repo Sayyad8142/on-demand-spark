@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { tryAccept, rejectBooking } from "@/lib/bookingActions";
+import { Capacitor } from "@capacitor/core";
 
 export function useBookingAlerts(userId: string | undefined, isOnline: boolean, match: (b:any)=>boolean, workerId?: string | null) {
   const [pending, setPending] = useState<any|null>(null);
@@ -23,6 +24,29 @@ export function useBookingAlerts(userId: string | undefined, isOnline: boolean, 
               price_inr: b.price_inr ?? 0,
             });
             toast({ title: "New booking available" });
+
+            // Trigger native Android overlay if on native platform
+            if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+              try {
+                const plugin = (window as any)?.Capacitor?.Plugins?.OverlayPlugin;
+                if (plugin?.showBookingOverlay) {
+                  const bookingJson = JSON.stringify({
+                    id: b.id,
+                    cust_name: b.cust_name || 'Customer',
+                    community: b.community || '',
+                    service_type: b.service_type || '',
+                    flat_no: b.flat_no || '',
+                    price_inr: b.price_inr ?? 0,
+                  });
+                  console.log('🚀 Triggering native booking overlay from realtime');
+                  plugin.showBookingOverlay({ booking: bookingJson });
+                } else {
+                  console.warn('⚠️ OverlayPlugin.showBookingOverlay not available');
+                }
+              } catch (err) {
+                console.error('❌ Native overlay trigger failed:', err);
+              }
+            }
           }
         }
       )
