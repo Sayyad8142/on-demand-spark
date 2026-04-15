@@ -562,6 +562,8 @@ export type Database = {
           discount_reason: string | null
           dish_intensity: string | null
           dish_intensity_extra_inr: number | null
+          dispatch_anomaly: string | null
+          dispatch_anomaly_at: string | null
           dispatch_attempts: number
           dispatch_expires_at: string | null
           dispatch_started_at: string | null
@@ -642,6 +644,8 @@ export type Database = {
           discount_reason?: string | null
           dish_intensity?: string | null
           dish_intensity_extra_inr?: number | null
+          dispatch_anomaly?: string | null
+          dispatch_anomaly_at?: string | null
           dispatch_attempts?: number
           dispatch_expires_at?: string | null
           dispatch_started_at?: string | null
@@ -722,6 +726,8 @@ export type Database = {
           discount_reason?: string | null
           dish_intensity?: string | null
           dish_intensity_extra_inr?: number | null
+          dispatch_anomaly?: string | null
+          dispatch_anomaly_at?: string | null
           dispatch_attempts?: number
           dispatch_expires_at?: string | null
           dispatch_started_at?: string | null
@@ -1057,6 +1063,116 @@ export type Database = {
           service_type?: string
           updated_at?: string
           worker_ttl_seconds?: number
+        }
+        Relationships: []
+      }
+      dispatch_run_workers: {
+        Row: {
+          created_at: string
+          decision: string
+          exclusion_reason: string | null
+          fcm_result: string | null
+          fcm_token_present: boolean | null
+          id: string
+          predictive_score: number | null
+          reachability_tier: string | null
+          run_id: string
+          worker_id: string
+          worker_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          decision?: string
+          exclusion_reason?: string | null
+          fcm_result?: string | null
+          fcm_token_present?: boolean | null
+          id?: string
+          predictive_score?: number | null
+          reachability_tier?: string | null
+          run_id: string
+          worker_id: string
+          worker_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          decision?: string
+          exclusion_reason?: string | null
+          fcm_result?: string | null
+          fcm_token_present?: boolean | null
+          id?: string
+          predictive_score?: number | null
+          reachability_tier?: string | null
+          run_id?: string
+          worker_id?: string
+          worker_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dispatch_run_workers_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "dispatch_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dispatch_runs: {
+        Row: {
+          attempt_number: number
+          booking_id: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          meta: Json | null
+          outcome: string
+          started_at: string
+          trigger_source: string
+          workers_eligible: number
+          workers_evaluated: number
+          workers_failed: number
+          workers_notified: number
+          workers_push_ready: number
+          workers_selected: number
+          workers_skipped: number
+        }
+        Insert: {
+          attempt_number?: number
+          booking_id: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          meta?: Json | null
+          outcome?: string
+          started_at?: string
+          trigger_source?: string
+          workers_eligible?: number
+          workers_evaluated?: number
+          workers_failed?: number
+          workers_notified?: number
+          workers_push_ready?: number
+          workers_selected?: number
+          workers_skipped?: number
+        }
+        Update: {
+          attempt_number?: number
+          booking_id?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          meta?: Json | null
+          outcome?: string
+          started_at?: string
+          trigger_source?: string
+          workers_eligible?: number
+          workers_evaluated?: number
+          workers_failed?: number
+          workers_notified?: number
+          workers_push_ready?: number
+          workers_selected?: number
+          workers_skipped?: number
         }
         Relationships: []
       }
@@ -3788,6 +3904,8 @@ export type Database = {
               discount_reason: string | null
               dish_intensity: string | null
               dish_intensity_extra_inr: number | null
+              dispatch_anomaly: string | null
+              dispatch_anomaly_at: string | null
               dispatch_attempts: number
               dispatch_expires_at: string | null
               dispatch_started_at: string | null
@@ -4847,6 +4965,8 @@ export type Database = {
           discount_reason: string | null
           dish_intensity: string | null
           dish_intensity_extra_inr: number | null
+          dispatch_anomaly: string | null
+          dispatch_anomaly_at: string | null
           dispatch_attempts: number
           dispatch_expires_at: string | null
           dispatch_started_at: string | null
