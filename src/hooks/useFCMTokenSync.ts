@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { PushNotifications } from '@capacitor/push-notifications';
 import { supabase } from '@/integrations/supabase/client';
 
 // @ts-ignore - Capacitor bridge
@@ -18,8 +19,8 @@ const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
  *   3. On app resume (via visibility change)
  *   4. Periodic self-heal every 5 minutes
  *
- * Self-healing: if the backend has no active token for this worker,
- * the hook re-reads the native pending token and syncs it.
+ * Enhanced: if no pending token exists, force PushNotifications.register()
+ * to trigger a fresh token from Firebase.
  */
 export function useFCMTokenSync(userId: string | undefined) {
   const syncedRef = useRef<string | null>(null);
@@ -29,12 +30,28 @@ export function useFCMTokenSync(userId: string | undefined) {
     if (!Capacitor.isNativePlatform() || !AuthBridge || !userId) return;
 
     try {
-      const result = await AuthBridge.getPendingFCMToken();
-      const pendingToken: string | null = result?.token ?? null;
+      let result = await AuthBridge.getPendingFCMToken();
+      let pendingToken: string | null = result?.token ?? null;
+
+      // If no pending token, force re-register to get a fresh one
+      if (!pendingToken) {
+        console.log(`🔄 [FCMSync] No pending token (${reason}), forcing re-register...`);
+        try {
+          await PushNotifications.register();
+          // Wait for Firebase to deliver token to native storage
+          for (let i = 0; i < 6; i++) {
+            await new Promise(r => setTimeout(r, 500));
+            result = await AuthBridge.getPendingFCMToken();
+            pendingToken = result?.token ?? null;
+            if (pendingToken) break;
+          }
+        } catch (e) {
+          console.warn('⚠️ [FCMSync] Re-register failed:', e);
+        }
+      }
 
       if (!pendingToken) {
-        // No pending token from native side — check if backend already has one
-        // If not, we can't do anything until Firebase issues a new token
+        // Still no token — can't sync
         return;
       }
 
