@@ -3540,6 +3540,9 @@ export type Database = {
           last_lng: number | null
           last_notification_received_at: string | null
           last_offer_at: string | null
+          last_push_error_at: string | null
+          last_push_error_code: string | null
+          last_push_success_at: string | null
           last_seen_at: string | null
           location_enabled: boolean | null
           no_ack_count: number | null
@@ -3551,6 +3554,8 @@ export type Database = {
           photo_url: string | null
           preferred_payout_method: string | null
           priority_score: number
+          push_block_reason: string | null
+          push_health_status: string
           rating: number | null
           razorpay_contact_id: string | null
           razorpay_fund_account_id: string | null
@@ -3613,6 +3618,9 @@ export type Database = {
           last_lng?: number | null
           last_notification_received_at?: string | null
           last_offer_at?: string | null
+          last_push_error_at?: string | null
+          last_push_error_code?: string | null
+          last_push_success_at?: string | null
           last_seen_at?: string | null
           location_enabled?: boolean | null
           no_ack_count?: number | null
@@ -3624,6 +3632,8 @@ export type Database = {
           photo_url?: string | null
           preferred_payout_method?: string | null
           priority_score?: number
+          push_block_reason?: string | null
+          push_health_status?: string
           rating?: number | null
           razorpay_contact_id?: string | null
           razorpay_fund_account_id?: string | null
@@ -3686,6 +3696,9 @@ export type Database = {
           last_lng?: number | null
           last_notification_received_at?: string | null
           last_offer_at?: string | null
+          last_push_error_at?: string | null
+          last_push_error_code?: string | null
+          last_push_success_at?: string | null
           last_seen_at?: string | null
           location_enabled?: boolean | null
           no_ack_count?: number | null
@@ -3697,6 +3710,8 @@ export type Database = {
           photo_url?: string | null
           preferred_payout_method?: string | null
           priority_score?: number
+          push_block_reason?: string | null
+          push_health_status?: string
           rating?: number | null
           razorpay_contact_id?: string | null
           razorpay_fund_account_id?: string | null
@@ -3872,6 +3887,9 @@ export type Database = {
               last_lng: number | null
               last_notification_received_at: string | null
               last_offer_at: string | null
+              last_push_error_at: string | null
+              last_push_error_code: string | null
+              last_push_success_at: string | null
               last_seen_at: string | null
               location_enabled: boolean | null
               no_ack_count: number | null
@@ -3883,6 +3901,8 @@ export type Database = {
               photo_url: string | null
               preferred_payout_method: string | null
               priority_score: number
+              push_block_reason: string | null
+              push_health_status: string
               rating: number | null
               razorpay_contact_id: string | null
               razorpay_fund_account_id: string | null
@@ -3954,6 +3974,9 @@ export type Database = {
               last_lng: number | null
               last_notification_received_at: string | null
               last_offer_at: string | null
+              last_push_error_at: string | null
+              last_push_error_code: string | null
+              last_push_success_at: string | null
               last_seen_at: string | null
               location_enabled: boolean | null
               no_ack_count: number | null
@@ -3965,6 +3988,8 @@ export type Database = {
               photo_url: string | null
               preferred_payout_method: string | null
               priority_score: number
+              push_block_reason: string | null
+              push_health_status: string
               rating: number | null
               razorpay_contact_id: string | null
               razorpay_fund_account_id: string | null
@@ -4854,6 +4879,10 @@ export type Database = {
         }
         Returns: number
       }
+      mark_stale_push_tokens: {
+        Args: { p_stale_days?: number }
+        Returns: number
+      }
       mark_support_messages_as_seen: {
         Args: { p_thread_id: string }
         Returns: undefined
@@ -4878,6 +4907,15 @@ export type Database = {
       mark_worker_payout_processing: {
         Args: { p_admin_notes?: string; p_payout_id: string }
         Returns: Json
+      }
+      mark_worker_push_health: {
+        Args: {
+          p_block_reason?: string
+          p_error_code?: string
+          p_status: string
+          p_worker_id: string
+        }
+        Returns: undefined
       }
       norm_phone: { Args: { p: string }; Returns: string }
       notify_next_worker: { Args: { p_booking_id: string }; Returns: Json }
@@ -4956,6 +4994,10 @@ export type Database = {
       release_worker_payout: {
         Args: { p_admin_notes?: string; p_payout_id: string }
         Returns: Json
+      }
+      repair_worker_push_health: {
+        Args: { p_new_token: string; p_worker_id: string }
+        Returns: undefined
       }
       respond_to_booking_assignment: {
         Args: { p_assignment_id: string; p_response: string }
