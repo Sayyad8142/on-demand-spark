@@ -31,7 +31,24 @@ interface MonitoringResult {
 }
 
 const MONITORING_WINDOW_SECONDS = 180; // 3 minutes
-const MIN_REQUIRED_STEPS = 40;
+const DEFAULT_MIN_STEPS = 40;
+
+async function fetchMinSteps(): Promise<number> {
+  try {
+    const { data } = await supabase
+      .from("ops_settings")
+      .select("value")
+      .eq("key", "min_movement_steps")
+      .maybeSingle();
+    if (data?.value) {
+      const parsed = parseInt(data.value, 10);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+  } catch {
+    console.log("📊 Failed to fetch min_movement_steps, using default");
+  }
+  return DEFAULT_MIN_STEPS;
+}
 
 let StepCounter: StepCounterPlugin | null = null;
 

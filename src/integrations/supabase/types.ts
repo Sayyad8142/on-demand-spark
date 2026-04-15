@@ -1827,6 +1827,54 @@ export type Database = {
           },
         ]
       }
+      ops_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          message: string
+          metadata: Json | null
+          recommended_action: string | null
+          resolved_at: string | null
+          severity: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          message: string
+          metadata?: Json | null
+          recommended_action?: string | null
+          resolved_at?: string | null
+          severity?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          message?: string
+          metadata?: Json | null
+          recommended_action?: string | null
+          resolved_at?: string | null
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ops_settings: {
         Row: {
           key: string
@@ -4166,6 +4214,23 @@ export type Database = {
         }[]
       }
       get_worker_contact: { Args: { p_booking_id: string }; Returns: Json }
+      get_worker_dispatch_scores: {
+        Args: { p_worker_ids: string[] }
+        Returns: {
+          acceptance_rate: number
+          accepted_count: number
+          last_accepted_at: string
+          last_completed_at: string
+          predictive_score: number
+          push_success_rate: number
+          rejected_count: number
+          rejection_rate: number
+          timed_out_count: number
+          timeout_rate: number
+          total_requests: number
+          worker_id: string
+        }[]
+      }
       get_worker_live_stats: {
         Args: never
         Returns: {
