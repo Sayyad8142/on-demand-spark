@@ -363,10 +363,55 @@ export type Database = {
           },
         ]
       }
+      booking_request_delivery_events: {
+        Row: {
+          app_state: string | null
+          app_version: string | null
+          booking_id: string
+          booking_request_id: string | null
+          created_at: string
+          device_id: string | null
+          id: string
+          opened_at: string | null
+          received_at: string | null
+          received_on_device: boolean
+          worker_id: string
+        }
+        Insert: {
+          app_state?: string | null
+          app_version?: string | null
+          booking_id: string
+          booking_request_id?: string | null
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          opened_at?: string | null
+          received_at?: string | null
+          received_on_device?: boolean
+          worker_id: string
+        }
+        Update: {
+          app_state?: string | null
+          app_version?: string | null
+          booking_id?: string
+          booking_request_id?: string | null
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          opened_at?: string | null
+          received_at?: string | null
+          received_on_device?: boolean
+          worker_id?: string
+        }
+        Relationships: []
+      }
       booking_requests: {
         Row: {
           booking_id: string
           created_at: string | null
+          device_ack_status: string | null
+          device_opened_at: string | null
+          device_received_at: string | null
           id: string
           notification_status: string
           notified_at: string | null
@@ -380,6 +425,9 @@ export type Database = {
         Insert: {
           booking_id: string
           created_at?: string | null
+          device_ack_status?: string | null
+          device_opened_at?: string | null
+          device_received_at?: string | null
           id?: string
           notification_status?: string
           notified_at?: string | null
@@ -393,6 +441,9 @@ export type Database = {
         Update: {
           booking_id?: string
           created_at?: string | null
+          device_ack_status?: string | null
+          device_opened_at?: string | null
+          device_received_at?: string | null
           id?: string
           notification_status?: string
           notified_at?: string | null
@@ -3076,6 +3127,36 @@ export type Database = {
           },
         ]
       }
+      worker_heartbeats: {
+        Row: {
+          app_state: string | null
+          app_version: string | null
+          battery_level: number | null
+          heartbeat_at: string
+          id: string
+          network_type: string | null
+          worker_id: string
+        }
+        Insert: {
+          app_state?: string | null
+          app_version?: string | null
+          battery_level?: number | null
+          heartbeat_at?: string
+          id?: string
+          network_type?: string | null
+          worker_id: string
+        }
+        Update: {
+          app_state?: string | null
+          app_version?: string | null
+          battery_level?: number | null
+          heartbeat_at?: string
+          id?: string
+          network_type?: string | null
+          worker_id?: string
+        }
+        Relationships: []
+      }
       worker_payout_events: {
         Row: {
           created_at: string
@@ -3419,7 +3500,9 @@ export type Database = {
         Row: {
           account_holder_name: string | null
           admin_override_rating: number | null
+          app_version: string | null
           bank_account_number: string | null
+          battery_optimization_disabled: boolean | null
           blocked_at: string | null
           blocked_by: string | null
           blocked_reason: string | null
@@ -3427,6 +3510,7 @@ export type Database = {
           community: string | null
           cook_cuisine_tags: string[]
           created_at: string
+          device_manufacturer: string | null
           fcm_last_fail_at: string | null
           fcm_last_fail_reason: string | null
           fcm_last_send_at: string | null
@@ -3446,13 +3530,20 @@ export type Database = {
           is_core_worker: boolean
           last_7_days_completed_bookings: number
           last_7_days_online_hours: number
+          last_acknowledged_booking_at: string | null
           last_active_at: string | null
+          last_app_opened_at: string | null
           last_booking_completed_at: string | null
+          last_fcm_token_refresh_at: string | null
+          last_heartbeat_at: string | null
           last_lat: number | null
           last_lng: number | null
+          last_notification_received_at: string | null
           last_offer_at: string | null
           last_seen_at: string | null
           location_enabled: boolean | null
+          no_ack_count: number | null
+          notification_permission_granted: boolean | null
           payout_last_error: string | null
           payout_ready: boolean
           payout_verified_at: string | null
@@ -3463,6 +3554,8 @@ export type Database = {
           rating: number | null
           razorpay_contact_id: string | null
           razorpay_fund_account_id: string | null
+          reachability_score: number | null
+          reachability_status: string | null
           respect_availability: boolean | null
           selected_community_id: string | null
           service_types: string[]
@@ -3480,7 +3573,9 @@ export type Database = {
         Insert: {
           account_holder_name?: string | null
           admin_override_rating?: number | null
+          app_version?: string | null
           bank_account_number?: string | null
+          battery_optimization_disabled?: boolean | null
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
@@ -3488,6 +3583,7 @@ export type Database = {
           community?: string | null
           cook_cuisine_tags?: string[]
           created_at?: string
+          device_manufacturer?: string | null
           fcm_last_fail_at?: string | null
           fcm_last_fail_reason?: string | null
           fcm_last_send_at?: string | null
@@ -3507,13 +3603,20 @@ export type Database = {
           is_core_worker?: boolean
           last_7_days_completed_bookings?: number
           last_7_days_online_hours?: number
+          last_acknowledged_booking_at?: string | null
           last_active_at?: string | null
+          last_app_opened_at?: string | null
           last_booking_completed_at?: string | null
+          last_fcm_token_refresh_at?: string | null
+          last_heartbeat_at?: string | null
           last_lat?: number | null
           last_lng?: number | null
+          last_notification_received_at?: string | null
           last_offer_at?: string | null
           last_seen_at?: string | null
           location_enabled?: boolean | null
+          no_ack_count?: number | null
+          notification_permission_granted?: boolean | null
           payout_last_error?: string | null
           payout_ready?: boolean
           payout_verified_at?: string | null
@@ -3524,6 +3627,8 @@ export type Database = {
           rating?: number | null
           razorpay_contact_id?: string | null
           razorpay_fund_account_id?: string | null
+          reachability_score?: number | null
+          reachability_status?: string | null
           respect_availability?: boolean | null
           selected_community_id?: string | null
           service_types?: string[]
@@ -3541,7 +3646,9 @@ export type Database = {
         Update: {
           account_holder_name?: string | null
           admin_override_rating?: number | null
+          app_version?: string | null
           bank_account_number?: string | null
+          battery_optimization_disabled?: boolean | null
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
@@ -3549,6 +3656,7 @@ export type Database = {
           community?: string | null
           cook_cuisine_tags?: string[]
           created_at?: string
+          device_manufacturer?: string | null
           fcm_last_fail_at?: string | null
           fcm_last_fail_reason?: string | null
           fcm_last_send_at?: string | null
@@ -3568,13 +3676,20 @@ export type Database = {
           is_core_worker?: boolean
           last_7_days_completed_bookings?: number
           last_7_days_online_hours?: number
+          last_acknowledged_booking_at?: string | null
           last_active_at?: string | null
+          last_app_opened_at?: string | null
           last_booking_completed_at?: string | null
+          last_fcm_token_refresh_at?: string | null
+          last_heartbeat_at?: string | null
           last_lat?: number | null
           last_lng?: number | null
+          last_notification_received_at?: string | null
           last_offer_at?: string | null
           last_seen_at?: string | null
           location_enabled?: boolean | null
+          no_ack_count?: number | null
+          notification_permission_granted?: boolean | null
           payout_last_error?: string | null
           payout_ready?: boolean
           payout_verified_at?: string | null
@@ -3585,6 +3700,8 @@ export type Database = {
           rating?: number | null
           razorpay_contact_id?: string | null
           razorpay_fund_account_id?: string | null
+          reachability_score?: number | null
+          reachability_status?: string | null
           respect_availability?: boolean | null
           selected_community_id?: string | null
           service_types?: string[]
@@ -3715,7 +3832,9 @@ export type Database = {
             Returns: {
               account_holder_name: string | null
               admin_override_rating: number | null
+              app_version: string | null
               bank_account_number: string | null
+              battery_optimization_disabled: boolean | null
               blocked_at: string | null
               blocked_by: string | null
               blocked_reason: string | null
@@ -3723,6 +3842,7 @@ export type Database = {
               community: string | null
               cook_cuisine_tags: string[]
               created_at: string
+              device_manufacturer: string | null
               fcm_last_fail_at: string | null
               fcm_last_fail_reason: string | null
               fcm_last_send_at: string | null
@@ -3742,13 +3862,20 @@ export type Database = {
               is_core_worker: boolean
               last_7_days_completed_bookings: number
               last_7_days_online_hours: number
+              last_acknowledged_booking_at: string | null
               last_active_at: string | null
+              last_app_opened_at: string | null
               last_booking_completed_at: string | null
+              last_fcm_token_refresh_at: string | null
+              last_heartbeat_at: string | null
               last_lat: number | null
               last_lng: number | null
+              last_notification_received_at: string | null
               last_offer_at: string | null
               last_seen_at: string | null
               location_enabled: boolean | null
+              no_ack_count: number | null
+              notification_permission_granted: boolean | null
               payout_last_error: string | null
               payout_ready: boolean
               payout_verified_at: string | null
@@ -3759,6 +3886,8 @@ export type Database = {
               rating: number | null
               razorpay_contact_id: string | null
               razorpay_fund_account_id: string | null
+              reachability_score: number | null
+              reachability_status: string | null
               respect_availability: boolean | null
               selected_community_id: string | null
               service_types: string[]
@@ -3785,7 +3914,9 @@ export type Database = {
             Returns: {
               account_holder_name: string | null
               admin_override_rating: number | null
+              app_version: string | null
               bank_account_number: string | null
+              battery_optimization_disabled: boolean | null
               blocked_at: string | null
               blocked_by: string | null
               blocked_reason: string | null
@@ -3793,6 +3924,7 @@ export type Database = {
               community: string | null
               cook_cuisine_tags: string[]
               created_at: string
+              device_manufacturer: string | null
               fcm_last_fail_at: string | null
               fcm_last_fail_reason: string | null
               fcm_last_send_at: string | null
@@ -3812,13 +3944,20 @@ export type Database = {
               is_core_worker: boolean
               last_7_days_completed_bookings: number
               last_7_days_online_hours: number
+              last_acknowledged_booking_at: string | null
               last_active_at: string | null
+              last_app_opened_at: string | null
               last_booking_completed_at: string | null
+              last_fcm_token_refresh_at: string | null
+              last_heartbeat_at: string | null
               last_lat: number | null
               last_lng: number | null
+              last_notification_received_at: string | null
               last_offer_at: string | null
               last_seen_at: string | null
               location_enabled: boolean | null
+              no_ack_count: number | null
+              notification_permission_granted: boolean | null
               payout_last_error: string | null
               payout_ready: boolean
               payout_verified_at: string | null
@@ -3829,6 +3968,8 @@ export type Database = {
               rating: number | null
               razorpay_contact_id: string | null
               razorpay_fund_account_id: string | null
+              reachability_score: number | null
+              reachability_status: string | null
               respect_availability: boolean | null
               selected_community_id: string | null
               service_types: string[]
@@ -4000,6 +4141,7 @@ export type Database = {
       check_instant_supply: { Args: { p_community: string }; Returns: number }
       check_payout_eligibility: { Args: { p_payout_id: string }; Returns: Json }
       cleanup_old_booking_requests: { Args: never; Returns: undefined }
+      cleanup_old_heartbeats: { Args: never; Returns: number }
       cleanup_old_presence_snapshots: { Args: never; Returns: number }
       cleanup_old_support_chats: { Args: never; Returns: undefined }
       cleanup_old_worker_busy_logs: { Args: never; Returns: undefined }
@@ -4011,6 +4153,10 @@ export type Database = {
           worker_id: string
           worker_name: string
         }[]
+      }
+      compute_worker_reachability: {
+        Args: { p_worker_id: string }
+        Returns: string
       }
       create_admin_email_user: { Args: never; Returns: undefined }
       credit_wallet_on_cancel: {
