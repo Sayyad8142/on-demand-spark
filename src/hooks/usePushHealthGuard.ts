@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Capacitor } from '@capacitor/core';
-import { PushNotifications } from '@capacitor/push-notifications';
-import { supabase } from '@/integrations/supabase/client';
-
-// @ts-ignore - Capacitor bridge
-const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+import { getPushHealthSnapshot } from '@/lib/pushToken';
+import {
+  getPushRepairStatus,
+  subscribePushRepairStatus,
+  triggerAutomaticPushRepair,
+  triggerManualPushRepair,
+  type PushRepairPhase,
+} from '@/services/pushRepairCoordinator';
 
 export interface PushHealthState {
   permissionGranted: boolean;
@@ -15,6 +17,10 @@ export interface PushHealthState {
   isChecking: boolean;
   lastCheckAt: Date | null;
   lastError: string | null;
+  repairPhase: PushRepairPhase;
+  repairAttempt: number;
+  repairMaxAttempts: number;
+  manualRepairRequired: boolean;
 }
 
 const INITIAL_STATE: PushHealthState = {
@@ -26,6 +32,10 @@ const INITIAL_STATE: PushHealthState = {
   isChecking: true,
   lastCheckAt: null,
   lastError: null,
+  repairPhase: getPushRepairStatus().phase,
+  repairAttempt: 0,
+  repairMaxAttempts: getPushRepairStatus().maxAttempts,
+  manualRepairRequired: false,
 };
 
 /**
@@ -38,7 +48,6 @@ const INITIAL_STATE: PushHealthState = {
 export function usePushHealthGuard(userId: string | undefined) {
   const [state, setState] = useState<PushHealthState>(INITIAL_STATE);
   const mountedRef = useRef(true);
-  const repairingRef = useRef(false);
 
   const set = (patch: Partial<PushHealthState>) => {
     if (!mountedRef.current) return;
@@ -52,179 +61,73 @@ export function usePushHealthGuard(userId: string | undefined) {
   /**
    * Full health check: permission → local token → backend token status
    */
-  const checkHealth = useCallback(async (): Promise<boolean> => {
+  const checkHealth = useCallback(async (options?: { autoRepair?: boolean; source?: string }): Promise<boolean> => {
     if (!userId) return false;
     set({ isChecking: true, lastError: null });
 
     try {
-      // 1. Check notification permission
-      let permOk = false;
-      if (Capacitor.isNativePlatform()) {
-        try {
-          const perm = await PushNotifications.checkPermissions();
-          permOk = perm.receive === 'granted';
-        } catch { permOk = false; }
-      } else if (typeof Notification !== 'undefined') {
-        permOk = Notification.permission === 'granted';
-      } else {
-        permOk = true; // can't check, assume ok
-      }
-
-      // 2. Check local pending token
-      let localToken: string | null = null;
-      if (Capacitor.isNativePlatform() && AuthBridge) {
-        try {
-          const result = await AuthBridge.getPendingFCMToken();
-          localToken = result?.token ?? null;
-        } catch {}
-      }
-
-      // 3. Check backend token state
-      const { data: worker } = await supabase
-        .from('workers')
-        .select('fcm_token, fcm_token_status, fcm_token_updated_at')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      const backendToken = worker?.fcm_token ?? null;
-      const backendStatus = worker?.fcm_token_status ?? null;
-      const tokenExists = !!(localToken || backendToken);
-      const tokenSyncedToBackend = !!backendToken;
-      const tokenHealthy = tokenSyncedToBackend && backendStatus !== 'invalid';
+      const snapshot = await getPushHealthSnapshot(userId);
 
       set({
-        permissionGranted: permOk,
-        tokenExists,
-        tokenSyncedToBackend,
-        tokenHealthy,
+        permissionGranted: snapshot.permissionGranted,
+        tokenExists: snapshot.tokenExists,
+        tokenSyncedToBackend: snapshot.tokenSyncedToBackend,
+        tokenHealthy: snapshot.tokenHealthy,
         isChecking: false,
         lastCheckAt: new Date(),
+        lastError: snapshot.isHealthy ? null : state.lastError,
       });
 
-      const healthy = permOk && tokenExists && tokenSyncedToBackend && tokenHealthy;
-      console.log(`🛡️ [PushHealth] Check: perm=${permOk} token=${tokenExists} synced=${tokenSyncedToBackend} healthy=${tokenHealthy} → ${healthy ? '✅' : '❌'}`);
+      console.log(`🛡️ [PushHealth] Check: perm=${snapshot.permissionGranted} token=${snapshot.tokenExists} synced=${snapshot.tokenSyncedToBackend} healthy=${snapshot.tokenHealthy} → ${snapshot.isHealthy ? '✅' : '❌'}`);
 
-      // Auto-repair: if we have a local token but backend is missing/invalid, sync it
-      if (permOk && localToken && (!tokenSyncedToBackend || !tokenHealthy)) {
-        console.log('🔧 [PushHealth] Auto-repairing: syncing local token to backend');
-        await syncTokenToBackend(localToken, userId);
+      if (!snapshot.isHealthy && (options?.autoRepair ?? true)) {
+        console.log(`🚀 [PushHealth] ${options?.source || 'health-check'}: unhealthy state detected, starting auto repair`);
+        void triggerAutomaticPushRepair(userId, options?.source || 'health-check');
       }
 
-      return healthy;
+      return snapshot.isHealthy;
     } catch (e: any) {
       console.error('❌ [PushHealth] Check failed:', e);
       set({ isChecking: false, lastError: e.message });
       return false;
     }
-  }, [userId]);
+  }, [userId, state.lastError]);
 
   /**
    * Full repair: request permission → re-register → get token → sync to backend
    */
   const repair = useCallback(async (): Promise<boolean> => {
-    if (!userId || repairingRef.current) return false;
-    repairingRef.current = true;
-    set({ isChecking: true, lastError: null });
-    console.log('🔧 [PushHealth] Starting full repair...');
-
-    try {
-      // Step 1: Request permission
-      let permOk = false;
-      if (Capacitor.isNativePlatform()) {
-        try {
-          let perm = await PushNotifications.checkPermissions();
-          if (perm.receive !== 'granted') {
-            perm = await PushNotifications.requestPermissions();
-          }
-          permOk = perm.receive === 'granted';
-        } catch { permOk = false; }
-      } else if (typeof Notification !== 'undefined') {
-        if (Notification.permission !== 'granted') {
-          const result = await Notification.requestPermission();
-          permOk = result === 'granted';
-        } else {
-          permOk = true;
-        }
-      } else {
-        permOk = true;
-      }
-
-      if (!permOk) {
-        set({ permissionGranted: false, isChecking: false, lastError: 'Notification permission denied' });
-        console.warn('❌ [PushHealth] Permission denied');
-        return false;
-      }
-      set({ permissionGranted: true });
-      console.log('✅ [PushHealth] Permission granted');
-
-      // Step 2: Re-register push to force fresh token
-      if (Capacitor.isNativePlatform()) {
-        console.log('🔄 [PushHealth] Re-registering push notifications...');
-        await PushNotifications.register();
-
-        // Wait for token to appear in native storage (Firebase may take a moment)
-        let token: string | null = null;
-        for (let i = 0; i < 10; i++) {
-          await new Promise(r => setTimeout(r, 500));
-          if (AuthBridge) {
-            const result = await AuthBridge.getPendingFCMToken();
-            token = result?.token ?? null;
-            if (token) break;
-          }
-        }
-
-        if (!token) {
-          // Try getting from registration listener as fallback
-          token = await new Promise<string | null>((resolve) => {
-            const timeout = setTimeout(() => resolve(null), 5000);
-            PushNotifications.addListener('registration', (t) => {
-              clearTimeout(timeout);
-              resolve(t.value);
-            });
-          });
-        }
-
-        if (!token) {
-          set({ tokenExists: false, isChecking: false, lastError: 'Could not get FCM token' });
-          console.error('❌ [PushHealth] No token after re-register');
-          return false;
-        }
-
-        set({ tokenExists: true });
-        console.log('✅ [PushHealth] Token obtained:', token.substring(0, 20) + '...');
-
-        // Step 3: Sync to backend
-        const synced = await syncTokenToBackend(token, userId);
-        if (!synced) {
-          set({ tokenSyncedToBackend: false, isChecking: false, lastError: 'Failed to sync token to backend' });
-          return false;
-        }
-
-        // Clear pending token after successful sync
-        try { await AuthBridge.clearPendingFCMToken(); } catch {}
-
-        set({
-          tokenSyncedToBackend: true,
-          tokenHealthy: true,
-          isChecking: false,
-          lastCheckAt: new Date(),
-        });
-
-        console.log('✅ [PushHealth] Full repair successful');
-        return true;
-      } else {
-        // Web: use web push service
-        set({ isChecking: false, lastError: 'Web push repair not implemented' });
-        return false;
-      }
-    } catch (e: any) {
-      console.error('❌ [PushHealth] Repair failed:', e);
-      set({ isChecking: false, lastError: e.message });
-      return false;
-    } finally {
-      repairingRef.current = false;
+    if (!userId) return false;
+    console.log('🔧 [PushHealth] Starting manual repair fallback...');
+    const ok = await triggerManualPushRepair(userId);
+    if (ok) {
+      await checkHealth({ autoRepair: false, source: 'manual-repair-success' });
     }
+    return ok;
   }, [userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      setState(INITIAL_STATE);
+      return;
+    }
+
+    return subscribePushRepairStatus((status) => {
+      const inProgress = status.phase === 'checking' || status.phase === 'preparing';
+      set({
+        isChecking: inProgress,
+        repairPhase: status.phase,
+        repairAttempt: status.attempt,
+        repairMaxAttempts: status.maxAttempts,
+        manualRepairRequired: status.manualRequired,
+        lastError: status.phase === 'failed' ? status.lastError : null,
+      });
+
+      if (status.phase === 'success') {
+        void checkHealth({ autoRepair: false, source: 'repair-success' });
+      }
+    });
+  }, [userId, checkHealth]);
 
   // Run check on mount, userId change, and app resume
   useEffect(() => {
@@ -232,16 +135,16 @@ export function usePushHealthGuard(userId: string | undefined) {
     if (!userId) return;
 
     // Initial check with delay for auth to settle
-    const timer = setTimeout(() => checkHealth(), 2000);
+    const timer = setTimeout(() => checkHealth({ autoRepair: true, source: 'push-guard-mount' }), 1200);
 
     // Periodic check every 3 minutes
-    const interval = setInterval(() => checkHealth(), 3 * 60 * 1000);
+    const interval = setInterval(() => checkHealth({ autoRepair: true, source: 'push-guard-interval' }), 3 * 60 * 1000);
 
     // Check on resume
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         console.log('🛡️ [PushHealth] App resumed, re-checking...');
-        checkHealth();
+        void checkHealth({ autoRepair: true, source: 'push-guard-resume' });
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
@@ -255,43 +158,4 @@ export function usePushHealthGuard(userId: string | undefined) {
   }, [userId, checkHealth]);
 
   return { ...state, checkHealth, repair };
-}
-
-/**
- * Sync a token to the workers table and fcm_tokens fallback.
- */
-async function syncTokenToBackend(token: string, userId: string): Promise<boolean> {
-  try {
-    const now = new Date().toISOString();
-
-    const { error: workerError } = await supabase
-      .from('workers')
-      .update({
-        fcm_token: token,
-        fcm_token_status: 'active',
-        fcm_token_updated_at: now,
-        fcm_token_platform: Capacitor.isNativePlatform() ? 'android' : 'web',
-        updated_at: now,
-      })
-      .eq('user_id', userId);
-
-    if (workerError) {
-      console.error('❌ [PushHealth] Backend sync failed:', workerError);
-      return false;
-    }
-
-    // Legacy fallback
-    await supabase.from('fcm_tokens').upsert(
-      { user_id: userId, token, updated_at: now },
-      { onConflict: 'user_id' }
-    ).then(({ error }) => {
-      if (error) console.warn('⚠️ [PushHealth] fcm_tokens fallback failed:', error);
-    });
-
-    console.log('✅ [PushHealth] Token synced to backend');
-    return true;
-  } catch (e) {
-    console.error('❌ [PushHealth] Sync exception:', e);
-    return false;
-  }
 }

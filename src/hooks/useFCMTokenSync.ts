@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { PushNotifications } from '@capacitor/push-notifications';
 import { supabase } from '@/integrations/supabase/client';
+import { clearPendingNativeFcmToken, syncTokenToBackend, waitForNativeFcmToken } from '@/lib/pushToken';
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -30,28 +30,27 @@ export function useFCMTokenSync(userId: string | undefined) {
     if (!Capacitor.isNativePlatform() || !AuthBridge || !userId) return;
 
     try {
-      let result = await AuthBridge.getPendingFCMToken();
-      let pendingToken: string | null = result?.token ?? null;
+      console.log(`🔄 [FCMSync] ${reason}: checking pending native token`);
+      let pendingToken = await waitForNativeFcmToken({
+        reason: `fcm-sync-${reason}-pending-check`,
+        timeoutMs: 1500,
+        pollMs: 250,
+        registerIfNeeded: false,
+      });
 
       // If no pending token, force re-register to get a fresh one
       if (!pendingToken) {
-        console.log(`🔄 [FCMSync] No pending token (${reason}), forcing re-register...`);
-        try {
-          await PushNotifications.register();
-          // Wait for Firebase to deliver token to native storage
-          for (let i = 0; i < 6; i++) {
-            await new Promise(r => setTimeout(r, 500));
-            result = await AuthBridge.getPendingFCMToken();
-            pendingToken = result?.token ?? null;
-            if (pendingToken) break;
-          }
-        } catch (e) {
-          console.warn('⚠️ [FCMSync] Re-register failed:', e);
-        }
+        console.log(`🔄 [FCMSync] ${reason}: no pending token, forcing register()`);
+        pendingToken = await waitForNativeFcmToken({
+          reason: `fcm-sync-${reason}-register`,
+          timeoutMs: 12000,
+          pollMs: 500,
+          registerIfNeeded: true,
+        });
       }
 
       if (!pendingToken) {
-        // Still no token — can't sync
+        console.warn(`⚠️ [FCMSync] ${reason}: token still unavailable after register()`);
         return;
       }
 
@@ -65,45 +64,17 @@ export function useFCMTokenSync(userId: string | undefined) {
         pendingToken.substring(0, 20) + '...'
       );
 
-      // Write to PRIMARY source: workers.fcm_token + health fields
-      const { error: workerError, data: workerData } = await supabase
-        .from('workers')
-        .update({
-          fcm_token: pendingToken,
-          fcm_token_updated_at: new Date().toISOString(),
-          fcm_token_status: 'active',
-          fcm_token_platform: 'android',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', userId)
-        .select('id');
-
-      if (workerError) {
-        console.error('❌ [FCMSync] Failed to save token to workers:', workerError);
+      const synced = await syncTokenToBackend(pendingToken, userId, `fcm-sync-${reason}`);
+      if (!synced) {
+        console.error('❌ [FCMSync] Failed to sync token to backend');
         return; // Don't clear pending — will retry
-      }
-
-      if (!workerData || workerData.length === 0) {
-        console.warn('⚠️ [FCMSync] workers update matched 0 rows for userId:', userId);
-      } else {
-        console.log('✅ [FCMSync] Token saved to workers table, worker id:', workerData[0].id);
-      }
-
-      // Write to FALLBACK: fcm_tokens table (legacy compatibility)
-      const { error: fcmError } = await supabase.from('fcm_tokens').upsert(
-        { user_id: userId, token: pendingToken, updated_at: new Date().toISOString() },
-        { onConflict: 'user_id' }
-      );
-
-      if (fcmError) {
-        console.warn('⚠️ [FCMSync] fcm_tokens fallback write failed (non-critical):', fcmError);
       }
 
       console.log('✅ [FCMSync] Token synced successfully');
       syncedRef.current = pendingToken;
 
       // Clear the pending token from native storage
-      await AuthBridge.clearPendingFCMToken();
+      await clearPendingNativeFcmToken();
     } catch (e) {
       console.error('❌ [FCMSync] Exception during token sync:', e);
     }

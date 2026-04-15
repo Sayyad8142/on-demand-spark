@@ -42,7 +42,6 @@ export default function Home() {
 
   // Push health guard: mandatory token validation
   const pushHealth = usePushHealthGuard(isGuestMode ? undefined : user?.id);
-  const [repairing, setRepairing] = useState(false);
 
   // Enhanced heartbeat: 45s interval with device info + pending booking fallback
   const isOnline = !!worker?.is_available;
@@ -54,14 +53,6 @@ export default function Home() {
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [showWebPushBanner, setShowWebPushBanner] = useState(false);
-
-  // Auto-repair: if worker is online but push is unhealthy, attempt repair
-  useEffect(() => {
-    if (!isGuestMode && isOnline && !pushHealth.isHealthy && !pushHealth.isChecking && !repairing) {
-      console.log('⚠️ Worker online but push unhealthy, auto-repairing...');
-      pushHealth.repair();
-    }
-  }, [isOnline, pushHealth.isHealthy, pushHealth.isChecking]);
 
   // Note: FCM initialization is handled in App.tsx, no need to duplicate here
 
@@ -197,13 +188,25 @@ export default function Home() {
               workerId={worker?.id || user?.id || 'demo-worker-id'}
               payoutReady={payoutReady}
               onPayoutRequired={() => navigate('/profile')}
-              pushHealthy={pushHealth.isHealthy || pushHealth.isChecking}
+              pushHealthy={pushHealth.isHealthy}
               onPushUnhealthy={async () => {
-                setRepairing(true);
+                if (pushHealth.isChecking) {
+                  toast({
+                    title: 'Preparing booking alerts',
+                    description: 'Please wait while the app restores push notifications in the background.',
+                  });
+                  return;
+                }
+
                 const ok = await pushHealth.repair();
-                setRepairing(false);
                 if (ok) {
                   toast({ title: "Booking alerts restored", description: "You can now go online." });
+                } else {
+                  toast({
+                    title: 'Booking alerts still unavailable',
+                    description: 'Please enable notifications and try the backup refresh again.',
+                    variant: 'destructive',
+                  });
                 }
               }}
             />
@@ -238,8 +241,26 @@ export default function Home() {
         </Card>
       )}
 
-      {/* Push Health Warning Banner */}
-      {!isGuestMode && !pushHealth.isChecking && !pushHealth.isHealthy && (
+      {/* Push Health Status Banner */}
+      {!isGuestMode && !pushHealth.isHealthy && pushHealth.isChecking && (
+        <Card className="p-4 bg-muted/50 border-border">
+          <div className="flex items-start gap-3">
+            <RefreshCw className="w-5 h-5 text-primary flex-shrink-0 mt-0.5 animate-spin" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-sm text-foreground mb-1">
+                Preparing booking alerts…
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {pushHealth.repairAttempt > 0
+                  ? `Automatic repair attempt ${pushHealth.repairAttempt}/${pushHealth.repairMaxAttempts} is running in the background.`
+                  : 'Checking notification permission, refreshing token, and syncing booking alerts automatically.'}
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {!isGuestMode && !pushHealth.isHealthy && !pushHealth.isChecking && pushHealth.manualRepairRequired && (
         <Card className="p-4 bg-destructive/10 border-2 border-destructive">
           <div className="flex items-start gap-3">
             <ShieldAlert className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
@@ -251,10 +272,10 @@ export default function Home() {
                 {!pushHealth.permissionGranted
                   ? "Notification permission is not granted. Please enable it in settings."
                   : !pushHealth.tokenExists
-                  ? "Push token is missing. Tap below to refresh."
+                  ? "Push token is still missing after automatic retries. Use the backup refresh below."
                   : !pushHealth.tokenSyncedToBackend
-                  ? "Token not synced to server. Tap below to fix."
-                  : "Token is marked invalid. Tap below to refresh."}
+                  ? "Token could not be synced to the server automatically. Use the backup refresh below."
+                  : "Token is marked invalid and auto-repair did not recover it yet."}
               </p>
               {pushHealth.lastError && (
                 <p className="text-xs text-destructive/70 mb-2">Error: {pushHealth.lastError}</p>
@@ -262,11 +283,9 @@ export default function Home() {
               <Button
                 size="sm"
                 variant="destructive"
-                disabled={repairing}
+                disabled={pushHealth.isChecking}
                 onClick={async () => {
-                  setRepairing(true);
                   const ok = await pushHealth.repair();
-                  setRepairing(false);
                   toast({
                     title: ok ? "Booking alerts restored ✅" : "Repair failed ❌",
                     description: ok ? "You can now go online and receive bookings." : "Please try again or restart the app.",
@@ -275,8 +294,8 @@ export default function Home() {
                 }}
                 className="h-8 text-xs"
               >
-                <RefreshCw className={`w-3 h-3 mr-1 ${repairing ? 'animate-spin' : ''}`} />
-                {repairing ? "Refreshing..." : "Refresh Booking Alerts"}
+                <RefreshCw className={`w-3 h-3 mr-1 ${pushHealth.isChecking ? 'animate-spin' : ''}`} />
+                {pushHealth.isChecking ? "Refreshing..." : "Refresh Booking Alerts"}
               </Button>
             </div>
           </div>

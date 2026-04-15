@@ -8,6 +8,7 @@ import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useAutoPushRepair } from "@/hooks/useAutoPushRepair";
 import { useFCMTokenSync } from "@/hooks/useFCMTokenSync";
 import { useAppState } from "@/hooks/useAppState";
 import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
@@ -105,6 +106,7 @@ function AppInner() {
   const { session } = useAuth();
   useAppState(); // Refresh JWT when app comes to foreground
   useFCMTokenSync(session?.user?.id); // Sync any natively-persisted FCM token to backend
+  useAutoPushRepair(session?.user?.id); // Auto-heal push token on login, open, and resume
   const { needsUpdate } = useForceUpdateCheck();
   const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
