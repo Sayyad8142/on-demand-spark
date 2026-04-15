@@ -299,13 +299,17 @@ export default function Profile() {
   }, [user, isGuestMode, realWorker?.id]);
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !user) return;
+    if (!file || !user || uploadingPhoto) return;
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
+    // Reset input so same file can be re-selected
+    event.target.value = '';
+
+    // Validate file type — only JPG, PNG, WebP
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!ALLOWED_TYPES.includes(file.type)) {
       toast({
-        title: "Error",
-        description: "Please upload an image file",
+        title: "Invalid format",
+        description: "Please upload a JPG, PNG, or WebP image",
         variant: "destructive"
       });
       return;
@@ -314,85 +318,108 @@ export default function Profile() {
     // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
       toast({
-        title: "Error",
-        description: "Image must be less than 5MB",
+        title: "File too large",
+        description: "Image must be less than 5 MB",
         variant: "destructive"
       });
       return;
     }
+
     try {
       setUploadingPhoto(true);
 
       // Get authenticated user ID
-      const {
-        data: {
-          user: authUser
-        },
-        error: authError
-      } = await supabase.auth.getUser();
-      if (authError || !authUser) {
-        throw new Error('Not authenticated');
-      }
-      console.log('Starting photo upload for user:', authUser.id);
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+      if (authError || !authUser) throw new Error('Not authenticated');
 
-      // Delete old photo if exists
-      if (photoUrl) {
-        const oldPath = photoUrl.split('/').pop();
-        if (oldPath) {
-          await supabase.storage.from('worker-photos').remove([`${authUser.id}/${oldPath}`]);
+      // Compress / resize if file > 1 MB
+      let uploadFile: File | Blob = file;
+      if (file.size > 1 * 1024 * 1024) {
+        try {
+          uploadFile = await compressImage(file, 1200, 0.8);
+          console.log(`Compressed ${file.size} → ${uploadFile.size}`);
+        } catch (e) {
+          console.warn('Compression failed, uploading original', e);
         }
       }
 
-      // Upload new photo using auth user ID
-      const fileExt = file.name.split('.').pop();
+      // Delete old photo (non-blocking — failure here must not block new upload)
+      if (photoUrl) {
+        try {
+          const oldPath = photoUrl.split('/').pop();
+          if (oldPath) {
+            await supabase.storage.from('worker-photos').remove([`${authUser.id}/${oldPath}`]);
+          }
+        } catch (delErr) {
+          console.warn('Old photo delete failed (non-blocking):', delErr);
+        }
+      }
+
+      // Upload new photo
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
       const fileName = `${Date.now()}.${fileExt}`;
       const filePath = `${authUser.id}/${fileName}`;
-      console.log('Uploading to path:', filePath);
-      console.log('Auth user ID:', authUser.id);
-      const {
-        error: uploadError,
-        data: uploadData
-      } = await supabase.storage.from('worker-photos').upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false
-      });
-      console.log('Upload result:', {
-        uploadData,
-        uploadError
-      });
+
+      const { error: uploadError } = await supabase.storage
+        .from('worker-photos')
+        .upload(filePath, uploadFile, { cacheControl: '3600', upsert: false });
       if (uploadError) throw uploadError;
 
       // Get public URL
-      const {
-        data: {
-          publicUrl
-        }
-      } = supabase.storage.from('worker-photos').getPublicUrl(filePath);
+      const { data: { publicUrl } } = supabase.storage.from('worker-photos').getPublicUrl(filePath);
 
-      // Update worker profile using worker's actual ID (not auth uid)
+      // Update worker profile
       const workerId = worker?.id || user.id;
-      const {
-        error: updateError
-      } = await supabase.from('workers').update({
-        photo_url: publicUrl
-      }).eq('id', workerId);
+      const { error: updateError } = await supabase
+        .from('workers')
+        .update({ photo_url: publicUrl })
+        .eq('id', workerId);
       if (updateError) throw updateError;
+
+      // Optimistic UI update
       setPhotoUrl(publicUrl);
-      toast({
-        title: "Success",
-        description: "Photo updated successfully"
-      });
+      refetchWorker();
+
+      toast({ title: "✅ Photo updated", description: "Your profile photo has been saved" });
     } catch (error: any) {
       console.error('Photo upload error:', error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to upload photo",
+        title: "Upload failed",
+        description: error.message || "Could not upload photo. Please try again.",
         variant: "destructive"
       });
     } finally {
       setUploadingPhoto(false);
     }
   };
+
+  /** Resize & compress an image via canvas */
+  function compressImage(file: File, maxDim: number, quality: number): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const ratio = Math.min(maxDim / width, maxDim / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return reject(new Error('Canvas not supported'));
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => blob ? resolve(blob) : reject(new Error('Compression failed')),
+          'image/jpeg',
+          quality
+        );
+      };
+      img.onerror = () => reject(new Error('Image load failed'));
+      img.src = URL.createObjectURL(file);
+    });
+  }
   const handleUpdate = async () => {
     if (!fullName.trim()) {
       toast({
@@ -655,7 +682,7 @@ export default function Profile() {
                       <div className="flex-1">
                         <label htmlFor="edit-photo-upload" className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all ${uploadingPhoto ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}>
                           {uploadingPhoto ? (
-                            <>Uploading...</>
+                            <><Loader2 className="w-4 h-4 animate-spin" />Uploading...</>
                           ) : (
                             <><Camera className="w-4 h-4" />{photoUrl ? 'Change Photo' : 'Upload Photo'}</>
                           )}
@@ -663,7 +690,7 @@ export default function Profile() {
                         <input
                           id="edit-photo-upload"
                           type="file"
-                          accept="image/*"
+                          accept="image/jpeg,image/png,image/webp"
                           className="hidden"
                           disabled={uploadingPhoto}
                           onChange={handlePhotoUpload}
@@ -796,7 +823,7 @@ export default function Profile() {
                   <label htmlFor="photo-upload" className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                     {uploadingPhoto ? <Loader2 className="w-6 h-6 text-white animate-spin" /> : <Camera className="w-6 h-6 text-white" />}
                   </label>
-                  <input id="photo-upload" type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto} className="hidden" />
+                  <input id="photo-upload" type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhotoUpload} disabled={uploadingPhoto} className="hidden" />
                 </div>
                 <div className="flex-1 pt-2">
                   <h2 className="text-2xl font-bold mb-1">{worker?.full_name}</h2>
