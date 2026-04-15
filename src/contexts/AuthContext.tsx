@@ -213,6 +213,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await saveSession(newSession);
           await saveJWT(newSession.access_token);
         }, 0);
+
+        // Immediately trigger FCM token capture on login/token-refresh (new device, reinstall, etc.)
+        if (Capacitor.isNativePlatform() && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+          const uid = newSession.user?.id;
+          if (uid) {
+            console.log(`🔔 [Auth] ${event}: triggering FCM token sync for new device/session`);
+            setTimeout(() => {
+              void triggerAutomaticPushRepair(uid, `auth-${event.toLowerCase()}`);
+            }, 1500); // small delay for Firebase to be ready
+          }
+        }
       } else if (Capacitor.isNativePlatform() && event === 'SIGNED_OUT') {
         setTimeout(() => clearSessionCompletely(), 0);
       }
