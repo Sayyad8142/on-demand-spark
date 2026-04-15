@@ -40,6 +40,10 @@ export default function Home() {
 
   const payoutReady = isGuestMode ? true : workerLoading ? true : !!(worker as any)?.payout_ready;
 
+  // Push health guard: mandatory token validation
+  const pushHealth = usePushHealthGuard(isGuestMode ? undefined : user?.id);
+  const [repairing, setRepairing] = useState(false);
+
   // Enhanced heartbeat: 45s interval with device info + pending booking fallback
   const isOnline = !!worker?.is_available;
   useEnhancedHeartbeat(isGuestMode ? undefined : worker?.id, isOnline);
@@ -50,6 +54,14 @@ export default function Home() {
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [showWebPushBanner, setShowWebPushBanner] = useState(false);
+
+  // Auto-repair: if worker is online but push is unhealthy, attempt repair
+  useEffect(() => {
+    if (!isGuestMode && isOnline && !pushHealth.isHealthy && !pushHealth.isChecking && !repairing) {
+      console.log('⚠️ Worker online but push unhealthy, auto-repairing...');
+      pushHealth.repair();
+    }
+  }, [isOnline, pushHealth.isHealthy, pushHealth.isChecking]);
 
   // Note: FCM initialization is handled in App.tsx, no need to duplicate here
 
