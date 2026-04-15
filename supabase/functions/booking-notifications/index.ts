@@ -19,7 +19,6 @@ const normalizeWorkerTargetId = (worker: { id: string; user_id?: string | null }
   return worker.id;
 };
 
-// Haversine distance in meters
 const haversineM = (aLat: number, aLng: number, bLat: number, bLng: number): number => {
   const toRad = (d: number) => d * Math.PI / 180;
   const R = 6371000;
@@ -30,7 +29,6 @@ const haversineM = (aLat: number, aLng: number, bLat: number, bLng: number): num
   return 2 * R * Math.asin(Math.sqrt(s1 + s2));
 };
 
-// Supported service types (cook removed)
 const SUPPORTED_SERVICES = ['maid', 'bathroom_cleaning'];
 
 Deno.serve(async (req) => {
@@ -74,7 +72,6 @@ Deno.serve(async (req) => {
       return new Response("skip - not pending", { status: 200, headers: corsHeaders });
     }
 
-    // VALIDATION: Reject unsupported services
     if (!SUPPORTED_SERVICES.includes(b.service_type)) {
       console.error(`❌ Unsupported service type: ${b.service_type}`);
       return new Response(
@@ -94,7 +91,6 @@ Deno.serve(async (req) => {
       price_inr: b.price_inr,
     });
 
-    // Fetch community details
     const { data: communityData, error: communityError } = await supabase
       .from("communities")
       .select("id, name, center_lat, center_lng, radius_m")
@@ -113,7 +109,6 @@ Deno.serve(async (req) => {
 
     const hasCommunityCenter = communityData?.center_lat && communityData?.center_lng;
 
-    // Determine check time for availability
     let checkTimeString: string;
     let checkDayOfWeek: number;
     
@@ -138,7 +133,6 @@ Deno.serve(async (req) => {
       console.log(`📅 Instant booking — current IST time: ${checkTimeString}`);
     }
 
-    // Get workers with matching availability slots
     const { data: availableWorkers, error: availError } = await supabase
       .from('worker_availability')
       .select('worker_id, slots')
@@ -172,10 +166,10 @@ Deno.serve(async (req) => {
 
     console.log(`📊 Workers with availability at ${checkTimeString}: ${availableWorkerIds.size}`);
 
-    // Query eligible workers
+    // Query eligible workers — now also fetch token health fields
     let workersQuery = supabase
       .from("workers")
-      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng, fcm_token")
+      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng, fcm_token, fcm_token_status")
       .eq("is_active", true)
       .eq("is_available", true)
       .eq("is_busy", false)
@@ -210,15 +204,45 @@ Deno.serve(async (req) => {
       return new Response("no-workers", { status: 200 });
     }
 
-    // Log each eligible worker with token status
-    console.log(`📊 ${workers.length} eligible workers:`);
+    // ─── Token readiness check: separate push-ready vs push-not-ready workers ───
+    const pushReady: typeof workers = [];
+    const pushNotReady: { id: string; name: string; reason: string }[] = [];
+
     for (const w of workers) {
-      const hasToken = !!w.fcm_token;
-      console.log(`  ${w.full_name} (${w.id}): rating=${w.rating}, fcm_token=${hasToken ? "YES" : "NO"}, community=${w.selected_community_id}`);
+      if (!w.fcm_token) {
+        pushNotReady.push({ id: w.id, name: w.full_name || 'unknown', reason: 'no_token' });
+      } else if (w.fcm_token_status === 'invalid') {
+        pushNotReady.push({ id: w.id, name: w.full_name || 'unknown', reason: 'token_invalid' });
+      } else {
+        pushReady.push(w);
+      }
     }
 
-    // Sort workers by rating (highest first), then distance
-    const sortedWorkers = workers.sort((a, b) => {
+    console.log(`📊 ${workers.length} eligible workers: ${pushReady.length} push-ready, ${pushNotReady.length} push-not-ready`);
+    if (pushNotReady.length > 0) {
+      console.warn(`⚠️ Workers skipped for push (no token or invalid): ${pushNotReady.map(w => `${w.name}(${w.reason})`).join(', ')}`);
+    }
+
+    if (pushReady.length === 0) {
+      console.log("⚠️ All eligible workers lack valid push tokens — cannot dispatch");
+      return new Response(
+        JSON.stringify({ 
+          message: 'All eligible workers lack valid push tokens', 
+          booking_id,
+          eligible_count: workers.length,
+          push_not_ready: pushNotReady,
+        }), 
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Log each push-ready worker
+    for (const w of pushReady) {
+      console.log(`  ✅ ${w.full_name} (${w.id}): rating=${w.rating}, token=YES, community=${w.selected_community_id}`);
+    }
+
+    // Sort by rating then distance
+    const sortedWorkers = pushReady.sort((a, b) => {
       const ratingDiff = (b.rating || 0) - (a.rating || 0);
       if (ratingDiff !== 0) return ratingDiff;
       if (hasCommunityCenter && a.last_lat && a.last_lng && b.last_lat && b.last_lng) {
@@ -229,7 +253,6 @@ Deno.serve(async (req) => {
       return (b.total_ratings || 0) - (a.total_ratings || 0);
     });
 
-    // Standard rating-based tiers
     const TIER_TIMEOUT_SECONDS = 30;
     const TIER_1_MIN_RATING = 4.5;
     const TIER_2_MIN_RATING = 4.0;
@@ -240,9 +263,11 @@ Deno.serve(async (req) => {
 
     console.log(`📊 Tiers: T1(${tier1Workers.length}), T2(${tier2Workers.length}), T3(${tier3Workers.length})`);
 
-    // Create booking_requests
+    // Create booking_requests for ALL eligible workers (including push-not-ready for tracking)
     const currentTime = new Date();
-    const bookingRequests = sortedWorkers.map((worker) => {
+    const allWorkersForRequests = [...sortedWorkers];
+    
+    const bookingRequests = allWorkersForRequests.map((worker) => {
       let tier = 3;
       let timeoutSeconds = TIER_TIMEOUT_SECONDS * 3;
 
@@ -292,22 +317,21 @@ Deno.serve(async (req) => {
         const allUserIds = sortedWorkers
           .map((w) => normalizeWorkerTargetId(w))
           .filter((id) => uuidRegex.test(id));
-        return await sendNotifications(allUserIds, b, booking_id, bookingType);
+        return await sendNotifications(allUserIds, b, booking_id, bookingType, pushNotReady);
       }
 
-      return await sendNotifications(tier2UserIds, b, booking_id, bookingType);
+      return await sendNotifications(tier2UserIds, b, booking_id, bookingType, pushNotReady);
     }
 
     console.log(`🎯 Notifying Tier 1: ${tier1UserIds.length} workers`);
-    return await sendNotifications(tier1UserIds, b, booking_id, bookingType);
+    return await sendNotifications(tier1UserIds, b, booking_id, bookingType, pushNotReady);
   } catch (e) {
     console.error("❌ Exception:", e);
     return new Response(`err:${(e as Error)?.message ?? e}`, { status: 500, headers: corsHeaders });
   }
 });
 
-// Helper function to send FCM notifications via send-fcm edge function
-async function sendNotifications(userIds: string[], booking: any, bookingId: string, bookingType: string) {
+async function sendNotifications(userIds: string[], booking: any, bookingId: string, bookingType: string, pushNotReady: { id: string; name: string; reason: string }[]) {
   const fcmUrl = `${SUPABASE_URL}/functions/v1/send-fcm`;
   console.log(`📤 Calling send-fcm for ${bookingType} booking ${bookingId}`);
   console.log(`   Target worker IDs: [${userIds.join(", ")}]`);
@@ -366,7 +390,6 @@ async function sendNotifications(userIds: string[], booking: any, bookingId: str
     result = { raw: responseText };
   }
   
-  // Log FCM result summary
   console.log(`📊 send-fcm result for booking ${bookingId}:`);
   console.log(`   firebase_project: ${result.firebase_project || "unknown"}`);
   console.log(`   sent: ${result.sent || 0}, failed: ${result.failed || 0}`);
@@ -382,7 +405,14 @@ async function sendNotifications(userIds: string[], booking: any, bookingId: str
   }
 
   return new Response(
-    JSON.stringify({ success: true, booking_type: bookingType, booking_id: bookingId, sent: userIds.length, result }), 
+    JSON.stringify({ 
+      success: true, 
+      booking_type: bookingType, 
+      booking_id: bookingId, 
+      sent: userIds.length, 
+      push_not_ready_workers: pushNotReady,
+      result 
+    }), 
     { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
 }

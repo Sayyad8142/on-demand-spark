@@ -25,13 +25,8 @@ if (serviceAccountJson) {
     _serviceAccount = JSON.parse(serviceAccountJson);
     _firebaseProjectId = _serviceAccount.project_id ?? null;
     console.log(`🔑 Firebase service account loaded — project_id: ${_firebaseProjectId}`);
-    console.log(`🔑 Firebase client_email: ${_serviceAccount.client_email ?? "MISSING"}`);
-    // IMPORTANT: The project_id here MUST match the google-services.json project_number/sender_id
-    // Worker app uses project: didi-now-worker-7b4cb (sender 993479758920)
-    // If this log shows a DIFFERENT project_id, that is the SENDER_ID_MISMATCH root cause.
     if (_firebaseProjectId !== "didi-now-worker-7b4cb") {
-      console.error(`⚠️ SENDER_ID WARNING: Service account project_id "${_firebaseProjectId}" does NOT match worker app project "didi-now-worker-7b4cb"`);
-      console.error(`⚠️ This WILL cause SENDER_ID_MISMATCH errors for all FCM sends!`);
+      console.error(`⚠️ SENDER_ID WARNING: project_id "${_firebaseProjectId}" does NOT match worker app project`);
     }
   } catch (e) {
     console.error("❌ Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY:", e);
@@ -40,8 +35,12 @@ if (serviceAccountJson) {
   console.error("❌ FIREBASE_SERVICE_ACCOUNT_KEY secret is NOT configured");
 }
 
+// FCM error codes that mean the token is permanently invalid
+const INVALID_TOKEN_ERRORS = new Set([
+  'UNREGISTERED', 'INVALID_ARGUMENT', 'SENDER_ID_MISMATCH', 'NOT_FOUND'
+]);
+
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -51,41 +50,32 @@ Deno.serve(async (req) => {
     console.log("📤 send-fcm invoked");
     console.log("═══════════════════════════════════════════════════════════");
 
-    // SECURITY: Verify authentication
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error("❌ No authorization header");
       return new Response(JSON.stringify({ error: "Unauthorized" }), { 
-        status: 401, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Validate and parse payload
     const payload: FCMPayload = await req.json();
     const { workerIds, title, body, data } = payload;
 
-    // SECURITY: Validate inputs
     if (!Array.isArray(workerIds) || workerIds.length === 0) {
       return new Response(JSON.stringify({ error: "Invalid workerIds" }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Validate all workerIds are UUIDs
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!workerIds.every(id => uuidRegex.test(id))) {
       return new Response(JSON.stringify({ error: "Invalid worker ID format" }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
     if (!title || !body) {
       return new Response(JSON.stringify({ error: "Missing title or body" }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
@@ -94,9 +84,7 @@ Deno.serve(async (req) => {
     console.log(`📋 Booking: ${bookingId} (${bookingType})`);
     console.log(`👷 Worker IDs requested: [${workerIds.join(", ")}]`);
 
-    // ─── Validate Firebase config ───
     if (!_serviceAccount) {
-      console.error("❌ FIREBASE_SERVICE_ACCOUNT_KEY not configured or invalid");
       return new Response(
         JSON.stringify({ error: "Firebase not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -104,88 +92,97 @@ Deno.serve(async (req) => {
     }
 
     const projectId = _firebaseProjectId!;
-    console.log(`🔑 Using Firebase project: ${projectId}`);
-
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // ─── Token lookup: unified logic ───
-    // Source 1 (primary): workers.fcm_token — set by native Android on login
-    // Source 2 (fallback): fcm_tokens table — set by Capacitor JS plugin
-    // We also try matching by workers.id in case workerIds contains worker.id instead of user_id
-
+    // ─── Token lookup: workers.fcm_token is source of truth ───
     const { data: workersData, error: workerTokenError } = await supabase
       .from("workers")
-      .select("id, user_id, fcm_token, full_name")
+      .select("id, user_id, fcm_token, fcm_token_status, full_name")
       .or(`user_id.in.(${workerIds.map(id => `"${id}"`).join(",")}),id.in.(${workerIds.map(id => `"${id}"`).join(",")})`)
-      .not("fcm_token", "is", null);
-
-    const { data: fcmTokensData, error: fcmTokenError } = await supabase
-      .from("fcm_tokens")
-      .select("token, user_id")
-      .in("user_id", workerIds);
 
     if (workerTokenError) console.error("❌ Error fetching worker tokens:", workerTokenError);
-    if (fcmTokenError) console.error("❌ Error fetching fcm_tokens:", fcmTokenError);
 
-    // Merge tokens: workers table takes priority over fcm_tokens table
-    const tokenMap = new Map<string, { token: string; source: string; workerName: string }>();
+    // Build token map from workers table only (source of truth)
+    const tokenMap = new Map<string, { token: string; source: string; workerName: string; workerId: string }>();
+    const skippedWorkers: { id: string; name: string; reason: string }[] = [];
     
-    // First: fcm_tokens table (lower priority)
-    if (fcmTokensData) {
-      for (const row of fcmTokensData) {
-        if (row.token) {
-          tokenMap.set(row.user_id, { 
-            token: row.token, 
-            source: "fcm_tokens_table",
-            workerName: "unknown"
-          });
-        }
-      }
-    }
-    
-    // Then: workers table (higher priority, overrides)
     if (workersData) {
       for (const row of workersData) {
-        if (row.fcm_token) {
-          const targetId = row.user_id || row.id;
-          tokenMap.set(targetId, { 
-            token: row.fcm_token, 
-            source: "workers.fcm_token",
-            workerName: row.full_name || "unknown"
-          });
+        const targetId = row.user_id || row.id;
+        
+        if (!row.fcm_token) {
+          skippedWorkers.push({ id: targetId, name: row.full_name || "unknown", reason: "no_token" });
+          continue;
+        }
+        if (row.fcm_token_status === 'invalid') {
+          skippedWorkers.push({ id: targetId, name: row.full_name || "unknown", reason: "token_invalid" });
+          continue;
+        }
+        
+        tokenMap.set(targetId, { 
+          token: row.fcm_token, 
+          source: "workers.fcm_token",
+          workerName: row.full_name || "unknown",
+          workerId: row.id,
+        });
+      }
+    }
+
+    // Also check fcm_tokens table as fallback for workers with missing token
+    if (skippedWorkers.some(w => w.reason === 'no_token')) {
+      const missingIds = skippedWorkers.filter(w => w.reason === 'no_token').map(w => w.id);
+      const { data: fcmFallback } = await supabase
+        .from("fcm_tokens")
+        .select("token, user_id")
+        .in("user_id", missingIds);
+      
+      if (fcmFallback) {
+        for (const row of fcmFallback) {
+          if (row.token && !tokenMap.has(row.user_id)) {
+            // Found in fallback — use it and also update workers table
+            const workerRow = workersData?.find(w => (w.user_id || w.id) === row.user_id);
+            tokenMap.set(row.user_id, {
+              token: row.token,
+              source: "fcm_tokens_fallback",
+              workerName: workerRow?.full_name || "unknown",
+              workerId: workerRow?.id || row.user_id,
+            });
+            // Promote to workers table for next time
+            if (workerRow) {
+              await supabase.from("workers").update({
+                fcm_token: row.token,
+                fcm_token_status: 'active',
+                fcm_token_updated_at: new Date().toISOString(),
+              }).eq("id", workerRow.id);
+            }
+            // Remove from skipped
+            const idx = skippedWorkers.findIndex(w => w.id === row.user_id);
+            if (idx >= 0) skippedWorkers.splice(idx, 1);
+          }
         }
       }
     }
 
-    console.log(`📊 Token lookup results:`);
-    console.log(`   workers.fcm_token entries: ${workersData?.length ?? 0}`);
-    console.log(`   fcm_tokens table entries: ${fcmTokensData?.length ?? 0}`);
-    console.log(`   merged unique tokens: ${tokenMap.size}`);
-    
-    // Log which workers have NO token
-    const missingTokenWorkers = workerIds.filter(id => !tokenMap.has(id));
-    if (missingTokenWorkers.length > 0) {
-      console.warn(`⚠️ ${missingTokenWorkers.length} workers have NO FCM token: [${missingTokenWorkers.join(", ")}]`);
+    console.log(`📊 Token lookup: ${tokenMap.size} valid, ${skippedWorkers.length} skipped`);
+    if (skippedWorkers.length > 0) {
+      console.warn(`⚠️ Skipped workers: ${skippedWorkers.map(w => `${w.name}(${w.reason})`).join(", ")}`);
     }
 
     if (tokenMap.size === 0) {
-      console.log("⚠️ No FCM tokens found for any requested workers");
       return new Response(
-        JSON.stringify({ error: "No tokens found", workerIds }),
+        JSON.stringify({ error: "No valid tokens found", workerIds, skipped: skippedWorkers }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Get OAuth2 access token for FCM v1 API
     const accessToken = await getAccessToken(_serviceAccount);
 
     // ─── Send to each worker ───
     const results = await Promise.all(
-      Array.from(tokenMap.entries()).map(async ([userId, { token, source, workerName }]) => {
+      Array.from(tokenMap.entries()).map(async ([userId, { token, source, workerName, workerId }]) => {
         try {
           const isBookingAlert = data?.type === "BOOKING_ALERT";
           
-          // Build data payload — ALL values must be strings for FCM
           const baseData: Record<string, string> = {
             type: String(data?.type || ""),
             bookingId: String(data?.bookingId || data?.booking_id || ""),
@@ -205,8 +202,6 @@ Deno.serve(async (req) => {
             body: String(body),
           };
 
-          // CRITICAL: BOOKING_ALERT uses data-only message (no notification block)
-          // This ensures MyFirebaseService.onMessageReceived() ALWAYS fires on Android
           const message = isBookingAlert
             ? {
                 message: {
@@ -224,7 +219,7 @@ Deno.serve(async (req) => {
                 },
               };
 
-          console.log(`📤 Sending FCM to ${workerName} (${userId}), token: ${token.substring(0, 20)}..., source: ${source}`);
+          console.log(`📤 Sending to ${workerName} (${userId}), token: ${token.substring(0, 20)}..., src: ${source}`);
 
           const response = await fetch(
             `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
@@ -244,18 +239,42 @@ Deno.serve(async (req) => {
             const errorCode = result.error?.details?.[0]?.errorCode || result.error?.status || "UNKNOWN";
             console.error(`❌ FCM failed for ${workerName}: ${errorCode} — ${result.error?.message || JSON.stringify(result.error)}`);
             
-            // Clean up stale tokens (UNREGISTERED = device no longer has app)
-            if (result.error?.code === 404 || 
-                result.error?.details?.some((d: any) => d.errorCode === "UNREGISTERED")) {
-              console.log(`🗑️ Cleaning stale token for ${workerName} (${userId})`);
+            // ─── Token health: mark invalid on permanent errors ───
+            const isPermanentError = INVALID_TOKEN_ERRORS.has(errorCode) || 
+              result.error?.code === 404 ||
+              result.error?.details?.some((d: any) => INVALID_TOKEN_ERRORS.has(d.errorCode));
+
+            if (isPermanentError) {
+              console.log(`🗑️ Marking token INVALID for ${workerName} (${workerId}): ${errorCode}`);
+              
+              // Mark token as invalid (don't delete — keep for debugging)
+              await supabase.from("workers").update({
+                fcm_token_status: 'invalid',
+                fcm_last_fail_at: new Date().toISOString(),
+                fcm_last_fail_reason: errorCode,
+              }).eq("id", workerId);
+              
+              // Also clean fcm_tokens fallback
               await supabase.from("fcm_tokens").delete().eq("user_id", userId);
-              await supabase.from("workers").update({ fcm_token: null }).eq("user_id", userId);
+            } else {
+              // Transient error — just log failure time
+              await supabase.from("workers").update({
+                fcm_last_fail_at: new Date().toISOString(),
+                fcm_last_fail_reason: errorCode,
+              }).eq("id", workerId);
             }
             
-            return { user_id: userId, worker_name: workerName, success: false, error_code: errorCode, error: result.error?.message };
+            return { user_id: userId, worker_name: workerName, success: false, error_code: errorCode, error: result.error?.message, permanent: isPermanentError };
           }
 
           console.log(`✅ FCM sent to ${workerName} (${userId}) — messageId: ${result.name}`);
+          
+          // ─── Token health: update last successful send ───
+          await supabase.from("workers").update({
+            fcm_last_send_at: new Date().toISOString(),
+            fcm_token_status: 'active', // Confirm active on success
+          }).eq("id", workerId);
+          
           return { user_id: userId, worker_name: workerName, success: true, messageId: result.name };
         } catch (error) {
           console.error(`❌ Exception sending to ${workerName} (${userId}):`, error);
@@ -283,7 +302,7 @@ Deno.serve(async (req) => {
       sent: successCount,
       failed: failureCount,
       total_tokens: tokenMap.size,
-      missing_tokens: missingTokenWorkers.length,
+      skipped_workers: skippedWorkers,
       results 
     }), {
       status: 200,
@@ -317,7 +336,6 @@ async function getAccessToken(serviceAccount: any): Promise<string> {
 
   const signatureInput = `${jwtHeader}.${jwtClaimSetEncoded}`;
   
-  // Normalize private key newlines
   const privateKeyRaw = String(serviceAccount.private_key || "");
   const privateKey = privateKeyRaw.includes("\\n")
     ? privateKeyRaw.replace(/\\n/g, "\n")
@@ -337,9 +355,7 @@ async function getAccessToken(serviceAccount: any): Promise<string> {
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
       return bytes;
     } catch {
-      throw new Error(
-        "Invalid Firebase service account private_key. Re-check FIREBASE_SERVICE_ACCOUNT_KEY."
-      );
+      throw new Error("Invalid Firebase service account private_key.");
     }
   };
 
