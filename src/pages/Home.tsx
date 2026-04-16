@@ -11,6 +11,7 @@ import { usePushHealthGuard } from "@/hooks/usePushHealthGuard";
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { UpcomingBookingsBar } from "@/components/UpcomingBookingsBar";
+import { OnboardingChecklist, useOnboardingStatus } from "@/components/OnboardingChecklist";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Bell, X, LogOut, AlertTriangle, RefreshCw, ShieldAlert } from "lucide-react";
