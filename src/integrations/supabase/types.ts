@@ -3566,6 +3566,7 @@ export type Database = {
           photo_url: string | null
           preferred_payout_method: string | null
           priority_score: number
+          priority_score_updated_at: string | null
           push_block_reason: string | null
           push_health_status: string
           rating: number | null
@@ -3574,6 +3575,7 @@ export type Database = {
           reachability_score: number | null
           reachability_status: string | null
           respect_availability: boolean | null
+          score_reason: string | null
           selected_community_id: string | null
           service_types: string[]
           timezone: string | null
@@ -3644,6 +3646,7 @@ export type Database = {
           photo_url?: string | null
           preferred_payout_method?: string | null
           priority_score?: number
+          priority_score_updated_at?: string | null
           push_block_reason?: string | null
           push_health_status?: string
           rating?: number | null
@@ -3652,6 +3655,7 @@ export type Database = {
           reachability_score?: number | null
           reachability_status?: string | null
           respect_availability?: boolean | null
+          score_reason?: string | null
           selected_community_id?: string | null
           service_types?: string[]
           timezone?: string | null
@@ -3722,6 +3726,7 @@ export type Database = {
           photo_url?: string | null
           preferred_payout_method?: string | null
           priority_score?: number
+          priority_score_updated_at?: string | null
           push_block_reason?: string | null
           push_health_status?: string
           rating?: number | null
@@ -3730,6 +3735,7 @@ export type Database = {
           reachability_score?: number | null
           reachability_status?: string | null
           respect_availability?: boolean | null
+          score_reason?: string | null
           selected_community_id?: string | null
           service_types?: string[]
           timezone?: string | null
@@ -3913,6 +3919,7 @@ export type Database = {
               photo_url: string | null
               preferred_payout_method: string | null
               priority_score: number
+              priority_score_updated_at: string | null
               push_block_reason: string | null
               push_health_status: string
               rating: number | null
@@ -3921,6 +3928,7 @@ export type Database = {
               reachability_score: number | null
               reachability_status: string | null
               respect_availability: boolean | null
+              score_reason: string | null
               selected_community_id: string | null
               service_types: string[]
               timezone: string | null
@@ -4000,6 +4008,7 @@ export type Database = {
               photo_url: string | null
               preferred_payout_method: string | null
               priority_score: number
+              priority_score_updated_at: string | null
               push_block_reason: string | null
               push_health_status: string
               rating: number | null
@@ -4008,6 +4017,7 @@ export type Database = {
               reachability_score: number | null
               reachability_status: string | null
               respect_availability: boolean | null
+              score_reason: string | null
               selected_community_id: string | null
               service_types: string[]
               timezone: string | null
@@ -4610,6 +4620,24 @@ export type Database = {
         Returns: {
           rating_range: string
           worker_count: number
+        }[]
+      }
+      get_worker_score_debug: {
+        Args: { p_community?: string; p_service_type?: string }
+        Returns: {
+          acceptance_rate_7d: number
+          completed_7d: number
+          effective_rating: number
+          final_rank: number
+          is_new_worker: boolean
+          last_seen_at: string
+          online_hours: number
+          priority_score: number
+          score_reason: string
+          score_updated_at: string
+          total_ratings: number
+          worker_id: string
+          worker_name: string
         }[]
       }
       get_worker_slot_supply: {
