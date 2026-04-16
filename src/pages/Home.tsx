@@ -7,6 +7,7 @@ import { useActiveJob } from "@/hooks/useActiveJob";
 import { useEnhancedHeartbeat } from "@/hooks/useEnhancedHeartbeat";
 import { useBookingRequestsRealtime } from "@/hooks/useBookingRequestsRealtime";
 import { usePushHealthGuard } from "@/hooks/usePushHealthGuard";
+import { useAutoHeal } from "@/hooks/useAutoHeal";
 
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
@@ -49,6 +50,9 @@ export default function Home() {
 
   // Push health guard: mandatory token validation
   const pushHealth = usePushHealthGuard(isGuestMode ? undefined : user?.id);
+
+  // Auto-heal missing data (service_types, availability slots)
+  useAutoHeal(isGuestMode ? undefined : worker?.id, isGuestMode ? null : worker);
 
   // Enhanced heartbeat: 45s interval with device info + pending booking fallback
   const isOnline = !!worker?.is_available;
@@ -231,7 +235,7 @@ export default function Home() {
       <div className={`p-4 space-y-4 pb-32 ${isGuestMode ? 'pt-4' : 'pt-28'}`}>
 
       {/* Onboarding Checklist */}
-      {!isGuestMode && worker && !onboarding.isComplete && (
+      {!isGuestMode && worker && (
         <div id="onboarding-checklist">
           <OnboardingChecklist
             workerId={worker.id}

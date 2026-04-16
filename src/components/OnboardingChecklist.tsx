@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { CheckCircle2, Circle, ChevronRight } from "lucide-react";
+import { CheckCircle2, Circle, ChevronRight, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
 
 interface OnboardingChecklistProps {
   workerId: string;
@@ -52,7 +52,24 @@ export function OnboardingChecklist({ workerId, worker, onStatusChange }: Onboar
     onStatusChange?.(status.isComplete);
   }, [status.isComplete, onStatusChange]);
 
-  if (status.isComplete) return null;
+  // If complete, show ready state
+  if (status.isComplete) {
+    return (
+      <Card className="p-4 bg-green-50 dark:bg-green-950 border-green-300 dark:border-green-700">
+        <div className="flex items-center gap-3">
+          <Sparkles className="w-6 h-6 text-green-600 flex-shrink-0" />
+          <div>
+            <h3 className="font-bold text-sm text-green-900 dark:text-green-100">
+              You're ready to receive bookings!
+            </h3>
+            <p className="text-xs text-green-700 dark:text-green-300 mt-0.5">
+              Turn ON availability above to start getting work.
+            </p>
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   const steps = [
     {

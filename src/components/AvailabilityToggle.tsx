@@ -56,15 +56,13 @@ export function AvailabilityToggle({
     if (loading) return;
     const newValue = !isAvailable;
 
-    // Hard block: onboarding must be complete (service_types, community, slots)
+    // Soft warning: onboarding incomplete (allow going online)
     if (newValue && !onboardingComplete) {
       toast({
-        title: "Complete setup first",
-        description: "Please complete your profile setup to start receiving bookings.",
-        variant: "destructive",
+        title: "Setup incomplete",
+        description: "Complete your profile setup to receive more bookings.",
       });
       onOnboardingIncomplete?.();
-      return;
     }
 
     // Soft warning: payout not ready (allow going online)
