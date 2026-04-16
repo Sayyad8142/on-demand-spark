@@ -41,6 +41,12 @@ export default function Home() {
 
   const payoutReady = isGuestMode ? true : workerLoading ? true : !!(worker as any)?.payout_ready;
 
+  // Onboarding status: checks service_types, community, availability slots
+  const onboarding = useOnboardingStatus(
+    isGuestMode ? undefined : worker?.id,
+    isGuestMode ? null : worker
+  );
+
   // Push health guard: mandatory token validation
   const pushHealth = usePushHealthGuard(isGuestMode ? undefined : user?.id);
 
