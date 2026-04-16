@@ -7,6 +7,7 @@ import { useActiveJob } from "@/hooks/useActiveJob";
 import { useEnhancedHeartbeat } from "@/hooks/useEnhancedHeartbeat";
 import { useBookingRequestsRealtime } from "@/hooks/useBookingRequestsRealtime";
 import { usePushHealthGuard } from "@/hooks/usePushHealthGuard";
+import { useAutoHeal } from "@/hooks/useAutoHeal";
 
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
