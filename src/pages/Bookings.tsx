@@ -273,7 +273,7 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
 
       {/* Payment & Payout Status */}
       <div className="flex flex-wrap gap-1.5 mt-2">
-        {booking.payment_method && (
+        {booking.payment_method && booking.payment_method !== 'razorpay' && (
           <Badge variant="outline" className="text-[10px] gap-0.5 h-5">
             <CreditCard className="w-2.5 h-2.5" />
             {booking.payment_method === 'pay_after_service' ? 'Pay After' : booking.payment_method.replace('_', ' ')}
