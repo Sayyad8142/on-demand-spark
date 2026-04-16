@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
-import { useWorkerPriorityMetrics } from "@/hooks/useWorkerPriorityMetrics";
+
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import BottomNav from "@/components/BottomNav";
 import UpiQrUpload from "@/components/UpiQrUpload";
 import { CURRENT_VERSION_CODE } from "@/config/version";
-import BookingPriorityCard from "@/components/profile/BookingPriorityCard";
+
 import WorkerRankCard from "@/components/profile/WorkerRankCard";
 import WeeklyPerformanceCard from "@/components/profile/WeeklyPerformanceCard";
 import HowToGetMoreBookingsCard from "@/components/profile/HowToGetMoreBookingsCard";
@@ -127,17 +127,6 @@ export default function Profile() {
     1: 0
   });
 
-  // Priority metrics hook
-  const primaryCommunity = worker?.communities?.[0] ?? worker?.community ?? undefined;
-  const primaryService = worker?.service_types?.[0] ?? undefined;
-  const { metrics: priorityMetrics, loading: priorityLoading } = useWorkerPriorityMetrics(
-    worker?.id,
-    primaryCommunity,
-    primaryService,
-    workerRating || Number(worker?.rating) || 5.0,
-    ratingsCount,
-    worker?.last_active_at
-  );
 
   // Fetch communities from Supabase with real-time updates
   useEffect(() => {
@@ -962,10 +951,6 @@ export default function Profile() {
         </div>
 
         <div className="px-4 mt-4 space-y-4">
-
-          {/* Booking Priority Card */}
-          <BookingPriorityCard metrics={priorityMetrics} />
-
 
 
 
