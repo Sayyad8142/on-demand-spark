@@ -51,6 +51,9 @@ export default function Home() {
   // Push health guard: mandatory token validation
   const pushHealth = usePushHealthGuard(isGuestMode ? undefined : user?.id);
 
+  // Auto-heal missing data (service_types, availability slots)
+  useAutoHeal(isGuestMode ? undefined : worker?.id, isGuestMode ? null : worker);
+
   // Enhanced heartbeat: 45s interval with device info + pending booking fallback
   const isOnline = !!worker?.is_available;
   useEnhancedHeartbeat(isGuestMode ? undefined : worker?.id, isOnline);
