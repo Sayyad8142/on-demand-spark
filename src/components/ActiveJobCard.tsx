@@ -34,7 +34,7 @@ interface ActiveJobCardProps {
 }
 
 const MANAGER_PHONE = "8008180018";
-const COOLDOWN_MINUTES = 20;
+const COOLDOWN_MINUTES = 15;
 
 export default function ActiveJobCard({
   booking,
