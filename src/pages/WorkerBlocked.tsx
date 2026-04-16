@@ -33,7 +33,7 @@ export default function WorkerBlocked({ reason }: { reason?: string | null }) {
       <Button
         onClick={handleCall}
         size="lg"
-        className="bg-white text-red-600 hover:bg-red-50 font-bold text-lg px-8 py-6 rounded-xl shadow-lg"
+        className="bg-green-500 text-white hover:bg-green-600 font-bold text-lg px-8 py-6 rounded-xl shadow-lg"
       >
         <Phone className="mr-2 h-5 w-5" />
         Call Admin

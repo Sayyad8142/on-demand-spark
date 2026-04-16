@@ -3210,15 +3210,19 @@ export type Database = {
           hold_reason: string | null
           id: string
           idempotency_key: string | null
+          last_retry_at: string | null
+          manual_utr: string | null
           paid_at: string | null
           payout_amount: number
           payout_method: string | null
+          payout_source: string
           platform_fee: number
           processed_at: string | null
           processed_by_admin_id: string | null
           raw_response: Json | null
           razorpay_payout_id: string | null
           reference_id: string | null
+          retry_count: number
           reversed_at: string | null
           status: string
           updated_at: string
@@ -3238,15 +3242,19 @@ export type Database = {
           hold_reason?: string | null
           id?: string
           idempotency_key?: string | null
+          last_retry_at?: string | null
+          manual_utr?: string | null
           paid_at?: string | null
           payout_amount: number
           payout_method?: string | null
+          payout_source?: string
           platform_fee?: number
           processed_at?: string | null
           processed_by_admin_id?: string | null
           raw_response?: Json | null
           razorpay_payout_id?: string | null
           reference_id?: string | null
+          retry_count?: number
           reversed_at?: string | null
           status?: string
           updated_at?: string
@@ -3266,15 +3274,19 @@ export type Database = {
           hold_reason?: string | null
           id?: string
           idempotency_key?: string | null
+          last_retry_at?: string | null
+          manual_utr?: string | null
           paid_at?: string | null
           payout_amount?: number
           payout_method?: string | null
+          payout_source?: string
           platform_fee?: number
           processed_at?: string | null
           processed_by_admin_id?: string | null
           raw_response?: Json | null
           razorpay_payout_id?: string | null
           reference_id?: string | null
+          retry_count?: number
           reversed_at?: string | null
           status?: string
           updated_at?: string
