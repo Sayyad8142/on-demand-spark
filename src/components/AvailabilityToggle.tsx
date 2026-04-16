@@ -11,9 +11,20 @@ interface AvailabilityToggleProps {
   onPayoutRequired?: () => void;
   pushHealthy?: boolean;
   onPushUnhealthy?: () => void;
+  onboardingComplete?: boolean;
+  onOnboardingIncomplete?: () => void;
 }
 
-export function AvailabilityToggle({ workerId, className, payoutReady = true, onPayoutRequired, pushHealthy = true, onPushUnhealthy }: AvailabilityToggleProps) {
+export function AvailabilityToggle({
+  workerId,
+  className,
+  payoutReady = true,
+  onPayoutRequired,
+  pushHealthy = true,
+  onPushUnhealthy,
+  onboardingComplete = true,
+  onOnboardingIncomplete,
+}: AvailabilityToggleProps) {
   const [isAvailable, setIsAvailable] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -45,26 +56,31 @@ export function AvailabilityToggle({ workerId, className, payoutReady = true, on
     if (loading) return;
     const newValue = !isAvailable;
 
-    // Block going online if payout not ready
-    if (newValue && !payoutReady) {
+    // Hard block: onboarding must be complete (service_types, community, slots)
+    if (newValue && !onboardingComplete) {
       toast({
-        title: "Payout setup required",
-        description: "Please add your payout details to start receiving bookings.",
+        title: "Complete setup first",
+        description: "Please complete your profile setup to start receiving bookings.",
         variant: "destructive",
       });
-      onPayoutRequired?.();
+      onOnboardingIncomplete?.();
       return;
     }
 
-    // Block going online if push notifications are not healthy
+    // Soft warning: payout not ready (allow going online)
+    if (newValue && !payoutReady) {
+      toast({
+        title: "Payout setup pending",
+        description: "You can receive bookings, but complete payout setup to get paid.",
+      });
+    }
+
+    // Soft warning: push not healthy (allow going online)
     if (newValue && !pushHealthy) {
       toast({
-        title: "Booking alerts not active",
-        description: "Please refresh notifications before going online.",
-        variant: "destructive",
+        title: "Booking alerts may be delayed",
+        description: "Notifications are syncing. You may miss alerts until ready.",
       });
-      onPushUnhealthy?.();
-      return;
     }
 
     setPressed(true);
