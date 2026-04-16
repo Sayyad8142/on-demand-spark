@@ -64,7 +64,7 @@ export default function BottomNav() {
               }`}
             >
               <div className="relative">
-                <Icon className={`w-6 h-6 ${isCallButton ? "text-success" : ""} ${isActive(path) ? "stroke-[2.5]" : ""}`} />
+                <Icon className={`w-6 h-6 ${isCallButton ? "!text-success" : ""} ${isActive(path) ? "stroke-[2.5]" : ""}`} />
                 {showBadge}
               </div>
               <span className="text-xs mt-1 font-medium">{label}</span>
