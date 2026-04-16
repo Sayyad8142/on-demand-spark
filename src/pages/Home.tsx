@@ -230,6 +230,16 @@ export default function Home() {
       {/* Main Content with top padding for fixed header */}
       <div className={`p-4 space-y-4 pb-32 ${isGuestMode ? 'pt-4' : 'pt-28'}`}>
 
+      {/* Onboarding Checklist */}
+      {!isGuestMode && worker && !onboarding.isComplete && (
+        <div id="onboarding-checklist">
+          <OnboardingChecklist
+            workerId={worker.id}
+            worker={worker}
+          />
+        </div>
+      )}
+
       {/* Payout Setup Warning Banner */}
       {!isGuestMode && !payoutReady && (
         <Card className="p-4 bg-amber-50 dark:bg-amber-950 border-amber-300 dark:border-amber-700">
@@ -237,10 +247,10 @@ export default function Home() {
             <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <h3 className="font-semibold text-sm text-amber-900 dark:text-amber-100 mb-1">
-                Payout setup incomplete
+                Payout setup pending
               </h3>
               <p className="text-xs text-amber-700 dark:text-amber-300 mb-2">
-                Please add your payout details to start receiving bookings.
+                Complete payout setup to receive payments. You can still receive bookings.
               </p>
               <Button
                 size="sm"

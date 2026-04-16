@@ -109,11 +109,11 @@ export function useFCMTokenSync(userId: string | undefined) {
 
     if (!userId) return;
 
-    // Initial sync with small delay for auth to settle
-    const initTimer = setTimeout(() => syncToken('mount'), 2000);
+    // Initial sync immediately (no delay for new workers)
+    const initTimer = setTimeout(() => syncToken('mount'), 500);
 
-    // Self-heal every 5 minutes
-    const healInterval = setInterval(() => selfHealCheck(), 5 * 60 * 1000);
+    // Self-heal every 3 minutes (more aggressive for new workers)
+    const healInterval = setInterval(() => selfHealCheck(), 3 * 60 * 1000);
 
     // Re-sync on app resume (visibility change)
     const handleVisibility = () => {
