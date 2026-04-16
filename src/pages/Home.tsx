@@ -235,7 +235,7 @@ export default function Home() {
       <div className={`p-4 space-y-4 pb-32 ${isGuestMode ? 'pt-4' : 'pt-28'}`}>
 
       {/* Onboarding Checklist */}
-      {!isGuestMode && worker && !onboarding.isComplete && (
+      {!isGuestMode && worker && (
         <div id="onboarding-checklist">
           <OnboardingChecklist
             workerId={worker.id}
