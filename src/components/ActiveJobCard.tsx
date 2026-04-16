@@ -308,29 +308,6 @@ export default function ActiveJobCard({
           </Button>
         </div>
 
-        {/* Payment & Status Info */}
-        <div className="px-3 space-y-2">
-          <div className="flex flex-wrap gap-1.5">
-            {booking.payment_method && (
-              <Badge variant="outline" className="text-xs gap-1">
-                <CreditCard className="w-3 h-3" />
-                {booking.payment_method === 'pay_after_service' ? 'Pay After Service' : booking.payment_method.replace('_', ' ')}
-              </Badge>
-            )}
-            {booking.payment_status === 'paid' && (
-              <Badge className="bg-green-100 text-green-700 text-xs gap-1">
-                <Check className="w-3 h-3" />
-                User Paid
-              </Badge>
-            )}
-            {(booking as any).worker_collected_payment && (
-              <Badge className="bg-blue-100 text-blue-700 text-xs gap-1">
-                <Banknote className="w-3 h-3" />
-                Collected
-              </Badge>
-            )}
-          </div>
-        </div>
 
         {/* Pay After Service: Collect Payment Button */}
         {booking.payment_method === 'pay_after_service' && !(booking as any).worker_collected_payment && (
