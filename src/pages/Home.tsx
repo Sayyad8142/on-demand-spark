@@ -11,6 +11,7 @@ import { usePushHealthGuard } from "@/hooks/usePushHealthGuard";
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { UpcomingBookingsBar } from "@/components/UpcomingBookingsBar";
+import { OnboardingChecklist, useOnboardingStatus } from "@/components/OnboardingChecklist";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Bell, X, LogOut, AlertTriangle, RefreshCw, ShieldAlert } from "lucide-react";
@@ -39,6 +40,12 @@ export default function Home() {
   const activeJob = isGuestMode ? null : realActiveJob;
 
   const payoutReady = isGuestMode ? true : workerLoading ? true : !!(worker as any)?.payout_ready;
+
+  // Onboarding status: checks service_types, community, availability slots
+  const onboarding = useOnboardingStatus(
+    isGuestMode ? undefined : worker?.id,
+    isGuestMode ? null : worker
+  );
 
   // Push health guard: mandatory token validation
   const pushHealth = usePushHealthGuard(isGuestMode ? undefined : user?.id);
@@ -209,6 +216,12 @@ export default function Home() {
                   });
                 }
               }}
+              onboardingComplete={onboarding.isComplete}
+              onOnboardingIncomplete={() => {
+                // Scroll to onboarding checklist
+                const el = document.getElementById('onboarding-checklist');
+                el?.scrollIntoView({ behavior: 'smooth' });
+              }}
             />
           </div>
         </div>
@@ -217,6 +230,16 @@ export default function Home() {
       {/* Main Content with top padding for fixed header */}
       <div className={`p-4 space-y-4 pb-32 ${isGuestMode ? 'pt-4' : 'pt-28'}`}>
 
+      {/* Onboarding Checklist */}
+      {!isGuestMode && worker && !onboarding.isComplete && (
+        <div id="onboarding-checklist">
+          <OnboardingChecklist
+            workerId={worker.id}
+            worker={worker}
+          />
+        </div>
+      )}
+
       {/* Payout Setup Warning Banner */}
       {!isGuestMode && !payoutReady && (
         <Card className="p-4 bg-amber-50 dark:bg-amber-950 border-amber-300 dark:border-amber-700">
@@ -224,10 +247,10 @@ export default function Home() {
             <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <h3 className="font-semibold text-sm text-amber-900 dark:text-amber-100 mb-1">
-                Payout setup incomplete
+                Payout setup pending
               </h3>
               <p className="text-xs text-amber-700 dark:text-amber-300 mb-2">
-                Please add your payout details to start receiving bookings.
+                Complete payout setup to receive payments. You can still receive bookings.
               </p>
               <Button
                 size="sm"
