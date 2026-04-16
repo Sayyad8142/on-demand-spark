@@ -216,6 +216,12 @@ export default function Home() {
                   });
                 }
               }}
+              onboardingComplete={onboarding.isComplete}
+              onOnboardingIncomplete={() => {
+                // Scroll to onboarding checklist
+                const el = document.getElementById('onboarding-checklist');
+                el?.scrollIntoView({ behavior: 'smooth' });
+              }}
             />
           </div>
         </div>
