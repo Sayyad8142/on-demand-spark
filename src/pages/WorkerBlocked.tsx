@@ -26,9 +26,6 @@ export default function WorkerBlocked({ reason }: { reason?: string | null }) {
         </p>
       )}
 
-      <p className="text-2xl font-mono font-bold tracking-wider mb-8">
-        {ADMIN_PHONE}
-      </p>
 
       <Button
         onClick={handleCall}
