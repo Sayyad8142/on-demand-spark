@@ -52,24 +52,8 @@ export function OnboardingChecklist({ workerId, worker, onStatusChange }: Onboar
     onStatusChange?.(status.isComplete);
   }, [status.isComplete, onStatusChange]);
 
-  // If complete, show ready state
-  if (status.isComplete) {
-    return (
-      <Card className="p-4 bg-green-50 dark:bg-green-950 border-green-300 dark:border-green-700">
-        <div className="flex items-center gap-3">
-          <Sparkles className="w-6 h-6 text-green-600 flex-shrink-0" />
-          <div>
-            <h3 className="font-bold text-sm text-green-900 dark:text-green-100">
-              You're ready to receive bookings!
-            </h3>
-            <p className="text-xs text-green-700 dark:text-green-300 mt-0.5">
-              Turn ON availability above to start getting work.
-            </p>
-          </div>
-        </div>
-      </Card>
-    );
-  }
+  // If complete, don't show anything — worker is ready
+  if (status.isComplete) return null;
 
   const steps = [
     {
