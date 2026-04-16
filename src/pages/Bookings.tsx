@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Search, MapPin, Calendar, Loader2, User, Star, CreditCard, CheckCircle2, Clock } from "lucide-react";
+import { ArrowLeft, Search, MapPin, Calendar, Loader2, User, Star, CreditCard, CheckCircle2, Clock, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { getPayoutStatus, PAYOUT_ESTIMATING_LABEL } from "@/lib/payoutStatus";
 import { DEMO_BOOKINGS } from "@/config/demoData";
 import { formatBookingAddress, BookingWithAddress } from "@/lib/address";
@@ -178,107 +179,64 @@ export default function Bookings() {
 }
 
 function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusColor: (status: string) => string }) {
+  const [open, setOpen] = useState(false);
   const isCompleted = booking.status === 'completed';
   const isCancelled = booking.status === 'cancelled';
   const numberColor = isCompleted ? 'text-green-500' : 'text-red-500';
-  
+
   const cardClass = isCancelled
-    ? "p-3 shadow-lg border-2 border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900"
-    : "p-3 shadow-lg border-0";
-  
+    ? "p-4 shadow-lg border-2 border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900"
+    : "p-4 shadow-lg border-0";
+
+  const displayAmount = booking.payout_amount ?? (booking.price_inr ? calcWorkerPayout(booking.price_inr) : null);
+  const isEstimate = booking.payout_amount == null && booking.price_inr != null;
+
   return (
     <Card className={cardClass}>
-      <div className="flex items-center justify-between mb-2">
-        {/* Worker Photo */}
-        {booking.worker_name && (
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md border-2 border-white dark:border-gray-800 overflow-hidden">
-              {booking.worker_photo_url ? (
-                <img 
-                  src={booking.worker_photo_url} 
-                  alt={booking.worker_name} 
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <User className="w-5 h-5 text-primary-foreground" />
-              )}
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Worker</p>
-              <p className="text-sm font-semibold">{booking.worker_name}</p>
-            </div>
-          </div>
-        )}
+      {/* Top: status + date */}
+      <div className="flex items-center justify-between mb-3">
         <Badge className={getStatusColor(booking.status)}>
           {booking.status.replace('_', ' ')}
         </Badge>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Calendar className="w-3 h-3" />
+          {booking.scheduled_date
+            ? new Date(booking.scheduled_date).toLocaleDateString()
+            : booking.created_at
+              ? new Date(booking.created_at).toLocaleDateString()
+              : 'N/A'}
+          {booking.scheduled_time && (
+            <span className="ml-1">{booking.scheduled_time.slice(0, 5)}</span>
+          )}
+        </div>
       </div>
 
-      {/* Flat Number Display */}
-      <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-2 shadow-sm">
+      {/* Flat Number */}
+      <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 mb-3 shadow-sm">
         <p className={`font-extrabold text-center ${numberColor} text-xl tracking-tight`}>{formatBookingAddress(booking)}</p>
       </div>
 
-      {/* Customer Name */}
-      <div className="mb-2">
-        <p className="text-[10px] text-gray-500 dark:text-gray-400">Customer</p>
-        <p className="font-semibold text-sm">{booking.cust_name}</p>
-      </div>
-
-      {/* Community */}
-      <div className="flex items-center gap-1.5 mb-2">
-        <MapPin className={`w-3.5 h-3.5 ${numberColor}`} />
-        <p className="text-xs text-muted-foreground">{booking.community}</p>
-      </div>
-
-      <div className="flex items-center justify-between text-xs border-t pt-2">
-        <div className="flex items-center gap-3">
-          <span className="text-muted-foreground">
-            {booking.service_type === 'cook' ? '📦 Legacy Booking' : booking.service_type.replace('_', ' ')}
-          </span>
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <Calendar className="w-3 h-3" />
-            {booking.scheduled_date 
-              ? new Date(booking.scheduled_date).toLocaleDateString()
-              : booking.created_at 
-                ? new Date(booking.created_at).toLocaleDateString()
-                : 'N/A'}
-            {booking.scheduled_time && (
-              <span className="ml-1">
-                {booking.scheduled_time.slice(0, 5)}
-              </span>
-            )}
+      {/* HIGHLIGHT: Rating + Price */}
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-xl p-3 flex flex-col items-center justify-center">
+          <div className="flex items-center gap-1">
+            <Star className={`w-5 h-5 ${booking.rating ? 'text-amber-500 fill-amber-500' : 'text-gray-300'}`} />
+            <span className="font-extrabold text-2xl text-amber-600 dark:text-amber-400">
+              {booking.rating ?? '—'}
+            </span>
           </div>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Rating</p>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Customer Rating */}
-          {booking.rating != null && booking.rating > 0 ? (
-            <div className="flex items-center gap-1 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
-              <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-              <span className="font-semibold text-amber-600 dark:text-amber-400">{booking.rating}</span>
-            </div>
-          ) : booking.status === 'completed' ? (
-            <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded-full">
-              <Star className="w-3 h-3 text-gray-300" />
-              <span className="text-xs text-muted-foreground">—</span>
-            </div>
-          ) : null}
-          {booking.payout_amount != null ? (
-            <span className={`font-bold ${numberColor} text-base`}>₹{booking.payout_amount}</span>
-          ) : booking.price_inr ? (
-            <span className={`font-bold ${numberColor} text-base`}>~₹{calcWorkerPayout(booking.price_inr)}</span>
-          ) : null}
+        <div className={`rounded-xl p-3 flex flex-col items-center justify-center border ${isCompleted ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}>
+          <span className={`font-extrabold text-2xl ${numberColor}`}>
+            {displayAmount != null ? `${isEstimate ? '~' : ''}₹${displayAmount}` : '—'}
+          </span>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Earnings</p>
         </div>
       </div>
 
       {/* Payment & Payout Status */}
-      <div className="flex flex-wrap gap-1.5 mt-2">
-        {booking.payment_method && booking.payment_method !== 'razorpay' && (
-          <Badge variant="outline" className="text-[10px] gap-0.5 h-5">
-            <CreditCard className="w-2.5 h-2.5" />
-            {booking.payment_method === 'pay_after_service' ? 'Pay After' : booking.payment_method.replace('_', ' ')}
-          </Badge>
-        )}
+      <div className="flex flex-wrap gap-1.5 mb-2">
         {booking.payment_status === 'paid' && (
           <Badge className="bg-green-100 text-green-700 text-[10px] gap-0.5 h-5">
             <CheckCircle2 className="w-2.5 h-2.5" />
@@ -302,6 +260,48 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
           </Badge>
         ) : null}
       </div>
+
+      {/* Collapsible: details */}
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger className="w-full flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground border-t pt-2 mt-1 transition-colors">
+          {open ? 'Hide details' : 'View details'}
+          <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-3 space-y-2">
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Customer</p>
+            <p className="font-semibold text-sm">{booking.cust_name}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Service</p>
+            <p className="text-sm capitalize">
+              {booking.service_type === 'cook' ? '📦 Legacy Booking' : booking.service_type.replace('_', ' ')}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Community</p>
+            <div className="flex items-center gap-1.5">
+              <MapPin className={`w-3.5 h-3.5 ${numberColor}`} />
+              <p className="text-sm">{booking.community}</p>
+            </div>
+          </div>
+          {booking.worker_name && (
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Worker</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-sm overflow-hidden">
+                  {booking.worker_photo_url ? (
+                    <img src={booking.worker_photo_url} alt={booking.worker_name} className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-4 h-4 text-primary-foreground" />
+                  )}
+                </div>
+                <p className="text-sm font-semibold">{booking.worker_name}</p>
+              </div>
+            </div>
+          )}
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   );
 }
