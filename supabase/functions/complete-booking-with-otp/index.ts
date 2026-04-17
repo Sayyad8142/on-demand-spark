@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
 
     // Idempotent replay: booking already completed → return existing payout or restore missing payout safely
     if (bookingRow.status === "completed") {
-      const payoutResult = await createOrFetchPayout(adminClient, booking_id, worker.id, bookingAmount);
+      const payoutResult = await createOrFetchPayout(adminClient, booking_id, worker.id, bookingAmount, bookingRow.community);
 
       return jsonResponse({
         success: true,
@@ -308,7 +308,7 @@ Deno.serve(async (req) => {
       note: "Completed via OTP verification by worker",
     });
 
-    const payoutResult = await createOrFetchPayout(adminClient, booking_id, worker.id, bookingAmount);
+    const payoutResult = await createOrFetchPayout(adminClient, booking_id, worker.id, bookingAmount, bookingRow.community);
 
     return jsonResponse({
       success: true,
