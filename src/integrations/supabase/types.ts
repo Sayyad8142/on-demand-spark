@@ -2171,6 +2171,60 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_wallet_issue_resolutions: {
+        Row: {
+          assigned_to: string | null
+          booking_id: string | null
+          created_at: string
+          id: string
+          internal_notes: string | null
+          issue_type: string
+          payment_intent_id: string | null
+          resolution_status: string
+          resolved_at: string | null
+          resolved_by: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          updated_at: string
+          user_id: string | null
+          wallet_transaction_id: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          internal_notes?: string | null
+          issue_type: string
+          payment_intent_id?: string | null
+          resolution_status?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          updated_at?: string
+          user_id?: string | null
+          wallet_transaction_id?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          internal_notes?: string | null
+          issue_type?: string
+          payment_intent_id?: string | null
+          resolution_status?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          updated_at?: string
+          user_id?: string | null
+          wallet_transaction_id?: string | null
+        }
+        Relationships: []
+      }
       pricing: {
         Row: {
           active: boolean
@@ -3875,6 +3929,19 @@ export type Database = {
       }
     }
     Views: {
+      v_payment_wallet_issues: {
+        Row: {
+          booking_id: string | null
+          details: Json | null
+          error_summary: string | null
+          issue_type: string | null
+          payment_intent_id: string | null
+          severity: string | null
+          user_id: string | null
+          wallet_transaction_id: string | null
+        }
+        Relationships: []
+      }
       worker_rating_stats: {
         Row: {
           avg_rating: number | null
@@ -5029,6 +5096,48 @@ export type Database = {
         Args: { p_timestamp: string; p_worker_id: string }
         Returns: boolean
       }
+      list_payment_wallet_issues: {
+        Args: {
+          p_booking_status?: string
+          p_community?: string
+          p_from?: string
+          p_issue_type?: string
+          p_limit?: number
+          p_payment_method?: string
+          p_payment_status?: string
+          p_resolution_status?: string
+          p_search?: string
+          p_service_type?: string
+          p_severity?: string
+          p_to?: string
+        }
+        Returns: {
+          booking_created_at: string
+          booking_id: string
+          booking_status: string
+          community: string
+          cust_name: string
+          cust_phone: string
+          details: Json
+          error_summary: string
+          internal_notes: string
+          issue_type: string
+          payment_intent_id: string
+          payment_method: string
+          payment_status: string
+          price_inr: number
+          resolution_id: string
+          resolution_status: string
+          resolved_at: string
+          resolved_by: string
+          reviewed_at: string
+          reviewed_by: string
+          service_type: string
+          severity: string
+          user_id: string
+          wallet_transaction_id: string
+        }[]
+      }
       maid_total_price: {
         Args: {
           p_community?: string
@@ -5077,6 +5186,7 @@ export type Database = {
       }
       norm_phone: { Args: { p: string }; Returns: string }
       notify_next_worker: { Args: { p_booking_id: string }; Returns: Json }
+      payment_wallet_issues_summary: { Args: never; Returns: Json }
       pending_sla_minutes: { Args: never; Returns: number }
       pg_advisory_unlock_dispatch: { Args: never; Returns: boolean }
       pg_try_advisory_lock_dispatch: { Args: never; Returns: boolean }
@@ -5409,6 +5519,15 @@ export type Database = {
       update_worker_location: {
         Args: { p_lat: number; p_lng: number }
         Returns: Json
+      }
+      upsert_payment_wallet_resolution: {
+        Args: {
+          p_booking_id: string
+          p_internal_notes?: string
+          p_issue_type: string
+          p_resolution_status: string
+        }
+        Returns: string
       }
       urlencode:
         | { Args: { data: Json }; Returns: string }
