@@ -354,6 +354,8 @@ export default function ActiveJobCard({
         onClose={() => setShowOtpModal(false)}
         bookingId={booking.id}
         onCompleted={() => onStatusUpdate('completed')}
+        flatNo={booking.flat_no}
+        serviceType={booking.service_type}
       />
 
       {/* Payment Collection Modal */}
