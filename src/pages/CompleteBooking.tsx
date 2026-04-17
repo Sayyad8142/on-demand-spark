@@ -10,6 +10,10 @@ import {
   Home,
   Sparkles,
   RefreshCw,
+  Phone,
+  HelpCircle,
+  ShieldCheck,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -33,7 +37,37 @@ const haptic = {
   },
 };
 
-type ErrorKind = "validation" | "wrong_otp" | "payment" | "network" | "other" | null;
+// Simple analytics tracker — logs to console + posts to a booking_events row when possible.
+// Non-blocking; never throws.
+const trackEvent = (
+  event:
+    | "otp_submit_attempt"
+    | "otp_wrong"
+    | "otp_success"
+    | "otp_network_error"
+    | "otp_retry_click"
+    | "otp_timeout_warning"
+    | "otp_call_customer",
+  bookingId: string,
+  meta: Record<string, any> = {},
+) => {
+  try {
+    // eslint-disable-next-line no-console
+    console.log(`[analytics] ${event}`, { bookingId, ...meta });
+    // Best-effort persistence — ignored if table policy blocks
+    supabase.from("booking_events").insert({
+      booking_id: bookingId,
+      type: `worker_${event}`,
+      meta: { ...meta, ts: new Date().toISOString() },
+    } as any).then(() => {}, () => {});
+  } catch {
+    // swallow
+  }
+};
+
+type ErrorKind = "validation" | "wrong_otp" | "payment" | "network" | "timeout" | "other" | null;
+
+const TIMEOUT_WARNING_MS = 12_000;
 
 export default function CompleteBooking() {
   const { bookingId = "" } = useParams<{ bookingId: string }>();
@@ -46,19 +80,26 @@ export default function CompleteBooking() {
   const [shake, setShake] = useState(false);
   const [success, setSuccess] = useState(false);
   const [payout, setPayout] = useState<PayoutSummary | null>(null);
-  const [bookingMeta, setBookingMeta] = useState<{ flat_no?: string; service_type?: string } | null>(null);
+  const [bookingMeta, setBookingMeta] = useState<{
+    flat_no?: string;
+    service_type?: string;
+    cust_phone?: string;
+  } | null>(null);
+  const [showSlowWarning, setShowSlowWarning] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const submitLockRef = useRef(false);
   const otpContainerRef = useRef<HTMLDivElement | null>(null);
+  const slowTimerRef = useRef<number | null>(null);
 
-  // Fetch booking meta (flat / service) for header chips
+  // Fetch booking meta (flat / service / phone) for header chips + Call button
   useEffect(() => {
     if (!bookingId) return;
     let cancelled = false;
     (async () => {
       const { data } = await supabase
         .from("bookings")
-        .select("flat_no, service_type")
+        .select("flat_no, service_type, cust_phone")
         .eq("id", bookingId)
         .maybeSingle();
       if (!cancelled && data) setBookingMeta(data);
@@ -75,6 +116,13 @@ export default function CompleteBooking() {
     return () => clearTimeout(t);
   }, []);
 
+  // Cleanup slow-warning timer on unmount
+  useEffect(() => {
+    return () => {
+      if (slowTimerRef.current) window.clearTimeout(slowTimerRef.current);
+    };
+  }, []);
+
   const triggerShake = () => {
     setShake(true);
     setTimeout(() => setShake(false), 500);
@@ -85,11 +133,29 @@ export default function CompleteBooking() {
     setError(msg);
     setErrorKind("wrong_otp");
     triggerShake();
+    trackEvent("otp_wrong", bookingId, { entered_length: otp.length });
     // Clear OTP after 500ms (let user see what they typed + shake)
     setTimeout(() => setOtp(""), 500);
   };
 
-  const handleSubmit = async () => {
+  const startSlowTimer = () => {
+    if (slowTimerRef.current) window.clearTimeout(slowTimerRef.current);
+    setShowSlowWarning(false);
+    slowTimerRef.current = window.setTimeout(() => {
+      setShowSlowWarning(true);
+      trackEvent("otp_timeout_warning", bookingId);
+    }, TIMEOUT_WARNING_MS);
+  };
+
+  const stopSlowTimer = () => {
+    if (slowTimerRef.current) {
+      window.clearTimeout(slowTimerRef.current);
+      slowTimerRef.current = null;
+    }
+    setShowSlowWarning(false);
+  };
+
+  const handleSubmit = async (isRetry = false) => {
     if (submitLockRef.current || loading) return;
     if (otp.length < 3) {
       setError("Please enter the complete 3-digit OTP");
@@ -98,10 +164,14 @@ export default function CompleteBooking() {
       return;
     }
 
+    if (isRetry) trackEvent("otp_retry_click", bookingId);
+    trackEvent("otp_submit_attempt", bookingId, { is_retry: isRetry });
+
     submitLockRef.current = true;
     setLoading(true);
     setError(null);
     setErrorKind(null);
+    startSlowTimer();
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke("complete-booking-with-otp", {
@@ -113,6 +183,7 @@ export default function CompleteBooking() {
         if (errorBody.includes("already completed")) {
           haptic.success();
           setSuccess(true);
+          trackEvent("otp_success", bookingId, { already_completed: true });
           if (data?.payout) setPayout(data.payout);
         } else if (errorBody.includes("Invalid OTP")) {
           handleWrongOtp("Wrong OTP. Please ask the customer for the correct code.");
@@ -133,6 +204,7 @@ export default function CompleteBooking() {
         if (data.already_completed) {
           haptic.success();
           setSuccess(true);
+          trackEvent("otp_success", bookingId, { already_completed: true });
           if (data?.payout) setPayout(data.payout);
         } else if (data.payment_required) {
           haptic.error();
@@ -152,15 +224,18 @@ export default function CompleteBooking() {
       if (!data?.error) {
         haptic.success();
         setSuccess(true);
+        trackEvent("otp_success", bookingId);
       }
       if (data?.payout) setPayout(data.payout);
     } catch (err: any) {
       haptic.error();
       setError("Network error. Please try again.");
       setErrorKind("network");
+      trackEvent("otp_network_error", bookingId, { message: err?.message ?? "unknown" });
     } finally {
       submitLockRef.current = false;
       setLoading(false);
+      stopSlowTimer();
     }
   };
 
@@ -173,6 +248,12 @@ export default function CompleteBooking() {
     // Notify other screens to refresh, then go home
     window.dispatchEvent(new CustomEvent("bookingCompleted", { detail: { bookingId } }));
     navigate("/home", { replace: true });
+  };
+
+  const handleCallCustomer = () => {
+    if (!bookingMeta?.cust_phone) return;
+    trackEvent("otp_call_customer", bookingId);
+    window.location.href = `tel:${bookingMeta.cust_phone}`;
   };
 
   return (
@@ -226,8 +307,11 @@ export default function CompleteBooking() {
             <p className="text-base font-semibold text-foreground mb-2 text-center">
               Enter 3-digit OTP
             </p>
-            <p className="text-sm text-muted-foreground mb-6 text-center">
+            <p className="text-sm text-muted-foreground mb-2 text-center">
               The OTP is shown in the customer's app
+            </p>
+            <p className="text-xs text-muted-foreground mb-6 text-center font-medium">
+              🔒 Only customer OTP will complete the job
             </p>
 
             <div ref={otpContainerRef} className={cn("mb-6", shake && "animate-otp-shake")}>
@@ -236,7 +320,7 @@ export default function CompleteBooking() {
                 value={otp}
                 onChange={(v) => {
                   setOtp(v);
-                  if (error && errorKind !== "network") {
+                  if (error && errorKind !== "network" && errorKind !== "timeout") {
                     setError(null);
                     setErrorKind(null);
                   }
@@ -272,7 +356,7 @@ export default function CompleteBooking() {
                   <p className="font-medium">{error}</p>
                   {errorKind === "network" && (
                     <button
-                      onClick={handleSubmit}
+                      onClick={() => handleSubmit(true)}
                       className="mt-2 inline-flex items-center gap-1.5 text-destructive font-bold text-sm underline"
                     >
                       <RefreshCw className="w-4 h-4" /> Retry
@@ -281,6 +365,61 @@ export default function CompleteBooking() {
                 </div>
               </div>
             )}
+
+            {/* Slow network warning (shown while loading > 12s) */}
+            {loading && showSlowWarning && (
+              <div className="flex items-start gap-2 text-amber-700 dark:text-amber-400 text-sm bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 px-4 py-3 rounded-xl w-full max-w-sm mb-4">
+                <Clock className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold">Taking longer than expected</p>
+                  <p className="text-xs mt-0.5 opacity-90">Please check your internet. We won't lose your OTP.</p>
+                  <button
+                    onClick={() => {
+                      stopSlowTimer();
+                      submitLockRef.current = false;
+                      setLoading(false);
+                      handleSubmit(true);
+                    }}
+                    className="mt-2 inline-flex items-center gap-1.5 font-bold text-sm underline"
+                  >
+                    <RefreshCw className="w-4 h-4" /> Retry now
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Help / Customer not showing OTP */}
+            <div className="w-full max-w-sm mt-2">
+              <button
+                type="button"
+                onClick={() => setShowHelp((s) => !s)}
+                className="w-full flex items-center justify-center gap-1.5 text-sm font-semibold text-pink-600 py-2"
+              >
+                <HelpCircle className="w-4 h-4" />
+                Customer not showing OTP?
+              </button>
+
+              {showHelp && (
+                <div className="bg-muted rounded-2xl p-4 mt-2 text-sm text-foreground space-y-2">
+                  <p className="font-semibold">Ask the customer to:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                    <li>Open the Didi Now app</li>
+                    <li>Go to the active booking screen</li>
+                    <li>Read out the 3-digit OTP shown there</li>
+                  </ol>
+                  {bookingMeta?.cust_phone && (
+                    <Button
+                      onClick={handleCallCustomer}
+                      variant="outline"
+                      className="w-full mt-3 h-12 rounded-xl border-pink-600 text-pink-600 hover:bg-pink-50 hover:text-pink-700 font-bold"
+                    >
+                      <Phone className="w-4 h-4 mr-2" />
+                      Call Customer
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Sticky footer */}
@@ -289,7 +428,7 @@ export default function CompleteBooking() {
             style={{ boxShadow: "0 -4px 12px rgba(0,0,0,0.04)" }}
           >
             <Button
-              onClick={handleSubmit}
+              onClick={() => handleSubmit(false)}
               disabled={loading || otp.length < 3}
               className="w-full h-14 text-base font-bold rounded-2xl bg-pink-600 hover:bg-pink-700 text-white"
             >
@@ -322,7 +461,12 @@ export default function CompleteBooking() {
               <PartyPopper className="w-12 h-12 text-green-600" />
             </div>
             <h2 className="text-3xl font-extrabold mb-2">Job Completed! 🎉</h2>
-            <p className="text-muted-foreground mb-6">Great work! Your payout is being processed.</p>
+            <p className="text-muted-foreground mb-3">Great work! Your payout is being processed.</p>
+
+            <div className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-3 py-1.5 rounded-full text-sm font-semibold mb-6">
+              <ShieldCheck className="w-4 h-4" />
+              Payment is secured
+            </div>
 
             {payout && (
               <div className="w-full max-w-sm bg-muted rounded-2xl p-5 space-y-3">
