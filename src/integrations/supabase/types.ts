@@ -89,51 +89,120 @@ export type Database = {
           force_update: boolean
           id: string
           ios_store_url: string
+          ios_store_url_worker: string
           latest_version_name: string
+          latest_worker_version_name: string
           min_user_version_code: number
           min_user_version_name: string
           min_worker_version_code: number
+          min_worker_version_name: string
           play_store_url_user: string
+          play_store_url_worker: string
           release_notes: string | null
           soft_update_enabled: boolean
           soft_update_message: string
+          support_phone: string
           update_title: string
           updated_at: string
           user_update_message: string
+          worker_hard_update_enabled: boolean
+          worker_release_notes: string
+          worker_soft_update_enabled: boolean
+          worker_support_phone: string
+          worker_update_message: string
+          worker_update_title: string
         }
         Insert: {
           created_at?: string | null
           force_update?: boolean
           id?: string
           ios_store_url?: string
+          ios_store_url_worker?: string
           latest_version_name?: string
+          latest_worker_version_name?: string
           min_user_version_code?: number
           min_user_version_name?: string
           min_worker_version_code?: number
+          min_worker_version_name?: string
           play_store_url_user?: string
+          play_store_url_worker?: string
           release_notes?: string | null
           soft_update_enabled?: boolean
           soft_update_message?: string
+          support_phone?: string
           update_title?: string
           updated_at?: string
           user_update_message?: string
+          worker_hard_update_enabled?: boolean
+          worker_release_notes?: string
+          worker_soft_update_enabled?: boolean
+          worker_support_phone?: string
+          worker_update_message?: string
+          worker_update_title?: string
         }
         Update: {
           created_at?: string | null
           force_update?: boolean
           id?: string
           ios_store_url?: string
+          ios_store_url_worker?: string
           latest_version_name?: string
+          latest_worker_version_name?: string
           min_user_version_code?: number
           min_user_version_name?: string
           min_worker_version_code?: number
+          min_worker_version_name?: string
           play_store_url_user?: string
+          play_store_url_worker?: string
           release_notes?: string | null
           soft_update_enabled?: boolean
           soft_update_message?: string
+          support_phone?: string
           update_title?: string
           updated_at?: string
           user_update_message?: string
+          worker_hard_update_enabled?: boolean
+          worker_release_notes?: string
+          worker_soft_update_enabled?: boolean
+          worker_support_phone?: string
+          worker_update_message?: string
+          worker_update_title?: string
+        }
+        Relationships: []
+      }
+      app_config_audit: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          changed_by_email: string | null
+          field_name: string
+          id: string
+          new_value: string | null
+          note: string | null
+          old_value: string | null
+          scope: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          changed_by_email?: string | null
+          field_name: string
+          id?: string
+          new_value?: string | null
+          note?: string | null
+          old_value?: string | null
+          scope?: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          changed_by_email?: string | null
+          field_name?: string
+          id?: string
+          new_value?: string | null
+          note?: string | null
+          old_value?: string | null
+          scope?: string
         }
         Relationships: []
       }
@@ -5011,6 +5080,14 @@ export type Database = {
       pending_sla_minutes: { Args: never; Returns: number }
       pg_advisory_unlock_dispatch: { Args: never; Returns: boolean }
       pg_try_advisory_lock_dispatch: { Args: never; Returns: boolean }
+      preview_worker_update_impact: {
+        Args: { p_min_version_name: string }
+        Returns: {
+          blocked_workers: number
+          total_workers: number
+          unknown_version_workers: number
+        }[]
+      }
       pushcut_notify_support:
         | {
             Args: {
@@ -5110,6 +5187,7 @@ export type Database = {
         Args: { p_worker_id: string }
         Returns: undefined
       }
+      semver_lt: { Args: { a: string; b: string }; Returns: boolean }
       send_demo_notification: {
         Args: {
           p_customer_name?: string
