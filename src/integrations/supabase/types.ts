@@ -16,25 +16,34 @@ export type Database = {
     Tables: {
       admin_fcm_tokens: {
         Row: {
+          app_version: string | null
           created_at: string
           device_info: string | null
           id: string
+          last_seen_at: string
+          platform: string
           token: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          app_version?: string | null
           created_at?: string
           device_info?: string | null
           id?: string
+          last_seen_at?: string
+          platform?: string
           token: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          app_version?: string | null
           created_at?: string
           device_info?: string | null
           id?: string
+          last_seen_at?: string
+          platform?: string
           token?: string
           updated_at?: string
           user_id?: string
@@ -1492,16 +1501,25 @@ export type Database = {
       }
       fcm_tokens: {
         Row: {
+          app_version: string | null
+          last_seen_at: string
+          platform: string
           token: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          app_version?: string | null
+          last_seen_at?: string
+          platform?: string
           token: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          app_version?: string | null
+          last_seen_at?: string
+          platform?: string
           token?: string
           updated_at?: string
           user_id?: string
@@ -2927,25 +2945,34 @@ export type Database = {
       }
       user_fcm_tokens: {
         Row: {
+          app_version: string | null
           created_at: string | null
           device_info: Json | null
           id: string
+          last_seen_at: string
+          platform: string
           token: string
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          app_version?: string | null
           created_at?: string | null
           device_info?: Json | null
           id?: string
+          last_seen_at?: string
+          platform?: string
           token: string
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          app_version?: string | null
           created_at?: string | null
           device_info?: Json | null
           id?: string
+          last_seen_at?: string
+          platform?: string
           token?: string
           updated_at?: string | null
           user_id?: string
