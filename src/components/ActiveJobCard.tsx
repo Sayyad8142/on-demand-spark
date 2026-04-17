@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Phone, Volume2, Utensils, Zap, PlusCircle, Sparkles, CookingPot, KeyRound, Banknote, CreditCard } from "lucide-react";
 import { BookingWithAddress } from "@/lib/address";
 import { parsePHFCode } from "@/lib/address";
-import { calcWorkerPayout } from "@/lib/payoutCalc";
+import { useCommunityFee } from "@/hooks/useCommunityFee";
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +48,7 @@ export default function ActiveJobCard({
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const { i18n } = useTranslation();
   const navigate = useNavigate();
+  const { breakdown: payoutBreakdown } = useCommunityFee(booking.community, booking.price_inr);
 
   // Fetch per-task prices
   useEffect(() => {
@@ -288,10 +289,22 @@ export default function ActiveJobCard({
                   </div>
                 ) : null;
               })()}
-              {/* Total */}
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-muted-foreground">Your Earnings</p>
-                <p className="font-bold text-green-500 text-xl">₹{calcWorkerPayout(booking.price_inr)}</p>
+              {/* Earnings breakdown — driven by community.platform_fee_percent */}
+              <div className="space-y-1 pt-1">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Customer Pays</span>
+                  <span>₹{payoutBreakdown.gross}</span>
+                </div>
+                {payoutBreakdown.feeAmount > 0 && (
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Platform Fee ({payoutBreakdown.feePercent}%)</span>
+                    <span>−₹{payoutBreakdown.feeAmount}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between pt-1 border-t border-border/60">
+                  <p className="text-sm font-medium text-muted-foreground">You Earn</p>
+                  <p className="font-bold text-green-500 text-xl">₹{payoutBreakdown.netPayout}</p>
+                </div>
               </div>
             </div>
           }
