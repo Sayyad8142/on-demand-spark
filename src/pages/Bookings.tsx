@@ -12,7 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { getPayoutStatus, PAYOUT_ESTIMATING_LABEL } from "@/lib/payoutStatus";
 import { DEMO_BOOKINGS } from "@/config/demoData";
 import { formatBookingAddress, BookingWithAddress } from "@/lib/address";
-import { calcWorkerPayout } from "@/lib/payoutCalc";
+import { useCommunityFee } from "@/hooks/useCommunityFee";
 
 type Booking = BookingWithAddress & { rating?: number | null; payout_status?: string | null; payout_amount?: number | null };
 
@@ -188,7 +188,9 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
     ? "p-4 shadow-lg border-2 border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900"
     : "p-4 shadow-lg border-0";
 
-  const displayAmount = booking.payout_amount ?? (booking.price_inr ? calcWorkerPayout(booking.price_inr) : null);
+  // Live community fee — never hardcoded.
+  const { breakdown } = useCommunityFee(booking.community, booking.price_inr);
+  const displayAmount = booking.payout_amount ?? (booking.price_inr ? breakdown.netPayout : null);
   const isEstimate = booking.payout_amount == null && booking.price_inr != null;
 
   return (

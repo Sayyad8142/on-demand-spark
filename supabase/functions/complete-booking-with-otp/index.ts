@@ -20,6 +20,7 @@ type BookingRow = {
   payment_status: string | null;
   worker_collected_payment: boolean | null;
   price_inr: number | null;
+  community: string | null;
 };
 
 type WorkerPayoutRow = {
@@ -66,13 +67,38 @@ async function getExistingPayout(adminClient: ReturnType<typeof createClient>, b
   return data as WorkerPayoutRow | null;
 }
 
+/**
+ * Resolve the live platform-fee % for a community.
+ * Reads `communities.platform_fee_percent` (admin-controlled).
+ * Falls back to 0% if the community is missing or fee is unconfigured —
+ * this matches the worker app's fallback so the displayed and actual payout always agree.
+ */
+async function getCommunityFeePercent(
+  adminClient: ReturnType<typeof createClient>,
+  community: string | null,
+): Promise<number> {
+  if (!community) return 0;
+  const { data, error } = await adminClient
+    .from("communities")
+    .select("platform_fee_percent")
+    .or(`value.eq.${community},name.eq.${community}`)
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return 0;
+  const pct = Number((data as any).platform_fee_percent ?? 0);
+  if (Number.isNaN(pct)) return 0;
+  return Math.min(100, Math.max(0, pct));
+}
+
 async function createOrFetchPayout(
   adminClient: ReturnType<typeof createClient>,
   bookingId: string,
   workerId: string,
   bookingAmount: number,
+  community: string | null,
 ) {
-  const platformFeePercent = 20;
+  const platformFeePercent = await getCommunityFeePercent(adminClient, community);
   const platformFee = Math.round((bookingAmount * platformFeePercent) / 100);
   const payoutAmount = bookingAmount - platformFee;
 
@@ -170,7 +196,7 @@ Deno.serve(async (req) => {
 
     // Idempotent replay: booking already completed → return existing payout or restore missing payout safely
     if (bookingRow.status === "completed") {
-      const payoutResult = await createOrFetchPayout(adminClient, booking_id, worker.id, bookingAmount);
+      const payoutResult = await createOrFetchPayout(adminClient, booking_id, worker.id, bookingAmount, bookingRow.community);
 
       return jsonResponse({
         success: true,
@@ -282,7 +308,7 @@ Deno.serve(async (req) => {
       note: "Completed via OTP verification by worker",
     });
 
-    const payoutResult = await createOrFetchPayout(adminClient, booking_id, worker.id, bookingAmount);
+    const payoutResult = await createOrFetchPayout(adminClient, booking_id, worker.id, bookingAmount, bookingRow.community);
 
     return jsonResponse({
       success: true,

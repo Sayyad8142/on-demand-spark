@@ -471,15 +471,17 @@ export default function CompleteBooking() {
             {payout && (
               <div className="w-full max-w-sm bg-muted rounded-2xl p-5 space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Booking Amount</span>
+                  <span className="text-muted-foreground">Customer Pays</span>
                   <span className="font-semibold">₹{payout.gross_amount}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Platform Fee</span>
-                  <span className="font-semibold text-destructive">-₹{payout.platform_fee}</span>
-                </div>
+                {payout.platform_fee > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Platform Fee</span>
+                    <span className="font-semibold text-destructive">−₹{payout.platform_fee}</span>
+                  </div>
+                )}
                 <div className="border-t pt-3 flex justify-between items-center">
-                  <span className="font-bold">Your Payout</span>
+                  <span className="font-bold">You Earn</span>
                   <span className="font-extrabold text-green-600 text-2xl">₹{payout.payout_amount}</span>
                 </div>
                 <p className="text-xs text-muted-foreground text-center pt-1">
