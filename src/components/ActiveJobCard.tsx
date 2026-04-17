@@ -44,9 +44,9 @@ export default function ActiveJobCard({
   const [remainingSeconds, setRemainingSeconds] = useState<number>(0);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [taskPrices, setTaskPrices] = useState<Record<string, number>>({});
-  const [showOtpModal, setShowOtpModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const { i18n } = useTranslation();
+  const navigate = useNavigate();
 
   // Fetch per-task prices
   useEffect(() => {
@@ -332,7 +332,7 @@ export default function ActiveJobCard({
               "bg-gray-400 hover:bg-gray-400 cursor-not-allowed text-white/80" :
               "bg-red-500 hover:bg-red-600 text-white"}`
             }
-            onClick={() => setShowOtpModal(true)}
+            onClick={() => navigate(`/complete-booking/${booking.id}`)}
             disabled={isWorkCompletedDisabled}>
             {updating ? "Updating..." :
               <>
@@ -346,16 +346,6 @@ export default function ActiveJobCard({
           </Button>
         </div>
       </div>
-
-      {/* OTP Completion Modal */}
-      <OtpCompletionModal
-        open={showOtpModal}
-        onClose={() => setShowOtpModal(false)}
-        bookingId={booking.id}
-        onCompleted={() => onStatusUpdate('completed')}
-        flatNo={booking.flat_no}
-        serviceType={booking.service_type}
-      />
 
       {/* Payment Collection Modal */}
       <PaymentCollectionModal
