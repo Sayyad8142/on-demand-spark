@@ -12,7 +12,6 @@ import serviceDishWashing from "@/assets/service-dish-washing.webp";
 import serviceFloorCleaning from "@/assets/service-floor-cleaning.webp";
 import serviceBathroomCleaning from "@/assets/service-bathroom-cleaning.webp";
 import serviceCooking from "@/assets/service-cooking.webp";
-import OtpCompletionModal from "@/components/OtpCompletionModal";
 import PaymentCollectionModal from "@/components/PaymentCollectionModal";
 
 const TASK_CONFIG: Record<string, {label: string; img: string; icon: typeof Utensils}> = {
