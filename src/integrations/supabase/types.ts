@@ -1007,6 +1007,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          platform_fee_percent: number
           radius_m: number | null
           updated_at: string
           value: string
@@ -1020,6 +1021,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          platform_fee_percent?: number
           radius_m?: number | null
           updated_at?: string
           value: string
@@ -1033,9 +1035,40 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          platform_fee_percent?: number
           radius_m?: number | null
           updated_at?: string
           value?: string
+        }
+        Relationships: []
+      }
+      community_platform_fees: {
+        Row: {
+          community_name: string | null
+          community_value: string
+          created_at: string
+          fee_percent: number
+          id: string
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          community_name?: string | null
+          community_value: string
+          created_at?: string
+          fee_percent?: number
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          community_name?: string | null
+          community_value?: string
+          created_at?: string
+          fee_percent?: number
+          id?: string
+          is_active?: boolean
+          updated_at?: string
         }
         Relationships: []
       }
@@ -4545,6 +4578,14 @@ export type Database = {
           p_type?: string
         }
         Returns: Json
+      }
+      get_community_platform_fee: {
+        Args: { p_community: string }
+        Returns: number
+      }
+      get_community_platform_fee_percent: {
+        Args: { _community: string }
+        Returns: number
       }
       get_dispatch_config: {
         Args: { p_community: string; p_service_type: string }
