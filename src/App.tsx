@@ -12,6 +12,7 @@ import { useAutoPushRepair } from "@/hooks/useAutoPushRepair";
 import { useFCMTokenSync } from "@/hooks/useFCMTokenSync";
 import { useAppState } from "@/hooks/useAppState";
 import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
+import { SoftUpdatePrompt } from "@/components/SoftUpdatePrompt";
 import { initNativePush } from "@/native/push";
 import { requestAndroidOverlay } from "@/lib/overlay";
 import { tryAccept } from "@/lib/bookingActions";
@@ -107,7 +108,7 @@ function AppInner() {
   useAppState(); // Refresh JWT when app comes to foreground
   useFCMTokenSync(session?.user?.id); // Sync any natively-persisted FCM token to backend
   useAutoPushRepair(session?.user?.id); // Auto-heal push token on login, open, and resume
-  const { needsUpdate } = useForceUpdateCheck();
+  const { needsUpdate, softUpdate, config: updateConfig, dismissSoftUpdate } = useForceUpdateCheck();
   const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
 
@@ -204,13 +205,13 @@ function AppInner() {
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
-  // If Play Store update is required, show force update screen
+  // If Play Store update is required, show force update screen (HARD BLOCK)
   if (needsUpdate) {
     return (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <ForceUpdateScreen />
+        <ForceUpdateScreen config={updateConfig} />
       </TooltipProvider>
     );
   }
@@ -234,6 +235,7 @@ function AppInner() {
       <Toaster />
       <Sonner />
       {showOtaMandatory && <OtaMandatoryModal bundleInfo={otaResult.bundleInfo!} />}
+      <SoftUpdatePrompt open={softUpdate && !showOtaMandatory} config={updateConfig} onRemindLater={dismissSoftUpdate} />
       <BrowserRouter>
         <NativeNavigationHandler />
         <Routes>
