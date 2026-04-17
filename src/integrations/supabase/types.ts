@@ -3127,6 +3127,51 @@ export type Database = {
           },
         ]
       }
+      worker_fix_followups: {
+        Row: {
+          call_outcome: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          next_followup_at: string | null
+          ops_note: string | null
+          reason_code: string
+          resolved_at: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+          worker_id: string
+        }
+        Insert: {
+          call_outcome?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          next_followup_at?: string | null
+          ops_note?: string | null
+          reason_code: string
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          worker_id: string
+        }
+        Update: {
+          call_outcome?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          next_followup_at?: string | null
+          ops_note?: string | null
+          reason_code?: string
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          worker_id?: string
+        }
+        Relationships: []
+      }
       worker_heartbeats: {
         Row: {
           app_state: string | null
@@ -4206,6 +4251,10 @@ export type Database = {
         Returns: string
       }
       create_admin_email_user: { Args: never; Returns: undefined }
+      create_wallet_booking: {
+        Args: { p_amount_inr: number; p_booking: Json; p_user_id: string }
+        Returns: Json
+      }
       credit_wallet_on_cancel: {
         Args: {
           p_booking_id: string
