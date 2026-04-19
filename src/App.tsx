@@ -14,12 +14,12 @@ import { useAppState } from "@/hooks/useAppState";
 import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
 import { SoftUpdatePrompt } from "@/components/SoftUpdatePrompt";
 import { initNativePush } from "@/native/push";
-import { requestAndroidOverlay } from "@/lib/overlay";
 import { tryAccept } from "@/lib/bookingActions";
 import { requestLocationPermissions } from "@/lib/backgroundLocation";
-import { requestActivityRecognitionPermission } from "@/lib/activityRecognition";
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
 import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
+import PermissionOnboarding from "@/components/PermissionOnboarding";
+import { checkAllPermissions, hasOutstandingPermissions } from "@/lib/permissions";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import Auth from "./pages/Auth";
 import OtpVerify from "./pages/OtpVerify";
@@ -113,6 +113,34 @@ function AppInner() {
   const { needsUpdate, softUpdate, config: updateConfig, dismissSoftUpdate } = useForceUpdateCheck();
   const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+
+  // Decide whether to show the unified Permission Onboarding screen.
+  // Runs once on app start: skip on web, skip if user already dismissed it
+  // and nothing is missing, otherwise show it.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!Capacitor.isNativePlatform()) {
+        setOnboardingChecked(true);
+        return;
+      }
+      const dismissed = localStorage.getItem("perm_onboarding_dismissed_v1") === "true";
+      const states = await checkAllPermissions();
+      const outstanding = hasOutstandingPermissions(states);
+      if (cancelled) return;
+      // Show if: never dismissed OR something is still missing
+      setShowOnboarding(!dismissed || outstanding);
+      setOnboardingChecked(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem("perm_onboarding_dismissed_v1", "true");
+    setShowOnboarding(false);
+  };
 
   // OTA: confirm boot success + check for updates on startup
   useEffect(() => {
@@ -129,41 +157,22 @@ function AppInner() {
     }
   }, []);
 
-  // Request location + activity-recognition permissions on app startup (native only)
+  // Background location permission (separate from the unified onboarding flow,
+  // which only handles the four worker-critical permissions).
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
-
-    console.log('📍 Requesting location permissions on app startup');
-    requestLocationPermissions().then((granted) => {
-      console.log(granted ? '✅ Location permissions granted' : '❌ Location permissions denied');
-    });
-
-    // Ask ACTIVITY_RECOGNITION up-front so the worker isn't surprised by a
-    // popup the first time they accept a booking. Delayed slightly so it
-    // doesn't collide with the battery / overlay dialog shown by MainActivity.
-    const t = setTimeout(() => {
-      requestActivityRecognitionPermission().catch(() => {});
-    }, 1500);
-    return () => clearTimeout(t);
+    requestLocationPermissions().catch(() => {});
   }, []);
 
-  // Initialize native push notifications when we have a session
+  // Initialize native push notifications when we have a session.
+  // Permission prompt is owned by PermissionOnboarding — here we only
+  // register the device token if permission was already granted.
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId) return;
-
-    console.log("User logged in:", userId);
-    
-    if (Capacitor.isNativePlatform()) {
-      console.log("🔔 Initializing native push for user:", userId);
-      initNativePush(userId);
-      
-      // Request overlay permission on Android
-      if (Capacitor.getPlatform() === 'android') {
-        requestAndroidOverlay();
-      }
-    }
-    // Web push registration is now done manually via /troubleshoot or /verify-push pages
+    if (!Capacitor.isNativePlatform()) return;
+    console.log("🔔 Initializing native push for user:", userId);
+    initNativePush(userId);
   }, [session?.user?.id]);
 
   // Handle deep links for booking acceptance
@@ -235,6 +244,18 @@ function AppInner() {
 
   // If mandatory OTA update is required, show OTA modal over the app
   const showOtaMandatory = otaResult?.isMandatory && otaResult?.bundleInfo;
+
+  // Show unified Permission Onboarding before the rest of the app — only on
+  // native, only on first run (or while permissions remain missing).
+  if (onboardingChecked && showOnboarding && Capacitor.isNativePlatform()) {
+    return (
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <PermissionOnboarding onComplete={handleOnboardingComplete} />
+      </TooltipProvider>
+    );
+  }
 
   return (
     <TooltipProvider>
