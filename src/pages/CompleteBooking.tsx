@@ -178,16 +178,41 @@ export default function CompleteBooking() {
         body: { booking_id: bookingId, otp },
       });
 
+      // Try to extract the real backend error message even when invoke surfaces a generic non-2xx.
+      // supabase-js attaches the response on fnError.context (a Response). We read its body if possible.
+      let backendMessage: string | null = null;
+      let backendPayload: any = null;
       if (fnError) {
-        const errorBody = fnError.message || "Something went wrong";
+        try {
+          const ctx: any = (fnError as any).context;
+          if (ctx && typeof ctx.json === "function") {
+            backendPayload = await ctx.clone().json().catch(() => null);
+          }
+          if (!backendPayload && ctx && typeof ctx.text === "function") {
+            const txt = await ctx.clone().text().catch(() => "");
+            if (txt) {
+              try { backendPayload = JSON.parse(txt); } catch { backendMessage = txt; }
+            }
+          }
+          if (backendPayload?.error) backendMessage = String(backendPayload.error);
+        } catch {
+          // ignore — fall back to fnError.message
+        }
+        const errorBody = backendMessage || fnError.message || "Something went wrong";
+        const isPaymentRequired = backendPayload?.payment_required === true;
+
         if (errorBody.includes("already completed")) {
           haptic.success();
           setSuccess(true);
           trackEvent("otp_success", bookingId, { already_completed: true });
-          if (data?.payout) setPayout(data.payout);
+          if (data?.payout || backendPayload?.payout) setPayout(data?.payout ?? backendPayload?.payout);
         } else if (errorBody.includes("Invalid OTP")) {
           handleWrongOtp("Wrong OTP. Please ask the customer for the correct code.");
-        } else if (errorBody.includes("Payment not collected") || errorBody.includes("Payment not completed")) {
+        } else if (
+          isPaymentRequired ||
+          errorBody.includes("Payment not collected") ||
+          errorBody.includes("Payment not completed")
+        ) {
           haptic.error();
           setError("Please collect payment before completing this job.");
           setErrorKind("payment");
