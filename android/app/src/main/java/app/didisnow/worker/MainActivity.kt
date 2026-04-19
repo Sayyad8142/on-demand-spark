@@ -46,10 +46,12 @@ class MainActivity : BridgeActivity() {
         registerPlugin(LiveUpdatePlugin::class.java) // registered as "DidiLiveUpdate" via annotation
         registerPlugin(StepCounterPlugin::class.java)
         
-        android.util.Log.d("MainActivity", "🚀 App starting - checking permissions")
+        android.util.Log.d("MainActivity", "🚀 App starting — permissions handled by JS PermissionOnboarding screen")
         
-        // Show unified permissions dialog (battery + overlay)
-        BatteryOptimizationHelper.showPermissionsDialog(this)
+        // NOTE: native AlertDialog removed. The web-side PermissionOnboarding
+        // screen now drives the entire permission UX (notifications, overlay,
+        // battery optimization, activity recognition) so workers see one
+        // unified flow instead of multiple surprise system popups.
         
         // Handle intent if launched from overlay
         handleNavigationIntent(intent)
