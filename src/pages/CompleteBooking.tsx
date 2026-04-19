@@ -330,7 +330,7 @@ export default function CompleteBooking() {
           {/* Body */}
           <div className="flex-1 overflow-y-auto px-5 py-8 flex flex-col items-center">
             <p className="text-base font-semibold text-foreground mb-2 text-center">
-              Enter 3-digit OTP
+              Enter 4-digit OTP
             </p>
             <p className="text-sm text-muted-foreground mb-2 text-center">
               The OTP is shown in the customer's app
@@ -341,7 +341,7 @@ export default function CompleteBooking() {
 
             <div ref={otpContainerRef} className={cn("mb-6", shake && "animate-otp-shake")}>
               <InputOTP
-                maxLength={3}
+                maxLength={4}
                 value={otp}
                 onChange={(v) => {
                   setOtp(v);
@@ -355,7 +355,7 @@ export default function CompleteBooking() {
                 autoFocus
               >
                 <InputOTPGroup className="gap-3">
-                  {[0, 1, 2].map((i) => (
+                  {[0, 1, 2, 3].map((i) => (
                     <InputOTPSlot
                       key={i}
                       index={i}
@@ -430,7 +430,7 @@ export default function CompleteBooking() {
                   <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
                     <li>Open the Didi Now app</li>
                     <li>Go to the active booking screen</li>
-                    <li>Read out the 3-digit OTP shown there</li>
+                    <li>Read out the 4-digit OTP shown there</li>
                   </ol>
                   {bookingMeta?.cust_phone && (
                     <Button
@@ -454,7 +454,7 @@ export default function CompleteBooking() {
           >
             <Button
               onClick={() => handleSubmit(false)}
-              disabled={loading || otp.length < 3}
+              disabled={loading || otp.length < 4}
               className="w-full h-14 text-base font-bold rounded-2xl bg-pink-600 hover:bg-pink-700 text-white"
             >
               {loading ? (
