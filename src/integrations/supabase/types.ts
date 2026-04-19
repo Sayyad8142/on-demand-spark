@@ -675,7 +675,9 @@ export type Database = {
           bathroom_count: number | null
           booking_type: string
           can_cancel_until: string | null
+          cancel_fault_party: string | null
           cancel_reason: string | null
+          cancel_reason_code: string | null
           cancel_source: string | null
           cancelled_at: string | null
           community: string
@@ -757,7 +759,9 @@ export type Database = {
           bathroom_count?: number | null
           booking_type: string
           can_cancel_until?: string | null
+          cancel_fault_party?: string | null
           cancel_reason?: string | null
+          cancel_reason_code?: string | null
           cancel_source?: string | null
           cancelled_at?: string | null
           community: string
@@ -839,7 +843,9 @@ export type Database = {
           bathroom_count?: number | null
           booking_type?: string
           can_cancel_until?: string | null
+          cancel_fault_party?: string | null
           cancel_reason?: string | null
+          cancel_reason_code?: string | null
           cancel_source?: string | null
           cancelled_at?: string | null
           community?: string
@@ -3633,6 +3639,54 @@ export type Database = {
           },
         ]
       }
+      worker_fault_events: {
+        Row: {
+          booking_id: string | null
+          created_at: string
+          id: string
+          note: string | null
+          reason_code: string
+          source: string
+          triggered_by: string | null
+          worker_id: string
+        }
+        Insert: {
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          reason_code: string
+          source: string
+          triggered_by?: string | null
+          worker_id: string
+        }
+        Update: {
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          reason_code?: string
+          source?: string
+          triggered_by?: string | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_fault_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_fault_events_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_fix_followups: {
         Row: {
           call_outcome: string | null
@@ -3973,6 +4027,54 @@ export type Database = {
           },
         ]
       }
+      worker_reach_events: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          note: string | null
+          reach_outcome: string
+          source: string
+          user_id: string | null
+          worker_id: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          reach_outcome: string
+          source?: string
+          user_id?: string | null
+          worker_id: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          reach_outcome?: string
+          source?: string
+          user_id?: string | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_reach_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_reach_events_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_registration_requests: {
         Row: {
           community: string
@@ -4062,6 +4164,7 @@ export type Database = {
       workers: {
         Row: {
           account_holder_name: string | null
+          admin_fault_7d: number
           admin_override_rating: number | null
           app_version: string | null
           bank_account_number: string | null
@@ -4109,6 +4212,7 @@ export type Database = {
           last_seen_at: string | null
           location_enabled: boolean | null
           no_ack_count: number | null
+          not_reached_7d: number
           notification_permission_granted: boolean | null
           payout_last_error: string | null
           payout_ready: boolean
@@ -4121,6 +4225,7 @@ export type Database = {
           push_block_reason: string | null
           push_health_status: string
           rating: number | null
+          rating_bucket: string
           razorpay_contact_id: string | null
           razorpay_fund_account_id: string | null
           reachability_score: number | null
@@ -4142,6 +4247,7 @@ export type Database = {
         }
         Insert: {
           account_holder_name?: string | null
+          admin_fault_7d?: number
           admin_override_rating?: number | null
           app_version?: string | null
           bank_account_number?: string | null
@@ -4189,6 +4295,7 @@ export type Database = {
           last_seen_at?: string | null
           location_enabled?: boolean | null
           no_ack_count?: number | null
+          not_reached_7d?: number
           notification_permission_granted?: boolean | null
           payout_last_error?: string | null
           payout_ready?: boolean
@@ -4201,6 +4308,7 @@ export type Database = {
           push_block_reason?: string | null
           push_health_status?: string
           rating?: number | null
+          rating_bucket?: string
           razorpay_contact_id?: string | null
           razorpay_fund_account_id?: string | null
           reachability_score?: number | null
@@ -4222,6 +4330,7 @@ export type Database = {
         }
         Update: {
           account_holder_name?: string | null
+          admin_fault_7d?: number
           admin_override_rating?: number | null
           app_version?: string | null
           bank_account_number?: string | null
@@ -4269,6 +4378,7 @@ export type Database = {
           last_seen_at?: string | null
           location_enabled?: boolean | null
           no_ack_count?: number | null
+          not_reached_7d?: number
           notification_permission_granted?: boolean | null
           payout_last_error?: string | null
           payout_ready?: boolean
@@ -4281,6 +4391,7 @@ export type Database = {
           push_block_reason?: string | null
           push_health_status?: string
           rating?: number | null
+          rating_bucket?: string
           razorpay_contact_id?: string | null
           razorpay_fund_account_id?: string | null
           reachability_score?: number | null
@@ -4394,6 +4505,20 @@ export type Database = {
           web_version: string
         }[]
       }
+      admin_log_worker_fault: {
+        Args: {
+          p_booking_id: string
+          p_note?: string
+          p_reason_code: string
+          p_source: string
+          p_worker_id: string
+        }
+        Returns: string
+      }
+      admin_log_worker_reach: {
+        Args: { p_booking_id: string; p_note?: string; p_outcome: string }
+        Returns: string
+      }
       admin_quick_stats: { Args: never; Returns: Json }
       admin_reject_worker_registration: {
         Args: { p_rejection_reason: string; p_request_id: string }
@@ -4428,6 +4553,7 @@ export type Database = {
             }
             Returns: {
               account_holder_name: string | null
+              admin_fault_7d: number
               admin_override_rating: number | null
               app_version: string | null
               bank_account_number: string | null
@@ -4475,6 +4601,7 @@ export type Database = {
               last_seen_at: string | null
               location_enabled: boolean | null
               no_ack_count: number | null
+              not_reached_7d: number
               notification_permission_granted: boolean | null
               payout_last_error: string | null
               payout_ready: boolean
@@ -4487,6 +4614,7 @@ export type Database = {
               push_block_reason: string | null
               push_health_status: string
               rating: number | null
+              rating_bucket: string
               razorpay_contact_id: string | null
               razorpay_fund_account_id: string | null
               reachability_score: number | null
@@ -4517,6 +4645,7 @@ export type Database = {
             Args: { p_worker: Json }
             Returns: {
               account_holder_name: string | null
+              admin_fault_7d: number
               admin_override_rating: number | null
               app_version: string | null
               bank_account_number: string | null
@@ -4564,6 +4693,7 @@ export type Database = {
               last_seen_at: string | null
               location_enabled: boolean | null
               no_ack_count: number | null
+              not_reached_7d: number
               notification_permission_granted: boolean | null
               payout_last_error: string | null
               payout_ready: boolean
@@ -4576,6 +4706,7 @@ export type Database = {
               push_block_reason: string | null
               push_health_status: string
               rating: number | null
+              rating_bucket: string
               razorpay_contact_id: string | null
               razorpay_fund_account_id: string | null
               reachability_score: number | null
@@ -4640,7 +4771,9 @@ export type Database = {
               bathroom_count: number | null
               booking_type: string
               can_cancel_until: string | null
+              cancel_fault_party: string | null
               cancel_reason: string | null
+              cancel_reason_code: string | null
               cancel_source: string | null
               cancelled_at: string | null
               community: string
@@ -5197,17 +5330,19 @@ export type Database = {
       get_worker_score_debug: {
         Args: { p_community?: string; p_service_type?: string }
         Returns: {
-          acceptance_rate_7d: number
           completed_7d: number
           effective_rating: number
           final_rank: number
-          is_new_worker: boolean
+          is_active: boolean
+          is_available: boolean
+          is_busy: boolean
           last_seen_at: string
-          online_hours: number
+          not_reached_7d: number
           priority_score: number
+          rating_bucket: string
           score_reason: string
           score_updated_at: string
-          total_ratings: number
+          worker_fault_7d: number
           worker_id: string
           worker_name: string
         }[]
@@ -5620,6 +5755,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      recalc_worker_priority_score_one: {
+        Args: { p_worker_id: string }
+        Returns: undefined
+      }
       recalc_worker_priority_scores: { Args: never; Returns: undefined }
       recalc_worker_rating: {
         Args: { p_worker_id: string }
@@ -5809,7 +5948,9 @@ export type Database = {
           bathroom_count: number | null
           booking_type: string
           can_cancel_until: string | null
+          cancel_fault_party: string | null
           cancel_reason: string | null
+          cancel_reason_code: string | null
           cancel_source: string | null
           cancelled_at: string | null
           community: string
