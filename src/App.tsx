@@ -245,6 +245,18 @@ function AppInner() {
   // If mandatory OTA update is required, show OTA modal over the app
   const showOtaMandatory = otaResult?.isMandatory && otaResult?.bundleInfo;
 
+  // Show unified Permission Onboarding before the rest of the app — only on
+  // native, only on first run (or while permissions remain missing).
+  if (onboardingChecked && showOnboarding && Capacitor.isNativePlatform()) {
+    return (
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <PermissionOnboarding onComplete={handleOnboardingComplete} />
+      </TooltipProvider>
+    );
+  }
+
   return (
     <TooltipProvider>
       <Toaster />
