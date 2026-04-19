@@ -17,6 +17,22 @@ import { Device } from "@capacitor/device";
 import { checkOverlayPermission, requestOverlayPermission } from "@/native/overlay";
 import { requestActivityRecognitionPermission } from "@/lib/activityRecognition";
 
+interface OverlayPlugin {
+  checkPermission(): Promise<{ granted: boolean }>;
+  requestPermission(): Promise<{ granted: boolean }>;
+  openOverlaySettings(): Promise<{ opened: boolean }>;
+}
+
+let overlayPlugin: OverlayPlugin | null = null;
+function getOverlayPlugin(): OverlayPlugin | null {
+  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return null;
+  if (!overlayPlugin) {
+    try { overlayPlugin = registerPlugin<OverlayPlugin>("OverlayPlugin"); }
+    catch { return null; }
+  }
+  return overlayPlugin;
+}
+
 export type PermissionId =
   | "notifications"
   | "overlay"
@@ -133,8 +149,21 @@ export async function requestOverlay(): Promise<boolean> {
   if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return true;
   // Native plugin opens system Settings — user has to flip a toggle and
   // come back; immediate return value is rarely true. We re-check on resume.
-  await requestOverlayPermission();
-  // Small delay then re-check
+  console.log("[Permissions] Requesting overlay permission (opening Settings)...");
+  try {
+    // Try registerPlugin path first (more reliable than window.Capacitor.Plugins lookup)
+    const p = getOverlayPlugin();
+    if (p) {
+      try { await p.requestPermission(); }
+      catch (e) { console.warn("[Permissions] OverlayPlugin.requestPermission rejected, trying openOverlaySettings", e);
+        try { await p.openOverlaySettings(); } catch (e2) { console.error("[Permissions] openOverlaySettings failed", e2); }
+      }
+    } else {
+      await requestOverlayPermission();
+    }
+  } catch (e) {
+    console.error("[Permissions] requestOverlay failed", e);
+  }
   await new Promise(r => setTimeout(r, 400));
   return await checkOverlayPermission();
 }
@@ -157,15 +186,18 @@ export async function checkBatteryState(): Promise<PermissionState> {
 export async function requestBatteryExemption(): Promise<boolean> {
   if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return true;
   const plugin = getBatteryPlugin();
-  if (!plugin) return false;
+  if (!plugin) {
+    console.warn("[Permissions] BatteryOptimization plugin not available — APK may be outdated. Rebuild with `npx cap sync android` and reinstall.");
+    return false;
+  }
   try {
+    console.log("[Permissions] Requesting battery optimization exemption (opening Settings)...");
     await plugin.request();
-    // Settings page opened — user has to flip a toggle and come back.
-    // Re-check once they return (handled by App resume listener).
     await new Promise(r => setTimeout(r, 400));
     const { ignoring } = await plugin.isIgnoring().catch(() => ({ ignoring: false }));
     return ignoring;
-  } catch {
+  } catch (e) {
+    console.error("[Permissions] requestBatteryExemption failed", e);
     return false;
   }
 }
