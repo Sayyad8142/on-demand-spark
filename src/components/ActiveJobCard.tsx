@@ -194,7 +194,7 @@ export default function ActiveJobCard({
     window.speechSynthesis.speak(utterance);
   };
 
-  const isWorkCompletedDisabled = updating || remainingSeconds > 0;
+  const isWorkCompletedDisabled = updating;
 
   const formatCountdown = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -352,9 +352,6 @@ export default function ActiveJobCard({
               <>
                 <KeyRound className="w-6 h-6 mr-2" />
                 Complete with OTP
-                {remainingSeconds > 0 &&
-                  <span className="ml-2 text-sm font-normal opacity-80">({formatCountdown(remainingSeconds)})</span>
-                }
               </>
             }
           </Button>
