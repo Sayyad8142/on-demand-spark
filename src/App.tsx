@@ -17,6 +17,7 @@ import { initNativePush } from "@/native/push";
 import { requestAndroidOverlay } from "@/lib/overlay";
 import { tryAccept } from "@/lib/bookingActions";
 import { requestLocationPermissions } from "@/lib/backgroundLocation";
+import { requestActivityRecognitionPermission } from "@/lib/activityRecognition";
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
 import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
@@ -128,18 +129,22 @@ function AppInner() {
     }
   }, []);
 
-  // Request location permissions on app startup for native platforms
+  // Request location + activity-recognition permissions on app startup (native only)
   useEffect(() => {
-    if (Capacitor.isNativePlatform()) {
-      console.log('📍 Requesting location permissions on app startup');
-      requestLocationPermissions().then((granted) => {
-        if (granted) {
-          console.log('✅ Location permissions granted');
-        } else {
-          console.log('❌ Location permissions denied');
-        }
-      });
-    }
+    if (!Capacitor.isNativePlatform()) return;
+
+    console.log('📍 Requesting location permissions on app startup');
+    requestLocationPermissions().then((granted) => {
+      console.log(granted ? '✅ Location permissions granted' : '❌ Location permissions denied');
+    });
+
+    // Ask ACTIVITY_RECOGNITION up-front so the worker isn't surprised by a
+    // popup the first time they accept a booking. Delayed slightly so it
+    // doesn't collide with the battery / overlay dialog shown by MainActivity.
+    const t = setTimeout(() => {
+      requestActivityRecognitionPermission().catch(() => {});
+    }, 1500);
+    return () => clearTimeout(t);
   }, []);
 
   // Initialize native push notifications when we have a session
