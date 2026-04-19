@@ -45,6 +45,7 @@ class MainActivity : BridgeActivity() {
         registerPlugin(SmsRetrieverPlugin::class.java)
         registerPlugin(LiveUpdatePlugin::class.java) // registered as "DidiLiveUpdate" via annotation
         registerPlugin(StepCounterPlugin::class.java)
+        registerPlugin(BatteryOptimizationPlugin::class.java)
         
         android.util.Log.d("MainActivity", "🚀 App starting — permissions handled by JS PermissionOnboarding screen")
         
