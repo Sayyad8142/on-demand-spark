@@ -5,6 +5,7 @@ import { Bell, Layers, BatteryCharging, Activity, Check, X, AlertTriangle, Loade
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 import {
   type PermissionId,
   type PermissionState,
@@ -79,6 +80,14 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
   }, [refresh]);
 
   const handleRequest = async (id: PermissionId) => {
+    // On web preview these only work on a real Android build
+    if (id !== "notifications" && !Capacitor.isNativePlatform()) {
+      toast({
+        title: "Available on Android only",
+        description: "This permission can only be enabled on the installed Android app.",
+      });
+      return;
+    }
     setBusyId(id);
     try {
       switch (id) {
@@ -87,6 +96,13 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
         case "battery":       await requestBatteryExemption(); break;
         case "activity":      await requestActivity(); break;
       }
+    } catch (e) {
+      console.error(`[PermissionOnboarding] ${id} request failed`, e);
+      toast({
+        title: "Couldn't open settings",
+        description: "Please try again or open Android Settings manually.",
+        variant: "destructive",
+      });
     } finally {
       setBusyId(null);
       // Small delay to let the OS settle, then re-check.
