@@ -157,8 +157,8 @@ export default function CompleteBooking() {
 
   const handleSubmit = async (isRetry = false) => {
     if (submitLockRef.current || loading) return;
-    if (otp.length < 3) {
-      setError("Please enter the complete 3-digit OTP");
+    if (otp.length < 4) {
+      setError("Please enter the complete 4-digit OTP");
       setErrorKind("validation");
       triggerShake();
       return;
