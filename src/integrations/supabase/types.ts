@@ -1042,36 +1042,6 @@ export type Database = {
         }
         Relationships: []
       }
-      community_platform_fees: {
-        Row: {
-          community_name: string | null
-          community_value: string
-          created_at: string
-          fee_percent: number
-          id: string
-          is_active: boolean
-          updated_at: string
-        }
-        Insert: {
-          community_name?: string | null
-          community_value: string
-          created_at?: string
-          fee_percent?: number
-          id?: string
-          is_active?: boolean
-          updated_at?: string
-        }
-        Update: {
-          community_name?: string | null
-          community_value?: string
-          created_at?: string
-          fee_percent?: number
-          id?: string
-          is_active?: boolean
-          updated_at?: string
-        }
-        Relationships: []
-      }
       contact_leads: {
         Row: {
           created_at: string | null
@@ -3097,6 +3067,359 @@ export type Database = {
         }
         Relationships: []
       }
+      vm_addresses: {
+        Row: {
+          address_line: string
+          city: string
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          is_default: boolean
+          label: string
+          landmark: string | null
+          pincode: string | null
+          state: string | null
+          user_id: string
+        }
+        Insert: {
+          address_line: string
+          city: string
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          landmark?: string | null
+          pincode?: string | null
+          state?: string | null
+          user_id: string
+        }
+        Update: {
+          address_line?: string
+          city?: string
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          landmark?: string | null
+          pincode?: string | null
+          state?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vm_banners: {
+        Row: {
+          bg_color: string | null
+          created_at: string
+          cta_link: string | null
+          cta_text: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          subtitle: string | null
+          title: string
+        }
+        Insert: {
+          bg_color?: string | null
+          created_at?: string
+          cta_link?: string | null
+          cta_text?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          subtitle?: string | null
+          title: string
+        }
+        Update: {
+          bg_color?: string | null
+          created_at?: string
+          cta_link?: string | null
+          cta_text?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          subtitle?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      vm_categories: {
+        Row: {
+          created_at: string
+          display_order: number
+          icon: string | null
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      vm_order_items: {
+        Row: {
+          created_at: string
+          id: string
+          line_total: number
+          order_id: string
+          price: number
+          product_id: string | null
+          product_name: string
+          quantity: number
+          unit: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          line_total: number
+          order_id: string
+          price: number
+          product_id?: string | null
+          product_name: string
+          quantity: number
+          unit: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          line_total?: number
+          order_id?: string
+          price?: number
+          product_id?: string | null
+          product_name?: string
+          quantity?: number
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vm_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "vm_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vm_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "vm_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vm_orders: {
+        Row: {
+          admin_notes: string | null
+          business_name: string | null
+          created_at: string
+          customer_name: string | null
+          delivery_address: string
+          delivery_notes: string | null
+          id: string
+          mobile: string | null
+          order_number: string
+          payment_method: Database["public"]["Enums"]["vm_payment_method"]
+          payment_status: string
+          status: Database["public"]["Enums"]["vm_order_status"]
+          subtotal: number
+          total: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          business_name?: string | null
+          created_at?: string
+          customer_name?: string | null
+          delivery_address: string
+          delivery_notes?: string | null
+          id?: string
+          mobile?: string | null
+          order_number?: string
+          payment_method?: Database["public"]["Enums"]["vm_payment_method"]
+          payment_status?: string
+          status?: Database["public"]["Enums"]["vm_order_status"]
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          business_name?: string | null
+          created_at?: string
+          customer_name?: string | null
+          delivery_address?: string
+          delivery_notes?: string | null
+          id?: string
+          mobile?: string | null
+          order_number?: string
+          payment_method?: Database["public"]["Enums"]["vm_payment_method"]
+          payment_status?: string
+          status?: Database["public"]["Enums"]["vm_order_status"]
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vm_products: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          description: string | null
+          freshness_note: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_featured: boolean
+          is_out_of_stock: boolean
+          min_order_qty: number
+          name: string
+          price: number
+          stock: number
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          freshness_note?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_featured?: boolean
+          is_out_of_stock?: boolean
+          min_order_qty?: number
+          name: string
+          price: number
+          stock?: number
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          freshness_note?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_featured?: boolean
+          is_out_of_stock?: boolean
+          min_order_qty?: number
+          name?: string
+          price?: number
+          stock?: number
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vm_products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "vm_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vm_profiles: {
+        Row: {
+          business_name: string | null
+          business_type: Database["public"]["Enums"]["vm_business_type"] | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          gst_number: string | null
+          id: string
+          internal_remarks: string | null
+          is_active: boolean
+          mobile: string | null
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          business_name?: string | null
+          business_type?: Database["public"]["Enums"]["vm_business_type"] | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          gst_number?: string | null
+          id?: string
+          internal_remarks?: string | null
+          is_active?: boolean
+          mobile?: string | null
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          business_name?: string | null
+          business_type?: Database["public"]["Enums"]["vm_business_type"] | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          gst_number?: string | null
+          id?: string
+          internal_remarks?: string | null
+          is_active?: boolean
+          mobile?: string | null
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vm_settings: {
+        Row: {
+          business_name: string | null
+          contact_phone: string | null
+          id: string
+          updated_at: string
+          welcome_text: string | null
+        }
+        Insert: {
+          business_name?: string | null
+          contact_phone?: string | null
+          id?: string
+          updated_at?: string
+          welcome_text?: string | null
+        }
+        Update: {
+          business_name?: string | null
+          contact_phone?: string | null
+          id?: string
+          updated_at?: string
+          welcome_text?: string | null
+        }
+        Relationships: []
+      }
       wallet_transactions: {
         Row: {
           amount_inr: number
@@ -4579,10 +4902,6 @@ export type Database = {
         }
         Returns: Json
       }
-      get_community_platform_fee: {
-        Args: { p_community: string }
-        Returns: number
-      }
       get_community_platform_fee_percent: {
         Args: { _community: string }
         Returns: number
@@ -5357,6 +5676,14 @@ export type Database = {
         Returns: undefined
       }
       run_sla_with_secret: { Args: { p_secret: string }; Returns: undefined }
+      safe_wallet_increment: {
+        Args: {
+          p_amount_delta: number
+          p_min_balance?: number
+          p_user_id: string
+        }
+        Returns: Json
+      }
       schedule_assignment_timeout: {
         Args: { p_assignment_id: string; p_expires_at: string }
         Returns: undefined
@@ -5641,6 +5968,20 @@ export type Database = {
       maid_task: "floor_cleaning" | "dish_washing"
       payment_status: "pending" | "paid" | "partial" | "overdue" | "cancelled"
       user_role: "admin" | "staff" | "landlord"
+      vm_business_type:
+        | "restaurant"
+        | "hotel"
+        | "cloud_kitchen"
+        | "caterer"
+        | "other"
+      vm_order_status:
+        | "pending"
+        | "confirmed"
+        | "packed"
+        | "out_for_delivery"
+        | "delivered"
+        | "cancelled"
+      vm_payment_method: "cod" | "pay_later" | "online_transfer"
     }
     CompositeTypes: {
       http_header: {
@@ -5788,6 +6129,22 @@ export const Constants = {
       maid_task: ["floor_cleaning", "dish_washing"],
       payment_status: ["pending", "paid", "partial", "overdue", "cancelled"],
       user_role: ["admin", "staff", "landlord"],
+      vm_business_type: [
+        "restaurant",
+        "hotel",
+        "cloud_kitchen",
+        "caterer",
+        "other",
+      ],
+      vm_order_status: [
+        "pending",
+        "confirmed",
+        "packed",
+        "out_for_delivery",
+        "delivered",
+        "cancelled",
+      ],
+      vm_payment_method: ["cod", "pay_later", "online_transfer"],
     },
   },
 } as const
