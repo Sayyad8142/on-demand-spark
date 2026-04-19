@@ -43,8 +43,8 @@ interface StepCounterPlugin {
 }
 
 interface BatteryPlugin {
-  isIgnoringBatteryOptimizations?(): Promise<{ ignoring: boolean }>;
-  requestIgnoreBatteryOptimizations?(): Promise<{ requested: boolean }>;
+  isIgnoring(): Promise<{ ignoring: boolean }>;
+  request(): Promise<{ requested: boolean }>;
 }
 
 let stepPlugin: StepCounterPlugin | null = null;
@@ -57,10 +57,15 @@ function getStepPlugin(): StepCounterPlugin | null {
   return stepPlugin;
 }
 
+let batteryPlugin: BatteryPlugin | null = null;
 function getBatteryPlugin(): BatteryPlugin | null {
-  // BatteryOptimization is exposed natively via the OverlayPlugin/MainActivity
-  // dialog. We don't have a JS bridge for "is ignoring" yet — see notes below.
-  return null;
+  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return null;
+  if (!batteryPlugin) {
+    try {
+      batteryPlugin = registerPlugin<BatteryPlugin>("BatteryOptimization");
+    } catch { return null; }
+  }
+  return batteryPlugin;
 }
 
 // ---------- Notifications ----------
