@@ -157,8 +157,8 @@ export default function CompleteBooking() {
 
   const handleSubmit = async (isRetry = false) => {
     if (submitLockRef.current || loading) return;
-    if (otp.length < 3) {
-      setError("Please enter the complete 3-digit OTP");
+    if (otp.length < 4) {
+      setError("Please enter the complete 4-digit OTP");
       setErrorKind("validation");
       triggerShake();
       return;
@@ -178,16 +178,41 @@ export default function CompleteBooking() {
         body: { booking_id: bookingId, otp },
       });
 
+      // Try to extract the real backend error message even when invoke surfaces a generic non-2xx.
+      // supabase-js attaches the response on fnError.context (a Response). We read its body if possible.
+      let backendMessage: string | null = null;
+      let backendPayload: any = null;
       if (fnError) {
-        const errorBody = fnError.message || "Something went wrong";
+        try {
+          const ctx: any = (fnError as any).context;
+          if (ctx && typeof ctx.json === "function") {
+            backendPayload = await ctx.clone().json().catch(() => null);
+          }
+          if (!backendPayload && ctx && typeof ctx.text === "function") {
+            const txt = await ctx.clone().text().catch(() => "");
+            if (txt) {
+              try { backendPayload = JSON.parse(txt); } catch { backendMessage = txt; }
+            }
+          }
+          if (backendPayload?.error) backendMessage = String(backendPayload.error);
+        } catch {
+          // ignore — fall back to fnError.message
+        }
+        const errorBody = backendMessage || fnError.message || "Something went wrong";
+        const isPaymentRequired = backendPayload?.payment_required === true;
+
         if (errorBody.includes("already completed")) {
           haptic.success();
           setSuccess(true);
           trackEvent("otp_success", bookingId, { already_completed: true });
-          if (data?.payout) setPayout(data.payout);
+          if (data?.payout || backendPayload?.payout) setPayout(data?.payout ?? backendPayload?.payout);
         } else if (errorBody.includes("Invalid OTP")) {
           handleWrongOtp("Wrong OTP. Please ask the customer for the correct code.");
-        } else if (errorBody.includes("Payment not collected") || errorBody.includes("Payment not completed")) {
+        } else if (
+          isPaymentRequired ||
+          errorBody.includes("Payment not collected") ||
+          errorBody.includes("Payment not completed")
+        ) {
           haptic.error();
           setError("Please collect payment before completing this job.");
           setErrorKind("payment");
@@ -280,7 +305,7 @@ export default function CompleteBooking() {
               </div>
               <h1 className="text-2xl font-extrabold leading-tight">Complete Job</h1>
               <p className="text-white/90 text-sm mt-1.5 max-w-xs">
-                Ask the customer for the 3-digit OTP
+                Ask the customer for the 4-digit OTP
               </p>
             </div>
 
@@ -305,7 +330,7 @@ export default function CompleteBooking() {
           {/* Body */}
           <div className="flex-1 overflow-y-auto px-5 py-8 flex flex-col items-center">
             <p className="text-base font-semibold text-foreground mb-2 text-center">
-              Enter 3-digit OTP
+              Enter 4-digit OTP
             </p>
             <p className="text-sm text-muted-foreground mb-2 text-center">
               The OTP is shown in the customer's app
@@ -316,7 +341,7 @@ export default function CompleteBooking() {
 
             <div ref={otpContainerRef} className={cn("mb-6", shake && "animate-otp-shake")}>
               <InputOTP
-                maxLength={3}
+                maxLength={4}
                 value={otp}
                 onChange={(v) => {
                   setOtp(v);
@@ -330,7 +355,7 @@ export default function CompleteBooking() {
                 autoFocus
               >
                 <InputOTPGroup className="gap-3">
-                  {[0, 1, 2].map((i) => (
+                  {[0, 1, 2, 3].map((i) => (
                     <InputOTPSlot
                       key={i}
                       index={i}
@@ -405,7 +430,7 @@ export default function CompleteBooking() {
                   <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
                     <li>Open the Didi Now app</li>
                     <li>Go to the active booking screen</li>
-                    <li>Read out the 3-digit OTP shown there</li>
+                    <li>Read out the 4-digit OTP shown there</li>
                   </ol>
                   {bookingMeta?.cust_phone && (
                     <Button
@@ -429,7 +454,7 @@ export default function CompleteBooking() {
           >
             <Button
               onClick={() => handleSubmit(false)}
-              disabled={loading || otp.length < 3}
+              disabled={loading || otp.length < 4}
               className="w-full h-14 text-base font-bold rounded-2xl bg-pink-600 hover:bg-pink-700 text-white"
             >
               {loading ? (
