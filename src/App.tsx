@@ -15,7 +15,7 @@ import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
 import { SoftUpdatePrompt } from "@/components/SoftUpdatePrompt";
 import { initNativePush } from "@/native/push";
 import { tryAccept } from "@/lib/bookingActions";
-import { requestLocationPermissions } from "@/lib/backgroundLocation";
+// requestLocationPermissions intentionally not imported — see startup effect note below.
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
 import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
 import PermissionOnboarding from "@/components/PermissionOnboarding";
@@ -157,12 +157,11 @@ function AppInner() {
     }
   }, []);
 
-  // Background location permission (separate from the unified onboarding flow,
-  // which only handles the four worker-critical permissions).
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
-    requestLocationPermissions().catch(() => {});
-  }, []);
+  // NOTE: Location permission request intentionally disabled at startup.
+  // For this phase, only the unified PermissionOnboarding flow is allowed
+  // to ask for permissions (notifications, overlay, battery, activity).
+  // Re-enable here later if/when location is added to the onboarding screen.
+
 
   // Initialize native push notifications when we have a session.
   // Permission prompt is owned by PermissionOnboarding — here we only
