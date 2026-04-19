@@ -145,40 +145,29 @@ export async function checkBatteryState(): Promise<PermissionState> {
     return { id: "battery", status: "not_required", canRequest: false };
   }
   const plugin = getBatteryPlugin();
-  if (plugin?.isIgnoringBatteryOptimizations) {
+  if (plugin) {
     try {
-      const { ignoring } = await plugin.isIgnoringBatteryOptimizations();
+      const { ignoring } = await plugin.isIgnoring();
       return { id: "battery", status: ignoring ? "granted" : "missing", canRequest: true };
     } catch { /* fall through */ }
   }
-  // No JS bridge yet — assume "missing" so user can open Settings.
-  // After they return, the screen still shows it as missing (unknown), so
-  // we mark it as "unknown" to avoid scaring users who already enabled it.
   return { id: "battery", status: "unknown", canRequest: true };
 }
 
 export async function requestBatteryExemption(): Promise<boolean> {
   if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return true;
-  // Reuse OverlayPlugin's sibling helper through the native dialog path.
-  // We invoke via a custom Intent through a tiny shim: opening the system
-  // settings page if no plugin is wired. Falls back to no-op.
+  const plugin = getBatteryPlugin();
+  if (!plugin) return false;
   try {
-    // @ts-ignore
-    const plugin = (window as any)?.Capacitor?.Plugins?.BatteryOptimization;
-    if (plugin?.request) {
-      await plugin.request();
-      return true;
-    }
-  } catch { /* ignore */ }
-  // Last-resort: open app settings via overlay plugin (user can tap Battery there)
-  try {
-    // @ts-ignore
-    const overlay = (window as any)?.Capacitor?.Plugins?.OverlayPlugin;
-    if (overlay?.openOverlaySettings) {
-      // Not ideal, but better than nothing — instructs user to find Battery section
-    }
-  } catch { /* ignore */ }
-  return false;
+    await plugin.request();
+    // Settings page opened — user has to flip a toggle and come back.
+    // Re-check once they return (handled by App resume listener).
+    await new Promise(r => setTimeout(r, 400));
+    const { ignoring } = await plugin.isIgnoring().catch(() => ({ ignoring: false }));
+    return ignoring;
+  } catch {
+    return false;
+  }
 }
 
 // ---------- Activity recognition (Android 10+ only) ----------
