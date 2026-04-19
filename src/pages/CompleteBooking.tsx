@@ -305,7 +305,7 @@ export default function CompleteBooking() {
               </div>
               <h1 className="text-2xl font-extrabold leading-tight">Complete Job</h1>
               <p className="text-white/90 text-sm mt-1.5 max-w-xs">
-                Ask the customer for the 3-digit OTP
+                Ask the customer for the 4-digit OTP
               </p>
             </div>
 
