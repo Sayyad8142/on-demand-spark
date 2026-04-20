@@ -80,6 +80,7 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
   }, [refresh]);
 
   const handleRequest = async (id: PermissionId) => {
+    console.log(`[PermissionOnboarding] 👆 Enable tapped — id=${id}, native=${Capacitor.isNativePlatform()}`);
     // On web preview these only work on a real Android build
     if (id !== "notifications" && !Capacitor.isNativePlatform()) {
       toast({
@@ -91,11 +92,24 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
     setBusyId(id);
     try {
       switch (id) {
-        case "notifications": await requestNotificationPermission(); break;
-        case "overlay":       await requestOverlay(); break;
-        case "battery":       await requestBatteryExemption(); break;
-        case "activity":      await requestActivity(); break;
+        case "notifications":
+          console.log("[PermissionOnboarding] → requestNotificationPermission()");
+          await requestNotificationPermission();
+          break;
+        case "overlay":
+          console.log("[PermissionOnboarding] → requestOverlay()");
+          await requestOverlay();
+          break;
+        case "battery":
+          console.log("[PermissionOnboarding] → requestBatteryExemption()");
+          await requestBatteryExemption();
+          break;
+        case "activity":
+          console.log("[PermissionOnboarding] → requestActivity()");
+          await requestActivity();
+          break;
       }
+      console.log(`[PermissionOnboarding] ✅ ${id} request returned without throwing`);
     } catch (e) {
       console.error(`[PermissionOnboarding] ${id} request failed`, e);
       toast({

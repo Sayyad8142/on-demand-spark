@@ -66,7 +66,9 @@ export async function requestActivityRecognitionPermission(): Promise<boolean> {
       console.log(
         `[Movement] Requesting ACTIVITY_RECOGNITION permission (sensor: ${support.sensorType})`
       );
+      console.log("[Movement] 🟦 Calling native StepCounter.requestPermission()...");
       const { granted } = await p.requestPermission();
+      console.log("[Movement] Native StepCounter.requestPermission resolved:", granted);
       if (granted) {
         console.log("[Movement] ✅ Activity permission granted");
       } else {
@@ -74,8 +76,8 @@ export async function requestActivityRecognitionPermission(): Promise<boolean> {
       }
       return granted;
     } catch (e) {
-      console.warn("[Movement] Activity permission request failed:", e);
-      return false;
+      console.error("[Movement] ❌ Activity permission request failed:", e);
+      throw e;
     } finally {
       requestInFlight = null;
     }
