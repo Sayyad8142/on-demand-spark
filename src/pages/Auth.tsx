@@ -15,6 +15,8 @@ import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
 import { Phone, UserRound } from "lucide-react";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
+import maidServiceIcon from "@/assets/service-maid.png";
+import bathroomServiceIcon from "@/assets/service-bathroom.png";
 
 
 // @ts-ignore - Capacitor bridge
@@ -24,12 +26,12 @@ const SmsRetrieverPlugin = (window as any).Capacitor?.Plugins?.SmsRetrieverPlugi
 const SERVICES = [{
   value: "maid",
   label: "auth.services.maid",
-  icon: "🧹",
+  icon: maidServiceIcon,
   description: "Sweeping, mopping, dishes & more"
 }, {
   value: "bathroom_cleaning",
   label: "auth.services.bathroom_cleaning",
-  icon: "🧼",
+  icon: bathroomServiceIcon,
   description: "Deep bathroom cleaning"
 }];
 
@@ -413,7 +415,15 @@ export default function Auth() {
                             : 'border-border bg-background hover:border-primary/40 hover:bg-muted/50'
                         }`}
                       >
-                        <div className="text-2xl mb-2">{service.icon}</div>
+                        <img
+                          src={service.icon}
+                          alt={t(service.label)}
+                          loading="lazy"
+                          width={64}
+                          height={64}
+                          className="w-16 h-16 mb-2 object-contain"
+                        />
+
                         <p className="font-semibold text-sm">{t(service.label)}</p>
                         <p className="text-xs text-muted-foreground mt-1">{service.description}</p>
                         {isSelected && (
