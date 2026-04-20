@@ -18,6 +18,7 @@ import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.getcapacitor.annotation.Permission
+import com.getcapacitor.annotation.PermissionCallback
 import com.getcapacitor.JSObject
 import org.json.JSONObject
 
@@ -67,33 +68,42 @@ class StepCounterPlugin : Plugin() {
 
     @PluginMethod
     fun requestPermission(call: PluginCall) {
+        Log.d(TAG, "🟢 [Native] StepCounterPlugin.requestPermission entered")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val granted = ContextCompat.checkSelfPermission(
                 context, Manifest.permission.ACTIVITY_RECOGNITION
             ) == PackageManager.PERMISSION_GRANTED
 
             if (granted) {
+                Log.d(TAG, "✅ [Native] ACTIVITY_RECOGNITION already granted")
                 val ret = JSObject()
                 ret.put("granted", true)
                 call.resolve(ret)
             } else {
-                // Request permission via Capacitor's built-in mechanism
+                // Request permission via Capacitor's built-in mechanism.
+                // The result is delivered to handlePermissionResult() (annotated
+                // with @PermissionCallback below) — without that annotation
+                // Capacitor cannot route the OS dialog result back here.
+                Log.d(TAG, "📣 [Native] Launching ACTIVITY_RECOGNITION runtime prompt via requestPermissionForAlias")
                 requestPermissionForAlias("activityRecognition", call, "handlePermissionResult")
             }
         } else {
             // Pre-Q, no permission needed for step sensors
+            Log.d(TAG, "ℹ️ [Native] Pre-Android 10 — ACTIVITY_RECOGNITION auto-granted")
             val ret = JSObject()
             ret.put("granted", true)
             call.resolve(ret)
         }
     }
 
+    @PermissionCallback
     @Suppress("unused")
     private fun handlePermissionResult(call: PluginCall) {
         val granted = ContextCompat.checkSelfPermission(
             context, Manifest.permission.ACTIVITY_RECOGNITION
         ) == PackageManager.PERMISSION_GRANTED
 
+        Log.d(TAG, "🔁 [Native] handlePermissionResult fired — granted=$granted")
         val ret = JSObject()
         ret.put("granted", granted)
         call.resolve(ret)
