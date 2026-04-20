@@ -15,8 +15,8 @@ import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
 import { Phone, UserRound } from "lucide-react";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
-import maidServiceIcon from "@/assets/service-maid.png";
-import bathroomServiceIcon from "@/assets/service-bathroom.png";
+import maidServiceIcon from "@/assets/service-maid.jpg";
+import bathroomServiceIcon from "@/assets/service-bathroom.jpg";
 
 
 // @ts-ignore - Capacitor bridge
@@ -409,30 +409,34 @@ export default function Auth() {
                           }
                         }}
                         disabled={loading}
-                        className={`relative p-4 rounded-2xl border-2 transition-all duration-200 text-left ${
+                        className={`relative overflow-hidden rounded-2xl border-2 text-left bg-background shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-md ${
                           isSelected
-                            ? 'border-primary bg-primary/5 shadow-md ring-2 ring-primary/20'
-                            : 'border-border bg-background hover:border-primary/40 hover:bg-muted/50'
+                            ? 'border-primary shadow-md ring-2 ring-primary/30 scale-[1.02]'
+                            : 'border-border hover:border-primary/50'
                         }`}
                       >
-                        <img
-                          src={service.icon}
-                          alt={t(service.label)}
-                          loading="lazy"
-                          width={64}
-                          height={64}
-                          className="w-16 h-16 mb-2 object-contain"
-                        />
-
-                        <p className="font-semibold text-sm">{t(service.label)}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{service.description}</p>
-                        {isSelected && (
-                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                            <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-                        )}
+                        <div className="relative w-full aspect-square overflow-hidden bg-muted">
+                          <img
+                            src={service.icon}
+                            alt={t(service.label)}
+                            loading="lazy"
+                            width={512}
+                            height={512}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                          {isSelected && (
+                            <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center shadow-lg">
+                              <svg className="w-3.5 h-3.5 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-3">
+                          <p className="font-semibold text-sm">{t(service.label)}</p>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{service.description}</p>
+                        </div>
                       </button>
                     );
                   })}
