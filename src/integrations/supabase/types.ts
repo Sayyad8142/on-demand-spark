@@ -4172,6 +4172,8 @@ export type Database = {
           blocked_at: string | null
           blocked_by: string | null
           blocked_reason: string | null
+          cashfree_beneficiary_id: string | null
+          cashfree_beneficiary_synced_at: string | null
           communities: string[] | null
           community: string | null
           cook_cuisine_tags: string[]
@@ -4255,6 +4257,8 @@ export type Database = {
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
+          cashfree_beneficiary_id?: string | null
+          cashfree_beneficiary_synced_at?: string | null
           communities?: string[] | null
           community?: string | null
           cook_cuisine_tags?: string[]
@@ -4338,6 +4342,8 @@ export type Database = {
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
+          cashfree_beneficiary_id?: string | null
+          cashfree_beneficiary_synced_at?: string | null
           communities?: string[] | null
           community?: string | null
           cook_cuisine_tags?: string[]
@@ -4561,6 +4567,8 @@ export type Database = {
               blocked_at: string | null
               blocked_by: string | null
               blocked_reason: string | null
+              cashfree_beneficiary_id: string | null
+              cashfree_beneficiary_synced_at: string | null
               communities: string[] | null
               community: string | null
               cook_cuisine_tags: string[]
@@ -4653,6 +4661,8 @@ export type Database = {
               blocked_at: string | null
               blocked_by: string | null
               blocked_reason: string | null
+              cashfree_beneficiary_id: string | null
+              cashfree_beneficiary_synced_at: string | null
               communities: string[] | null
               community: string | null
               cook_cuisine_tags: string[]
