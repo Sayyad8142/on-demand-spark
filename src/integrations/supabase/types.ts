@@ -4172,7 +4172,12 @@ export type Database = {
           blocked_at: string | null
           blocked_by: string | null
           blocked_reason: string | null
+          cashfree_beneficiary_address: string | null
+          cashfree_beneficiary_email: string | null
           cashfree_beneficiary_id: string | null
+          cashfree_beneficiary_last_attempt_at: string | null
+          cashfree_beneficiary_last_error: string | null
+          cashfree_beneficiary_status: string
           cashfree_beneficiary_synced_at: string | null
           communities: string[] | null
           community: string | null
@@ -4216,6 +4221,8 @@ export type Database = {
           no_ack_count: number | null
           not_reached_7d: number
           notification_permission_granted: boolean | null
+          payout_address: string | null
+          payout_email: string | null
           payout_last_error: string | null
           payout_ready: boolean
           payout_verified_at: string | null
@@ -4257,7 +4264,12 @@ export type Database = {
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
+          cashfree_beneficiary_address?: string | null
+          cashfree_beneficiary_email?: string | null
           cashfree_beneficiary_id?: string | null
+          cashfree_beneficiary_last_attempt_at?: string | null
+          cashfree_beneficiary_last_error?: string | null
+          cashfree_beneficiary_status?: string
           cashfree_beneficiary_synced_at?: string | null
           communities?: string[] | null
           community?: string | null
@@ -4301,6 +4313,8 @@ export type Database = {
           no_ack_count?: number | null
           not_reached_7d?: number
           notification_permission_granted?: boolean | null
+          payout_address?: string | null
+          payout_email?: string | null
           payout_last_error?: string | null
           payout_ready?: boolean
           payout_verified_at?: string | null
@@ -4342,7 +4356,12 @@ export type Database = {
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
+          cashfree_beneficiary_address?: string | null
+          cashfree_beneficiary_email?: string | null
           cashfree_beneficiary_id?: string | null
+          cashfree_beneficiary_last_attempt_at?: string | null
+          cashfree_beneficiary_last_error?: string | null
+          cashfree_beneficiary_status?: string
           cashfree_beneficiary_synced_at?: string | null
           communities?: string[] | null
           community?: string | null
@@ -4386,6 +4405,8 @@ export type Database = {
           no_ack_count?: number | null
           not_reached_7d?: number
           notification_permission_granted?: boolean | null
+          payout_address?: string | null
+          payout_email?: string | null
           payout_last_error?: string | null
           payout_ready?: boolean
           payout_verified_at?: string | null
@@ -4567,7 +4588,12 @@ export type Database = {
               blocked_at: string | null
               blocked_by: string | null
               blocked_reason: string | null
+              cashfree_beneficiary_address: string | null
+              cashfree_beneficiary_email: string | null
               cashfree_beneficiary_id: string | null
+              cashfree_beneficiary_last_attempt_at: string | null
+              cashfree_beneficiary_last_error: string | null
+              cashfree_beneficiary_status: string
               cashfree_beneficiary_synced_at: string | null
               communities: string[] | null
               community: string | null
@@ -4611,6 +4637,8 @@ export type Database = {
               no_ack_count: number | null
               not_reached_7d: number
               notification_permission_granted: boolean | null
+              payout_address: string | null
+              payout_email: string | null
               payout_last_error: string | null
               payout_ready: boolean
               payout_verified_at: string | null
@@ -4661,7 +4689,12 @@ export type Database = {
               blocked_at: string | null
               blocked_by: string | null
               blocked_reason: string | null
+              cashfree_beneficiary_address: string | null
+              cashfree_beneficiary_email: string | null
               cashfree_beneficiary_id: string | null
+              cashfree_beneficiary_last_attempt_at: string | null
+              cashfree_beneficiary_last_error: string | null
+              cashfree_beneficiary_status: string
               cashfree_beneficiary_synced_at: string | null
               communities: string[] | null
               community: string | null
@@ -4705,6 +4738,8 @@ export type Database = {
               no_ack_count: number | null
               not_reached_7d: number
               notification_permission_granted: boolean | null
+              payout_address: string | null
+              payout_email: string | null
               payout_last_error: string | null
               payout_ready: boolean
               payout_verified_at: string | null
@@ -4938,6 +4973,10 @@ export type Database = {
       ensure_worker_profile: { Args: never; Returns: Json }
       escalate_overdue_bookings: { Args: never; Returns: undefined }
       export_my_data: { Args: never; Returns: Json }
+      generate_worker_payout_address: {
+        Args: { _community: string }
+        Returns: string
+      }
       get_active_booking_statuses: { Args: never; Returns: string[] }
       get_app_setting: { Args: { k: string }; Returns: string }
       get_assigned_worker_info: {
@@ -6112,6 +6151,10 @@ export type Database = {
       worker_set_booking_status: {
         Args: { p_booking_id: string; p_new_status: string }
         Returns: Json
+      }
+      worker_system_payout_email: {
+        Args: { worker_uuid: string }
+        Returns: string
       }
     }
     Enums: {
