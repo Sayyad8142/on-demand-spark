@@ -287,17 +287,8 @@ export default function OtpVerify() {
 
       // Navigate based on mode
       if (state.mode === 'signup') {
-        const { data: availabilityData } = await supabase
-          .from('worker_availability')
-          .select('*')
-          .eq('worker_id', data.user.id)
-          .limit(1);
-
-        if (!availabilityData || availabilityData.length === 0) {
-          navigate("/availability", { replace: true });
-        } else {
-          navigate("/home", { replace: true });
-        }
+        // New signup → always send to Account Details first
+        navigate("/account-details?from=signup", { replace: true });
       } else {
         navigate("/home", { replace: true });
       }

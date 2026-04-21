@@ -43,6 +43,7 @@ import Earnings from "./pages/Earnings";
 import WorkerBlocked from "./pages/WorkerBlocked";
 import DeviceReadiness from "./pages/DeviceReadiness";
 import CompleteBooking from "./pages/CompleteBooking";
+import AccountDetails from "./pages/AccountDetails";
 import BottomNav from "./components/BottomNav";
 
 const queryClient = new QueryClient();
@@ -284,6 +285,7 @@ function AppInner() {
           <Route path="/auth-debug" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
           <Route path="/device-readiness" element={<ProtectedRoute><DeviceReadiness /></ProtectedRoute>} />
           <Route path="/complete-booking/:bookingId" element={<ProtectedRoute><CompleteBooking /></ProtectedRoute>} />
+          <Route path="/account-details" element={<ProtectedRoute><AccountDetails /></ProtectedRoute>} />
           <Route path="/" element={<Navigate to="/auth" replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
