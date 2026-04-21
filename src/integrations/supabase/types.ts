@@ -4168,6 +4168,8 @@ export type Database = {
           admin_override_rating: number | null
           app_version: string | null
           bank_account_number: string | null
+          bank_details_source: string | null
+          bank_name: string | null
           battery_optimization_disabled: boolean | null
           blocked_at: string | null
           blocked_by: string | null
@@ -4221,6 +4223,7 @@ export type Database = {
           no_ack_count: number | null
           not_reached_7d: number
           notification_permission_granted: boolean | null
+          passbook_url: string | null
           payout_address: string | null
           payout_email: string | null
           payout_last_error: string | null
@@ -4260,6 +4263,8 @@ export type Database = {
           admin_override_rating?: number | null
           app_version?: string | null
           bank_account_number?: string | null
+          bank_details_source?: string | null
+          bank_name?: string | null
           battery_optimization_disabled?: boolean | null
           blocked_at?: string | null
           blocked_by?: string | null
@@ -4313,6 +4318,7 @@ export type Database = {
           no_ack_count?: number | null
           not_reached_7d?: number
           notification_permission_granted?: boolean | null
+          passbook_url?: string | null
           payout_address?: string | null
           payout_email?: string | null
           payout_last_error?: string | null
@@ -4352,6 +4358,8 @@ export type Database = {
           admin_override_rating?: number | null
           app_version?: string | null
           bank_account_number?: string | null
+          bank_details_source?: string | null
+          bank_name?: string | null
           battery_optimization_disabled?: boolean | null
           blocked_at?: string | null
           blocked_by?: string | null
@@ -4405,6 +4413,7 @@ export type Database = {
           no_ack_count?: number | null
           not_reached_7d?: number
           notification_permission_granted?: boolean | null
+          passbook_url?: string | null
           payout_address?: string | null
           payout_email?: string | null
           payout_last_error?: string | null
@@ -4584,6 +4593,8 @@ export type Database = {
               admin_override_rating: number | null
               app_version: string | null
               bank_account_number: string | null
+              bank_details_source: string | null
+              bank_name: string | null
               battery_optimization_disabled: boolean | null
               blocked_at: string | null
               blocked_by: string | null
@@ -4637,6 +4648,7 @@ export type Database = {
               no_ack_count: number | null
               not_reached_7d: number
               notification_permission_granted: boolean | null
+              passbook_url: string | null
               payout_address: string | null
               payout_email: string | null
               payout_last_error: string | null
@@ -4685,6 +4697,8 @@ export type Database = {
               admin_override_rating: number | null
               app_version: string | null
               bank_account_number: string | null
+              bank_details_source: string | null
+              bank_name: string | null
               battery_optimization_disabled: boolean | null
               blocked_at: string | null
               blocked_by: string | null
@@ -4738,6 +4752,7 @@ export type Database = {
               no_ack_count: number | null
               not_reached_7d: number
               notification_permission_granted: boolean | null
+              passbook_url: string | null
               payout_address: string | null
               payout_email: string | null
               payout_last_error: string | null
