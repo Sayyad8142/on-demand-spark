@@ -96,14 +96,17 @@ class StepCounterPlugin : Plugin() {
         }
     }
 
+    // NOTE: Capacitor's @PermissionCallback dispatcher requires the method to
+    // be reachable via reflection from the plugin base class. Keep it `public`
+    // (Kotlin default) — `private fun` here silently breaks the callback on
+    // some Capacitor versions and the OS dialog result never reaches JS.
     @PermissionCallback
-    @Suppress("unused")
-    private fun handlePermissionResult(call: PluginCall) {
+    fun handlePermissionResult(call: PluginCall) {
         val granted = ContextCompat.checkSelfPermission(
             context, Manifest.permission.ACTIVITY_RECOGNITION
         ) == PackageManager.PERMISSION_GRANTED
 
-        Log.d(TAG, "🔁 [Native] handlePermissionResult fired — granted=$granted")
+        Log.d(TAG, "🔁 [Native] handlePermissionResult fired — granted=$granted (Build=${Build.MANUFACTURER}/${Build.MODEL})")
         val ret = JSObject()
         ret.put("granted", granted)
         call.resolve(ret)

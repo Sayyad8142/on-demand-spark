@@ -25,60 +25,85 @@ class BatteryOptimizationPlugin : Plugin() {
                 val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
                 pm.isIgnoringBatteryOptimizations(context.packageName)
             } else true
-            Log.d(TAG, "🔋 [Native] isIgnoring=$ignoring")
-            val ret = JSObject().put("ignoring", ignoring)
-            call.resolve(ret)
+            Log.d(TAG, "🔋 isIgnoring=$ignoring")
+            call.resolve(JSObject().put("ignoring", ignoring))
         } catch (e: Exception) {
-            Log.e(TAG, "❌ [Native] isIgnoring error", e)
+            Log.e(TAG, "❌ isIgnoring error", e)
             call.reject("Battery check error: ${e.message}")
         }
     }
 
-    @PluginMethod
-    fun request(call: PluginCall) {
-        Log.d(TAG, "🟢 [Native] BatteryOptimizationPlugin.request entered")
-        val activity = activity ?: run {
-            Log.e(TAG, "❌ [Native] Activity not available — cannot launch battery settings")
-            call.reject("Activity not available")
-            return
-        }
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            Log.d(TAG, "ℹ️ [Native] Pre-Android M — battery exemption not required")
-            call.resolve(JSObject().put("requested", true))
-            return
-        }
+    /**
+     * Launch the battery-optimization request dialog with multiple fallbacks.
+     * Many OEMs (especially Xiaomi/Vivo) block the per-package request intent,
+     * so we cascade through:
+     *
+     *   1. ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS  (per-package dialog)
+     *   2. ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS  (global list)
+     *   3. ACTION_APPLICATION_DETAILS_SETTINGS          (last resort)
+     */
+    private fun launchBatterySettings(): Boolean {
+        val ctx: Context = activity ?: context
+        val pkg = ctx.packageName
+        val device = "${Build.MANUFACTURER} / ${Build.MODEL} / API ${Build.VERSION.SDK_INT}"
+        Log.d(TAG, "📣 Launching battery settings (device: $device, pkg=$pkg)")
 
-        // Primary intent: opens the per-app "Allow ignore battery optimizations?" dialog.
-        // Some OEMs / locked-down devices block this; fall back to the global
-        // battery-optimization settings list so the user can still grant it manually.
-        val pkg = activity.packageName
-        var launched = false
+        // 1. Direct per-package request dialog
         try {
             val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
                 data = Uri.parse("package:$pkg")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            Log.d(TAG, "📣 [Native] Launching ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS for $pkg")
-            activity.startActivity(intent)
-            launched = true
-            Log.d(TAG, "✅ [Native] ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS started")
+            ctx.startActivity(intent)
+            Log.d(TAG, "✅ ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS started")
+            return true
         } catch (e: Exception) {
-            Log.w(TAG, "⚠️ [Native] Direct request intent failed, attempting fallback", e)
+            Log.w(TAG, "⚠️ Direct battery request failed: ${e.message}")
         }
 
-        if (!launched) {
-            try {
-                val fallback = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                Log.d(TAG, "📣 [Native] Launching ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS (fallback)")
-                activity.startActivity(fallback)
-                launched = true
-                Log.d(TAG, "✅ [Native] Fallback battery settings started")
-            } catch (e2: Exception) {
-                Log.e(TAG, "❌ [Native] Fallback battery settings also failed", e2)
-                call.reject("Battery request error: ${e2.message}")
-                return
+        // 2. Fallback: global battery-optimization list
+        try {
+            val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
+            ctx.startActivity(intent)
+            Log.d(TAG, "✅ ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS started (fallback)")
+            return true
+        } catch (e: Exception) {
+            Log.w(TAG, "⚠️ Global battery list failed: ${e.message}")
         }
 
-        call.resolve(JSObject().put("requested", launched))
+        // 3. Last-resort: app details settings
+        try {
+            val intent = Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:$pkg")
+            ).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            ctx.startActivity(intent)
+            Log.d(TAG, "✅ ACTION_APPLICATION_DETAILS_SETTINGS started (last resort)")
+            return true
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ All battery setting intents failed", e)
+        }
+
+        return false
+    }
+
+    @PluginMethod
+    fun request(call: PluginCall) {
+        Log.d(TAG, "🟢 BatteryOptimizationPlugin.request entered")
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            Log.d(TAG, "ℹ️ Pre-Android M — battery exemption not required")
+            call.resolve(JSObject().put("requested", true))
+            return
+        }
+        val opened = launchBatterySettings()
+        if (opened) {
+            call.resolve(JSObject().put("requested", true))
+        } else {
+            call.reject("Could not open battery settings on this device")
+        }
     }
 }
