@@ -10,6 +10,23 @@ import android.provider.Settings
 import androidx.appcompat.app.AlertDialog
 
 object BatteryOptimizationHelper {
+    private fun openIntent(context: Context, intent: Intent, label: String): Boolean {
+        return try {
+            if (intent.resolveActivity(context.packageManager) == null) {
+                android.util.Log.w("BatteryOptimizationHelper", "⚠️ No activity can handle $label")
+                false
+            } else {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+                android.util.Log.d("BatteryOptimizationHelper", "✅ Opened $label on ${Build.MANUFACTURER}")
+                true
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("BatteryOptimizationHelper", "⚠️ Failed to open $label", e)
+            false
+        }
+    }
+
     fun showBatteryDialog(activity: Activity) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -17,7 +34,11 @@ object BatteryOptimizationHelper {
                 val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
                     data = Uri.parse("package:$packageName")
                 }
-                activity.startActivity(intent)
+                if (openIntent(activity, intent, "ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS")) return
+                val fallbackIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+                openIntent(activity, fallbackIntent, "ACTION_APPLICATION_DETAILS_SETTINGS")
             }
         } catch (e: Exception) {
             android.util.Log.e("BatteryOptimizationHelper", "Failed to show battery optimization dialog", e)
@@ -31,10 +52,18 @@ object BatteryOptimizationHelper {
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (!pm.isIgnoringBatteryOptimizations(packageName)) {
-                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                    intent.data = Uri.parse("package:$packageName")
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    context.startActivity(intent)
+                    val directIntent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = Uri.parse("package:$packageName")
+                    }
+                    if (openIntent(context, directIntent, "ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS")) return
+
+                    val listIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                    if (openIntent(context, listIntent, "ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS")) return
+
+                    val detailsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.parse("package:$packageName")
+                    }
+                    openIntent(context, detailsIntent, "ACTION_APPLICATION_DETAILS_SETTINGS")
                 }
             }
         } catch (e: Exception) {
