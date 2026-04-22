@@ -244,29 +244,11 @@ export default function Home() {
         </div>
       )}
 
-      {/* Payout Setup Warning Banner */}
-      {!isGuestMode && !payoutReady && (
-        <Card className="p-4 bg-amber-50 dark:bg-amber-950 border-amber-300 dark:border-amber-700">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <h3 className="font-semibold text-sm text-amber-900 dark:text-amber-100 mb-1">
-                Payout setup pending
-              </h3>
-              <p className="text-xs text-amber-700 dark:text-amber-300 mb-2">
-                Complete payout setup to receive payments. You can still receive bookings.
-              </p>
-              <Button
-                size="sm"
-                onClick={() => navigate('/profile')}
-                className="bg-amber-600 hover:bg-amber-700 text-white h-8 text-xs"
-              >
-                Complete Payout Setup
-              </Button>
-            </div>
-          </div>
-        </Card>
-      )}
+      {/*
+        Payout Setup Warning Banner removed — replaced by the centralized
+        IncompleteBankSetup full-screen guard in App.tsx, so workers cannot
+        proceed until bank details are filled in.
+      */}
 
       {/* Push Health Status Banner */}
       {Capacitor.isNativePlatform() && !isGuestMode && !pushHealth.isHealthy && pushHealth.isChecking && (

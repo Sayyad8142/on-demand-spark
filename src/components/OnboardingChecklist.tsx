@@ -4,6 +4,7 @@ import { CheckCircle2, Circle, ChevronRight, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
+import { getBankSetupStatus } from "@/lib/bankSetup";
 
 interface OnboardingChecklistProps {
   workerId: string;
@@ -36,11 +37,7 @@ export function useOnboardingStatus(workerId: string | undefined, worker: any): 
 
   const hasServiceTypes = !!(worker?.service_types && worker.service_types.length > 0);
   const hasCommunity = !!(worker?.selected_community_id || (worker?.communities && worker.communities.length > 0));
-  const hasBankDetails = !!(
-    worker?.account_holder_name &&
-    worker?.bank_account_number &&
-    worker?.ifsc_code
-  );
+  const hasBankDetails = getBankSetupStatus(worker).hasBankDetails;
 
   return {
     hasServiceTypes,
