@@ -14,6 +14,23 @@ object OverlayPermissionHelper {
             Settings.canDrawOverlays(activity)
         else true
 
+    private fun openIntent(activity: Activity, intent: Intent, label: String): Boolean {
+        return try {
+            if (intent.resolveActivity(activity.packageManager) == null) {
+                android.util.Log.w("OverlayPermission", "⚠️ No activity can handle $label")
+                false
+            } else {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                activity.startActivity(intent)
+                android.util.Log.d("OverlayPermission", "✅ Opened $label on ${Build.MANUFACTURER}")
+                true
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("OverlayPermission", "⚠️ Failed to open $label", e)
+            false
+        }
+    }
+
     fun request(activity: Activity, requestCode: Int = 9911) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
             !Settings.canDrawOverlays(activity)) {
@@ -21,7 +38,12 @@ object OverlayPermissionHelper {
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                 Uri.parse("package:${activity.packageName}")
             )
-            activity.startActivityForResult(intent, requestCode)
+            if (openIntent(activity, intent, "ACTION_MANAGE_OVERLAY_PERMISSION(package)")) return
+
+            val fallbackIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.parse("package:${activity.packageName}")
+            }
+            openIntent(activity, fallbackIntent, "ACTION_APPLICATION_DETAILS_SETTINGS")
         }
     }
 
