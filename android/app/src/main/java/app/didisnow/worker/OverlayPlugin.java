@@ -34,23 +34,13 @@ public class OverlayPlugin extends Plugin {
 
         try {
             if (getActivity() != null) {
-                getActivity().runOnUiThread(() -> {
-                    try {
-                        getActivity().startActivity(intent);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                });
+                getActivity().startActivity(intent);
             } else {
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 ctx.startActivity(intent);
             }
             Log.d(TAG, "✅ Started " + label);
             return true;
-        } catch (RuntimeException e) {
-            Throwable cause = e.getCause() != null ? e.getCause() : e;
-            Log.w(TAG, "⚠️ Failed to start " + label + ": " + cause.getMessage());
-            return false;
         } catch (Exception e) {
             Log.w(TAG, "⚠️ Failed to start " + label + ": " + e.getMessage());
             return false;
