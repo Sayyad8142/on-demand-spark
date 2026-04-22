@@ -18,6 +18,39 @@ class BatteryOptimizationPlugin : Plugin() {
 
     private val TAG = "BatteryOptPlugin"
 
+    private fun startSettingsIntent(intent: Intent, label: String): Boolean {
+        val ctx: Context = activity ?: context
+
+        if (intent.resolveActivity(ctx.packageManager) == null) {
+            Log.w(TAG, "⚠️ No activity can handle $label")
+            return false
+        }
+
+        return try {
+            if (activity != null) {
+                activity?.runOnUiThread {
+                    try {
+                        activity?.startActivity(intent)
+                    } catch (e: Exception) {
+                        throw RuntimeException(e)
+                    }
+                }
+            } else {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                ctx.startActivity(intent)
+            }
+            Log.d(TAG, "✅ Started $label")
+            true
+        } catch (e: RuntimeException) {
+            val cause = e.cause ?: e
+            Log.w(TAG, "⚠️ Failed to start $label: ${cause.message}")
+            false
+        } catch (e: Exception) {
+            Log.w(TAG, "⚠️ Failed to start $label: ${e.message}")
+            false
+        }
+    }
+
     @PluginMethod
     fun isIgnoring(call: PluginCall) {
         try {
@@ -48,46 +81,42 @@ class BatteryOptimizationPlugin : Plugin() {
         val device = "${Build.MANUFACTURER} / ${Build.MODEL} / API ${Build.VERSION.SDK_INT}"
         Log.d(TAG, "📣 Launching battery settings (device: $device, pkg=$pkg)")
 
-        // 1. Direct per-package request dialog
-        try {
-            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                data = Uri.parse("package:$pkg")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            ctx.startActivity(intent)
-            Log.d(TAG, "✅ ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS started")
+        val directIntent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+            data = Uri.parse("package:$pkg")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        if (startSettingsIntent(directIntent, "ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS")) {
             return true
-        } catch (e: Exception) {
-            Log.w(TAG, "⚠️ Direct battery request failed: ${e.message}")
         }
 
         // 2. Fallback: global battery-optimization list
         try {
-            val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+            val globalIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            ctx.startActivity(intent)
-            Log.d(TAG, "✅ ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS started (fallback)")
-            return true
+            if (startSettingsIntent(globalIntent, "ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS")) {
+                return true
+            }
         } catch (e: Exception) {
-            Log.w(TAG, "⚠️ Global battery list failed: ${e.message}")
+            Log.w(TAG, "⚠️ Global battery list build failed: ${e.message}")
         }
 
         // 3. Last-resort: app details settings
         try {
-            val intent = Intent(
+            val detailsIntent = Intent(
                 Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                 Uri.parse("package:$pkg")
             ).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            ctx.startActivity(intent)
-            Log.d(TAG, "✅ ACTION_APPLICATION_DETAILS_SETTINGS started (last resort)")
-            return true
+            if (startSettingsIntent(detailsIntent, "ACTION_APPLICATION_DETAILS_SETTINGS")) {
+                return true
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "❌ All battery setting intents failed", e)
+            Log.e(TAG, "❌ App details fallback failed", e)
         }
 
+        Log.e(TAG, "❌ All battery setting intents failed for manufacturer=${Build.MANUFACTURER}")
         return false
     }
 
@@ -101,7 +130,7 @@ class BatteryOptimizationPlugin : Plugin() {
         }
         val opened = launchBatterySettings()
         if (opened) {
-            call.resolve(JSObject().put("requested", true))
+            call.resolve(JSObject().put("requested", true).put("opened", true).put("manufacturer", Build.MANUFACTURER))
         } else {
             call.reject("Could not open battery settings on this device")
         }
