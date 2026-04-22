@@ -20,6 +20,33 @@ public class OverlayPlugin extends Plugin {
 
     private static final String TAG = "OverlayPlugin";
 
+    private boolean startSettingsIntent(Intent intent, String label) {
+        Context ctx = getActivity() != null ? getActivity() : getContext();
+        if (ctx == null) {
+            Log.e(TAG, "❌ No context available for " + label);
+            return false;
+        }
+
+        if (intent.resolveActivity(ctx.getPackageManager()) == null) {
+            Log.w(TAG, "⚠️ No activity can handle " + label);
+            return false;
+        }
+
+        try {
+            if (getActivity() != null) {
+                getActivity().startActivity(intent);
+            } else {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                ctx.startActivity(intent);
+            }
+            Log.d(TAG, "✅ Started " + label);
+            return true;
+        } catch (Exception e) {
+            Log.w(TAG, "⚠️ Failed to start " + label + ": " + e.getMessage());
+            return false;
+        }
+    }
+
     /**
      * Launch the system overlay-permission Settings screen with multiple
      * fallbacks. Some OEMs (Vivo / Xiaomi / Realme) reject the per-package
@@ -41,45 +68,41 @@ public class OverlayPlugin extends Plugin {
         String mfg = Build.MANUFACTURER + " / " + Build.MODEL + " / API " + Build.VERSION.SDK_INT;
         Log.d(TAG, "📣 Launching overlay settings (device: " + mfg + ", pkg=" + pkg + ")");
 
-        // 1. Per-package overlay screen
-        try {
-            Intent i = new Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:" + pkg)
-            );
-            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            ctx.startActivity(i);
-            Log.d(TAG, "✅ Per-package ACTION_MANAGE_OVERLAY_PERMISSION started");
+        Intent perPackageIntent = new Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:" + pkg)
+        );
+        perPackageIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        if (startSettingsIntent(perPackageIntent, "per-package ACTION_MANAGE_OVERLAY_PERMISSION")) {
             return true;
-        } catch (Exception e) {
-            Log.w(TAG, "⚠️ Per-package overlay intent failed: " + e.getMessage());
         }
 
         // 2. Global overlay permission list (no data URI)
         try {
-            Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
-            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            ctx.startActivity(i);
-            Log.d(TAG, "✅ Global ACTION_MANAGE_OVERLAY_PERMISSION started (fallback)");
-            return true;
+            Intent globalIntent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
+            globalIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (startSettingsIntent(globalIntent, "global ACTION_MANAGE_OVERLAY_PERMISSION")) {
+                return true;
+            }
         } catch (Exception e) {
-            Log.w(TAG, "⚠️ Global overlay intent failed: " + e.getMessage());
+            Log.w(TAG, "⚠️ Global overlay intent build failed: " + e.getMessage());
         }
 
         // 3. Final fallback: app details so the user can navigate manually
         try {
-            Intent i = new Intent(
+            Intent detailsIntent = new Intent(
                     Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                     Uri.parse("package:" + pkg)
             );
-            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            ctx.startActivity(i);
-            Log.d(TAG, "✅ ACTION_APPLICATION_DETAILS_SETTINGS started (last-resort fallback)");
-            return true;
+            detailsIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (startSettingsIntent(detailsIntent, "ACTION_APPLICATION_DETAILS_SETTINGS")) {
+                return true;
+            }
         } catch (Exception e) {
-            Log.e(TAG, "❌ All overlay setting intents failed: " + e.getMessage(), e);
+            Log.e(TAG, "❌ App details fallback failed: " + e.getMessage(), e);
         }
 
+        Log.e(TAG, "❌ All overlay setting intents failed for manufacturer=" + Build.MANUFACTURER);
         return false;
     }
 
@@ -91,7 +114,10 @@ public class OverlayPlugin extends Plugin {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
                     !Settings.canDrawOverlays(ctx)) {
                 boolean opened = launchOverlaySettings();
-                JSObject ret = new JSObject().put("granted", false).put("opened", opened);
+                JSObject ret = new JSObject()
+                        .put("granted", false)
+                        .put("opened", opened)
+                        .put("manufacturer", Build.MANUFACTURER);
                 if (opened) {
                     call.resolve(ret);
                 } else {
@@ -185,7 +211,7 @@ public class OverlayPlugin extends Plugin {
         Log.d(TAG, "🟢 openOverlaySettings entered");
         boolean opened = launchOverlaySettings();
         if (opened) {
-            call.resolve(new JSObject().put("opened", true));
+            call.resolve(new JSObject().put("opened", true).put("manufacturer", Build.MANUFACTURER));
         } else {
             call.reject("Could not open overlay settings on this device");
         }

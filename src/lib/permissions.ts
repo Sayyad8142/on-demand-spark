@@ -18,8 +18,8 @@ import { requestActivityRecognitionPermission } from "@/lib/activityRecognition"
 
 interface OverlayPlugin {
   checkPermission(): Promise<{ granted: boolean }>;
-  requestPermission(): Promise<{ granted: boolean }>;
-  openOverlaySettings(): Promise<{ opened: boolean }>;
+  requestPermission(): Promise<{ granted: boolean; opened?: boolean; manufacturer?: string }>;
+  openOverlaySettings(): Promise<{ opened: boolean; manufacturer?: string }>;
 }
 
 let overlayPlugin: OverlayPlugin | null = null;
@@ -76,7 +76,7 @@ interface StepCounterPlugin {
 
 interface BatteryPlugin {
   isIgnoring(): Promise<{ ignoring: boolean }>;
-  request(): Promise<{ requested: boolean }>;
+  request(): Promise<{ requested: boolean; opened?: boolean; manufacturer?: string }>;
 }
 
 let stepPlugin: StepCounterPlugin | null = null;
@@ -175,13 +175,22 @@ export async function requestOverlay(): Promise<boolean> {
   // requestPermission succeeds, settings opened — DO NOT throw, even though
   // the immediate `granted` value will be false (user hasn't toggled yet).
   try {
-    await p.requestPermission();
-    console.log("[Permissions] ✅ OverlayPlugin.requestPermission resolved (settings opened)");
+    const result = await p.requestPermission();
+    console.log("[Permissions] ✅ OverlayPlugin.requestPermission resolved", result);
+    if (result?.opened) {
+      return false;
+    }
+    if (result?.granted) {
+      return true;
+    }
   } catch (e) {
     console.warn("[Permissions] OverlayPlugin.requestPermission rejected — trying openOverlaySettings", e);
     try {
-      await p.openOverlaySettings();
-      console.log("[Permissions] ✅ OverlayPlugin.openOverlaySettings resolved");
+      const fallback = await p.openOverlaySettings();
+      console.log("[Permissions] ✅ OverlayPlugin.openOverlaySettings resolved", fallback);
+      if (fallback?.opened) {
+        return false;
+      }
     } catch (e2) {
       console.error("[Permissions] ❌ All overlay setting paths failed", e2);
       throw e2;
@@ -216,8 +225,11 @@ export async function requestBatteryExemption(): Promise<boolean> {
   }
   try {
     console.log("[Permissions] 🟦 requestBatteryExemption() invoked — opening Android Settings...");
-    await plugin.request();
-    console.log("[Permissions] ✅ BatteryOptimization.request resolved (settings opened)");
+    const result = await plugin.request();
+    console.log("[Permissions] ✅ BatteryOptimization.request resolved", result);
+    if (result?.opened) {
+      return false;
+    }
     // Settings opened — user must flip the toggle. Re-check after delay; do
     // NOT throw if still not ignoring (that's expected on first open).
     await new Promise(r => setTimeout(r, 400));

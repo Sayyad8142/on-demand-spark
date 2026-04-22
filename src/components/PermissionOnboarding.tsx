@@ -120,7 +120,7 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
     } finally {
       setBusyId(null);
       // Small delay to let the OS settle, then re-check.
-      setTimeout(refresh, 300);
+      setTimeout(refresh, 900);
     }
   };
 
