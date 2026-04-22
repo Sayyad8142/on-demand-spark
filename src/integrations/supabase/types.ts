@@ -4169,6 +4169,7 @@ export type Database = {
           app_version: string | null
           bank_account_number: string | null
           bank_details_source: string | null
+          bank_details_verified: boolean
           bank_name: string | null
           battery_optimization_disabled: boolean | null
           blocked_at: string | null
@@ -4264,6 +4265,7 @@ export type Database = {
           app_version?: string | null
           bank_account_number?: string | null
           bank_details_source?: string | null
+          bank_details_verified?: boolean
           bank_name?: string | null
           battery_optimization_disabled?: boolean | null
           blocked_at?: string | null
@@ -4359,6 +4361,7 @@ export type Database = {
           app_version?: string | null
           bank_account_number?: string | null
           bank_details_source?: string | null
+          bank_details_verified?: boolean
           bank_name?: string | null
           battery_optimization_disabled?: boolean | null
           blocked_at?: string | null
@@ -4594,6 +4597,7 @@ export type Database = {
               app_version: string | null
               bank_account_number: string | null
               bank_details_source: string | null
+              bank_details_verified: boolean
               bank_name: string | null
               battery_optimization_disabled: boolean | null
               blocked_at: string | null
@@ -4698,6 +4702,7 @@ export type Database = {
               app_version: string | null
               bank_account_number: string | null
               bank_details_source: string | null
+              bank_details_verified: boolean
               bank_name: string | null
               battery_optimization_disabled: boolean | null
               blocked_at: string | null
@@ -4966,6 +4971,10 @@ export type Database = {
       create_wallet_booking: {
         Args: { p_amount_inr: number; p_booking: Json; p_user_id: string }
         Returns: Json
+      }
+      create_worker_payout_on_completion_for: {
+        Args: { p_booking_id: string }
+        Returns: undefined
       }
       credit_wallet_on_cancel: {
         Args: {
