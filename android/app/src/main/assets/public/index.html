@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="./app-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Didi Now Partner - Instant On-Demand Services</title>
+    <meta name="description" content="Didi Now Partner App - Accept instant bookings for maid, cook, and cleaning services in your community" />
+    <meta name="author" content="Didi Now" />
+
+    <meta property="og:title" content="Didi Now Partner App" />
+    <meta property="og:description" content="Accept instant on-demand bookings and earn money" />
+    <meta property="og:type" content="website" />
+    
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Didi Now Partner App" />
+    <script type="module" crossorigin src="./assets/index-CBSaI4Nf.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CUnULSvG.css">
+  </head>
+
+  <body>
+    <div id="root">
+      <!-- Inline loading screen - prevents black flash on native app launch -->
+      <div id="app-splash" style="
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+        gap: 16px;
+      ">
+        <img src="./app-icon.png" alt="Didi Now" style="width: 80px; height: 80px; border-radius: 16px;" />
+        <div style="
+          width: 32px; height: 32px;
+          border: 3px solid #e5e7eb;
+          border-top-color: #ff007a;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        "></div>
+      </div>
+      <style>
+        @keyframes spin { to { transform: rotate(360deg); } }
+      </style>
+    </div>
+  </body>
+</html>
