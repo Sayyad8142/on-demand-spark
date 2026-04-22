@@ -28,23 +28,13 @@ class BatteryOptimizationPlugin : Plugin() {
 
         return try {
             if (activity != null) {
-                activity?.runOnUiThread {
-                    try {
-                        activity?.startActivity(intent)
-                    } catch (e: Exception) {
-                        throw RuntimeException(e)
-                    }
-                }
+                activity?.startActivity(intent)
             } else {
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 ctx.startActivity(intent)
             }
             Log.d(TAG, "✅ Started $label")
             true
-        } catch (e: RuntimeException) {
-            val cause = e.cause ?: e
-            Log.w(TAG, "⚠️ Failed to start $label: ${cause.message}")
-            false
         } catch (e: Exception) {
             Log.w(TAG, "⚠️ Failed to start $label: ${e.message}")
             false
