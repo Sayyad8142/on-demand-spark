@@ -415,6 +415,83 @@ export default function Auth() {
               </div>
 
 
+              {/* Bank Account Details — optional during signup, recommended */}
+              <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-semibold">Bank Account Details</p>
+                  <p className="text-xs text-muted-foreground">
+                    Optional for now, recommended. Required to receive payouts.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-acct-name">Account Holder Name</Label>
+                  <Input
+                    id="signup-acct-name"
+                    type="text"
+                    placeholder="Name as on bank account"
+                    value={signUpAccountHolderName}
+                    onChange={e => setSignUpAccountHolderName(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-acct-no">Bank Account Number</Label>
+                  <Input
+                    id="signup-acct-no"
+                    inputMode="numeric"
+                    placeholder="9 to 18 digits"
+                    value={signUpBankAccountNumber}
+                    onChange={e => setSignUpBankAccountNumber(e.target.value.replace(/\D/g, ""))}
+                    maxLength={18}
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-acct-no-confirm">Confirm Account Number</Label>
+                  <Input
+                    id="signup-acct-no-confirm"
+                    inputMode="numeric"
+                    placeholder="Re-enter account number"
+                    value={signUpConfirmAccountNumber}
+                    onChange={e => setSignUpConfirmAccountNumber(e.target.value.replace(/\D/g, ""))}
+                    maxLength={18}
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-ifsc">IFSC Code</Label>
+                  <Input
+                    id="signup-ifsc"
+                    type="text"
+                    placeholder="e.g., HDFC0001234"
+                    value={signUpIfscCode}
+                    onChange={e => setSignUpIfscCode(e.target.value.toUpperCase())}
+                    maxLength={11}
+                    disabled={loading}
+                    className="uppercase"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    11 characters. Format: 4 letters + 0 + 6 alphanumeric.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-bank-name">Bank Name (optional)</Label>
+                  <Input
+                    id="signup-bank-name"
+                    type="text"
+                    placeholder="e.g., HDFC Bank"
+                    value={signUpBankName}
+                    onChange={e => setSignUpBankName(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
               {/* Manual UPI ID Input — optional, saved for future use */}
               <div className="space-y-2">
                 <Label htmlFor="signup-upi">{t('auth.upiIdLabel', 'UPI ID')} (optional, for future use)</Label>
@@ -427,7 +504,7 @@ export default function Auth() {
                   disabled={loading} 
                 />
                 <p className="text-xs text-muted-foreground">
-                  You can add bank account details after signup.
+                  You can update bank or UPI details anytime from your profile.
                 </p>
               </div>
 
