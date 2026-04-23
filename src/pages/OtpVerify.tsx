@@ -29,6 +29,12 @@ interface OtpVerifyState {
       payload: string;
       extractedUpiId: string;
     } | null;
+    bankDetails?: {
+      account_holder_name: string;
+      bank_account_number: string;
+      ifsc_code: string;
+      bank_name: string | null;
+    } | null;
   };
 }
 
