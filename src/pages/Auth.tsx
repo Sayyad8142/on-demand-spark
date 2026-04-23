@@ -82,6 +82,12 @@ export default function Auth() {
   const [signUpUpiId, setSignUpUpiId] = useState("");
   const [signUpCommunity, setSignUpCommunity] = useState("");
   const [signUpServices, setSignUpServices] = useState<string[]>([]);
+  // Bank account details (optional during signup)
+  const [signUpAccountHolderName, setSignUpAccountHolderName] = useState("");
+  const [signUpBankAccountNumber, setSignUpBankAccountNumber] = useState("");
+  const [signUpConfirmAccountNumber, setSignUpConfirmAccountNumber] = useState("");
+  const [signUpIfscCode, setSignUpIfscCode] = useState("");
+  const [signUpBankName, setSignUpBankName] = useState("");
   // Cook cuisine tags removed - cook service discontinued
   
 
