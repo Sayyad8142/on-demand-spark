@@ -40,6 +40,8 @@ const phoneSchema = z.string().regex(/^[6-9]\d{9}$/, 'Invalid phone number. Must
 const nameSchema = z.string().trim().min(2, 'Name must be at least 2 characters').max(100, 'Name must not exceed 100 characters').regex(/^[a-zA-Z\s]+$/, 'Name can only contain letters and spaces');
 const upiSchema = z.string().regex(/^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/, 'Invalid UPI ID format (e.g., name@bank)');
 const otpSchema = z.string().regex(/^\d{6}$/, 'OTP must be exactly 6 digits').length(6);
+const ifscSchema = z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Invalid IFSC code (e.g., HDFC0001234)');
+const accountNumberSchema = z.string().regex(/^\d{9,18}$/, 'Account number must be 9–18 digits');
 export default function Auth() {
   const navigate = useNavigate();
   const {
@@ -80,6 +82,12 @@ export default function Auth() {
   const [signUpUpiId, setSignUpUpiId] = useState("");
   const [signUpCommunity, setSignUpCommunity] = useState("");
   const [signUpServices, setSignUpServices] = useState<string[]>([]);
+  // Bank account details (optional during signup)
+  const [signUpAccountHolderName, setSignUpAccountHolderName] = useState("");
+  const [signUpBankAccountNumber, setSignUpBankAccountNumber] = useState("");
+  const [signUpConfirmAccountNumber, setSignUpConfirmAccountNumber] = useState("");
+  const [signUpIfscCode, setSignUpIfscCode] = useState("");
+  const [signUpBankName, setSignUpBankName] = useState("");
   // Cook cuisine tags removed - cook service discontinued
   
 
@@ -261,6 +269,47 @@ export default function Auth() {
         return;
       }
     }
+
+    // Bank details are optional. If ANY bank field is filled, validate ALL required bank fields.
+    const bankAccountNumber = signUpBankAccountNumber.trim();
+    const confirmAccountNumber = signUpConfirmAccountNumber.trim();
+    const accountHolderNameBank = signUpAccountHolderName.trim();
+    const ifscCode = signUpIfscCode.trim().toUpperCase();
+    const bankName = signUpBankName.trim();
+    const anyBankFieldFilled = !!(bankAccountNumber || confirmAccountNumber || accountHolderNameBank || ifscCode || bankName);
+    let bankPayload: {
+      account_holder_name: string;
+      bank_account_number: string;
+      ifsc_code: string;
+      bank_name: string | null;
+    } | null = null;
+
+    if (anyBankFieldFilled) {
+      if (!accountHolderNameBank) {
+        toast({ title: "Account holder name is required", description: "Please complete bank details or clear them all.", variant: "destructive" });
+        return;
+      }
+      const acctValidation = accountNumberSchema.safeParse(bankAccountNumber);
+      if (!acctValidation.success) {
+        toast({ title: "Invalid bank account number", description: acctValidation.error.errors[0].message, variant: "destructive" });
+        return;
+      }
+      if (bankAccountNumber !== confirmAccountNumber) {
+        toast({ title: "Account numbers do not match", description: "Please re-enter the same account number in both fields.", variant: "destructive" });
+        return;
+      }
+      const ifscValidation = ifscSchema.safeParse(ifscCode);
+      if (!ifscValidation.success) {
+        toast({ title: "Invalid IFSC code", description: ifscValidation.error.errors[0].message, variant: "destructive" });
+        return;
+      }
+      bankPayload = {
+        account_holder_name: accountHolderNameBank,
+        bank_account_number: bankAccountNumber,
+        ifsc_code: ifscCode,
+        bank_name: bankName || null,
+      };
+    }
     try {
       setLoading(true);
       const phone = normalizePhone(signUpPhone);
@@ -290,7 +339,8 @@ export default function Auth() {
             community: signUpCommunity,
             services: signUpServices,
             cuisineTags: [],
-            qrData: null
+            qrData: null,
+            bankDetails: bankPayload,
           }
         }
       });
@@ -365,6 +415,83 @@ export default function Auth() {
               </div>
 
 
+              {/* Bank Account Details — optional during signup, recommended */}
+              <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-semibold">Bank Account Details</p>
+                  <p className="text-xs text-muted-foreground">
+                    Optional for now, recommended. Required to receive payouts.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-acct-name">Account Holder Name</Label>
+                  <Input
+                    id="signup-acct-name"
+                    type="text"
+                    placeholder="Name as on bank account"
+                    value={signUpAccountHolderName}
+                    onChange={e => setSignUpAccountHolderName(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-acct-no">Bank Account Number</Label>
+                  <Input
+                    id="signup-acct-no"
+                    inputMode="numeric"
+                    placeholder="9 to 18 digits"
+                    value={signUpBankAccountNumber}
+                    onChange={e => setSignUpBankAccountNumber(e.target.value.replace(/\D/g, ""))}
+                    maxLength={18}
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-acct-no-confirm">Confirm Account Number</Label>
+                  <Input
+                    id="signup-acct-no-confirm"
+                    inputMode="numeric"
+                    placeholder="Re-enter account number"
+                    value={signUpConfirmAccountNumber}
+                    onChange={e => setSignUpConfirmAccountNumber(e.target.value.replace(/\D/g, ""))}
+                    maxLength={18}
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-ifsc">IFSC Code</Label>
+                  <Input
+                    id="signup-ifsc"
+                    type="text"
+                    placeholder="e.g., HDFC0001234"
+                    value={signUpIfscCode}
+                    onChange={e => setSignUpIfscCode(e.target.value.toUpperCase())}
+                    maxLength={11}
+                    disabled={loading}
+                    className="uppercase"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    11 characters. Format: 4 letters + 0 + 6 alphanumeric.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-bank-name">Bank Name (optional)</Label>
+                  <Input
+                    id="signup-bank-name"
+                    type="text"
+                    placeholder="e.g., HDFC Bank"
+                    value={signUpBankName}
+                    onChange={e => setSignUpBankName(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
               {/* Manual UPI ID Input — optional, saved for future use */}
               <div className="space-y-2">
                 <Label htmlFor="signup-upi">{t('auth.upiIdLabel', 'UPI ID')} (optional, for future use)</Label>
@@ -377,7 +504,7 @@ export default function Auth() {
                   disabled={loading} 
                 />
                 <p className="text-xs text-muted-foreground">
-                  You can add bank account details after signup.
+                  You can update bank or UPI details anytime from your profile.
                 </p>
               </div>
 
