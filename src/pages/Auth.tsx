@@ -269,6 +269,47 @@ export default function Auth() {
         return;
       }
     }
+
+    // Bank details are optional. If ANY bank field is filled, validate ALL required bank fields.
+    const bankAccountNumber = signUpBankAccountNumber.trim();
+    const confirmAccountNumber = signUpConfirmAccountNumber.trim();
+    const accountHolderNameBank = signUpAccountHolderName.trim();
+    const ifscCode = signUpIfscCode.trim().toUpperCase();
+    const bankName = signUpBankName.trim();
+    const anyBankFieldFilled = !!(bankAccountNumber || confirmAccountNumber || accountHolderNameBank || ifscCode || bankName);
+    let bankPayload: {
+      account_holder_name: string;
+      bank_account_number: string;
+      ifsc_code: string;
+      bank_name: string | null;
+    } | null = null;
+
+    if (anyBankFieldFilled) {
+      if (!accountHolderNameBank) {
+        toast({ title: "Account holder name is required", description: "Please complete bank details or clear them all.", variant: "destructive" });
+        return;
+      }
+      const acctValidation = accountNumberSchema.safeParse(bankAccountNumber);
+      if (!acctValidation.success) {
+        toast({ title: "Invalid bank account number", description: acctValidation.error.errors[0].message, variant: "destructive" });
+        return;
+      }
+      if (bankAccountNumber !== confirmAccountNumber) {
+        toast({ title: "Account numbers do not match", description: "Please re-enter the same account number in both fields.", variant: "destructive" });
+        return;
+      }
+      const ifscValidation = ifscSchema.safeParse(ifscCode);
+      if (!ifscValidation.success) {
+        toast({ title: "Invalid IFSC code", description: ifscValidation.error.errors[0].message, variant: "destructive" });
+        return;
+      }
+      bankPayload = {
+        account_holder_name: accountHolderNameBank,
+        bank_account_number: bankAccountNumber,
+        ifsc_code: ifscCode,
+        bank_name: bankName || null,
+      };
+    }
     try {
       setLoading(true);
       const phone = normalizePhone(signUpPhone);
@@ -298,7 +339,8 @@ export default function Auth() {
             community: signUpCommunity,
             services: signUpServices,
             cuisineTags: [],
-            qrData: null
+            qrData: null,
+            bankDetails: bankPayload,
           }
         }
       });
