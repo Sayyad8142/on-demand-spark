@@ -15,6 +15,8 @@ import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
 import { Phone, UserRound } from "lucide-react";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
+import maidServiceIcon from "@/assets/service-maid.jpg";
+import bathroomServiceIcon from "@/assets/service-bathroom.jpg";
 
 
 // @ts-ignore - Capacitor bridge
@@ -24,20 +26,22 @@ const SmsRetrieverPlugin = (window as any).Capacitor?.Plugins?.SmsRetrieverPlugi
 const SERVICES = [{
   value: "maid",
   label: "auth.services.maid",
-  icon: "🧹",
+  icon: maidServiceIcon,
   description: "Sweeping, mopping, dishes & more"
 }, {
   value: "bathroom_cleaning",
   label: "auth.services.bathroom_cleaning",
-  icon: "🧼",
+  icon: bathroomServiceIcon,
   description: "Deep bathroom cleaning"
 }];
 
 // SECURITY: Input validation schemas
 const phoneSchema = z.string().regex(/^[6-9]\d{9}$/, 'Invalid phone number. Must be 10 digits starting with 6-9').length(10, 'Phone number must be exactly 10 digits');
 const nameSchema = z.string().trim().min(2, 'Name must be at least 2 characters').max(100, 'Name must not exceed 100 characters').regex(/^[a-zA-Z\s]+$/, 'Name can only contain letters and spaces');
-const upiSchema = z.string().min(1, 'UPI ID is required').regex(/^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/, 'Invalid UPI ID format (e.g., name@bank)');
+const upiSchema = z.string().regex(/^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/, 'Invalid UPI ID format (e.g., name@bank)');
 const otpSchema = z.string().regex(/^\d{6}$/, 'OTP must be exactly 6 digits').length(6);
+const ifscSchema = z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Invalid IFSC code (e.g., HDFC0001234)');
+const accountNumberSchema = z.string().regex(/^\d{9,18}$/, 'Account number must be 9–18 digits');
 export default function Auth() {
   const navigate = useNavigate();
   const {
@@ -78,6 +82,12 @@ export default function Auth() {
   const [signUpUpiId, setSignUpUpiId] = useState("");
   const [signUpCommunity, setSignUpCommunity] = useState("");
   const [signUpServices, setSignUpServices] = useState<string[]>([]);
+  // Bank account details (optional during signup)
+  const [signUpAccountHolderName, setSignUpAccountHolderName] = useState("");
+  const [signUpBankAccountNumber, setSignUpBankAccountNumber] = useState("");
+  const [signUpConfirmAccountNumber, setSignUpConfirmAccountNumber] = useState("");
+  const [signUpIfscCode, setSignUpIfscCode] = useState("");
+  const [signUpBankName, setSignUpBankName] = useState("");
   // Cook cuisine tags removed - cook service discontinued
   
 
@@ -247,14 +257,58 @@ export default function Auth() {
       });
       return;
     }
-    const upiValidation = upiSchema.safeParse(signUpUpiId);
-    if (!upiValidation.success) {
-      toast({
-        title: "Invalid UPI ID",
-        description: upiValidation.error.errors[0].message,
-        variant: "destructive"
-      });
-      return;
+    // UPI is optional during signup. Validate only if provided.
+    if (signUpUpiId.trim()) {
+      const upiValidation = upiSchema.safeParse(signUpUpiId.trim());
+      if (!upiValidation.success) {
+        toast({
+          title: "Invalid UPI ID",
+          description: upiValidation.error.errors[0].message,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
+    // Bank details are optional. If ANY bank field is filled, validate ALL required bank fields.
+    const bankAccountNumber = signUpBankAccountNumber.trim();
+    const confirmAccountNumber = signUpConfirmAccountNumber.trim();
+    const accountHolderNameBank = signUpAccountHolderName.trim();
+    const ifscCode = signUpIfscCode.trim().toUpperCase();
+    const bankName = signUpBankName.trim();
+    const anyBankFieldFilled = !!(bankAccountNumber || confirmAccountNumber || accountHolderNameBank || ifscCode || bankName);
+    let bankPayload: {
+      account_holder_name: string;
+      bank_account_number: string;
+      ifsc_code: string;
+      bank_name: string | null;
+    } | null = null;
+
+    if (anyBankFieldFilled) {
+      if (!accountHolderNameBank) {
+        toast({ title: "Account holder name is required", description: "Please complete bank details or clear them all.", variant: "destructive" });
+        return;
+      }
+      const acctValidation = accountNumberSchema.safeParse(bankAccountNumber);
+      if (!acctValidation.success) {
+        toast({ title: "Invalid bank account number", description: acctValidation.error.errors[0].message, variant: "destructive" });
+        return;
+      }
+      if (bankAccountNumber !== confirmAccountNumber) {
+        toast({ title: "Account numbers do not match", description: "Please re-enter the same account number in both fields.", variant: "destructive" });
+        return;
+      }
+      const ifscValidation = ifscSchema.safeParse(ifscCode);
+      if (!ifscValidation.success) {
+        toast({ title: "Invalid IFSC code", description: ifscValidation.error.errors[0].message, variant: "destructive" });
+        return;
+      }
+      bankPayload = {
+        account_holder_name: accountHolderNameBank,
+        bank_account_number: bankAccountNumber,
+        ifsc_code: ifscCode,
+        bank_name: bankName || null,
+      };
     }
     try {
       setLoading(true);
@@ -285,7 +339,8 @@ export default function Auth() {
             community: signUpCommunity,
             services: signUpServices,
             cuisineTags: [],
-            qrData: null
+            qrData: null,
+            bankDetails: bankPayload,
           }
         }
       });
@@ -360,9 +415,86 @@ export default function Auth() {
               </div>
 
 
-              {/* Manual UPI ID Input */}
+              {/* Bank Account Details — optional during signup, recommended */}
+              <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-semibold">Bank Account Details</p>
+                  <p className="text-xs text-muted-foreground">
+                    Optional for now, recommended. Required to receive payouts.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-acct-name">Account Holder Name</Label>
+                  <Input
+                    id="signup-acct-name"
+                    type="text"
+                    placeholder="Name as on bank account"
+                    value={signUpAccountHolderName}
+                    onChange={e => setSignUpAccountHolderName(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-acct-no">Bank Account Number</Label>
+                  <Input
+                    id="signup-acct-no"
+                    inputMode="numeric"
+                    placeholder="9 to 18 digits"
+                    value={signUpBankAccountNumber}
+                    onChange={e => setSignUpBankAccountNumber(e.target.value.replace(/\D/g, ""))}
+                    maxLength={18}
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-acct-no-confirm">Confirm Account Number</Label>
+                  <Input
+                    id="signup-acct-no-confirm"
+                    inputMode="numeric"
+                    placeholder="Re-enter account number"
+                    value={signUpConfirmAccountNumber}
+                    onChange={e => setSignUpConfirmAccountNumber(e.target.value.replace(/\D/g, ""))}
+                    maxLength={18}
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-ifsc">IFSC Code</Label>
+                  <Input
+                    id="signup-ifsc"
+                    type="text"
+                    placeholder="e.g., HDFC0001234"
+                    value={signUpIfscCode}
+                    onChange={e => setSignUpIfscCode(e.target.value.toUpperCase())}
+                    maxLength={11}
+                    disabled={loading}
+                    className="uppercase"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    11 characters. Format: 4 letters + 0 + 6 alphanumeric.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-bank-name">Bank Name (optional)</Label>
+                  <Input
+                    id="signup-bank-name"
+                    type="text"
+                    placeholder="e.g., HDFC Bank"
+                    value={signUpBankName}
+                    onChange={e => setSignUpBankName(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              {/* Manual UPI ID Input — optional, saved for future use */}
               <div className="space-y-2">
-                <Label htmlFor="signup-upi">{t('auth.upiIdLabel', 'UPI ID')} *</Label>
+                <Label htmlFor="signup-upi">{t('auth.upiIdLabel', 'UPI ID')} (optional, for future use)</Label>
                 <Input 
                   id="signup-upi" 
                   type="text" 
@@ -372,7 +504,7 @@ export default function Auth() {
                   disabled={loading} 
                 />
                 <p className="text-xs text-muted-foreground">
-                  {t('auth.upiHint', 'Required for receiving payouts')}
+                  You can update bank or UPI details anytime from your profile.
                 </p>
               </div>
 
@@ -407,22 +539,34 @@ export default function Auth() {
                           }
                         }}
                         disabled={loading}
-                        className={`relative p-4 rounded-2xl border-2 transition-all duration-200 text-left ${
+                        className={`relative overflow-hidden rounded-2xl border-2 text-left bg-background shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-md ${
                           isSelected
-                            ? 'border-primary bg-primary/5 shadow-md ring-2 ring-primary/20'
-                            : 'border-border bg-background hover:border-primary/40 hover:bg-muted/50'
+                            ? 'border-primary shadow-md ring-2 ring-primary/30 scale-[1.02]'
+                            : 'border-border hover:border-primary/50'
                         }`}
                       >
-                        <div className="text-2xl mb-2">{service.icon}</div>
-                        <p className="font-semibold text-sm">{t(service.label)}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{service.description}</p>
-                        {isSelected && (
-                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                            <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-                        )}
+                        <div className="relative w-full aspect-square overflow-hidden bg-muted">
+                          <img
+                            src={service.icon}
+                            alt={t(service.label)}
+                            loading="lazy"
+                            width={512}
+                            height={512}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                          {isSelected && (
+                            <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center shadow-lg">
+                              <svg className="w-3.5 h-3.5 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-3">
+                          <p className="font-semibold text-sm">{t(service.label)}</p>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{service.description}</p>
+                        </div>
                       </button>
                     );
                   })}

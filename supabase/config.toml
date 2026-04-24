@@ -20,3 +20,15 @@ verify_jwt = false
 
 [functions.send-webpush]
 verify_jwt = false
+
+[functions.ack-booking-delivery]
+verify_jwt = false
+
+[functions.get-pending-worker-bookings]
+verify_jwt = false
+
+[functions.dispatch-pending-bookings]
+verify_jwt = false
+
+[functions.send-worker-fallback-alert]
+verify_jwt = false
