@@ -1,5 +1,6 @@
 package app.didisnow.worker;
 
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -31,21 +32,19 @@ public class OverlayPlugin extends Plugin {
         String action = intent.getAction();
         String data   = intent.getData() != null ? intent.getData().toString() : "null";
 
-        // NOTE: resolveActivity() pre-check removed — on Android 11+ with package
-        // visibility restrictions, it can return null even when the Settings
-        // activity is available. We now attempt startActivity() directly and
-        // rely on try/catch to handle real failures.
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        // DO NOT use resolveActivity() here — it always returns null on Android 11+
+        // due to package visibility restrictions (API 30+), even for valid Settings intents.
         Log.d(TAG, "[intent] try label=" + label + " action=" + action + " data=" + data + " device=" + device);
         try {
             if (getActivity() != null) {
                 getActivity().startActivity(intent);
             } else {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 ctx.startActivity(intent);
             }
             Log.d(TAG, "[intent] ✅ ok label=" + label + " device=" + device);
             return true;
-        } catch (android.content.ActivityNotFoundException e) {
+        } catch (ActivityNotFoundException e) {
             Log.w(TAG, "[intent] ❌ ActivityNotFound label=" + label + " device=" + device + " err=" + e.getMessage());
             return false;
         } catch (SecurityException e) {

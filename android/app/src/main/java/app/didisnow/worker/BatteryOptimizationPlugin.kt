@@ -2,6 +2,7 @@ package app.didisnow.worker
 
 import android.content.Context
 import android.content.Intent
+import android.content.ActivityNotFoundException
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
@@ -24,21 +25,18 @@ class BatteryOptimizationPlugin : Plugin() {
         val action = intent.action
         val data = intent.data?.toString() ?: "null"
 
-        // NOTE: resolveActivity() pre-check removed — on Android 11+ with package
-        // visibility restrictions, it can return null even when the Settings
-        // activity is available. Attempt startActivity() directly and rely on
-        // try/catch for real failures.
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        // DO NOT use resolveActivity() — always null on Android 11+ (API 30+)
         Log.d(TAG, "[intent] try label=$label action=$action data=$data device=$device")
         return try {
             if (activity != null) {
                 activity?.startActivity(intent)
             } else {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 ctx.startActivity(intent)
             }
             Log.d(TAG, "[intent] ✅ ok label=$label device=$device")
             true
-        } catch (e: android.content.ActivityNotFoundException) {
+        } catch (e: ActivityNotFoundException) {
             Log.w(TAG, "[intent] ❌ ActivityNotFound label=$label device=$device err=${e.message}")
             false
         } catch (e: SecurityException) {
