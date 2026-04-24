@@ -87,9 +87,6 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
   const [failedIds, setFailedIds] = useState<Set<PermissionId>>(new Set());
   const [oem, setOem] = useState<OemInfo | null>(null);
   const [fallbackModal, setFallbackModal] = useState<FallbackModalState>({ open: false, permissionId: null });
-  const [autoAttemptedIds, setAutoAttemptedIds] = useState<Set<PermissionId>>(new Set());
-  const [autoCountdown, setAutoCountdown] = useState<number | null>(null);
-  const [autoTargetId, setAutoTargetId] = useState<PermissionId | null>(null);
   const [debugEvents, setDebugEvents] = useState<PermissionDebugEvent[]>([]);
 
   const addDebugEvent = useCallback((event: Omit<PermissionDebugEvent, "at">) => {
@@ -100,15 +97,6 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
     setLoading(true);
     const next = await checkAllPermissions();
     setStates(next);
-    setAutoAttemptedIds((prev) => {
-      const remaining = new Set(prev);
-      next.forEach((permission) => {
-        if (permission.status === "granted") {
-          remaining.delete(permission.id);
-        }
-      });
-      return remaining;
-    });
     setLoading(false);
   }, []);
 
@@ -207,41 +195,13 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
   const visibleStates = states.filter(s => s.status !== "not_required");
   const allDone = !loading && !hasOutstandingPermissions(visibleStates);
   const showOemBanner = oem && isTrickyOem(oem.id) && !allDone && !loading;
-  const nextAutoState = !loading && !busyId && !fallbackModal.open
-    ? visibleStates.find((permission) => permission.status !== "granted" && permission.canRequest && !autoAttemptedIds.has(permission.id)) ?? null
-    : null;
-
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform() || !nextAutoState) {
-      setAutoTargetId(null);
-      setAutoCountdown(null);
-      return;
-    }
-
-    setAutoTargetId(nextAutoState.id);
-    setAutoCountdown(3);
-
-    const intervalId = window.setInterval(() => {
-      setAutoCountdown((prev) => (prev && prev > 1 ? prev - 1 : prev));
-    }, 1000);
-
-    const timeoutId = window.setTimeout(() => {
-      setAutoAttemptedIds((prev) => new Set(prev).add(nextAutoState.id));
-      void handleRequest(nextAutoState.id, { silent: true });
-    }, 3000);
-
-    return () => {
-      window.clearInterval(intervalId);
-      window.clearTimeout(timeoutId);
-    };
-  }, [handleRequest, nextAutoState]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="px-5 pt-8 pb-4">
         <h1 className="text-2xl font-bold">Enable Worker Permissions</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          We’ll open each required permission one by one after 3 seconds. You can also tap any card yourself.
+          Tap each required permission to enable it and keep booking alerts working properly.
         </p>
       </header>
 
@@ -261,25 +221,6 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
                 Some toggles may be in a non-standard place. If a button doesn't work,
                 tap <span className="font-semibold">Show me how</span> for step-by-step instructions.
               </div>
-            </div>
-          </Card>
-        )}
-
-        {!loading && autoTargetId && autoCountdown !== null && (
-          <Card className="p-3 border-primary/30 bg-primary/5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium">Next permission: {META[autoTargetId].title}</p>
-                <p className="text-xs text-muted-foreground">Opening in {autoCountdown}s when the app stays active.</p>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8"
-                onClick={() => setAutoAttemptedIds((prev) => new Set(prev).add(autoTargetId))}
-              >
-                Skip
-              </Button>
             </div>
           </Card>
         )}
