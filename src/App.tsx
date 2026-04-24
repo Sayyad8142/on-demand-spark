@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { toast } from "sonner";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -143,6 +144,7 @@ function AppInner() {
   const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
   const startupPermissionRequestInFlight = useRef(false);
+  const overlayReturnCheckPending = useRef(false);
 
   // OTA: confirm boot success + check for updates on startup
   useEffect(() => {
@@ -190,6 +192,11 @@ function AppInner() {
     const requestPermissionById = async (permissionId: PermissionId) => {
       switch (permissionId) {
         case "overlay":
+          overlayReturnCheckPending.current = true;
+          console.log("[Permissions] 📣 Startup attempting ACTION_MANAGE_OVERLAY_PERMISSION intent");
+          toast("Opening Display over other apps", {
+            description: "Attempting ACTION_MANAGE_OVERLAY_PERMISSION for Didi Now Partner.",
+          });
           await requestOverlay();
           break;
         case "battery":
@@ -228,9 +235,37 @@ function AppInner() {
       }
     };
 
+    const reportOverlayStateAfterReturn = async () => {
+      if (!overlayReturnCheckPending.current) return;
+      overlayReturnCheckPending.current = false;
+
+      try {
+        const states = await checkAllPermissions();
+        const overlayState = states.find((entry) => entry.id === "overlay");
+        const canDrawOverlays = overlayState?.status === "granted";
+        console.log(`[Permissions] 🔁 Returned from ACTION_MANAGE_OVERLAY_PERMISSION; Settings.canDrawOverlays()=${canDrawOverlays}`);
+
+        if (canDrawOverlays) {
+          toast.success("Display over other apps enabled", {
+            description: "Settings.canDrawOverlays() returned true after returning to the app.",
+          });
+        } else {
+          toast("Display over other apps still disabled", {
+            description: "Settings.canDrawOverlays() returned false after returning to the app.",
+          });
+        }
+      } catch (error) {
+        console.error("[Permissions] Failed to check Settings.canDrawOverlays() after return", error);
+        toast.error("Could not verify overlay permission", {
+          description: "Failed while checking Settings.canDrawOverlays() after returning.",
+        });
+      }
+    };
+
     const timer = window.setTimeout(runStartupPermissionFlow, 900);
     const appStateSub = CapApp.addListener("appStateChange", ({ isActive }) => {
       if (isActive) {
+        void reportOverlayStateAfterReturn();
         void runStartupPermissionFlow();
       }
     });
