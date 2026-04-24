@@ -30,19 +30,11 @@ export async function initFCM() {
     console.log('🔔 Foreground notification:', notification);
     const data = notification.data || {};
     const bookingId = data.bookingId || data.booking_id;
-    const bookingRequestId = data.booking_request_id || data.bookingRequestId;
-
+    
     if (bookingId) {
       console.log('📬 Foreground booking alert via FCM:', bookingId);
-
-      // ACK the FCM delivery immediately (fire-and-forget)
-      import('@/lib/bookingAck').then(({ ackBookingDelivery }) =>
-        ackBookingDelivery({ bookingId, bookingRequestId, event: 'push_received' })
-      ).catch(() => {});
-
       await processIncomingBooking({
         bookingId,
-        bookingRequestId,
         custName: data.cust_name || data.custName || 'Customer',
         community: data.community || '',
         serviceType: data.service_type || data.serviceType || '',

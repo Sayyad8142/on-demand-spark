@@ -1,7 +1,6 @@
 package app.didisnow.worker
 
 import android.app.Activity
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -15,42 +14,14 @@ object OverlayPermissionHelper {
             Settings.canDrawOverlays(activity)
         else true
 
-    private fun openIntent(activity: Activity, intent: Intent, label: String): Boolean {
-        // DO NOT use resolveActivity() here — it always returns null on Android 11+
-        // due to package visibility restrictions (API 30+), even for valid Settings intents.
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        return try {
-            activity.startActivity(intent)
-            android.util.Log.d("OverlayPermission", "✅ Opened $label on ${Build.MANUFACTURER}")
-            true
-        } catch (e: ActivityNotFoundException) {
-            android.util.Log.w("OverlayPermission", "⚠️ ActivityNotFound for $label", e)
-            false
-        } catch (e: Exception) {
-            android.util.Log.w("OverlayPermission", "⚠️ Failed to open $label", e)
-            false
-        }
-    }
-
     fun request(activity: Activity, requestCode: Int = 9911) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
             !Settings.canDrawOverlays(activity)) {
-            // 1. Per-package overlay permission screen
-            val perPackageIntent = Intent(
+            val intent = Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                 Uri.parse("package:${activity.packageName}")
             )
-            if (openIntent(activity, perPackageIntent, "ACTION_MANAGE_OVERLAY_PERMISSION(package)")) return
-
-            // 2. Global overlay permission list
-            val globalIntent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-            if (openIntent(activity, globalIntent, "ACTION_MANAGE_OVERLAY_PERMISSION(global)")) return
-
-            // 3. App details fallback
-            val fallbackIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                data = Uri.parse("package:${activity.packageName}")
-            }
-            openIntent(activity, fallbackIntent, "ACTION_APPLICATION_DETAILS_SETTINGS")
+            activity.startActivityForResult(intent, requestCode)
         }
     }
 

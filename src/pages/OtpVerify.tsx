@@ -29,12 +29,6 @@ interface OtpVerifyState {
       payload: string;
       extractedUpiId: string;
     } | null;
-    bankDetails?: {
-      account_holder_name: string;
-      bank_account_number: string;
-      ifsc_code: string;
-      bank_name: string | null;
-    } | null;
   };
 }
 
@@ -178,7 +172,7 @@ export default function OtpVerify() {
         }
       } else if (state.mode === 'signup' && state.signUpData) {
         // Sign Up flow
-        const { fullName, upiId, community, services, cuisineTags, qrData, bankDetails } = state.signUpData;
+        const { fullName, upiId, community, services, cuisineTags, qrData } = state.signUpData;
 
         // Fetch the community ID
         const { data: communityData, error: communityError } = await supabase
@@ -232,18 +226,6 @@ export default function OtpVerify() {
           upiQrUploadedAt = new Date().toISOString();
         }
 
-        // Bank details captured during signup (optional)
-        const bankFieldsForInsert = bankDetails
-          ? {
-              account_holder_name: bankDetails.account_holder_name,
-              bank_account_number: bankDetails.bank_account_number,
-              ifsc_code: bankDetails.ifsc_code,
-              bank_name: bankDetails.bank_name,
-              bank_details_source: 'manual' as const,
-              payout_ready: true,
-            }
-          : {};
-
         if (existingWorker) {
           const { error: workerError } = await supabase.from('workers').upsert({
             id: data.user.id,
@@ -260,18 +242,7 @@ export default function OtpVerify() {
             cook_cuisine_tags: finalCuisineTags,
             is_active: true,
             is_available: false,
-            is_busy: false,
-            // Only overwrite bank fields if newly provided during signup
-            ...(bankDetails
-              ? {
-                  account_holder_name: bankDetails.account_holder_name,
-                  bank_account_number: bankDetails.bank_account_number,
-                  ifsc_code: bankDetails.ifsc_code,
-                  bank_name: bankDetails.bank_name,
-                  bank_details_source: 'manual',
-                  payout_ready: true,
-                }
-              : {}),
+            is_busy: false
           }, { onConflict: 'id' });
           if (workerError) throw workerError;
         } else {
@@ -290,8 +261,7 @@ export default function OtpVerify() {
             cook_cuisine_tags: finalCuisineTags,
             is_active: true,
             is_available: false,
-            is_busy: false,
-            ...bankFieldsForInsert,
+            is_busy: false
           });
           if (workerError) throw workerError;
         }
@@ -317,8 +287,17 @@ export default function OtpVerify() {
 
       // Navigate based on mode
       if (state.mode === 'signup') {
-        // New signup → always send to Account Details first
-        navigate("/account-details?from=signup", { replace: true });
+        const { data: availabilityData } = await supabase
+          .from('worker_availability')
+          .select('*')
+          .eq('worker_id', data.user.id)
+          .limit(1);
+
+        if (!availabilityData || availabilityData.length === 0) {
+          navigate("/availability", { replace: true });
+        } else {
+          navigate("/home", { replace: true });
+        }
       } else {
         navigate("/home", { replace: true });
       }

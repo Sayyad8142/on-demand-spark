@@ -319,12 +319,6 @@ Deno.serve(async (req) => {
         status: 'pending',
         offered_at: tier === 1 ? currentTime.toISOString() : null,
         timeout_at: timeoutAt,
-        // Reliability tracking — tier 1 workers get pushed in this same
-        // request, so stamp push_sent_at now. Tiers 2/3 get stamped by
-        // notify-next-tier when their push actually fires.
-        push_sent_at: tier === 1 ? currentTime.toISOString() : null,
-        alert_attempt_count: 1,
-        last_alert_channel: tier === 1 ? 'push' : null,
       };
     });
 

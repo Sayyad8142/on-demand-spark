@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -14,12 +14,12 @@ import { useAppState } from "@/hooks/useAppState";
 import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
 import { SoftUpdatePrompt } from "@/components/SoftUpdatePrompt";
 import { initNativePush } from "@/native/push";
+import { requestAndroidOverlay } from "@/lib/overlay";
 import { tryAccept } from "@/lib/bookingActions";
-// requestLocationPermissions intentionally not imported — see startup effect note below.
+import { requestLocationPermissions } from "@/lib/backgroundLocation";
+import { requestActivityRecognitionPermission } from "@/lib/activityRecognition";
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
 import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
-import PermissionOnboarding from "@/components/PermissionOnboarding";
-import { checkAllPermissions, hasOutstandingPermissions } from "@/lib/permissions";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import Auth from "./pages/Auth";
 import OtpVerify from "./pages/OtpVerify";
@@ -43,18 +43,13 @@ import Earnings from "./pages/Earnings";
 import WorkerBlocked from "./pages/WorkerBlocked";
 import DeviceReadiness from "./pages/DeviceReadiness";
 import CompleteBooking from "./pages/CompleteBooking";
-import AccountDetails from "./pages/AccountDetails";
 import BottomNav from "./components/BottomNav";
-import IncompleteBankSetup from "./components/IncompleteBankSetup";
-import { getBankSetupStatus } from "./lib/bankSetup";
 
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children, showNav = false }: { children: React.ReactNode; showNav?: boolean }) {
   const { user, session, loading } = useAuth();
   const isGuestMode = localStorage.getItem('guest_mode') === 'true';
-  const location = useLocation();
-  const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
 
   // Show loading state while checking auth
   if (loading) {
@@ -72,25 +67,6 @@ function ProtectedRoute({ children, showNav = false }: { children: React.ReactNo
   if (!user && !session && !isGuestMode) {
     console.log('🚫 ProtectedRoute: No user/session, redirecting to /auth');
     return <Navigate to="/auth" replace />;
-  }
-
-  // Bank-setup guard: block app usage when bank details are missing.
-  // Skip in guest mode and on the page that lets them fix it.
-  const ALLOWED_WHEN_INCOMPLETE = ["/account-details"];
-  const isAllowedRoute = ALLOWED_WHEN_INCOMPLETE.some((p) =>
-    location.pathname.startsWith(p)
-  );
-  const bankSetup = getBankSetupStatus(worker);
-  const shouldBlock =
-    !isGuestMode &&
-    !!session?.user?.id &&
-    !workerLoading &&
-    !!worker &&
-    !bankSetup.isComplete &&
-    !isAllowedRoute;
-
-  if (shouldBlock) {
-    return <IncompleteBankSetup />;
   }
 
   return (
@@ -137,34 +113,6 @@ function AppInner() {
   const { needsUpdate, softUpdate, config: updateConfig, dismissSoftUpdate } = useForceUpdateCheck();
   const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [onboardingChecked, setOnboardingChecked] = useState(false);
-
-  // Decide whether to show the unified Permission Onboarding screen.
-  // Runs once on app start: skip on web, skip if user already dismissed it
-  // and nothing is missing, otherwise show it.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!Capacitor.isNativePlatform()) {
-        setOnboardingChecked(true);
-        return;
-      }
-      const dismissed = localStorage.getItem("perm_onboarding_dismissed_v1") === "true";
-      const states = await checkAllPermissions();
-      const outstanding = hasOutstandingPermissions(states);
-      if (cancelled) return;
-      // Show if: never dismissed OR something is still missing
-      setShowOnboarding(!dismissed || outstanding);
-      setOnboardingChecked(true);
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
-  const handleOnboardingComplete = () => {
-    localStorage.setItem("perm_onboarding_dismissed_v1", "true");
-    setShowOnboarding(false);
-  };
 
   // OTA: confirm boot success + check for updates on startup
   useEffect(() => {
@@ -181,21 +129,41 @@ function AppInner() {
     }
   }, []);
 
-  // NOTE: Location permission request intentionally disabled at startup.
-  // For this phase, only the unified PermissionOnboarding flow is allowed
-  // to ask for permissions (notifications, overlay, battery, activity).
-  // Re-enable here later if/when location is added to the onboarding screen.
+  // Request location + activity-recognition permissions on app startup (native only)
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
 
+    console.log('📍 Requesting location permissions on app startup');
+    requestLocationPermissions().then((granted) => {
+      console.log(granted ? '✅ Location permissions granted' : '❌ Location permissions denied');
+    });
 
-  // Initialize native push notifications when we have a session.
-  // Permission prompt is owned by PermissionOnboarding — here we only
-  // register the device token if permission was already granted.
+    // Ask ACTIVITY_RECOGNITION up-front so the worker isn't surprised by a
+    // popup the first time they accept a booking. Delayed slightly so it
+    // doesn't collide with the battery / overlay dialog shown by MainActivity.
+    const t = setTimeout(() => {
+      requestActivityRecognitionPermission().catch(() => {});
+    }, 1500);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Initialize native push notifications when we have a session
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId) return;
-    if (!Capacitor.isNativePlatform()) return;
-    console.log("🔔 Initializing native push for user:", userId);
-    initNativePush(userId);
+
+    console.log("User logged in:", userId);
+    
+    if (Capacitor.isNativePlatform()) {
+      console.log("🔔 Initializing native push for user:", userId);
+      initNativePush(userId);
+      
+      // Request overlay permission on Android
+      if (Capacitor.getPlatform() === 'android') {
+        requestAndroidOverlay();
+      }
+    }
+    // Web push registration is now done manually via /troubleshoot or /verify-push pages
   }, [session?.user?.id]);
 
   // Handle deep links for booking acceptance
@@ -268,18 +236,6 @@ function AppInner() {
   // If mandatory OTA update is required, show OTA modal over the app
   const showOtaMandatory = otaResult?.isMandatory && otaResult?.bundleInfo;
 
-  // Show unified Permission Onboarding before the rest of the app — only on
-  // native, only on first run (or while permissions remain missing).
-  if (onboardingChecked && showOnboarding && Capacitor.isNativePlatform()) {
-    return (
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <PermissionOnboarding onComplete={handleOnboardingComplete} />
-      </TooltipProvider>
-    );
-  }
-
   return (
     <TooltipProvider>
       <Toaster />
@@ -308,7 +264,6 @@ function AppInner() {
           <Route path="/auth-debug" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
           <Route path="/device-readiness" element={<ProtectedRoute><DeviceReadiness /></ProtectedRoute>} />
           <Route path="/complete-booking/:bookingId" element={<ProtectedRoute><CompleteBooking /></ProtectedRoute>} />
-          <Route path="/account-details" element={<ProtectedRoute><AccountDetails /></ProtectedRoute>} />
           <Route path="/" element={<Navigate to="/auth" replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

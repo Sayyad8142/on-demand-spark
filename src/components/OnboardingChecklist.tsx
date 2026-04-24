@@ -4,7 +4,6 @@ import { CheckCircle2, Circle, ChevronRight, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
-import { getBankSetupStatus } from "@/lib/bankSetup";
 
 interface OnboardingChecklistProps {
   workerId: string;
@@ -16,7 +15,6 @@ export interface OnboardingStatus {
   hasServiceTypes: boolean;
   hasCommunity: boolean;
   hasAvailabilitySlots: boolean;
-  hasBankDetails: boolean;
   isComplete: boolean;
 }
 
@@ -37,14 +35,12 @@ export function useOnboardingStatus(workerId: string | undefined, worker: any): 
 
   const hasServiceTypes = !!(worker?.service_types && worker.service_types.length > 0);
   const hasCommunity = !!(worker?.selected_community_id || (worker?.communities && worker.communities.length > 0));
-  const hasBankDetails = getBankSetupStatus(worker).hasBankDetails;
 
   return {
     hasServiceTypes,
     hasCommunity,
     hasAvailabilitySlots: hasSlots,
-    hasBankDetails,
-    isComplete: hasServiceTypes && hasCommunity && hasSlots && hasBankDetails,
+    isComplete: hasServiceTypes && hasCommunity && hasSlots,
   };
 }
 
@@ -69,11 +65,6 @@ export function OnboardingChecklist({ workerId, worker, onStatusChange }: Onboar
       label: "Select your area",
       done: status.hasCommunity,
       action: () => navigate("/profile"),
-    },
-    {
-      label: "Add bank account details",
-      done: status.hasBankDetails,
-      action: () => navigate("/account-details"),
     },
     {
       label: "Set your working hours",

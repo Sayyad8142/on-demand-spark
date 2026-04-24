@@ -54,21 +54,6 @@ Deno.serve(async (req) => {
     const workerIds = requests.map(r => r.worker_id);
     console.log(`🎯 Sending to ${workerIds.length} tier ${tier} workers: [${workerIds.join(", ")}]`);
 
-    // Stamp push_sent_at + offered_at on these requests so the retry/fallback
-    // engine knows when this tier's push actually fired.
-    const { error: stampErr } = await supabase
-      .from("booking_requests")
-      .update({
-        push_sent_at: new Date().toISOString(),
-        offered_at: new Date().toISOString(),
-        last_alert_channel: 'push',
-      })
-      .eq("booking_id", booking_id)
-      .eq("order_sequence", tier)
-      .eq("status", "pending")
-      .is("push_sent_at", null);
-    if (stampErr) console.warn("⚠️ Failed to stamp push_sent_at:", stampErr.message);
-
     // Build scheduled time display
     let scheduledTimeDisplay = "";
     if (booking.scheduled_date && booking.scheduled_time) {

@@ -66,16 +66,15 @@ export async function requestActivityRecognitionPermission(): Promise<boolean> {
       console.log(
         `[Movement] Requesting ACTIVITY_RECOGNITION permission (sensor: ${support.sensorType})`
       );
-      console.log("[Movement] 🟦 Calling native StepCounter.requestPermission()...");
       const { granted } = await p.requestPermission();
-      console.log("[Movement] Native StepCounter.requestPermission resolved:", granted);
-      // NOTE: Returning false here is the normal "user denied" outcome.
-      // Do NOT throw — throwing would surface a "Couldn't open settings" toast
-      // even though the OS prompt did appear correctly.
+      if (granted) {
+        console.log("[Movement] ✅ Activity permission granted");
+      } else {
+        console.log("[Movement] ❌ Activity permission denied");
+      }
       return granted;
     } catch (e) {
-      // Only true plugin/bridge failures reach this catch (e.g. missing plugin)
-      console.error("[Movement] ❌ Activity permission request failed:", e);
+      console.warn("[Movement] Activity permission request failed:", e);
       return false;
     } finally {
       requestInFlight = null;
