@@ -215,7 +215,7 @@ export async function requestOverlay(): Promise<boolean> {
         if (opened) {
           return false;
         }
-        throw e3;
+        throw e2;
       } catch (e3) {
         console.error("[Permissions] ❌ All overlay setting paths failed", e3);
         throw e3;
