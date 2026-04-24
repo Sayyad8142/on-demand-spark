@@ -78,7 +78,6 @@ export async function startMovementMonitoring(
 
     // Not on native — record as unsupported and exit
     if (!plugin) {
-      console.log("[Movement] Skipped — not native platform");
       await saveMovementCheck(bookingId, workerId, {
         sensor_supported: false,
         permission_granted: false,
@@ -91,7 +90,6 @@ export async function startMovementMonitoring(
     // Check sensor support
     const { supported, sensorType } = await plugin.checkSupport();
     if (!supported) {
-      console.log("[Movement] Skipped — device has no step sensor");
       await saveMovementCheck(bookingId, workerId, {
         sensor_supported: false,
         permission_granted: false,
@@ -101,12 +99,9 @@ export async function startMovementMonitoring(
       return;
     }
 
-    // Request permission (already granted on startup in most cases — instant resolve)
+    // Request permission
     const { granted } = await plugin.requestPermission();
     if (!granted) {
-      console.log(
-        "[Movement] Skipped — ACTIVITY_RECOGNITION permission denied (booking accept NOT blocked)"
-      );
       await saveMovementCheck(bookingId, workerId, {
         sensor_supported: true,
         permission_granted: false,
@@ -116,7 +111,6 @@ export async function startMovementMonitoring(
       });
       return;
     }
-    console.log(`[Movement] Permission OK — sensor: ${sensorType}`);
 
     // Fetch dynamic threshold from backend
     const minSteps = await fetchMinSteps();
@@ -162,10 +156,7 @@ export async function startMovementMonitoring(
       windowSeconds: MONITORING_WINDOW_SECONDS,
     });
 
-    console.log(
-      `[Movement] ✅ Monitoring started — booking=${bookingId} window=${MONITORING_WINDOW_SECONDS}s minSteps=${minSteps}`,
-      startResult
-    );
+    console.log("📊 Step monitoring started:", startResult);
   } catch (error) {
     console.error("📊 Movement monitoring error (non-blocking):", error);
     // Save error state but never block
