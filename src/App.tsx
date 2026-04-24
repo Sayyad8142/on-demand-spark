@@ -18,8 +18,6 @@ import { tryAccept } from "@/lib/bookingActions";
 // requestLocationPermissions intentionally not imported — see startup effect note below.
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
 import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
-import PermissionOnboarding from "@/components/PermissionOnboarding";
-import { checkAllPermissions, hasOutstandingPermissions } from "@/lib/permissions";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import Auth from "./pages/Auth";
 import OtpVerify from "./pages/OtpVerify";
@@ -137,34 +135,6 @@ function AppInner() {
   const { needsUpdate, softUpdate, config: updateConfig, dismissSoftUpdate } = useForceUpdateCheck();
   const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [onboardingChecked, setOnboardingChecked] = useState(false);
-
-  // Decide whether to show the unified Permission Onboarding screen.
-  // Runs once on app start: skip on web, skip if user already dismissed it
-  // and nothing is missing, otherwise show it.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!Capacitor.isNativePlatform()) {
-        setOnboardingChecked(true);
-        return;
-      }
-      const dismissed = localStorage.getItem("perm_onboarding_dismissed_v1") === "true";
-      const states = await checkAllPermissions();
-      const outstanding = hasOutstandingPermissions(states);
-      if (cancelled) return;
-      // Show if: never dismissed OR something is still missing
-      setShowOnboarding(!dismissed || outstanding);
-      setOnboardingChecked(true);
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
-  const handleOnboardingComplete = () => {
-    localStorage.setItem("perm_onboarding_dismissed_v1", "true");
-    setShowOnboarding(false);
-  };
 
   // OTA: confirm boot success + check for updates on startup
   useEffect(() => {
@@ -182,14 +152,12 @@ function AppInner() {
   }, []);
 
   // NOTE: Location permission request intentionally disabled at startup.
-  // For this phase, only the unified PermissionOnboarding flow is allowed
-  // to ask for permissions (notifications, overlay, battery, activity).
-  // Re-enable here later if/when location is added to the onboarding screen.
+  // Permissions should be requested by the native/system prompt when the
+  // relevant feature initializes instead of blocking launch with a gate screen.
 
 
   // Initialize native push notifications when we have a session.
-  // Permission prompt is owned by PermissionOnboarding — here we only
-  // register the device token if permission was already granted.
+  // This shows the normal Android notification permission prompt when needed.
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId) return;
@@ -267,18 +235,6 @@ function AppInner() {
 
   // If mandatory OTA update is required, show OTA modal over the app
   const showOtaMandatory = otaResult?.isMandatory && otaResult?.bundleInfo;
-
-  // Show unified Permission Onboarding before the rest of the app — only on
-  // native, only on first run (or while permissions remain missing).
-  if (onboardingChecked && showOnboarding && Capacitor.isNativePlatform()) {
-    return (
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <PermissionOnboarding onComplete={handleOnboardingComplete} />
-      </TooltipProvider>
-    );
-  }
 
   return (
     <TooltipProvider>
