@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
 
@@ -15,6 +16,11 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 import org.json.JSONObject;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 @CapacitorPlugin(name = "OverlayPlugin")
 public class OverlayPlugin extends Plugin {
@@ -35,25 +41,64 @@ public class OverlayPlugin extends Plugin {
         // DO NOT use resolveActivity() here — it always returns null on Android 11+
         // due to package visibility restrictions (API 30+), even for valid Settings intents.
         Log.d(TAG, "[intent] try label=" + label + " action=" + action + " data=" + data + " device=" + device);
-        try {
-            if (getActivity() != null) {
-                getActivity().startActivity(intent);
-            } else {
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                ctx.startActivity(intent);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        final AtomicBoolean opened = new AtomicBoolean(false);
+        final AtomicReference<Throwable> failure = new AtomicReference<>(null);
+        final Runnable launch = () -> {
+            try {
+                if (getActivity() != null && !getActivity().isFinishing()) {
+                    getActivity().startActivity(intent);
+                } else {
+                    ctx.startActivity(intent);
+                }
+                opened.set(true);
+            } catch (Throwable t) {
+                failure.set(t);
             }
+        };
+
+        if (getActivity() != null && Looper.myLooper() != Looper.getMainLooper()) {
+            CountDownLatch latch = new CountDownLatch(1);
+            getActivity().runOnUiThread(() -> {
+                try {
+                    launch.run();
+                } finally {
+                    latch.countDown();
+                }
+            });
+            try {
+                latch.await(1500, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                Log.w(TAG, "[intent] ❌ Interrupted while launching label=" + label + " device=" + device, e);
+                return false;
+            }
+        } else {
+            launch.run();
+        }
+
+        if (opened.get()) {
             Log.d(TAG, "[intent] ✅ ok label=" + label + " device=" + device);
             return true;
-        } catch (ActivityNotFoundException e) {
-            Log.w(TAG, "[intent] ❌ ActivityNotFound label=" + label + " device=" + device + " err=" + e.getMessage());
-            return false;
-        } catch (SecurityException e) {
-            Log.w(TAG, "[intent] ❌ SecurityException label=" + label + " device=" + device + " err=" + e.getMessage());
-            return false;
-        } catch (Exception e) {
-            Log.w(TAG, "[intent] ❌ Exception label=" + label + " device=" + device + " err=" + e.getClass().getSimpleName() + ":" + e.getMessage());
+        }
+
+        Throwable error = failure.get();
+        if (error instanceof ActivityNotFoundException) {
+            Log.w(TAG, "[intent] ❌ ActivityNotFound label=" + label + " device=" + device + " err=" + error.getMessage());
             return false;
         }
+        if (error instanceof SecurityException) {
+            Log.w(TAG, "[intent] ❌ SecurityException label=" + label + " device=" + device + " err=" + error.getMessage());
+            return false;
+        }
+        if (error != null) {
+            Log.w(TAG, "[intent] ❌ Exception label=" + label + " device=" + device + " err=" + error.getClass().getSimpleName() + ":" + error.getMessage());
+            return false;
+        }
+
+        Log.w(TAG, "[intent] ❌ unknown_failure label=" + label + " device=" + device);
+        return false;
     }
 
     /**
