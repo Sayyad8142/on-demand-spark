@@ -121,6 +121,7 @@ public class OverlayPlugin extends Plugin {
         String pkg = ctx.getPackageName();
         String mfg = Build.MANUFACTURER + " / " + Build.MODEL + " / API " + Build.VERSION.SDK_INT;
         Log.d(TAG, "📣 Launching overlay settings (device: " + mfg + ", pkg=" + pkg + ")");
+        Log.d(TAG, "📣 Attempting ACTION_MANAGE_OVERLAY_PERMISSION intent; Settings.canDrawOverlays(before)=" + Settings.canDrawOverlays(ctx));
 
         Intent perPackageIntent = new Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -128,6 +129,7 @@ public class OverlayPlugin extends Plugin {
         );
         perPackageIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         if (startSettingsIntent(perPackageIntent, "per-package ACTION_MANAGE_OVERLAY_PERMISSION")) {
+            Log.d(TAG, "📣 ACTION_MANAGE_OVERLAY_PERMISSION attempted successfully; waiting for user return to re-check Settings.canDrawOverlays()");
             return true;
         }
 
