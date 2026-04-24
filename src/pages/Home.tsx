@@ -6,6 +6,7 @@ import { useUnifiedBookingAlerts } from "@/hooks/useUnifiedBookingAlerts";
 import { useActiveJob } from "@/hooks/useActiveJob";
 import { useEnhancedHeartbeat } from "@/hooks/useEnhancedHeartbeat";
 import { useBookingRequestsRealtime } from "@/hooks/useBookingRequestsRealtime";
+import { useBookingPollingFallback } from "@/hooks/useBookingPollingFallback";
 import { usePushHealthGuard } from "@/hooks/usePushHealthGuard";
 import { useAutoHeal } from "@/hooks/useAutoHeal";
 
@@ -60,6 +61,9 @@ export default function Home() {
 
   // Layer 2: Realtime subscription on booking_requests
   useBookingRequestsRealtime(isGuestMode ? undefined : worker?.id, isOnline);
+
+  // Layer 3: Server-side polling fallback (10s foreground / 30s background)
+  useBookingPollingFallback(isGuestMode ? undefined : worker?.id, isOnline);
   
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
