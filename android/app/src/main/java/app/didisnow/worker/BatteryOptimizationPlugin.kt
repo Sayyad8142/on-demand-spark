@@ -20,25 +20,32 @@ class BatteryOptimizationPlugin : Plugin() {
 
     private fun startSettingsIntent(intent: Intent, label: String): Boolean {
         val ctx: Context = activity ?: context
+        val device = "${Build.MANUFACTURER}/${Build.MODEL}/api${Build.VERSION.SDK_INT}"
+        val action = intent.action
+        val data = intent.data?.toString() ?: "null"
 
         // NOTE: resolveActivity() pre-check removed — on Android 11+ with package
         // visibility restrictions, it can return null even when the Settings
         // activity is available. Attempt startActivity() directly and rely on
         // try/catch for real failures.
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        Log.d(TAG, "[intent] try label=$label action=$action data=$data device=$device")
         return try {
             if (activity != null) {
                 activity?.startActivity(intent)
             } else {
                 ctx.startActivity(intent)
             }
-            Log.d(TAG, "✅ Started $label")
+            Log.d(TAG, "[intent] ✅ ok label=$label device=$device")
             true
         } catch (e: android.content.ActivityNotFoundException) {
-            Log.w(TAG, "⚠️ ActivityNotFound for $label: ${e.message}")
+            Log.w(TAG, "[intent] ❌ ActivityNotFound label=$label device=$device err=${e.message}")
+            false
+        } catch (e: SecurityException) {
+            Log.w(TAG, "[intent] ❌ SecurityException label=$label device=$device err=${e.message}")
             false
         } catch (e: Exception) {
-            Log.w(TAG, "⚠️ Failed to start $label: ${e.message}")
+            Log.w(TAG, "[intent] ❌ Exception label=$label device=$device err=${e.javaClass.simpleName}:${e.message}")
             false
         }
     }
