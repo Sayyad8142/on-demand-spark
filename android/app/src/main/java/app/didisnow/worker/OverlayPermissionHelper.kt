@@ -15,16 +15,18 @@ object OverlayPermissionHelper {
         else true
 
     private fun openIntent(activity: Activity, intent: Intent, label: String): Boolean {
+        // NOTE: resolveActivity() pre-check removed — on Android 11+ with package
+        // visibility restrictions, it can return null even when the Settings
+        // activity is available. Attempt startActivity() directly and rely on
+        // try/catch for real failures.
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         return try {
-            if (intent.resolveActivity(activity.packageManager) == null) {
-                android.util.Log.w("OverlayPermission", "⚠️ No activity can handle $label")
-                false
-            } else {
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                activity.startActivity(intent)
-                android.util.Log.d("OverlayPermission", "✅ Opened $label on ${Build.MANUFACTURER}")
-                true
-            }
+            activity.startActivity(intent)
+            android.util.Log.d("OverlayPermission", "✅ Opened $label on ${Build.MANUFACTURER}")
+            true
+        } catch (e: android.content.ActivityNotFoundException) {
+            android.util.Log.w("OverlayPermission", "⚠️ ActivityNotFound for $label", e)
+            false
         } catch (e: Exception) {
             android.util.Log.w("OverlayPermission", "⚠️ Failed to open $label", e)
             false
@@ -34,12 +36,18 @@ object OverlayPermissionHelper {
     fun request(activity: Activity, requestCode: Int = 9911) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
             !Settings.canDrawOverlays(activity)) {
-            val intent = Intent(
+            // 1. Per-package overlay permission screen
+            val perPackageIntent = Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                 Uri.parse("package:${activity.packageName}")
             )
-            if (openIntent(activity, intent, "ACTION_MANAGE_OVERLAY_PERMISSION(package)")) return
+            if (openIntent(activity, perPackageIntent, "ACTION_MANAGE_OVERLAY_PERMISSION(package)")) return
 
+            // 2. Global overlay permission list
+            val globalIntent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+            if (openIntent(activity, globalIntent, "ACTION_MANAGE_OVERLAY_PERMISSION(global)")) return
+
+            // 3. App details fallback
             val fallbackIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                 data = Uri.parse("package:${activity.packageName}")
             }
