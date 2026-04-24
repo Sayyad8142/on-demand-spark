@@ -11,6 +11,7 @@
  * clear explanation flow instead of multiple surprise system dialogs.
  */
 
+import { App as CapApp } from "@capacitor/app";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
 import { Device } from "@capacitor/device";
@@ -98,6 +99,22 @@ function getBatteryPlugin(): BatteryPlugin | null {
     } catch { return null; }
   }
   return batteryPlugin;
+}
+
+async function tryOpenAppSettingsFallback(reason: "overlay" | "battery"): Promise<boolean> {
+  try {
+    const appPlugin = CapApp as unknown as { openSettings?: () => Promise<void> };
+    if (typeof appPlugin.openSettings !== "function") {
+      console.warn(`[Permissions] App.openSettings unavailable for ${reason} fallback`);
+      return false;
+    }
+    await appPlugin.openSettings();
+    console.log(`[Permissions] ✅ App.openSettings() opened app settings as ${reason} fallback`);
+    return true;
+  } catch (error) {
+    console.warn(`[Permissions] App.openSettings failed for ${reason} fallback`, error);
+    return false;
+  }
 }
 
 // ---------- Notifications ----------
@@ -192,8 +209,17 @@ export async function requestOverlay(): Promise<boolean> {
         return false;
       }
     } catch (e2) {
-      console.error("[Permissions] ❌ All overlay setting paths failed", e2);
-      throw e2;
+      console.warn("[Permissions] OverlayPlugin.openOverlaySettings also failed — falling back to app settings", e2);
+      try {
+        const opened = await tryOpenAppSettingsFallback("overlay");
+        if (opened) {
+          return false;
+        }
+        throw e2;
+      } catch (e3) {
+        console.error("[Permissions] ❌ All overlay setting paths failed", e3);
+        throw e3;
+      }
     }
   }
   await new Promise(r => setTimeout(r, 400));
@@ -237,8 +263,17 @@ export async function requestBatteryExemption(): Promise<boolean> {
     console.log("[Permissions] Battery isIgnoring after request:", ignoring);
     return ignoring;
   } catch (e) {
-    console.error("[Permissions] ❌ requestBatteryExemption failed (no settings screen could be opened)", e);
-    throw e;
+    console.warn("[Permissions] BatteryOptimization.request failed — falling back to app settings", e);
+    try {
+      const opened = await tryOpenAppSettingsFallback("battery");
+      if (opened) {
+        return false;
+      }
+      throw e;
+    } catch (e2) {
+      console.error("[Permissions] ❌ requestBatteryExemption failed (no settings screen could be opened)", e2);
+      throw e2;
+    }
   }
 }
 
