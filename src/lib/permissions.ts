@@ -276,13 +276,16 @@ export async function requestBatteryExemption(): Promise<boolean> {
   if (!plugin) {
     const msg = "[Permissions] BatteryOptimization plugin not available — registerPlugin returned null";
     console.error(msg);
+    reportPermissionDebug({ permissionId: "battery", step: "plugin", status: "failed", error: msg });
     throw new Error(msg);
   }
   try {
     console.log("[Permissions] 🟦 requestBatteryExemption() invoked — opening Android Settings...");
+    reportPermissionDebug({ permissionId: "battery", step: "request", status: "started", message: "Opening Android battery settings" });
     const result = await plugin.request();
     console.log("[Permissions] ✅ BatteryOptimization.request resolved", result);
     if (result?.opened) {
+      reportPermissionDebug({ permissionId: "battery", step: "request", status: "success", fallbackPath: "battery optimization native chain", message: "Battery settings screen opened" });
       return false;
     }
     // Settings opened — user must flip the toggle. Re-check after delay; do
@@ -290,17 +293,21 @@ export async function requestBatteryExemption(): Promise<boolean> {
     await new Promise(r => setTimeout(r, 400));
     const { ignoring } = await plugin.isIgnoring().catch(() => ({ ignoring: false }));
     console.log("[Permissions] Battery isIgnoring after request:", ignoring);
+    reportPermissionDebug({ permissionId: "battery", step: "isIgnoring", status: ignoring ? "success" : "failed", message: ignoring ? "Battery optimization disabled" : "Battery optimization still enabled" });
     return ignoring;
   } catch (e) {
     console.warn("[Permissions] BatteryOptimization.request failed — falling back to app settings", e);
+    reportPermissionDebug({ permissionId: "battery", step: "request", status: "fallback", fallbackPath: "Capacitor App.openSettings", error: e instanceof Error ? e.message : String(e) });
     try {
       const opened = await tryOpenAppSettingsFallback("battery");
       if (opened) {
+        reportPermissionDebug({ permissionId: "battery", step: "App.openSettings", status: "success", fallbackPath: "Android app settings", message: "App settings opened as last resort" });
         return false;
       }
       throw e;
     } catch (e2) {
       console.error("[Permissions] ❌ requestBatteryExemption failed (no settings screen could be opened)", e2);
+      reportPermissionDebug({ permissionId: "battery", step: "all fallback paths", status: "failed", fallbackPath: "none left", error: e2 instanceof Error ? e2.message : String(e2) });
       throw e2;
     }
   }
