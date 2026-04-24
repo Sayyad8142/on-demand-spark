@@ -92,6 +92,10 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
   const [autoTargetId, setAutoTargetId] = useState<PermissionId | null>(null);
   const [debugEvents, setDebugEvents] = useState<PermissionDebugEvent[]>([]);
 
+  const addDebugEvent = useCallback((event: Omit<PermissionDebugEvent, "at">) => {
+    setDebugEvents((prev) => [{ ...event, at: new Date().toLocaleTimeString() }, ...prev].slice(0, 8));
+  }, []);
+
   const refresh = useCallback(async () => {
     setLoading(true);
     const next = await checkAllPermissions();
@@ -159,7 +163,7 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
     try {
       switch (id) {
         case "notifications":
-          setDebugEvents((prev) => [{ permissionId: id, step: "request", status: "started", message: "Requesting notification permission", at: new Date().toLocaleTimeString() }, ...prev].slice(0, 8));
+          addDebugEvent({ permissionId: id, step: "request", status: "started", message: "Requesting notification permission" });
           await requestNotificationPermission();
           break;
         case "overlay":
@@ -169,15 +173,15 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
           await requestBatteryExemption();
           break;
         case "activity":
-          setDebugEvents((prev) => [{ permissionId: id, step: "request", status: "started", message: "Requesting activity permission", at: new Date().toLocaleTimeString() }, ...prev].slice(0, 8));
+          addDebugEvent({ permissionId: id, step: "request", status: "started", message: "Requesting activity permission" });
           await requestActivity();
           break;
       }
       console.log(`[PermissionOnboarding] ✅ ${id} request returned without throwing`);
-      setDebugEvents((prev) => [{ permissionId: id, step: "handleRequest", status: "success", message: "Request completed without throwing", at: new Date().toLocaleTimeString() }, ...prev].slice(0, 8));
+      addDebugEvent({ permissionId: id, step: "handleRequest", status: "success", message: "Request completed without throwing" });
     } catch (e) {
       console.error(`[PermissionOnboarding] ${id} request failed`, e);
-      setDebugEvents((prev) => [{ permissionId: id, step: "handleRequest", status: "failed", error: e instanceof Error ? e.message : String(e), at: new Date().toLocaleTimeString() }, ...prev].slice(0, 8));
+      addDebugEvent({ permissionId: id, step: "handleRequest", status: "failed", error: e instanceof Error ? e.message : String(e) });
       markFailed(id, true);
       if (id === "overlay" || id === "battery") {
         openFallbackModal(id);
@@ -198,7 +202,7 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
       setBusyId(null);
       setTimeout(refresh, 900);
     }
-  }, [oem?.id, openFallbackModal, refresh]);
+  }, [addDebugEvent, oem?.id, openFallbackModal, refresh]);
 
   const visibleStates = states.filter(s => s.status !== "not_required");
   const allDone = !loading && !hasOutstandingPermissions(visibleStates);
