@@ -27,20 +27,22 @@ public class OverlayPlugin extends Plugin {
             return false;
         }
 
-        if (intent.resolveActivity(ctx.getPackageManager()) == null) {
-            Log.w(TAG, "⚠️ No activity can handle " + label);
-            return false;
-        }
-
+        // NOTE: resolveActivity() pre-check removed — on Android 11+ with package
+        // visibility restrictions, it can return null even when the Settings
+        // activity is available. We now attempt startActivity() directly and
+        // rely on try/catch to handle real failures.
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
             if (getActivity() != null) {
                 getActivity().startActivity(intent);
             } else {
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 ctx.startActivity(intent);
             }
             Log.d(TAG, "✅ Started " + label);
             return true;
+        } catch (android.content.ActivityNotFoundException e) {
+            Log.w(TAG, "⚠️ ActivityNotFound for " + label + ": " + e.getMessage());
+            return false;
         } catch (Exception e) {
             Log.w(TAG, "⚠️ Failed to start " + label + ": " + e.getMessage());
             return false;
