@@ -545,52 +545,79 @@ export type Database = {
       }
       booking_requests: {
         Row: {
+          alert_attempt_count: number
+          alert_last_error: string | null
           booking_id: string
           created_at: string | null
           device_ack_status: string | null
           device_opened_at: string | null
           device_received_at: string | null
+          fallback_sms_count: number
+          fallback_sms_sent_at: string | null
           id: string
+          last_alert_channel: string | null
           notification_status: string
           notified_at: string | null
           offered_at: string | null
           order_sequence: number
+          popup_shown_at: string | null
+          push_delivered_at: string | null
+          push_sent_at: string | null
           responded_at: string | null
           status: string | null
           timeout_at: string
           worker_id: string
+          worker_seen_at: string | null
         }
         Insert: {
+          alert_attempt_count?: number
+          alert_last_error?: string | null
           booking_id: string
           created_at?: string | null
           device_ack_status?: string | null
           device_opened_at?: string | null
           device_received_at?: string | null
+          fallback_sms_count?: number
+          fallback_sms_sent_at?: string | null
           id?: string
+          last_alert_channel?: string | null
           notification_status?: string
           notified_at?: string | null
           offered_at?: string | null
           order_sequence: number
+          popup_shown_at?: string | null
+          push_delivered_at?: string | null
+          push_sent_at?: string | null
           responded_at?: string | null
           status?: string | null
           timeout_at?: string
           worker_id: string
+          worker_seen_at?: string | null
         }
         Update: {
+          alert_attempt_count?: number
+          alert_last_error?: string | null
           booking_id?: string
           created_at?: string | null
           device_ack_status?: string | null
           device_opened_at?: string | null
           device_received_at?: string | null
+          fallback_sms_count?: number
+          fallback_sms_sent_at?: string | null
           id?: string
+          last_alert_channel?: string | null
           notification_status?: string
           notified_at?: string | null
           offered_at?: string | null
           order_sequence?: number
+          popup_shown_at?: string | null
+          push_delivered_at?: string | null
+          push_sent_at?: string | null
           responded_at?: string | null
           status?: string | null
           timeout_at?: string
           worker_id?: string
+          worker_seen_at?: string | null
         }
         Relationships: [
           {

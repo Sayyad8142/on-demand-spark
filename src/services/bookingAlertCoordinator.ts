@@ -108,8 +108,17 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
   // Notify all listeners
   listeners.forEach((l) => l(alert));
 
-  // Send delivery "received" acknowledgment
+  // Send delivery "received" acknowledgment (legacy table)
   sendDeliveryAck(alert, "received");
+
+  // NEW: also stamp booking_requests.popup_shown_at via the new ACK function
+  import("@/lib/bookingAck").then(({ ackBookingDelivery }) =>
+    ackBookingDelivery({
+      bookingId: alert.bookingId,
+      bookingRequestId: alert.bookingRequestId,
+      event: "popup_shown",
+    })
+  ).catch(() => {});
 
   return true;
 }
@@ -169,8 +178,12 @@ export async function sendDeliveryAck(
 /**
  * Mark that the alert UI has been opened/shown to the worker.
  */
-export function markAlertOpened(bookingId: string) {
-  sendDeliveryAck({ bookingId }, "opened");
+export function markAlertOpened(bookingId: string, bookingRequestId?: string) {
+  sendDeliveryAck({ bookingId, bookingRequestId }, "opened");
+  // NEW: also stamp booking_requests.worker_seen_at
+  import("@/lib/bookingAck").then(({ ackBookingDelivery }) =>
+    ackBookingDelivery({ bookingId, bookingRequestId, event: "worker_seen" })
+  ).catch(() => {});
 }
 
 /**
