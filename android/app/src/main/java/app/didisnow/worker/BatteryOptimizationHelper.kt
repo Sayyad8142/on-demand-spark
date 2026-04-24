@@ -1,6 +1,7 @@
 package app.didisnow.worker
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -11,18 +12,20 @@ import androidx.appcompat.app.AlertDialog
 
 object BatteryOptimizationHelper {
     private fun openIntent(context: Context, intent: Intent, label: String): Boolean {
+        val device = "${Build.MANUFACTURER}/${Build.MODEL}/api${Build.VERSION.SDK_INT}"
+        val action = intent.action
+        val data = intent.data?.toString() ?: "null"
+        android.util.Log.d("BatteryOptimizationHelper", "[intent] try label=$label action=$action data=$data device=$device")
         return try {
-            if (intent.resolveActivity(context.packageManager) == null) {
-                android.util.Log.w("BatteryOptimizationHelper", "⚠️ No activity can handle $label")
-                false
-            } else {
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(intent)
-                android.util.Log.d("BatteryOptimizationHelper", "✅ Opened $label on ${Build.MANUFACTURER}")
-                true
-            }
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            android.util.Log.d("BatteryOptimizationHelper", "[intent] ✅ ok label=$label device=$device")
+            true
+        } catch (e: ActivityNotFoundException) {
+            android.util.Log.w("BatteryOptimizationHelper", "[intent] ❌ ActivityNotFound label=$label device=$device err=${e.message}")
+            false
         } catch (e: Exception) {
-            android.util.Log.w("BatteryOptimizationHelper", "⚠️ Failed to open $label", e)
+            android.util.Log.w("BatteryOptimizationHelper", "[intent] ❌ Exception label=$label device=$device err=${e.javaClass.simpleName}:${e.message}")
             false
         }
     }
