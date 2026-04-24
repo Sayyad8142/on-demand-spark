@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,6 +15,13 @@ import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
 import { SoftUpdatePrompt } from "@/components/SoftUpdatePrompt";
 import { initNativePush } from "@/native/push";
 import { tryAccept } from "@/lib/bookingActions";
+import {
+  checkAllPermissions,
+  requestActivity,
+  requestBatteryExemption,
+  requestOverlay,
+  type PermissionId,
+} from "@/lib/permissions";
 // requestLocationPermissions intentionally not imported — see startup effect note below.
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
 import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
@@ -135,6 +142,7 @@ function AppInner() {
   const { needsUpdate, softUpdate, config: updateConfig, dismissSoftUpdate } = useForceUpdateCheck();
   const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
+  const startupPermissionRequestInFlight = useRef(false);
 
   // OTA: confirm boot success + check for updates on startup
   useEffect(() => {
@@ -151,9 +159,87 @@ function AppInner() {
     }
   }, []);
 
-  // NOTE: Location permission request intentionally disabled at startup.
-  // Permissions should be requested by the native/system prompt when the
-  // relevant feature initializes instead of blocking launch with a gate screen.
+  // Restore normal first-launch Android permission flow without showing the
+  // removed onboarding screen. Notifications are still handled by initNativePush;
+  // overlay, battery optimization, and activity recognition are requested
+  // automatically once per signed-in user/install, one step per active session.
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return;
+
+    const storageKey = `android_startup_permission_attempts_v1:${userId}`;
+    const orderedPermissions: PermissionId[] = ["overlay", "battery", "activity"];
+
+    const readAttempted = () => {
+      try {
+        const raw = localStorage.getItem(storageKey);
+        if (!raw) return new Set<PermissionId>();
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return new Set<PermissionId>();
+        return new Set(parsed.filter((value): value is PermissionId => orderedPermissions.includes(value)));
+      } catch {
+        return new Set<PermissionId>();
+      }
+    };
+
+    const writeAttempted = (attempted: Set<PermissionId>) => {
+      localStorage.setItem(storageKey, JSON.stringify(Array.from(attempted)));
+    };
+
+    const requestPermissionById = async (permissionId: PermissionId) => {
+      switch (permissionId) {
+        case "overlay":
+          await requestOverlay();
+          break;
+        case "battery":
+          await requestBatteryExemption();
+          break;
+        case "activity":
+          await requestActivity();
+          break;
+        default:
+          break;
+      }
+    };
+
+    const runStartupPermissionFlow = async () => {
+      if (startupPermissionRequestInFlight.current) return;
+      startupPermissionRequestInFlight.current = true;
+
+      try {
+        const states = await checkAllPermissions();
+        const attempted = readAttempted();
+        const nextPermission = orderedPermissions.find((permissionId) => {
+          const state = states.find((entry) => entry.id === permissionId);
+          return !!state && state.canRequest && state.status !== "granted" && state.status !== "not_required" && !attempted.has(permissionId);
+        });
+
+        if (!nextPermission) return;
+
+        attempted.add(nextPermission);
+        writeAttempted(attempted);
+        console.log(`[Permissions] 🚀 Startup auto-request for ${nextPermission}`);
+        await requestPermissionById(nextPermission);
+      } catch (error) {
+        console.error("[Permissions] Startup auto-request flow failed", error);
+      } finally {
+        startupPermissionRequestInFlight.current = false;
+      }
+    };
+
+    const timer = window.setTimeout(runStartupPermissionFlow, 900);
+    const appStateSub = CapApp.addListener("appStateChange", ({ isActive }) => {
+      if (isActive) {
+        void runStartupPermissionFlow();
+      }
+    });
+
+    return () => {
+      window.clearTimeout(timer);
+      appStateSub.then((listener) => listener.remove());
+    };
+  }, [session?.user?.id]);
 
 
   // Initialize native push notifications when we have a session.
