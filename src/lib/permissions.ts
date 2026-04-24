@@ -70,6 +70,26 @@ export interface PermissionState {
   canRequest: boolean;
 }
 
+export interface PermissionDebugEvent {
+  permissionId: PermissionId;
+  step: string;
+  status: "started" | "success" | "fallback" | "failed";
+  fallbackPath?: string;
+  message?: string;
+  error?: string;
+  at: string;
+}
+
+let permissionDebugReporter: ((event: PermissionDebugEvent) => void) | null = null;
+
+export function setPermissionDebugReporter(reporter: ((event: PermissionDebugEvent) => void) | null) {
+  permissionDebugReporter = reporter;
+}
+
+function reportPermissionDebug(event: Omit<PermissionDebugEvent, "at">) {
+  permissionDebugReporter?.({ ...event, at: new Date().toLocaleTimeString() });
+}
+
 interface StepCounterPlugin {
   checkSupport(): Promise<{ supported: boolean; sensorType: string }>;
   requestPermission(): Promise<{ granted: boolean }>;
@@ -181,10 +201,12 @@ export async function checkOverlayState(): Promise<PermissionState> {
 export async function requestOverlay(): Promise<boolean> {
   if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return true;
   console.log("[Permissions] 🟦 requestOverlay() invoked — opening Android Settings...");
+  reportPermissionDebug({ permissionId: "overlay", step: "requestPermission", status: "started", message: "Opening Android overlay settings" });
   const p = getOverlayPlugin();
   if (!p) {
     const msg = "[Permissions] OverlayPlugin not available (registerPlugin returned null)";
     console.error(msg);
+    reportPermissionDebug({ permissionId: "overlay", step: "plugin", status: "failed", error: msg });
     throw new Error(msg);
   }
   console.log("[Permissions] OverlayPlugin detected — invoking requestPermission()");
@@ -195,29 +217,36 @@ export async function requestOverlay(): Promise<boolean> {
     const result = await p.requestPermission();
     console.log("[Permissions] ✅ OverlayPlugin.requestPermission resolved", result);
     if (result?.opened) {
+      reportPermissionDebug({ permissionId: "overlay", step: "requestPermission", status: "success", fallbackPath: "per-package/global/app-details native chain", message: "Native settings screen opened" });
       return false;
     }
     if (result?.granted) {
+      reportPermissionDebug({ permissionId: "overlay", step: "checkPermission", status: "success", message: "Overlay permission already granted" });
       return true;
     }
   } catch (e) {
     console.warn("[Permissions] OverlayPlugin.requestPermission rejected — trying openOverlaySettings", e);
+    reportPermissionDebug({ permissionId: "overlay", step: "requestPermission", status: "fallback", fallbackPath: "openOverlaySettings", error: e instanceof Error ? e.message : String(e) });
     try {
       const fallback = await p.openOverlaySettings();
       console.log("[Permissions] ✅ OverlayPlugin.openOverlaySettings resolved", fallback);
       if (fallback?.opened) {
+        reportPermissionDebug({ permissionId: "overlay", step: "openOverlaySettings", status: "success", fallbackPath: "explicit native overlay settings", message: "Fallback settings screen opened" });
         return false;
       }
     } catch (e2) {
       console.warn("[Permissions] OverlayPlugin.openOverlaySettings also failed — falling back to app settings", e2);
+      reportPermissionDebug({ permissionId: "overlay", step: "openOverlaySettings", status: "fallback", fallbackPath: "Capacitor App.openSettings", error: e2 instanceof Error ? e2.message : String(e2) });
       try {
         const opened = await tryOpenAppSettingsFallback("overlay");
         if (opened) {
+          reportPermissionDebug({ permissionId: "overlay", step: "App.openSettings", status: "success", fallbackPath: "Android app settings", message: "App settings opened as last resort" });
           return false;
         }
         throw e2;
       } catch (e3) {
         console.error("[Permissions] ❌ All overlay setting paths failed", e3);
+        reportPermissionDebug({ permissionId: "overlay", step: "all fallback paths", status: "failed", fallbackPath: "none left", error: e3 instanceof Error ? e3.message : String(e3) });
         throw e3;
       }
     }
