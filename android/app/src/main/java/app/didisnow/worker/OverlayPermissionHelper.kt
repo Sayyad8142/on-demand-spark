@@ -1,6 +1,7 @@
 package app.didisnow.worker
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -15,16 +16,14 @@ object OverlayPermissionHelper {
         else true
 
     private fun openIntent(activity: Activity, intent: Intent, label: String): Boolean {
-        // NOTE: resolveActivity() pre-check removed — on Android 11+ with package
-        // visibility restrictions, it can return null even when the Settings
-        // activity is available. Attempt startActivity() directly and rely on
-        // try/catch for real failures.
+        // DO NOT use resolveActivity() here — it always returns null on Android 11+
+        // due to package visibility restrictions (API 30+), even for valid Settings intents.
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         return try {
             activity.startActivity(intent)
             android.util.Log.d("OverlayPermission", "✅ Opened $label on ${Build.MANUFACTURER}")
             true
-        } catch (e: android.content.ActivityNotFoundException) {
+        } catch (e: ActivityNotFoundException) {
             android.util.Log.w("OverlayPermission", "⚠️ ActivityNotFound for $label", e)
             false
         } catch (e: Exception) {
