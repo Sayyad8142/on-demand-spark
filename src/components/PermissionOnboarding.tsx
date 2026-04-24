@@ -17,12 +17,14 @@ import { toast } from "@/hooks/use-toast";
 import {
   type PermissionId,
   type PermissionState,
+  type PermissionDebugEvent,
   checkAllPermissions,
   hasOutstandingPermissions,
   requestNotificationPermission,
   requestOverlay,
   requestBatteryExemption,
   requestActivity,
+  setPermissionDebugReporter,
 } from "@/lib/permissions";
 import {
   type OemInfo,
@@ -88,6 +90,11 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
   const [autoAttemptedIds, setAutoAttemptedIds] = useState<Set<PermissionId>>(new Set());
   const [autoCountdown, setAutoCountdown] = useState<number | null>(null);
   const [autoTargetId, setAutoTargetId] = useState<PermissionId | null>(null);
+  const [debugEvents, setDebugEvents] = useState<PermissionDebugEvent[]>([]);
+
+  const addDebugEvent = useCallback((event: Omit<PermissionDebugEvent, "at">) => {
+    setDebugEvents((prev) => [{ ...event, at: new Date().toLocaleTimeString() }, ...prev].slice(0, 8));
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -109,6 +116,13 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
     refresh();
     getOemInfo().then(setOem).catch(() => setOem(null));
   }, [refresh]);
+
+  useEffect(() => {
+    setPermissionDebugReporter((event) => {
+      setDebugEvents((prev) => [event, ...prev].slice(0, 8));
+    });
+    return () => setPermissionDebugReporter(null);
+  }, []);
 
   // Re-check when user returns from system Settings
   useEffect(() => {
@@ -149,6 +163,7 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
     try {
       switch (id) {
         case "notifications":
+          addDebugEvent({ permissionId: id, step: "request", status: "started", message: "Requesting notification permission" });
           await requestNotificationPermission();
           break;
         case "overlay":
@@ -158,12 +173,15 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
           await requestBatteryExemption();
           break;
         case "activity":
+          addDebugEvent({ permissionId: id, step: "request", status: "started", message: "Requesting activity permission" });
           await requestActivity();
           break;
       }
       console.log(`[PermissionOnboarding] ✅ ${id} request returned without throwing`);
+      addDebugEvent({ permissionId: id, step: "handleRequest", status: "success", message: "Request completed without throwing" });
     } catch (e) {
       console.error(`[PermissionOnboarding] ${id} request failed`, e);
+      addDebugEvent({ permissionId: id, step: "handleRequest", status: "failed", error: e instanceof Error ? e.message : String(e) });
       markFailed(id, true);
       if (id === "overlay" || id === "battery") {
         openFallbackModal(id);
@@ -184,7 +202,7 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
       setBusyId(null);
       setTimeout(refresh, 900);
     }
-  }, [oem?.id, openFallbackModal, refresh]);
+  }, [addDebugEvent, oem?.id, openFallbackModal, refresh]);
 
   const visibleStates = states.filter(s => s.status !== "not_required");
   const allDone = !loading && !hasOutstandingPermissions(visibleStates);
@@ -278,6 +296,10 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
           />
         ))}
 
+        {!loading && (
+          <PermissionDebugPanel events={debugEvents} />
+        )}
+
         {!loading && visibleStates.length === 0 && (
           <Card className="p-6 text-center">
             <Check className="w-8 h-8 text-green-600 mx-auto mb-2" />
@@ -308,6 +330,43 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
         onClose={() => setFallbackModal({ open: false, permissionId: null })}
       />
     </div>
+  );
+}
+
+function PermissionDebugPanel({ events }: { events: PermissionDebugEvent[] }) {
+  return (
+    <Card className="p-3 border-dashed">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold">Permission status debug</h2>
+        <span className="text-[10px] text-muted-foreground">Last {events.length}</span>
+      </div>
+      {events.length === 0 ? (
+        <p className="mt-2 text-xs text-muted-foreground">No permission attempts recorded yet.</p>
+      ) : (
+        <div className="mt-2 space-y-2">
+          {events.map((event, index) => (
+            <div key={`${event.at}-${event.permissionId}-${event.step}-${index}`} className="rounded-md bg-muted/50 p-2 text-xs">
+              <div className="flex flex-wrap items-center gap-1 font-medium">
+                <span>{event.permissionId}</span>
+                <span className="text-muted-foreground">/</span>
+                <span>{event.step}</span>
+                <span className={cn(
+                  "ml-auto rounded-full px-1.5 py-0.5 text-[10px]",
+                  event.status === "success" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+                  event.status === "failed" && "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+                  event.status === "fallback" && "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+                  event.status === "started" && "bg-primary/10 text-primary"
+                )}>{event.status}</span>
+              </div>
+              {event.fallbackPath && <p className="mt-1 text-muted-foreground">Fallback: {event.fallbackPath}</p>}
+              {event.message && <p className="mt-1 text-muted-foreground">{event.message}</p>}
+              {event.error && <p className="mt-1 text-red-600 dark:text-red-400 break-words">Error: {event.error}</p>}
+              <p className="mt-1 text-[10px] text-muted-foreground">{event.at}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }
 
