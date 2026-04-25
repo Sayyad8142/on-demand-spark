@@ -138,6 +138,7 @@ function AppInner() {
   const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
   const [showPermissionOnboarding, setShowPermissionOnboarding] = useState(false);
+  const [startupPopupPermissionsComplete, setStartupPopupPermissionsComplete] = useState(false);
 
   // OTA: confirm boot success + check for updates on startup
   useEffect(() => {
@@ -154,8 +155,37 @@ function AppInner() {
     }
   }, []);
 
-  // Android first-login permission flow: request popup permissions first,
-  // then show the permission onboarding screen once per signed-in user.
+  // Android app-launch popup permissions: these do not depend on login.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
+      setStartupPopupPermissionsComplete(true);
+      return;
+    }
+
+    let cancelled = false;
+
+    const runStartupPermissionFlow = async () => {
+      console.log("[Permissions] Android app-launch flow: requesting notifications first");
+      await requestNotificationPermission();
+      console.log("[Permissions] Android app-launch flow: requesting activity/step permission second");
+      await requestActivity();
+    };
+
+    runStartupPermissionFlow()
+      .then(() => {
+        if (!cancelled) setStartupPopupPermissionsComplete(true);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error("[Permissions] Startup popup permission check failed", error);
+          setStartupPopupPermissionsComplete(true);
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  // Android first-login onboarding: show overlay/battery instructions after popup permissions finish.
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId || !Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
@@ -163,33 +193,11 @@ function AppInner() {
       return;
     }
 
-    let cancelled = false;
+    if (!startupPopupPermissionsComplete) return;
+
     const storageKey = `permission_onboarding_seen_v1:${userId}`;
-    if (localStorage.getItem(storageKey) === "true") {
-      setShowPermissionOnboarding(false);
-      return;
-    }
-
-    const runStartupPermissionFlow = async () => {
-      console.log("[Permissions] Android startup flow: requesting notifications first");
-      await requestNotificationPermission();
-      console.log("[Permissions] Android startup flow: requesting activity/step permission second");
-      await requestActivity();
-    };
-
-    runStartupPermissionFlow()
-      .then(() => {
-        if (!cancelled) setShowPermissionOnboarding(true);
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          console.error("[Permissions] Startup permission check failed; showing onboarding", error);
-          setShowPermissionOnboarding(true);
-        }
-      });
-
-    return () => { cancelled = true; };
-  }, [session?.user?.id]);
+    setShowPermissionOnboarding(localStorage.getItem(storageKey) !== "true");
+  }, [session?.user?.id, startupPopupPermissionsComplete]);
 
   const handlePermissionOnboardingComplete = () => {
     const userId = session?.user?.id;
