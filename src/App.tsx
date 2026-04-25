@@ -19,9 +19,7 @@ import {
   checkBatteryState,
   checkOverlayState,
   requestActivity,
-  requestBatteryExemption,
   requestNotificationPermission,
-  requestOverlay,
 } from "@/lib/permissions";
 // requestLocationPermissions intentionally not imported — see startup effect note below.
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
@@ -149,8 +147,6 @@ function AppInner() {
   const androidPermissionFlowRef = useRef({
     running: false,
     runtimeRequested: false,
-    overlayOpened: false,
-    batteryOpened: false,
     completed: false,
   });
 
@@ -197,8 +193,9 @@ function AppInner() {
     }
   }, []);
 
-  // Android app-launch permissions. Runtime prompts are requested first; settings-based
-  // permissions are opened one-by-one and continue when the user returns to the app.
+  // Android app-launch permissions. Only runtime prompts open automatically.
+  // Settings-based permissions (overlay/battery) are handled by PermissionOnboarding
+  // so workers explicitly tap Enable and understand what Android Settings screen opened.
   useEffect(() => {
     if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
       return;
@@ -207,6 +204,8 @@ function AppInner() {
     let cancelled = false;
 
     const runStartupPermissionFlow = async () => {
+      const userId = session?.user?.id;
+      if (!userId) return;
       const flow = androidPermissionFlowRef.current;
       if (cancelled || flow.running || flow.completed) return;
 
@@ -222,22 +221,17 @@ function AppInner() {
         }
 
         const overlay = await checkOverlayState();
-        if (!cancelled && overlay.status !== "granted" && overlay.status !== "not_required" && !flow.overlayOpened) {
-          flow.overlayOpened = true;
-          console.log("[Permissions] opening overlay settings");
-          await requestOverlay();
-          return;
-        }
-        console.log(`[Permissions] overlay settings opened/skipped: ${overlay.status}`);
+        console.log(`[Permissions] opening overlay settings deferred to onboarding: ${overlay.status}`);
 
         const battery = await checkBatteryState();
-        if (!cancelled && battery.status !== "granted" && battery.status !== "not_required" && !flow.batteryOpened) {
-          flow.batteryOpened = true;
-          console.log("[Permissions] opening battery optimization settings");
-          await requestBatteryExemption();
-          return;
+        console.log(`[Permissions] opening battery optimization settings deferred to onboarding: ${battery.status}`);
+
+        if (!cancelled && (
+          (overlay.status !== "granted" && overlay.status !== "not_required") ||
+          (battery.status !== "granted" && battery.status !== "not_required")
+        )) {
+          await checkAndroidSettingsPermissions({ allowHide: false });
         }
-        console.log(`[Permissions] battery optimization opened/skipped: ${battery.status}`);
 
         flow.completed = true;
         console.log("[Permissions] Android app-launch flow completed");
@@ -265,7 +259,7 @@ function AppInner() {
       cancelled = true;
       appStateSub.then((sub) => sub.remove());
     };
-  }, []);
+  }, [checkAndroidSettingsPermissions, session?.user?.id]);
 
   useEffect(() => {
     const userId = session?.user?.id;

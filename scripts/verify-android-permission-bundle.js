@@ -5,8 +5,10 @@ const assetsDir = join(process.cwd(), "android", "app", "src", "main", "assets",
 
 const requiredMarkers = [
   "[Permissions] Android app-launch flow",
-  "opening overlay settings",
-  "opening battery optimization settings",
+  "opening overlay settings deferred to onboarding",
+  "opening battery optimization settings deferred to onboarding",
+  "[PermissionOnboarding] 👆 Enable tapped",
+  "[PermissionOnboarding] App resumed — re-running checkAllPermissions()",
 ];
 
 if (!existsSync(assetsDir)) {
