@@ -258,16 +258,6 @@ function AppInner() {
     );
   }
 
-  if (showPermissionOnboarding && session?.user?.id) {
-    return (
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <PermissionOnboarding onComplete={handlePermissionOnboardingComplete} />
-      </TooltipProvider>
-    );
-  }
-
   // If mandatory OTA update is required, show OTA modal over the app
   const showOtaMandatory = otaResult?.isMandatory && otaResult?.bundleInfo;
 
