@@ -4,7 +4,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { toast } from "sonner";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -16,13 +15,8 @@ import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
 import { SoftUpdatePrompt } from "@/components/SoftUpdatePrompt";
 import { initNativePush } from "@/native/push";
 import { tryAccept } from "@/lib/bookingActions";
-import {
-  checkAllPermissions,
-  requestActivity,
-  requestBatteryExemption,
-  requestOverlay,
-  type PermissionId,
-} from "@/lib/permissions";
+import { checkAllPermissions, hasOutstandingPermissions } from "@/lib/permissions";
+import PermissionOnboarding from "@/components/PermissionOnboarding";
 // requestLocationPermissions intentionally not imported — see startup effect note below.
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
 import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
@@ -143,8 +137,9 @@ function AppInner() {
   const { needsUpdate, softUpdate, config: updateConfig, dismissSoftUpdate } = useForceUpdateCheck();
   const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
-  const startupPermissionRequestInFlight = useRef(false);
-  const overlayReturnCheckPending = useRef(false);
+  const [showPermissionOnboarding, setShowPermissionOnboarding] = useState(false);
+  const [permissionCheckLoading, setPermissionCheckLoading] = useState(false);
+  const [permissionOnboardingCompleted, setPermissionOnboardingCompleted] = useState(false);
 
   // OTA: confirm boot success + check for updates on startup
   useEffect(() => {
