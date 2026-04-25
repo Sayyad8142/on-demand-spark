@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
+import { isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 
 type Booking = Database["public"]["Tables"]["bookings"]["Row"];
 
@@ -87,6 +88,14 @@ export function useActiveJob(userId: string | undefined) {
         "📦 Active job fetched:",
         data ? `Found booking ${data.id}, flat: ${data.flat_no}` : "No active job"
       );
+      if (data && data.status === "assigned" && isBeforeScheduledDispatchWindow(data)) {
+        logScheduledOfferDecision(data, "query", false);
+        console.log("📅 Future scheduled assignment hidden from active job card:", data.id);
+        setActiveJob(null);
+        return;
+      }
+
+      if (data) logScheduledOfferDecision(data, "query", true);
       setActiveJob(data);
     } catch (error) {
       console.error("❌ Error fetching active job:", error);
@@ -117,7 +126,13 @@ export function useActiveJob(userId: string | undefined) {
         (payload) => {
           const booking = payload.new as Booking;
           console.log("📡 Realtime booking update:", booking.id, "status:", booking.status);
+          if (booking.status === "assigned" && isBeforeScheduledDispatchWindow(booking)) {
+            logScheduledOfferDecision(booking, "realtime", false);
+            setActiveJob(null);
+            return;
+          }
           if (["assigned", "accepted", "on_the_way", "started"].includes(booking.status)) {
+            logScheduledOfferDecision(booking, "realtime", true);
             setActiveJob(booking);
           } else {
             setActiveJob(null);

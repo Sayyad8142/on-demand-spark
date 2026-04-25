@@ -20,6 +20,7 @@ import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { supabase } from "@/integrations/supabase/client";
 import { processIncomingBooking } from "@/services/bookingAlertCoordinator";
+import { logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 
 const POLL_FOREGROUND_MS = 10_000;
 const POLL_BACKGROUND_MS = 30_000;
@@ -36,6 +37,9 @@ interface PendingItem {
     cust_name: string | null;
     flat_no: string | null;
     price_inr: number | null;
+    booking_type?: string | null;
+    scheduled_date?: string | null;
+    scheduled_time?: string | null;
   };
 }
 
@@ -69,6 +73,7 @@ export function useBookingPollingFallback(workerId: string | undefined | null, i
 
         console.log(`[Polling] Found ${items.length} pending booking(s) via fallback`);
         for (const item of items) {
+          logScheduledOfferDecision(item.booking, "poll", true);
           await processIncomingBooking({
             bookingId: item.booking.id,
             bookingRequestId: item.booking_request_id,
@@ -77,6 +82,9 @@ export function useBookingPollingFallback(workerId: string | undefined | null, i
             serviceType: item.booking.service_type || "",
             flatNo: item.booking.flat_no || "",
             priceInr: item.booking.price_inr ?? 0,
+            bookingType: item.booking.booking_type ?? undefined,
+            scheduledDate: item.booking.scheduled_date ?? undefined,
+            scheduledTime: item.booking.scheduled_time ?? undefined,
             timeoutAt: item.timeout_at,
             source: "heartbeat",
           });

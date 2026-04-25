@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Capacitor } from "@capacitor/core";
 import { CURRENT_VERSION_CODE } from "@/config/version";
 import { processIncomingBooking } from "@/services/bookingAlertCoordinator";
+import { logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 
 const HEARTBEAT_INTERVAL_MS = 45 * 1000; // 45 seconds
 
@@ -159,11 +160,12 @@ async function checkPendingBookingRequests(workerId: string) {
       // Fetch booking details
       const { data: booking } = await supabase
         .from("bookings")
-        .select("id, cust_name, community, service_type, flat_no, price_inr, status")
+        .select("id, cust_name, community, service_type, flat_no, price_inr, status, booking_type, scheduled_date, scheduled_time")
         .eq("id", req.booking_id)
         .maybeSingle();
 
       if (!booking || booking.status !== "pending") continue;
+      logScheduledOfferDecision(booking, "heartbeat", true);
 
       await processIncomingBooking({
         bookingId: booking.id,
@@ -173,6 +175,9 @@ async function checkPendingBookingRequests(workerId: string) {
         serviceType: booking.service_type || "",
         flatNo: booking.flat_no || "",
         priceInr: booking.price_inr ?? 0,
+        bookingType: booking.booking_type,
+        scheduledDate: booking.scheduled_date ?? undefined,
+        scheduledTime: booking.scheduled_time ?? undefined,
         timeoutAt: req.timeout_at,
         source: "heartbeat",
       });

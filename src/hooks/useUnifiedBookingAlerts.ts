@@ -11,6 +11,7 @@ import {
   markAlertOpened,
   pruneShownBookings,
 } from "@/services/bookingAlertCoordinator";
+import { isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 
 /**
  * Unified booking alert hook that:
@@ -83,6 +84,10 @@ export function useUnifiedBookingAlerts(
         async (payload) => {
           const b = payload.new as any;
           if (matchRef.current(b)) {
+            if (isBeforeScheduledDispatchWindow(b)) {
+              logScheduledOfferDecision(b, "realtime", false);
+              return;
+            }
             await processIncomingBooking({
               bookingId: b.id,
               custName: b.cust_name || "Customer",
@@ -90,6 +95,9 @@ export function useUnifiedBookingAlerts(
               serviceType: b.service_type || "",
               flatNo: b.flat_no || "",
               priceInr: b.price_inr ?? 0,
+              bookingType: b.booking_type,
+              scheduledDate: b.scheduled_date,
+              scheduledTime: b.scheduled_time,
               source: "realtime_bookings",
             });
           }
@@ -148,7 +156,7 @@ export function useUnifiedBookingAlerts(
         for (const req of requests) {
           const { data: booking } = await supabase
             .from("bookings")
-            .select("id, cust_name, community, service_type, flat_no, price_inr, status")
+            .select("id, cust_name, community, service_type, flat_no, price_inr, status, booking_type, scheduled_date, scheduled_time")
             .eq("id", req.booking_id)
             .maybeSingle();
 
@@ -161,6 +169,9 @@ export function useUnifiedBookingAlerts(
               serviceType: booking.service_type || "",
               flatNo: booking.flat_no || "",
               priceInr: booking.price_inr ?? 0,
+              bookingType: booking.booking_type,
+              scheduledDate: booking.scheduled_date ?? undefined,
+              scheduledTime: booking.scheduled_time ?? undefined,
               timeoutAt: req.timeout_at,
               source: "resume",
             });

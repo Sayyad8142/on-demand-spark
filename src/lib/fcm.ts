@@ -9,6 +9,7 @@
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import { processIncomingBooking } from '@/services/bookingAlertCoordinator';
+import { isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from '@/lib/scheduledBookingGuards';
 
 let fcmInitialized = false;
 
@@ -33,6 +34,18 @@ export async function initFCM() {
     const bookingRequestId = data.booking_request_id || data.bookingRequestId;
 
     if (bookingId) {
+      const scheduleInfo = {
+        bookingId,
+        bookingType: data.booking_type || data.bookingType,
+        scheduledDate: data.scheduled_date || data.scheduledDate,
+        scheduledTime: data.scheduled_time || data.scheduledTime,
+      };
+      if (!bookingRequestId && isBeforeScheduledDispatchWindow(scheduleInfo)) {
+        logScheduledOfferDecision(scheduleInfo, 'fcm', false);
+        console.log('🔕 FCM scheduled booking ignored before dispatch window:', bookingId);
+        return;
+      }
+
       console.log('📬 Foreground booking alert via FCM:', bookingId);
 
       // ACK the FCM delivery immediately (fire-and-forget)
@@ -48,6 +61,9 @@ export async function initFCM() {
         serviceType: data.service_type || data.serviceType || '',
         flatNo: data.flat_no || data.flatNo || '',
         priceInr: parseInt(data.price_inr || data.priceInr || '0', 10),
+        bookingType: scheduleInfo.bookingType,
+        scheduledDate: scheduleInfo.scheduledDate,
+        scheduledTime: scheduleInfo.scheduledTime,
         source: 'fcm',
       });
     }
@@ -58,16 +74,33 @@ export async function initFCM() {
     console.log('🔔 Notification clicked:', notification);
     const data = notification.notification.data || {};
     const bookingId = data.bookingId || data.booking_id;
+    const bookingRequestId = data.booking_request_id || data.bookingRequestId;
     
     if (bookingId) {
+      const scheduleInfo = {
+        bookingId,
+        bookingType: data.booking_type || data.bookingType,
+        scheduledDate: data.scheduled_date || data.scheduledDate,
+        scheduledTime: data.scheduled_time || data.scheduledTime,
+      };
+      if (!bookingRequestId && isBeforeScheduledDispatchWindow(scheduleInfo)) {
+        logScheduledOfferDecision(scheduleInfo, 'fcm', false);
+        console.log('🔕 FCM scheduled booking tap ignored before dispatch window:', bookingId);
+        return;
+      }
+
       console.log('📬 Booking alert clicked:', bookingId);
       await processIncomingBooking({
         bookingId,
+        bookingRequestId,
         custName: data.cust_name || data.custName || 'Customer',
         community: data.community || '',
         serviceType: data.service_type || data.serviceType || '',
         flatNo: data.flat_no || data.flatNo || '',
         priceInr: parseInt(data.price_inr || data.priceInr || '0', 10),
+        bookingType: scheduleInfo.bookingType,
+        scheduledDate: scheduleInfo.scheduledDate,
+        scheduledTime: scheduleInfo.scheduledTime,
         source: 'fcm',
       });
     }

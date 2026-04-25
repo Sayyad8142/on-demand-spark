@@ -8,6 +8,11 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import {
+  isBeforeScheduledDispatchWindow,
+  logScheduledOfferDecision,
+  type ScheduledOfferLogSource,
+} from "@/lib/scheduledBookingGuards";
 
 export interface BookingAlert {
   bookingId: string;
@@ -17,9 +22,20 @@ export interface BookingAlert {
   serviceType: string;
   flatNo: string;
   priceInr: number;
+  bookingType?: string;
+  scheduledDate?: string;
+  scheduledTime?: string;
   timeoutAt?: string;
   source: "fcm" | "realtime_bookings" | "realtime_requests" | "heartbeat" | "resume";
 }
+
+const sourceForLog: Record<BookingAlert["source"], ScheduledOfferLogSource> = {
+  fcm: "fcm",
+  realtime_bookings: "realtime",
+  realtime_requests: "realtime",
+  heartbeat: "heartbeat",
+  resume: "resume",
+};
 
 type AlertListener = (alert: BookingAlert) => void;
 type DismissListener = (bookingId: string) => void;
@@ -79,9 +95,29 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
   try {
     const { data: booking } = await supabase
       .from("bookings")
-      .select("status, worker_id")
+      .select("status, worker_id, booking_type, scheduled_date, scheduled_time")
       .eq("id", bookingId)
       .maybeSingle();
+
+    if (booking) {
+      alert.bookingType = alert.bookingType ?? booking.booking_type;
+      alert.scheduledDate = alert.scheduledDate ?? booking.scheduled_date ?? undefined;
+      alert.scheduledTime = alert.scheduledTime ?? booking.scheduled_time ?? undefined;
+
+      const hasActiveRequest = !!alert.bookingRequestId;
+      const earlyScheduledOffer = !hasActiveRequest && isBeforeScheduledDispatchWindow({
+        bookingId,
+        booking_type: alert.bookingType,
+        scheduled_date: alert.scheduledDate,
+        scheduled_time: alert.scheduledTime,
+      });
+
+      if (earlyScheduledOffer) {
+        logScheduledOfferDecision(alert, sourceForLog[alert.source], false);
+        console.log(`🔕 [Coordinator] Early scheduled offer blocked: ${bookingId}`);
+        return false;
+      }
+    }
 
     if (booking && booking.status !== "pending") {
       console.log(`🔕 [Coordinator] Stale: ${bookingId} status=${booking.status}`);
@@ -104,6 +140,7 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
   currentAlert = alert;
 
   console.log(`🔔 [Coordinator] NEW alert: ${bookingId} (source: ${alert.source})`);
+  logScheduledOfferDecision(alert, sourceForLog[alert.source], true);
 
   // Notify all listeners
   listeners.forEach((l) => l(alert));
