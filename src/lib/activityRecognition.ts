@@ -15,6 +15,7 @@ import { Capacitor, registerPlugin } from "@capacitor/core";
 
 interface StepCounterPlugin {
   checkSupport(): Promise<{ supported: boolean; sensorType: string }>;
+  checkPermission(): Promise<{ granted: boolean }>;
   requestPermission(): Promise<{ granted: boolean }>;
 }
 
