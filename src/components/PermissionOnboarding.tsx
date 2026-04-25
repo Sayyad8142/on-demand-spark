@@ -48,7 +48,7 @@ const META: Record<PermissionId, PermissionMeta> = {
     Icon: Bell,
   },
   overlay: {
-    title: "Display over other apps",
+    title: "Display over other apps / Overlay",
     reason: "Shows new bookings as a popup even when the app is in background.",
     Icon: Layers,
   },
@@ -58,7 +58,7 @@ const META: Record<PermissionId, PermissionMeta> = {
     Icon: BatteryCharging,
   },
   activity: {
-    title: "Physical activity",
+    title: "Physical activity / Step count",
     reason: "Helps verify you've started moving after accepting a booking.",
     Icon: Activity,
   },
@@ -96,9 +96,13 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
   const refresh = useCallback(async () => {
     setLoading(true);
     const next = await checkAllPermissions();
+    next.forEach((state) => {
+      console.log(`[PermissionOnboarding] status ${state.id}=${state.status} canRequest=${state.canRequest}`);
+      addDebugEvent({ permissionId: state.id, step: "status", status: state.status === "granted" || state.status === "not_required" ? "success" : "failed", message: `Current status: ${state.status}` });
+    });
     setStates(next);
     setLoading(false);
-  }, []);
+  }, [addDebugEvent]);
 
   useEffect(() => {
     refresh();
@@ -120,7 +124,10 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
       return () => document.removeEventListener("visibilitychange", onVis);
     }
     const sub = CapApp.addListener("appStateChange", (s) => {
-      if (s.isActive) refresh();
+      if (s.isActive) {
+        console.log("[PermissionOnboarding] App resumed — re-running checkAllPermissions()");
+        refresh();
+      }
     });
     return () => { sub.then(s => s.remove()); };
   }, [refresh]);
@@ -139,6 +146,7 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
 
   const handleRequest = useCallback(async (id: PermissionId, options?: { silent?: boolean }) => {
     console.log(`[PermissionOnboarding] 👆 Enable tapped — id=${id}, native=${Capacitor.isNativePlatform()}, oem=${oem?.id}`);
+    addDebugEvent({ permissionId: id, step: "button", status: "started", message: `Enable tapped; native=${Capacitor.isNativePlatform()} platform=${Capacitor.getPlatform()}` });
     if (id !== "notifications" && !Capacitor.isNativePlatform()) {
       toast({
         title: "Available on Android only",
@@ -152,6 +160,7 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
       switch (id) {
         case "notifications":
           addDebugEvent({ permissionId: id, step: "request", status: "started", message: "Requesting notification permission" });
+          addDebugEvent({ permissionId: id, step: "plugin", status: "success", message: "PushNotifications plugin path available" });
           await requestNotificationPermission();
           break;
         case "overlay":
@@ -162,6 +171,7 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
           break;
         case "activity":
           addDebugEvent({ permissionId: id, step: "request", status: "started", message: "Requesting activity permission" });
+          addDebugEvent({ permissionId: id, step: "plugin", status: "success", message: "StepCounter plugin path available" });
           await requestActivity();
           break;
       }
@@ -253,9 +263,9 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
         <Button
           className="w-full h-12 text-base"
           onClick={onComplete}
-          disabled={loading}
+          disabled={loading || !allDone}
         >
-          {allDone ? "Continue" : "Continue anyway"}
+          Continue to app
         </Button>
         {!allDone && !loading && (
           <p className="text-xs text-center text-muted-foreground">

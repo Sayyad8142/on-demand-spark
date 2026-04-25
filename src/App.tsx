@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { toast } from "sonner";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -16,13 +15,8 @@ import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
 import { SoftUpdatePrompt } from "@/components/SoftUpdatePrompt";
 import { initNativePush } from "@/native/push";
 import { tryAccept } from "@/lib/bookingActions";
-import {
-  checkAllPermissions,
-  requestActivity,
-  requestBatteryExemption,
-  requestOverlay,
-  type PermissionId,
-} from "@/lib/permissions";
+import { checkAllPermissions, hasOutstandingPermissions } from "@/lib/permissions";
+import PermissionOnboarding from "@/components/PermissionOnboarding";
 // requestLocationPermissions intentionally not imported — see startup effect note below.
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
 import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
@@ -143,8 +137,9 @@ function AppInner() {
   const { needsUpdate, softUpdate, config: updateConfig, dismissSoftUpdate } = useForceUpdateCheck();
   const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
-  const startupPermissionRequestInFlight = useRef(false);
-  const overlayReturnCheckPending = useRef(false);
+  const [showPermissionOnboarding, setShowPermissionOnboarding] = useState(false);
+  const [permissionCheckLoading, setPermissionCheckLoading] = useState(false);
+  const [permissionOnboardingCompleted, setPermissionOnboardingCompleted] = useState(false);
 
   // OTA: confirm boot success + check for updates on startup
   useEffect(() => {
@@ -161,131 +156,55 @@ function AppInner() {
     }
   }, []);
 
-  // Restore normal first-launch Android permission flow without showing the
-  // removed onboarding screen. Notifications are still handled by initNativePush;
-  // overlay, battery optimization, and activity recognition are requested
-  // automatically once per signed-in user/install, one step per active session.
+  // Android first-login permission gate. Do not persist "attempted" state;
+  // permissions are checked from the OS and the worker stays here until ready.
   useEffect(() => {
     const userId = session?.user?.id;
-    if (!userId) return;
-    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return;
+    if (!userId || !Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
+      setShowPermissionOnboarding(false);
+      setPermissionCheckLoading(false);
+      return;
+    }
 
-    const storageKey = `android_startup_permission_attempts_v1:${userId}`;
-    const orderedPermissions: PermissionId[] = ["overlay", "battery", "activity"];
+    let cancelled = false;
+    setPermissionCheckLoading(true);
+    try {
+      localStorage.removeItem(`android_startup_permission_attempts_v1:${userId}`);
+    } catch { /* ignore storage errors */ }
 
-    const readAttempted = () => {
-      try {
-        const raw = localStorage.getItem(storageKey);
-        if (!raw) return new Set<PermissionId>();
-        const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed)) return new Set<PermissionId>();
-        return new Set(parsed.filter((value): value is PermissionId => orderedPermissions.includes(value)));
-      } catch {
-        return new Set<PermissionId>();
-      }
-    };
-
-    const writeAttempted = (attempted: Set<PermissionId>) => {
-      localStorage.setItem(storageKey, JSON.stringify(Array.from(attempted)));
-    };
-
-    const requestPermissionById = async (permissionId: PermissionId) => {
-      switch (permissionId) {
-        case "overlay":
-          overlayReturnCheckPending.current = true;
-          console.log("[Permissions] 📣 Startup attempting ACTION_MANAGE_OVERLAY_PERMISSION intent");
-          toast("Opening Display over other apps", {
-            description: "Attempting ACTION_MANAGE_OVERLAY_PERMISSION for Didi Now Partner.",
-          });
-          await requestOverlay();
-          break;
-        case "battery":
-          await requestBatteryExemption();
-          break;
-        case "activity":
-          await requestActivity();
-          break;
-        default:
-          break;
-      }
-    };
-
-    const runStartupPermissionFlow = async () => {
-      if (startupPermissionRequestInFlight.current) return;
-      startupPermissionRequestInFlight.current = true;
-
-      try {
-        const states = await checkAllPermissions();
-        const attempted = readAttempted();
-        const nextPermission = orderedPermissions.find((permissionId) => {
-          const state = states.find((entry) => entry.id === permissionId);
-          return !!state && state.canRequest && state.status !== "granted" && state.status !== "not_required" && !attempted.has(permissionId);
+    checkAllPermissions()
+      .then((states) => {
+        if (cancelled) return;
+        const requiredStates = states.filter((state) => ["overlay", "battery", "activity"].includes(state.id));
+        requiredStates.forEach((state) => {
+          console.log(`[Permissions] startup status ${state.id}=${state.status} canRequest=${state.canRequest}`);
         });
-
-        if (!nextPermission) return;
-
-        attempted.add(nextPermission);
-        writeAttempted(attempted);
-        console.log(`[Permissions] 🚀 Startup auto-request for ${nextPermission}`);
-        await requestPermissionById(nextPermission);
-      } catch (error) {
-        console.error("[Permissions] Startup auto-request flow failed", error);
-      } finally {
-        startupPermissionRequestInFlight.current = false;
-      }
-    };
-
-    const reportOverlayStateAfterReturn = async () => {
-      if (!overlayReturnCheckPending.current) return;
-      overlayReturnCheckPending.current = false;
-
-      try {
-        const states = await checkAllPermissions();
-        const overlayState = states.find((entry) => entry.id === "overlay");
-        const canDrawOverlays = overlayState?.status === "granted";
-        console.log(`[Permissions] 🔁 Returned from ACTION_MANAGE_OVERLAY_PERMISSION; Settings.canDrawOverlays()=${canDrawOverlays}`);
-
-        if (canDrawOverlays) {
-          toast.success("Display over other apps enabled", {
-            description: "Settings.canDrawOverlays() returned true after returning to the app.",
-          });
-        } else {
-          toast("Display over other apps still disabled", {
-            description: "Settings.canDrawOverlays() returned false after returning to the app.",
-          });
+        setShowPermissionOnboarding(hasOutstandingPermissions(requiredStates));
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error("[Permissions] Startup permission check failed; showing onboarding", error);
+          setShowPermissionOnboarding(true);
         }
-      } catch (error) {
-        console.error("[Permissions] Failed to check Settings.canDrawOverlays() after return", error);
-        toast.error("Could not verify overlay permission", {
-          description: "Failed while checking Settings.canDrawOverlays() after returning.",
-        });
-      }
-    };
+      })
+      .finally(() => {
+        if (!cancelled) setPermissionCheckLoading(false);
+      });
 
-    const timer = window.setTimeout(runStartupPermissionFlow, 900);
-    const appStateSub = CapApp.addListener("appStateChange", ({ isActive }) => {
-      if (isActive) {
-        void reportOverlayStateAfterReturn();
-        void runStartupPermissionFlow();
-      }
-    });
-
-    return () => {
-      window.clearTimeout(timer);
-      appStateSub.then((listener) => listener.remove());
-    };
+    return () => { cancelled = true; };
   }, [session?.user?.id]);
 
 
   // Initialize native push notifications when we have a session.
-  // This shows the normal Android notification permission prompt when needed.
+  // Android notification prompt is handled by PermissionOnboarding first.
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId) return;
     if (!Capacitor.isNativePlatform()) return;
+    if (Capacitor.getPlatform() === "android" && (permissionCheckLoading || showPermissionOnboarding) && !permissionOnboardingCompleted) return;
     console.log("🔔 Initializing native push for user:", userId);
     initNativePush(userId);
-  }, [session?.user?.id]);
+  }, [session?.user?.id, permissionCheckLoading, permissionOnboardingCompleted, showPermissionOnboarding]);
 
   // Handle deep links for booking acceptance
   useEffect(() => {
@@ -350,6 +269,30 @@ function AppInner() {
         <Toaster />
         <Sonner />
         <WorkerBlocked reason={worker?.blocked_reason} />
+      </TooltipProvider>
+    );
+  }
+
+  if (session?.user?.id && Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android" && (permissionCheckLoading || showPermissionOnboarding)) {
+    return (
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        {permissionCheckLoading ? (
+          <div className="min-h-screen flex items-center justify-center bg-background">
+            <div className="text-center space-y-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+              <p className="text-muted-foreground">Checking permissions...</p>
+            </div>
+          </div>
+        ) : (
+          <PermissionOnboarding
+            onComplete={() => {
+              setPermissionOnboardingCompleted(true);
+              setShowPermissionOnboarding(false);
+            }}
+          />
+        )}
       </TooltipProvider>
     );
   }

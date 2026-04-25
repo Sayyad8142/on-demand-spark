@@ -67,6 +67,22 @@ class StepCounterPlugin : Plugin() {
     }
 
     @PluginMethod
+    fun checkPermission(call: PluginCall) {
+        val granted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ContextCompat.checkSelfPermission(
+                context, Manifest.permission.ACTIVITY_RECOGNITION
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+
+        Log.d(TAG, "🔍 [Native] ACTIVITY_RECOGNITION checkPermission granted=$granted")
+        val ret = JSObject()
+        ret.put("granted", granted)
+        call.resolve(ret)
+    }
+
+    @PluginMethod
     fun requestPermission(call: PluginCall) {
         Log.d(TAG, "🟢 [Native] StepCounterPlugin.requestPermission entered")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
