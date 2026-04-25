@@ -170,6 +170,7 @@ function AppInner() {
 
     let cancelled = false;
     setPermissionCheckLoading(true);
+    setShowPermissionOnboarding(false);
     setStartupPermissionFlowCompleted(false);
     try {
       localStorage.removeItem(`android_startup_permission_attempts_v1:${userId}`);
@@ -288,7 +289,7 @@ function AppInner() {
     );
   }
 
-  if (session?.user?.id && Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android" && showPermissionOnboarding) {
+  if (session?.user?.id && Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android" && startupPermissionFlowCompleted && showPermissionOnboarding) {
     return (
       <TooltipProvider>
         <Toaster />
