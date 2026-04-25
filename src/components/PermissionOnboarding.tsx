@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
-import { Bell, Layers, BatteryCharging, Activity, Check, X, AlertTriangle, Loader2, HelpCircle, RotateCcw } from "lucide-react";
+import { Layers, BatteryCharging, Check, X, AlertTriangle, Loader2, HelpCircle, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -45,7 +45,7 @@ const META: Record<PermissionId, PermissionMeta> = {
   notifications: {
     title: "Notifications",
     reason: "So you receive booking alerts the moment they arrive.",
-    Icon: Bell,
+    Icon: Layers,
   },
   overlay: {
     title: "Display over other apps / Overlay",
@@ -60,7 +60,7 @@ const META: Record<PermissionId, PermissionMeta> = {
   activity: {
     title: "Physical activity / Step count",
     reason: "Helps verify you've started moving after accepting a booking.",
-    Icon: Activity,
+    Icon: Layers,
   },
 };
 
