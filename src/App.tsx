@@ -15,8 +15,7 @@ import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
 import { SoftUpdatePrompt } from "@/components/SoftUpdatePrompt";
 import { initNativePush } from "@/native/push";
 import { tryAccept } from "@/lib/bookingActions";
-import { requestActivity, requestNotificationPermission } from "@/lib/permissions";
-import PermissionOnboarding from "@/components/PermissionOnboarding";
+import { requestActivity, requestBatteryExemption, requestNotificationPermission, requestOverlay } from "@/lib/permissions";
 // requestLocationPermissions intentionally not imported — see startup effect note below.
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
 import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
@@ -137,8 +136,6 @@ function AppInner() {
   const { needsUpdate, softUpdate, config: updateConfig, dismissSoftUpdate } = useForceUpdateCheck();
   const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
-  const [showPermissionOnboarding, setShowPermissionOnboarding] = useState(false);
-  const [startupPopupPermissionsComplete, setStartupPopupPermissionsComplete] = useState(false);
 
   // OTA: confirm boot success + check for updates on startup
   useEffect(() => {
@@ -155,10 +152,9 @@ function AppInner() {
     }
   }, []);
 
-  // Android app-launch popup permissions: these do not depend on login.
+  // Android app-launch permission flow: no custom onboarding screen.
   useEffect(() => {
     if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
-      setStartupPopupPermissionsComplete(true);
       return;
     }
 
@@ -169,43 +165,20 @@ function AppInner() {
       await requestNotificationPermission();
       console.log("[Permissions] Android app-launch flow: requesting activity/step permission second");
       await requestActivity();
+      console.log("[Permissions] Android app-launch flow: opening overlay settings third");
+      await requestOverlay();
+      console.log("[Permissions] Android app-launch flow: opening battery optimization settings fourth");
+      await requestBatteryExemption();
     };
 
     runStartupPermissionFlow()
-      .then(() => {
-        if (!cancelled) setStartupPopupPermissionsComplete(true);
-      })
+      .then(() => undefined)
       .catch((error) => {
-        if (!cancelled) {
-          console.error("[Permissions] Startup popup permission check failed", error);
-          setStartupPopupPermissionsComplete(true);
-        }
+        if (!cancelled) console.error("[Permissions] Android app-launch permission flow failed", error);
       });
 
     return () => { cancelled = true; };
   }, []);
-
-  // Android first-login onboarding: show overlay/battery instructions after popup permissions finish.
-  useEffect(() => {
-    const userId = session?.user?.id;
-    if (!userId || !Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
-      setShowPermissionOnboarding(false);
-      return;
-    }
-
-    if (!startupPopupPermissionsComplete) return;
-
-    const storageKey = `permission_onboarding_seen_v1:${userId}`;
-    setShowPermissionOnboarding(localStorage.getItem(storageKey) !== "true");
-  }, [session?.user?.id, startupPopupPermissionsComplete]);
-
-  const handlePermissionOnboardingComplete = () => {
-    const userId = session?.user?.id;
-    if (userId) {
-      localStorage.setItem(`permission_onboarding_seen_v1:${userId}`, "true");
-    }
-    setShowPermissionOnboarding(false);
-  };
 
 
   // Initialize native push notifications when we have a session.
@@ -281,16 +254,6 @@ function AppInner() {
         <Toaster />
         <Sonner />
         <WorkerBlocked reason={worker?.blocked_reason} />
-      </TooltipProvider>
-    );
-  }
-
-  if (showPermissionOnboarding && session?.user?.id) {
-    return (
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <PermissionOnboarding onComplete={handlePermissionOnboardingComplete} />
       </TooltipProvider>
     );
   }
