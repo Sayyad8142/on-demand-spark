@@ -267,6 +267,28 @@ function AppInner() {
     };
   }, []);
 
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId || !Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
+      setShowPermissionOnboarding(false);
+      setPermissionCheckLoading(false);
+      return;
+    }
+
+    checkAndroidSettingsPermissions({ allowHide: false });
+
+    const appStateSub = CapApp.addListener("appStateChange", ({ isActive }) => {
+      if (!isActive) return;
+      window.setTimeout(() => {
+        checkAndroidSettingsPermissions({ allowHide: true });
+      }, 700);
+    });
+
+    return () => {
+      appStateSub.then((sub) => sub.remove());
+    };
+  }, [checkAndroidSettingsPermissions, session?.user?.id]);
+
 
   // Initialize native push notifications when we have a session.
   useEffect(() => {
@@ -340,6 +362,31 @@ function AppInner() {
         <Toaster />
         <Sonner />
         <WorkerBlocked reason={worker?.blocked_reason} />
+      </TooltipProvider>
+    );
+  }
+
+  if (session?.user?.id && permissionCheckLoading && !showPermissionOnboarding) {
+    return (
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="text-muted-foreground">Checking permissions...</p>
+          </div>
+        </div>
+      </TooltipProvider>
+    );
+  }
+
+  if (session?.user?.id && showPermissionOnboarding) {
+    return (
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <PermissionOnboarding onComplete={() => checkAndroidSettingsPermissions({ allowHide: true })} />
       </TooltipProvider>
     );
   }
