@@ -92,6 +92,7 @@ function reportPermissionDebug(event: Omit<PermissionDebugEvent, "at">) {
 
 interface StepCounterPlugin {
   checkSupport(): Promise<{ supported: boolean; sensorType: string }>;
+  checkPermission(): Promise<{ granted: boolean }>;
   requestPermission(): Promise<{ granted: boolean }>;
 }
 
@@ -281,6 +282,7 @@ export async function requestBatteryExemption(): Promise<boolean> {
   }
   try {
     console.log("[Permissions] 🟦 requestBatteryExemption() invoked — opening Android Settings...");
+    console.log("[Permissions] BatteryOptimization plugin detected — invoking request()");
     reportPermissionDebug({ permissionId: "battery", step: "request", status: "started", message: "Opening Android battery settings" });
     const result = await plugin.request();
     console.log("[Permissions] ✅ BatteryOptimization.request resolved", result);
@@ -338,10 +340,13 @@ export async function checkActivityState(): Promise<PermissionState> {
     }
   } catch { /* assume supported */ }
 
-  // We don't have a "checkOnly" method, so we infer state by attempting
-  // a no-op check via requestPermission only when the user explicitly taps.
-  // Until then, report "missing" so the row is visible.
-  return { id: "activity", status: "missing", canRequest: true };
+  try {
+    const { granted } = await p.checkPermission();
+    return { id: "activity", status: granted ? "granted" : "missing", canRequest: true };
+  } catch (error) {
+    console.warn("[Permissions] StepCounter.checkPermission failed", error);
+    return { id: "activity", status: "unknown", canRequest: true };
+  }
 }
 
 export async function requestActivity(): Promise<boolean> {
@@ -360,5 +365,5 @@ export async function checkAllPermissions(): Promise<PermissionState[]> {
 }
 
 export function hasOutstandingPermissions(states: PermissionState[]): boolean {
-  return states.some(s => s.status === "missing" || s.status === "denied");
+  return states.some(s => s.status === "missing" || s.status === "denied" || s.status === "unknown");
 }
