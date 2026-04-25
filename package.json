@@ -7,6 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
+    "android:verify-permissions": "node scripts/verify-android-permission-bundle.js",
+    "android:sync": "bun run build && npx cap sync android && bun run android:verify-permissions",
+    "android:build": "bun run build && npx cap sync android && bun run android:verify-permissions && cd android && ./gradlew assembleRelease",
+    "android:build:win": "bun run build && npx cap sync android && bun run android:verify-permissions && cd android && gradlew.bat assembleRelease",
     "lint": "eslint .",
     "preview": "vite preview"
   },
