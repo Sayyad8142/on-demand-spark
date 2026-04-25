@@ -97,7 +97,22 @@ Deno.serve(async (req) => {
     const { data: rows, error: rErr } = await query;
     if (rErr) return json({ error: "lookup_failed", detail: rErr.message }, 500);
     const reqRow = rows?.[0];
-    if (!reqRow) return json({ error: "request_not_found" }, 404);
+    if (!reqRow) {
+      console.warn("[ack-booking-delivery] request_not_found", {
+        booking_id,
+        booking_request_id,
+        event_type,
+        worker_id: worker.id,
+      });
+      return json({
+        ok: true,
+        skipped: true,
+        reason: "request_not_found",
+        booking_id,
+        booking_request_id,
+        event_type,
+      });
+    }
 
     const col = EVENT_TO_COL[event_type];
     const channel = EVENT_TO_CHANNEL[event_type];
