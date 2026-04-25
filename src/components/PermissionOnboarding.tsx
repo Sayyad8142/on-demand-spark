@@ -202,7 +202,7 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
     }
   }, [addDebugEvent, oem?.id, openFallbackModal, refresh]);
 
-  const visibleStates = states.filter(s => s.status !== "not_required");
+  const visibleStates = states.filter(s => ["overlay", "battery"].includes(s.id) && s.status !== "not_required");
   const allDone = !loading && !hasOutstandingPermissions(visibleStates);
   const showOemBanner = oem && isTrickyOem(oem.id) && !allDone && !loading;
 
