@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -143,6 +143,13 @@ function AppInner() {
   const { needsUpdate, softUpdate, config: updateConfig, dismissSoftUpdate } = useForceUpdateCheck();
   const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
+  const androidPermissionFlowRef = useRef({
+    running: false,
+    runtimeRequested: false,
+    overlayOpened: false,
+    batteryOpened: false,
+    completed: false,
+  });
 
   // OTA: confirm boot success + check for updates on startup
   useEffect(() => {
@@ -159,7 +166,8 @@ function AppInner() {
     }
   }, []);
 
-  // Android app-launch popup permissions only. Settings-based permissions are requested after login.
+  // Android app-launch permissions. Runtime prompts are requested first; settings-based
+  // permissions are opened one-by-one and continue when the user returns to the app.
   useEffect(() => {
     if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
       return;
@@ -168,10 +176,39 @@ function AppInner() {
     let cancelled = false;
 
     const runStartupPermissionFlow = async () => {
-      console.log("[Permissions] Android app-launch flow: requesting notifications first");
-      await requestNotificationPermission();
-      console.log("[Permissions] Android app-launch flow: requesting activity/step permission second");
-      await requestActivity();
+      const flow = androidPermissionFlowRef.current;
+      if (cancelled || flow.running || flow.completed) return;
+
+      flow.running = true;
+      try {
+        if (!flow.runtimeRequested) {
+          console.log("[Permissions] Android app-launch flow: requesting notifications first");
+          await requestNotificationPermission();
+          console.log("[Permissions] Android app-launch flow: requesting activity/step permission second");
+          await requestActivity();
+          flow.runtimeRequested = true;
+        }
+
+        const overlay = await checkOverlayState();
+        if (!cancelled && overlay.status !== "granted" && overlay.status !== "not_required" && !flow.overlayOpened) {
+          flow.overlayOpened = true;
+          console.log("[Permissions] Android app-launch flow: opening overlay settings");
+          await requestOverlay();
+          return;
+        }
+
+        const battery = await checkBatteryState();
+        if (!cancelled && battery.status !== "granted" && battery.status !== "not_required" && !flow.batteryOpened) {
+          flow.batteryOpened = true;
+          console.log("[Permissions] Android app-launch flow: opening battery optimization settings");
+          await requestBatteryExemption();
+          return;
+        }
+
+        flow.completed = true;
+      } finally {
+        flow.running = false;
+      }
     };
 
     runStartupPermissionFlow()
@@ -180,36 +217,20 @@ function AppInner() {
         if (!cancelled) console.error("[Permissions] Android app-launch permission flow failed", error);
       });
 
-    return () => { cancelled = true; };
-  }, []);
-
-  // Android post-login settings permissions. These cannot be normal runtime popups.
-  useEffect(() => {
-    const userId = session?.user?.id;
-    if (!userId || !Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return;
-
-    let cancelled = false;
-
-    const runPostLoginSettingsFlow = async () => {
-      const overlay = await checkOverlayState();
-      if (!cancelled && overlay.status !== "granted" && overlay.status !== "not_required") {
-        console.log("[Permissions] Android post-login flow: opening overlay settings");
-        await requestOverlay();
-      }
-
-      const battery = await checkBatteryState();
-      if (!cancelled && battery.status !== "granted" && battery.status !== "not_required") {
-        console.log("[Permissions] Android post-login flow: opening battery optimization settings");
-        await requestBatteryExemption();
-      }
-    };
-
-    runPostLoginSettingsFlow().catch((error) => {
-      if (!cancelled) console.error("[Permissions] Android post-login settings flow failed", error);
+    const appStateSub = CapApp.addListener("appStateChange", ({ isActive }) => {
+      if (!isActive || cancelled) return;
+      window.setTimeout(() => {
+        runStartupPermissionFlow().catch((error) => {
+          if (!cancelled) console.error("[Permissions] Android resumed permission flow failed", error);
+        });
+      }, 700);
     });
 
-    return () => { cancelled = true; };
-  }, [session?.user?.id]);
+    return () => {
+      cancelled = true;
+      appStateSub.then((sub) => sub.remove());
+    };
+  }, []);
 
 
   // Initialize native push notifications when we have a session.
