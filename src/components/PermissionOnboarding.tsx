@@ -263,9 +263,9 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
         <Button
           className="w-full h-12 text-base"
           onClick={onComplete}
-          disabled={loading}
+          disabled={loading || !allDone}
         >
-          {allDone ? "Continue" : "Continue anyway"}
+          Continue to app
         </Button>
         {!allDone && !loading && (
           <p className="text-xs text-center text-muted-foreground">
