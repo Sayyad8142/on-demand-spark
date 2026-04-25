@@ -181,10 +181,11 @@ function AppInner() {
 
       flow.running = true;
       try {
+        console.log("[Permissions] Android app-launch flow started");
         if (!flow.runtimeRequested) {
-          console.log("[Permissions] Android app-launch flow: requesting notifications first");
+          console.log("[Permissions] notification permission requested");
           await requestNotificationPermission();
-          console.log("[Permissions] Android app-launch flow: requesting activity/step permission second");
+          console.log("[Permissions] activity permission requested/skipped");
           await requestActivity();
           flow.runtimeRequested = true;
         }
@@ -192,20 +193,23 @@ function AppInner() {
         const overlay = await checkOverlayState();
         if (!cancelled && overlay.status !== "granted" && overlay.status !== "not_required" && !flow.overlayOpened) {
           flow.overlayOpened = true;
-          console.log("[Permissions] Android app-launch flow: opening overlay settings");
+          console.log("[Permissions] opening overlay settings");
           await requestOverlay();
           return;
         }
+        console.log(`[Permissions] overlay settings opened/skipped: ${overlay.status}`);
 
         const battery = await checkBatteryState();
         if (!cancelled && battery.status !== "granted" && battery.status !== "not_required" && !flow.batteryOpened) {
           flow.batteryOpened = true;
-          console.log("[Permissions] Android app-launch flow: opening battery optimization settings");
+          console.log("[Permissions] opening battery optimization settings");
           await requestBatteryExemption();
           return;
         }
+        console.log(`[Permissions] battery optimization opened/skipped: ${battery.status}`);
 
         flow.completed = true;
+        console.log("[Permissions] Android app-launch flow completed");
       } finally {
         flow.running = false;
       }
