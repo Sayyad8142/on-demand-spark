@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Geolocation } from '@capacitor/geolocation';
 import { requestNativeLocationPermissions } from '@/lib/nativeLocationTracking';
 
-let locationInterval: NodeJS.Timeout | null = null;
+let locationInterval: ReturnType<typeof setInterval> | null = null;
 let isTrackingLocation = false;
 
 /**
