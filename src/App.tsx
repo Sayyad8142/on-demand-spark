@@ -15,7 +15,14 @@ import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
 import { SoftUpdatePrompt } from "@/components/SoftUpdatePrompt";
 import { initNativePush } from "@/native/push";
 import { tryAccept } from "@/lib/bookingActions";
-import { requestActivity, requestBatteryExemption, requestNotificationPermission, requestOverlay } from "@/lib/permissions";
+import {
+  checkBatteryState,
+  checkOverlayState,
+  requestActivity,
+  requestBatteryExemption,
+  requestNotificationPermission,
+  requestOverlay,
+} from "@/lib/permissions";
 // requestLocationPermissions intentionally not imported — see startup effect note below.
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
 import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
@@ -152,7 +159,7 @@ function AppInner() {
     }
   }, []);
 
-  // Android app-launch permission flow: no custom onboarding screen.
+  // Android app-launch popup permissions only. Settings-based permissions are requested after login.
   useEffect(() => {
     if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
       return;
@@ -165,10 +172,6 @@ function AppInner() {
       await requestNotificationPermission();
       console.log("[Permissions] Android app-launch flow: requesting activity/step permission second");
       await requestActivity();
-      console.log("[Permissions] Android app-launch flow: opening overlay settings third");
-      await requestOverlay();
-      console.log("[Permissions] Android app-launch flow: opening battery optimization settings fourth");
-      await requestBatteryExemption();
     };
 
     runStartupPermissionFlow()
@@ -180,9 +183,36 @@ function AppInner() {
     return () => { cancelled = true; };
   }, []);
 
+  // Android post-login settings permissions. These cannot be normal runtime popups.
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId || !Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return;
+
+    let cancelled = false;
+
+    const runPostLoginSettingsFlow = async () => {
+      const overlay = await checkOverlayState();
+      if (!cancelled && overlay.status !== "granted" && overlay.status !== "not_required") {
+        console.log("[Permissions] Android post-login flow: opening overlay settings");
+        await requestOverlay();
+      }
+
+      const battery = await checkBatteryState();
+      if (!cancelled && battery.status !== "granted" && battery.status !== "not_required") {
+        console.log("[Permissions] Android post-login flow: opening battery optimization settings");
+        await requestBatteryExemption();
+      }
+    };
+
+    runPostLoginSettingsFlow().catch((error) => {
+      if (!cancelled) console.error("[Permissions] Android post-login settings flow failed", error);
+    });
+
+    return () => { cancelled = true; };
+  }, [session?.user?.id]);
+
 
   // Initialize native push notifications when we have a session.
-  // Android notification prompt is handled by PermissionOnboarding first.
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId) return;
