@@ -198,6 +198,12 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
   const allDone = !loading && !hasOutstandingPermissions(visibleStates);
   const showOemBanner = oem && isTrickyOem(oem.id) && !allDone && !loading;
 
+  useEffect(() => {
+    if (allDone) {
+      onComplete();
+    }
+  }, [allDone, onComplete]);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="px-5 pt-8 pb-4">
