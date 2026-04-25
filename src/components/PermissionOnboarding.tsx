@@ -20,10 +20,8 @@ import {
   type PermissionDebugEvent,
   checkAllPermissions,
   hasOutstandingPermissions,
-  requestNotificationPermission,
   requestOverlay,
   requestBatteryExemption,
-  requestActivity,
   setPermissionDebugReporter,
 } from "@/lib/permissions";
 import {
@@ -70,6 +68,8 @@ const PERMISSION_KIND: Record<PermissionId, PermissionKind> = {
   battery: "battery",
   activity: "activity",
 };
+
+const ONBOARDING_PERMISSION_IDS: PermissionId[] = ["overlay", "battery"];
 
 interface PermissionOnboardingProps {
   onComplete: () => void;
@@ -158,22 +158,14 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
     markFailed(id, false);
     try {
       switch (id) {
-        case "notifications":
-          addDebugEvent({ permissionId: id, step: "request", status: "started", message: "Requesting notification permission" });
-          addDebugEvent({ permissionId: id, step: "plugin", status: "success", message: "PushNotifications plugin path available" });
-          await requestNotificationPermission();
-          break;
         case "overlay":
           await requestOverlay();
           break;
         case "battery":
           await requestBatteryExemption();
           break;
-        case "activity":
-          addDebugEvent({ permissionId: id, step: "request", status: "started", message: "Requesting activity permission" });
-          addDebugEvent({ permissionId: id, step: "plugin", status: "success", message: "StepCounter plugin path available" });
-          await requestActivity();
-          break;
+        default:
+          return;
       }
       console.log(`[PermissionOnboarding] ✅ ${id} request returned without throwing`);
       addDebugEvent({ permissionId: id, step: "handleRequest", status: "success", message: "Request completed without throwing" });
@@ -202,7 +194,7 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
     }
   }, [addDebugEvent, oem?.id, openFallbackModal, refresh]);
 
-  const visibleStates = states.filter(s => ["overlay", "battery"].includes(s.id) && s.status !== "not_required");
+  const visibleStates = states.filter(s => ONBOARDING_PERMISSION_IDS.includes(s.id) && s.status !== "not_required");
   const allDone = !loading && !hasOutstandingPermissions(visibleStates);
   const showOemBanner = oem && isTrickyOem(oem.id) && !allDone && !loading;
 
