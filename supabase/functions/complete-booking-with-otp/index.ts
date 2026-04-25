@@ -52,7 +52,7 @@ const formatPayout = (payout: WorkerPayoutRow | null) =>
       }
     : null;
 
-async function getExistingPayout(adminClient: ReturnType<typeof createClient>, bookingId: string) {
+async function getExistingPayout(adminClient: any, bookingId: string) {
   const { data, error } = await adminClient
     .from("worker_payouts")
     .select("booking_id, worker_id, gross_amount, platform_fee, payout_amount, status, paid_at, reference_id")
@@ -74,7 +74,7 @@ async function getExistingPayout(adminClient: ReturnType<typeof createClient>, b
  * this matches the worker app's fallback so the displayed and actual payout always agree.
  */
 async function getCommunityFeePercent(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: any,
   community: string | null,
 ): Promise<number> {
   if (!community) return 0;
@@ -92,7 +92,7 @@ async function getCommunityFeePercent(
 }
 
 async function createOrFetchPayout(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: any,
   bookingId: string,
   workerId: string,
   bookingAmount: number,
@@ -108,7 +108,7 @@ async function createOrFetchPayout(
 
   const { data, error } = await adminClient
     .from("worker_payouts")
-    .insert({
+      .insert({
       booking_id: bookingId,
       worker_id: workerId,
       gross_amount: bookingAmount,
@@ -116,8 +116,8 @@ async function createOrFetchPayout(
       payout_amount: payoutAmount,
       status: "pending",
       payout_method: "upi",
-      idempotency_key: `booking:${bookingId}`,
-    })
+        idempotency_key: `booking:${bookingId}`,
+      } as any)
     .select("booking_id, worker_id, gross_amount, platform_fee, payout_amount, status, paid_at, reference_id")
     .single();
 
@@ -264,7 +264,7 @@ Deno.serve(async (req) => {
     if (!completedBooking) {
       const { data: latestBooking, error: latestBookingError } = await adminClient
         .from("bookings")
-        .select("status, worker_id, price_inr")
+        .select("status, worker_id, price_inr, community")
         .eq("id", booking_id)
         .maybeSingle();
 
@@ -283,6 +283,7 @@ Deno.serve(async (req) => {
           booking_id,
           worker.id,
           latestBooking.price_inr || 0,
+          latestBooking.community ?? null,
         );
 
         return jsonResponse({
