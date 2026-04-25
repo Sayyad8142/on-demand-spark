@@ -36,8 +36,10 @@ class MainActivity : BridgeActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // OTA: Check boot health and restore/rollback BEFORE Capacitor loads the WebView
         handleOtaBootHealth()
-        
-        super.onCreate(savedInstanceState)
+
+        // Register custom Capacitor plugins BEFORE super.onCreate().
+        // BridgeActivity loads the WebView/bridge inside super.onCreate(), so
+        // registering after super makes JS see custom plugins as "not implemented".
         registerPlugin(ForegroundServicePlugin::class.java)
         registerPlugin(OverlayPlugin::class.java)
         registerPlugin(AuthBridge::class.java)
@@ -46,6 +48,8 @@ class MainActivity : BridgeActivity() {
         registerPlugin(LiveUpdatePlugin::class.java) // registered as "DidiLiveUpdate" via annotation
         registerPlugin(StepCounterPlugin::class.java)
         registerPlugin(BatteryOptimizationPlugin::class.java)
+        
+        super.onCreate(savedInstanceState)
         
         android.util.Log.d("MainActivity", "🚀 App starting — permissions handled by JS PermissionOnboarding screen")
         
