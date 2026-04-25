@@ -85,7 +85,7 @@ export default function Profile() {
   
   // Hidden debug screen trigger - tap version 5 times
   const versionTapCount = useRef(0);
-  const versionTapTimeout = useRef<NodeJS.Timeout | null>(null);
+  const versionTapTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const handleVersionTap = () => {
     versionTapCount.current++;
