@@ -196,14 +196,15 @@ function AppInner() {
 
 
   // Initialize native push notifications when we have a session.
-  // This shows the normal Android notification permission prompt when needed.
+  // Android notification prompt is handled by PermissionOnboarding first.
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId) return;
     if (!Capacitor.isNativePlatform()) return;
+    if (Capacitor.getPlatform() === "android" && (permissionCheckLoading || showPermissionOnboarding) && !permissionOnboardingCompleted) return;
     console.log("🔔 Initializing native push for user:", userId);
     initNativePush(userId);
-  }, [session?.user?.id]);
+  }, [session?.user?.id, permissionCheckLoading, permissionOnboardingCompleted, showPermissionOnboarding]);
 
   // Handle deep links for booking acceptance
   useEffect(() => {
@@ -268,6 +269,30 @@ function AppInner() {
         <Toaster />
         <Sonner />
         <WorkerBlocked reason={worker?.blocked_reason} />
+      </TooltipProvider>
+    );
+  }
+
+  if (session?.user?.id && Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android" && (permissionCheckLoading || showPermissionOnboarding)) {
+    return (
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        {permissionCheckLoading ? (
+          <div className="min-h-screen flex items-center justify-center bg-background">
+            <div className="text-center space-y-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+              <p className="text-muted-foreground">Checking permissions...</p>
+            </div>
+          </div>
+        ) : (
+          <PermissionOnboarding
+            onComplete={() => {
+              setPermissionOnboardingCompleted(true);
+              setShowPermissionOnboarding(false);
+            }}
+          />
+        )}
       </TooltipProvider>
     );
   }
