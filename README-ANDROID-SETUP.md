@@ -34,12 +34,21 @@ This creates an `android/` directory with a native Android project.
 
 ## Step 4: Build Web Assets
 
+Always build and sync the web bundle before creating any APK. Otherwise Android can ship stale files from `android/app/src/main/assets/public` and miss recent React changes such as the permission startup flow.
+
 ```bash
-npm run build
-npx cap sync android
+bun run android:sync
 ```
 
 This copies your web assets into the Android project.
+
+Manual equivalent:
+
+```bash
+bun run build
+npx cap sync android
+bun run android:verify-permissions
+```
 
 ## Step 5: Configure Firebase
 
@@ -244,9 +253,29 @@ npx cap open android
 
 ### Build APK
 
-In Android Studio:
-1. Build → Build Bundle(s) / APK(s) → Build APK(s)
-2. Or run: `./gradlew assembleDebug` from the `android/` directory
+Use the guarded release build command:
+
+```bash
+bun run android:build
+```
+
+Windows:
+
+```bash
+bun run android:build:win
+```
+
+Manual equivalent:
+
+```bash
+bun run build
+npx cap sync android
+bun run android:verify-permissions
+cd android
+./gradlew assembleRelease
+```
+
+In Android Studio, only build after running `bun run android:sync` from the project root.
 
 ### Install on Device
 
