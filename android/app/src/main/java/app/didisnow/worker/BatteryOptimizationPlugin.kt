@@ -5,6 +5,8 @@ import android.content.Intent
 import android.content.ActivityNotFoundException
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
@@ -28,11 +30,18 @@ class BatteryOptimizationPlugin : Plugin() {
         // DO NOT use resolveActivity() — always null on Android 11+ (API 30+)
         Log.d(TAG, "[intent] try label=$label action=$action data=$data device=$device")
         return try {
-            if (activity != null) {
-                activity?.startActivity(intent)
-            } else {
+            val launcher = Runnable {
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                ctx.startActivity(intent)
+                if (activity != null) {
+                    activity?.startActivity(intent)
+                } else {
+                    ctx.startActivity(intent)
+                }
+            }
+            if (Looper.myLooper() == Looper.getMainLooper()) {
+                launcher.run()
+            } else {
+                Handler(Looper.getMainLooper()).post(launcher)
             }
             Log.d(TAG, "[intent] ✅ ok label=$label device=$device")
             true
