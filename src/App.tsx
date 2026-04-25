@@ -15,7 +15,7 @@ import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
 import { SoftUpdatePrompt } from "@/components/SoftUpdatePrompt";
 import { initNativePush } from "@/native/push";
 import { tryAccept } from "@/lib/bookingActions";
-import { checkAllPermissions, hasOutstandingPermissions } from "@/lib/permissions";
+import { checkAllPermissions, hasOutstandingPermissions, requestActivity, requestNotificationPermission } from "@/lib/permissions";
 import PermissionOnboarding from "@/components/PermissionOnboarding";
 // requestLocationPermissions intentionally not imported — see startup effect note below.
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
@@ -140,6 +140,7 @@ function AppInner() {
   const [showPermissionOnboarding, setShowPermissionOnboarding] = useState(false);
   const [permissionCheckLoading, setPermissionCheckLoading] = useState(false);
   const [permissionOnboardingCompleted, setPermissionOnboardingCompleted] = useState(false);
+  const [startupPermissionFlowCompleted, setStartupPermissionFlowCompleted] = useState(false);
 
   // OTA: confirm boot success + check for updates on startup
   useEffect(() => {
@@ -156,26 +157,37 @@ function AppInner() {
     }
   }, []);
 
-  // Android first-login permission gate. Do not persist "attempted" state;
-  // permissions are checked from the OS and the worker stays here until ready.
+  // Android first-login permission flow: request popup permissions first,
+  // then show onboarding for manual overlay/battery settings.
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId || !Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
       setShowPermissionOnboarding(false);
       setPermissionCheckLoading(false);
+      setStartupPermissionFlowCompleted(true);
       return;
     }
 
     let cancelled = false;
     setPermissionCheckLoading(true);
+    setStartupPermissionFlowCompleted(false);
     try {
       localStorage.removeItem(`android_startup_permission_attempts_v1:${userId}`);
     } catch { /* ignore storage errors */ }
 
-    checkAllPermissions()
+    const runStartupPermissionFlow = async () => {
+      console.log("[Permissions] Android startup flow: requesting notifications first");
+      await requestNotificationPermission();
+      console.log("[Permissions] Android startup flow: requesting activity/step permission second");
+      await requestActivity();
+      const states = await checkAllPermissions();
+      return states;
+    };
+
+    runStartupPermissionFlow()
       .then((states) => {
         if (cancelled) return;
-        const requiredStates = states.filter((state) => ["overlay", "battery", "activity"].includes(state.id));
+        const requiredStates = states.filter((state) => ["overlay", "battery"].includes(state.id));
         requiredStates.forEach((state) => {
           console.log(`[Permissions] startup status ${state.id}=${state.status} canRequest=${state.canRequest}`);
         });
@@ -188,7 +200,10 @@ function AppInner() {
         }
       })
       .finally(() => {
-        if (!cancelled) setPermissionCheckLoading(false);
+        if (!cancelled) {
+          setPermissionCheckLoading(false);
+          setStartupPermissionFlowCompleted(true);
+        }
       });
 
     return () => { cancelled = true; };
