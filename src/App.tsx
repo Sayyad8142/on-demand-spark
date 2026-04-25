@@ -277,17 +277,12 @@ function AppInner() {
     );
   }
 
-  if (session?.user?.id && Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android" && startupPermissionFlowCompleted && showPermissionOnboarding) {
+  if (showPermissionOnboarding && session?.user?.id) {
     return (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <PermissionOnboarding
-          onComplete={() => {
-            setPermissionOnboardingCompleted(true);
-            setShowPermissionOnboarding(false);
-          }}
-        />
+        <PermissionOnboarding onComplete={handlePermissionOnboardingComplete} />
       </TooltipProvider>
     );
   }
