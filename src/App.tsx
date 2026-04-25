@@ -216,10 +216,10 @@ function AppInner() {
     const userId = session?.user?.id;
     if (!userId) return;
     if (!Capacitor.isNativePlatform()) return;
-    if (Capacitor.getPlatform() === "android" && (permissionCheckLoading || showPermissionOnboarding) && !permissionOnboardingCompleted) return;
+    if (Capacitor.getPlatform() === "android" && !startupPermissionFlowCompleted) return;
     console.log("🔔 Initializing native push for user:", userId);
     initNativePush(userId);
-  }, [session?.user?.id, permissionCheckLoading, permissionOnboardingCompleted, showPermissionOnboarding]);
+  }, [session?.user?.id, startupPermissionFlowCompleted]);
 
   // Handle deep links for booking acceptance
   useEffect(() => {
@@ -288,26 +288,17 @@ function AppInner() {
     );
   }
 
-  if (session?.user?.id && Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android" && (permissionCheckLoading || showPermissionOnboarding)) {
+  if (session?.user?.id && Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android" && showPermissionOnboarding) {
     return (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        {permissionCheckLoading ? (
-          <div className="min-h-screen flex items-center justify-center bg-background">
-            <div className="text-center space-y-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-              <p className="text-muted-foreground">Checking permissions...</p>
-            </div>
-          </div>
-        ) : (
-          <PermissionOnboarding
-            onComplete={() => {
-              setPermissionOnboardingCompleted(true);
-              setShowPermissionOnboarding(false);
-            }}
-          />
-        )}
+        <PermissionOnboarding
+          onComplete={() => {
+            setPermissionOnboardingCompleted(true);
+            setShowPermissionOnboarding(false);
+          }}
+        />
       </TooltipProvider>
     );
   }
