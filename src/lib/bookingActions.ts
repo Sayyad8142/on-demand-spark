@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { startMovementMonitoring } from "@/lib/stepMonitoring";
+import { isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 
 // Helper to ensure session is valid before making API calls
 async function ensureValidSession(): Promise<boolean> {
@@ -36,6 +37,27 @@ export async function tryAccept(bookingId: string, workerId?: string): Promise<{
   const sessionValid = await ensureValidSession();
   if (!sessionValid) {
     return { success: false, error: "Session expired. Please log in again." };
+  }
+
+  const { data: activeRequest } = await supabase
+    .from("booking_requests")
+    .select("id")
+    .eq("booking_id", bookingId)
+    .eq("status", "pending")
+    .gt("timeout_at", new Date().toISOString())
+    .maybeSingle();
+
+  if (!activeRequest) {
+    const { data: booking } = await supabase
+      .from("bookings")
+      .select("id, booking_type, scheduled_date, scheduled_time")
+      .eq("id", bookingId)
+      .maybeSingle();
+
+    if (booking && isBeforeScheduledDispatchWindow(booking)) {
+      logScheduledOfferDecision(booking, "query", false);
+      return { success: false, error: "Scheduled booking is not open for acceptance yet." };
+    }
   }
   
   const { data, error } = await supabase.rpc("try_accept_booking", { p_booking_id: bookingId });
