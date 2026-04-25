@@ -152,10 +152,9 @@ function AppInner() {
     }
   }, []);
 
-  // Android app-launch popup permissions: these do not depend on login.
+  // Android app-launch permission flow: no custom onboarding screen.
   useEffect(() => {
     if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
-      setStartupPopupPermissionsComplete(true);
       return;
     }
 
@@ -166,43 +165,20 @@ function AppInner() {
       await requestNotificationPermission();
       console.log("[Permissions] Android app-launch flow: requesting activity/step permission second");
       await requestActivity();
+      console.log("[Permissions] Android app-launch flow: opening overlay settings third");
+      await requestOverlay();
+      console.log("[Permissions] Android app-launch flow: opening battery optimization settings fourth");
+      await requestBatteryExemption();
     };
 
     runStartupPermissionFlow()
-      .then(() => {
-        if (!cancelled) setStartupPopupPermissionsComplete(true);
-      })
+      .then(() => undefined)
       .catch((error) => {
-        if (!cancelled) {
-          console.error("[Permissions] Startup popup permission check failed", error);
-          setStartupPopupPermissionsComplete(true);
-        }
+        if (!cancelled) console.error("[Permissions] Android app-launch permission flow failed", error);
       });
 
     return () => { cancelled = true; };
   }, []);
-
-  // Android first-login onboarding: show overlay/battery instructions after popup permissions finish.
-  useEffect(() => {
-    const userId = session?.user?.id;
-    if (!userId || !Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
-      setShowPermissionOnboarding(false);
-      return;
-    }
-
-    if (!startupPopupPermissionsComplete) return;
-
-    const storageKey = `permission_onboarding_seen_v1:${userId}`;
-    setShowPermissionOnboarding(localStorage.getItem(storageKey) !== "true");
-  }, [session?.user?.id, startupPopupPermissionsComplete]);
-
-  const handlePermissionOnboardingComplete = () => {
-    const userId = session?.user?.id;
-    if (userId) {
-      localStorage.setItem(`permission_onboarding_seen_v1:${userId}`, "true");
-    }
-    setShowPermissionOnboarding(false);
-  };
 
 
   // Initialize native push notifications when we have a session.
