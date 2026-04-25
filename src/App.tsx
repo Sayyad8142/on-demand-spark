@@ -15,8 +15,7 @@ import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
 import { SoftUpdatePrompt } from "@/components/SoftUpdatePrompt";
 import { initNativePush } from "@/native/push";
 import { tryAccept } from "@/lib/bookingActions";
-import { requestActivity, requestNotificationPermission } from "@/lib/permissions";
-import PermissionOnboarding from "@/components/PermissionOnboarding";
+import { requestActivity, requestBatteryExemption, requestNotificationPermission, requestOverlay } from "@/lib/permissions";
 // requestLocationPermissions intentionally not imported — see startup effect note below.
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
 import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
@@ -137,8 +136,6 @@ function AppInner() {
   const { needsUpdate, softUpdate, config: updateConfig, dismissSoftUpdate } = useForceUpdateCheck();
   const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
-  const [showPermissionOnboarding, setShowPermissionOnboarding] = useState(false);
-  const [startupPopupPermissionsComplete, setStartupPopupPermissionsComplete] = useState(false);
 
   // OTA: confirm boot success + check for updates on startup
   useEffect(() => {
