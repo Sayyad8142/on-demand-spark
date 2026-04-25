@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
-import { Bell, Layers, BatteryCharging, Activity, Check, X, AlertTriangle, Loader2, HelpCircle, RotateCcw } from "lucide-react";
+import { Layers, BatteryCharging, Check, X, AlertTriangle, Loader2, HelpCircle, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -20,10 +20,8 @@ import {
   type PermissionDebugEvent,
   checkAllPermissions,
   hasOutstandingPermissions,
-  requestNotificationPermission,
   requestOverlay,
   requestBatteryExemption,
-  requestActivity,
   setPermissionDebugReporter,
 } from "@/lib/permissions";
 import {
@@ -45,7 +43,7 @@ const META: Record<PermissionId, PermissionMeta> = {
   notifications: {
     title: "Notifications",
     reason: "So you receive booking alerts the moment they arrive.",
-    Icon: Bell,
+    Icon: Layers,
   },
   overlay: {
     title: "Display over other apps / Overlay",
@@ -60,7 +58,7 @@ const META: Record<PermissionId, PermissionMeta> = {
   activity: {
     title: "Physical activity / Step count",
     reason: "Helps verify you've started moving after accepting a booking.",
-    Icon: Activity,
+    Icon: Layers,
   },
 };
 
@@ -70,6 +68,8 @@ const PERMISSION_KIND: Record<PermissionId, PermissionKind> = {
   battery: "battery",
   activity: "activity",
 };
+
+const ONBOARDING_PERMISSION_IDS: PermissionId[] = ["overlay", "battery"];
 
 interface PermissionOnboardingProps {
   onComplete: () => void;
@@ -158,22 +158,14 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
     markFailed(id, false);
     try {
       switch (id) {
-        case "notifications":
-          addDebugEvent({ permissionId: id, step: "request", status: "started", message: "Requesting notification permission" });
-          addDebugEvent({ permissionId: id, step: "plugin", status: "success", message: "PushNotifications plugin path available" });
-          await requestNotificationPermission();
-          break;
         case "overlay":
           await requestOverlay();
           break;
         case "battery":
           await requestBatteryExemption();
           break;
-        case "activity":
-          addDebugEvent({ permissionId: id, step: "request", status: "started", message: "Requesting activity permission" });
-          addDebugEvent({ permissionId: id, step: "plugin", status: "success", message: "StepCounter plugin path available" });
-          await requestActivity();
-          break;
+        default:
+          return;
       }
       console.log(`[PermissionOnboarding] ✅ ${id} request returned without throwing`);
       addDebugEvent({ permissionId: id, step: "handleRequest", status: "success", message: "Request completed without throwing" });
@@ -202,7 +194,7 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
     }
   }, [addDebugEvent, oem?.id, openFallbackModal, refresh]);
 
-  const visibleStates = states.filter(s => ["overlay", "battery"].includes(s.id) && s.status !== "not_required");
+  const visibleStates = states.filter(s => ONBOARDING_PERMISSION_IDS.includes(s.id) && s.status !== "not_required");
   const allDone = !loading && !hasOutstandingPermissions(visibleStates);
   const showOemBanner = oem && isTrickyOem(oem.id) && !allDone && !loading;
 
