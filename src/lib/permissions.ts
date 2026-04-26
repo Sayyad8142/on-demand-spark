@@ -122,7 +122,7 @@ function getBatteryPlugin(): BatteryPlugin | null {
   return batteryPlugin;
 }
 
-async function tryOpenAppSettingsFallback(reason: "overlay" | "battery"): Promise<boolean> {
+async function tryOpenAppSettingsFallback(reason: "overlay" | "battery" | "activity"): Promise<boolean> {
   try {
     const appPlugin = CapApp as unknown as { openSettings?: () => Promise<void> };
     if (typeof appPlugin.openSettings !== "function") {
@@ -330,7 +330,7 @@ export async function checkActivityState(): Promise<PermissionState> {
   } catch { /* keep going — assume modern Android */ }
 
   const p = getStepPlugin();
-  if (!p) return { id: "activity", status: "not_required", canRequest: false };
+  if (!p) return { id: "activity", status: "missing", canRequest: true };
 
   // Check sensor support first — no point asking on devices without one
   try {
@@ -350,7 +350,20 @@ export async function checkActivityState(): Promise<PermissionState> {
 }
 
 export async function requestActivity(): Promise<boolean> {
-  return await requestActivityRecognitionPermission();
+  reportPermissionDebug({ permissionId: "activity", step: "requestPermission", status: "started", message: "Opening Android physical activity permission prompt" });
+  const granted = await requestActivityRecognitionPermission();
+  if (granted) {
+    reportPermissionDebug({ permissionId: "activity", step: "requestPermission", status: "success", message: "Physical activity permission granted" });
+    return true;
+  }
+
+  reportPermissionDebug({ permissionId: "activity", step: "requestPermission", status: "fallback", fallbackPath: "Capacitor App.openSettings", message: "Permission was not granted from the prompt; opening app settings" });
+  const opened = await tryOpenAppSettingsFallback("activity");
+  if (opened) return false;
+
+  const msg = "Physical activity permission was not granted and app settings could not be opened";
+  reportPermissionDebug({ permissionId: "activity", step: "App.openSettings", status: "failed", error: msg });
+  throw new Error(msg);
 }
 
 // ---------- Aggregate ----------
