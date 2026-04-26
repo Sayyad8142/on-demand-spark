@@ -681,6 +681,7 @@ export type Database = {
           booking_id: string
           checked_at: string | null
           created_at: string
+          error_message: string | null
           final_step_value: number | null
           id: string
           low_movement_flag: boolean
@@ -690,8 +691,10 @@ export type Database = {
           movement_status: string
           permission_granted: boolean
           raw_meta: Json | null
+          sensor_available: boolean | null
           sensor_supported: boolean
           sensor_type_used: string | null
+          steps_counted: number | null
           steps_in_window: number | null
           worker_id: string
         }
@@ -701,6 +704,7 @@ export type Database = {
           booking_id: string
           checked_at?: string | null
           created_at?: string
+          error_message?: string | null
           final_step_value?: number | null
           id?: string
           low_movement_flag?: boolean
@@ -710,8 +714,10 @@ export type Database = {
           movement_status?: string
           permission_granted?: boolean
           raw_meta?: Json | null
+          sensor_available?: boolean | null
           sensor_supported?: boolean
           sensor_type_used?: string | null
+          steps_counted?: number | null
           steps_in_window?: number | null
           worker_id: string
         }
@@ -721,6 +727,7 @@ export type Database = {
           booking_id?: string
           checked_at?: string | null
           created_at?: string
+          error_message?: string | null
           final_step_value?: number | null
           id?: string
           low_movement_flag?: boolean
@@ -730,8 +737,10 @@ export type Database = {
           movement_status?: string
           permission_granted?: boolean
           raw_meta?: Json | null
+          sensor_available?: boolean | null
           sensor_supported?: boolean
           sensor_type_used?: string | null
+          steps_counted?: number | null
           steps_in_window?: number | null
           worker_id?: string
         }
