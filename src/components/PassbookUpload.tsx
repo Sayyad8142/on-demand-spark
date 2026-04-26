@@ -188,7 +188,7 @@ export default function PassbookUpload({
     <div className="space-y-3">
       <Label className="flex items-center gap-2">
         <BookOpen className="h-4 w-4" />
-        Passbook / Cancelled Cheque (Optional)
+        Account Details Image (Optional)
       </Label>
 
       {hasPassbook ? (
@@ -212,7 +212,7 @@ export default function PassbookUpload({
             <div className="flex-1 min-w-0">
               <Badge variant="secondary" className="gap-1 text-xs">
                 <Check className="h-3 w-3" />
-                Passbook saved
+                Image saved
               </Badge>
               <p className="text-xs text-muted-foreground mt-1 truncate">
                 {isPdf ? "PDF document" : "Image uploaded"}
@@ -263,9 +263,9 @@ export default function PassbookUpload({
           ) : (
             <div className="flex flex-col items-center gap-2">
               <Upload className="h-8 w-8 text-muted-foreground" />
-              <p className="text-sm font-medium">Upload Passbook</p>
+              <p className="text-sm font-medium">Upload account details image</p>
               <p className="text-xs text-muted-foreground">
-                Photo of bank passbook or cancelled cheque (JPG, PNG, PDF)
+                Passbook or cancelled cheque (JPG, PNG, PDF)
               </p>
             </div>
           )}
