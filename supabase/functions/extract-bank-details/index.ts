@@ -9,11 +9,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return json({ error: "Missing authorization" }, 401);
-    }
-
     const { passbook_path, worker_id, image_data_url } = await req.json();
     if ((!passbook_path || typeof passbook_path !== "string") && (!image_data_url || typeof image_data_url !== "string")) {
       return json({ error: "passbook_path or image_data_url is required" }, 400);
@@ -22,14 +17,6 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnon = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const userClient = createClient(supabaseUrl, supabaseAnon, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
-
-    const { data: { user }, error: userError } = await userClient.auth.getUser();
-    if (userError || !user) return json({ error: "Unauthorized" }, 401);
-
     if (image_data_url) {
       if (!/^data:(image\/(jpeg|png|webp)|application\/pdf);base64,/i.test(image_data_url)) {
         return json({ error: "Unsupported image format" }, 400);
@@ -38,6 +25,19 @@ Deno.serve(async (req) => {
       const details = await extractWithAi(image_data_url);
       return json({ success: true, details });
     }
+
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return json({ error: "Missing authorization" }, 401);
+    }
+
+    const userClient = createClient(supabaseUrl, supabaseAnon, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    if (userError || !user) return json({ error: "Unauthorized" }, 401);
 
     if (!passbook_path.startsWith(`${user.id}/`)) {
       return json({ error: "Unauthorized file path" }, 403);
