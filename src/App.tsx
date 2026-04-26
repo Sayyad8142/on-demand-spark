@@ -52,6 +52,7 @@ import BottomNav from "./components/BottomNav";
 import IncompleteBankSetup from "./components/IncompleteBankSetup";
 import PermissionOnboarding from "./components/PermissionOnboarding";
 import { getBankSetupStatus } from "./lib/bankSetup";
+import { startMovementMonitoring } from "@/lib/stepMonitoring";
 
 const queryClient = new QueryClient();
 
@@ -116,18 +117,21 @@ function NativeNavigationHandler() {
     const handleNativeNavigation = (event: CustomEvent) => {
       console.log("📱 Native navigation event received:", event.detail);
       
-      const { navigateTo, bookingId } = event.detail || {};
+      const { navigateTo, screen, bookingId } = event.detail || {};
+      const target = navigateTo || screen;
       
-      if (navigateTo === "home") {
+      if (target === "home") {
         console.log("🏠 Navigating to home screen", bookingId ? `with booking ${bookingId}` : "");
         navigate("/home");
       }
     };
     
     window.addEventListener("nativeNavigation", handleNativeNavigation as EventListener);
+    window.addEventListener("native:navigate", handleNativeNavigation as EventListener);
     
     return () => {
       window.removeEventListener("nativeNavigation", handleNativeNavigation as EventListener);
+      window.removeEventListener("native:navigate", handleNativeNavigation as EventListener);
     };
   }, [navigate]);
   
@@ -292,6 +296,39 @@ function AppInner() {
     console.log("🔔 Initializing native push for user:", userId);
     initNativePush(userId);
   }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (!worker?.id) return;
+
+    const startAcceptedBookingMovementCheck = (bookingId?: string) => {
+      if (!bookingId) return;
+      console.log(`[Movement] Native accept detected — starting movement monitoring for booking=${bookingId}`);
+      startMovementMonitoring(bookingId, worker.id).catch((error) => {
+        console.error("[Movement] Native accept movement monitoring failed", error);
+      });
+    };
+
+    const onBookingAccepted = (event: Event) => {
+      const bookingId = (event as CustomEvent)?.detail?.bookingId;
+      startAcceptedBookingMovementCheck(bookingId);
+    };
+
+    const onNativeNavigate = (event: Event) => {
+      const detail = (event as CustomEvent)?.detail || {};
+      const target = detail.navigateTo || detail.screen;
+      if (target === "home") startAcceptedBookingMovementCheck(detail.bookingId);
+    };
+
+    window.addEventListener("bookingAccepted", onBookingAccepted);
+    window.addEventListener("native:navigate", onNativeNavigate);
+    window.addEventListener("nativeNavigation", onNativeNavigate);
+
+    return () => {
+      window.removeEventListener("bookingAccepted", onBookingAccepted);
+      window.removeEventListener("native:navigate", onNativeNavigate);
+      window.removeEventListener("nativeNavigation", onNativeNavigate);
+    };
+  }, [worker?.id]);
 
   // Handle deep links for booking acceptance
   useEffect(() => {
