@@ -52,6 +52,7 @@ import BottomNav from "./components/BottomNav";
 import IncompleteBankSetup from "./components/IncompleteBankSetup";
 import PermissionOnboarding from "./components/PermissionOnboarding";
 import { getBankSetupStatus } from "./lib/bankSetup";
+import { startMovementMonitoring } from "@/lib/stepMonitoring";
 
 const queryClient = new QueryClient();
 
@@ -116,18 +117,21 @@ function NativeNavigationHandler() {
     const handleNativeNavigation = (event: CustomEvent) => {
       console.log("📱 Native navigation event received:", event.detail);
       
-      const { navigateTo, bookingId } = event.detail || {};
+      const { navigateTo, screen, bookingId } = event.detail || {};
+      const target = navigateTo || screen;
       
-      if (navigateTo === "home") {
+      if (target === "home") {
         console.log("🏠 Navigating to home screen", bookingId ? `with booking ${bookingId}` : "");
         navigate("/home");
       }
     };
     
     window.addEventListener("nativeNavigation", handleNativeNavigation as EventListener);
+    window.addEventListener("native:navigate", handleNativeNavigation as EventListener);
     
     return () => {
       window.removeEventListener("nativeNavigation", handleNativeNavigation as EventListener);
+      window.removeEventListener("native:navigate", handleNativeNavigation as EventListener);
     };
   }, [navigate]);
   
