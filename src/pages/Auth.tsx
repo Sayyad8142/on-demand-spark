@@ -550,7 +550,7 @@ export default function Auth() {
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{signUpPassbookFile.name}</p>
                         <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Check className="h-3 w-3" /> Ready to upload after OTP
+                          <Check className="h-3 w-3" /> {extractingPassbook ? "Reading details..." : "Details read — verify above"}
                         </p>
                       </div>
                       <Button
@@ -561,7 +561,7 @@ export default function Auth() {
                           setSignUpPassbookFile(null);
                           if (passbookInputRef.current) passbookInputRef.current.value = "";
                         }}
-                        disabled={loading}
+                        disabled={loading || extractingPassbook}
                         className="h-8 w-8"
                       >
                         <X className="h-4 w-4" />
@@ -571,12 +571,12 @@ export default function Auth() {
                     <button
                       type="button"
                       onClick={() => passbookInputRef.current?.click()}
-                      disabled={loading}
+                      disabled={loading || extractingPassbook}
                       className="flex w-full flex-col items-center gap-2 rounded-lg border-2 border-dashed border-border bg-background p-4 text-center transition-colors hover:bg-muted/50 disabled:opacity-50"
                     >
                       <Upload className="h-7 w-7 text-muted-foreground" />
                       <span className="text-sm font-medium">Upload passbook or cheque</span>
-                      <span className="text-xs text-muted-foreground">JPG, PNG, WEBP, or PDF</span>
+                      <span className="text-xs text-muted-foreground">Fills name, account number, and IFSC instantly</span>
                     </button>
                   )}
                   <input
