@@ -319,6 +319,7 @@ export default function Auth() {
         phone
       });
       if (error) throw error;
+      localStorage.removeItem(AUTH_DRAFT_KEY);
 
       // Navigate to OTP verification page
       navigate("/otp-verify", {
@@ -440,6 +441,7 @@ export default function Auth() {
         }
       });
       if (error) throw error;
+      localStorage.removeItem(AUTH_DRAFT_KEY);
 
       // Navigate to OTP verification page with signup data
       navigate("/otp-verify", {
