@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.send-worker-fallback-alert]
 verify_jwt = false
+
+[functions.extract-bank-details]
+verify_jwt = false
