@@ -45,6 +45,7 @@ const ifscSchema = z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Invalid IFSC code
 const accountNumberSchema = z.string().regex(/^\d{9,18}$/, 'Account number must be 9–18 digits');
 const PASSBOOK_ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 const PASSBOOK_MAX_SIZE = 8 * 1024 * 1024;
+const AUTH_DRAFT_KEY = "didi-worker-auth-draft-v1";
 export default function Auth() {
   const navigate = useNavigate();
   const {
@@ -93,6 +94,7 @@ export default function Auth() {
   const [signUpBankName, setSignUpBankName] = useState("");
   const [signUpPassbookFile, setSignUpPassbookFile] = useState<File | null>(null);
   const [extractingPassbook, setExtractingPassbook] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
   const passbookInputRef = useRef<HTMLInputElement>(null);
   // Cook cuisine tags removed - cook service discontinued
   
@@ -112,6 +114,69 @@ export default function Auth() {
     };
     fetchCommunities();
   }, []);
+
+  useEffect(() => {
+    try {
+      const savedDraft = localStorage.getItem(AUTH_DRAFT_KEY);
+      if (!savedDraft) {
+        setDraftRestored(true);
+        return;
+      }
+
+      const draft = JSON.parse(savedDraft);
+      if (draft.activeTab === "signin" || draft.activeTab === "signup") setActiveTab(draft.activeTab);
+      if (typeof draft.signInPhone === "string") setSignInPhone(draft.signInPhone);
+      if (typeof draft.signUpFullName === "string") setSignUpFullName(draft.signUpFullName);
+      if (typeof draft.signUpPhone === "string") setSignUpPhone(draft.signUpPhone);
+      if (typeof draft.signUpUpiId === "string") setSignUpUpiId(draft.signUpUpiId);
+      if (typeof draft.signUpCommunity === "string") setSignUpCommunity(draft.signUpCommunity);
+      if (Array.isArray(draft.signUpServices)) setSignUpServices(draft.signUpServices.filter((service: unknown) => typeof service === "string"));
+      if (typeof draft.signUpAccountHolderName === "string") setSignUpAccountHolderName(draft.signUpAccountHolderName);
+      if (typeof draft.signUpBankAccountNumber === "string") setSignUpBankAccountNumber(draft.signUpBankAccountNumber);
+      if (typeof draft.signUpConfirmAccountNumber === "string") setSignUpConfirmAccountNumber(draft.signUpConfirmAccountNumber);
+      if (typeof draft.signUpIfscCode === "string") setSignUpIfscCode(draft.signUpIfscCode);
+      if (typeof draft.signUpBankName === "string") setSignUpBankName(draft.signUpBankName);
+    } catch (error) {
+      console.error("Could not restore auth draft:", error);
+      localStorage.removeItem(AUTH_DRAFT_KEY);
+    } finally {
+      setDraftRestored(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!draftRestored) return;
+
+    localStorage.setItem(AUTH_DRAFT_KEY, JSON.stringify({
+      activeTab,
+      signInPhone,
+      signUpFullName,
+      signUpPhone,
+      signUpUpiId,
+      signUpCommunity,
+      signUpServices,
+      signUpAccountHolderName,
+      signUpBankAccountNumber,
+      signUpConfirmAccountNumber,
+      signUpIfscCode,
+      signUpBankName,
+    }));
+  }, [
+    activeTab,
+    draftRestored,
+    signInPhone,
+    signUpFullName,
+    signUpPhone,
+    signUpUpiId,
+    signUpCommunity,
+    signUpServices,
+    signUpAccountHolderName,
+    signUpBankAccountNumber,
+    signUpConfirmAccountNumber,
+    signUpIfscCode,
+    signUpBankName,
+  ]);
+
   const normalizePhone = (phone: string) => {
     const cleaned = phone.replace(/\D/g, '');
     return cleaned.startsWith('91') ? `+${cleaned}` : `+91${cleaned}`;
