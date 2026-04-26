@@ -12,6 +12,8 @@ interface PassbookUploadProps {
   currentUrl?: string | null;
   /** Receives the storage path (not a signed URL) to persist. */
   onUrlChange: (path: string | null) => void;
+  /** Called immediately after a new upload succeeds. */
+  onUploaded?: (path: string) => void | Promise<void>;
 }
 
 const BUCKET = "worker-passbook";
@@ -36,6 +38,7 @@ export default function PassbookUpload({
   workerId,
   currentUrl,
   onUrlChange,
+  onUploaded,
 }: PassbookUploadProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -132,6 +135,7 @@ export default function PassbookUpload({
 
       // Persist ONLY the storage path. UI preview uses a fresh signed URL.
       onUrlChange(filePath);
+      await onUploaded?.(filePath);
 
       // Generate signed URL for immediate preview
       const { data: signed } = await supabase.storage
@@ -141,8 +145,8 @@ export default function PassbookUpload({
       setIsPdf(file.type === "application/pdf");
 
       toast({
-        title: "Passbook uploaded",
-        description: "Your passbook has been saved",
+        title: "Account image uploaded",
+        description: "We'll read the account details from it when possible",
       });
     } catch (err: any) {
       console.error("Passbook upload error:", err);
@@ -184,7 +188,7 @@ export default function PassbookUpload({
     <div className="space-y-3">
       <Label className="flex items-center gap-2">
         <BookOpen className="h-4 w-4" />
-        Passbook / Cancelled Cheque (Optional)
+        Account Details Image (Optional)
       </Label>
 
       {hasPassbook ? (
@@ -208,7 +212,7 @@ export default function PassbookUpload({
             <div className="flex-1 min-w-0">
               <Badge variant="secondary" className="gap-1 text-xs">
                 <Check className="h-3 w-3" />
-                Passbook saved
+                Image saved
               </Badge>
               <p className="text-xs text-muted-foreground mt-1 truncate">
                 {isPdf ? "PDF document" : "Image uploaded"}
@@ -259,9 +263,9 @@ export default function PassbookUpload({
           ) : (
             <div className="flex flex-col items-center gap-2">
               <Upload className="h-8 w-8 text-muted-foreground" />
-              <p className="text-sm font-medium">Upload Passbook</p>
+              <p className="text-sm font-medium">Upload account details image</p>
               <p className="text-xs text-muted-foreground">
-                Photo of bank passbook or cancelled cheque (JPG, PNG, PDF)
+                Passbook or cancelled cheque (JPG, PNG, PDF)
               </p>
             </div>
           )}

@@ -10,6 +10,7 @@ import { ArrowLeft, Loader2, Landmark, CreditCard, ShieldCheck } from "lucide-re
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import PassbookUpload from "@/components/PassbookUpload";
+import { extractBankDetailsFromPassbook } from "@/lib/bankDetailsExtraction";
 
 const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 const UPI_REGEX = /^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/;
@@ -30,6 +31,7 @@ export default function AccountDetails() {
   const [upiId, setUpiId] = useState("");
   const [passbookUrl, setPassbookUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [extracting, setExtracting] = useState(false);
 
   useEffect(() => {
     if (worker) {
@@ -104,6 +106,32 @@ export default function AccountDetails() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePassbookUploaded = async (path: string) => {
+    try {
+      setExtracting(true);
+      const details = await extractBankDetailsFromPassbook(path, worker?.id);
+      if (!details) return;
+
+      if (details.account_holder_name) setAccountHolderName(details.account_holder_name);
+      if (details.bank_account_number) {
+        setBankAccountNumber(details.bank_account_number);
+        setConfirmAccountNumber(details.bank_account_number);
+      }
+      if (details.ifsc_code) setIfscCode(details.ifsc_code.toUpperCase());
+      if (details.bank_name) setBankName(details.bank_name);
+
+      sonnerToast.success("Account details filled from image");
+    } catch (err: any) {
+      toast({
+        title: "Could not read image",
+        description: err?.message || "Please enter the account details manually",
+        variant: "destructive",
+      });
+    } finally {
+      setExtracting(false);
     }
   };
 
@@ -238,10 +266,12 @@ export default function AccountDetails() {
               workerId={worker?.id}
               currentUrl={passbookUrl}
               onUrlChange={setPassbookUrl}
+                onUploaded={handlePassbookUploaded}
             />
             <p className="text-xs text-muted-foreground mt-2">
-              Upload a clear photo of your bank passbook or cancelled cheque. This helps
-              us verify your account faster.
+              {extracting
+                ? "Reading account details from the uploaded image..."
+                : "Upload a clear photo of your bank passbook or cancelled cheque. We'll fill the fields when details can be read."}
             </p>
           </CardContent>
         </Card>
