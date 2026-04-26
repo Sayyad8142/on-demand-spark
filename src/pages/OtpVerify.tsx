@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft, Phone, Shield, CheckCircle2 } from "lucide-react";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { extractBankDetailsFromPassbook } from "@/lib/bankDetailsExtraction";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -35,6 +36,7 @@ interface OtpVerifyState {
       ifsc_code: string;
       bank_name: string | null;
     } | null;
+    passbookFile?: File | null;
   };
 }
 
@@ -178,7 +180,7 @@ export default function OtpVerify() {
         }
       } else if (state.mode === 'signup' && state.signUpData) {
         // Sign Up flow
-        const { fullName, upiId, community, services, cuisineTags, qrData, bankDetails } = state.signUpData;
+        const { fullName, upiId, community, services, cuisineTags, qrData, bankDetails, passbookFile } = state.signUpData;
 
         // Fetch the community ID
         const { data: communityData, error: communityError } = await supabase
@@ -207,6 +209,7 @@ export default function OtpVerify() {
         let upiQrUrl: string | null = null;
         let upiQrPayload: string | null = null;
         let upiQrUploadedAt: string | null = null;
+        let passbookPath: string | null = null;
 
         // Upload QR if provided
         if (qrData?.file) {
@@ -232,6 +235,19 @@ export default function OtpVerify() {
           upiQrUploadedAt = new Date().toISOString();
         }
 
+        if (passbookFile) {
+          const ext = passbookFile.type === "application/pdf" ? "pdf" : passbookFile.type.split("/")[1] || "jpg";
+          passbookPath = `${data.user.id}/passbook-${Date.now()}.${ext}`;
+          const { error: passbookUploadError } = await supabase.storage
+            .from('worker-passbook')
+            .upload(passbookPath, passbookFile, {
+              cacheControl: '3600',
+              upsert: true,
+              contentType: passbookFile.type,
+            });
+          if (passbookUploadError) throw passbookUploadError;
+        }
+
         // Bank details captured during signup (optional)
         const bankFieldsForInsert = bankDetails
           ? {
@@ -240,9 +256,12 @@ export default function OtpVerify() {
               ifsc_code: bankDetails.ifsc_code,
               bank_name: bankDetails.bank_name,
               bank_details_source: 'manual' as const,
+              passbook_url: passbookPath,
               payout_ready: true,
             }
-          : {};
+          : passbookPath
+            ? { passbook_url: passbookPath, bank_details_source: 'passbook' as const }
+            : {};
 
         if (existingWorker) {
           const { error: workerError } = await supabase.from('workers').upsert({
@@ -269,9 +288,12 @@ export default function OtpVerify() {
                   ifsc_code: bankDetails.ifsc_code,
                   bank_name: bankDetails.bank_name,
                   bank_details_source: 'manual',
+                  passbook_url: passbookPath || existingWorker.passbook_url,
                   payout_ready: true,
                 }
-              : {}),
+              : passbookPath
+                ? { passbook_url: passbookPath, bank_details_source: 'passbook' }
+                : {}),
           }, { onConflict: 'id' });
           if (workerError) throw workerError;
         } else {
@@ -294,6 +316,14 @@ export default function OtpVerify() {
             ...bankFieldsForInsert,
           });
           if (workerError) throw workerError;
+        }
+
+        if (passbookPath && !bankDetails) {
+          try {
+            await extractBankDetailsFromPassbook(passbookPath, data.user.id);
+          } catch (extractError) {
+            console.warn('Passbook extraction after signup failed:', extractError);
+          }
         }
       }
 
