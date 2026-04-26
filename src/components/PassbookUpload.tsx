@@ -12,6 +12,8 @@ interface PassbookUploadProps {
   currentUrl?: string | null;
   /** Receives the storage path (not a signed URL) to persist. */
   onUrlChange: (path: string | null) => void;
+  /** Called immediately after a new upload succeeds. */
+  onUploaded?: (path: string) => void | Promise<void>;
 }
 
 const BUCKET = "worker-passbook";
@@ -36,6 +38,7 @@ export default function PassbookUpload({
   workerId,
   currentUrl,
   onUrlChange,
+  onUploaded,
 }: PassbookUploadProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -132,6 +135,7 @@ export default function PassbookUpload({
 
       // Persist ONLY the storage path. UI preview uses a fresh signed URL.
       onUrlChange(filePath);
+      await onUploaded?.(filePath);
 
       // Generate signed URL for immediate preview
       const { data: signed } = await supabase.storage
@@ -141,8 +145,8 @@ export default function PassbookUpload({
       setIsPdf(file.type === "application/pdf");
 
       toast({
-        title: "Passbook uploaded",
-        description: "Your passbook has been saved",
+        title: "Account image uploaded",
+        description: "We'll read the account details from it when possible",
       });
     } catch (err: any) {
       console.error("Passbook upload error:", err);
