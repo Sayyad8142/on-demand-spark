@@ -19,6 +19,32 @@ export type AckEvent = "push_received" | "popup_shown" | "worker_seen";
 
 const acked = new Set<string>();
 const key = (id: string, ev: AckEvent) => `${id}::${ev}`;
+let cachedWorkerId: string | null | undefined;
+
+async function getWorkerId(): Promise<string | null> {
+  if (cachedWorkerId !== undefined) return cachedWorkerId;
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    cachedWorkerId = null;
+    return null;
+  }
+
+  const { data: worker, error: workerError } = await supabase
+    .from("workers")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (workerError || !worker?.id) {
+    console.warn("[ACK] worker_id lookup failed", workerError?.message);
+    cachedWorkerId = null;
+    return null;
+  }
+
+  cachedWorkerId = worker.id;
+  return cachedWorkerId;
+}
 
 interface AckArgs {
   bookingId?: string;
@@ -34,10 +60,18 @@ export async function ackBookingDelivery({ bookingId, bookingRequestId, event }:
   if (!bookingId && !bookingRequestId) return;
 
   try {
+    const workerId = await getWorkerId();
+    if (!workerId) {
+      console.warn(`[ACK] ${event} skipped: worker_id unavailable`);
+      acked.delete(cacheKey);
+      return;
+    }
+
     const { data, error } = await supabase.functions.invoke("ack-booking-delivery", {
       body: {
         booking_id: bookingId,
         booking_request_id: bookingRequestId,
+        worker_id: workerId,
         event_type: event,
       },
     });
@@ -57,4 +91,5 @@ export async function ackBookingDelivery({ bookingId, bookingRequestId, event }:
 /** Reset the in-memory cache (e.g. on logout or test) */
 export function resetAckCache() {
   acked.clear();
+  cachedWorkerId = undefined;
 }
