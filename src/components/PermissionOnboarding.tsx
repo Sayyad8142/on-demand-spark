@@ -22,6 +22,7 @@ import {
   hasOutstandingPermissions,
   requestOverlay,
   requestBatteryExemption,
+  requestActivity,
   setPermissionDebugReporter,
 } from "@/lib/permissions";
 import {
@@ -69,7 +70,7 @@ const PERMISSION_KIND: Record<PermissionId, PermissionKind> = {
   activity: "activity",
 };
 
-const ONBOARDING_PERMISSION_IDS: PermissionId[] = ["overlay", "battery"];
+const ONBOARDING_PERMISSION_IDS: PermissionId[] = ["overlay", "battery", "activity"];
 
 interface PermissionOnboardingProps {
   onComplete: () => void;
@@ -163,6 +164,9 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
           break;
         case "battery":
           await requestBatteryExemption();
+          break;
+        case "activity":
+          await requestActivity();
           break;
         default:
           return;
