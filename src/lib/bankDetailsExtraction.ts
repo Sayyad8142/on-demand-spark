@@ -25,3 +25,25 @@ export async function extractBankDetailsFromPassbook(
 
   return (data?.details || null) as ExtractedBankDetails | null;
 }
+
+export async function extractBankDetailsFromFile(file: File): Promise<ExtractedBankDetails | null> {
+  const imageDataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Could not read selected file"));
+    reader.readAsDataURL(file);
+  });
+
+  const { data, error } = await supabase.functions.invoke("extract-bank-details", {
+    body: {
+      image_data_url: imageDataUrl,
+      file_type: file.type,
+    },
+  });
+
+  if (error) {
+    throw new Error(error.message || "Could not read account details from image");
+  }
+
+  return (data?.details || null) as ExtractedBankDetails | null;
+}

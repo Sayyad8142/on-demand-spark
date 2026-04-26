@@ -17,6 +17,7 @@ import { Check, FileText, Phone, Upload, UserRound, X } from "lucide-react";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import maidServiceIcon from "@/assets/service-maid.jpg";
 import bathroomServiceIcon from "@/assets/service-bathroom.jpg";
+import { extractBankDetailsFromFile } from "@/lib/bankDetailsExtraction";
 
 
 // @ts-ignore - Capacitor bridge
@@ -91,6 +92,7 @@ export default function Auth() {
   const [signUpIfscCode, setSignUpIfscCode] = useState("");
   const [signUpBankName, setSignUpBankName] = useState("");
   const [signUpPassbookFile, setSignUpPassbookFile] = useState<File | null>(null);
+  const [extractingPassbook, setExtractingPassbook] = useState(false);
   const passbookInputRef = useRef<HTMLInputElement>(null);
   // Cook cuisine tags removed - cook service discontinued
   
@@ -115,7 +117,7 @@ export default function Auth() {
     return cleaned.startsWith('91') ? `+${cleaned}` : `+91${cleaned}`;
   };
 
-  const handlePassbookSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePassbookSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -132,6 +134,28 @@ export default function Auth() {
     }
 
     setSignUpPassbookFile(file);
+    setExtractingPassbook(true);
+
+    try {
+      const details = await extractBankDetailsFromFile(file);
+      if (details?.account_holder_name) setSignUpAccountHolderName(details.account_holder_name);
+      if (details?.bank_account_number) {
+        setSignUpBankAccountNumber(details.bank_account_number);
+        setSignUpConfirmAccountNumber(details.bank_account_number);
+      }
+      if (details?.ifsc_code) setSignUpIfscCode(details.ifsc_code.toUpperCase());
+      if (details?.bank_name) setSignUpBankName(details.bank_name);
+
+      if (details?.account_holder_name || details?.bank_account_number || details?.ifsc_code) {
+        toast({ title: "Account details filled", description: "Please verify the extracted details before continuing" });
+      } else {
+        toast({ title: "Could not find details", description: "Please enter the bank details manually", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Could not read image", description: err?.message || "Please enter the bank details manually", variant: "destructive" });
+    } finally {
+      setExtractingPassbook(false);
+    }
   };
 
   const handleSignInSendOtp = async () => {
@@ -526,7 +550,7 @@ export default function Auth() {
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{signUpPassbookFile.name}</p>
                         <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Check className="h-3 w-3" /> Ready to upload after OTP
+                          <Check className="h-3 w-3" /> {extractingPassbook ? "Reading details..." : "Details read — verify above"}
                         </p>
                       </div>
                       <Button
@@ -537,7 +561,7 @@ export default function Auth() {
                           setSignUpPassbookFile(null);
                           if (passbookInputRef.current) passbookInputRef.current.value = "";
                         }}
-                        disabled={loading}
+                        disabled={loading || extractingPassbook}
                         className="h-8 w-8"
                       >
                         <X className="h-4 w-4" />
@@ -547,12 +571,12 @@ export default function Auth() {
                     <button
                       type="button"
                       onClick={() => passbookInputRef.current?.click()}
-                      disabled={loading}
+                      disabled={loading || extractingPassbook}
                       className="flex w-full flex-col items-center gap-2 rounded-lg border-2 border-dashed border-border bg-background p-4 text-center transition-colors hover:bg-muted/50 disabled:opacity-50"
                     >
                       <Upload className="h-7 w-7 text-muted-foreground" />
                       <span className="text-sm font-medium">Upload passbook or cheque</span>
-                      <span className="text-xs text-muted-foreground">JPG, PNG, WEBP, or PDF</span>
+                      <span className="text-xs text-muted-foreground">Fills name, account number, and IFSC instantly</span>
                     </button>
                   )}
                   <input
@@ -646,8 +670,8 @@ export default function Auth() {
                 </div>
               </div>
 
-              <Button onClick={handleSignUpSendOtp} disabled={loading || !signUpFullName || !signUpPhone || !signUpCommunity || signUpServices.length === 0} className="w-full">
-                {loading ? t('auth.sending') : t('auth.sendOtp')}
+              <Button onClick={handleSignUpSendOtp} disabled={loading || extractingPassbook || !signUpFullName || !signUpPhone || !signUpCommunity || signUpServices.length === 0} className="w-full">
+                {loading ? t('auth.sending') : extractingPassbook ? "Reading account image..." : t('auth.sendOtp')}
               </Button>
             </TabsContent>
           </Tabs>
