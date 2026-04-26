@@ -17,6 +17,7 @@ import { Check, FileText, Phone, Upload, UserRound, X } from "lucide-react";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import maidServiceIcon from "@/assets/service-maid.jpg";
 import bathroomServiceIcon from "@/assets/service-bathroom.jpg";
+import { extractBankDetailsFromFile } from "@/lib/bankDetailsExtraction";
 
 
 // @ts-ignore - Capacitor bridge
@@ -91,6 +92,7 @@ export default function Auth() {
   const [signUpIfscCode, setSignUpIfscCode] = useState("");
   const [signUpBankName, setSignUpBankName] = useState("");
   const [signUpPassbookFile, setSignUpPassbookFile] = useState<File | null>(null);
+  const [extractingPassbook, setExtractingPassbook] = useState(false);
   const passbookInputRef = useRef<HTMLInputElement>(null);
   // Cook cuisine tags removed - cook service discontinued
   
@@ -115,7 +117,7 @@ export default function Auth() {
     return cleaned.startsWith('91') ? `+${cleaned}` : `+91${cleaned}`;
   };
 
-  const handlePassbookSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePassbookSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -132,6 +134,28 @@ export default function Auth() {
     }
 
     setSignUpPassbookFile(file);
+    setExtractingPassbook(true);
+
+    try {
+      const details = await extractBankDetailsFromFile(file);
+      if (details?.account_holder_name) setSignUpAccountHolderName(details.account_holder_name);
+      if (details?.bank_account_number) {
+        setSignUpBankAccountNumber(details.bank_account_number);
+        setSignUpConfirmAccountNumber(details.bank_account_number);
+      }
+      if (details?.ifsc_code) setSignUpIfscCode(details.ifsc_code.toUpperCase());
+      if (details?.bank_name) setSignUpBankName(details.bank_name);
+
+      if (details?.account_holder_name || details?.bank_account_number || details?.ifsc_code) {
+        toast({ title: "Account details filled", description: "Please verify the extracted details before continuing" });
+      } else {
+        toast({ title: "Could not find details", description: "Please enter the bank details manually", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Could not read image", description: err?.message || "Please enter the bank details manually", variant: "destructive" });
+    } finally {
+      setExtractingPassbook(false);
+    }
   };
 
   const handleSignInSendOtp = async () => {
