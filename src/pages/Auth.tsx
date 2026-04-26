@@ -365,6 +365,7 @@ export default function Auth() {
             cuisineTags: [],
             qrData: null,
             bankDetails: bankPayload,
+            passbookFile: signUpPassbookFile,
           }
         }
       });
@@ -512,6 +513,54 @@ export default function Auth() {
                     value={signUpBankName}
                     onChange={e => setSignUpBankName(e.target.value)}
                     disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Account Details Image (optional)</Label>
+                  {signUpPassbookFile ? (
+                    <div className="flex items-center gap-3 rounded-lg border border-border bg-background p-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted">
+                        <FileText className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{signUpPassbookFile.name}</p>
+                        <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Check className="h-3 w-3" /> Ready to upload after OTP
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setSignUpPassbookFile(null);
+                          if (passbookInputRef.current) passbookInputRef.current.value = "";
+                        }}
+                        disabled={loading}
+                        className="h-8 w-8"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => passbookInputRef.current?.click()}
+                      disabled={loading}
+                      className="flex w-full flex-col items-center gap-2 rounded-lg border-2 border-dashed border-border bg-background p-4 text-center transition-colors hover:bg-muted/50 disabled:opacity-50"
+                    >
+                      <Upload className="h-7 w-7 text-muted-foreground" />
+                      <span className="text-sm font-medium">Upload passbook or cheque</span>
+                      <span className="text-xs text-muted-foreground">JPG, PNG, WEBP, or PDF</span>
+                    </button>
+                  )}
+                  <input
+                    ref={passbookInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    onChange={handlePassbookSelect}
+                    className="hidden"
                   />
                 </div>
               </div>
