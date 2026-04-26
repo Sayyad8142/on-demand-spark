@@ -14,9 +14,9 @@ Deno.serve(async (req) => {
       return json({ error: "Missing authorization" }, 401);
     }
 
-    const { passbook_path, worker_id } = await req.json();
-    if (!passbook_path || typeof passbook_path !== "string") {
-      return json({ error: "passbook_path is required" }, 400);
+    const { passbook_path, worker_id, image_data_url, file_type } = await req.json();
+    if ((!passbook_path || typeof passbook_path !== "string") && (!image_data_url || typeof image_data_url !== "string")) {
+      return json({ error: "passbook_path or image_data_url is required" }, 400);
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -29,6 +29,15 @@ Deno.serve(async (req) => {
 
     const { data: { user }, error: userError } = await userClient.auth.getUser();
     if (userError || !user) return json({ error: "Unauthorized" }, 401);
+
+    if (image_data_url) {
+      if (!/^data:(image\/(jpeg|png|webp)|application\/pdf);base64,/i.test(image_data_url)) {
+        return json({ error: "Unsupported image format" }, 400);
+      }
+
+      const details = await extractWithAi(image_data_url);
+      return json({ success: true, details });
+    }
 
     if (!passbook_path.startsWith(`${user.id}/`)) {
       return json({ error: "Unauthorized file path" }, 403);
