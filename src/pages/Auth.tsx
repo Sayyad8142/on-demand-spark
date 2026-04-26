@@ -670,8 +670,8 @@ export default function Auth() {
                 </div>
               </div>
 
-              <Button onClick={handleSignUpSendOtp} disabled={loading || !signUpFullName || !signUpPhone || !signUpCommunity || signUpServices.length === 0} className="w-full">
-                {loading ? t('auth.sending') : t('auth.sendOtp')}
+              <Button onClick={handleSignUpSendOtp} disabled={loading || extractingPassbook || !signUpFullName || !signUpPhone || !signUpCommunity || signUpServices.length === 0} className="w-full">
+                {loading ? t('auth.sending') : extractingPassbook ? "Reading account image..." : t('auth.sendOtp')}
               </Button>
             </TabsContent>
           </Tabs>
