@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
-import { Phone, UserRound } from "lucide-react";
+import { Check, FileText, Phone, Upload, UserRound, X } from "lucide-react";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import maidServiceIcon from "@/assets/service-maid.jpg";
 import bathroomServiceIcon from "@/assets/service-bathroom.jpg";
@@ -42,6 +42,8 @@ const upiSchema = z.string().regex(/^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/, 'Invali
 const otpSchema = z.string().regex(/^\d{6}$/, 'OTP must be exactly 6 digits').length(6);
 const ifscSchema = z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Invalid IFSC code (e.g., HDFC0001234)');
 const accountNumberSchema = z.string().regex(/^\d{9,18}$/, 'Account number must be 9–18 digits');
+const PASSBOOK_ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+const PASSBOOK_MAX_SIZE = 8 * 1024 * 1024;
 export default function Auth() {
   const navigate = useNavigate();
   const {
@@ -88,6 +90,8 @@ export default function Auth() {
   const [signUpConfirmAccountNumber, setSignUpConfirmAccountNumber] = useState("");
   const [signUpIfscCode, setSignUpIfscCode] = useState("");
   const [signUpBankName, setSignUpBankName] = useState("");
+  const [signUpPassbookFile, setSignUpPassbookFile] = useState<File | null>(null);
+  const passbookInputRef = useRef<HTMLInputElement>(null);
   // Cook cuisine tags removed - cook service discontinued
   
 
@@ -110,6 +114,26 @@ export default function Auth() {
     const cleaned = phone.replace(/\D/g, '');
     return cleaned.startsWith('91') ? `+${cleaned}` : `+91${cleaned}`;
   };
+
+  const handlePassbookSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!PASSBOOK_ACCEPTED_TYPES.includes(file.type)) {
+      toast({ title: "Invalid file", description: "Upload JPG, PNG, WEBP, or PDF", variant: "destructive" });
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > PASSBOOK_MAX_SIZE) {
+      toast({ title: "File too large", description: "Max size is 8MB", variant: "destructive" });
+      event.target.value = "";
+      return;
+    }
+
+    setSignUpPassbookFile(file);
+  };
+
   const handleSignInSendOtp = async () => {
     if (!signInPhone) {
       toast({
