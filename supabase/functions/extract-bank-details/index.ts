@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
       return json({ error: "Missing authorization" }, 401);
     }
 
-    const { passbook_path, worker_id, image_data_url, file_type } = await req.json();
+    const { passbook_path, worker_id, image_data_url } = await req.json();
     if ((!passbook_path || typeof passbook_path !== "string") && (!image_data_url || typeof image_data_url !== "string")) {
       return json({ error: "passbook_path or image_data_url is required" }, 400);
     }
