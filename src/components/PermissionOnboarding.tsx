@@ -172,12 +172,12 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
           return;
       }
       console.log(`[PermissionOnboarding] ✅ ${id} request returned without throwing`);
-      addDebugEvent({ permissionId: id, step: "handleRequest", status: "success", message: "Request completed without throwing" });
+      addDebugEvent({ permissionId: id, step: "handleRequest", status: "success", message: id === "activity" ? "Permission prompt/settings opened" : "Request completed without throwing" });
     } catch (e) {
       console.error(`[PermissionOnboarding] ${id} request failed`, e);
       addDebugEvent({ permissionId: id, step: "handleRequest", status: "failed", error: e instanceof Error ? e.message : String(e) });
       markFailed(id, true);
-      if (id === "overlay" || id === "battery") {
+        if (id === "overlay" || id === "battery" || id === "activity") {
         openFallbackModal(id);
         if (!options?.silent) {
           toast({
