@@ -76,6 +76,8 @@ export async function startMovementMonitoring(
   try {
     const plugin = getPlugin();
 
+    console.log(`[Movement] startMovementMonitoring invoked booking=${bookingId} worker=${workerId}`);
+
     // Not on native — record as unsupported and exit
     if (!plugin) {
       console.log("[Movement] Skipped — not native platform");
@@ -90,6 +92,7 @@ export async function startMovementMonitoring(
 
     // Check sensor support
     const { supported, sensorType } = await plugin.checkSupport();
+    console.log(`[Movement] Sensor support supported=${supported} type=${sensorType}`);
     if (!supported) {
       console.log("[Movement] Skipped — device has no step sensor");
       await saveMovementCheck(bookingId, workerId, {
@@ -103,6 +106,7 @@ export async function startMovementMonitoring(
 
     // Request permission (already granted on startup in most cases — instant resolve)
     const { granted } = await plugin.requestPermission();
+    console.log(`[Movement] ACTIVITY_RECOGNITION permission_granted=${granted}`);
     if (!granted) {
       console.log(
         "[Movement] Skipped — ACTIVITY_RECOGNITION permission denied (booking accept NOT blocked)"
@@ -141,6 +145,9 @@ export async function startMovementMonitoring(
 
         const steps = result.stepsInWindow ?? 0;
         const isLowMovement = steps < minSteps;
+        console.log(
+          `[Movement] Final result booking=${bookingId} baseline=${result.baselineStepValue ?? "null"} final=${result.finalStepValue ?? "null"} steps=${steps} min=${minSteps}`
+        );
 
         await updateMovementCheck(bookingId, workerId, {
           baseline_step_value: result.baselineStepValue,
@@ -215,6 +222,7 @@ async function saveMovementCheck(
       );
 
     if (error) console.error("📊 Failed to save movement check:", error);
+    else console.log(`[Movement] ✅ movement check upserted booking=${bookingId} worker=${workerId} status=${fields.movement_status ?? "unknown"}`);
   } catch (e) {
     console.error("📊 Movement check save error:", e);
   }
@@ -233,6 +241,7 @@ async function updateMovementCheck(
       .eq("worker_id", workerId);
 
     if (error) console.error("📊 Failed to update movement check:", error);
+    else console.log(`[Movement] ✅ movement check updated booking=${bookingId} worker=${workerId} status=${fields.movement_status ?? "unknown"}`);
   } catch (e) {
     console.error("📊 Movement check update error:", e);
   }
