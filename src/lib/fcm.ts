@@ -9,7 +9,7 @@
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import { processIncomingBooking } from '@/services/bookingAlertCoordinator';
-import { isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from '@/lib/scheduledBookingGuards';
+import { canShowWorkerBookingOffer, isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from '@/lib/scheduledBookingGuards';
 
 let fcmInitialized = false;
 
@@ -39,7 +39,13 @@ export async function initFCM() {
         bookingType: data.booking_type || data.bookingType,
         scheduledDate: data.scheduled_date || data.scheduledDate,
         scheduledTime: data.scheduled_time || data.scheduledTime,
+        prealertSent: data.prealert_sent === true || data.prealert_sent === 'true' || data.prealertSent === true || data.prealertSent === 'true',
       };
+      if (!canShowWorkerBookingOffer(scheduleInfo)) {
+        logScheduledOfferDecision(scheduleInfo, 'fcm', false);
+        console.log('🔕 FCM scheduled booking ignored until prealert_sent=true:', bookingId);
+        return;
+      }
       if (!bookingRequestId && isBeforeScheduledDispatchWindow(scheduleInfo)) {
         logScheduledOfferDecision(scheduleInfo, 'fcm', false);
         console.log('🔕 FCM scheduled booking ignored before dispatch window:', bookingId);
@@ -82,7 +88,13 @@ export async function initFCM() {
         bookingType: data.booking_type || data.bookingType,
         scheduledDate: data.scheduled_date || data.scheduledDate,
         scheduledTime: data.scheduled_time || data.scheduledTime,
+        prealertSent: data.prealert_sent === true || data.prealert_sent === 'true' || data.prealertSent === true || data.prealertSent === 'true',
       };
+      if (!canShowWorkerBookingOffer(scheduleInfo)) {
+        logScheduledOfferDecision(scheduleInfo, 'fcm', false);
+        console.log('🔕 FCM scheduled booking tap ignored until prealert_sent=true:', bookingId);
+        return;
+      }
       if (!bookingRequestId && isBeforeScheduledDispatchWindow(scheduleInfo)) {
         logScheduledOfferDecision(scheduleInfo, 'fcm', false);
         console.log('🔕 FCM scheduled booking tap ignored before dispatch window:', bookingId);
@@ -101,6 +113,7 @@ export async function initFCM() {
         bookingType: scheduleInfo.bookingType,
         scheduledDate: scheduleInfo.scheduledDate,
         scheduledTime: scheduleInfo.scheduledTime,
+        prealertSent: scheduleInfo.prealertSent,
         source: 'fcm',
       });
     }
