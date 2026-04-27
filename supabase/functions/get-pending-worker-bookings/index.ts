@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
     const bookingIds = Array.from(new Set(requests.map(r => r.booking_id)));
     const { data: bookings, error: bErr } = await admin
       .from("bookings")
-      .select("id, status, service_type, community, cust_name, flat_no, price_inr, scheduled_date, scheduled_time, booking_type, address_line1")
+      .select("id, status, service_type, community, cust_name, flat_no, price_inr, scheduled_date, scheduled_time, booking_type, prealert_sent, address_line1")
       .in("id", bookingIds);
 
     if (bErr) return json({ error: "booking_lookup_failed", detail: bErr.message }, 500);
@@ -79,6 +79,18 @@ Deno.serve(async (req) => {
       .map(r => {
         const b = bookingMap.get(r.booking_id);
         if (!b || b.status !== "pending") return null;
+        const isScheduled = b.booking_type === "scheduled" || !!(b.scheduled_date && b.scheduled_time);
+        if (isScheduled && b.prealert_sent !== true) {
+          console.log("[get-pending-worker-bookings] scheduled request hidden", {
+            booking_id: b.id,
+            booking_type: b.booking_type,
+            scheduled_at: b.scheduled_date && b.scheduled_time ? `${b.scheduled_date}T${b.scheduled_time}` : null,
+            prealert_sent: b.prealert_sent,
+            request_status: r.status,
+            shown_to_worker: false,
+          });
+          return null;
+        }
         return {
           booking_request_id: r.id,
           booking_id: r.booking_id,
@@ -98,6 +110,7 @@ Deno.serve(async (req) => {
             scheduled_date: b.scheduled_date,
             scheduled_time: b.scheduled_time,
             booking_type: b.booking_type,
+            prealert_sent: b.prealert_sent,
           },
         };
       })
