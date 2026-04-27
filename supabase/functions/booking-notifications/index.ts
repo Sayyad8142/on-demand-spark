@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     
     const { data: b, error: be } = await supabase
       .from("bookings")
-      .select("id, status, service_type, community, cust_name, cust_phone, flat_no, price_inr, scheduled_date, scheduled_time, booking_type")
+      .select("id, status, service_type, community, cust_name, cust_phone, flat_no, price_inr, scheduled_date, scheduled_time, booking_type, prealert_sent")
       .eq("id", booking_id)
       .single();
       
@@ -82,6 +82,20 @@ Deno.serve(async (req) => {
 
     const isScheduled = !!(b.scheduled_date && b.scheduled_time);
     const bookingType = isScheduled ? "scheduled" : "instant";
+
+    if (isScheduled && b.prealert_sent !== true) {
+      console.log("🔕 Scheduled booking dispatch blocked until prealert_sent=true", {
+        booking_id,
+        booking_type: bookingType,
+        scheduled_at: `${b.scheduled_date}T${b.scheduled_time}`,
+        prealert_sent: b.prealert_sent,
+        shown_to_worker: false,
+      });
+      return new Response(JSON.stringify({ skipped: true, reason: "scheduled_prealert_not_sent", booking_id }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     
     console.log(`✅ Booking loaded (${bookingType}):`, { 
       service_type: b.service_type, 
@@ -391,6 +405,7 @@ async function sendNotifications(userIds: string[], booking: any, bookingId: str
       bookingId: bookingId, 
       booking_id: bookingId,
       booking_type: bookingType,
+      prealert_sent: String(booking.prealert_sent === true),
       customer: booking.cust_name || "New Customer",
       community: booking.community || '',
       serviceType: booking.service_type,
