@@ -9,6 +9,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import {
+  canShowWorkerBookingOffer,
   isBeforeScheduledDispatchWindow,
   logScheduledOfferDecision,
   type ScheduledOfferLogSource,
@@ -25,6 +26,8 @@ export interface BookingAlert {
   bookingType?: string;
   scheduledDate?: string;
   scheduledTime?: string;
+  prealertSent?: boolean;
+  requestStatus?: string;
   timeoutAt?: string;
   source: "fcm" | "realtime_bookings" | "realtime_requests" | "heartbeat" | "resume";
 }
@@ -95,7 +98,7 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
   try {
     const { data: booking } = await supabase
       .from("bookings")
-      .select("status, worker_id, booking_type, scheduled_date, scheduled_time")
+      .select("status, worker_id, booking_type, scheduled_date, scheduled_time, prealert_sent")
       .eq("id", bookingId)
       .maybeSingle();
 
@@ -103,6 +106,13 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
       alert.bookingType = alert.bookingType ?? booking.booking_type;
       alert.scheduledDate = alert.scheduledDate ?? booking.scheduled_date ?? undefined;
       alert.scheduledTime = alert.scheduledTime ?? booking.scheduled_time ?? undefined;
+      alert.prealertSent = alert.prealertSent ?? booking.prealert_sent ?? undefined;
+
+      if (!canShowWorkerBookingOffer(alert)) {
+        logScheduledOfferDecision(alert, sourceForLog[alert.source], false);
+        console.log(`🔕 [Coordinator] Scheduled offer hidden until prealert_sent=true: ${bookingId}`);
+        return false;
+      }
 
       const hasActiveRequest = !!alert.bookingRequestId;
       const earlyScheduledOffer = !hasActiveRequest && isBeforeScheduledDispatchWindow({
@@ -110,6 +120,8 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
         booking_type: alert.bookingType,
         scheduled_date: alert.scheduledDate,
         scheduled_time: alert.scheduledTime,
+        prealertSent: alert.prealertSent,
+        requestStatus: alert.requestStatus,
       });
 
       if (earlyScheduledOffer) {
