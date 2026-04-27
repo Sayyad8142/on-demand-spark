@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { processIncomingBooking, dismissAlert } from "@/services/bookingAlertCoordinator";
-import { logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
+import { canShowWorkerBookingOffer, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 
 /**
  * Realtime subscription on booking_requests table for this worker.
@@ -46,7 +46,7 @@ export function useBookingRequestsRealtime(
           // Fetch booking details
           const { data: booking } = await supabase
             .from("bookings")
-            .select("id, cust_name, community, service_type, flat_no, price_inr, status, booking_type, scheduled_date, scheduled_time")
+            .select("id, cust_name, community, service_type, flat_no, price_inr, status, booking_type, scheduled_date, scheduled_time, prealert_sent")
             .eq("id", req.booking_id)
             .maybeSingle();
 
@@ -54,6 +54,14 @@ export function useBookingRequestsRealtime(
             console.log("📡 [BookingRequests] Booking not pending, skipping");
             return;
           }
+
+          const offerLogInput = { ...booking, request_status: req.status };
+          if (!canShowWorkerBookingOffer(offerLogInput)) {
+            logScheduledOfferDecision(offerLogInput, "realtime", false);
+            console.log("📡 [BookingRequests] Scheduled request hidden until prealert_sent=true", booking.id);
+            return;
+          }
+
           logScheduledOfferDecision(booking, "realtime", true);
 
           await processIncomingBooking({
@@ -67,6 +75,8 @@ export function useBookingRequestsRealtime(
             bookingType: booking.booking_type,
             scheduledDate: booking.scheduled_date ?? undefined,
             scheduledTime: booking.scheduled_time ?? undefined,
+            prealertSent: booking.prealert_sent ?? undefined,
+            requestStatus: req.status ?? undefined,
             timeoutAt: req.timeout_at,
             source: "realtime_requests",
           });
