@@ -145,7 +145,7 @@ export function useUnifiedBookingAlerts(
       try {
         const { data: requests } = await supabase
           .from("booking_requests")
-          .select("id, booking_id, timeout_at")
+          .select("id, booking_id, timeout_at, status")
           .eq("worker_id", workerId)
           .eq("status", "pending")
           .gt("timeout_at", new Date().toISOString())
