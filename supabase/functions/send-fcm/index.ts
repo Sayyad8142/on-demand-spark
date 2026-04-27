@@ -198,6 +198,8 @@ Deno.serve(async (req) => {
             scheduled_time: String(data?.scheduled_time || ""),
             scheduled_date: String(data?.scheduled_date || ""),
             scheduled_time_raw: String(data?.scheduled_time_raw || ""),
+            prealert_sent: String(data?.prealert_sent || "false"),
+            request_status: String(data?.request_status || ""),
             title: String(title),
             body: String(body),
           };
