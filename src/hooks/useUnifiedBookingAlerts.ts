@@ -52,6 +52,10 @@ export function useUnifiedBookingAlerts(
               service_type: alert.serviceType,
               flat_no: alert.flatNo,
               price_inr: alert.priceInr,
+              booking_type: alert.bookingType,
+              scheduled_date: alert.scheduledDate,
+              scheduled_time: alert.scheduledTime,
+              prealert_sent: alert.prealertSent === true,
             });
             console.log("🚀 Triggering native overlay from coordinator");
             plugin.showBookingOverlay({ booking: bookingJson });
