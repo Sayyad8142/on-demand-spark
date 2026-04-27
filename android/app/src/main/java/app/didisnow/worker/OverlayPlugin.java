@@ -236,6 +236,9 @@ public class OverlayPlugin extends Plugin {
             Intent intent = new Intent(ctx, BookingOverlayService.class);
             intent.putExtra("mode", "show");
             intent.putExtra("booking_id", b.optString("id", ""));
+            intent.putExtra("booking_type", b.optString("booking_type", "instant"));
+            intent.putExtra("prealert_sent", b.optBoolean("prealert_sent", false));
+            intent.putExtra("scheduled_time", b.optString("scheduled_time", ""));
             intent.putExtra("service_type", b.optString("service_type", ""));
             intent.putExtra("customer_name", b.optString("cust_name", ""));
             intent.putExtra("community", b.optString("community", ""));
