@@ -48,6 +48,16 @@ class BookingAlertActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val bookingId = intent.getStringExtra("booking_id") ?: ""
+        val bookingType = intent.getStringExtra("booking_type") ?: "instant"
+        val prealertSent = intent.getBooleanExtra("prealert_sent", false)
+        val scheduledTime = intent.getStringExtra("scheduled_time") ?: ""
+        if (bookingType == "scheduled" && !prealertSent) {
+            Log.w("BookingAlert", "🔕 Scheduled offer hidden until prealert_sent=true booking_id=$bookingId booking_type=$bookingType scheduled_at=$scheduledTime prealert_sent=$prealertSent request_status=null shown_to_worker=false")
+            finish()
+            return
+        }
+
         // Keep screen on & show over lock screen
         window.addFlags(
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
@@ -62,7 +72,6 @@ class BookingAlertActivity : AppCompatActivity() {
         playAlertSound()
         startVibration()
 
-        val bookingId = intent.getStringExtra("booking_id") ?: ""
         val serviceType = intent.getStringExtra("service_type") ?: ""
         val flatNo = intent.getStringExtra("flat_no") ?: ""
         val priceInr = intent.getIntExtra("price_inr", 0)

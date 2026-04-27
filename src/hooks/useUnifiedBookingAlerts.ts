@@ -11,7 +11,7 @@ import {
   markAlertOpened,
   pruneShownBookings,
 } from "@/services/bookingAlertCoordinator";
-import { isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
+import { canShowWorkerBookingOffer, isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 
 /**
  * Unified booking alert hook that:
@@ -52,6 +52,10 @@ export function useUnifiedBookingAlerts(
               service_type: alert.serviceType,
               flat_no: alert.flatNo,
               price_inr: alert.priceInr,
+              booking_type: alert.bookingType,
+              scheduled_date: alert.scheduledDate,
+              scheduled_time: alert.scheduledTime,
+              prealert_sent: alert.prealertSent === true,
             });
             console.log("🚀 Triggering native overlay from coordinator");
             plugin.showBookingOverlay({ booking: bookingJson });
@@ -145,7 +149,7 @@ export function useUnifiedBookingAlerts(
       try {
         const { data: requests } = await supabase
           .from("booking_requests")
-          .select("id, booking_id, timeout_at")
+          .select("id, booking_id, timeout_at, status")
           .eq("worker_id", workerId)
           .eq("status", "pending")
           .gt("timeout_at", new Date().toISOString())
@@ -156,11 +160,18 @@ export function useUnifiedBookingAlerts(
         for (const req of requests) {
           const { data: booking } = await supabase
             .from("bookings")
-            .select("id, cust_name, community, service_type, flat_no, price_inr, status, booking_type, scheduled_date, scheduled_time")
+            .select("id, cust_name, community, service_type, flat_no, price_inr, status, booking_type, scheduled_date, scheduled_time, prealert_sent")
             .eq("id", req.booking_id)
             .maybeSingle();
 
           if (booking?.status === "pending") {
+            const offerLogInput = { ...booking, request_status: req.status };
+            if (!canShowWorkerBookingOffer(offerLogInput)) {
+              logScheduledOfferDecision(offerLogInput, "resume", false);
+              console.log("📱 [UnifiedAlerts] Scheduled request hidden until prealert_sent=true", booking.id);
+              continue;
+            }
+
             await processIncomingBooking({
               bookingId: booking.id,
               bookingRequestId: req.id,
@@ -172,6 +183,8 @@ export function useUnifiedBookingAlerts(
               bookingType: booking.booking_type,
               scheduledDate: booking.scheduled_date ?? undefined,
               scheduledTime: booking.scheduled_time ?? undefined,
+              prealertSent: booking.prealert_sent ?? undefined,
+              requestStatus: req.status ?? undefined,
               timeoutAt: req.timeout_at,
               source: "resume",
             });

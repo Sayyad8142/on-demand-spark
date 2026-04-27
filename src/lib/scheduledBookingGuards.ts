@@ -5,6 +5,11 @@ type ScheduleInput = {
   bookingId?: string | null;
   booking_type?: string | null;
   bookingType?: string | null;
+  prealert_sent?: boolean | null;
+  prealertSent?: boolean | null;
+  status?: string | null;
+  request_status?: string | null;
+  requestStatus?: string | null;
   scheduled_date?: string | null;
   scheduledDate?: string | null;
   scheduled_time?: string | null;
@@ -38,6 +43,11 @@ export function isBeforeScheduledDispatchWindow(input: ScheduleInput, now = new 
   return minutesUntilScheduled !== null && minutesUntilScheduled > DISPATCH_WINDOW_MINUTES;
 }
 
+export function canShowWorkerBookingOffer(input: ScheduleInput): boolean {
+  if (!isScheduledBooking(input)) return true;
+  return (input.prealert_sent ?? input.prealertSent) === true;
+}
+
 export function logScheduledOfferDecision(
   input: ScheduleInput,
   source: ScheduledOfferLogSource,
@@ -49,6 +59,8 @@ export function logScheduledOfferDecision(
     booking_id: input.bookingId ?? input.id ?? null,
     booking_type: input.booking_type ?? input.bookingType ?? (scheduledAt ? "scheduled" : "instant"),
     scheduled_at: scheduledAt?.toISOString() ?? null,
+    prealert_sent: input.prealert_sent ?? input.prealertSent ?? null,
+    request_status: input.request_status ?? input.requestStatus ?? input.status ?? null,
     current_time: now.toISOString(),
     minutes_until_scheduled: getMinutesUntilScheduled(input, now),
     source,

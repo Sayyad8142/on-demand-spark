@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
     // Get booking data
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
-      .select("id, service_type, community, cust_name, flat_no, price_inr, status, booking_type, scheduled_date, scheduled_time")
+      .select("id, service_type, community, cust_name, flat_no, price_inr, status, booking_type, scheduled_date, scheduled_time, prealert_sent")
       .eq("id", booking_id)
       .single();
 
@@ -36,6 +36,21 @@ Deno.serve(async (req) => {
     if (booking.status !== "pending") {
       console.log("⏭️ Booking already accepted, skipping");
       return new Response("booking-accepted", { status: 200, headers: corsHeaders });
+    }
+
+    if ((booking.booking_type === "scheduled" || (booking.scheduled_date && booking.scheduled_time)) && booking.prealert_sent !== true) {
+      console.log("🔕 Scheduled next-tier dispatch blocked until prealert_sent=true", {
+        booking_id,
+        booking_type: booking.booking_type || "scheduled",
+        scheduled_at: booking.scheduled_date && booking.scheduled_time ? `${booking.scheduled_date}T${booking.scheduled_time}` : null,
+        prealert_sent: booking.prealert_sent,
+        request_status: "pending",
+        shown_to_worker: false,
+      });
+      return new Response(JSON.stringify({ skipped: true, reason: "scheduled_prealert_not_sent", booking_id }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Get workers for this tier
@@ -104,6 +119,7 @@ Deno.serve(async (req) => {
           flat_no: booking.flat_no || "",
           price: String(booking.price_inr || 0),
           tier: String(tier),
+          prealert_sent: String(booking.prealert_sent === true),
           scheduled_time: scheduledTimeDisplay,
           scheduled_date: booking.scheduled_date || "",
           scheduled_time_raw: booking.scheduled_time || ""

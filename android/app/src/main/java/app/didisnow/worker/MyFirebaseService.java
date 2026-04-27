@@ -108,6 +108,9 @@ public class MyFirebaseService extends FirebaseMessagingService {
         }
 
         String scheduledTime = data.get("scheduled_time"); // Human-readable scheduled time
+        String scheduledDate = data.get("scheduled_date");
+        String scheduledTimeRaw = data.get("scheduled_time_raw");
+        boolean prealertSent = "true".equalsIgnoreCase(data.get("prealert_sent"));
 
         Log.d(TAG, "📋 BOOKING DETAILS:");
         Log.d(TAG, "   ID: " + bookingId);
@@ -120,11 +123,21 @@ public class MyFirebaseService extends FirebaseMessagingService {
         if (scheduledTime != null && !scheduledTime.isEmpty()) {
           Log.d(TAG, "   Scheduled Time: " + scheduledTime);
         }
+        Log.d(TAG, "   Scheduled At: " + scheduledDate + " " + scheduledTimeRaw);
+        Log.d(TAG, "   Prealert Sent: " + prealertSent);
         
         // Validate critical data
         if (bookingId == null || bookingId.isEmpty()) {
           Log.e(TAG, "❌ CRITICAL: No bookingId in FCM payload! Cannot show overlay.");
           Log.e(TAG, "❌ Full data payload: " + data.toString());
+          return;
+        }
+
+        if ("scheduled".equals(bookingType) && !prealertSent) {
+          Log.w(TAG, "🔕 Scheduled booking hidden until prealert_sent=true. booking_id=" + bookingId
+              + ", scheduled_at=" + scheduledDate + "T" + scheduledTimeRaw
+              + ", request_status=" + data.get("request_status")
+              + ", shown_to_worker=false");
           return;
         }
         
@@ -133,7 +146,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
           if (!android.provider.Settings.canDrawOverlays(this)) {
             Log.e(TAG, "❌ CRITICAL: No overlay permission! Falling back to Activity.");
             // Try to show BookingAlertActivity as fallback
-            launchBookingAlertActivity(bookingId, customer, community, serviceType, flatNo, price, bookingType, scheduledTime);
+            launchBookingAlertActivity(bookingId, customer, community, serviceType, flatNo, price, bookingType, scheduledTime, prealertSent);
             return;
           } else {
             Log.d(TAG, "✅ Overlay permission granted");
@@ -148,6 +161,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
         serviceIntent.putExtra("mode", "show");
         serviceIntent.putExtra("booking_id", bookingId);
         serviceIntent.putExtra("booking_type", bookingType != null ? bookingType : "instant");
+        serviceIntent.putExtra("prealert_sent", prealertSent);
         serviceIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
         serviceIntent.putExtra("community", community != null ? community : "");
         serviceIntent.putExtra("service_type", serviceType != null ? serviceType : "Service");
@@ -183,7 +197,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
           Log.d(TAG, "✅ BookingOverlayService started successfully for " + bookingType + " booking!");
         } catch (Exception se) {
           Log.e(TAG, "❌ startService failed, falling back to BookingAlertActivity", se);
-          launchBookingAlertActivity(bookingId, customer, community, serviceType, location, price, bookingType, scheduledTime);
+          launchBookingAlertActivity(bookingId, customer, community, serviceType, location, price, bookingType, scheduledTime, prealertSent);
         }
       } else {
         Log.d(TAG, "⏭️ Not a BOOKING_ALERT, type: " + type + " - skipping overlay");
@@ -200,7 +214,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
    */
   private void launchBookingAlertActivity(String bookingId, String customer, String community, 
                                            String serviceType, String location, int price,
-                                           String bookingType, String scheduledTime) {
+                                            String bookingType, String scheduledTime, boolean prealertSent) {
     Log.d(TAG, "🚀 Launching BookingAlertActivity as fallback for " + bookingType + " booking");
     
     try {
@@ -208,6 +222,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
       activityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
       activityIntent.putExtra("booking_id", bookingId);
       activityIntent.putExtra("booking_type", bookingType != null ? bookingType : "instant");
+      activityIntent.putExtra("prealert_sent", prealertSent);
       activityIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
       activityIntent.putExtra("community", community != null ? community : "");
       activityIntent.putExtra("service_type", serviceType != null ? serviceType : "Service");

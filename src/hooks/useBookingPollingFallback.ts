@@ -20,7 +20,7 @@ import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { supabase } from "@/integrations/supabase/client";
 import { processIncomingBooking } from "@/services/bookingAlertCoordinator";
-import { logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
+import { canShowWorkerBookingOffer, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 
 const POLL_FOREGROUND_MS = 10_000;
 const POLL_BACKGROUND_MS = 30_000;
@@ -40,6 +40,7 @@ interface PendingItem {
     booking_type?: string | null;
     scheduled_date?: string | null;
     scheduled_time?: string | null;
+    prealert_sent?: boolean | null;
   };
 }
 
@@ -73,7 +74,14 @@ export function useBookingPollingFallback(workerId: string | undefined | null, i
 
         console.log(`[Polling] Found ${items.length} pending booking(s) via fallback`);
         for (const item of items) {
-          logScheduledOfferDecision(item.booking, "poll", true);
+          const offerLogInput = { ...item.booking, request_status: item.status };
+          if (!canShowWorkerBookingOffer(offerLogInput)) {
+            logScheduledOfferDecision(offerLogInput, "poll", false);
+            console.log("[Polling] Scheduled request hidden until prealert_sent=true", item.booking.id);
+            continue;
+          }
+
+          logScheduledOfferDecision(offerLogInput, "poll", true);
           await processIncomingBooking({
             bookingId: item.booking.id,
             bookingRequestId: item.booking_request_id,
@@ -85,6 +93,8 @@ export function useBookingPollingFallback(workerId: string | undefined | null, i
             bookingType: item.booking.booking_type ?? undefined,
             scheduledDate: item.booking.scheduled_date ?? undefined,
             scheduledTime: item.booking.scheduled_time ?? undefined,
+            prealertSent: item.booking.prealert_sent ?? undefined,
+            requestStatus: item.status ?? undefined,
             timeoutAt: item.timeout_at,
             source: "heartbeat",
           });
