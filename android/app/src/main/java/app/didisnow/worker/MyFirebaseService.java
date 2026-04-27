@@ -108,6 +108,9 @@ public class MyFirebaseService extends FirebaseMessagingService {
         }
 
         String scheduledTime = data.get("scheduled_time"); // Human-readable scheduled time
+        String scheduledDate = data.get("scheduled_date");
+        String scheduledTimeRaw = data.get("scheduled_time_raw");
+        boolean prealertSent = "true".equalsIgnoreCase(data.get("prealert_sent"));
 
         Log.d(TAG, "📋 BOOKING DETAILS:");
         Log.d(TAG, "   ID: " + bookingId);
@@ -120,11 +123,21 @@ public class MyFirebaseService extends FirebaseMessagingService {
         if (scheduledTime != null && !scheduledTime.isEmpty()) {
           Log.d(TAG, "   Scheduled Time: " + scheduledTime);
         }
+        Log.d(TAG, "   Scheduled At: " + scheduledDate + " " + scheduledTimeRaw);
+        Log.d(TAG, "   Prealert Sent: " + prealertSent);
         
         // Validate critical data
         if (bookingId == null || bookingId.isEmpty()) {
           Log.e(TAG, "❌ CRITICAL: No bookingId in FCM payload! Cannot show overlay.");
           Log.e(TAG, "❌ Full data payload: " + data.toString());
+          return;
+        }
+
+        if ("scheduled".equals(bookingType) && !prealertSent) {
+          Log.w(TAG, "🔕 Scheduled booking hidden until prealert_sent=true. booking_id=" + bookingId
+              + ", scheduled_at=" + scheduledDate + "T" + scheduledTimeRaw
+              + ", request_status=" + data.get("request_status")
+              + ", shown_to_worker=false");
           return;
         }
         
@@ -148,6 +161,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
         serviceIntent.putExtra("mode", "show");
         serviceIntent.putExtra("booking_id", bookingId);
         serviceIntent.putExtra("booking_type", bookingType != null ? bookingType : "instant");
+        serviceIntent.putExtra("prealert_sent", prealertSent);
         serviceIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
         serviceIntent.putExtra("community", community != null ? community : "");
         serviceIntent.putExtra("service_type", serviceType != null ? serviceType : "Service");
