@@ -134,6 +134,9 @@ class BookingOverlayService : Service() {
                 }
                 "show" -> {
                     val bookingId = intent?.getStringExtra("booking_id") ?: ""
+                    val bookingType = intent?.getStringExtra("booking_type") ?: "instant"
+                    val prealertSent = intent?.getBooleanExtra("prealert_sent", false) ?: false
+                    val scheduledTime = intent?.getStringExtra("scheduled_time") ?: ""
                     val customer = intent?.getStringExtra("customer_name") ?: "New Customer"
                     val community = intent?.getStringExtra("community") ?: ""
                     val serviceType = intent?.getStringExtra("service_type") ?: ""
@@ -144,10 +147,16 @@ class BookingOverlayService : Service() {
                     var accessToken = intent?.getStringExtra("ACCESS_TOKEN")
                     android.util.Log.d("BookingOverlay", "🔑 Access token from Intent: ${if (accessToken != null) "✅ Present (${accessToken.take(12)}...)" else "❌ Not passed"}")
 
-                    android.util.Log.d("BookingOverlay", "📋 Booking details - ID: $bookingId, Service: $serviceType, Community: $community")
+                    android.util.Log.d("BookingOverlay", "📋 Booking details - ID: $bookingId, Type: $bookingType, Prealert: $prealertSent, Scheduled: $scheduledTime, Service: $serviceType, Community: $community")
                     
                     if (bookingId.isEmpty()) {
                         android.util.Log.e("BookingOverlay", "❌ No booking ID provided, cannot show overlay")
+                        stopSelf()
+                        return START_NOT_STICKY
+                    }
+
+                    if (bookingType == "scheduled" && !prealertSent) {
+                        android.util.Log.w("BookingOverlay", "🔕 Scheduled offer hidden until prealert_sent=true booking_id=$bookingId booking_type=$bookingType scheduled_at=$scheduledTime prealert_sent=$prealertSent request_status=null shown_to_worker=false")
                         stopSelf()
                         return START_NOT_STICKY
                     }
