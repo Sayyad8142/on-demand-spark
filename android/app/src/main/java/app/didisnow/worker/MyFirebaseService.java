@@ -146,7 +146,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
           if (!android.provider.Settings.canDrawOverlays(this)) {
             Log.e(TAG, "❌ CRITICAL: No overlay permission! Falling back to Activity.");
             // Try to show BookingAlertActivity as fallback
-            launchBookingAlertActivity(bookingId, customer, community, serviceType, flatNo, price, bookingType, scheduledTime);
+            launchBookingAlertActivity(bookingId, customer, community, serviceType, flatNo, price, bookingType, scheduledTime, prealertSent);
             return;
           } else {
             Log.d(TAG, "✅ Overlay permission granted");
@@ -197,7 +197,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
           Log.d(TAG, "✅ BookingOverlayService started successfully for " + bookingType + " booking!");
         } catch (Exception se) {
           Log.e(TAG, "❌ startService failed, falling back to BookingAlertActivity", se);
-          launchBookingAlertActivity(bookingId, customer, community, serviceType, location, price, bookingType, scheduledTime);
+          launchBookingAlertActivity(bookingId, customer, community, serviceType, location, price, bookingType, scheduledTime, prealertSent);
         }
       } else {
         Log.d(TAG, "⏭️ Not a BOOKING_ALERT, type: " + type + " - skipping overlay");
@@ -214,7 +214,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
    */
   private void launchBookingAlertActivity(String bookingId, String customer, String community, 
                                            String serviceType, String location, int price,
-                                           String bookingType, String scheduledTime) {
+                                            String bookingType, String scheduledTime, boolean prealertSent) {
     Log.d(TAG, "🚀 Launching BookingAlertActivity as fallback for " + bookingType + " booking");
     
     try {
@@ -222,6 +222,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
       activityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
       activityIntent.putExtra("booking_id", bookingId);
       activityIntent.putExtra("booking_type", bookingType != null ? bookingType : "instant");
+      activityIntent.putExtra("prealert_sent", prealertSent);
       activityIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
       activityIntent.putExtra("community", community != null ? community : "");
       activityIntent.putExtra("service_type", serviceType != null ? serviceType : "Service");
