@@ -80,6 +80,17 @@ Deno.serve(async (req) => {
       console.log(`   Customer: ${booking.cust_name} | Flat: ${booking.flat_no} | ₹${booking.price_inr}`);
 
       try {
+        const { error: prealertError } = await supabase
+          .from('bookings')
+          .update({ prealert_sent: true })
+          .eq('id', booking.id);
+
+        if (prealertError) {
+          console.error(`❌ Failed to set prealert_sent before dispatch for ${booking.id}:`, prealertError);
+          results.push({ booking_id: booking.id, status: "error", detail: "prealert_update_failed" });
+          continue;
+        }
+
         const notifyResponse = await fetch(`${SUPABASE_URL}/functions/v1/booking-notifications`, {
           method: 'POST',
           headers: {
@@ -127,15 +138,8 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Mark as prealert sent
-      const { error: updateError } = await supabase
-        .from('bookings')
-        .update({ prealert_sent: true })
-        .eq('id', booking.id);
-
-      if (updateError) {
-        console.error(`❌ Failed to update prealert_sent for ${booking.id}:`, updateError);
-      }
+      // prealert_sent is marked before dispatch so every worker-side path can
+      // safely require it before showing scheduled offers.
     }
 
     const endTime = Date.now() - new Date(startTime).getTime();
