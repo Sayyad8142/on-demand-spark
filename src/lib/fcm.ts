@@ -70,6 +70,7 @@ export async function initFCM() {
         bookingType: scheduleInfo.bookingType,
         scheduledDate: scheduleInfo.scheduledDate,
         scheduledTime: scheduleInfo.scheduledTime,
+        prealertSent: scheduleInfo.prealertSent,
         source: 'fcm',
       });
     }
