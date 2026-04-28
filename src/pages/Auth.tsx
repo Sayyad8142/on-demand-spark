@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
-import { Check, FileText, Phone, Upload, UserRound, X } from "lucide-react";
+import { Building2, Check, ChevronLeft, FileText, Landmark, Phone, ShieldCheck, Upload, UserRound, X } from "lucide-react";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import maidServiceIcon from "@/assets/service-maid.jpg";
 import bathroomServiceIcon from "@/assets/service-bathroom.jpg";
@@ -94,6 +94,8 @@ export default function Auth() {
   const [signUpBankName, setSignUpBankName] = useState("");
   const [signUpPassbookFile, setSignUpPassbookFile] = useState<File | null>(null);
   const [extractingPassbook, setExtractingPassbook] = useState(false);
+  const [signUpStep, setSignUpStep] = useState(1);
+  const [showBankDetails, setShowBankDetails] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
   const passbookInputRef = useRef<HTMLInputElement>(null);
   // Cook cuisine tags removed - cook service discontinued
