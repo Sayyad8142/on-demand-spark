@@ -780,14 +780,14 @@ export default function Auth() {
       </Card>
 
       {/* Language Selector - Below Card */}
-      <div className="flex items-center justify-center gap-2 bg-background/80 backdrop-blur-sm rounded-full shadow-lg p-2">
+      <div className="flex items-center justify-center gap-1 rounded-full bg-background/80 p-1.5 shadow-sm backdrop-blur-sm">
         <Button variant={i18n.language === 'en' ? 'default' : 'ghost'} size="sm" onClick={() => {
           i18n.changeLanguage('en');
           localStorage.setItem('language', 'en');
           toast({
             title: "Language changed to English"
           });
-        }} className="rounded-full px-4">
+        }} className="h-8 rounded-full px-3 text-xs">
           English
         </Button>
         <Button variant={i18n.language === 'hi' ? 'default' : 'ghost'} size="sm" onClick={() => {
@@ -796,7 +796,7 @@ export default function Auth() {
           toast({
             title: "भाषा हिंदी में बदल गई"
           });
-        }} className="rounded-full px-4">
+        }} className="h-8 rounded-full px-3 text-xs">
           हिंदी
         </Button>
         <Button variant={i18n.language === 'te' ? 'default' : 'ghost'} size="sm" onClick={() => {
@@ -805,14 +805,14 @@ export default function Auth() {
           toast({
             title: "భాష తెలుగులోకి మార్చబడింది"
           });
-        }} className="rounded-full px-4">
+        }} className="h-8 rounded-full px-3 text-xs">
           తెలుగు
         </Button>
       </div>
 
       {/* Call Support Button */}
       <a href="tel:8008180018" className="w-full mt-4">
-        <Button className="w-full bg-green-600 hover:bg-green-700 text-white py-0 my-[19px]">
+        <Button variant="outline" className="my-2 h-10 w-full rounded-full text-sm">
           <Phone className="w-4 h-4 mr-2" />
           Call manager
         </Button>
