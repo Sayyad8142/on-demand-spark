@@ -225,6 +225,26 @@ export default function Auth() {
     }
   };
 
+  const selectedCommunityName = communities.find(community => community.value === signUpCommunity)?.name || "Not selected";
+  const selectedServiceLabels = signUpServices.map(serviceValue => {
+    const service = SERVICES.find(item => item.value === serviceValue);
+    return service ? t(service.label) : serviceValue;
+  });
+  const hasPayoutDetails = !!(signUpAccountHolderName.trim() || signUpBankAccountNumber.trim() || signUpConfirmAccountNumber.trim() || signUpIfscCode.trim() || signUpBankName.trim() || signUpPassbookFile || signUpUpiId.trim());
+  const canContinueSignup = !!signUpFullName && !!signUpPhone && !!signUpCommunity && signUpServices.length > 0;
+
+  const goToSignupStepTwo = () => {
+    if (!canContinueSignup) {
+      toast({
+        title: "Please fill basic details",
+        description: signUpServices.length === 0 ? "Select at least one service type" : "Name, phone, community, and service are required",
+        variant: "destructive"
+      });
+      return;
+    }
+    setSignUpStep(2);
+  };
+
   const handleSignInSendOtp = async () => {
     if (!signInPhone) {
       toast({
