@@ -5,15 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
-import { Check, FileText, Phone, Upload, UserRound, X } from "lucide-react";
+import { Check, ChevronLeft, FileText, Landmark, Phone, ShieldCheck, Upload, UserRound, X } from "lucide-react";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import maidServiceIcon from "@/assets/service-maid.jpg";
 import bathroomServiceIcon from "@/assets/service-bathroom.jpg";
@@ -94,6 +93,8 @@ export default function Auth() {
   const [signUpBankName, setSignUpBankName] = useState("");
   const [signUpPassbookFile, setSignUpPassbookFile] = useState<File | null>(null);
   const [extractingPassbook, setExtractingPassbook] = useState(false);
+  const [signUpStep, setSignUpStep] = useState(1);
+  const [showBankDetails, setShowBankDetails] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
   const passbookInputRef = useRef<HTMLInputElement>(null);
   // Cook cuisine tags removed - cook service discontinued
@@ -221,6 +222,26 @@ export default function Auth() {
     } finally {
       setExtractingPassbook(false);
     }
+  };
+
+  const selectedCommunityName = communities.find(community => community.value === signUpCommunity)?.name || "Not selected";
+  const selectedServiceLabels = signUpServices.map(serviceValue => {
+    const service = SERVICES.find(item => item.value === serviceValue);
+    return service ? t(service.label) : serviceValue;
+  });
+  const hasPayoutDetails = !!(signUpAccountHolderName.trim() || signUpBankAccountNumber.trim() || signUpConfirmAccountNumber.trim() || signUpIfscCode.trim() || signUpBankName.trim() || signUpPassbookFile || signUpUpiId.trim());
+  const canContinueSignup = !!signUpFullName && !!signUpPhone && !!signUpCommunity && signUpServices.length > 0;
+
+  const goToSignupStepTwo = () => {
+    if (!canContinueSignup) {
+      toast({
+        title: "Please fill basic details",
+        description: signUpServices.length === 0 ? "Select at least one service type" : "Name, phone, community, and service are required",
+        variant: "destructive"
+      });
+      return;
+    }
+    setSignUpStep(2);
   };
 
   const handleSignInSendOtp = async () => {
@@ -519,241 +540,254 @@ export default function Auth() {
             </TabsContent>
 
             {/* Sign Up Tab */}
-            <TabsContent value="signup" className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="signup-name">{t('auth.fullNameLabel')}</Label>
-                <Input id="signup-name" type="text" placeholder={t('auth.namePlaceholder')} value={signUpFullName} onChange={e => setSignUpFullName(e.target.value)} disabled={loading} />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="signup-phone">{t('auth.phoneLabel')} *</Label>
-                <Input id="signup-phone" type="tel" placeholder={t('auth.phonePlaceholder')} value={signUpPhone} onChange={e => setSignUpPhone(e.target.value)} maxLength={10} disabled={loading} />
-              </div>
-
-
-              {/* Bank Account Details — optional during signup, recommended */}
-              <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
-                <div className="space-y-0.5">
-                  <p className="text-sm font-semibold">Bank Account Details</p>
-                  <p className="text-xs text-muted-foreground">
-                    Optional for now, recommended. Required to receive payouts.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-acct-name">Account Holder Name</Label>
-                  <Input
-                    id="signup-acct-name"
-                    type="text"
-                    placeholder="Name as on bank account"
-                    value={signUpAccountHolderName}
-                    onChange={e => setSignUpAccountHolderName(e.target.value)}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-acct-no">Bank Account Number</Label>
-                  <Input
-                    id="signup-acct-no"
-                    inputMode="numeric"
-                    placeholder="9 to 18 digits"
-                    value={signUpBankAccountNumber}
-                    onChange={e => setSignUpBankAccountNumber(e.target.value.replace(/\D/g, ""))}
-                    maxLength={18}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-acct-no-confirm">Confirm Account Number</Label>
-                  <Input
-                    id="signup-acct-no-confirm"
-                    inputMode="numeric"
-                    placeholder="Re-enter account number"
-                    value={signUpConfirmAccountNumber}
-                    onChange={e => setSignUpConfirmAccountNumber(e.target.value.replace(/\D/g, ""))}
-                    maxLength={18}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-ifsc">IFSC Code</Label>
-                  <Input
-                    id="signup-ifsc"
-                    type="text"
-                    placeholder="e.g., HDFC0001234"
-                    value={signUpIfscCode}
-                    onChange={e => setSignUpIfscCode(e.target.value.toUpperCase())}
-                    maxLength={11}
-                    disabled={loading}
-                    className="uppercase"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    11 characters. Format: 4 letters + 0 + 6 alphanumeric.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-bank-name">Bank Name (optional)</Label>
-                  <Input
-                    id="signup-bank-name"
-                    type="text"
-                    placeholder="e.g., HDFC Bank"
-                    value={signUpBankName}
-                    onChange={e => setSignUpBankName(e.target.value)}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Account Details Image (optional)</Label>
-                  {signUpPassbookFile ? (
-                    <div className="flex items-center gap-3 rounded-lg border border-border bg-background p-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted">
-                        <FileText className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{signUpPassbookFile.name}</p>
-                        <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Check className="h-3 w-3" /> {extractingPassbook ? "Reading details..." : "Details read — verify above"}
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setSignUpPassbookFile(null);
-                          if (passbookInputRef.current) passbookInputRef.current.value = "";
-                        }}
-                        disabled={loading || extractingPassbook}
-                        className="h-8 w-8"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => passbookInputRef.current?.click()}
-                      disabled={loading || extractingPassbook}
-                      className="flex w-full flex-col items-center gap-2 rounded-lg border-2 border-dashed border-border bg-background p-4 text-center transition-colors hover:bg-muted/50 disabled:opacity-50"
-                    >
-                      <Upload className="h-7 w-7 text-muted-foreground" />
-                      <span className="text-sm font-medium">Upload passbook or cheque</span>
-                      <span className="text-xs text-muted-foreground">Fills name, account number, and IFSC instantly</span>
-                    </button>
-                  )}
-                  <input
-                    ref={passbookInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,application/pdf"
-                    onChange={handlePassbookSelect}
-                    className="hidden"
-                  />
-                </div>
-              </div>
-
-              {/* Manual UPI ID Input — optional, saved for future use */}
-              <div className="space-y-2">
-                <Label htmlFor="signup-upi">{t('auth.upiIdLabel', 'UPI ID')} (optional, for future use)</Label>
-                <Input 
-                  id="signup-upi" 
-                  type="text" 
-                  placeholder={t('auth.upiPlaceholder', 'e.g., name@paytm')} 
-                  value={signUpUpiId} 
-                  onChange={e => setSignUpUpiId(e.target.value)} 
-                  disabled={loading} 
-                />
-                <p className="text-xs text-muted-foreground">
-                  You can update bank or UPI details anytime from your profile.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="signup-community">{t('auth.communityLabel')}</Label>
-                <Select value={signUpCommunity} onValueChange={setSignUpCommunity} disabled={loading}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('auth.selectCommunity')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {communities.map(community => <SelectItem key={community.value} value={community.value}>
-                        {community.name}
-                      </SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-3">
-                <Label>{t('auth.serviceLabel')}</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  {SERVICES.map(service => {
-                    const isSelected = signUpServices.includes(service.value);
+            <TabsContent value="signup" className="space-y-5">
+              <div className="rounded-2xl bg-primary/10 p-1">
+                <div className="grid grid-cols-3 gap-1 text-center text-[11px] font-semibold">
+                  {["Basic", "Payout", "Confirm"].map((label, index) => {
+                    const stepNumber = index + 1;
+                    const active = signUpStep === stepNumber;
+                    const complete = signUpStep > stepNumber;
                     return (
                       <button
-                        key={service.value}
+                        key={label}
                         type="button"
                         onClick={() => {
-                          if (isSelected) {
-                            setSignUpServices(prev => prev.filter(s => s !== service.value));
-                          } else {
-                            setSignUpServices(prev => [...prev, service.value]);
-                          }
+                          if (stepNumber === 1) setSignUpStep(1);
+                          if (stepNumber === 2) goToSignupStepTwo();
+                          if (stepNumber === 3 && canContinueSignup) setSignUpStep(3);
                         }}
-                        disabled={loading}
-                        className={`relative overflow-hidden rounded-2xl border-2 text-left bg-background shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-md ${
-                          isSelected
-                            ? 'border-primary shadow-md ring-2 ring-primary/30 scale-[1.02]'
-                            : 'border-border hover:border-primary/50'
+                        className={`rounded-xl px-2 py-2 transition-all ${
+                          active || complete ? "bg-background text-primary shadow-sm" : "text-muted-foreground"
                         }`}
                       >
-                        <div className="relative w-full aspect-square overflow-hidden bg-muted">
-                          <img
-                            src={service.icon}
-                            alt={t(service.label)}
-                            loading="lazy"
-                            width={512}
-                            height={512}
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                          {isSelected && (
-                            <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center shadow-lg">
-                              <svg className="w-3.5 h-3.5 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                              </svg>
-                            </div>
-                          )}
-                        </div>
-                        <div className="p-3">
-                          <p className="font-semibold text-sm">{t(service.label)}</p>
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{service.description}</p>
-                        </div>
+                        <span className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-xs">
+                          {complete ? <Check className="h-3.5 w-3.5" /> : stepNumber}
+                        </span>
+                        {label}
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              <Button onClick={handleSignUpSendOtp} disabled={loading || extractingPassbook || !signUpFullName || !signUpPhone || !signUpCommunity || signUpServices.length === 0} className="w-full">
-                {loading ? t('auth.sending') : extractingPassbook ? "Reading account image..." : t('auth.sendOtp')}
-              </Button>
+              {signUpStep === 1 && (
+                <div className="space-y-5 rounded-3xl border bg-card p-4 shadow-sm">
+                  <div>
+                    <p className="text-lg font-bold">Step 1: Basic Details</p>
+                    <p className="text-sm text-muted-foreground">Tell us where you work and what service you provide.</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-name" className="text-base">{t('auth.fullNameLabel')}</Label>
+                    <Input id="signup-name" type="text" placeholder={t('auth.namePlaceholder')} value={signUpFullName} onChange={e => setSignUpFullName(e.target.value)} disabled={loading} className="h-12 rounded-2xl text-base" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-phone" className="text-base">{t('auth.phoneLabel')} *</Label>
+                    <Input id="signup-phone" type="tel" placeholder={t('auth.phonePlaceholder')} value={signUpPhone} onChange={e => setSignUpPhone(e.target.value)} maxLength={10} disabled={loading} className="h-12 rounded-2xl text-base" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-community" className="text-base">{t('auth.communityLabel')}</Label>
+                    <Select value={signUpCommunity} onValueChange={setSignUpCommunity} disabled={loading}>
+                      <SelectTrigger className="h-12 rounded-2xl text-base">
+                        <SelectValue placeholder={t('auth.selectCommunity')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {communities.map(community => <SelectItem key={community.value} value={community.value}>
+                            {community.name}
+                          </SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-base">Service Type</Label>
+                    <div className="grid gap-3">
+                      {SERVICES.map(service => {
+                        const isSelected = signUpServices.includes(service.value);
+                        const serviceTitle = service.value === "maid" ? "Maid Service" : "Bathroom Cleaning";
+                        const serviceEmoji = service.value === "maid" ? "🧹" : "🛁";
+                        return (
+                          <button
+                            key={service.value}
+                            type="button"
+                            onClick={() => {
+                              if (isSelected) {
+                                setSignUpServices(prev => prev.filter(s => s !== service.value));
+                              } else {
+                                setSignUpServices(prev => [...prev, service.value]);
+                              }
+                            }}
+                            disabled={loading}
+                            className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition-all ${
+                              isSelected ? 'border-primary bg-primary/10 shadow-sm ring-2 ring-primary/20' : 'border-border bg-background hover:border-primary/50'
+                            }`}
+                          >
+                            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-2xl" aria-hidden="true">
+                              {serviceEmoji}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block font-semibold">{serviceTitle}</span>
+                              <span className="mt-1 block text-sm text-muted-foreground">{service.description}</span>
+                            </span>
+                            <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-border'}`}>
+                              {isSelected && <Check className="h-4 w-4" />}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <Button onClick={goToSignupStepTwo} disabled={loading} className="h-12 w-full rounded-2xl text-base font-semibold">
+                    Continue
+                  </Button>
+                </div>
+              )}
+
+              {signUpStep === 2 && (
+                <div className="space-y-5 rounded-3xl border bg-card p-4 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <Landmark className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold">Step 2: Payout Details</p>
+                      <p className="text-sm font-medium">Add bank details for payouts</p>
+                      <p className="mt-1 text-sm text-muted-foreground">You can skip now and update later from profile.</p>
+                    </div>
+                  </div>
+
+                  {!showBankDetails ? (
+                    <div className="space-y-3">
+                      <Button type="button" onClick={() => setShowBankDetails(true)} className="h-12 w-full rounded-2xl text-base font-semibold">
+                        Add bank details now
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => setSignUpStep(3)} className="h-12 w-full rounded-2xl text-base">
+                        Skip for now
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-acct-name" className="text-base">Account Holder Name</Label>
+                        <Input id="signup-acct-name" type="text" placeholder="Name as on bank account" value={signUpAccountHolderName} onChange={e => setSignUpAccountHolderName(e.target.value)} disabled={loading} className="h-12 rounded-2xl text-base" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-acct-no" className="text-base">Bank Account Number</Label>
+                        <Input id="signup-acct-no" inputMode="numeric" placeholder="9 to 18 digits" value={signUpBankAccountNumber} onChange={e => setSignUpBankAccountNumber(e.target.value.replace(/\D/g, ""))} maxLength={18} disabled={loading} className="h-12 rounded-2xl text-base" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-acct-no-confirm" className="text-base">Confirm Account Number</Label>
+                        <Input id="signup-acct-no-confirm" inputMode="numeric" placeholder="Re-enter account number" value={signUpConfirmAccountNumber} onChange={e => setSignUpConfirmAccountNumber(e.target.value.replace(/\D/g, ""))} maxLength={18} disabled={loading} className="h-12 rounded-2xl text-base" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-ifsc" className="text-base">IFSC Code</Label>
+                        <Input id="signup-ifsc" type="text" placeholder="e.g., HDFC0001234" value={signUpIfscCode} onChange={e => setSignUpIfscCode(e.target.value.toUpperCase())} maxLength={11} disabled={loading} className="h-12 rounded-2xl text-base uppercase" />
+                        <p className="text-xs text-muted-foreground">11 characters. Format: 4 letters + 0 + 6 alphanumeric.</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-bank-name" className="text-base">Bank Name (optional)</Label>
+                        <Input id="signup-bank-name" type="text" placeholder="e.g., HDFC Bank" value={signUpBankName} onChange={e => setSignUpBankName(e.target.value)} disabled={loading} className="h-12 rounded-2xl text-base" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-base">Account Details Image (optional)</Label>
+                        {signUpPassbookFile ? (
+                          <div className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted">
+                              <FileText className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium">{signUpPassbookFile.name}</p>
+                              <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Check className="h-3 w-3" /> {extractingPassbook ? "Reading details..." : "Details read — verify above"}
+                              </p>
+                            </div>
+                            <Button type="button" variant="ghost" size="icon" onClick={() => {
+                              setSignUpPassbookFile(null);
+                              if (passbookInputRef.current) passbookInputRef.current.value = "";
+                            }} disabled={loading || extractingPassbook} className="h-9 w-9 rounded-full">
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <button type="button" onClick={() => passbookInputRef.current?.click()} disabled={loading || extractingPassbook} className="flex w-full flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-border bg-background p-5 text-center transition-colors hover:bg-muted/50 disabled:opacity-50">
+                            <Upload className="h-7 w-7 text-muted-foreground" />
+                            <span className="text-sm font-semibold">Upload passbook or cheque</span>
+                            <span className="text-xs text-muted-foreground">Fills name, account number, and IFSC instantly</span>
+                          </button>
+                        )}
+                        <input ref={passbookInputRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={handlePassbookSelect} className="hidden" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-upi" className="text-base">{t('auth.upiIdLabel', 'UPI ID')} (optional, for future use)</Label>
+                        <Input id="signup-upi" type="text" placeholder={t('auth.upiPlaceholder', 'e.g., name@paytm')} value={signUpUpiId} onChange={e => setSignUpUpiId(e.target.value)} disabled={loading} className="h-12 rounded-2xl text-base" />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 pt-1">
+                        <Button type="button" variant="outline" onClick={() => setSignUpStep(1)} className="h-12 rounded-2xl">
+                          <ChevronLeft className="mr-1 h-4 w-4" /> Back
+                        </Button>
+                        <Button type="button" onClick={() => setSignUpStep(3)} disabled={extractingPassbook} className="h-12 rounded-2xl font-semibold">
+                          Continue
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {signUpStep === 3 && (
+                <div className="space-y-5 rounded-3xl border bg-card p-4 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <ShieldCheck className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold">Step 3: Confirm & Send OTP</p>
+                      <p className="text-sm text-muted-foreground">Check your details before verification.</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 rounded-2xl bg-muted/60 p-4 text-sm">
+                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">Name</span><span className="text-right font-semibold">{signUpFullName || "Not entered"}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">Phone</span><span className="text-right font-semibold">{signUpPhone || "Not entered"}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">Community</span><span className="text-right font-semibold">{selectedCommunityName}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">Service</span><span className="text-right font-semibold">{selectedServiceLabels.length ? selectedServiceLabels.join(", ") : "Not selected"}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">Payout</span><span className="text-right font-semibold">{hasPayoutDetails ? "Added" : "Skipped for now"}</span></div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button type="button" variant="outline" onClick={() => setSignUpStep(2)} className="h-12 rounded-2xl">
+                      <ChevronLeft className="mr-1 h-4 w-4" /> Back
+                    </Button>
+                    <Button onClick={handleSignUpSendOtp} disabled={loading || extractingPassbook || !signUpFullName || !signUpPhone || !signUpCommunity || signUpServices.length === 0} className="h-12 rounded-2xl font-semibold">
+                      {loading ? t('auth.sending') : extractingPassbook ? "Reading image..." : t('auth.sendOtp')}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
 
       {/* Language Selector - Below Card */}
-      <div className="flex items-center justify-center gap-2 bg-background/80 backdrop-blur-sm rounded-full shadow-lg p-2">
+      <div className="flex items-center justify-center gap-1 rounded-full bg-background/80 p-1.5 shadow-sm backdrop-blur-sm">
         <Button variant={i18n.language === 'en' ? 'default' : 'ghost'} size="sm" onClick={() => {
           i18n.changeLanguage('en');
           localStorage.setItem('language', 'en');
           toast({
             title: "Language changed to English"
           });
-        }} className="rounded-full px-4">
+        }} className="h-8 rounded-full px-3 text-xs">
           English
         </Button>
         <Button variant={i18n.language === 'hi' ? 'default' : 'ghost'} size="sm" onClick={() => {
@@ -762,7 +796,7 @@ export default function Auth() {
           toast({
             title: "भाषा हिंदी में बदल गई"
           });
-        }} className="rounded-full px-4">
+        }} className="h-8 rounded-full px-3 text-xs">
           हिंदी
         </Button>
         <Button variant={i18n.language === 'te' ? 'default' : 'ghost'} size="sm" onClick={() => {
@@ -771,14 +805,14 @@ export default function Auth() {
           toast({
             title: "భాష తెలుగులోకి మార్చబడింది"
           });
-        }} className="rounded-full px-4">
+        }} className="h-8 rounded-full px-3 text-xs">
           తెలుగు
         </Button>
       </div>
 
       {/* Call Support Button */}
       <a href="tel:8008180018" className="w-full mt-4">
-        <Button className="w-full bg-green-600 hover:bg-green-700 text-white py-0 my-[19px]">
+        <Button variant="outline" className="my-2 h-10 w-full rounded-full text-sm">
           <Phone className="w-4 h-4 mr-2" />
           Call manager
         </Button>
