@@ -97,7 +97,6 @@ export default function Auth() {
   const [showBankDetails, setShowBankDetails] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
   const passbookInputRef = useRef<HTMLInputElement>(null);
-  // Cook cuisine tags removed - cook service discontinued
   
 
   // Auto OTP detection moved to OtpVerify page
@@ -461,7 +460,7 @@ export default function Auth() {
     try {
       setLoading(true);
       const phone = normalizePhone(signUpPhone);
-      const validSignupServices = signUpServices.filter(service => service !== "cook");
+      const validSignupServices = signUpServices.filter(service => SERVICES.some(item => item.value === service));
       const {
         error
       } = await supabase.auth.signInWithOtp({
