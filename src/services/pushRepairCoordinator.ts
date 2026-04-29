@@ -68,6 +68,7 @@ export async function triggerAutomaticPushRepair(
   userId: string | undefined,
   source: string,
   retryDelaysMs = RETRY_DELAYS_MS,
+  options?: { requestPermission?: boolean },
 ) {
   if (!userId) return false;
 
@@ -127,7 +128,9 @@ export async function triggerAutomaticPushRepair(
         });
 
         console.log(`🔁 [PushRepair] ${source}: attempt ${attempt}/${retryDelaysMs.length}`);
-        const result = await performPushRepair(userId, `${source}-attempt-${attempt}`);
+        const result = await performPushRepair(userId, `${source}-attempt-${attempt}`, {
+          requestPermission: options?.requestPermission === true,
+        });
 
         if (result.success) {
           console.log(`✅ [PushRepair] ${source}: repair succeeded on attempt ${attempt}`);
@@ -181,5 +184,5 @@ export async function triggerAutomaticPushRepair(
 }
 
 export async function triggerManualPushRepair(userId: string | undefined, source = 'manual-refresh') {
-  return triggerAutomaticPushRepair(userId, source, RETRY_DELAYS_MS);
+  return triggerAutomaticPushRepair(userId, source, RETRY_DELAYS_MS, { requestPermission: true });
 }
