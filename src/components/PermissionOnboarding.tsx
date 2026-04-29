@@ -70,7 +70,7 @@ const PERMISSION_KIND: Record<PermissionId, PermissionKind> = {
   activity: "activity",
 };
 
-const ONBOARDING_PERMISSION_IDS: PermissionId[] = ["overlay", "battery", "activity"];
+const ONBOARDING_PERMISSION_IDS: PermissionId[] = ["overlay", "activity"];
 
 interface PermissionOnboardingProps {
   onComplete: () => void;
