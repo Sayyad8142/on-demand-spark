@@ -53,6 +53,16 @@ export default function AccountDetails() {
   }, [worker]);
 
   const validate = (): string | null => {
+    const anyBankFieldFilled = !!(
+      accountHolderName.trim()
+      || bankAccountNumber.trim()
+      || confirmAccountNumber.trim()
+      || ifscCode.trim()
+      || bankName.trim()
+    );
+
+    if (!anyBankFieldFilled) return null;
+
     if (!accountHolderName.trim()) return "Account holder name is required";
     if (accountHolderName.trim().length < 2) return "Account holder name is too short";
 
@@ -89,9 +99,9 @@ export default function AccountDetails() {
       const source = passbookUrl ? "passbook" : "manual";
 
       await updateWorker({
-        account_holder_name: accountHolderName.trim(),
-        bank_account_number: acct,
-        ifsc_code: ifsc,
+        account_holder_name: accountHolderName.trim() || null,
+        bank_account_number: acct || null,
+        ifsc_code: ifsc || null,
         bank_name: bankName.trim() || null,
         upi_id: upiId.trim() || null,
         passbook_url: passbookUrl,
