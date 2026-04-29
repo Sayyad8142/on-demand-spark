@@ -83,6 +83,20 @@ export function clearAlertState() {
 export async function processIncomingBooking(alert: BookingAlert): Promise<boolean> {
   const { bookingId } = alert;
 
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const { data: worker } = await supabase
+      .from("workers")
+      .select("id, payout_ready")
+      .or(`user_id.eq.${user.id},id.eq.${user.id}`)
+      .maybeSingle();
+
+    if (worker?.payout_ready !== true) {
+      console.log(`🔕 [Coordinator] Booking hidden because payout_not_ready: ${bookingId}`);
+      return false;
+    }
+  }
+
   // Dedup: already shown or currently showing
   if (shownBookingIds.has(bookingId)) {
     console.log(`🔕 [Coordinator] Dedup: ${bookingId} already shown (source: ${alert.source})`);
