@@ -76,6 +76,15 @@ interface NotificationDiagnostics {
 // Derive type from the actual function return
 type StorageCacheDebug = ReturnType<typeof getStorageCacheDebug>;
 
+function DebugRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-3">
+      <span className="text-muted-foreground">{label}:</span>
+      <span className="truncate max-w-[200px] text-right">{value}</span>
+    </div>
+  );
+}
+
 export default function AuthDebug() {
   const navigate = useNavigate();
   const { toast } = useToast();
