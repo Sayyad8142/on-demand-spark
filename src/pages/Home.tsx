@@ -202,7 +202,7 @@ export default function Home() {
             <AvailabilityToggle
               workerId={worker?.id || user?.id || 'demo-worker-id'}
               payoutReady={payoutReady}
-              onPayoutRequired={() => navigate('/profile')}
+              onPayoutRequired={() => navigate('/account-details')}
               pushHealthy={pushHealth.isHealthy}
               onPushUnhealthy={async () => {
                 if (pushHealth.isChecking) {
