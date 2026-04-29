@@ -18,7 +18,7 @@ type Slot = {
 const DAY_KEYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const DAY_SHORT_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
-// Generate 30-min slots from 7:00 AM to endHour (default 7:00 PM, cooks get 9:00 PM)
+// Generate 30-min slots from 7:00 AM to 7:00 PM
 const generateSlots = (endHour: number = 19): Slot[] => {
   const slots: Slot[] = [];
   for (let hour = 7; hour < endHour; hour++) {
@@ -62,7 +62,6 @@ export default function Availability() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [isCook, setIsCook] = useState(false);
   const [weekData, setWeekData] = useState<Record<DayKey, Slot[]>>(generateInitialWeekData());
   const [activeDay, setActiveDay] = useState<DayKey>(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1 as DayKey);
   const [workerId, setWorkerId] = useState<string | null>(null);
@@ -127,12 +126,7 @@ export default function Availability() {
       if (workerData) {
         setWorkerId(workerData.id);
         
-        // Check if worker is a cook - cooks get extended hours till 9 PM
-        const workerIsCook = workerData.service_types?.includes('cook') || false;
-        setIsCook(workerIsCook);
-        
-        // Regenerate slots with correct end hour (21 for cooks, 19 for others)
-        const endHour = workerIsCook ? 21 : 19;
+        const endHour = 19;
         setWeekData(generateInitialWeekData(endHour));
         
         await loadAvailability(workerData.id, endHour);
@@ -256,8 +250,7 @@ export default function Availability() {
     setWeekData(newWeekData);
   };
   const clearAllWeek = () => {
-    const endHour = isCook ? 21 : 19;
-    setWeekData(generateInitialWeekData(endHour));
+    setWeekData(generateInitialWeekData());
   };
   const saveAvailability = async () => {
     if (!workerId) {
