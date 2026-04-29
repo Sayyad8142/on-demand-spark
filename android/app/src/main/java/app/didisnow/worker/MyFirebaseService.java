@@ -3,11 +3,14 @@ package app.didisnow.worker;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.util.Log;
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
@@ -140,6 +143,8 @@ public class MyFirebaseService extends FirebaseMessagingService {
               + ", shown_to_worker=false");
           return;
         }
+
+        showBookingNotification(bookingId, bookingType);
         
         // Check overlay permission
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -322,6 +327,48 @@ public class MyFirebaseService extends FirebaseMessagingService {
     NotificationManager notificationManager = getSystemService(NotificationManager.class);
     if (notificationManager != null) {
       notificationManager.notify(NOTIFICATION_ID + 1, builder.build());
+    }
+  }
+
+  private void showBookingNotification(String bookingId, String bookingType) {
+    createNotificationChannel();
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+      Log.w(TAG, "🔕 Booking notification not shown: POST_NOTIFICATIONS denied. booking_id=" + bookingId);
+      return;
+    }
+
+    Intent intent = new Intent(this, MainActivity.class);
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+    intent.putExtra("navigate_to", "bookings");
+    intent.putExtra("booking_id", bookingId);
+
+    PendingIntent pendingIntent = PendingIntent.getActivity(
+      this,
+      bookingId != null ? bookingId.hashCode() : NOTIFICATION_ID,
+      intent,
+      PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+    );
+
+    NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+      .setSmallIcon(R.drawable.ic_notification)
+      .setContentTitle("New Booking")
+      .setContentText("New Booking")
+      .setPriority(NotificationCompat.PRIORITY_HIGH)
+      .setCategory(NotificationCompat.CATEGORY_ALARM)
+      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+      .setAutoCancel(true)
+      .setContentIntent(pendingIntent);
+
+    NotificationManager notificationManager = getSystemService(NotificationManager.class);
+    if (notificationManager != null) {
+      try {
+        notificationManager.notify(bookingId != null ? bookingId.hashCode() : NOTIFICATION_ID, builder.build());
+        Log.d(TAG, "✅ Booking tray notification shown. booking_id=" + bookingId + ", booking_type=" + bookingType);
+      } catch (SecurityException e) {
+        Log.w(TAG, "🔕 Booking notification blocked by Android permission. booking_id=" + bookingId, e);
+      }
     }
   }
 }
