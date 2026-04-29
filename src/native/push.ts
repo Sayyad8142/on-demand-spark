@@ -3,6 +3,8 @@ import { Capacitor } from '@capacitor/core';
 import { syncTokenToBackend } from '@/lib/pushToken';
 
 let lastSyncedToken: string | null = null;
+let listenersInitialized = false;
+let activeUserId: string | undefined;
 
 /**
  * initNativePush — Registers the device for push notifications and sets up
@@ -16,6 +18,8 @@ let lastSyncedToken: string | null = null;
  * and useFCMTokenSync.
  */
 export async function initNativePush(userId?: string) {
+  activeUserId = userId;
+
   if (!Capacitor.isNativePlatform()) {
     console.log('⏭️ Not native platform, skipping push init');
     return;
@@ -45,25 +49,27 @@ export async function initNativePush(userId?: string) {
   console.log('📝 Registering for push notifications...');
   await PushNotifications.register();
 
-  PushNotifications.addListener('registration', async (token) => {
-    console.log('🎯 [push.ts] FCM token received:', token.value.substring(0, 30) + '...');
-    if (userId && token.value !== lastSyncedToken) {
-      const synced = await syncTokenToBackend(token.value, userId || '', 'native-registration-event');
-      if (synced) lastSyncedToken = token.value;
-    }
-  });
+  if (!listenersInitialized) {
+    listenersInitialized = true;
 
-  PushNotifications.addListener('registrationError', (err) => {
-    console.error('Registration error:', err);
-  });
+    PushNotifications.addListener('registration', async (token) => {
+      console.log('🎯 [push.ts] FCM token received:', token.value.substring(0, 30) + '...');
+      if (activeUserId && token.value !== lastSyncedToken) {
+        const synced = await syncTokenToBackend(token.value, activeUserId, 'native-registration-event');
+        if (synced) lastSyncedToken = token.value;
+      }
+    });
 
-  // foreground push (debug)
-  PushNotifications.addListener('pushNotificationReceived', (notification) => {
-    console.log('Push received (fg):', notification);
-  });
+    PushNotifications.addListener('registrationError', (err) => {
+      console.error('Registration error:', err);
+    });
 
-  // tap on notification
-  PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-    console.log('Push action:', action);
-  });
+    PushNotifications.addListener('pushNotificationReceived', (notification) => {
+      console.log('Push received (fg):', notification);
+    });
+
+    PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+      console.log('Push action:', action);
+    });
+  }
 }
