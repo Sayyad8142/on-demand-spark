@@ -113,7 +113,33 @@ export default function PayoutSetupCard({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="payout-upi">UPI ID</Label>
+          <Label htmlFor="payout-account-number">Bank Account Number</Label>
+          <Input
+            id="payout-account-number"
+            inputMode="numeric"
+            value={bankAccountNumber}
+            onChange={(e) => setBankAccountNumber(e.target.value.replace(/\D/g, ""))}
+            placeholder="9 to 18 digits"
+            maxLength={18}
+            disabled={saving}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="payout-ifsc">IFSC Code</Label>
+          <Input
+            id="payout-ifsc"
+            value={ifscCode}
+            onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
+            placeholder="e.g., HDFC0001234"
+            maxLength={11}
+            disabled={saving}
+            className="uppercase"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="payout-upi">UPI ID (optional)</Label>
           <Input
             id="payout-upi"
             value={upiId}
