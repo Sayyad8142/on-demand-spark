@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
     // ─── Token lookup: workers.fcm_token is source of truth ───
     const { data: workersData, error: workerTokenError } = await supabase
       .from("workers")
-      .select("id, user_id, fcm_token, fcm_token_status, full_name")
+      .select("id, user_id, fcm_token, fcm_token_status, full_name, payout_ready")
       .or(`user_id.in.(${workerIds.map(id => `"${id}"`).join(",")}),id.in.(${workerIds.map(id => `"${id}"`).join(",")})`)
 
     if (workerTokenError) console.error("❌ Error fetching worker tokens:", workerTokenError);
@@ -112,6 +112,10 @@ Deno.serve(async (req) => {
         
         if (!row.fcm_token) {
           skippedWorkers.push({ id: targetId, name: row.full_name || "unknown", reason: "no_token" });
+          continue;
+        }
+        if (row.payout_ready !== true) {
+          skippedWorkers.push({ id: targetId, name: row.full_name || "unknown", reason: "payout_not_ready" });
           continue;
         }
         if (row.fcm_token_status === 'invalid') {
