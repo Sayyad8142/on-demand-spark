@@ -17,6 +17,7 @@ import { initNativePush } from "@/native/push";
 import { tryAccept } from "@/lib/bookingActions";
 import {
   checkBatteryState,
+  checkNotificationPermission,
   checkOverlayState,
   requestActivity,
   requestNotificationPermission,
@@ -100,6 +101,9 @@ function NativeNavigationHandler() {
       if (target === "home") {
         console.log("🏠 Navigating to home screen", bookingId ? `with booking ${bookingId}` : "");
         navigate("/home");
+      } else if (target === "bookings" || target === "booking_requests") {
+        console.log("📋 Navigating to bookings screen", bookingId ? `with booking ${bookingId}` : "");
+        navigate("/bookings");
       }
     };
     
@@ -125,6 +129,7 @@ function AppInner() {
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
   const [showPermissionOnboarding, setShowPermissionOnboarding] = useState(false);
   const [permissionCheckLoading, setPermissionCheckLoading] = useState(false);
+  const notificationWarningShownRef = useRef(false);
   const androidPermissionFlowRef = useRef({
     running: false,
     runtimeRequested: false,
@@ -195,7 +200,16 @@ function AppInner() {
         console.log("[Permissions] Android app-launch flow started");
         if (!flow.runtimeRequested) {
           console.log("[Permissions] notification permission requested");
-          await requestNotificationPermission();
+          const notificationEnabled = await requestNotificationPermission();
+          if (!notificationEnabled && !notificationWarningShownRef.current) {
+            notificationWarningShownRef.current = true;
+            const state = await checkNotificationPermission();
+            if (state.status === "denied" || state.status === "missing") {
+              window.setTimeout(() => {
+                alert("Booking alerts are disabled. Please enable notifications to receive jobs.");
+              }, 500);
+            }
+          }
           console.log("[Permissions] activity permission requested/skipped");
           await requestActivity();
           flow.runtimeRequested = true;
