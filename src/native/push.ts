@@ -46,8 +46,8 @@ export async function initNativePush(userId?: string) {
   await PushNotifications.register();
 
   PushNotifications.addListener('registration', async (token) => {
-    console.log('🎯 [push.ts] FCM token received (debug only):', token.value.substring(0, 30) + '...');
-    if (token.value !== lastSyncedToken) {
+    console.log('🎯 [push.ts] FCM token received:', token.value.substring(0, 30) + '...');
+    if (userId && token.value !== lastSyncedToken) {
       const synced = await syncTokenToBackend(token.value, userId || '', 'native-registration-event');
       if (synced) lastSyncedToken = token.value;
     }
