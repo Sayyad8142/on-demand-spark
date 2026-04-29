@@ -426,6 +426,19 @@ function AppInner() {
       <Sonner />
       {showOtaMandatory && <OtaMandatoryModal bundleInfo={otaResult.bundleInfo!} />}
       <SoftUpdatePrompt open={softUpdate && !showOtaMandatory} config={updateConfig} onRemindLater={dismissSoftUpdate} />
+      {showBatteryWarning && session?.user?.id && (
+        <div className="fixed left-3 right-3 top-3 z-50 rounded-md border border-destructive/30 bg-background p-3 shadow-lg">
+          <div className="flex items-start gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground">Battery optimization may block booking alerts.</p>
+              <p className="mt-1 text-xs text-muted-foreground">Disable battery optimization for Didi Now Partner to receive jobs reliably.</p>
+            </div>
+            <Button size="sm" className="h-8 shrink-0" onClick={() => requestBatteryExemption()}>
+              Open settings
+            </Button>
+          </div>
+        </div>
+      )}
       <BrowserRouter>
         <NativeNavigationHandler />
         <Routes>
