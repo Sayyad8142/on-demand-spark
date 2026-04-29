@@ -813,7 +813,7 @@ export default function Auth() {
 
       {/* Call Support Button */}
       <a href="tel:8008180018" className="w-full mt-4">
-        <Button variant="outline" className="my-2 h-10 w-full rounded-full text-sm">
+        <Button className="my-2 h-11 w-full rounded-full bg-success text-success-foreground text-sm font-semibold shadow-sm hover:bg-success/90">
           <Phone className="w-4 h-4 mr-2" />
           Call manager
         </Button>
