@@ -207,7 +207,7 @@ export default function AuthDebug() {
       });
     }
     setLoading(false);
-  }, [toast]);
+  }, [toast, user?.id]);
 
   // Initial load
   useEffect(() => {
@@ -358,6 +358,22 @@ export default function AuthDebug() {
                 {timeUntilExpiry !== null ? `${timeUntilExpiry} min` : 'N/A'}
               </span>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Notification Diagnostics */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Notification Diagnostics</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-xs font-mono">
+            <DebugRow label="Worker ID" value={notificationDiagnostics?.workerId || 'None'} />
+            <DebugRow label="Firebase UID" value={notificationDiagnostics?.firebaseUid || 'None'} />
+            <DebugRow label="FCM Token Exists" value={notificationDiagnostics?.fcmTokenExists ? 'Yes' : 'No'} />
+            <DebugRow label="Notification Permission" value={notificationDiagnostics?.notificationPermissionStatus || 'loading'} />
+            <DebugRow label="Last Token Updated" value={notificationDiagnostics?.lastTokenUpdatedAt ? format(new Date(notificationDiagnostics.lastTokenUpdatedAt), 'dd MMM HH:mm') : 'N/A'} />
+            <DebugRow label="Last Seen At" value={notificationDiagnostics?.lastSeenAt ? format(new Date(notificationDiagnostics.lastSeenAt), 'dd MMM HH:mm') : 'N/A'} />
+            <DebugRow label="App Version" value={notificationDiagnostics?.appVersion || CURRENT_VERSION_NAME} />
           </CardContent>
         </Card>
 
