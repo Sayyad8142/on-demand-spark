@@ -76,6 +76,8 @@ interface NotificationDiagnostics {
 // Derive type from the actual function return
 type StorageCacheDebug = ReturnType<typeof getStorageCacheDebug>;
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function DebugRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-3">
@@ -104,16 +106,23 @@ export default function AuthDebug() {
       const cacheDebug = getStorageCacheDebug();
       setStorageDebug(cacheDebug);
 
-      const [permissionState, workerResult] = await Promise.all([
-        checkNotificationPermission(),
-        user?.id
-          ? supabase
-              .from('workers')
-              .select('id, fcm_token, fcm_token_updated_at, last_seen_at')
-              .or(`user_id.eq.${user.id},id.eq.${user.id}`)
-              .maybeSingle()
-          : Promise.resolve({ data: null, error: null }),
-      ]);
+      const permissionState = await checkNotificationPermission();
+      let workerResult = { data: null as any, error: null as any };
+      if (user?.id) {
+        workerResult = await supabase
+          .from('workers')
+          .select('id, fcm_token, fcm_token_updated_at, last_seen_at')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (!workerResult.data && !workerResult.error && UUID_RE.test(user.id)) {
+          workerResult = await supabase
+            .from('workers')
+            .select('id, fcm_token, fcm_token_updated_at, last_seen_at')
+            .eq('id', user.id)
+            .maybeSingle();
+        }
+      }
 
       if (workerResult.error) console.warn('[AuthDebug] Worker diagnostics load failed:', workerResult.error.message);
       setNotificationDiagnostics({
