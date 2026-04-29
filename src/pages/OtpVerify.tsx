@@ -36,6 +36,7 @@ interface OtpVerifyState {
       ifsc_code: string;
       bank_name: string | null;
     } | null;
+    payoutReady?: boolean;
     passbookFile?: File | null;
   };
 }
@@ -181,6 +182,7 @@ export default function OtpVerify() {
       } else if (state.mode === 'signup' && state.signUpData) {
         // Sign Up flow
         const { fullName, upiId, community, services, cuisineTags, qrData, bankDetails, passbookFile } = state.signUpData;
+        const payoutReady = !!bankDetails;
 
         // Fetch the community ID
         const { data: communityData, error: communityError } = await supabase
@@ -280,6 +282,7 @@ export default function OtpVerify() {
             is_active: true,
             is_available: false,
             is_busy: false,
+              payout_ready: payoutReady,
             // Only overwrite bank fields if newly provided during signup
             ...(bankDetails
               ? {
@@ -313,6 +316,7 @@ export default function OtpVerify() {
             is_active: true,
             is_available: false,
             is_busy: false,
+            payout_ready: payoutReady,
             ...bankFieldsForInsert,
           });
           if (workerError) throw workerError;
