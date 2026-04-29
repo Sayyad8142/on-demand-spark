@@ -18,13 +18,13 @@ export interface PushHealthSnapshot {
   isHealthy: boolean;
 }
 
-export async function ensurePushPermission(reason: string): Promise<boolean> {
+export async function ensurePushPermission(reason: string, options?: { requestIfMissing?: boolean }): Promise<boolean> {
   if (Capacitor.isNativePlatform()) {
     try {
       let permission = await PushNotifications.checkPermissions();
       console.log(`🔐 [PushToken] ${reason}: current permission =`, permission.receive);
 
-      if (permission.receive !== 'granted') {
+      if (permission.receive !== 'granted' && options?.requestIfMissing === true) {
         console.log(`🔐 [PushToken] ${reason}: requesting notification permission...`);
         permission = await PushNotifications.requestPermissions();
         console.log(`🔐 [PushToken] ${reason}: permission result =`, permission.receive);
@@ -38,7 +38,7 @@ export async function ensurePushPermission(reason: string): Promise<boolean> {
   }
 
   if (typeof Notification !== 'undefined') {
-    if (Notification.permission !== 'granted') {
+    if (Notification.permission !== 'granted' && options?.requestIfMissing === true) {
       const result = await Notification.requestPermission();
       return result === 'granted';
     }
@@ -179,7 +179,7 @@ export async function syncTokenToBackend(token: string, userId: string, reason: 
 }
 
 export async function getPushHealthSnapshot(userId: string): Promise<PushHealthSnapshot> {
-  const permissionGranted = await ensurePushPermission('health-check');
+  const permissionGranted = await ensurePushPermission('health-check', { requestIfMissing: false });
   const localToken = await getPendingNativeFcmToken();
 
   const { data: worker } = await supabase
@@ -206,13 +206,13 @@ export async function getPushHealthSnapshot(userId: string): Promise<PushHealthS
   };
 }
 
-export async function performPushRepair(userId: string, reason: string): Promise<{
+export async function performPushRepair(userId: string, reason: string, options?: { requestPermission?: boolean }): Promise<{
   success: boolean;
   error: string | null;
   token: string | null;
 }> {
   try {
-    const permissionGranted = await ensurePushPermission(reason);
+    const permissionGranted = await ensurePushPermission(reason, { requestIfMissing: options?.requestPermission === true });
     if (!permissionGranted) {
       console.warn(`❌ [PushToken] ${reason}: notification permission denied`);
       return { success: false, error: 'Notification permission denied', token: null };
