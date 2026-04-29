@@ -12,7 +12,6 @@ import { useTranslation } from "react-i18next";
 import serviceDishWashing from "@/assets/service-dish-washing.webp";
 import serviceFloorCleaning from "@/assets/service-floor-cleaning.webp";
 import serviceBathroomCleaning from "@/assets/service-bathroom-cleaning.webp";
-import serviceCooking from "@/assets/service-cooking.webp";
 import PaymentCollectionModal from "@/components/PaymentCollectionModal";
 
 const TASK_CONFIG: Record<string, {label: string; img: string; icon: typeof Utensils}> = {
@@ -21,8 +20,7 @@ const TASK_CONFIG: Record<string, {label: string; img: string; icon: typeof Uten
 };
 
 const SERVICE_TASKS: Record<string, {label: string;img: string;}[]> = {
-  bathroom_cleaning: [{ label: "Bathroom Cleaning", img: serviceBathroomCleaning }],
-  cook: [{ label: "Cooking", img: serviceCooking }]
+  bathroom_cleaning: [{ label: "Bathroom Cleaning", img: serviceBathroomCleaning }]
 };
 
 type Booking = BookingWithAddress;
