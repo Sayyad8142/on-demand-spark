@@ -10,6 +10,9 @@ import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { checkNotificationPermission, type PermissionStatus } from "@/lib/permissions";
+import { CURRENT_VERSION_NAME } from "@/config/version";
 
 interface AuthEvent {
   time: string;
@@ -60,6 +63,16 @@ interface StorageSync {
   parseError: string | null;
 }
 
+interface NotificationDiagnostics {
+  workerId: string | null;
+  firebaseUid: string | null;
+  fcmTokenExists: boolean;
+  notificationPermissionStatus: PermissionStatus | "loading";
+  lastTokenUpdatedAt: string | null;
+  lastSeenAt: string | null;
+  appVersion: string;
+}
+
 // Derive type from the actual function return
 type StorageCacheDebug = ReturnType<typeof getStorageCacheDebug>;
 
@@ -72,6 +85,7 @@ export default function AuthDebug() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [notificationDiagnostics, setNotificationDiagnostics] = useState<NotificationDiagnostics | null>(null);
   const autoRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadDebugInfo = useCallback(async () => {
@@ -80,6 +94,28 @@ export default function AuthDebug() {
       // Get storage cache debug (memory cache info)
       const cacheDebug = getStorageCacheDebug();
       setStorageDebug(cacheDebug);
+
+      const [permissionState, workerResult] = await Promise.all([
+        checkNotificationPermission(),
+        user?.id
+          ? supabase
+              .from('workers')
+              .select('id, fcm_token, fcm_token_updated_at, last_seen_at')
+              .or(`user_id.eq.${user.id},id.eq.${user.id}`)
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+      ]);
+
+      if (workerResult.error) console.warn('[AuthDebug] Worker diagnostics load failed:', workerResult.error.message);
+      setNotificationDiagnostics({
+        workerId: workerResult.data?.id ?? null,
+        firebaseUid: user?.id ?? null,
+        fcmTokenExists: !!workerResult.data?.fcm_token,
+        notificationPermissionStatus: permissionState.status,
+        lastTokenUpdatedAt: workerResult.data?.fcm_token_updated_at ?? null,
+        lastSeenAt: workerResult.data?.last_seen_at ?? null,
+        appVersion: CURRENT_VERSION_NAME,
+      });
 
       // Reload from persistent storage
       await reloadSessionFromStorage();
@@ -242,6 +278,7 @@ export default function AuthDebug() {
       sessionExpiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : null,
       storageDebug,
       storageSync,
+      notificationDiagnostics,
       recentEvents: authEvents.slice(0, 5),
       recentErrors: authErrors.slice(0, 3)
     };
