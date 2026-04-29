@@ -71,8 +71,10 @@ class MainActivity : BridgeActivity() {
     
     // Accept nullable Intent and guard reads
     private fun handleNavigationIntent(intent: Intent?) {
+        val bookingId = intent?.getStringExtra("booking_id") ?: intent?.getStringExtra("bookingId")
         val navigateTo = intent?.getStringExtra("navigate_to")
-        val bookingId = intent?.getStringExtra("booking_id")
+            ?: intent?.getStringExtra("screen")
+            ?: if (!bookingId.isNullOrEmpty()) "bookings" else null
         
         android.util.Log.d("MainActivity", "🧭 Navigation intent: navigateTo=$navigateTo, bookingId=$bookingId")
         
