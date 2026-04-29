@@ -232,6 +232,19 @@ export default function Auth() {
   const hasPayoutDetails = !!(signUpAccountHolderName.trim() || signUpBankAccountNumber.trim() || signUpConfirmAccountNumber.trim() || signUpIfscCode.trim() || signUpBankName.trim() || signUpPassbookFile || signUpUpiId.trim());
   const canContinueSignup = !!signUpFullName && !!signUpPhone && !!signUpCommunity && signUpServices.length > 0;
 
+  const skipSignupPayoutDetails = () => {
+    setShowBankDetails(false);
+    setSignUpAccountHolderName("");
+    setSignUpBankAccountNumber("");
+    setSignUpConfirmAccountNumber("");
+    setSignUpIfscCode("");
+    setSignUpBankName("");
+    setSignUpUpiId("");
+    setSignUpPassbookFile(null);
+    if (passbookInputRef.current) passbookInputRef.current.value = "";
+    setSignUpStep(3);
+  };
+
   const goToSignupStepTwo = () => {
     if (!canContinueSignup) {
       toast({
@@ -448,6 +461,7 @@ export default function Auth() {
     try {
       setLoading(true);
       const phone = normalizePhone(signUpPhone);
+      const validSignupServices = signUpServices.filter(service => service !== "cook");
       const {
         error
       } = await supabase.auth.signInWithOtp({
@@ -456,7 +470,7 @@ export default function Auth() {
           data: {
             full_name: signUpFullName.trim(),
             upi_id: signUpUpiId?.trim() || null,
-            service_types: signUpServices,
+            service_types: validSignupServices,
             communities: [signUpCommunity]
           }
         }
@@ -473,7 +487,7 @@ export default function Auth() {
             fullName: signUpFullName,
             upiId: signUpUpiId,
             community: signUpCommunity,
-            services: signUpServices,
+            services: validSignupServices,
             cuisineTags: [],
             qrData: null,
             bankDetails: bankPayload,
@@ -665,7 +679,7 @@ export default function Auth() {
                       <Button type="button" onClick={() => setShowBankDetails(true)} className="h-12 w-full rounded-2xl text-base font-semibold">
                         Add bank details now
                       </Button>
-                      <Button type="button" variant="outline" onClick={() => setSignUpStep(3)} className="h-12 w-full rounded-2xl text-base">
+                       <Button type="button" variant="outline" onClick={skipSignupPayoutDetails} className="h-12 w-full rounded-2xl text-base">
                         Skip for now
                       </Button>
                     </div>
