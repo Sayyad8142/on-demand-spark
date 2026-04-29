@@ -60,7 +60,7 @@ export default function CustomerReviews() {
           created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
           bookings: {
             cust_name: 'Priya Sharma',
-            service_type: 'cook',
+            service_type: 'maid',
             flat_no: 'B-205',
             community: 'downtown'
           }

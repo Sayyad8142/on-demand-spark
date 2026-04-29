@@ -27,7 +27,6 @@ import WorkerRankCard from "@/components/profile/WorkerRankCard";
 import WeeklyPerformanceCard from "@/components/profile/WeeklyPerformanceCard";
 import HowToGetMoreBookingsCard from "@/components/profile/HowToGetMoreBookingsCard";
 import MotivationCard from "@/components/profile/MotivationCard";
-import PayoutSetupCard from "@/components/profile/PayoutSetupCard";
 import PriorityScoreCard from "@/components/profile/PriorityScoreCard";
 const SERVICES = [{
   value: "maid",
@@ -38,6 +37,7 @@ const SERVICES = [{
   label: "Bathroom Cleaning",
   icon: "🧼"
 }];
+const SERVICE_VALUES = new Set(SERVICES.map(service => service.value));
 interface Community {
   id: string;
   name: string;
@@ -68,7 +68,6 @@ export default function Profile() {
   const [fullName, setFullName] = useState("");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedCommunities, setSelectedCommunities] = useState<string[]>([]);
-  const [selectedCuisineTags, setSelectedCuisineTags] = useState<string[]>([]);
   const [communities, setCommunities] = useState<Community[]>([]);
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -78,10 +77,6 @@ export default function Profile() {
   const [upiQrUrl, setUpiQrUrl] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
-  const [accountHolderName, setAccountHolderName] = useState("");
-  const [bankAccountNumber, setBankAccountNumber] = useState("");
-  const [ifscCode, setIfscCode] = useState("");
-  const [preferredPayoutMethod, setPreferredPayoutMethod] = useState("upi");
   const payoutReady = !!(worker as any)?.payout_ready;
   
   // Hidden debug screen trigger - tap version 5 times
@@ -161,15 +156,10 @@ export default function Profile() {
       setPhone(worker.phone || "");
       setUpiId(worker.upi_id || "");
       setUpiQrUrl(worker.upi_qr_url || null);
-      setSelectedServices(worker.service_types || []);
+      setSelectedServices((worker.service_types || []).filter((service: string) => SERVICE_VALUES.has(service)));
       setSelectedCommunities(worker.communities || (worker.community ? [worker.community] : []));
-      setSelectedCuisineTags(worker.cook_cuisine_tags || []);
       setTotalEarnings(worker.total_earnings || 0);
       setPhotoUrl(worker.photo_url || null);
-      setAccountHolderName((worker as any).account_holder_name || "");
-      setBankAccountNumber((worker as any).bank_account_number || "");
-      setIfscCode((worker as any).ifsc_code || "");
-      setPreferredPayoutMethod((worker as any).preferred_payout_method || "upi");
     }
   }, [worker]);
   useEffect(() => {
@@ -446,15 +436,13 @@ export default function Profile() {
     }
     try {
       setUpdating(true);
-      // Filter out any legacy cook selection
-      const validServices = selectedServices.filter(s => s !== 'cook');
+      const validServices = selectedServices.filter(service => SERVICE_VALUES.has(service));
       await updateWorker({
         full_name: fullName,
         phone: phone,
         upi_id: upiId,
         service_types: validServices,
         communities: selectedCommunities,
-        cook_cuisine_tags: [],
       } as any);
       toast({
         title: "Success",

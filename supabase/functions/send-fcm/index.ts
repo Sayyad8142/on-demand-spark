@@ -110,12 +110,12 @@ Deno.serve(async (req) => {
       for (const row of workersData) {
         const targetId = row.user_id || row.id;
         
-        if (!row.fcm_token) {
-          skippedWorkers.push({ id: targetId, name: row.full_name || "unknown", reason: "no_token" });
-          continue;
-        }
         if (row.payout_ready !== true) {
           skippedWorkers.push({ id: targetId, name: row.full_name || "unknown", reason: "payout_not_ready" });
+          continue;
+        }
+        if (!row.fcm_token) {
+          skippedWorkers.push({ id: targetId, name: row.full_name || "unknown", reason: "no_token" });
           continue;
         }
         if (row.fcm_token_status === 'invalid') {

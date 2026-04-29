@@ -12,18 +12,26 @@ interface PayoutSetupCardProps {
   workerId: string | undefined;
   payoutReady: boolean;
   currentAccountName: string;
+  currentBankAccountNumber?: string;
+  currentIfscCode?: string;
   currentUpiId: string;
   onSetupComplete: () => void;
 }
+
+const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 
 export default function PayoutSetupCard({
   workerId,
   payoutReady,
   currentAccountName,
+  currentBankAccountNumber = "",
+  currentIfscCode = "",
   currentUpiId,
   onSetupComplete,
 }: PayoutSetupCardProps) {
   const [accountName, setAccountName] = useState(currentAccountName);
+  const [bankAccountNumber, setBankAccountNumber] = useState(currentBankAccountNumber);
+  const [ifscCode, setIfscCode] = useState(currentIfscCode);
   const [upiId, setUpiId] = useState(currentUpiId);
   const [saving, setSaving] = useState(false);
 
@@ -34,11 +42,15 @@ export default function PayoutSetupCard({
       toast.error("Account holder name is required");
       return;
     }
-    if (!upiId.trim()) {
-      toast.error("UPI ID is required");
+    if (!/^\d{9,18}$/.test(bankAccountNumber.trim())) {
+      toast.error("Account number must be 9–18 digits");
       return;
     }
-    if (!upiId.includes("@")) {
+    if (!IFSC_REGEX.test(ifscCode.trim().toUpperCase())) {
+      toast.error("Invalid IFSC code. Example: HDFC0001234");
+      return;
+    }
+    if (upiId.trim() && !upiId.includes("@")) {
       toast.error("Invalid UPI ID. It must contain '@'. Example: name@paytm");
       return;
     }
@@ -46,14 +58,16 @@ export default function PayoutSetupCard({
     try {
       setSaving(true);
 
-      const bothFilled = !!accountName.trim() && !!upiId.trim();
+      const bankReady = !!accountName.trim() && /^\d{9,18}$/.test(bankAccountNumber.trim()) && IFSC_REGEX.test(ifscCode.trim().toUpperCase());
 
       const { error } = await supabase
         .from("workers")
         .update({
           account_holder_name: accountName.trim(),
-          upi_id: upiId.trim(),
-          payout_ready: bothFilled,
+          bank_account_number: bankAccountNumber.trim(),
+          ifsc_code: ifscCode.trim().toUpperCase(),
+          upi_id: upiId.trim() || null,
+          payout_ready: bankReady,
         })
         .eq("id", workerId);
 
@@ -99,7 +113,33 @@ export default function PayoutSetupCard({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="payout-upi">UPI ID</Label>
+          <Label htmlFor="payout-account-number">Bank Account Number</Label>
+          <Input
+            id="payout-account-number"
+            inputMode="numeric"
+            value={bankAccountNumber}
+            onChange={(e) => setBankAccountNumber(e.target.value.replace(/\D/g, ""))}
+            placeholder="9 to 18 digits"
+            maxLength={18}
+            disabled={saving}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="payout-ifsc">IFSC Code</Label>
+          <Input
+            id="payout-ifsc"
+            value={ifscCode}
+            onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
+            placeholder="e.g., HDFC0001234"
+            maxLength={11}
+            disabled={saving}
+            className="uppercase"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="payout-upi">UPI ID (optional)</Label>
           <Input
             id="payout-upi"
             value={upiId}

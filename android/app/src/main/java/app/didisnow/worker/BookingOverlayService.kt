@@ -333,7 +333,6 @@ class BookingOverlayService : Service() {
         // Set service-specific image
         val serviceImageView = overlayView?.findViewById<ImageView>(R.id.serviceImage)
         val imageResource = when {
-            serviceType.contains("cook", ignoreCase = true) -> R.drawable.service_cook
             serviceType.contains("bathroom", ignoreCase = true) -> R.drawable.service_bathroom
             serviceType.contains("maid", ignoreCase = true) || 
             serviceType.contains("dish", ignoreCase = true) -> R.drawable.service_maid

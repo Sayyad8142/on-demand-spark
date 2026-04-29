@@ -181,8 +181,12 @@ export default function OtpVerify() {
         }
       } else if (state.mode === 'signup' && state.signUpData) {
         // Sign Up flow
-        const { fullName, upiId, community, services, cuisineTags, qrData, bankDetails, passbookFile } = state.signUpData;
-        const payoutReady = !!bankDetails;
+        const { fullName, upiId, community, services, qrData, bankDetails, passbookFile } = state.signUpData;
+        const hasValidBankDetails = !!(
+          bankDetails?.account_holder_name?.trim()
+          && /^\d{9,18}$/.test(bankDetails.bank_account_number || "")
+          && /^[A-Z]{4}0[A-Z0-9]{6}$/.test((bankDetails.ifsc_code || "").toUpperCase())
+        );
 
         // Fetch the community ID
         const { data: communityData, error: communityError } = await supabase
@@ -203,9 +207,7 @@ export default function OtpVerify() {
           .eq('phone', phone)
           .maybeSingle();
 
-        // Filter out cook service (discontinued)
-        const validServices = services.filter((s: string) => s !== 'cook');
-        const finalCuisineTags: string[] = [];
+        const validServices = services;
         
         // Prepare QR data fields
         let upiQrUrl: string | null = null;
@@ -259,7 +261,7 @@ export default function OtpVerify() {
               bank_name: bankDetails.bank_name,
               bank_details_source: 'manual' as const,
               passbook_url: passbookPath,
-              payout_ready: true,
+              payout_ready: hasValidBankDetails,
             }
           : passbookPath
             ? { passbook_url: passbookPath, bank_details_source: 'passbook' as const }
@@ -278,11 +280,10 @@ export default function OtpVerify() {
             service_types: validServices,
             communities: [community],
             selected_community_id: communityData.id,
-            cook_cuisine_tags: finalCuisineTags,
             is_active: true,
             is_available: false,
             is_busy: false,
-              payout_ready: payoutReady,
+              payout_ready: hasValidBankDetails,
             // Only overwrite bank fields if newly provided during signup
             ...(bankDetails
               ? {
@@ -292,7 +293,7 @@ export default function OtpVerify() {
                   bank_name: bankDetails.bank_name,
                   bank_details_source: 'manual',
                   passbook_url: passbookPath || existingWorker.passbook_url,
-                  payout_ready: true,
+                  payout_ready: hasValidBankDetails,
                 }
               : passbookPath
                 ? { passbook_url: passbookPath, bank_details_source: 'passbook' }
@@ -312,11 +313,10 @@ export default function OtpVerify() {
             service_types: validServices,
             communities: [community],
             selected_community_id: communityData.id,
-            cook_cuisine_tags: finalCuisineTags,
             is_active: true,
             is_available: false,
             is_busy: false,
-            payout_ready: payoutReady,
+            payout_ready: hasValidBankDetails,
             ...bankFieldsForInsert,
           });
           if (workerError) throw workerError;

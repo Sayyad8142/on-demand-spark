@@ -90,11 +90,6 @@ class BookingAlertActivity : AppCompatActivity() {
                 serviceSubtitle.text = "Includes: Dishes & Jhaadu/Pocha"
                 serviceImage.setImageResource(R.drawable.maid_dishes)
             }
-            "cook" -> {
-                serviceText.text = "Cook Service"
-                serviceSubtitle.text = "Includes: Meal Preparation"
-                serviceImage.setImageResource(R.drawable.ic_service_cook)
-            }
             "bathroom cleaning", "bathroom" -> {
                 serviceText.text = "Bathroom Cleaning"
                 serviceSubtitle.text = "Includes: Complete Bathroom Cleaning"

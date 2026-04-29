@@ -6314,6 +6314,14 @@ export type Database = {
         Args: { p_booking_id: string; p_method: string }
         Returns: Json
       }
+      worker_has_valid_payout_details: {
+        Args: {
+          _account_holder_name: string
+          _bank_account_number: string
+          _ifsc_code: string
+        }
+        Returns: boolean
+      }
       worker_respond_to_booking: {
         Args: {
           p_assignment_id: string

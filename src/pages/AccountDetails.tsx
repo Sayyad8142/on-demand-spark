@@ -15,6 +15,12 @@ import { extractBankDetailsFromPassbook } from "@/lib/bankDetailsExtraction";
 const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 const UPI_REGEX = /^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/;
 
+const hasValidBankDetails = (name: string, accountNumber: string, ifsc: string) => (
+  name.trim().length >= 2
+  && /^\d{9,18}$/.test(accountNumber.trim())
+  && IFSC_REGEX.test(ifsc.trim().toUpperCase())
+);
+
 export default function AccountDetails() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -47,6 +53,16 @@ export default function AccountDetails() {
   }, [worker]);
 
   const validate = (): string | null => {
+    const anyBankFieldFilled = !!(
+      accountHolderName.trim()
+      || bankAccountNumber.trim()
+      || confirmAccountNumber.trim()
+      || ifscCode.trim()
+      || bankName.trim()
+    );
+
+    if (!anyBankFieldFilled) return null;
+
     if (!accountHolderName.trim()) return "Account holder name is required";
     if (accountHolderName.trim().length < 2) return "Account holder name is too short";
 
@@ -79,13 +95,13 @@ export default function AccountDetails() {
 
       const ifsc = ifscCode.trim().toUpperCase();
       const acct = bankAccountNumber.trim();
-      const bankFilled = !!accountHolderName.trim() && !!acct && !!ifsc;
+      const bankFilled = hasValidBankDetails(accountHolderName, acct, ifsc);
       const source = passbookUrl ? "passbook" : "manual";
 
       await updateWorker({
-        account_holder_name: accountHolderName.trim(),
-        bank_account_number: acct,
-        ifsc_code: ifsc,
+        account_holder_name: accountHolderName.trim() || null,
+        bank_account_number: acct || null,
+        ifsc_code: ifsc || null,
         bank_name: bankName.trim() || null,
         upi_id: upiId.trim() || null,
         passbook_url: passbookUrl,

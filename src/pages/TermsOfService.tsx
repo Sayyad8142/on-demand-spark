@@ -53,7 +53,6 @@ export default function TermsOfService() {
                   </p>
                   <ul className="list-disc list-inside text-muted-foreground space-y-1 ml-4">
                     <li>Maid/cleaning services</li>
-                    <li>Cooking services</li>
                     <li>Bathroom cleaning services</li>
                   </ul>
                   <p className="text-muted-foreground leading-relaxed mt-3">

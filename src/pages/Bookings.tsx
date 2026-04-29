@@ -277,7 +277,7 @@ function BookingCard({ booking, getStatusColor }: { booking: Booking; getStatusC
           <div>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Service</p>
             <p className="text-sm capitalize">
-              {booking.service_type === 'cook' ? '📦 Legacy Booking' : booking.service_type.replace('_', ' ')}
+              {booking.service_type.replace('_', ' ')}
             </p>
           </div>
           <div>
