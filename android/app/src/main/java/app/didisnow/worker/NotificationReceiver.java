@@ -42,8 +42,9 @@ public class NotificationReceiver extends BroadcastReceiver {
                     .getLaunchIntentForPackage(context.getPackageName());
                 if (launchIntent != null) {
                     launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    launchIntent.putExtra("navigate_to", "bookings");
                     if (bookingId != null) {
-                        launchIntent.putExtra("bookingId", bookingId);
+                        launchIntent.putExtra("booking_id", bookingId);
                     }
                     context.startActivity(launchIntent);
                 }
