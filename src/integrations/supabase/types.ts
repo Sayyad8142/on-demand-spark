@@ -3858,6 +3858,41 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_payout_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json
+          id: string
+          updated_by_admin_id: string | null
+          worker_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json
+          id?: string
+          updated_by_admin_id?: string | null
+          worker_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json
+          id?: string
+          updated_by_admin_id?: string | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_payout_audit_log_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_payout_events: {
         Row: {
           created_at: string
@@ -4654,10 +4689,26 @@ export type Database = {
         Args: { p_booking_id: string; p_note?: string; p_outcome: string }
         Returns: string
       }
+      admin_mark_worker_payout_ready: {
+        Args: { p_worker_id: string }
+        Returns: Json
+      }
       admin_quick_stats: { Args: never; Returns: Json }
       admin_reject_worker_registration: {
         Args: { p_rejection_reason: string; p_request_id: string }
         Returns: undefined
+      }
+      admin_save_worker_payout_details: {
+        Args: {
+          p_account_holder_name: string
+          p_bank_account_number: string
+          p_bank_name?: string
+          p_ifsc_code: string
+          p_mark_ready?: boolean
+          p_upi_id?: string
+          p_worker_id: string
+        }
+        Returns: Json
       }
       admin_set_booking_status: {
         Args: { p_booking_id: string; p_new_status: string; p_note?: string }
