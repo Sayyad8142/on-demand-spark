@@ -169,6 +169,12 @@ export async function checkNotificationPermission(): Promise<PermissionState> {
 export async function requestNotificationPermission(): Promise<boolean> {
   if (Capacitor.isNativePlatform()) {
     try {
+      const current = await PushNotifications.checkPermissions();
+      if (current.receive === "denied") return false;
+      if (current.receive === "granted") {
+        try { await PushNotifications.register(); } catch { /* noop */ }
+        return true;
+      }
       const perm = await PushNotifications.requestPermissions();
       if (perm.receive === "granted") {
         try { await PushNotifications.register(); } catch { /* noop */ }
