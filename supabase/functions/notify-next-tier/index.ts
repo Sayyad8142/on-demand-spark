@@ -66,7 +66,25 @@ Deno.serve(async (req) => {
       return new Response("no-workers", { status: 200, headers: corsHeaders });
     }
 
-    const workerIds = requests.map(r => r.worker_id);
+    const requestedWorkerIds = requests.map(r => r.worker_id);
+    const { data: eligibleWorkers, error: eligibleWorkersError } = await supabase
+      .from("workers")
+      .select("id, payout_ready")
+      .in("id", requestedWorkerIds)
+      .eq("payout_ready", true);
+
+    if (eligibleWorkersError) {
+      console.error("❌ Failed to validate payout readiness:", eligibleWorkersError);
+      return new Response(JSON.stringify({ error: eligibleWorkersError.message }), { status: 500, headers: corsHeaders });
+    }
+
+    const workerIds = (eligibleWorkers || []).map(w => w.id);
+    const skippedPayout = requestedWorkerIds.filter(id => !workerIds.includes(id));
+    if (skippedPayout.length > 0) console.log(`💳 Skipping payout-not-ready workers: [${skippedPayout.join(", ")}]`);
+    if (workerIds.length === 0) {
+      console.log(`⚠️ No payout-ready workers found for tier ${tier}`);
+      return new Response("no-payout-ready-workers", { status: 200, headers: corsHeaders });
+    }
     console.log(`🎯 Sending to ${workerIds.length} tier ${tier} workers: [${workerIds.join(", ")}]`);
 
     // Stamp push_sent_at + offered_at on these requests so the retry/fallback
@@ -81,6 +99,7 @@ Deno.serve(async (req) => {
       .eq("booking_id", booking_id)
       .eq("order_sequence", tier)
       .eq("status", "pending")
+      .in("worker_id", workerIds)
       .is("push_sent_at", null);
     if (stampErr) console.warn("⚠️ Failed to stamp push_sent_at:", stampErr.message);
 
