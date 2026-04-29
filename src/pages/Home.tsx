@@ -60,10 +60,10 @@ export default function Home() {
   useEnhancedHeartbeat(isGuestMode ? undefined : worker?.id, isOnline);
 
   // Layer 2: Realtime subscription on booking_requests
-  useBookingRequestsRealtime(isGuestMode ? undefined : worker?.id, isOnline);
+  useBookingRequestsRealtime(isGuestMode ? undefined : worker?.id, isOnline && payoutReady);
 
   // Layer 3: Server-side polling fallback (10s foreground / 30s background)
-  useBookingPollingFallback(isGuestMode ? undefined : worker?.id, isOnline);
+  useBookingPollingFallback(isGuestMode ? undefined : worker?.id, isOnline && payoutReady);
   
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -134,7 +134,7 @@ export default function Home() {
     accept,
     reject,
     clearAlert
-  } = useUnifiedBookingAlerts(user?.id, isOnline, matches, worker?.id);
+  } = useUnifiedBookingAlerts(user?.id, isOnline && payoutReady, matches, worker?.id);
   const handleToggle = async (value: boolean) => {
     if (isGuestMode) {
       toast({
@@ -202,7 +202,7 @@ export default function Home() {
             <AvailabilityToggle
               workerId={worker?.id || user?.id || 'demo-worker-id'}
               payoutReady={payoutReady}
-              onPayoutRequired={() => navigate('/profile')}
+              onPayoutRequired={() => navigate('/account-details')}
               pushHealthy={pushHealth.isHealthy}
               onPushUnhealthy={async () => {
                 if (pushHealth.isChecking) {
@@ -238,6 +238,27 @@ export default function Home() {
       {/* Main Content with top padding for fixed header */}
       <div className={`p-4 space-y-4 pb-32 ${isGuestMode ? 'pt-4' : 'pt-28'}`}>
 
+      {!isGuestMode && worker && !payoutReady && (
+        <Card className="p-5 border-2 border-primary/30 bg-primary/5 shadow-sm">
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <h2 className="font-semibold text-base text-foreground">
+                  Complete payout details to start getting bookings
+                </h2>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  You won’t receive bookings until payout details are added.
+                </p>
+              </div>
+            </div>
+            <Button className="w-full h-11" onClick={() => navigate('/account-details')}>
+              Add payout details
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {/* Onboarding Checklist */}
       {!isGuestMode && worker && (
         <div id="onboarding-checklist">
@@ -247,12 +268,6 @@ export default function Home() {
           />
         </div>
       )}
-
-      {/*
-        Payout Setup Warning Banner removed — replaced by the centralized
-        IncompleteBankSetup full-screen guard in App.tsx, so workers cannot
-        proceed until bank details are filled in.
-      */}
 
       {/* Push Health Status Banner */}
       {Capacitor.isNativePlatform() && !isGuestMode && !pushHealth.isHealthy && pushHealth.isChecking && (

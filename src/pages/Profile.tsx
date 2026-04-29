@@ -82,6 +82,7 @@ export default function Profile() {
   const [bankAccountNumber, setBankAccountNumber] = useState("");
   const [ifscCode, setIfscCode] = useState("");
   const [preferredPayoutMethod, setPreferredPayoutMethod] = useState("upi");
+  const payoutReady = !!(worker as any)?.payout_ready;
   
   // Hidden debug screen trigger - tap version 5 times
   const versionTapCount = useRef(0);
@@ -939,11 +940,20 @@ export default function Profile() {
                   <div>
                     <p className="font-semibold text-sm">Manage Account Details</p>
                     <p className="text-xs text-muted-foreground">
-                      {(worker as any)?.bank_account_number ? "Bank account saved" : "Add bank account for payouts"}
+                      {payoutReady ? "Payout ready ✅" : "Payout details not added"}
                     </p>
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                {payoutReady ? (
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                ) : (
+                  <Button size="sm" className="h-8 px-3" onClick={(event) => {
+                    event.stopPropagation();
+                    navigate('/account-details');
+                  }}>
+                    Add now
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

@@ -44,10 +44,15 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { data: worker, error: wErr } = await admin
       .from("workers")
-      .select("id")
+      .select("id, payout_ready")
       .eq("user_id", authUid)
       .maybeSingle();
     if (wErr || !worker) return json({ error: "worker_not_found" }, 403);
+
+    if (worker.payout_ready !== true) {
+      console.log("[get-pending-worker-bookings] hidden because payout_not_ready", { worker_id: worker.id });
+      return json({ pending: [], reason: "payout_not_ready" });
+    }
 
     const nowIso = new Date().toISOString();
 

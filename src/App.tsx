@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -49,9 +49,7 @@ import DeviceReadiness from "./pages/DeviceReadiness";
 import CompleteBooking from "./pages/CompleteBooking";
 import AccountDetails from "./pages/AccountDetails";
 import BottomNav from "./components/BottomNav";
-import IncompleteBankSetup from "./components/IncompleteBankSetup";
 import PermissionOnboarding from "./components/PermissionOnboarding";
-import { getBankSetupStatus } from "./lib/bankSetup";
 import { startMovementMonitoring } from "@/lib/stepMonitoring";
 
 const queryClient = new QueryClient();
@@ -59,8 +57,6 @@ const queryClient = new QueryClient();
 function ProtectedRoute({ children, showNav = false }: { children: React.ReactNode; showNav?: boolean }) {
   const { user, session, loading } = useAuth();
   const isGuestMode = localStorage.getItem('guest_mode') === 'true';
-  const location = useLocation();
-  const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
 
   // Show loading state while checking auth
   if (loading) {
@@ -78,25 +74,6 @@ function ProtectedRoute({ children, showNav = false }: { children: React.ReactNo
   if (!user && !session && !isGuestMode) {
     console.log('🚫 ProtectedRoute: No user/session, redirecting to /auth');
     return <Navigate to="/auth" replace />;
-  }
-
-  // Bank-setup guard: block app usage when bank details are missing.
-  // Skip in guest mode and on the page that lets them fix it.
-  const ALLOWED_WHEN_INCOMPLETE = ["/account-details"];
-  const isAllowedRoute = ALLOWED_WHEN_INCOMPLETE.some((p) =>
-    location.pathname.startsWith(p)
-  );
-  const bankSetup = getBankSetupStatus(worker);
-  const shouldBlock =
-    !isGuestMode &&
-    !!session?.user?.id &&
-    !workerLoading &&
-    !!worker &&
-    !bankSetup.isComplete &&
-    !isAllowedRoute;
-
-  if (shouldBlock) {
-    return <IncompleteBankSetup />;
   }
 
   return (

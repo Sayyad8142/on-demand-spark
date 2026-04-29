@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
     // Fetch ALL active workers for this community to understand skip reasons
     const { data: allCommunityWorkers } = await supabase
       .from("workers")
-      .select("id, full_name, is_available, is_busy, is_blocked, service_types, fcm_token, fcm_token_status, selected_community_id")
+      .select("id, full_name, is_available, is_busy, is_blocked, payout_ready, service_types, fcm_token, fcm_token_status, selected_community_id")
       .eq("is_active", true)
       .eq("selected_community_id", communityData?.id || '');
 
@@ -195,6 +195,7 @@ Deno.serve(async (req) => {
         if (!w.is_available) reasons.push('availability_off');
         if (w.is_busy) reasons.push('is_busy');
         if (w.is_blocked) reasons.push('is_blocked');
+        if (w.payout_ready !== true) reasons.push('payout_not_ready');
         if (!w.service_types || !w.service_types.includes(b.service_type)) reasons.push(`no_service(has:${(w.service_types||[]).join(',')})`);
         if (!w.fcm_token) reasons.push('no_fcm_token');
         if (w.fcm_token_status === 'invalid') reasons.push('token_invalid');
@@ -218,6 +219,7 @@ Deno.serve(async (req) => {
       .eq("is_active", true)
       .eq("is_available", true)
       .eq("is_busy", false)
+      .eq("payout_ready", true)
       .neq("is_blocked", true)
       .contains("service_types", [b.service_type]);
     
