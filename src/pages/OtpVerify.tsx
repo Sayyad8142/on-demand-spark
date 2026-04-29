@@ -181,7 +181,7 @@ export default function OtpVerify() {
         }
       } else if (state.mode === 'signup' && state.signUpData) {
         // Sign Up flow
-        const { fullName, upiId, community, services, cuisineTags, qrData, bankDetails, passbookFile } = state.signUpData;
+        const { fullName, upiId, community, services, qrData, bankDetails, passbookFile } = state.signUpData;
         const hasValidBankDetails = !!(
           bankDetails?.account_holder_name?.trim()
           && /^\d{9,18}$/.test(bankDetails.bank_account_number || "")
@@ -207,9 +207,7 @@ export default function OtpVerify() {
           .eq('phone', phone)
           .maybeSingle();
 
-        // Filter out cook service (discontinued)
-        const validServices = services.filter((s: string) => s !== 'cook');
-        const finalCuisineTags: string[] = [];
+        const validServices = services;
         
         // Prepare QR data fields
         let upiQrUrl: string | null = null;
@@ -282,7 +280,6 @@ export default function OtpVerify() {
             service_types: validServices,
             communities: [community],
             selected_community_id: communityData.id,
-            cook_cuisine_tags: finalCuisineTags,
             is_active: true,
             is_available: false,
             is_busy: false,
@@ -316,7 +313,6 @@ export default function OtpVerify() {
             service_types: validServices,
             communities: [community],
             selected_community_id: communityData.id,
-            cook_cuisine_tags: finalCuisineTags,
             is_active: true,
             is_available: false,
             is_busy: false,
