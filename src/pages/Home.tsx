@@ -60,10 +60,10 @@ export default function Home() {
   useEnhancedHeartbeat(isGuestMode ? undefined : worker?.id, isOnline);
 
   // Layer 2: Realtime subscription on booking_requests
-  useBookingRequestsRealtime(isGuestMode ? undefined : worker?.id, isOnline);
+  useBookingRequestsRealtime(isGuestMode ? undefined : worker?.id, isOnline && payoutReady);
 
   // Layer 3: Server-side polling fallback (10s foreground / 30s background)
-  useBookingPollingFallback(isGuestMode ? undefined : worker?.id, isOnline);
+  useBookingPollingFallback(isGuestMode ? undefined : worker?.id, isOnline && payoutReady);
   
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
