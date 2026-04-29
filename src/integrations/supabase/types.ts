@@ -4701,6 +4701,10 @@ export type Database = {
         Args: { p_rejection_reason: string; p_request_id: string }
         Returns: undefined
       }
+      admin_revoke_worker_payout_ready: {
+        Args: { p_reason?: string; p_worker_id: string }
+        Returns: Json
+      }
       admin_save_worker_payout_details: {
         Args: {
           p_account_holder_name: string
