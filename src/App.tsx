@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
@@ -20,6 +21,7 @@ import {
   checkNotificationPermission,
   checkOverlayState,
   requestActivity,
+  requestBatteryExemption,
   requestNotificationPermission,
 } from "@/lib/permissions";
 // requestLocationPermissions intentionally not imported — see startup effect note below.
@@ -128,6 +130,7 @@ function AppInner() {
   const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
   const [showPermissionOnboarding, setShowPermissionOnboarding] = useState(false);
+  const [showBatteryWarning, setShowBatteryWarning] = useState(false);
   const [permissionCheckLoading, setPermissionCheckLoading] = useState(false);
   const notificationWarningShownRef = useRef(false);
   const androidPermissionFlowRef = useRef({
@@ -149,10 +152,11 @@ function AppInner() {
       const [overlay, battery] = await Promise.all([checkOverlayState(), checkBatteryState()]);
       const overlayMissing = overlay.status !== "granted" && overlay.status !== "not_required";
       const batteryMissing = battery.status !== "granted" && battery.status !== "not_required";
+      setShowBatteryWarning(batteryMissing);
 
       console.log(`[Permissions] onboarding check overlay=${overlay.status} battery=${battery.status}`);
 
-      if (overlayMissing || batteryMissing) {
+      if (overlayMissing) {
         setShowPermissionOnboarding(true);
       } else if (allowHide) {
         setShowPermissionOnboarding(false);
