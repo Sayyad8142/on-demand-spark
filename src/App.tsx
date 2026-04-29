@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
@@ -17,8 +18,10 @@ import { initNativePush } from "@/native/push";
 import { tryAccept } from "@/lib/bookingActions";
 import {
   checkBatteryState,
+  checkNotificationPermission,
   checkOverlayState,
   requestActivity,
+  requestBatteryExemption,
   requestNotificationPermission,
 } from "@/lib/permissions";
 // requestLocationPermissions intentionally not imported — see startup effect note below.
@@ -100,6 +103,9 @@ function NativeNavigationHandler() {
       if (target === "home") {
         console.log("🏠 Navigating to home screen", bookingId ? `with booking ${bookingId}` : "");
         navigate("/home");
+      } else if (target === "bookings" || target === "booking_requests") {
+        console.log("📋 Navigating to bookings screen", bookingId ? `with booking ${bookingId}` : "");
+        navigate("/bookings");
       }
     };
     
@@ -124,7 +130,9 @@ function AppInner() {
   const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
   const [showPermissionOnboarding, setShowPermissionOnboarding] = useState(false);
+  const [showBatteryWarning, setShowBatteryWarning] = useState(false);
   const [permissionCheckLoading, setPermissionCheckLoading] = useState(false);
+  const notificationWarningShownRef = useRef(false);
   const androidPermissionFlowRef = useRef({
     running: false,
     runtimeRequested: false,
@@ -144,10 +152,11 @@ function AppInner() {
       const [overlay, battery] = await Promise.all([checkOverlayState(), checkBatteryState()]);
       const overlayMissing = overlay.status !== "granted" && overlay.status !== "not_required";
       const batteryMissing = battery.status !== "granted" && battery.status !== "not_required";
+      setShowBatteryWarning(batteryMissing);
 
       console.log(`[Permissions] onboarding check overlay=${overlay.status} battery=${battery.status}`);
 
-      if (overlayMissing || batteryMissing) {
+      if (overlayMissing) {
         setShowPermissionOnboarding(true);
       } else if (allowHide) {
         setShowPermissionOnboarding(false);
@@ -195,7 +204,16 @@ function AppInner() {
         console.log("[Permissions] Android app-launch flow started");
         if (!flow.runtimeRequested) {
           console.log("[Permissions] notification permission requested");
-          await requestNotificationPermission();
+          const notificationEnabled = await requestNotificationPermission();
+          if (!notificationEnabled && !notificationWarningShownRef.current) {
+            notificationWarningShownRef.current = true;
+            const state = await checkNotificationPermission();
+            if (state.status === "denied" || state.status === "missing") {
+              window.setTimeout(() => {
+                alert("Booking alerts are disabled. Please enable notifications to receive jobs.");
+              }, 500);
+            }
+          }
           console.log("[Permissions] activity permission requested/skipped");
           await requestActivity();
           flow.runtimeRequested = true;
@@ -408,6 +426,19 @@ function AppInner() {
       <Sonner />
       {showOtaMandatory && <OtaMandatoryModal bundleInfo={otaResult.bundleInfo!} />}
       <SoftUpdatePrompt open={softUpdate && !showOtaMandatory} config={updateConfig} onRemindLater={dismissSoftUpdate} />
+      {showBatteryWarning && session?.user?.id && (
+        <div className="fixed left-3 right-3 top-3 z-50 rounded-md border border-destructive/30 bg-background p-3 shadow-lg">
+          <div className="flex items-start gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground">Battery optimization may block booking alerts.</p>
+              <p className="mt-1 text-xs text-muted-foreground">Disable battery optimization for Didi Now Partner to receive jobs reliably.</p>
+            </div>
+            <Button size="sm" className="h-8 shrink-0" onClick={() => requestBatteryExemption()}>
+              Open settings
+            </Button>
+          </div>
+        </div>
+      )}
       <BrowserRouter>
         <NativeNavigationHandler />
         <Routes>
@@ -428,6 +459,7 @@ function AppInner() {
           <Route path="/customer-reviews" element={<ProtectedRoute><CustomerReviews /></ProtectedRoute>} />
           <Route path="/admin-upload-qr" element={<AdminUploadQr />} />
           <Route path="/auth-debug" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
+          <Route path="/support-diagnostics" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
           <Route path="/device-readiness" element={<ProtectedRoute><DeviceReadiness /></ProtectedRoute>} />
           <Route path="/complete-booking/:bookingId" element={<ProtectedRoute><CompleteBooking /></ProtectedRoute>} />
           <Route path="/account-details" element={<ProtectedRoute><AccountDetails /></ProtectedRoute>} />

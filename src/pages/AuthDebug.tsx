@@ -10,6 +10,9 @@ import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { checkNotificationPermission, type PermissionStatus } from "@/lib/permissions";
+import { CURRENT_VERSION_NAME } from "@/config/version";
 
 interface AuthEvent {
   time: string;
@@ -60,8 +63,29 @@ interface StorageSync {
   parseError: string | null;
 }
 
+interface NotificationDiagnostics {
+  workerId: string | null;
+  firebaseUid: string | null;
+  fcmTokenExists: boolean;
+  notificationPermissionStatus: PermissionStatus | "loading";
+  lastTokenUpdatedAt: string | null;
+  lastSeenAt: string | null;
+  appVersion: string;
+}
+
 // Derive type from the actual function return
 type StorageCacheDebug = ReturnType<typeof getStorageCacheDebug>;
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function DebugRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-3">
+      <span className="text-muted-foreground">{label}:</span>
+      <span className="truncate max-w-[200px] text-right">{value}</span>
+    </div>
+  );
+}
 
 export default function AuthDebug() {
   const navigate = useNavigate();
@@ -72,6 +96,7 @@ export default function AuthDebug() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [notificationDiagnostics, setNotificationDiagnostics] = useState<NotificationDiagnostics | null>(null);
   const autoRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadDebugInfo = useCallback(async () => {
@@ -80,6 +105,35 @@ export default function AuthDebug() {
       // Get storage cache debug (memory cache info)
       const cacheDebug = getStorageCacheDebug();
       setStorageDebug(cacheDebug);
+
+      const permissionState = await checkNotificationPermission();
+      let workerResult = { data: null as any, error: null as any };
+      if (user?.id) {
+        workerResult = await supabase
+          .from('workers')
+          .select('id, fcm_token, fcm_token_updated_at, last_seen_at')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (!workerResult.data && !workerResult.error && UUID_RE.test(user.id)) {
+          workerResult = await supabase
+            .from('workers')
+            .select('id, fcm_token, fcm_token_updated_at, last_seen_at')
+            .eq('id', user.id)
+            .maybeSingle();
+        }
+      }
+
+      if (workerResult.error) console.warn('[AuthDebug] Worker diagnostics load failed:', workerResult.error.message);
+      setNotificationDiagnostics({
+        workerId: workerResult.data?.id ?? null,
+        firebaseUid: user?.id ?? null,
+        fcmTokenExists: !!workerResult.data?.fcm_token,
+        notificationPermissionStatus: permissionState.status,
+        lastTokenUpdatedAt: workerResult.data?.fcm_token_updated_at ?? null,
+        lastSeenAt: workerResult.data?.last_seen_at ?? null,
+        appVersion: CURRENT_VERSION_NAME,
+      });
 
       // Reload from persistent storage
       await reloadSessionFromStorage();
@@ -171,7 +225,7 @@ export default function AuthDebug() {
       });
     }
     setLoading(false);
-  }, [toast]);
+  }, [toast, user?.id]);
 
   // Initial load
   useEffect(() => {
@@ -242,6 +296,7 @@ export default function AuthDebug() {
       sessionExpiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : null,
       storageDebug,
       storageSync,
+      notificationDiagnostics,
       recentEvents: authEvents.slice(0, 5),
       recentErrors: authErrors.slice(0, 3)
     };
@@ -321,6 +376,22 @@ export default function AuthDebug() {
                 {timeUntilExpiry !== null ? `${timeUntilExpiry} min` : 'N/A'}
               </span>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Notification Diagnostics */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Notification Diagnostics</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-xs font-mono">
+            <DebugRow label="Worker ID" value={notificationDiagnostics?.workerId || 'None'} />
+            <DebugRow label="Firebase UID" value={notificationDiagnostics?.firebaseUid || 'None'} />
+            <DebugRow label="FCM Token Exists" value={notificationDiagnostics?.fcmTokenExists ? 'Yes' : 'No'} />
+            <DebugRow label="Notification Permission" value={notificationDiagnostics?.notificationPermissionStatus || 'loading'} />
+            <DebugRow label="Last Token Updated" value={notificationDiagnostics?.lastTokenUpdatedAt ? format(new Date(notificationDiagnostics.lastTokenUpdatedAt), 'dd MMM HH:mm') : 'N/A'} />
+            <DebugRow label="Last Seen At" value={notificationDiagnostics?.lastSeenAt ? format(new Date(notificationDiagnostics.lastSeenAt), 'dd MMM HH:mm') : 'N/A'} />
+            <DebugRow label="App Version" value={notificationDiagnostics?.appVersion || CURRENT_VERSION_NAME} />
           </CardContent>
         </Card>
 
