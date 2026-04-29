@@ -37,6 +37,7 @@ const SERVICES = [{
   label: "Bathroom Cleaning",
   icon: "🧼"
 }];
+const SERVICE_VALUES = new Set(SERVICES.map(service => service.value));
 interface Community {
   id: string;
   name: string;
@@ -155,7 +156,7 @@ export default function Profile() {
       setPhone(worker.phone || "");
       setUpiId(worker.upi_id || "");
       setUpiQrUrl(worker.upi_qr_url || null);
-      setSelectedServices((worker.service_types || []).filter((service: string) => service !== 'cook'));
+      setSelectedServices((worker.service_types || []).filter((service: string) => SERVICE_VALUES.has(service)));
       setSelectedCommunities(worker.communities || (worker.community ? [worker.community] : []));
       setTotalEarnings(worker.total_earnings || 0);
       setPhotoUrl(worker.photo_url || null);
@@ -435,15 +436,13 @@ export default function Profile() {
     }
     try {
       setUpdating(true);
-      // Filter out any legacy cook selection
-      const validServices = selectedServices.filter(s => s !== 'cook');
+      const validServices = selectedServices.filter(service => SERVICE_VALUES.has(service));
       await updateWorker({
         full_name: fullName,
         phone: phone,
         upi_id: upiId,
         service_types: validServices,
         communities: selectedCommunities,
-        cook_cuisine_tags: [],
       } as any);
       toast({
         title: "Success",
