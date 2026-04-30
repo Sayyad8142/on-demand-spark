@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.extract-bank-details]
 verify_jwt = false
+
+[functions.worker-movement-update]
+verify_jwt = false
