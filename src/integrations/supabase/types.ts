@@ -818,6 +818,7 @@ export type Database = {
           payout_amount: number | null
           prealert_sent: boolean
           preferred_worker_id: string | null
+          previous_booking_id: string | null
           price_inr: number | null
           razorpay_order_id: string | null
           razorpay_payment_id: string | null
@@ -902,6 +903,7 @@ export type Database = {
           payout_amount?: number | null
           prealert_sent?: boolean
           preferred_worker_id?: string | null
+          previous_booking_id?: string | null
           price_inr?: number | null
           razorpay_order_id?: string | null
           razorpay_payment_id?: string | null
@@ -986,6 +988,7 @@ export type Database = {
           payout_amount?: number | null
           prealert_sent?: boolean
           preferred_worker_id?: string | null
+          previous_booking_id?: string | null
           price_inr?: number | null
           razorpay_order_id?: string | null
           razorpay_payment_id?: string | null
@@ -1023,6 +1026,13 @@ export type Database = {
             columns: ["preferred_worker_id"]
             isOneToOne: false
             referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_previous_booking_id_fkey"
+            columns: ["previous_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
           {
@@ -4305,6 +4315,9 @@ export type Database = {
           bank_details_source: string | null
           bank_details_verified: boolean
           bank_name: string | null
+          bank_verification_notes: string | null
+          bank_verification_status: string
+          bank_verified_at: string | null
           battery_optimization_disabled: boolean | null
           blocked_at: string | null
           blocked_by: string | null
@@ -4401,6 +4414,9 @@ export type Database = {
           bank_details_source?: string | null
           bank_details_verified?: boolean
           bank_name?: string | null
+          bank_verification_notes?: string | null
+          bank_verification_status?: string
+          bank_verified_at?: string | null
           battery_optimization_disabled?: boolean | null
           blocked_at?: string | null
           blocked_by?: string | null
@@ -4497,6 +4513,9 @@ export type Database = {
           bank_details_source?: string | null
           bank_details_verified?: boolean
           bank_name?: string | null
+          bank_verification_notes?: string | null
+          bank_verification_status?: string
+          bank_verified_at?: string | null
           battery_optimization_disabled?: boolean | null
           blocked_at?: string | null
           blocked_by?: string | null
@@ -4638,8 +4657,16 @@ export type Database = {
         Args: { p_photo_url?: string; p_request_id: string }
         Returns: undefined
       }
+      admin_block_worker_bank: {
+        Args: { _reason: string; _worker_id: string }
+        Returns: undefined
+      }
       admin_cancel_booking: {
         Args: { p_booking_id: string; p_reason: string }
+        Returns: undefined
+      }
+      admin_clear_worker_bank_block: {
+        Args: { _worker_id: string }
         Returns: undefined
       }
       admin_clear_worker_rating: {
@@ -4697,6 +4724,10 @@ export type Database = {
         Returns: Json
       }
       admin_quick_stats: { Args: never; Returns: Json }
+      admin_reject_worker_bank: {
+        Args: { _reason: string; _worker_id: string }
+        Returns: undefined
+      }
       admin_reject_worker_registration: {
         Args: { p_rejection_reason: string; p_request_id: string }
         Returns: undefined
@@ -4753,6 +4784,9 @@ export type Database = {
               bank_details_source: string | null
               bank_details_verified: boolean
               bank_name: string | null
+              bank_verification_notes: string | null
+              bank_verification_status: string
+              bank_verified_at: string | null
               battery_optimization_disabled: boolean | null
               blocked_at: string | null
               blocked_by: string | null
@@ -4858,6 +4892,9 @@ export type Database = {
               bank_details_source: string | null
               bank_details_verified: boolean
               bank_name: string | null
+              bank_verification_notes: string | null
+              bank_verification_status: string
+              bank_verified_at: string | null
               battery_optimization_disabled: boolean | null
               blocked_at: string | null
               blocked_by: string | null
@@ -5034,6 +5071,7 @@ export type Database = {
               payout_amount: number | null
               prealert_sent: boolean
               preferred_worker_id: string | null
+              previous_booking_id: string | null
               price_inr: number | null
               razorpay_order_id: string | null
               razorpay_payment_id: string | null
@@ -6219,6 +6257,7 @@ export type Database = {
           payout_amount: number | null
           prealert_sent: boolean
           preferred_worker_id: string | null
+          previous_booking_id: string | null
           price_inr: number | null
           razorpay_order_id: string | null
           razorpay_payment_id: string | null
