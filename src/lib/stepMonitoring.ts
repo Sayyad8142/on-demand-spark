@@ -66,6 +66,12 @@ const NOT_MOVING_AFTER_MS = 150_000;
 const FAILSAFE_AFTER_MS = 60_000;
 const statusListeners = new Set<(status: MovementDebugStatus) => void>();
 let StepCounter: StepCounterPlugin | null = null;
+const movementTable = supabase.from("booking_worker_movement_checks" as never) as unknown as {
+  upsert: (values: Record<string, unknown>, options: { onConflict: string }) => Promise<{ error: { message?: string } | null }>;
+  update: (values: Record<string, unknown>) => {
+    eq: (column: string, value: string) => { eq: (column: string, value: string) => Promise<{ error: { message?: string } | null }> };
+  };
+};
 let activeSession: {
   bookingId: string;
   workerId: string;
@@ -395,9 +401,7 @@ export async function stopMovementMonitoring(): Promise<void> {
 
 async function saveMovementCheck(bookingId: string, workerId: string, fields: Record<string, unknown>): Promise<void> {
   try {
-    const { error } = await supabase
-      .from("booking_worker_movement_checks" as any)
-      .upsert({ booking_id: bookingId, worker_id: workerId, accepted_at: new Date().toISOString(), ...fields } as any, { onConflict: "booking_id,worker_id" });
+    const { error } = await movementTable.upsert({ booking_id: bookingId, worker_id: workerId, accepted_at: new Date().toISOString(), ...fields }, { onConflict: "booking_id,worker_id" });
     if (error) console.error("[Movement] Failed to save movement check:", error);
     else console.log(`[Movement] ✅ movement check upserted booking=${bookingId} worker=${workerId} status=${fields.movement_status ?? "unknown"}`);
   } catch (e) {
@@ -407,9 +411,8 @@ async function saveMovementCheck(bookingId: string, workerId: string, fields: Re
 
 async function updateMovementCheck(bookingId: string, workerId: string, fields: Record<string, unknown>): Promise<void> {
   try {
-    const { error } = await supabase
-      .from("booking_worker_movement_checks" as any)
-      .update(fields as any)
+    const { error } = await movementTable
+      .update(fields)
       .eq("booking_id", bookingId)
       .eq("worker_id", workerId);
     if (error) console.error("[Movement] Failed to update movement check:", error);
