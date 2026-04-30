@@ -70,6 +70,7 @@ class MainActivity : BridgeActivity() {
         
         // Handle intent if launched from overlay
         handleNavigationIntent(intent)
+        deliverPendingCancellationAlert()
     }
 
     override fun onResume() {
@@ -78,6 +79,7 @@ class MainActivity : BridgeActivity() {
             cancellationReceiver,
             IntentFilter("BOOKING_CANCELLED_ALERT")
         )
+        deliverPendingCancellationAlert()
     }
 
     override fun onPause() {
@@ -127,6 +129,18 @@ class MainActivity : BridgeActivity() {
             """.trimIndent()
             bridge?.webView?.evaluateJavascript(js, null)
         }
+    }
+
+    private fun deliverPendingCancellationAlert() {
+        val prefs = getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
+        val bookingId = prefs.getString("pending_cancelled_booking_id", null) ?: return
+        val createdAt = prefs.getLong("pending_cancelled_booking_at", 0L)
+        if (bookingId.isBlank() || createdAt <= 0L || System.currentTimeMillis() - createdAt > 120000L) {
+            prefs.edit().remove("pending_cancelled_booking_id").remove("pending_cancelled_booking_at").apply()
+            return
+        }
+        dispatchCancellationAlertToWebView(bookingId)
+        prefs.edit().remove("pending_cancelled_booking_id").remove("pending_cancelled_booking_at").apply()
     }
     
     /**
