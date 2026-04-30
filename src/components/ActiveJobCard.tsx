@@ -334,6 +334,27 @@ export default function ActiveJobCard({
           </Button>
         </div>
 
+        <div className="mx-3 rounded-xl border border-border bg-muted/40 p-3 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-bold text-foreground">📊 Movement Status</p>
+            <Badge variant={movementStatus?.status === "Moving" ? "default" : "secondary"}>
+              {movementStatus?.status ?? "Not Tracking"}
+            </Badge>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+            <div>Steps: <span className="font-semibold text-foreground">{movementStatus?.steps ?? 0}</span></div>
+            <div>Last Updated: <span className="font-semibold text-foreground">{formatLastUpdated(movementStatus?.lastUpdatedAt ?? null)}</span></div>
+            <div>Permission: <span className="font-semibold text-foreground">{movementStatus?.permissionGranted ? "Granted" : "Check pending"}</span></div>
+            <div>API: <span className="font-semibold text-foreground">{movementStatus?.lastSendOk === true ? "Success" : movementStatus?.lastSendOk === false ? "Failed" : "Check pending"}</span></div>
+          </div>
+          {movementStatus?.warning && (
+            <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+              <span>{movementStatus.warning}</span>
+            </div>
+          )}
+        </div>
+
 
         {/* Pay After Service: Collect Payment Button */}
         {booking.payment_method === 'pay_after_service' && !(booking as any).worker_collected_payment && (
