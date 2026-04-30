@@ -66,6 +66,12 @@ export async function initNativePush(userId?: string) {
 
     PushNotifications.addListener('pushNotificationReceived', (notification) => {
       console.log('Push received (fg):', notification);
+      const data = notification.data || {};
+      if (data.type === 'BOOKING_CANCELLED') {
+        window.dispatchEvent(new CustomEvent('bookingCancelledAlert', {
+          detail: { bookingId: data.bookingId || data.booking_id, source: 'capacitor-push' },
+        }));
+      }
     });
 
     PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
