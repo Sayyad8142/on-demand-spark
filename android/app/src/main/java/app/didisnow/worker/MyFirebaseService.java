@@ -351,6 +351,11 @@ public class MyFirebaseService extends FirebaseMessagingService {
 
   private void broadcastCancellationToWebView(String bookingId) {
     try {
+      getSharedPreferences("worker_prefs", MODE_PRIVATE)
+        .edit()
+        .putString("pending_cancelled_booking_id", bookingId != null ? bookingId : "")
+        .putLong("pending_cancelled_booking_at", System.currentTimeMillis())
+        .apply();
       Intent intent = new Intent("BOOKING_CANCELLED_ALERT");
       intent.putExtra("booking_id", bookingId != null ? bookingId : "");
       LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
