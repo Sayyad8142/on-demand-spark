@@ -7,10 +7,13 @@ import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.AudioAttributes;
+import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
@@ -19,6 +22,7 @@ import java.util.Map;
 public class MyFirebaseService extends FirebaseMessagingService {
   private static final String TAG = "MyFirebaseService";
   private static final String CHANNEL_ID = "booking_alerts";
+  private static final String CANCELLATION_CHANNEL_ID = "booking_cancellations_urgent";
   private static final int NOTIFICATION_ID = 12345;
 
   @Override
@@ -27,6 +31,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
     // Fix 2: Pre-create notification channel early so fallback notifications
     // never fail silently on Android 8+ due to missing channel.
     createNotificationChannel();
+    createCancellationNotificationChannel();
   }
 
   @Override
