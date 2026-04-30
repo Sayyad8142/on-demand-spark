@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { DEMO_WORKER, DEMO_ACTIVE_JOB, DEMO_BOOKINGS } from "@/config/demoData";
+import { startMovementMonitoring, stopMovementMonitoring } from "@/lib/stepMonitoring";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -135,6 +136,20 @@ export default function Home() {
     reject,
     clearAlert
   } = useUnifiedBookingAlerts(user?.id, isOnline && payoutReady, matches, worker?.id);
+
+  useEffect(() => {
+    if (!worker?.id || !activeJob?.id || !['accepted', 'on_the_way', 'started'].includes(activeJob.status)) {
+      stopMovementMonitoring();
+      return;
+    }
+    startMovementMonitoring(activeJob.id, worker.id).catch((error) => {
+      console.error('[Movement] Active booking movement tracking failed', error);
+    });
+    return () => {
+      stopMovementMonitoring();
+    };
+  }, [worker?.id, activeJob?.id, activeJob?.status]);
+
   const handleToggle = async (value: boolean) => {
     if (isGuestMode) {
       toast({
