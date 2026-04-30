@@ -79,6 +79,8 @@ Deno.serve(async (req) => {
       });
     }
 
+    const messageType = String(data?.type || "");
+    const isCancellationAlert = messageType === "BOOKING_CANCELLED";
     const bookingId = data?.bookingId || data?.booking_id || "unknown";
     const bookingType = data?.booking_type || "unknown";
     console.log(`📋 Booking: ${bookingId} (${bookingType})`);
@@ -110,7 +112,7 @@ Deno.serve(async (req) => {
       for (const row of workersData) {
         const targetId = row.user_id || row.id;
         
-        if (row.payout_ready !== true) {
+        if (!isCancellationAlert && row.payout_ready !== true) {
           skippedWorkers.push({ id: targetId, name: row.full_name || "unknown", reason: "payout_not_ready" });
           continue;
         }
@@ -186,6 +188,7 @@ Deno.serve(async (req) => {
       Array.from(tokenMap.entries()).map(async ([userId, { token, source, workerName, workerId }]) => {
         try {
           const isBookingAlert = data?.type === "BOOKING_ALERT";
+          const isCancellationAlert = data?.type === "BOOKING_CANCELLED";
           
           const baseData: Record<string, string> = {
             type: String(data?.type || ""),
@@ -208,7 +211,7 @@ Deno.serve(async (req) => {
             body: String(body),
           };
 
-          const message = isBookingAlert
+          const message = isBookingAlert || isCancellationAlert
             ? {
                 message: {
                   token,

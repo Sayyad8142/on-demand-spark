@@ -132,6 +132,9 @@ function AppInner() {
   const [showPermissionOnboarding, setShowPermissionOnboarding] = useState(false);
   const [showBatteryWarning, setShowBatteryWarning] = useState(false);
   const [permissionCheckLoading, setPermissionCheckLoading] = useState(false);
+  const [cancellationAlert, setCancellationAlert] = useState<{ bookingId?: string } | null>(null);
+  const cancellationAudioRef = useRef<HTMLAudioElement | null>(null);
+  const cancellationTimeoutRef = useRef<number | null>(null);
   const notificationWarningShownRef = useRef(false);
   const androidPermissionFlowRef = useRef({
     running: false,
@@ -356,6 +359,47 @@ function AppInner() {
     return () => { sub.then(s => s.remove()); };
   }, [worker?.is_blocked]);
 
+  const stopCancellationAlert = useCallback(() => {
+    if (cancellationTimeoutRef.current) {
+      window.clearTimeout(cancellationTimeoutRef.current);
+      cancellationTimeoutRef.current = null;
+    }
+    if (cancellationAudioRef.current) {
+      cancellationAudioRef.current.pause();
+      cancellationAudioRef.current.currentTime = 0;
+      cancellationAudioRef.current = null;
+    }
+    if ("vibrate" in navigator) navigator.vibrate(0);
+    setCancellationAlert(null);
+  }, []);
+
+  const showCancellationAlert = useCallback((bookingId?: string) => {
+    setCancellationAlert({ bookingId });
+    if (cancellationTimeoutRef.current) window.clearTimeout(cancellationTimeoutRef.current);
+    if (cancellationAudioRef.current) {
+      cancellationAudioRef.current.pause();
+      cancellationAudioRef.current.currentTime = 0;
+    }
+    const audio = new Audio("/sounds/booking_cancellation_voice.mp3");
+    audio.loop = true;
+    cancellationAudioRef.current = audio;
+    audio.play().catch((error) => console.warn("Cancellation voice autoplay blocked", error));
+    if ("vibrate" in navigator) navigator.vibrate([700, 200, 700, 200, 1000]);
+    cancellationTimeoutRef.current = window.setTimeout(stopCancellationAlert, 45000);
+  }, [stopCancellationAlert]);
+
+  useEffect(() => {
+    const onBookingCancelled = (event: Event) => {
+      const bookingId = (event as CustomEvent)?.detail?.bookingId;
+      showCancellationAlert(bookingId);
+    };
+    window.addEventListener("bookingCancelledAlert", onBookingCancelled);
+    return () => {
+      window.removeEventListener("bookingCancelledAlert", onBookingCancelled);
+      stopCancellationAlert();
+    };
+  }, [showCancellationAlert, stopCancellationAlert]);
+
   // Listen for push notification messages
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -363,12 +407,14 @@ function AppInner() {
         console.log("Received BOOKING_ALERT message:", event.data.bookingId);
         // The booking alert modal will be triggered by the existing useBookingAlerts hook
         // which listens to the bookings table and shows the modal automatically
+      } else if (event.data?.type === "BOOKING_CANCELLED") {
+        showCancellationAlert(event.data?.bookingId || event.data?.booking_id);
       }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, []);
+  }, [showCancellationAlert]);
 
   // If Play Store update is required, show force update screen (HARD BLOCK)
   if (needsUpdate) {
@@ -435,6 +481,21 @@ function AppInner() {
             </div>
             <Button size="sm" className="h-8 shrink-0" onClick={() => requestBatteryExemption()}>
               Open settings
+            </Button>
+          </div>
+        </div>
+      )}
+      {cancellationAlert && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/90 p-5">
+          <div className="w-full max-w-sm rounded-lg border-2 border-destructive bg-card p-6 text-center shadow-2xl">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive text-destructive-foreground">
+              <span className="text-3xl font-bold">!</span>
+            </div>
+            <h2 className="text-2xl font-bold text-destructive">Booking Cancelled</h2>
+            <p className="mt-3 text-lg font-semibold text-foreground">Do not go to the flat</p>
+            <p className="mt-2 text-sm text-muted-foreground">Your booking was cancelled.</p>
+            <Button className="mt-6 w-full" variant="destructive" size="lg" onClick={stopCancellationAlert}>
+              OK
             </Button>
           </div>
         </div>

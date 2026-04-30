@@ -1,10 +1,13 @@
 package app.didisnow.worker
 
 import android.content.Context
+import android.content.BroadcastReceiver
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
 import androidx.core.content.ContextCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.getcapacitor.BridgeActivity
 import com.getcapacitor.Plugin
 import com.getcapacitor.annotation.CapacitorPlugin
@@ -33,6 +36,13 @@ class ForegroundServicePlugin : Plugin() {
 }
 
 class MainActivity : BridgeActivity() {
+    private val cancellationReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val bookingId = intent?.getStringExtra("booking_id") ?: ""
+            dispatchCancellationAlertToWebView(bookingId)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // OTA: Check boot health and restore/rollback BEFORE Capacitor loads the WebView
         handleOtaBootHealth()
@@ -60,6 +70,21 @@ class MainActivity : BridgeActivity() {
         
         // Handle intent if launched from overlay
         handleNavigationIntent(intent)
+        deliverPendingCancellationAlert()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            cancellationReceiver,
+            IntentFilter("BOOKING_CANCELLED_ALERT")
+        )
+        deliverPendingCancellationAlert()
+    }
+
+    override fun onPause() {
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(cancellationReceiver)
+        super.onPause()
     }
     
     // IMPORTANT: must match BridgeActivity/Activity signature (non-null Intent)
@@ -79,6 +104,10 @@ class MainActivity : BridgeActivity() {
         android.util.Log.d("MainActivity", "🧭 Navigation intent: navigateTo=$navigateTo, bookingId=$bookingId")
         
         if (navigateTo.isNullOrEmpty()) return
+
+        if (intent?.getStringExtra("alert_type") == "BOOKING_CANCELLED") {
+            dispatchCancellationAlertToWebView(bookingId ?: "")
+        }
         
         // Send event to WebView/JS
         bridge?.webView?.post {
@@ -89,6 +118,29 @@ class MainActivity : BridgeActivity() {
             """.trimIndent()
             bridge?.webView?.evaluateJavascript(js, null)
         }
+    }
+
+    private fun dispatchCancellationAlertToWebView(bookingId: String) {
+        bridge?.webView?.post {
+            val js = """
+                window.dispatchEvent(new CustomEvent('bookingCancelledAlert', {
+                  detail: { bookingId: '$bookingId', source: 'native' }
+                }));
+            """.trimIndent()
+            bridge?.webView?.evaluateJavascript(js, null)
+        }
+    }
+
+    private fun deliverPendingCancellationAlert() {
+        val prefs = getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
+        val bookingId = prefs.getString("pending_cancelled_booking_id", null) ?: return
+        val createdAt = prefs.getLong("pending_cancelled_booking_at", 0L)
+        if (bookingId.isBlank() || createdAt <= 0L || System.currentTimeMillis() - createdAt > 120000L) {
+            prefs.edit().remove("pending_cancelled_booking_id").remove("pending_cancelled_booking_at").apply()
+            return
+        }
+        dispatchCancellationAlertToWebView(bookingId)
+        prefs.edit().remove("pending_cancelled_booking_id").remove("pending_cancelled_booking_at").apply()
     }
     
     /**

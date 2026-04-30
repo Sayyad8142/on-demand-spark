@@ -7,10 +7,13 @@ import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.AudioAttributes;
+import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
@@ -19,6 +22,7 @@ import java.util.Map;
 public class MyFirebaseService extends FirebaseMessagingService {
   private static final String TAG = "MyFirebaseService";
   private static final String CHANNEL_ID = "booking_alerts";
+  private static final String CANCELLATION_CHANNEL_ID = "booking_cancellations_urgent";
   private static final int NOTIFICATION_ID = 12345;
 
   @Override
@@ -27,6 +31,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
     // Fix 2: Pre-create notification channel early so fallback notifications
     // never fail silently on Android 8+ due to missing channel.
     createNotificationChannel();
+    createCancellationNotificationChannel();
   }
 
   @Override
@@ -56,6 +61,16 @@ public class MyFirebaseService extends FirebaseMessagingService {
     Log.d(TAG, "🏷️ Booking type: " + bookingType);
     
     try {
+      if ("BOOKING_CANCELLED".equals(type)) {
+        String bookingId = data.get("bookingId");
+        if (bookingId == null || bookingId.isEmpty()) bookingId = data.get("booking_id");
+        Log.w(TAG, "🚨 BOOKING_CANCELLED received for booking_id=" + bookingId);
+        showCancellationNotification(bookingId);
+        broadcastCancellationToWebView(bookingId);
+        launchCancellationActivity(bookingId);
+        return;
+      }
+
       // Handle BOOKING_ALERT for BOTH instant AND scheduled bookings
       if ("BOOKING_ALERT".equals(type)) {
         Log.d(TAG, "═══════════════════════════════════════════════════════════");
@@ -307,6 +322,61 @@ public class MyFirebaseService extends FirebaseMessagingService {
       }
     }
   }
+
+  private void createCancellationNotificationChannel() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      Uri soundUri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.booking_cancellation_voice);
+      AudioAttributes audioAttributes = new AudioAttributes.Builder()
+        .setUsage(AudioAttributes.USAGE_ALARM)
+        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+        .build();
+      NotificationChannel channel = new NotificationChannel(
+        CANCELLATION_CHANNEL_ID,
+        "Urgent booking cancellations",
+        NotificationManager.IMPORTANCE_HIGH
+      );
+      channel.setDescription("Loud cancellation alerts for assigned workers");
+      channel.setSound(soundUri, audioAttributes);
+      channel.enableVibration(true);
+      channel.setVibrationPattern(new long[]{0, 700, 200, 700, 200, 1000});
+      channel.setLockscreenVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+      channel.setBypassDnd(true);
+
+      NotificationManager notificationManager = getSystemService(NotificationManager.class);
+      if (notificationManager != null) {
+        notificationManager.createNotificationChannel(channel);
+        Log.d(TAG, "✅ Cancellation notification channel created");
+      }
+    }
+  }
+
+  private void broadcastCancellationToWebView(String bookingId) {
+    try {
+      getSharedPreferences("worker_prefs", MODE_PRIVATE)
+        .edit()
+        .putString("pending_cancelled_booking_id", bookingId != null ? bookingId : "")
+        .putLong("pending_cancelled_booking_at", System.currentTimeMillis())
+        .apply();
+      Intent intent = new Intent("BOOKING_CANCELLED_ALERT");
+      intent.putExtra("booking_id", bookingId != null ? bookingId : "");
+      LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+      Log.d(TAG, "📣 Cancellation broadcast sent to MainActivity");
+    } catch (Exception e) {
+      Log.e(TAG, "❌ Failed to broadcast cancellation", e);
+    }
+  }
+
+  private void launchCancellationActivity(String bookingId) {
+    try {
+      Intent activityIntent = new Intent(this, BookingCancellationActivity.class);
+      activityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+      activityIntent.putExtra("booking_id", bookingId != null ? bookingId : "");
+      startActivity(activityIntent);
+      Log.d(TAG, "✅ BookingCancellationActivity launched");
+    } catch (Exception e) {
+      Log.e(TAG, "❌ Failed to launch cancellation activity", e);
+    }
+  }
   
   private void showPermissionNotification() {
     createNotificationChannel();
@@ -368,6 +438,52 @@ public class MyFirebaseService extends FirebaseMessagingService {
         Log.d(TAG, "✅ Booking tray notification shown. booking_id=" + bookingId + ", booking_type=" + bookingType);
       } catch (SecurityException e) {
         Log.w(TAG, "🔕 Booking notification blocked by Android permission. booking_id=" + bookingId, e);
+      }
+    }
+  }
+
+  private void showCancellationNotification(String bookingId) {
+    createCancellationNotificationChannel();
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+      Log.w(TAG, "🔕 Cancellation notification not shown: POST_NOTIFICATIONS denied. booking_id=" + bookingId);
+      return;
+    }
+
+    Intent intent = new Intent(this, MainActivity.class);
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+    intent.putExtra("navigate_to", "home");
+    intent.putExtra("booking_id", bookingId);
+    intent.putExtra("alert_type", "BOOKING_CANCELLED");
+
+    PendingIntent pendingIntent = PendingIntent.getActivity(
+      this,
+      bookingId != null ? bookingId.hashCode() : NOTIFICATION_ID + 2,
+      intent,
+      PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+    );
+
+    Uri soundUri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.booking_cancellation_voice);
+    NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CANCELLATION_CHANNEL_ID)
+      .setSmallIcon(R.drawable.ic_notification)
+      .setContentTitle("BOOKING CANCELLED")
+      .setContentText("Your booking was cancelled. Do not go to the flat.")
+      .setPriority(NotificationCompat.PRIORITY_HIGH)
+      .setCategory(NotificationCompat.CATEGORY_ALARM)
+      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+      .setVibrate(new long[]{0, 700, 200, 700, 200, 1000})
+      .setSound(soundUri)
+      .setAutoCancel(true)
+      .setContentIntent(pendingIntent);
+
+    NotificationManager notificationManager = getSystemService(NotificationManager.class);
+    if (notificationManager != null) {
+      try {
+        notificationManager.notify(bookingId != null ? bookingId.hashCode() : NOTIFICATION_ID + 2, builder.build());
+        Log.d(TAG, "✅ Cancellation notification shown. booking_id=" + bookingId);
+      } catch (SecurityException e) {
+        Log.w(TAG, "🔕 Cancellation notification blocked by Android permission. booking_id=" + bookingId, e);
       }
     }
   }
