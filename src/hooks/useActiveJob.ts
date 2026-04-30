@@ -134,6 +134,9 @@ export function useActiveJob(userId: string | undefined) {
           if (["assigned", "accepted", "on_the_way", "started"].includes(booking.status)) {
             logScheduledOfferDecision(booking, "realtime", true);
             setActiveJob(booking);
+          } else if (booking.status === "cancelled") {
+            window.dispatchEvent(new CustomEvent("bookingCancelledAlert", { detail: { bookingId: booking.id, source: "realtime" } }));
+            setActiveJob(null);
           } else {
             setActiveJob(null);
           }
