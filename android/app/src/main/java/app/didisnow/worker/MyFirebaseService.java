@@ -61,6 +61,15 @@ public class MyFirebaseService extends FirebaseMessagingService {
     Log.d(TAG, "🏷️ Booking type: " + bookingType);
     
     try {
+      if ("BOOKING_CANCELLED".equals(type)) {
+        String bookingId = data.get("bookingId");
+        if (bookingId == null || bookingId.isEmpty()) bookingId = data.get("booking_id");
+        Log.w(TAG, "🚨 BOOKING_CANCELLED received for booking_id=" + bookingId);
+        showCancellationNotification(bookingId);
+        broadcastCancellationToWebView(bookingId);
+        return;
+      }
+
       // Handle BOOKING_ALERT for BOTH instant AND scheduled bookings
       if ("BOOKING_ALERT".equals(type)) {
         Log.d(TAG, "═══════════════════════════════════════════════════════════");
