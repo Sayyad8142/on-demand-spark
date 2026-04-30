@@ -8,7 +8,7 @@ set search_path = public
 as $$
 declare
   fn_url text := 'https://paywwbuqycovjopryele.supabase.co/functions/v1/send-fcm';
-  anon_key text := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJwYXl3d2J1cXljb3Zqb3ByeWVsZSIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzU1MTY5MjY5LCJleHAiOjIwNzA3NDUyNjl9.js1MaTBkjuGlaDfQjrZpZ9_G8Jy9ygNAB8KpNDiQg8o';
+  anon_key text := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheXd3YnVxeWNvdmpvcHJ5ZWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkyNjksImV4cCI6MjA3MDc0NTI2OX0.js1MaTBkjuGlaDfQjrZpZ9_G8Jy9ygNAB8KpNDiQg8o';
   target_worker_id uuid;
 begin
   target_worker_id := coalesce(old.worker_id, new.worker_id);
