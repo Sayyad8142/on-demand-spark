@@ -485,6 +485,21 @@ function AppInner() {
           </div>
         </div>
       )}
+      {cancellationAlert && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/90 p-5">
+          <div className="w-full max-w-sm rounded-lg border-2 border-destructive bg-card p-6 text-center shadow-2xl">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive text-destructive-foreground">
+              <span className="text-3xl font-bold">!</span>
+            </div>
+            <h1 className="text-2xl font-bold text-destructive">Booking Cancelled</h1>
+            <p className="mt-3 text-lg font-semibold text-foreground">Do not go to the flat</p>
+            <p className="mt-2 text-sm text-muted-foreground">Your booking was cancelled.</p>
+            <Button className="mt-6 w-full" variant="destructive" size="lg" onClick={stopCancellationAlert}>
+              OK
+            </Button>
+          </div>
+        </div>
+      )}
       <BrowserRouter>
         <NativeNavigationHandler />
         <Routes>
