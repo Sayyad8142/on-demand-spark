@@ -321,6 +321,44 @@ public class MyFirebaseService extends FirebaseMessagingService {
       }
     }
   }
+
+  private void createCancellationNotificationChannel() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      Uri soundUri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.booking_cancellation_voice);
+      AudioAttributes audioAttributes = new AudioAttributes.Builder()
+        .setUsage(AudioAttributes.USAGE_ALARM)
+        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+        .build();
+      NotificationChannel channel = new NotificationChannel(
+        CANCELLATION_CHANNEL_ID,
+        "Urgent booking cancellations",
+        NotificationManager.IMPORTANCE_HIGH
+      );
+      channel.setDescription("Loud cancellation alerts for assigned workers");
+      channel.setSound(soundUri, audioAttributes);
+      channel.enableVibration(true);
+      channel.setVibrationPattern(new long[]{0, 700, 200, 700, 200, 1000});
+      channel.setLockscreenVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+      channel.setBypassDnd(true);
+
+      NotificationManager notificationManager = getSystemService(NotificationManager.class);
+      if (notificationManager != null) {
+        notificationManager.createNotificationChannel(channel);
+        Log.d(TAG, "✅ Cancellation notification channel created");
+      }
+    }
+  }
+
+  private void broadcastCancellationToWebView(String bookingId) {
+    try {
+      Intent intent = new Intent("BOOKING_CANCELLED_ALERT");
+      intent.putExtra("booking_id", bookingId != null ? bookingId : "");
+      LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+      Log.d(TAG, "📣 Cancellation broadcast sent to MainActivity");
+    } catch (Exception e) {
+      Log.e(TAG, "❌ Failed to broadcast cancellation", e);
+    }
+  }
   
   private void showPermissionNotification() {
     createNotificationChannel();
