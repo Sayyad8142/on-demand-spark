@@ -67,6 +67,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
         Log.w(TAG, "🚨 BOOKING_CANCELLED received for booking_id=" + bookingId);
         showCancellationNotification(bookingId);
         broadcastCancellationToWebView(bookingId);
+        launchCancellationActivity(bookingId);
         return;
       }
 
@@ -362,6 +363,18 @@ public class MyFirebaseService extends FirebaseMessagingService {
       Log.d(TAG, "📣 Cancellation broadcast sent to MainActivity");
     } catch (Exception e) {
       Log.e(TAG, "❌ Failed to broadcast cancellation", e);
+    }
+  }
+
+  private void launchCancellationActivity(String bookingId) {
+    try {
+      Intent activityIntent = new Intent(this, BookingCancellationActivity.class);
+      activityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+      activityIntent.putExtra("booking_id", bookingId != null ? bookingId : "");
+      startActivity(activityIntent);
+      Log.d(TAG, "✅ BookingCancellationActivity launched");
+    } catch (Exception e) {
+      Log.e(TAG, "❌ Failed to launch cancellation activity", e);
     }
   }
   
