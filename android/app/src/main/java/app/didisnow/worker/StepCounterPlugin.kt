@@ -188,6 +188,21 @@ class StepCounterPlugin : Plugin() {
                     if (baselineSteps == -1L) baselineSteps = 0
                     latestSteps = detectedSteps
                 }
+
+                val stepsInWindow = if (sensorType == "step_counter") {
+                    if (baselineSteps >= 0 && latestSteps >= 0) (latestSteps - baselineSteps).toInt().coerceAtLeast(0) else 0
+                } else {
+                    latestSteps.toInt().coerceAtLeast(0)
+                }
+                val updateData = JSObject()
+                updateData.put("bookingId", bookingId)
+                updateData.put("stepCount", stepsInWindow)
+                updateData.put("rawStepValue", if (latestSteps >= 0) latestSteps else JSONObject.NULL)
+                updateData.put("baselineStepValue", if (baselineSteps >= 0) baselineSteps else JSONObject.NULL)
+                updateData.put("sensorType", sensorType)
+                updateData.put("timestamp", System.currentTimeMillis())
+                Log.d(TAG, "📊 stepUpdate booking=$bookingId steps=$stepsInWindow raw=$latestSteps baseline=$baselineSteps")
+                notifyListeners("stepUpdate", updateData)
             }
 
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
