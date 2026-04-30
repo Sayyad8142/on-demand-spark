@@ -423,4 +423,50 @@ public class MyFirebaseService extends FirebaseMessagingService {
       }
     }
   }
+
+  private void showCancellationNotification(String bookingId) {
+    createCancellationNotificationChannel();
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+      Log.w(TAG, "🔕 Cancellation notification not shown: POST_NOTIFICATIONS denied. booking_id=" + bookingId);
+      return;
+    }
+
+    Intent intent = new Intent(this, MainActivity.class);
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+    intent.putExtra("navigate_to", "home");
+    intent.putExtra("booking_id", bookingId);
+    intent.putExtra("alert_type", "BOOKING_CANCELLED");
+
+    PendingIntent pendingIntent = PendingIntent.getActivity(
+      this,
+      bookingId != null ? bookingId.hashCode() : NOTIFICATION_ID + 2,
+      intent,
+      PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+    );
+
+    Uri soundUri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.booking_cancellation_voice);
+    NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CANCELLATION_CHANNEL_ID)
+      .setSmallIcon(R.drawable.ic_notification)
+      .setContentTitle("BOOKING CANCELLED")
+      .setContentText("Your booking was cancelled. Do not go to the flat.")
+      .setPriority(NotificationCompat.PRIORITY_HIGH)
+      .setCategory(NotificationCompat.CATEGORY_ALARM)
+      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+      .setVibrate(new long[]{0, 700, 200, 700, 200, 1000})
+      .setSound(soundUri)
+      .setAutoCancel(true)
+      .setContentIntent(pendingIntent);
+
+    NotificationManager notificationManager = getSystemService(NotificationManager.class);
+    if (notificationManager != null) {
+      try {
+        notificationManager.notify(bookingId != null ? bookingId.hashCode() : NOTIFICATION_ID + 2, builder.build());
+        Log.d(TAG, "✅ Cancellation notification shown. booking_id=" + bookingId);
+      } catch (SecurityException e) {
+        Log.w(TAG, "🔕 Cancellation notification blocked by Android permission. booking_id=" + bookingId, e);
+      }
+    }
+  }
 }
