@@ -215,12 +215,15 @@ export default function CompleteBooking() {
           handleWrongOtp("Wrong OTP. Please ask the customer for the correct code.");
         } else if (
           isPaymentRequired ||
+          errorBody.includes("collect cash") ||
           errorBody.includes("Payment not collected") ||
           errorBody.includes("Payment not completed")
         ) {
           haptic.error();
-          setError("Please collect payment before completing this job.");
+          setError("Please collect cash from the customer first.");
           setErrorKind("payment");
+          // Auto-open the collection modal so the worker can act immediately.
+          setShowCollectModal(true);
         } else {
           haptic.error();
           setError(errorBody);
@@ -238,8 +241,9 @@ export default function CompleteBooking() {
           if (data?.payout) setPayout(data.payout);
         } else if (data.payment_required) {
           haptic.error();
-          setError("Please collect payment before completing this job.");
+          setError("Please collect cash from the customer first.");
           setErrorKind("payment");
+          setShowCollectModal(true);
         } else {
           haptic.error();
           setError(data.error);
