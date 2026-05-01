@@ -224,7 +224,10 @@ Deno.serve(async (req) => {
     }
 
     // ── Payment safety gate ──
-    const paymentMethod = bookingRow.payment_method || "";
+    // Defensive: only "online" bookings rely on payment_status. Everything else
+    // (pay_after_service, cash, null, unknown) is treated as COD and MUST have
+    // worker_collected_payment=true. This prevents bypass via stale "cash" values.
+    const paymentMethod = (bookingRow.payment_method || "").toLowerCase();
     if (paymentMethod === "online") {
       if (!VALID_ONLINE_PAYMENT_STATUSES.includes(bookingRow.payment_status || "")) {
         return jsonResponse({
@@ -232,11 +235,12 @@ Deno.serve(async (req) => {
           payment_required: true,
         }, 402);
       }
-    } else if (paymentMethod === "pay_after_service") {
+    } else {
       if (!bookingRow.worker_collected_payment) {
         return jsonResponse({
-          error: "Payment not collected. Please collect payment before completing the job.",
+          error: "Please collect cash from the customer before completing the job.",
           payment_required: true,
+          collection_required: true,
         }, 402);
       }
     }
