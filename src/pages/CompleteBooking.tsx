@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import PaymentCollectionModal from "@/components/PaymentCollectionModal";
 
 interface PayoutSummary {
   payout_amount: number;
@@ -84,9 +85,13 @@ export default function CompleteBooking() {
     flat_no?: string;
     service_type?: string;
     cust_phone?: string;
+    price_inr?: number;
+    payment_method?: string;
+    worker_collected_payment?: boolean;
   } | null>(null);
   const [showSlowWarning, setShowSlowWarning] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showCollectModal, setShowCollectModal] = useState(false);
 
   const submitLockRef = useRef(false);
   const otpContainerRef = useRef<HTMLDivElement | null>(null);
@@ -99,7 +104,7 @@ export default function CompleteBooking() {
     (async () => {
       const { data } = await supabase
         .from("bookings")
-        .select("flat_no, service_type, cust_phone")
+        .select("flat_no, service_type, cust_phone, price_inr, payment_method, worker_collected_payment")
         .eq("id", bookingId)
         .maybeSingle();
       if (!cancelled && data) setBookingMeta(data);
