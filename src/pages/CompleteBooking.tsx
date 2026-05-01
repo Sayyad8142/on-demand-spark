@@ -539,6 +539,24 @@ export default function CompleteBooking() {
           </div>
         </>
       )}
+
+      {/* COD collection modal — auto-opens when backend gates completion */}
+      <PaymentCollectionModal
+        open={showCollectModal}
+        onClose={() => setShowCollectModal(false)}
+        bookingId={bookingId}
+        amount={bookingMeta?.price_inr || 0}
+        onCollected={() => {
+          setShowCollectModal(false);
+          setError(null);
+          setErrorKind(null);
+          setBookingMeta((m) => (m ? { ...m, worker_collected_payment: true } : m));
+          // Re-submit OTP automatically now that cash is collected
+          if (otp.length === 4) {
+            setTimeout(() => handleSubmit(true), 250);
+          }
+        }}
+      />
     </div>
   );
 }
