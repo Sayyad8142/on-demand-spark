@@ -3871,6 +3871,47 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_live_steps: {
+        Row: {
+          booking_id: string
+          created_at: string
+          device_info: Json | null
+          last_step_at: string
+          motion_status: string
+          step_count: number
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          device_info?: Json | null
+          last_step_at?: string
+          motion_status?: string
+          step_count?: number
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          device_info?: Json | null
+          last_step_at?: string
+          motion_status?: string
+          step_count?: number
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_live_steps_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_payout_audit_log: {
         Row: {
           action: string
