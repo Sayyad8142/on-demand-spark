@@ -356,8 +356,10 @@ export default function ActiveJobCard({
         </div>
 
 
-        {/* Pay After Service: Collect Payment Button */}
-        {booking.payment_method === 'pay_after_service' && !(booking as any).worker_collected_payment && (
+        {/* COD / Pay After Service: Collect Cash Button.
+            Defensive: treat anything that isn't 'online' as COD so legacy
+            'cash' values still surface the collect button. */}
+        {(booking.payment_method ?? '').toLowerCase() !== 'online' && !(booking as any).worker_collected_payment && (
           <div className="px-3">
             <Button
               size="lg"
@@ -366,7 +368,7 @@ export default function ActiveJobCard({
               onClick={() => setShowPaymentModal(true)}
             >
               <Banknote className="w-5 h-5 mr-2" />
-              Collect Payment (₹{booking.price_inr})
+              Collect Cash from Customer (₹{booking.price_inr})
             </Button>
           </div>
         )}

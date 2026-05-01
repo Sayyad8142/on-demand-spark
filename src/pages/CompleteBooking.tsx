@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import PaymentCollectionModal from "@/components/PaymentCollectionModal";
 
 interface PayoutSummary {
   payout_amount: number;
@@ -84,9 +85,13 @@ export default function CompleteBooking() {
     flat_no?: string;
     service_type?: string;
     cust_phone?: string;
+    price_inr?: number;
+    payment_method?: string;
+    worker_collected_payment?: boolean;
   } | null>(null);
   const [showSlowWarning, setShowSlowWarning] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showCollectModal, setShowCollectModal] = useState(false);
 
   const submitLockRef = useRef(false);
   const otpContainerRef = useRef<HTMLDivElement | null>(null);
@@ -99,7 +104,7 @@ export default function CompleteBooking() {
     (async () => {
       const { data } = await supabase
         .from("bookings")
-        .select("flat_no, service_type, cust_phone")
+        .select("flat_no, service_type, cust_phone, price_inr, payment_method, worker_collected_payment")
         .eq("id", bookingId)
         .maybeSingle();
       if (!cancelled && data) setBookingMeta(data);
@@ -210,12 +215,15 @@ export default function CompleteBooking() {
           handleWrongOtp("Wrong OTP. Please ask the customer for the correct code.");
         } else if (
           isPaymentRequired ||
+          errorBody.includes("collect cash") ||
           errorBody.includes("Payment not collected") ||
           errorBody.includes("Payment not completed")
         ) {
           haptic.error();
-          setError("Please collect payment before completing this job.");
+          setError("Please collect cash from the customer first.");
           setErrorKind("payment");
+          // Auto-open the collection modal so the worker can act immediately.
+          setShowCollectModal(true);
         } else {
           haptic.error();
           setError(errorBody);
@@ -233,8 +241,9 @@ export default function CompleteBooking() {
           if (data?.payout) setPayout(data.payout);
         } else if (data.payment_required) {
           haptic.error();
-          setError("Please collect payment before completing this job.");
+          setError("Please collect cash from the customer first.");
           setErrorKind("payment");
+          setShowCollectModal(true);
         } else {
           haptic.error();
           setError(data.error);
@@ -530,6 +539,24 @@ export default function CompleteBooking() {
           </div>
         </>
       )}
+
+      {/* COD collection modal — auto-opens when backend gates completion */}
+      <PaymentCollectionModal
+        open={showCollectModal}
+        onClose={() => setShowCollectModal(false)}
+        bookingId={bookingId}
+        amount={bookingMeta?.price_inr || 0}
+        onCollected={() => {
+          setShowCollectModal(false);
+          setError(null);
+          setErrorKind(null);
+          setBookingMeta((m) => (m ? { ...m, worker_collected_payment: true } : m));
+          // Re-submit OTP automatically now that cash is collected
+          if (otp.length === 4) {
+            setTimeout(() => handleSubmit(true), 250);
+          }
+        }}
+      />
     </div>
   );
 }
