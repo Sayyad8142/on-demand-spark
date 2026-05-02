@@ -95,7 +95,6 @@ export type Database = {
       app_config: {
         Row: {
           created_at: string | null
-          disable_online_payments: boolean
           enable_pay_after_service: boolean
           force_update: boolean
           id: string
@@ -125,7 +124,6 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
-          disable_online_payments?: boolean
           enable_pay_after_service?: boolean
           force_update?: boolean
           id?: string
@@ -155,7 +153,6 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
-          disable_online_payments?: boolean
           enable_pay_after_service?: boolean
           force_update?: boolean
           id?: string
@@ -3873,47 +3870,6 @@ export type Database = {
           worker_id?: string
         }
         Relationships: []
-      }
-      worker_live_steps: {
-        Row: {
-          booking_id: string
-          created_at: string
-          device_info: Json | null
-          last_step_at: string
-          motion_status: string
-          step_count: number
-          updated_at: string
-          worker_id: string
-        }
-        Insert: {
-          booking_id: string
-          created_at?: string
-          device_info?: Json | null
-          last_step_at?: string
-          motion_status?: string
-          step_count?: number
-          updated_at?: string
-          worker_id: string
-        }
-        Update: {
-          booking_id?: string
-          created_at?: string
-          device_info?: Json | null
-          last_step_at?: string
-          motion_status?: string
-          step_count?: number
-          updated_at?: string
-          worker_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "worker_live_steps_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: true
-            referencedRelation: "bookings"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       worker_payout_audit_log: {
         Row: {
