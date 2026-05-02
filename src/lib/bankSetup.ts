@@ -1,23 +1,21 @@
 /**
- * Worker bank-setup completion status.
+ * Worker payout-setup completion status.
  *
  * Single source of truth used by:
- *  - The full-screen IncompleteBankSetup guard (App.tsx)
- *  - The OnboardingChecklist "Add bank account details" step
+ *  - Signup flow (UPI is required, bank optional)
+ *  - The OnboardingChecklist "Add payout details" step
  *
- * A worker is considered "bank setup complete" when ALL three primary fields
- * exist on the workers row:
- *   - account_holder_name
- *   - bank_account_number
- *   - ifsc_code
- *
- * `payout_ready` is only set to true once these are filled (see
- * AccountDetails.tsx Save handler), so it stays consistent with this check.
+ * A worker is considered "payout setup complete" when they have a valid UPI ID,
+ * OR a complete set of bank details. UPI is the primary, required payout method
+ * during signup; bank details are optional.
  */
 export interface BankSetupStatus {
   hasBankDetails: boolean;
+  hasUpi: boolean;
   isComplete: boolean;
 }
+
+const UPI_REGEX = /^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/;
 
 export function getBankSetupStatus(worker: any): BankSetupStatus {
   const hasBankDetails = !!(
@@ -25,8 +23,11 @@ export function getBankSetupStatus(worker: any): BankSetupStatus {
     worker?.bank_account_number &&
     worker?.ifsc_code
   );
+  const upi = String(worker?.upi_id || "").trim();
+  const hasUpi = !!upi && UPI_REGEX.test(upi);
   return {
     hasBankDetails,
-    isComplete: hasBankDetails,
+    hasUpi,
+    isComplete: hasUpi || hasBankDetails,
   };
 }
