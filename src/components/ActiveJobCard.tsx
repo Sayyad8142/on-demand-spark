@@ -302,19 +302,9 @@ export default function ActiveJobCard({
                   </div>
                 ) : null;
               })()}
-              {/* Earnings breakdown — driven by community.platform_fee_percent */}
-              <div className="space-y-1 pt-1">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Customer Pays</span>
-                  <span>₹{payoutBreakdown.gross}</span>
-                </div>
-                {payoutBreakdown.feeAmount > 0 && (
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Platform Fee ({payoutBreakdown.feePercent}%)</span>
-                    <span>−₹{payoutBreakdown.feeAmount}</span>
-                  </div>
-                )}
-                <div className="flex items-center justify-between pt-1 border-t border-border/60">
+              {/* Earnings — worker net only */}
+              <div className="pt-1">
+                <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-muted-foreground">You Earn</p>
                   <p className="font-bold text-green-500 text-xl">₹{payoutBreakdown.netPayout}</p>
                 </div>
