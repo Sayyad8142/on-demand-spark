@@ -37,7 +37,9 @@ export function useOnboardingStatus(workerId: string | undefined, worker: any): 
 
   const hasServiceTypes = !!(worker?.service_types && worker.service_types.length > 0);
   const hasCommunity = !!(worker?.selected_community_id || (worker?.communities && worker.communities.length > 0));
-  const hasBankDetails = getBankSetupStatus(worker).hasBankDetails;
+  const payoutStatus = getBankSetupStatus(worker);
+  // Payout setup is complete with UPI alone (bank details optional).
+  const hasBankDetails = payoutStatus.isComplete;
 
   return {
     hasServiceTypes,
@@ -71,7 +73,7 @@ export function OnboardingChecklist({ workerId, worker, onStatusChange }: Onboar
       action: () => navigate("/profile"),
     },
     {
-      label: "Add bank account details",
+      label: "Add UPI ID for payouts",
       done: status.hasBankDetails,
       action: () => navigate("/account-details"),
     },
