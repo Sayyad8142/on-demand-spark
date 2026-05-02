@@ -53,6 +53,12 @@ export default function AccountDetails() {
   }, [worker]);
 
   const validate = (): string | null => {
+    // UPI is required
+    if (!upiId.trim()) return "UPI ID is required for payouts";
+    if (!UPI_REGEX.test(upiId.trim()))
+      return "Invalid UPI ID format (e.g., name@bank)";
+
+    // Bank details are optional. Only validate if any bank field was filled.
     const anyBankFieldFilled = !!(
       accountHolderName.trim()
       || bankAccountNumber.trim()
@@ -63,22 +69,19 @@ export default function AccountDetails() {
 
     if (!anyBankFieldFilled) return null;
 
-    if (!accountHolderName.trim()) return "Account holder name is required";
+    if (!accountHolderName.trim()) return "Account holder name is required when bank details are provided";
     if (accountHolderName.trim().length < 2) return "Account holder name is too short";
 
-    if (!bankAccountNumber.trim()) return "Bank account number is required";
+    if (!bankAccountNumber.trim()) return "Bank account number is required when bank details are provided";
     if (!/^\d{9,18}$/.test(bankAccountNumber.trim()))
       return "Account number must be 9–18 digits";
 
     if (bankAccountNumber.trim() !== confirmAccountNumber.trim())
       return "Account numbers do not match";
 
-    if (!ifscCode.trim()) return "IFSC code is required";
+    if (!ifscCode.trim()) return "IFSC code is required when bank details are provided";
     if (!IFSC_REGEX.test(ifscCode.trim().toUpperCase()))
       return "Invalid IFSC code (e.g., HDFC0001234)";
-
-    if (upiId.trim() && !UPI_REGEX.test(upiId.trim()))
-      return "Invalid UPI ID format (e.g., name@bank)";
 
     return null;
   };
@@ -98,18 +101,20 @@ export default function AccountDetails() {
       const bankFilled = hasValidBankDetails(accountHolderName, acct, ifsc);
       const source = passbookUrl ? "passbook" : "manual";
 
+      // payout_ready is now driven by the DB trigger (UPI OR valid bank details).
+      // We still send our best-known value for safety.
       await updateWorker({
         account_holder_name: accountHolderName.trim() || null,
         bank_account_number: acct || null,
         ifsc_code: ifsc || null,
         bank_name: bankName.trim() || null,
-        upi_id: upiId.trim() || null,
+        upi_id: upiId.trim(),
         passbook_url: passbookUrl,
         bank_details_source: source,
-        payout_ready: bankFilled,
+        payout_ready: true,
       } as any);
 
-      sonnerToast.success("Account details saved");
+      sonnerToast.success("Payout details saved");
 
       if (fromSignup) {
         navigate("/availability", { replace: true });
@@ -117,7 +122,7 @@ export default function AccountDetails() {
     } catch (err: any) {
       toast({
         title: "Save failed",
-        description: err?.message || "Could not save account details",
+        description: err?.message || "Could not save payout details",
         variant: "destructive",
       });
     } finally {
@@ -139,11 +144,11 @@ export default function AccountDetails() {
       if (details.ifsc_code) setIfscCode(details.ifsc_code.toUpperCase());
       if (details.bank_name) setBankName(details.bank_name);
 
-      sonnerToast.success("Account details filled from image");
+      sonnerToast.success("Bank details filled from image");
     } catch (err: any) {
       toast({
         title: "Could not read image",
-        description: err?.message || "Please enter the account details manually",
+        description: err?.message || "Please enter the bank details manually",
         variant: "destructive",
       });
     } finally {
@@ -168,7 +173,12 @@ export default function AccountDetails() {
               <ArrowLeft className="w-5 h-5" />
             </Button>
           )}
-          <h1 className="text-xl font-semibold">Account Details</h1>
+          <div>
+            <h1 className="text-xl font-semibold">UPI Details</h1>
+            <p className="text-xs text-muted-foreground">
+              Enter UPI ID for payouts. Bank details are optional.
+            </p>
+          </div>
         </div>
       </header>
 
@@ -177,27 +187,55 @@ export default function AccountDetails() {
           <Card className="border-primary/30 bg-primary/5">
             <CardContent className="py-3">
               <p className="text-sm">
-                <strong>One last step!</strong> Add your bank account details so we can
-                send your earnings directly. UPI is optional.
+                <strong>One last step!</strong> Enter your UPI ID so we can send
+                your earnings. Bank details are optional and can be added later.
               </p>
             </CardContent>
           </Card>
         )}
 
-        {/* Bank Details */}
+        {/* UPI - REQUIRED */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Landmark className="w-5 h-5" />
-              Bank Details
+              <CreditCard className="w-5 h-5" />
+              UPI ID
               <span className="ml-auto text-xs font-normal text-destructive">
                 Required
               </span>
             </CardTitle>
           </CardHeader>
+          <CardContent className="space-y-2">
+            <Label htmlFor="upi">UPI ID *</Label>
+            <Input
+              id="upi"
+              value={upiId}
+              onChange={(e) => setUpiId(e.target.value)}
+              placeholder="e.g., name@paytm"
+              disabled={saving}
+              autoCapitalize="none"
+              autoCorrect="off"
+            />
+            <p className="text-xs text-muted-foreground">
+              Your earnings will be sent to this UPI ID.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Bank Details - OPTIONAL */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Landmark className="w-5 h-5" />
+              Bank Details
+              <span className="ml-auto text-xs font-normal text-muted-foreground">
+                Optional
+              </span>
+            </CardTitle>
+          </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="acct-name">Account Holder Name *</Label>
+              <Label htmlFor="acct-name">Account Holder Name</Label>
               <Input
                 id="acct-name"
                 value={accountHolderName}
@@ -208,7 +246,7 @@ export default function AccountDetails() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="acct-no">Bank Account Number *</Label>
+              <Label htmlFor="acct-no">Bank Account Number</Label>
               <Input
                 id="acct-no"
                 inputMode="numeric"
@@ -223,7 +261,7 @@ export default function AccountDetails() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="acct-no-confirm">Confirm Account Number *</Label>
+              <Label htmlFor="acct-no-confirm">Confirm Account Number</Label>
               <Input
                 id="acct-no-confirm"
                 inputMode="numeric"
@@ -238,7 +276,7 @@ export default function AccountDetails() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="ifsc">IFSC Code *</Label>
+              <Label htmlFor="ifsc">IFSC Code</Label>
               <Input
                 id="ifsc"
                 value={ifscCode}
@@ -254,7 +292,7 @@ export default function AccountDetails() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="bank-name">Bank Name (optional)</Label>
+              <Label htmlFor="bank-name">Bank Name</Label>
               <Input
                 id="bank-name"
                 value={bankName}
@@ -266,7 +304,7 @@ export default function AccountDetails() {
           </CardContent>
         </Card>
 
-        {/* Passbook */}
+        {/* Passbook - OPTIONAL */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -282,38 +320,12 @@ export default function AccountDetails() {
               workerId={worker?.id}
               currentUrl={passbookUrl}
               onUrlChange={setPassbookUrl}
-                onUploaded={handlePassbookUploaded}
+              onUploaded={handlePassbookUploaded}
             />
             <p className="text-xs text-muted-foreground mt-2">
               {extracting
-                ? "Reading account details from the uploaded image..."
+                ? "Reading bank details from the uploaded image..."
                 : "Upload a clear photo of your bank passbook or cancelled cheque. We'll fill the fields when details can be read."}
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* UPI */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <CreditCard className="w-5 h-5" />
-              UPI ID
-              <span className="ml-auto text-xs font-normal text-muted-foreground">
-                Optional
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Label htmlFor="upi">UPI ID (optional, saved for future use)</Label>
-            <Input
-              id="upi"
-              value={upiId}
-              onChange={(e) => setUpiId(e.target.value)}
-              placeholder="e.g., name@paytm"
-              disabled={saving}
-            />
-            <p className="text-xs text-muted-foreground">
-              We'll save this for future use. Payouts will go to your bank account.
             </p>
           </CardContent>
         </Card>
