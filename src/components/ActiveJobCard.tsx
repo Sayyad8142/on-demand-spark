@@ -302,36 +302,15 @@ export default function ActiveJobCard({
                   </div>
                 ) : null;
               })()}
-              {/* Earnings breakdown — driven by community.platform_fee_percent */}
-              <div className="space-y-1 pt-1">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Customer Pays</span>
-                  <span>₹{payoutBreakdown.gross}</span>
-                </div>
-                {payoutBreakdown.feeAmount > 0 && (
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Platform Fee ({payoutBreakdown.feePercent}%)</span>
-                    <span>−₹{payoutBreakdown.feeAmount}</span>
-                  </div>
-                )}
-                <div className="flex items-center justify-between pt-1 border-t border-border/60">
+              {/* Earnings — worker net only */}
+              <div className="pt-1">
+                <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-muted-foreground">You Earn</p>
                   <p className="font-bold text-green-500 text-xl">₹{payoutBreakdown.netPayout}</p>
                 </div>
               </div>
             </div>
           }
-        </div>
-
-        {/* 4. Call Manager Button */}
-        <div className="px-3">
-          <Button
-            size="lg"
-            className="w-full h-12 text-base font-bold bg-green-500 hover:bg-green-600 text-white shadow-md rounded-xl transition-all duration-200 active:scale-[0.98]"
-            onClick={handleCallManager}>
-            <Phone className="w-5 h-5 mr-2" />
-            Call Manager
-          </Button>
         </div>
 
         <div className="mx-3 rounded-xl border border-border bg-muted/40 p-3 space-y-2">
@@ -355,23 +334,18 @@ export default function ActiveJobCard({
           )}
         </div>
 
+        {/* Call Manager Button (above Complete with OTP) */}
+        <div className="px-3">
+          <Button
+            size="lg"
+            className="w-full h-12 text-base font-bold bg-green-500 hover:bg-green-600 text-white shadow-md rounded-xl transition-all duration-200 active:scale-[0.98]"
+            onClick={handleCallManager}>
+            <Phone className="w-5 h-5 mr-2" />
+            Call Manager
+          </Button>
+        </div>
 
-        {/* Pay After Service: Collect Payment Button */}
-        {booking.payment_method === 'pay_after_service' && !(booking as any).worker_collected_payment && (
-          <div className="px-3">
-            <Button
-              size="lg"
-              variant="outline"
-              className="w-full h-12 text-base font-bold border-2 border-blue-500 text-blue-600 hover:bg-blue-50 rounded-xl"
-              onClick={() => setShowPaymentModal(true)}
-            >
-              <Banknote className="w-5 h-5 mr-2" />
-              Collect Payment (₹{booking.price_inr})
-            </Button>
-          </div>
-        )}
-
-        {/* 5. Complete with OTP Button */}
+        {/* Complete with OTP Button */}
         <div className="px-3 pb-3">
           <Button
             size="lg"

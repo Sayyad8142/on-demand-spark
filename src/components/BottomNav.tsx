@@ -39,8 +39,8 @@ export default function BottomNav() {
   }, [user]);
 
   const navItems = [
-  { path: "/home", icon: Home, label: t('nav.home') },
   { path: "tel:8008180018", icon: Phone, label: "Call", isExternal: true },
+  { path: "/home", icon: Home, label: t('nav.home') },
   { path: "/bookings", icon: Calendar, label: t('nav.bookings') },
   { path: "/availability", icon: Clock, label: t('nav.availability'), showBadge: hasAvailability },
   { path: "/profile", icon: User, label: t('nav.profile') }];
