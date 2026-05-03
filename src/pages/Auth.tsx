@@ -496,7 +496,7 @@ export default function Auth() {
             cuisineTags: [],
             qrData: null,
             bankDetails: bankPayload,
-            payoutReady: !!bankPayload,
+            payoutReady: !!(signUpUpiId.trim() || bankPayload),
             passbookFile: signUpPassbookFile,
           }
         }
