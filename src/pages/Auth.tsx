@@ -404,17 +404,23 @@ export default function Auth() {
       });
       return;
     }
-    // UPI is optional during signup. Validate only if provided.
-    if (signUpUpiId.trim()) {
-      const upiValidation = upiSchema.safeParse(signUpUpiId.trim());
-      if (!upiValidation.success) {
-        toast({
-          title: "Invalid UPI ID",
-          description: upiValidation.error.errors[0].message,
-          variant: "destructive"
-        });
-        return;
-      }
+    // UPI is mandatory during signup.
+    if (!signUpUpiId.trim()) {
+      toast({
+        title: "UPI ID is required",
+        description: "Please enter your UPI ID to receive payouts.",
+        variant: "destructive"
+      });
+      return;
+    }
+    const upiValidation = upiSchema.safeParse(signUpUpiId.trim());
+    if (!upiValidation.success) {
+      toast({
+        title: "Invalid UPI ID",
+        description: upiValidation.error.errors[0].message,
+        variant: "destructive"
+      });
+      return;
     }
 
     // Bank details are optional. If ANY bank field is filled, validate ALL required bank fields.
