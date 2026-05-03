@@ -684,9 +684,6 @@ export default function Auth() {
                       <Button type="button" onClick={() => setShowBankDetails(true)} className="h-12 w-full rounded-2xl text-base font-semibold">
                         Add bank details now
                       </Button>
-                       <Button type="button" variant="outline" onClick={skipSignupPayoutDetails} className="h-12 w-full rounded-2xl text-base">
-                        Skip for now
-                      </Button>
                     </div>
                   ) : (
                     <div className="space-y-4">
