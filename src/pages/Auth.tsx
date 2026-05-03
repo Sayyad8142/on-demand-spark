@@ -404,17 +404,23 @@ export default function Auth() {
       });
       return;
     }
-    // UPI is optional during signup. Validate only if provided.
-    if (signUpUpiId.trim()) {
-      const upiValidation = upiSchema.safeParse(signUpUpiId.trim());
-      if (!upiValidation.success) {
-        toast({
-          title: "Invalid UPI ID",
-          description: upiValidation.error.errors[0].message,
-          variant: "destructive"
-        });
-        return;
-      }
+    // UPI is mandatory during signup.
+    if (!signUpUpiId.trim()) {
+      toast({
+        title: "UPI ID is required",
+        description: "Please enter your UPI ID to receive payouts.",
+        variant: "destructive"
+      });
+      return;
+    }
+    const upiValidation = upiSchema.safeParse(signUpUpiId.trim());
+    if (!upiValidation.success) {
+      toast({
+        title: "Invalid UPI ID",
+        description: upiValidation.error.errors[0].message,
+        variant: "destructive"
+      });
+      return;
     }
 
     // Bank details are optional. If ANY bank field is filled, validate ALL required bank fields.
@@ -490,7 +496,7 @@ export default function Auth() {
             cuisineTags: [],
             qrData: null,
             bankDetails: bankPayload,
-            payoutReady: !!bankPayload,
+            payoutReady: !!(signUpUpiId.trim() || bankPayload),
             passbookFile: signUpPassbookFile,
           }
         }
@@ -741,8 +747,9 @@ export default function Auth() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="signup-upi" className="text-base">{t('auth.upiIdLabel', 'UPI ID')} (optional, for future use)</Label>
-                        <Input id="signup-upi" type="text" placeholder={t('auth.upiPlaceholder', 'e.g., name@paytm')} value={signUpUpiId} onChange={e => setSignUpUpiId(e.target.value)} disabled={loading} className="h-12 rounded-2xl text-base" />
+                        <Label htmlFor="signup-upi" className="text-base">{t('auth.upiIdLabel', 'UPI ID')} *</Label>
+                        <Input id="signup-upi" type="text" required placeholder={t('auth.upiPlaceholder', 'e.g., name@paytm')} value={signUpUpiId} onChange={e => setSignUpUpiId(e.target.value)} disabled={loading} className="h-12 rounded-2xl text-base" />
+                        <p className="text-xs text-muted-foreground">Required to receive your earnings.</p>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3 pt-1">
