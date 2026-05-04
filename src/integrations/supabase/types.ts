@@ -6409,6 +6409,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      worker_phone_exists: { Args: { _phone: string }; Returns: boolean }
       worker_respond_to_booking: {
         Args: {
           p_assignment_id: string
