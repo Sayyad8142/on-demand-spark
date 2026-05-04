@@ -37,8 +37,20 @@ if (serviceAccountJson) {
 
 // FCM error codes that mean the token is permanently invalid
 const INVALID_TOKEN_ERRORS = new Set([
-  'UNREGISTERED', 'INVALID_ARGUMENT', 'SENDER_ID_MISMATCH', 'NOT_FOUND'
+  'UNREGISTERED',
+  'INVALID_ARGUMENT',
+  'SENDER_ID_MISMATCH',
+  'NOT_FOUND',
+  'INVALID_REGISTRATION',
+  'INVALIDREGISTRATION',
+  'REGISTRATION_TOKEN_NOT_REGISTERED',
+  'INVALID_REGISTRATION_TOKEN',
 ]);
+
+function normalizeErrorCode(code: string | undefined | null): string {
+  if (!code) return '';
+  return String(code).toUpperCase().replace(/[-\s]/g, '_');
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -245,24 +257,32 @@ Deno.serve(async (req) => {
           const result = await response.json();
 
           if (!response.ok) {
-            const errorCode = result.error?.details?.[0]?.errorCode || result.error?.status || "UNKNOWN";
-            console.error(`❌ FCM failed for ${workerName}: ${errorCode} — ${result.error?.message || JSON.stringify(result.error)}`);
-            
+            const rawErrorCode = result.error?.details?.[0]?.errorCode || result.error?.status || "UNKNOWN";
+            const errorCode = normalizeErrorCode(rawErrorCode);
+            const errorMessage = result.error?.message || JSON.stringify(result.error);
+            console.error(`❌ FCM failed for ${workerName}: ${errorCode} — ${errorMessage}`);
+
             // ─── Token health: mark invalid on permanent errors ───
-            const isPermanentError = INVALID_TOKEN_ERRORS.has(errorCode) || 
+            const detailCodes: string[] = (result.error?.details || [])
+              .map((d: any) => normalizeErrorCode(d.errorCode))
+              .filter(Boolean);
+            const isPermanentError = INVALID_TOKEN_ERRORS.has(errorCode) ||
               result.error?.code === 404 ||
-              result.error?.details?.some((d: any) => INVALID_TOKEN_ERRORS.has(d.errorCode));
+              detailCodes.some((c) => INVALID_TOKEN_ERRORS.has(c)) ||
+              /not.*registered|invalid.*registration|unregistered/i.test(errorMessage || '');
 
             if (isPermanentError) {
-              console.log(`🗑️ Marking token INVALID for ${workerName} (${workerId}): ${errorCode}`);
-              
-              // Mark token as invalid (don't delete — keep for debugging)
+              console.log(`🗑️ Marking token INVALID for ${workerName} (${workerId}): ${errorCode} — clearing fcm_token`);
+
+              // Clear the invalid token entirely so dispatch will skip
               await supabase.from("workers").update({
+                fcm_token: null,
                 fcm_token_status: 'invalid',
+                fcm_token_updated_at: new Date().toISOString(),
                 fcm_last_fail_at: new Date().toISOString(),
                 fcm_last_fail_reason: errorCode,
               }).eq("id", workerId);
-              
+
               // Also clean fcm_tokens fallback
               await supabase.from("fcm_tokens").delete().eq("user_id", userId);
             } else {
@@ -272,8 +292,8 @@ Deno.serve(async (req) => {
                 fcm_last_fail_reason: errorCode,
               }).eq("id", workerId);
             }
-            
-            return { user_id: userId, worker_name: workerName, success: false, error_code: errorCode, error: result.error?.message, permanent: isPermanentError };
+
+            return { user_id: userId, worker_name: workerName, success: false, error_code: errorCode, error: errorMessage, permanent: isPermanentError };
           }
 
           console.log(`✅ FCM sent to ${workerName} (${userId}) — messageId: ${result.name}`);
