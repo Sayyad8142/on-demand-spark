@@ -37,8 +37,20 @@ if (serviceAccountJson) {
 
 // FCM error codes that mean the token is permanently invalid
 const INVALID_TOKEN_ERRORS = new Set([
-  'UNREGISTERED', 'INVALID_ARGUMENT', 'SENDER_ID_MISMATCH', 'NOT_FOUND'
+  'UNREGISTERED',
+  'INVALID_ARGUMENT',
+  'SENDER_ID_MISMATCH',
+  'NOT_FOUND',
+  'INVALID_REGISTRATION',
+  'INVALIDREGISTRATION',
+  'REGISTRATION_TOKEN_NOT_REGISTERED',
+  'INVALID_REGISTRATION_TOKEN',
 ]);
+
+function normalizeErrorCode(code: string | undefined | null): string {
+  if (!code) return '';
+  return String(code).toUpperCase().replace(/[-\s]/g, '_');
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
