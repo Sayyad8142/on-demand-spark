@@ -326,15 +326,16 @@ export default function Auth() {
       setLoading(true);
       const phone = normalizePhone(signInPhone);
 
-      // Check if worker with this phone exists (skip for demo number)
+      // Check if worker with this phone exists via SECURITY DEFINER RPC
+      // (anon role cannot SELECT workers directly due to RLS).
       const {
-        data: existingWorker,
+        data: phoneExists,
         error: workerCheckError
-      } = await supabase.from('workers').select('id').eq('phone', phone).maybeSingle();
+      } = await supabase.rpc('worker_phone_exists', { _phone: phone });
       if (workerCheckError) {
         console.error('Error checking worker:', workerCheckError);
       }
-      if (!existingWorker) {
+      if (!phoneExists) {
         toast({
           title: t('auth.accountNotRegistered', 'Account not registered'),
           description: t('auth.signUpFirst', 'Please sign up first to create your account'),
