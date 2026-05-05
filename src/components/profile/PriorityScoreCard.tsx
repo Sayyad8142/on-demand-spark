@@ -10,6 +10,7 @@ interface PriorityScoreCardProps {
     total_ratings?: number | null;
     last_7_days_completed_bookings?: number | null;
     last_7_days_online_hours?: number | null;
+    acceptance_rate_7d?: number | null;
     score_reason?: string | null;
   } | null;
 }
@@ -32,6 +33,7 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
   const totalRatings = worker?.total_ratings ?? 0;
   const completed7d = worker?.last_7_days_completed_bookings ?? 0;
   const onlineHours7d = worker?.last_7_days_online_hours ?? 0;
+  const acceptanceRate = worker?.acceptance_rate_7d ?? null;
   const reason = friendlyReason(worker?.score_reason);
 
   let tierLabel = "Getting Started";
@@ -95,8 +97,8 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
             <FactorItem
               icon={<CheckCircle2 className="w-4 h-4 text-green-500" />}
               label="Acceptance"
-              value="—"
-              sub="Accept quickly"
+              value={acceptanceRate !== null && acceptanceRate > 0 ? `${Math.round(acceptanceRate)}%` : '—'}
+              sub="Last 7 days"
             />
             <FactorItem
               icon={<Briefcase className="w-4 h-4 text-blue-500" />}
