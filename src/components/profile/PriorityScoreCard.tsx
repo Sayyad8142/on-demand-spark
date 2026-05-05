@@ -11,6 +11,7 @@ interface PriorityScoreCardProps {
     last_7_days_completed_bookings?: number | null;
     last_7_days_online_hours?: number | null;
     acceptance_rate_7d?: number | null;
+    total_requests_7d?: number | null;
     score_reason?: string | null;
   } | null;
 }
