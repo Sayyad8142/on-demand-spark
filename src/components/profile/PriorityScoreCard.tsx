@@ -33,6 +33,7 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
   const totalRatings = worker?.total_ratings ?? 0;
   const completed7d = worker?.last_7_days_completed_bookings ?? 0;
   const onlineHours7d = worker?.last_7_days_online_hours ?? 0;
+  const acceptanceRate = worker?.acceptance_rate_7d ?? null;
   const reason = friendlyReason(worker?.score_reason);
 
   let tierLabel = "Getting Started";
