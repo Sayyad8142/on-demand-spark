@@ -4351,6 +4351,7 @@ export type Database = {
       }
       workers: {
         Row: {
+          acceptance_rate_7d: number | null
           account_holder_name: string | null
           admin_fault_7d: number
           admin_override_rating: number | null
@@ -4450,6 +4451,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          acceptance_rate_7d?: number | null
           account_holder_name?: string | null
           admin_fault_7d?: number
           admin_override_rating?: number | null
@@ -4549,6 +4551,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          acceptance_rate_7d?: number | null
           account_holder_name?: string | null
           admin_fault_7d?: number
           admin_override_rating?: number | null
@@ -4820,6 +4823,7 @@ export type Database = {
               p_upi_id: string
             }
             Returns: {
+              acceptance_rate_7d: number | null
               account_holder_name: string | null
               admin_fault_7d: number
               admin_override_rating: number | null
@@ -4928,6 +4932,7 @@ export type Database = {
         | {
             Args: { p_worker: Json }
             Returns: {
+              acceptance_rate_7d: number | null
               account_holder_name: string | null
               admin_fault_7d: number
               admin_override_rating: number | null
