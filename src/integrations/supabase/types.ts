@@ -4443,6 +4443,7 @@ export type Database = {
           total_bookings_completed: number
           total_earnings: number | null
           total_ratings: number | null
+          total_requests_7d: number
           updated_at: string
           upi_id: string | null
           upi_qr_payload: string | null
@@ -4543,6 +4544,7 @@ export type Database = {
           total_bookings_completed?: number
           total_earnings?: number | null
           total_ratings?: number | null
+          total_requests_7d?: number
           updated_at?: string
           upi_id?: string | null
           upi_qr_payload?: string | null
@@ -4643,6 +4645,7 @@ export type Database = {
           total_bookings_completed?: number
           total_earnings?: number | null
           total_ratings?: number | null
+          total_requests_7d?: number
           updated_at?: string
           upi_id?: string | null
           upi_qr_payload?: string | null
@@ -4915,6 +4918,7 @@ export type Database = {
               total_bookings_completed: number
               total_earnings: number | null
               total_ratings: number | null
+              total_requests_7d: number
               updated_at: string
               upi_id: string | null
               upi_qr_payload: string | null
@@ -5024,6 +5028,7 @@ export type Database = {
               total_bookings_completed: number
               total_earnings: number | null
               total_ratings: number | null
+              total_requests_7d: number
               updated_at: string
               upi_id: string | null
               upi_qr_payload: string | null
