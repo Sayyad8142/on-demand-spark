@@ -97,8 +97,8 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
             <FactorItem
               icon={<CheckCircle2 className="w-4 h-4 text-green-500" />}
               label="Acceptance"
-              value="—"
-              sub="Accept quickly"
+              value={acceptanceRate !== null && acceptanceRate > 0 ? `${Math.round(acceptanceRate)}%` : '—'}
+              sub="Last 7 days"
             />
             <FactorItem
               icon={<Briefcase className="w-4 h-4 text-blue-500" />}
