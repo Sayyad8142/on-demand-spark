@@ -343,6 +343,17 @@ export default function Availability() {
         </div>
       </div>
 
+      {fromSignup && (
+        <div className="px-4 pt-4">
+          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+            <p className="text-sm font-semibold text-foreground">One last step — set your working hours</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Select the days and time slots when you're available. You won't receive any bookings until you save your availability.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Day Selector */}
       <div className="p-4">
         <Card className="p-4">
