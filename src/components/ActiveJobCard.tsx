@@ -45,7 +45,7 @@ export default function ActiveJobCard({
   const [currentSlide, setCurrentSlide] = useState(0);
   const [taskPrices, setTaskPrices] = useState<Record<string, number>>({});
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [movementStatus, setMovementStatus] = useState<MovementDebugStatus | null>(null);
+  
   const { i18n } = useTranslation();
   const navigate = useNavigate();
   const { breakdown: payoutBreakdown } = useCommunityFee(booking.community, booking.price_inr);
