@@ -94,7 +94,7 @@ export default function Auth() {
   const [signUpPassbookFile, setSignUpPassbookFile] = useState<File | null>(null);
   const [extractingPassbook, setExtractingPassbook] = useState(false);
   const [signUpStep, setSignUpStep] = useState(1);
-  const [showBankDetails, setShowBankDetails] = useState(false);
+  const [showBankDetails, setShowBankDetails] = useState(true);
   const [draftRestored, setDraftRestored] = useState(false);
   const passbookInputRef = useRef<HTMLInputElement>(null);
   
