@@ -94,7 +94,7 @@ export default function Auth() {
   const [signUpPassbookFile, setSignUpPassbookFile] = useState<File | null>(null);
   const [extractingPassbook, setExtractingPassbook] = useState(false);
   const [signUpStep, setSignUpStep] = useState(1);
-  const [showBankDetails, setShowBankDetails] = useState(false);
+  const [showBankDetails, setShowBankDetails] = useState(true);
   const [draftRestored, setDraftRestored] = useState(false);
   const passbookInputRef = useRef<HTMLInputElement>(null);
   
@@ -241,6 +241,54 @@ export default function Auth() {
     setSignUpUpiId("");
     setSignUpPassbookFile(null);
     if (passbookInputRef.current) passbookInputRef.current.value = "";
+    setSignUpStep(3);
+  };
+
+  const goToSignupStepThree = () => {
+    const upi = signUpUpiId.trim();
+    const hasUpi = !!upi;
+    const hasAnyBankField = !!(signUpAccountHolderName.trim() || signUpBankAccountNumber.trim() || signUpConfirmAccountNumber.trim() || signUpIfscCode.trim());
+
+    if (!hasUpi && !hasAnyBankField) {
+      toast({
+        title: "Payout details required",
+        description: "Please enter your UPI ID or complete bank account details to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (hasUpi) {
+      const upiValidation = upiSchema.safeParse(upi);
+      if (!upiValidation.success) {
+        toast({
+          title: "Invalid UPI ID",
+          description: upiValidation.error.errors[0].message,
+          variant: "destructive",
+        });
+        return;
+      }
+      setSignUpStep(3);
+      return;
+    }
+
+    // No UPI — bank details must be fully valid
+    if (!signUpAccountHolderName.trim()) {
+      toast({ title: "Account holder name required", variant: "destructive" });
+      return;
+    }
+    if (!accountNumberSchema.safeParse(signUpBankAccountNumber.trim()).success) {
+      toast({ title: "Invalid bank account number", description: "Must be 9–18 digits.", variant: "destructive" });
+      return;
+    }
+    if (signUpBankAccountNumber.trim() !== signUpConfirmAccountNumber.trim()) {
+      toast({ title: "Account numbers do not match", variant: "destructive" });
+      return;
+    }
+    if (!ifscSchema.safeParse(signUpIfscCode.trim().toUpperCase()).success) {
+      toast({ title: "Invalid IFSC code", description: "Format: 4 letters + 0 + 6 alphanumeric.", variant: "destructive" });
+      return;
+    }
     setSignUpStep(3);
   };
 
@@ -676,7 +724,7 @@ export default function Auth() {
                     <div>
                       <p className="text-lg font-bold">Step 2: Payout Details</p>
                       <p className="text-sm font-medium">Add bank details for payouts</p>
-                      <p className="mt-1 text-sm text-muted-foreground">You can skip now and update later from profile.</p>
+                      <p className="mt-1 text-sm text-muted-foreground">Enter your UPI ID or full bank details to continue.</p>
                     </div>
                   </div>
 
@@ -747,14 +795,14 @@ export default function Auth() {
                       <div className="space-y-2">
                         <Label htmlFor="signup-upi" className="text-base">{t('auth.upiIdLabel', 'UPI ID')}</Label>
                         <Input id="signup-upi" type="text" required placeholder={t('auth.upiPlaceholder', 'e.g., name@paytm')} value={signUpUpiId} onChange={e => setSignUpUpiId(e.target.value)} disabled={loading} className="h-12 rounded-2xl text-base" />
-                        <p className="text-xs text-muted-foreground">Required to receive your earnings.</p>
+                        <p className="text-xs text-muted-foreground">Enter UPI ID or fill bank details above to continue.</p>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3 pt-1">
                         <Button type="button" variant="outline" onClick={() => setSignUpStep(1)} className="h-12 rounded-2xl">
                           <ChevronLeft className="mr-1 h-4 w-4" /> Back
                         </Button>
-                        <Button type="button" onClick={() => setSignUpStep(3)} disabled={extractingPassbook} className="h-12 rounded-2xl font-semibold">
+                        <Button type="button" onClick={goToSignupStepThree} disabled={extractingPassbook} className="h-12 rounded-2xl font-semibold">
                           Continue
                         </Button>
                       </div>
