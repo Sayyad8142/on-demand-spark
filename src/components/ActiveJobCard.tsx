@@ -138,11 +138,6 @@ export default function ActiveJobCard({
     return () => clearInterval(interval);
   }, [cooldownEndTime]);
 
-  useEffect(() => {
-    return subscribeMovementStatus((status) => {
-      setMovementStatus(status?.bookingId === booking.id ? status : null);
-    });
-  }, [booking.id]);
 
   // Don't show for completed or cancelled bookings
   if (!['assigned', 'accepted', 'on_the_way', 'started'].includes(booking.status)) {
