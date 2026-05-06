@@ -244,6 +244,54 @@ export default function Auth() {
     setSignUpStep(3);
   };
 
+  const goToSignupStepThree = () => {
+    const upi = signUpUpiId.trim();
+    const hasUpi = !!upi;
+    const hasAnyBankField = !!(signUpAccountHolderName.trim() || signUpBankAccountNumber.trim() || signUpConfirmAccountNumber.trim() || signUpIfscCode.trim());
+
+    if (!hasUpi && !hasAnyBankField) {
+      toast({
+        title: "Payout details required",
+        description: "Please enter your UPI ID or complete bank account details to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (hasUpi) {
+      const upiValidation = upiSchema.safeParse(upi);
+      if (!upiValidation.success) {
+        toast({
+          title: "Invalid UPI ID",
+          description: upiValidation.error.errors[0].message,
+          variant: "destructive",
+        });
+        return;
+      }
+      setSignUpStep(3);
+      return;
+    }
+
+    // No UPI — bank details must be fully valid
+    if (!signUpAccountHolderName.trim()) {
+      toast({ title: "Account holder name required", variant: "destructive" });
+      return;
+    }
+    if (!accountNumberSchema.safeParse(signUpBankAccountNumber.trim()).success) {
+      toast({ title: "Invalid bank account number", description: "Must be 9–18 digits.", variant: "destructive" });
+      return;
+    }
+    if (signUpBankAccountNumber.trim() !== signUpConfirmAccountNumber.trim()) {
+      toast({ title: "Account numbers do not match", variant: "destructive" });
+      return;
+    }
+    if (!ifscSchema.safeParse(signUpIfscCode.trim().toUpperCase()).success) {
+      toast({ title: "Invalid IFSC code", description: "Format: 4 letters + 0 + 6 alphanumeric.", variant: "destructive" });
+      return;
+    }
+    setSignUpStep(3);
+  };
+
   const goToSignupStepTwo = () => {
     if (!canContinueSignup) {
       toast({
