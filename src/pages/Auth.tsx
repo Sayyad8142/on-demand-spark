@@ -724,7 +724,7 @@ export default function Auth() {
                     <div>
                       <p className="text-lg font-bold">Step 2: Payout Details</p>
                       <p className="text-sm font-medium">Add bank details for payouts</p>
-                      <p className="mt-1 text-sm text-muted-foreground">You can skip now and update later from profile.</p>
+                      <p className="mt-1 text-sm text-muted-foreground">Enter your UPI ID or full bank details to continue.</p>
                     </div>
                   </div>
 
