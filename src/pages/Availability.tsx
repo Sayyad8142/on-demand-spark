@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Clock, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -53,6 +53,8 @@ const generateInitialWeekData = (endHour: number = 19): Record<DayKey, Slot[]> =
 
 export default function Availability() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const fromSignup = searchParams.get("from") === "signup";
   const {
     toast
   } = useToast();
@@ -340,6 +342,17 @@ export default function Availability() {
           </div>
         </div>
       </div>
+
+      {fromSignup && (
+        <div className="px-4 pt-4">
+          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+            <p className="text-sm font-semibold text-foreground">One last step — set your working hours</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Select the days and time slots when you're available. You won't receive any bookings until you save your availability.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Day Selector */}
       <div className="p-4">
