@@ -28,6 +28,7 @@ import WeeklyPerformanceCard from "@/components/profile/WeeklyPerformanceCard";
 import HowToGetMoreBookingsCard from "@/components/profile/HowToGetMoreBookingsCard";
 import MotivationCard from "@/components/profile/MotivationCard";
 import PriorityScoreCard from "@/components/profile/PriorityScoreCard";
+import MovementStatusCard from "@/components/profile/MovementStatusCard";
 const SERVICES = [{
   value: "maid",
   label: "Maid Service",
