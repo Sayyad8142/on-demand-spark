@@ -28,6 +28,7 @@ import WeeklyPerformanceCard from "@/components/profile/WeeklyPerformanceCard";
 import HowToGetMoreBookingsCard from "@/components/profile/HowToGetMoreBookingsCard";
 import MotivationCard from "@/components/profile/MotivationCard";
 import PriorityScoreCard from "@/components/profile/PriorityScoreCard";
+import MovementStatusCard from "@/components/profile/MovementStatusCard";
 const SERVICES = [{
   value: "maid",
   label: "Maid Service",
@@ -857,6 +858,11 @@ export default function Profile() {
         {/* Priority Score */}
         <div className="px-4 mt-4">
           <PriorityScoreCard worker={worker} />
+        </div>
+
+        {/* Movement Status (debug) */}
+        <div className="px-4 mt-4">
+          <MovementStatusCard />
         </div>
 
         {/* Language Selection */}
