@@ -53,6 +53,8 @@ const generateInitialWeekData = (endHour: number = 19): Record<DayKey, Slot[]> =
 
 export default function Availability() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const fromSignup = searchParams.get("from") === "signup";
   const {
     toast
   } = useToast();
