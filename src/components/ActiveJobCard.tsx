@@ -9,7 +9,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
-import { subscribeMovementStatus, type MovementDebugStatus } from "@/lib/stepMonitoring";
+
 import serviceDishWashing from "@/assets/service-dish-washing.webp";
 import serviceFloorCleaning from "@/assets/service-floor-cleaning.webp";
 import serviceBathroomCleaning from "@/assets/service-bathroom-cleaning.webp";
