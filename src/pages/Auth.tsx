@@ -802,7 +802,7 @@ export default function Auth() {
                         <Button type="button" variant="outline" onClick={() => setSignUpStep(1)} className="h-12 rounded-2xl">
                           <ChevronLeft className="mr-1 h-4 w-4" /> Back
                         </Button>
-                        <Button type="button" onClick={() => setSignUpStep(3)} disabled={extractingPassbook} className="h-12 rounded-2xl font-semibold">
+                        <Button type="button" onClick={goToSignupStepThree} disabled={extractingPassbook} className="h-12 rounded-2xl font-semibold">
                           Continue
                         </Button>
                       </div>
