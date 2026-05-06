@@ -795,7 +795,7 @@ export default function Auth() {
                       <div className="space-y-2">
                         <Label htmlFor="signup-upi" className="text-base">{t('auth.upiIdLabel', 'UPI ID')}</Label>
                         <Input id="signup-upi" type="text" required placeholder={t('auth.upiPlaceholder', 'e.g., name@paytm')} value={signUpUpiId} onChange={e => setSignUpUpiId(e.target.value)} disabled={loading} className="h-12 rounded-2xl text-base" />
-                        <p className="text-xs text-muted-foreground">Required to receive your earnings.</p>
+                        <p className="text-xs text-muted-foreground">Enter UPI ID or fill bank details above to continue.</p>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3 pt-1">
