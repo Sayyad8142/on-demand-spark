@@ -351,8 +351,8 @@ export default function OtpVerify() {
 
       // Navigate based on mode
       if (state.mode === 'signup') {
-        // New signup → always send to Account Details first
-        navigate("/account-details?from=signup", { replace: true });
+        // New signup → send to Availability so worker selects time slots before receiving bookings
+        navigate("/availability?from=signup", { replace: true });
       } else {
         navigate("/home", { replace: true });
       }
