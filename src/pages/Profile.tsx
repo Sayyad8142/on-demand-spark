@@ -23,10 +23,6 @@ import BottomNav from "@/components/BottomNav";
 import UpiQrUpload from "@/components/UpiQrUpload";
 import { CURRENT_VERSION_CODE } from "@/config/version";
 
-import WorkerRankCard from "@/components/profile/WorkerRankCard";
-import WeeklyPerformanceCard from "@/components/profile/WeeklyPerformanceCard";
-import HowToGetMoreBookingsCard from "@/components/profile/HowToGetMoreBookingsCard";
-import MotivationCard from "@/components/profile/MotivationCard";
 import PriorityScoreCard from "@/components/profile/PriorityScoreCard";
 import MovementStatusCard from "@/components/profile/MovementStatusCard";
 const SERVICES = [{
