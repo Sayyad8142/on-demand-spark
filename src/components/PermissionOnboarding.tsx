@@ -156,6 +156,11 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
       });
       return;
     }
+    // Show a clear, pink-themed rationale before the system activity prompt
+    if (id === "activity" && !options?.silent) {
+      setActivityRationaleOpen(true);
+      return;
+    }
     setBusyId(id);
     markFailed(id, false);
     try {
