@@ -6029,7 +6029,15 @@ export type Database = {
       notify_next_worker: { Args: { p_booking_id: string }; Returns: Json }
       payment_wallet_issues_summary: { Args: never; Returns: Json }
       pending_sla_minutes: { Args: never; Returns: number }
+      pg_advisory_unlock_booking: {
+        Args: { p_booking_id: string }
+        Returns: boolean
+      }
       pg_advisory_unlock_dispatch: { Args: never; Returns: boolean }
+      pg_try_advisory_lock_booking: {
+        Args: { p_booking_id: string }
+        Returns: boolean
+      }
       pg_try_advisory_lock_dispatch: { Args: never; Returns: boolean }
       preview_worker_update_impact: {
         Args: { p_min_version_name: string }
