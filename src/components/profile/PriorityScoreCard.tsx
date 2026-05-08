@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Trophy, Star, CheckCircle2, Briefcase, Clock, Lightbulb } from "lucide-react";
+import { Trophy, Star, Lightbulb } from "lucide-react";
 
 interface PriorityScoreCardProps {
   worker: {
@@ -8,35 +8,13 @@ interface PriorityScoreCardProps {
     rating?: number | null;
     admin_override_rating?: number | null;
     total_ratings?: number | null;
-    last_7_days_completed_bookings?: number | null;
-    last_7_days_online_hours?: number | null;
-    acceptance_rate_7d?: number | null;
-    total_requests_7d?: number | null;
-    score_reason?: string | null;
   } | null;
-}
-
-function friendlyReason(reason: string | null | undefined): string | null {
-  if (!reason) return null;
-  const cleaned = reason
-    .replace(/score\s*=\s*[\d.]+/gi, '')
-    .replace(/base\s*=\s*[\d.]+/gi, '')
-    .replace(/[_]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (cleaned.length < 4) return null;
-  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 }
 
 export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
   const score = Math.round((worker?.priority_score ?? 0) * 10) / 10;
   const effectiveRating = worker?.admin_override_rating ?? worker?.rating ?? 0;
   const totalRatings = worker?.total_ratings ?? 0;
-  const completed7d = worker?.last_7_days_completed_bookings ?? 0;
-  const onlineHours7d = worker?.last_7_days_online_hours ?? 0;
-  const acceptanceRate = worker?.acceptance_rate_7d ?? null;
-  const totalRequests7d = worker?.total_requests_7d ?? 0;
-  const reason = friendlyReason(worker?.score_reason);
 
   let tierLabel = "Getting Started";
   let tierColor = "text-muted-foreground";
@@ -53,7 +31,7 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
   } else if (score >= 25) {
     tierLabel = "Building Up";
     tierColor = "text-amber-600 dark:text-amber-400";
-    encouragement = "Keep improving your rating and acceptance to receive more bookings earlier.";
+    encouragement = "Maintain great ratings and keep completing jobs to receive more bookings earlier.";
   }
 
   return (
@@ -79,41 +57,25 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
         </div>
 
         <p className="text-xs text-muted-foreground leading-relaxed bg-muted/50 rounded-lg p-3">
-          Your priority score helps decide how early you receive booking alerts.
-          <span className="block mt-1 font-medium text-foreground">
-            Higher score = more chance to get bookings first.
-          </span>
+          Workers with better ratings and priority scores receive booking alerts earlier.
         </p>
 
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-            What affects your score
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <FactorItem
-              icon={<Star className="w-4 h-4 text-amber-500" />}
-              label="Rating"
-              value={effectiveRating > 0 ? `${effectiveRating.toFixed(1)} ★` : '—'}
-              sub={totalRatings > 0 ? `${totalRatings} reviews` : 'No reviews yet'}
-            />
-            <FactorItem
-              icon={<CheckCircle2 className="w-4 h-4 text-green-500" />}
-              label="Acceptance"
-              value={totalRequests7d > 0 && acceptanceRate !== null ? `${Math.round(acceptanceRate)}%` : '—'}
-              sub={totalRequests7d > 0 ? 'Last 7 days' : 'No requests yet'}
-            />
-            <FactorItem
-              icon={<Briefcase className="w-4 h-4 text-blue-500" />}
-              label="Recent Jobs"
-              value={`${completed7d}`}
-              sub="Last 7 days"
-            />
-            <FactorItem
-              icon={<Clock className="w-4 h-4 text-purple-500" />}
-              label="Online Time"
-              value={`${onlineHours7d.toFixed(1)}h`}
-              sub="Last 7 days"
-            />
+        <div className="grid grid-cols-1 gap-2">
+          <div className="bg-muted/40 rounded-lg p-3 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+              <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
+            </div>
+            <div className="flex-1">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                Your Rating
+              </p>
+              <p className="text-base font-bold text-foreground">
+                {effectiveRating > 0 ? `${effectiveRating.toFixed(1)} ★` : '—'}
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                {totalRatings > 0 ? `${totalRatings} reviews` : 'No reviews yet'}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -127,19 +89,15 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
           <ul className="space-y-1 text-xs text-amber-900 dark:text-amber-200">
             <li className="flex items-start gap-1.5">
               <span className="text-amber-500 mt-0.5">•</span>
-              <span>Maintain good customer rating</span>
+              <span>Maintain high customer ratings</span>
             </li>
             <li className="flex items-start gap-1.5">
               <span className="text-amber-500 mt-0.5">•</span>
-              <span>Accept bookings quickly</span>
+              <span>Complete bookings successfully</span>
             </li>
             <li className="flex items-start gap-1.5">
               <span className="text-amber-500 mt-0.5">•</span>
-              <span>Complete more jobs</span>
-            </li>
-            <li className="flex items-start gap-1.5">
-              <span className="text-amber-500 mt-0.5">•</span>
-              <span>Stay active regularly</span>
+              <span>Stay active on the platform</span>
             </li>
           </ul>
           <p className="text-xs text-amber-800 dark:text-amber-300 mt-2 italic">
@@ -148,30 +106,5 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function FactorItem({
-  icon,
-  label,
-  value,
-  sub,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  sub: string;
-}) {
-  return (
-    <div className="bg-muted/40 rounded-lg p-2.5">
-      <div className="flex items-center gap-1.5 mb-0.5">
-        {icon}
-        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-          {label}
-        </span>
-      </div>
-      <p className="text-sm font-bold text-foreground">{value}</p>
-      <p className="text-[10px] text-muted-foreground">{sub}</p>
-    </div>
   );
 }
