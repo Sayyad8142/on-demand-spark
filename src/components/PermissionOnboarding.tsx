@@ -88,6 +88,7 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
   const [failedIds, setFailedIds] = useState<Set<PermissionId>>(new Set());
   const [oem, setOem] = useState<OemInfo | null>(null);
   const [fallbackModal, setFallbackModal] = useState<FallbackModalState>({ open: false, permissionId: null });
+  const [activityRationaleOpen, setActivityRationaleOpen] = useState(false);
   const [debugEvents, setDebugEvents] = useState<PermissionDebugEvent[]>([]);
 
   const addDebugEvent = useCallback((event: Omit<PermissionDebugEvent, "at">) => {
@@ -153,6 +154,11 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
         title: "Available on Android only",
         description: "This permission can only be enabled on the installed Android app.",
       });
+      return;
+    }
+    // Show a clear, pink-themed rationale before the system activity prompt
+    if (id === "activity" && !options?.silent) {
+      setActivityRationaleOpen(true);
       return;
     }
     setBusyId(id);
@@ -282,6 +288,41 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
         oem={oem}
         onClose={() => setFallbackModal({ open: false, permissionId: null })}
       />
+
+      <Dialog open={activityRationaleOpen} onOpenChange={(o) => !o && setActivityRationaleOpen(false)}>
+        <DialogContent className="max-w-sm rounded-2xl border-2 border-primary/30">
+          <DialogHeader>
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Layers className="h-6 w-6" />
+            </div>
+            <DialogTitle className="text-center text-base">
+              Allow Activity Permission
+            </DialogTitle>
+            <DialogDescription className="text-center text-sm">
+              Didi Now Partner uses activity permission to detect worker movement and improve booking reliability. Please allow this permission to continue.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
+            <Button
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={() => {
+                setActivityRationaleOpen(false);
+                handleRequest("activity", { silent: true });
+              }}
+            >
+              OK, allow
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-muted-foreground"
+              onClick={() => setActivityRationaleOpen(false)}
+            >
+              Not now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
