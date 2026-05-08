@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Search, MapPin, Calendar, Loader2, User, Star, CreditCard, CheckCircle2, Clock, ChevronDown } from "lucide-react";
+import { ArrowLeft, Search, MapPin, Calendar, Loader2, User, Star, CreditCard, CheckCircle2, Clock, ChevronDown, ChevronRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { getPayoutStatus, PAYOUT_ESTIMATING_LABEL } from "@/lib/payoutStatus";
 import { DEMO_BOOKINGS } from "@/config/demoData";
@@ -19,10 +20,37 @@ type Booking = BookingWithAddress & { rating?: number | null; payout_status?: st
 export default function Bookings() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const isGuestMode = localStorage.getItem('guest_mode') === 'true';
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [workerRating, setWorkerRating] = useState<number>(5.0);
+  const [ratingsCount, setRatingsCount] = useState<number>(0);
+
+  useEffect(() => {
+    if (isGuestMode) {
+      setWorkerRating(4.8);
+      setRatingsCount(127);
+      return;
+    }
+    if (!user) return;
+    (async () => {
+      let workerId: string | null = null;
+      const { data: w1 } = await supabase.from('workers').select('id, rating').eq('user_id', user.id).maybeSingle();
+      if (w1) { workerId = w1.id; setWorkerRating(Number(w1.rating) || 5.0); }
+      else {
+        const { data: w2 } = await supabase.from('workers').select('id, rating').eq('id', user.id).maybeSingle();
+        if (w2) { workerId = w2.id; setWorkerRating(Number(w2.rating) || 5.0); }
+      }
+      if (!workerId) return;
+      const { data } = await supabase.from('worker_rating_stats').select('avg_rating, ratings_count').eq('worker_id', workerId).maybeSingle();
+      if (data && Number(data.ratings_count) > 0) {
+        setWorkerRating(Number(data.avg_rating) || 0);
+        setRatingsCount(Number(data.ratings_count) || 0);
+      }
+    })();
+  }, [user, isGuestMode]);
 
   useEffect(() => {
     if (isGuestMode) {
@@ -162,6 +190,29 @@ export default function Bookings() {
 
       {/* Content */}
       <main className="max-w-2xl mx-auto p-4 space-y-4">
+        {/* Ratings & Reviews Link */}
+        <Card className="border-0 shadow-lg cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => navigate('/customer-reviews')}>
+          <div className="py-4 px-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                  <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">⭐ {workerRating.toFixed(1)} {t('profile.rating')}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {ratingsCount > 0 ? `${ratingsCount} ${t('profile.reviews').toLowerCase()}` : 'No reviews yet'}
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </div>
+            <p className="text-[11px] text-primary font-medium mt-2">
+              {t('profile.ratingPriority')}
+            </p>
+          </div>
+        </Card>
+
         {filteredHistory.length === 0 ? (
           <div className="text-center py-12">
             <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />

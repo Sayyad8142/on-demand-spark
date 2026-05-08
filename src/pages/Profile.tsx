@@ -953,31 +953,6 @@ export default function Profile() {
           </Card>
         </div>
 
-        {/* Enhanced Ratings & Reviews Link */}
-        <div className="px-4 mt-4">
-          <Card className="border-0 shadow-lg cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => navigate('/customer-reviews')}>
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                    <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">⭐ {workerRating.toFixed(1)} {t('profile.rating')}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {ratingsCount > 0 ? `${ratingsCount} ${t('profile.reviews').toLowerCase()}` : 'No reviews yet'}
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <p className="text-[11px] text-primary font-medium mt-2 ml-13">
-                {t('profile.ratingPriority')}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
         <div className="px-4 mt-4 space-y-4">
 
 
