@@ -290,6 +290,36 @@ function AppInner() {
     };
   }, [checkAndroidSettingsPermissions, session?.user?.id]);
 
+  // ── Passive movement tracking while worker is logged in ──
+  // Starts when we have a worker.id, stops when worker logs out.
+  // Re-checks on app resume in case Android killed the sensor listener.
+  useEffect(() => {
+    if (!worker?.id) {
+      void stopPassiveMovementMonitoring();
+      return;
+    }
+    if (!Capacitor.isNativePlatform()) return;
+
+    console.log(`[Passive] worker online (id=${worker.id}) — starting passive movement tracking`);
+    void startPassiveMovementMonitoring(worker.id);
+
+    const sub = CapApp.addListener("appStateChange", ({ isActive }) => {
+      if (!isActive) {
+        console.log("[Passive] app backgrounded");
+        return;
+      }
+      console.log("[Passive] app foregrounded — verifying tracking");
+      if (!isPassiveMonitoringActive()) {
+        console.log("[Passive] tracking stopped while in background — restarting");
+        void startPassiveMovementMonitoring(worker.id);
+      }
+    });
+
+    return () => {
+      sub.then((s) => s.remove());
+    };
+  }, [worker?.id]);
+
 
   // Initialize native push notifications when we have a session.
   useEffect(() => {
