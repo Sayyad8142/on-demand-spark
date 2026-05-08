@@ -343,13 +343,16 @@ export default function CompleteBooking() {
               <InputOTP
                 maxLength={4}
                 value={otp}
-                onChange={(v) => {
-                  setOtp(v);
-                  if (error && errorKind !== "network" && errorKind !== "timeout") {
-                    setError(null);
-                    setErrorKind(null);
-                  }
-                }}
+                 onChange={(v) => {
+                   setOtp(v);
+                   if (error && errorKind !== "network" && errorKind !== "timeout") {
+                     setError(null);
+                     setErrorKind(null);
+                   }
+                   if (v.length === 4 && !loading && !submitLockRef.current) {
+                     handleSubmit(false);
+                   }
+                 }}
                 inputMode="numeric"
                 pattern="[0-9]*"
                 autoFocus
