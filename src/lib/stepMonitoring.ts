@@ -15,7 +15,12 @@ interface StepCounterPlugin {
     bookingId: string;
     windowSeconds: number;
   }): Promise<{ status: string; bookingId: string; sensorType?: string }>;
+  /** Stops the booking-specific track only (passive keeps running). */
   stopMonitoring(): Promise<void>;
+  /** Stops only the passive online track. */
+  stopPassive?(): Promise<void>;
+  /** Stops both tracks and tears down the foreground service. */
+  stopAll?(): Promise<void>;
   addListener(
     event: "monitoringComplete" | "stepUpdate",
     cb: (data: MonitoringResult | NativeStepUpdate) => void
