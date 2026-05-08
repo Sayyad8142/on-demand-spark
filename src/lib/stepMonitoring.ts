@@ -59,11 +59,18 @@ export interface MovementDebugStatus {
   warning: string | null;
 }
 
-const MONITORING_WINDOW_SECONDS = 180;
+// Booking-specific check window: 5 minutes (was 3) — gives the worker time to start moving
+// after accepting a booking before the low-movement flag is evaluated.
+const MONITORING_WINDOW_SECONDS = 300;
 const DEFAULT_MIN_STEPS = 40;
 const LIVE_SEND_INTERVAL_MS = 12_000;
 const NOT_MOVING_AFTER_MS = 150_000;
 const FAILSAFE_AFTER_MS = 60_000;
+
+// Passive monitor (while worker is online, no booking) — long-running, no auto-stop.
+// Uses a much larger window so the native plugin does not unregister the sensor.
+const PASSIVE_WINDOW_SECONDS = 24 * 60 * 60; // 24h
+const PASSIVE_SEND_INTERVAL_MS = 60_000;     // 1 sample per minute
 const statusListeners = new Set<(status: MovementDebugStatus) => void>();
 let StepCounter: StepCounterPlugin | null = null;
 const movementTable = (supabase as unknown as {
