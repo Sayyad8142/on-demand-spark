@@ -436,3 +436,214 @@ async function updateMovementCheck(bookingId: string, workerId: string, fields: 
     console.error("[Movement] Movement check update error:", e);
   }
 }
+
+// ───────────────────────────────────────────────────────────────────────────────
+// Passive movement monitoring (while worker is online, no active booking).
+// This is intentionally SEPARATE from the booking-specific session above so it
+// cannot interfere with dispatch / completion checks.
+// ───────────────────────────────────────────────────────────────────────────────
+
+export interface PassiveMovementStatus {
+  workerId: string;
+  steps: number;
+  previousSteps: number;
+  isMoving: boolean;
+  status: "Tracking" | "Not Tracking" | "Permission Denied" | "Sensor Unsupported";
+  permissionGranted: boolean | null;
+  sensorSupported: boolean | null;
+  sensorType: string | null;
+  lastUpdatedAt: string | null;
+  lastSentAt: string | null;
+  lastSendOk: boolean | null;
+  lastError: string | null;
+  warning: string | null;
+}
+
+let passiveSession: {
+  workerId: string;
+  lastSteps: number;
+  previousSteps: number;
+  lastMovementAt: number;
+  intervalId: number | null;
+  stepListener?: { remove: () => void };
+  status: PassiveMovementStatus;
+} | null = null;
+
+const passiveListeners = new Set<(s: PassiveMovementStatus | null) => void>();
+
+export function subscribePassiveMovementStatus(
+  listener: (s: PassiveMovementStatus | null) => void,
+): () => void {
+  passiveListeners.add(listener);
+  listener(passiveSession?.status ?? null);
+  return () => passiveListeners.delete(listener);
+}
+
+function emitPassive() {
+  passiveListeners.forEach((l) => l(passiveSession?.status ?? null));
+}
+
+function setPassive(patch: Partial<PassiveMovementStatus>) {
+  if (!passiveSession) return;
+  passiveSession.status = { ...passiveSession.status, ...patch };
+  emitPassive();
+}
+
+async function sendPassiveSample() {
+  if (!passiveSession) return;
+  const session = passiveSession;
+  const nowIso = new Date().toISOString();
+  const payload = {
+    worker_id: session.workerId,
+    step_count: session.lastSteps,
+    previous_step_count: session.previousSteps,
+    is_moving: session.status.isMoving,
+    sensor_type: session.status.sensorType,
+    timestamp: nowIso,
+    source: "passive",
+  };
+  try {
+    const { error } = await supabase.functions.invoke("worker-passive-movement", { body: payload });
+    if (error) throw error;
+    setPassive({ lastSentAt: nowIso, lastSendOk: true, lastError: null });
+    console.log("[Passive] sample sent", { steps: session.lastSteps, isMoving: session.status.isMoving });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    setPassive({ lastSendOk: false, lastError: message, warning: `API failed: ${message}` });
+    console.error("[Passive] sample send failure", { payload, error });
+  }
+}
+
+function handlePassiveStepUpdate(update: NativeStepUpdate) {
+  if (!passiveSession) return;
+  // Plugin currently emits with the bookingId we passed in — ignore mismatched events
+  if (update.bookingId !== `passive:${passiveSession.workerId}`) return;
+  const now = Date.now();
+  const previous = passiveSession.lastSteps;
+  const current = Math.max(0, Number(update.stepCount ?? 0));
+  const increased = current > previous;
+  passiveSession.previousSteps = previous;
+  passiveSession.lastSteps = current;
+  if (increased) passiveSession.lastMovementAt = now;
+  const isMoving = now - passiveSession.lastMovementAt < NOT_MOVING_AFTER_MS && current > 0;
+  setPassive({
+    steps: current,
+    previousSteps: previous,
+    isMoving,
+    status: "Tracking",
+    lastUpdatedAt: new Date().toISOString(),
+    warning: null,
+  });
+}
+
+/** Start passive movement tracking (no booking required). Idempotent. */
+export async function startPassiveMovementMonitoring(workerId: string): Promise<void> {
+  if (passiveSession?.workerId === workerId) {
+    console.log("[Passive] already running for this worker, skipping");
+    return;
+  }
+  await stopPassiveMovementMonitoring();
+
+  passiveSession = {
+    workerId,
+    lastSteps: 0,
+    previousSteps: 0,
+    lastMovementAt: Date.now(),
+    intervalId: null,
+    status: {
+      workerId,
+      steps: 0,
+      previousSteps: 0,
+      isMoving: false,
+      status: "Not Tracking",
+      permissionGranted: null,
+      sensorSupported: null,
+      sensorType: null,
+      lastUpdatedAt: null,
+      lastSentAt: null,
+      lastSendOk: null,
+      lastError: null,
+      warning: null,
+    },
+  };
+  emitPassive();
+
+  const plugin = getPlugin();
+  if (!plugin) {
+    console.log("[Passive] plugin unavailable — not native Android, passive tracking disabled");
+    setPassive({
+      status: "Sensor Unsupported",
+      sensorSupported: false,
+      permissionGranted: false,
+      warning: "Passive tracking requires the Android app",
+    });
+    return;
+  }
+
+  try {
+    const support = await plugin.checkSupport();
+    setPassive({ sensorSupported: support.supported, sensorType: support.sensorType });
+    if (!support.supported) {
+      console.log("[Passive] step sensor not supported");
+      setPassive({ status: "Sensor Unsupported", warning: "Step sensor not available on this device" });
+      return;
+    }
+    const { granted } = await plugin.requestPermission();
+    setPassive({ permissionGranted: granted });
+    console.log(`[Passive] ACTIVITY_RECOGNITION granted=${granted}`);
+    if (!granted) {
+      setPassive({ status: "Permission Denied", warning: "Enable Physical Activity permission to track movement" });
+      return;
+    }
+
+    passiveSession.stepListener = await plugin.addListener("stepUpdate", (data) =>
+      handlePassiveStepUpdate(data as NativeStepUpdate),
+    );
+    const startResult = await plugin.startMonitoring({
+      bookingId: `passive:${workerId}`,
+      windowSeconds: PASSIVE_WINDOW_SECONDS,
+    });
+    setPassive({
+      status: "Tracking",
+      sensorType: startResult.sensorType ?? passiveSession.status.sensorType,
+      warning: null,
+    });
+    console.log(`[Passive] ✅ tracking started worker=${workerId} sensor=${startResult.sensorType}`);
+
+    passiveSession.intervalId = window.setInterval(() => {
+      if (!passiveSession) return;
+      void sendPassiveSample();
+    }, PASSIVE_SEND_INTERVAL_MS);
+    // Send first sample shortly after start
+    void sendPassiveSample();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[Passive] start failed", error);
+    setPassive({ status: "Not Tracking", lastError: message, warning: `Could not start tracking: ${message}` });
+  }
+}
+
+export async function stopPassiveMovementMonitoring(): Promise<void> {
+  const session = passiveSession;
+  passiveSession = null;
+  if (!session) return;
+  console.log("[Passive] stopping tracking");
+  try {
+    if (session.intervalId) window.clearInterval(session.intervalId);
+    session.stepListener?.remove();
+    // Only stop the native plugin if there is no booking-specific session running.
+    // (The native plugin only supports one monitoring session at a time.)
+    if (!activeSession) {
+      const plugin = getPlugin();
+      if (plugin) await plugin.stopMonitoring();
+    }
+  } catch (error) {
+    console.error("[Passive] stop failed", error);
+  } finally {
+    passiveListeners.forEach((l) => l(null));
+  }
+}
+
+export function isPassiveMonitoringActive(): boolean {
+  return passiveSession !== null;
+}
