@@ -53,7 +53,12 @@ import CompleteBooking from "./pages/CompleteBooking";
 import AccountDetails from "./pages/AccountDetails";
 import BottomNav from "./components/BottomNav";
 import PermissionOnboarding from "./components/PermissionOnboarding";
-import { startMovementMonitoring } from "@/lib/stepMonitoring";
+import {
+  startMovementMonitoring,
+  startPassiveMovementMonitoring,
+  stopPassiveMovementMonitoring,
+  isPassiveMonitoringActive,
+} from "@/lib/stepMonitoring";
 
 const queryClient = new QueryClient();
 
