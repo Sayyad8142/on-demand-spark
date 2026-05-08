@@ -855,16 +855,6 @@ export default function Profile() {
           </Card>
         </div>
 
-        {/* Priority Score */}
-        <div className="px-4 mt-4">
-          <PriorityScoreCard worker={worker} />
-        </div>
-
-        {/* Movement Status (debug) */}
-        <div className="px-4 mt-4">
-          <MovementStatusCard />
-        </div>
-
         {/* Language Selection */}
         <div className="px-4 mt-4">
           <Card className="border-0 shadow-lg">
@@ -920,6 +910,16 @@ export default function Profile() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Priority Score */}
+        <div className="px-4 mt-4">
+          <PriorityScoreCard worker={worker} />
+        </div>
+
+        {/* Movement Status (debug) */}
+        <div className="px-4 mt-4">
+          <MovementStatusCard />
         </div>
 
         {/* Manage Account Details Link */}
