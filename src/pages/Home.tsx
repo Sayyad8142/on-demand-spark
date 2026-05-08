@@ -284,25 +284,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* Push Health Status Banner */}
-      {Capacitor.isNativePlatform() && !isGuestMode && !pushHealth.isHealthy && pushHealth.isChecking && (
-        <Card className="p-4 bg-muted/50 border-border">
-          <div className="flex items-start gap-3">
-            <RefreshCw className="w-5 h-5 text-primary flex-shrink-0 mt-0.5 animate-spin" />
-            <div className="flex-1">
-              <h3 className="font-semibold text-sm text-foreground mb-1">
-                Preparing booking alerts…
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                {pushHealth.repairAttempt > 0
-                  ? `Automatic repair attempt ${pushHealth.repairAttempt}/${pushHealth.repairMaxAttempts} is running in the background.`
-                  : 'Checking notification permission, refreshing token, and syncing booking alerts automatically.'}
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
-
+      {/* Push health checks run silently on launch; only show UI if manual action is required. */}
       {Capacitor.isNativePlatform() && !isGuestMode && !pushHealth.isHealthy && !pushHealth.isChecking && pushHealth.manualRepairRequired && (
         <Card className="p-4 bg-destructive/10 border-2 border-destructive">
           <div className="flex items-start gap-3">
