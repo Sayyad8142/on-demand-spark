@@ -636,11 +636,14 @@ export async function stopPassiveMovementMonitoring(): Promise<void> {
   try {
     if (session.intervalId) window.clearInterval(session.intervalId);
     session.stepListener?.remove();
-    // Only stop the native plugin if there is no booking-specific session running.
-    // (The native plugin only supports one monitoring session at a time.)
-    if (!activeSession) {
-      const plugin = getPlugin();
-      if (plugin) await plugin.stopMonitoring();
+    // Stop only the passive track in the foreground service. The booking
+    // track (if any) keeps running independently.
+    const plugin = getPlugin();
+    if (plugin?.stopPassive) {
+      await plugin.stopPassive();
+    } else if (plugin && !activeSession) {
+      // Fallback for older native plugin versions.
+      await plugin.stopMonitoring();
     }
   } catch (error) {
     console.error("[Passive] stop failed", error);
