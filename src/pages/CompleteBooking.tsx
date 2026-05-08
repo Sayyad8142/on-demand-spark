@@ -25,7 +25,31 @@ interface PayoutSummary {
   platform_fee: number;
   gross_amount: number;
   status: string;
+  method?: string | null;
+  payout_method?: string | null;
+  completed_at?: string | null;
+  paid_at?: string | null;
 }
+
+const formatTime = (iso?: string | null) => {
+  try {
+    const d = iso ? new Date(iso) : new Date();
+    return d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
+  } catch {
+    return "";
+  }
+};
+
+const resolvePayoutMethod = (p: PayoutSummary | null): "UPI Transfer" | "Bank Transfer" => {
+  const raw = (p?.method ?? p?.payout_method ?? "upi").toString().toLowerCase();
+  if (raw.includes("bank") || raw === "imps" || raw === "neft" || raw === "rtgs") return "Bank Transfer";
+  return "UPI Transfer";
+};
+
+const isPayoutCredited = (p: PayoutSummary | null) => {
+  const s = (p?.status ?? "").toLowerCase();
+  return s === "paid" || s === "success" || s === "completed" || s === "credited";
+};
 
 // Lightweight haptics using navigator.vibrate (works in Capacitor WebView on Android)
 const haptic = {
