@@ -81,6 +81,12 @@
             android:name=".BookingOverlayService"
             android:exported="false" />
 
+        <!-- Movement Tracking Foreground Service (step counter / passive + booking) -->
+        <service
+            android:name=".MovementTrackingService"
+            android:exported="false"
+            android:foregroundServiceType="health" />
+
         <!-- Notification Receiver -->
         <receiver
             android:name=".NotificationReceiver"

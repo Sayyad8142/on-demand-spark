@@ -15,7 +15,12 @@ interface StepCounterPlugin {
     bookingId: string;
     windowSeconds: number;
   }): Promise<{ status: string; bookingId: string; sensorType?: string }>;
+  /** Stops the booking-specific track only (passive keeps running). */
   stopMonitoring(): Promise<void>;
+  /** Stops only the passive online track. */
+  stopPassive?(): Promise<void>;
+  /** Stops both tracks and tears down the foreground service. */
+  stopAll?(): Promise<void>;
   addListener(
     event: "monitoringComplete" | "stepUpdate",
     cb: (data: MonitoringResult | NativeStepUpdate) => void
@@ -631,11 +636,14 @@ export async function stopPassiveMovementMonitoring(): Promise<void> {
   try {
     if (session.intervalId) window.clearInterval(session.intervalId);
     session.stepListener?.remove();
-    // Only stop the native plugin if there is no booking-specific session running.
-    // (The native plugin only supports one monitoring session at a time.)
-    if (!activeSession) {
-      const plugin = getPlugin();
-      if (plugin) await plugin.stopMonitoring();
+    // Stop only the passive track in the foreground service. The booking
+    // track (if any) keeps running independently.
+    const plugin = getPlugin();
+    if (plugin?.stopPassive) {
+      await plugin.stopPassive();
+    } else if (plugin && !activeSession) {
+      // Fallback for older native plugin versions.
+      await plugin.stopMonitoring();
     }
   } catch (error) {
     console.error("[Passive] stop failed", error);
