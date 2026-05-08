@@ -1,27 +1,35 @@
 package app.didisnow.worker
 
 import android.Manifest
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.getcapacitor.annotation.Permission
 import com.getcapacitor.annotation.PermissionCallback
-import com.getcapacitor.JSObject
 import org.json.JSONObject
 
+/**
+ * StepCounter plugin — public JS API is unchanged. Internally now delegates
+ * sensor work to MovementTrackingService (a true Android Foreground Service)
+ * so step tracking survives backgrounding, screen lock, and activity pauses.
+ *
+ * Two concurrent tracks are supported:
+ *   - bookingId starting with "passive:" → passive online tracking (no auto-stop)
+ *   - any other bookingId               → booking-specific window (auto-stops)
+ */
 @CapacitorPlugin(
     name = "StepCounter",
     permissions = [
@@ -34,35 +42,78 @@ import org.json.JSONObject
 class StepCounterPlugin : Plugin() {
 
     private val TAG = "StepCounterPlugin"
-    private var sensorManager: SensorManager? = null
-    private var stepSensor: Sensor? = null
-    private var sensorType: String? = null
-    private var listener: SensorEventListener? = null
-    private var handler: Handler? = null
-    private var timeoutRunnable: Runnable? = null
+    private var receiverRegistered = false
 
-    // Monitoring state
-    private var baselineSteps: Long = -1
-    private var latestSteps: Long = -1
-    private var monitoringBookingId: String? = null
-    private var pendingCall: PluginCall? = null
+    private val updateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent == null) return
+            when (intent.action) {
+                MovementTrackingService.ACTION_STEP_UPDATE -> {
+                    val data = JSObject()
+                    data.put("bookingId", intent.getStringExtra(MovementTrackingService.EXTRA_BOOKING_ID) ?: "")
+                    data.put("stepCount", intent.getIntExtra(MovementTrackingService.EXTRA_STEP_COUNT, 0))
+                    val raw = intent.getLongExtra(MovementTrackingService.EXTRA_RAW_STEP_VALUE, -1L)
+                    data.put("rawStepValue", if (raw >= 0) raw else JSONObject.NULL)
+                    val baseline = intent.getLongExtra(MovementTrackingService.EXTRA_BASELINE_STEP_VALUE, -1L)
+                    data.put("baselineStepValue", if (baseline >= 0) baseline else JSONObject.NULL)
+                    data.put("sensorType", intent.getStringExtra(MovementTrackingService.EXTRA_SENSOR_TYPE) ?: "none")
+                    data.put("timestamp", intent.getLongExtra(MovementTrackingService.EXTRA_TIMESTAMP, System.currentTimeMillis()))
+                    notifyListeners("stepUpdate", data)
+                }
+                MovementTrackingService.ACTION_MONITORING_COMPLETE -> {
+                    val data = JSObject()
+                    val bookingId = intent.getStringExtra(MovementTrackingService.EXTRA_BOOKING_ID) ?: ""
+                    data.put("bookingId", bookingId)
+                    data.put("stepsInWindow", intent.getIntExtra(MovementTrackingService.EXTRA_STEPS_IN_WINDOW, 0))
+                    val baseline = intent.getLongExtra(MovementTrackingService.EXTRA_BASELINE_STEP_VALUE, -1L)
+                    data.put("baselineStepValue", if (baseline >= 0) baseline else JSONObject.NULL)
+                    val finalVal = intent.getLongExtra(MovementTrackingService.EXTRA_FINAL_STEP_VALUE, -1L)
+                    data.put("finalStepValue", if (finalVal >= 0) finalVal else JSONObject.NULL)
+                    data.put("sensorType", intent.getStringExtra(MovementTrackingService.EXTRA_SENSOR_TYPE) ?: "none")
+                    data.put("windowSeconds", intent.getIntExtra(MovementTrackingService.EXTRA_WINDOW_SECONDS, 0))
+                    notifyListeners("monitoringComplete", data)
+                    Log.d(TAG, "🏁 monitoringComplete forwarded to JS booking=$bookingId")
+                }
+            }
+        }
+    }
+
+    override fun load() {
+        super.load()
+        ensureReceiver()
+    }
+
+    override fun handleOnDestroy() {
+        if (receiverRegistered) {
+            try { LocalBroadcastManager.getInstance(context).unregisterReceiver(updateReceiver) } catch (_: Exception) {}
+            receiverRegistered = false
+        }
+        super.handleOnDestroy()
+    }
+
+    private fun ensureReceiver() {
+        if (receiverRegistered) return
+        val f = IntentFilter().apply {
+            addAction(MovementTrackingService.ACTION_STEP_UPDATE)
+            addAction(MovementTrackingService.ACTION_MONITORING_COMPLETE)
+        }
+        LocalBroadcastManager.getInstance(context).registerReceiver(updateReceiver, f)
+        receiverRegistered = true
+        Log.d(TAG, "📨 LocalBroadcast receiver registered for step updates")
+    }
 
     @PluginMethod
     fun checkSupport(call: PluginCall) {
         val sm = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
         val stepCounter = sm?.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
         val stepDetector = sm?.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
-
         val supported = stepCounter != null || stepDetector != null
         val type = when {
             stepCounter != null -> "step_counter"
             stepDetector != null -> "step_detector"
             else -> "none"
         }
-
-        val ret = JSObject()
-        ret.put("supported", supported)
-        ret.put("sensorType", type)
+        val ret = JSObject().put("supported", supported).put("sensorType", type)
         call.resolve(ret)
     }
 
@@ -72,60 +123,35 @@ class StepCounterPlugin : Plugin() {
             ContextCompat.checkSelfPermission(
                 context, Manifest.permission.ACTIVITY_RECOGNITION
             ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            true
-        }
-
-        Log.d(TAG, "🔍 [Native] ACTIVITY_RECOGNITION checkPermission granted=$granted")
-        val ret = JSObject()
-        ret.put("granted", granted)
-        call.resolve(ret)
+        } else true
+        Log.d(TAG, "🔍 checkPermission granted=$granted")
+        call.resolve(JSObject().put("granted", granted))
     }
 
     @PluginMethod
     fun requestPermission(call: PluginCall) {
-        Log.d(TAG, "🟢 [Native] StepCounterPlugin.requestPermission entered")
+        Log.d(TAG, "🟢 requestPermission entered")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val granted = ContextCompat.checkSelfPermission(
                 context, Manifest.permission.ACTIVITY_RECOGNITION
             ) == PackageManager.PERMISSION_GRANTED
-
             if (granted) {
-                Log.d(TAG, "✅ [Native] ACTIVITY_RECOGNITION already granted")
-                val ret = JSObject()
-                ret.put("granted", true)
-                call.resolve(ret)
+                call.resolve(JSObject().put("granted", true))
             } else {
-                // Request permission via Capacitor's built-in mechanism.
-                // The result is delivered to handlePermissionResult() (annotated
-                // with @PermissionCallback below) — without that annotation
-                // Capacitor cannot route the OS dialog result back here.
-                Log.d(TAG, "📣 [Native] Launching ACTIVITY_RECOGNITION runtime prompt via requestPermissionForAlias")
                 requestPermissionForAlias("activityRecognition", call, "handlePermissionResult")
             }
         } else {
-            // Pre-Q, no permission needed for step sensors
-            Log.d(TAG, "ℹ️ [Native] Pre-Android 10 — ACTIVITY_RECOGNITION auto-granted")
-            val ret = JSObject()
-            ret.put("granted", true)
-            call.resolve(ret)
+            call.resolve(JSObject().put("granted", true))
         }
     }
 
-    // NOTE: Capacitor's @PermissionCallback dispatcher requires the method to
-    // be reachable via reflection from the plugin base class. Keep it `public`
-    // (Kotlin default) — `private fun` here silently breaks the callback on
-    // some Capacitor versions and the OS dialog result never reaches JS.
     @PermissionCallback
     fun handlePermissionResult(call: PluginCall) {
         val granted = ContextCompat.checkSelfPermission(
             context, Manifest.permission.ACTIVITY_RECOGNITION
         ) == PackageManager.PERMISSION_GRANTED
-
-        Log.d(TAG, "🔁 [Native] handlePermissionResult fired — granted=$granted (Build=${Build.MANUFACTURER}/${Build.MODEL})")
-        val ret = JSObject()
-        ret.put("granted", granted)
-        call.resolve(ret)
+        Log.d(TAG, "🔁 handlePermissionResult granted=$granted (${Build.MANUFACTURER}/${Build.MODEL})")
+        call.resolve(JSObject().put("granted", granted))
     }
 
     @PluginMethod
@@ -134,126 +160,73 @@ class StepCounterPlugin : Plugin() {
             call.reject("bookingId is required")
             return
         }
-        val windowSeconds = call.getInt("windowSeconds", 180) ?: 180
+        val windowSeconds = call.getInt("windowSeconds", 300) ?: 300
 
-        Log.d(TAG, "📊 Starting step monitoring for booking $bookingId, window=${windowSeconds}s")
-
-        // Clean up any existing monitoring
-        stopListenerInternal()
+        ensureReceiver()
 
         val sm = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
-        if (sm == null) {
-            call.reject("SensorManager not available")
-            return
-        }
-        sensorManager = sm
-
-        // Prefer TYPE_STEP_COUNTER, fall back to TYPE_STEP_DETECTOR
-        val counter = sm.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
-        val detector = sm.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
+        val counter = sm?.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+        val detector = sm?.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
         val sensor = counter ?: detector
-
         if (sensor == null) {
-            Log.w(TAG, "📊 No step sensor available")
-            val ret = JSObject()
-            ret.put("status", "unsupported")
-            ret.put("bookingId", bookingId)
-            call.resolve(ret)
+            Log.w(TAG, "❌ no step sensor")
+            call.resolve(JSObject().put("status", "unsupported").put("bookingId", bookingId))
+            return
+        }
+        val sensorType = if (counter != null) "step_counter" else "step_detector"
+
+        val isPassive = bookingId.startsWith("passive:")
+        Log.d(TAG, "🚀 startMonitoring booking=$bookingId passive=$isPassive window=${windowSeconds}s sensor=$sensorType")
+
+        try {
+            if (isPassive) {
+                MovementTrackingService.startPassive(context, bookingId)
+            } else {
+                MovementTrackingService.startBooking(context, bookingId, windowSeconds)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ failed to start MovementTrackingService: ${e.message}", e)
+            call.reject("Could not start tracking service: ${e.message}")
             return
         }
 
-        stepSensor = sensor
-        sensorType = if (counter != null) "step_counter" else "step_detector"
-        monitoringBookingId = bookingId
-        baselineSteps = -1
-        latestSteps = -1
-
-        // For step_detector, we count events manually
-        var detectedSteps = 0L
-
-        listener = object : SensorEventListener {
-            override fun onSensorChanged(event: SensorEvent?) {
-                if (event == null) return
-
-                if (sensorType == "step_counter") {
-                    val currentSteps = event.values[0].toLong()
-                    if (baselineSteps == -1L) {
-                        baselineSteps = currentSteps
-                        Log.d(TAG, "📊 Baseline steps: $baselineSteps")
-                    }
-                    latestSteps = currentSteps
-                } else {
-                    // step_detector fires one event per step
-                    detectedSteps++
-                    if (baselineSteps == -1L) baselineSteps = 0
-                    latestSteps = detectedSteps
-                }
-
-                val stepsInWindow = if (sensorType == "step_counter") {
-                    if (baselineSteps >= 0 && latestSteps >= 0) (latestSteps - baselineSteps).toInt().coerceAtLeast(0) else 0
-                } else {
-                    latestSteps.toInt().coerceAtLeast(0)
-                }
-                val updateData = JSObject()
-                updateData.put("bookingId", bookingId)
-                updateData.put("stepCount", stepsInWindow)
-                updateData.put("rawStepValue", if (latestSteps >= 0) latestSteps else JSONObject.NULL)
-                updateData.put("baselineStepValue", if (baselineSteps >= 0) baselineSteps else JSONObject.NULL)
-                updateData.put("sensorType", sensorType)
-                updateData.put("timestamp", System.currentTimeMillis())
-                Log.d(TAG, "📊 stepUpdate booking=$bookingId steps=$stepsInWindow raw=$latestSteps baseline=$baselineSteps")
-                notifyListeners("stepUpdate", updateData)
-            }
-
-            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-        }
-
-        sm.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
-
-        // Set up timeout to auto-complete monitoring
-        handler = Handler(Looper.getMainLooper())
-        timeoutRunnable = Runnable {
-            Log.d(TAG, "📊 Monitoring window complete for booking $bookingId")
-            val stepsInWindow = if (sensorType == "step_counter") {
-                if (baselineSteps >= 0 && latestSteps >= 0) (latestSteps - baselineSteps).toInt() else 0
-            } else {
-                latestSteps.toInt().coerceAtLeast(0)
-            }
-
-            // Notify JS via event
-            val eventData = JSObject()
-            eventData.put("bookingId", bookingId)
-            eventData.put("stepsInWindow", stepsInWindow)
-            eventData.put("baselineStepValue", if (baselineSteps >= 0) baselineSteps else JSONObject.NULL)
-            eventData.put("finalStepValue", if (latestSteps >= 0) latestSteps else JSONObject.NULL)
-            eventData.put("sensorType", sensorType)
-            eventData.put("windowSeconds", windowSeconds)
-            notifyListeners("monitoringComplete", eventData)
-
-            stopListenerInternal()
-        }
-        handler?.postDelayed(timeoutRunnable!!, windowSeconds * 1000L)
-
-        val ret = JSObject()
-        ret.put("status", "started")
-        ret.put("bookingId", bookingId)
-        ret.put("sensorType", sensorType)
-        call.resolve(ret)
+        call.resolve(
+            JSObject()
+                .put("status", "started")
+                .put("bookingId", bookingId)
+                .put("sensorType", sensorType)
+        )
     }
 
     @PluginMethod
     fun stopMonitoring(call: PluginCall) {
-        Log.d(TAG, "📊 Stopping step monitoring manually")
-        stopListenerInternal()
+        Log.d(TAG, "🛑 stopMonitoring (stops booking track only; passive runs independently)")
+        try {
+            // Preserve previous semantics: stopMonitoring() was used to end booking sessions.
+            // Passive tracking has its own dedicated stopPassive entry.
+            MovementTrackingService.stopBooking(context)
+        } catch (e: Exception) {
+            Log.w(TAG, "stopMonitoring error: ${e.message}")
+        }
         call.resolve()
     }
 
-    private fun stopListenerInternal() {
-        listener?.let { sensorManager?.unregisterListener(it) }
-        listener = null
-        timeoutRunnable?.let { handler?.removeCallbacks(it) }
-        timeoutRunnable = null
-        handler = null
-        monitoringBookingId = null
+    @PluginMethod
+    fun stopPassive(call: PluginCall) {
+        Log.d(TAG, "🛑 stopPassive (passive online tracking only)")
+        try { MovementTrackingService.stopPassive(context) } catch (_: Exception) {}
+        call.resolve()
+    }
+
+    @PluginMethod
+    fun stopAll(call: PluginCall) {
+        Log.d(TAG, "🛑 stopAll (stops both passive and booking)")
+        try {
+            val i = Intent(context, MovementTrackingService::class.java).apply {
+                action = MovementTrackingService.ACTION_STOP_ALL
+            }
+            context.startService(i)
+        } catch (_: Exception) {}
+        call.resolve()
     }
 }
