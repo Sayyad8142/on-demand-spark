@@ -1,3 +1,5 @@
+// Passive movement sample sink: lightweight step samples while a worker is online,
+// independent of any active booking. Writes to public.worker_passive_movement.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "https://paywwbuqycovjopryele.supabase.co";
@@ -27,16 +29,16 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const workerId = String(body.worker_id ?? "");
-    const bookingId = String(body.booking_id ?? "");
     const stepCount = Number(body.step_count);
     const previousStepCount = Number(body.previous_step_count ?? 0);
-    const timestamp = typeof body.timestamp === "string" ? body.timestamp : new Date().toISOString();
     const isMoving = Boolean(body.is_moving);
+    const sensorType = typeof body.sensor_type === "string" ? body.sensor_type : null;
+    const sampledAt = typeof body.timestamp === "string" ? body.timestamp : new Date().toISOString();
+    const source = typeof body.source === "string" ? body.source : "passive";
 
     if (!uuidRe.test(workerId)) return json({ error: "bad_worker_id" }, 400);
-    if (!uuidRe.test(bookingId)) return json({ error: "bad_booking_id" }, 400);
     if (!Number.isFinite(stepCount) || stepCount < 0) return json({ error: "bad_step_count" }, 400);
-    if (Number.isNaN(Date.parse(timestamp))) return json({ error: "bad_timestamp" }, 400);
+    if (Number.isNaN(Date.parse(sampledAt))) return json({ error: "bad_timestamp" }, 400);
 
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
@@ -47,70 +49,33 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const authUid = userData.user.id;
 
-    // Resolve caller's worker row using the project-wide pattern
-    // (matches complete-booking-with-otp): user_id = uid::text OR id = uid
     const { data: callerWorker, error: callerErr } = await admin
       .from("workers")
-      .select("id, user_id")
+      .select("id")
       .or(`user_id.eq.${authUid},id.eq.${authUid}`)
       .limit(1)
       .maybeSingle();
 
     if (callerErr) return json({ error: "worker_lookup_failed", detail: callerErr.message }, 500);
     if (!callerWorker) return json({ error: "worker_not_found" }, 404);
+    if (callerWorker.id !== workerId) return json({ error: "worker_not_allowed" }, 403);
 
-    // The body's worker_id MUST refer to the authenticated worker — prevents spoofing
-    if (callerWorker.id !== workerId) {
-      return json({ error: "worker_not_allowed" }, 403);
-    }
-
-    const { data: booking, error: bookingErr } = await admin
-      .from("bookings")
-      .select("id, worker_id, status")
-      .eq("id", bookingId)
-      .maybeSingle();
-
-    if (bookingErr) return json({ error: "booking_lookup_failed", detail: bookingErr.message }, 500);
-    if (!booking || booking.worker_id !== workerId) return json({ error: "booking_not_assigned_to_worker" }, 403);
-
-    const movementStatus = isMoving ? "moving" : "not_moving";
-    const { error: upsertErr } = await admin
-      .from("booking_worker_movement_checks")
-      .upsert({
-        booking_id: bookingId,
-        worker_id: workerId,
-        sensor_supported: true,
-        permission_granted: true,
-        steps_in_window: Math.round(stepCount),
-        final_step_value: Math.round(stepCount),
-        movement_status: movementStatus,
-        low_movement_flag: !isMoving,
-        low_movement_reason: isMoving ? null : "No step increase detected in the current tracking window",
-        checked_at: timestamp,
-        raw_meta: {
-          current_step_count: Math.round(stepCount),
-          previous_step_count: Number.isFinite(previousStepCount) ? Math.round(previousStepCount) : 0,
-          is_moving: isMoving,
-          client_timestamp: timestamp,
-          source: body.source ?? "worker-app",
-          booking_status: booking.status,
-        },
-      }, { onConflict: "booking_id,worker_id" });
-
-    if (upsertErr) return json({ error: "movement_update_failed", detail: upsertErr.message }, 500);
-
-    console.log("[worker-movement-update] success", {
+    const { error: insertErr } = await admin.from("worker_passive_movement").insert({
       worker_id: workerId,
-      booking_id: bookingId,
       step_count: Math.round(stepCount),
+      previous_step_count: Number.isFinite(previousStepCount) ? Math.round(previousStepCount) : 0,
       is_moving: isMoving,
-      timestamp,
+      sensor_type: sensorType,
+      sampled_at: sampledAt,
+      source,
     });
 
-    return json({ ok: true, success: true, movement_status: movementStatus, step_count: Math.round(stepCount) });
+    if (insertErr) return json({ error: "passive_insert_failed", detail: insertErr.message }, 500);
+
+    return json({ ok: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown";
-    console.error("[worker-movement-update] fatal", message);
+    console.error("[worker-passive-movement] fatal", message);
     return json({ error: "fatal", detail: message }, 500);
   }
 });
