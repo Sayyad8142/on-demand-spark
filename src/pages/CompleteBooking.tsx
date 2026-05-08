@@ -148,6 +148,13 @@ export default function CompleteBooking() {
     };
   }, []);
 
+  // Capture local completion time once success flips on (fallback if backend doesn't send it)
+  useEffect(() => {
+    if (success && !completedAt) {
+      setCompletedAt(payout?.completed_at ?? payout?.paid_at ?? new Date().toISOString());
+    }
+  }, [success, payout, completedAt]);
+
   const triggerShake = () => {
     setShake(true);
     setTimeout(() => setShake(false), 500);
