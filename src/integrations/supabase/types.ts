@@ -3915,6 +3915,42 @@ export type Database = {
           },
         ]
       }
+      worker_passive_movement: {
+        Row: {
+          created_at: string
+          id: string
+          is_moving: boolean
+          previous_step_count: number
+          sampled_at: string
+          sensor_type: string | null
+          source: string | null
+          step_count: number
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_moving?: boolean
+          previous_step_count?: number
+          sampled_at?: string
+          sensor_type?: string | null
+          source?: string | null
+          step_count?: number
+          worker_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_moving?: boolean
+          previous_step_count?: number
+          sampled_at?: string
+          sensor_type?: string | null
+          source?: string | null
+          step_count?: number
+          worker_id?: string
+        }
+        Relationships: []
+      }
       worker_payout_audit_log: {
         Row: {
           action: string
