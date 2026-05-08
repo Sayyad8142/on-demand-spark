@@ -19,21 +19,29 @@ class BootReceiver : BroadcastReceiver() {
             Log.d("BootReceiver", "Device booted, was logged in: $wasLoggedIn, was available: $wasAvailable")
             
             if (wasLoggedIn) {
-                // No foreground service needed - FCM handles notifications
-                Log.d("BootReceiver", "Device booted, no foreground service – FCM handles notifications")
-                
-                // If user was available, restart location tracking
+                // No FCM-only foreground service — FCM handles notifications.
+                Log.d("BootReceiver", "Device booted, FCM handles notifications")
+
+                // Restart movement tracking foreground service in passive mode
+                // so step tracking survives reboot. The actual workerId is unknown
+                // here; JS-side App.tsx will re-issue startPassiveMovementMonitoring
+                // with the correct workerId when it loads — this just keeps the
+                // service warm if the worker was online before reboot.
                 if (wasAvailable) {
+                    try {
+                        MovementTrackingService.startPassive(context, "passive:boot")
+                        Log.d("BootReceiver", "MovementTrackingService restarted (passive boot warm-up)")
+                    } catch (e: Exception) {
+                        Log.w("BootReceiver", "Could not warm-up MovementTrackingService: ${e.message}")
+                    }
+
                     val locationServiceIntent = Intent(context, LocationTrackingService::class.java)
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         context.startForegroundService(locationServiceIntent)
                     } else {
                         context.startService(locationServiceIntent)
                     }
-                    
-                    // Also schedule WorkManager as backup
                     LocationUpdateWorker.schedule(context)
-                    
                     Log.d("BootReceiver", "LocationTrackingService restarted after boot")
                 }
             }
