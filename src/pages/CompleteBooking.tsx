@@ -553,14 +553,28 @@ export default function CompleteBooking() {
                 <ShieldCheck className="w-3.5 h-3.5" />
                 Payment Secured
               </div>
-              <div className="inline-flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-900 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                Payout Processing
-              </div>
+              {isPayoutCredited(payout) ? (
+                <div className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-900 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm">
+                  <Check className="w-3.5 h-3.5" />
+                  Amount Credited
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-900 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Payout Processing
+                </div>
+              )}
             </div>
 
+            {/* Completed at */}
+            {completedAt && (
+              <p className="text-center text-xs text-muted-foreground">
+                Job completed at: <span className="font-semibold text-foreground">{formatTime(completedAt)}</span>
+              </p>
+            )}
+
             {/* Earnings breakdown card */}
-            {payout && (
+            {payout ? (
               <div className="w-full max-w-sm mx-auto bg-card rounded-3xl p-5 shadow-xl border border-green-100 dark:border-green-900/40">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
@@ -593,17 +607,25 @@ export default function CompleteBooking() {
 
                 {/* Payout meta */}
                 <div className="mt-4 space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5" />
-                      Expected Credit
-                    </span>
-                    <span className="font-semibold text-foreground">Within 24 hours</span>
-                  </div>
+                  {!isPayoutCredited(payout) && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5" />
+                        Expected Credit
+                      </span>
+                      <span className="font-semibold text-foreground">Within 24 hours</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Payout Method</span>
-                    <span className="font-semibold text-foreground">UPI Transfer</span>
+                    <span className="font-semibold text-foreground">{resolvePayoutMethod(payout)}</span>
                   </div>
+                  {completedAt && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Completed At</span>
+                      <span className="font-semibold text-foreground">{formatTime(completedAt)}</span>
+                    </div>
+                  )}
                   {bookingId && (
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Booking ID</span>
@@ -612,22 +634,37 @@ export default function CompleteBooking() {
                   )}
                 </div>
               </div>
+            ) : (
+              <div className="max-w-sm mx-auto bg-muted/50 border border-border rounded-2xl p-4 text-center">
+                <p className="text-sm font-semibold text-foreground">
+                  Job completed successfully.
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Payout details are being updated. Check the Earnings tab in a moment.
+                </p>
+              </div>
             )}
 
             {/* Reassurance message */}
-            <div className="max-w-sm mx-auto bg-pink-50 dark:bg-pink-950/20 border border-pink-100 dark:border-pink-900/40 rounded-2xl p-4 text-center">
-              <p className="text-sm font-semibold text-pink-900 dark:text-pink-300">
-                💸 Your payout has been initiated
-              </p>
-              <p className="text-xs text-pink-800/80 dark:text-pink-400/80 mt-1 leading-relaxed">
-                The amount will be credited to your registered UPI shortly. You can track all payouts in the Earnings tab.
-              </p>
-            </div>
+            {payout && (
+              <div className="max-w-sm mx-auto bg-pink-50 dark:bg-pink-950/20 border border-pink-100 dark:border-pink-900/40 rounded-2xl p-4 text-center">
+                <p className="text-sm font-semibold text-pink-900 dark:text-pink-300">
+                  {isPayoutCredited(payout)
+                    ? "✅ Amount credited to your account"
+                    : "💸 Your payout has been initiated"}
+                </p>
+                <p className="text-xs text-pink-800/80 dark:text-pink-400/80 mt-1 leading-relaxed">
+                  {isPayoutCredited(payout)
+                    ? `The amount has been sent via ${resolvePayoutMethod(payout)}. Track all payouts in the Earnings tab.`
+                    : `The amount will be credited to your registered ${resolvePayoutMethod(payout) === "Bank Transfer" ? "bank account" : "UPI"} shortly. You can track all payouts in the Earnings tab.`}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Sticky footer */}
           <div
-            className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom),1rem)] border-t bg-background"
+            className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom),1rem)] border-t bg-background space-y-2"
             style={{ boxShadow: "0 -4px 12px rgba(0,0,0,0.04)" }}
           >
             <Button
@@ -636,6 +673,16 @@ export default function CompleteBooking() {
             >
               <Home className="w-5 h-5 mr-2" />
               Go to Home
+            </Button>
+            <Button
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent("bookingCompleted", { detail: { bookingId } }));
+                navigate("/earnings");
+              }}
+              variant="outline"
+              className="w-full h-12 text-sm font-bold rounded-2xl border-pink-600 text-pink-600 hover:bg-pink-50 hover:text-pink-700"
+            >
+              View Earnings
             </Button>
           </div>
         </>
