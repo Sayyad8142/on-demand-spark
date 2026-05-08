@@ -117,12 +117,6 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
           </div>
         </div>
 
-        {reason && (
-          <div className="text-xs bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-3 text-blue-900 dark:text-blue-200">
-            <span className="font-semibold">Note: </span>{reason}
-          </div>
-        )}
-
         <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3">
           <div className="flex items-center gap-1.5 mb-2">
             <Lightbulb className="w-4 h-4 text-amber-600 dark:text-amber-400" />
