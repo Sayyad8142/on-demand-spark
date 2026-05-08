@@ -5,8 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Loader2, Wallet, CheckCircle2, XCircle, Clock, RefreshCw, IndianRupee, TrendingUp, AlertCircle } from "lucide-react";
+import { ArrowLeft, Loader2, Wallet, CheckCircle2, XCircle, Clock, RefreshCw, IndianRupee, TrendingUp, AlertCircle, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
+import { PAYOUT_ESTIMATING_LABEL } from "@/lib/payoutStatus";
 
 interface PayoutRow {
   id: string;
@@ -20,6 +21,8 @@ interface PayoutRow {
   paid_at: string | null;
   created_at: string;
   upi_ref_id?: string | null;
+  /** Synthetic row for completed bookings without a payout record yet */
+  isEstimate?: boolean;
 }
 
 interface EarningsSummary {
@@ -77,8 +80,41 @@ export default function Earnings() {
       .eq("worker_id", workerId)
       .order("created_at", { ascending: false });
 
+    // Also fetch completed bookings to surface ones missing a payout row
+    const { data: completedBookings } = await supabase
+      .from("bookings")
+      .select("id, price_inr, completed_at, created_at")
+      .eq("worker_id", workerId)
+      .eq("status", "completed")
+      .order("completed_at", { ascending: false });
+
     if (!error && data) {
-      setPayouts(data);
+      const payoutBookingIds = new Set(data.map((p) => p.booking_id));
+      const estimates: PayoutRow[] = (completedBookings || [])
+        .filter((b) => !payoutBookingIds.has(b.id) && b.price_inr != null)
+        .map((b) => {
+          const gross = Number(b.price_inr) || 0;
+          const fee = Math.round(gross * 0.2);
+          const net = gross - fee;
+          return {
+            id: `estimate-${b.id}`,
+            booking_id: b.id,
+            gross_amount: gross,
+            platform_fee: fee,
+            payout_amount: net,
+            status: "estimating",
+            payout_method: null,
+            failure_reason: null,
+            paid_at: null,
+            created_at: b.completed_at || b.created_at,
+            isEstimate: true,
+          };
+        });
+
+      const merged = [...data, ...estimates].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      setPayouts(merged);
 
       const now = new Date();
       const todayStr = now.toISOString().split("T")[0];
@@ -141,6 +177,7 @@ export default function Earnings() {
       case "paid": return { label: "Paid", icon: CheckCircle2, cls: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" };
       case "processing": case "pending": case "approved": return { label: "Processing", icon: Clock, cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" };
       case "failed": case "reversed": return { label: "Failed", icon: XCircle, cls: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" };
+      case "estimating": return { label: PAYOUT_ESTIMATING_LABEL, icon: HelpCircle, cls: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" };
       default: return { label: "Processing", icon: Clock, cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" };
     }
   };
