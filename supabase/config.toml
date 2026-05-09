@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.worker-movement-update]
 verify_jwt = false
+
+[functions.worker-boot-ping]
+verify_jwt = false
