@@ -41,6 +41,15 @@ public class MyFirebaseService extends FirebaseMessagingService {
     Log.d(TAG, "═══════════════════════════════════════════════════════════");
     Log.d(TAG, "📩 From: " + message.getFrom());
     Log.d(TAG, "📩 Message ID: " + message.getMessageId());
+    WorkerLog.INSTANCE.add(getApplicationContext(), "FCM", "onMessageReceived id=" + message.getMessageId());
+
+    // Notify backend that this device is reachable (updates last_notification_received_at).
+    new Thread(new Runnable() {
+      @Override public void run() {
+        BackendSync.INSTANCE.pingBootSync(getApplicationContext(), "fcm_received", null);
+      }
+    }, "fcm-recv-ping").start();
+
     
     // Log the FULL data payload for debugging
     Map<String, String> data = message.getData();
