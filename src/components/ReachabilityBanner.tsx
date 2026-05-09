@@ -37,14 +37,14 @@ export function ReachabilityBanner() {
   const [state, setState] = useState<State | null>(null);
 
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.id) return;
     let cancel = false;
 
     const load = async () => {
       const { data } = await supabase
         .from("workers")
         .select("availability_state")
-        .or(`user_id.eq.${user.uid},id.eq.${user.uid}`)
+        .or(`user_id.eq.${user.id},id.eq.${user.id}`)
         .maybeSingle();
       if (!cancel) setState((data?.availability_state as State) ?? null);
     };
@@ -54,7 +54,7 @@ export function ReachabilityBanner() {
       cancel = true;
       clearInterval(id);
     };
-  }, [user?.uid]);
+  }, [user?.id]);
 
   if (!state || !COPY[state]) return null;
   const { title, body } = COPY[state]!;
