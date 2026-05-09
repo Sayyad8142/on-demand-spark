@@ -212,16 +212,27 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Query eligible workers — now also fetch token health fields
+    // Query eligible workers — now also fetch token health + reachability fields.
+    // Reachability guard (Phase 2): excludes workers in TOKEN_STALE / NOTIFICATION_BLOCKED
+    // states or currently in dispatch cooldown. Gated by env flag for safe rollout.
+    const REACHABILITY_GUARD = (Deno.env.get("DISPATCH_REACHABILITY_GUARD") ?? "1") === "1";
+
     let workersQuery = supabase
       .from("workers")
-      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng, fcm_token, fcm_token_status")
+      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng, fcm_token, fcm_token_status, availability_state, dispatch_cooldown_until")
       .eq("is_active", true)
       .eq("is_available", true)
       .eq("is_busy", false)
       .eq("payout_ready", true)
       .neq("is_blocked", true)
       .contains("service_types", [b.service_type]);
+
+    if (REACHABILITY_GUARD) {
+      const nowIso = new Date().toISOString();
+      workersQuery = workersQuery
+        .not("availability_state", "in", "(TOKEN_STALE,NOTIFICATION_BLOCKED)")
+        .or(`dispatch_cooldown_until.is.null,dispatch_cooldown_until.lt.${nowIso}`);
+    }
     
     if (communityData?.id) {
       workersQuery = workersQuery.eq("selected_community_id", communityData.id);
