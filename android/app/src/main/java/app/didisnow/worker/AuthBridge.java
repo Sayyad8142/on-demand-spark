@@ -97,4 +97,75 @@ public class AuthBridge extends Plugin {
         ret.put("ok", success);
         call.resolve(ret);
     }
+
+    /**
+     * Persists the worker's user_id (Firebase UID) so background components
+     * (BootReceiver, FcmBootSyncWorker, MyFirebaseService) can ping the backend
+     * even when the JS layer is not running.
+     */
+    @PluginMethod
+    public void saveUserId(PluginCall call) {
+        String userId = call.getString("userId", null);
+        JSObject ret = new JSObject();
+        if (userId == null || userId.isEmpty()) {
+            prefs().edit().remove("user_id").commit();
+            ret.put("ok", true);
+            ret.put("cleared", true);
+            call.resolve(ret);
+            return;
+        }
+        boolean ok = prefs().edit().putString("user_id", userId).commit();
+        ret.put("ok", ok);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void getUserId(PluginCall call) {
+        String userId = prefs().getString("user_id", null);
+        JSObject ret = new JSObject();
+        ret.put("userId", userId);
+        call.resolve(ret);
+    }
+
+    /** Returns the persisted ring-buffer log (JSON array string). */
+    @PluginMethod
+    public void readWorkerLog(PluginCall call) {
+        String json = WorkerLog.INSTANCE.read(getContext());
+        JSObject ret = new JSObject();
+        ret.put("log", json);
+        call.resolve(ret);
+    }
+
+    /** Diagnostic snapshot for the AuthDebug screen. */
+    @PluginMethod
+    public void getDiagnostics(PluginCall call) {
+        SharedPreferences p = prefs();
+        JSObject ret = new JSObject();
+        ret.put("userId", p.getString("user_id", null));
+        ret.put("isLoggedIn", p.getBoolean("is_logged_in", false));
+        ret.put("isAvailable", p.getBoolean("is_available", false));
+        ret.put("pendingFcmToken", p.getString("pending_fcm_token", null));
+        ret.put("pendingFcmTokenAt", p.getLong("pending_fcm_token_timestamp", 0L));
+        ret.put("manufacturer", android.os.Build.MANUFACTURER);
+        ret.put("model", android.os.Build.MODEL);
+        ret.put("androidVersion", android.os.Build.VERSION.RELEASE);
+        try {
+            android.os.PowerManager pm = (android.os.PowerManager)
+                getContext().getSystemService(android.content.Context.POWER_SERVICE);
+            ret.put(
+                "ignoringBatteryOptimizations",
+                pm != null && pm.isIgnoringBatteryOptimizations(getContext().getPackageName())
+            );
+        } catch (Exception e) {
+            ret.put("ignoringBatteryOptimizations", false);
+        }
+        try {
+            boolean notifEnabled = androidx.core.app.NotificationManagerCompat
+                .from(getContext()).areNotificationsEnabled();
+            ret.put("notificationsEnabled", notifEnabled);
+        } catch (Exception e) {
+            ret.put("notificationsEnabled", false);
+        }
+        call.resolve(ret);
+    }
 }

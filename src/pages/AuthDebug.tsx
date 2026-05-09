@@ -70,7 +70,28 @@ interface NotificationDiagnostics {
   notificationPermissionStatus: PermissionStatus | "loading";
   lastTokenUpdatedAt: string | null;
   lastSeenAt: string | null;
+  lastNotificationReceivedAt: string | null;
+  lastBootAt: string | null;
+  lastBootOem: string | null;
   appVersion: string;
+}
+
+interface NativeDiagnostics {
+  userId: string | null;
+  isLoggedIn: boolean;
+  isAvailable: boolean;
+  manufacturer: string | null;
+  model: string | null;
+  androidVersion: string | null;
+  ignoringBatteryOptimizations: boolean;
+  notificationsEnabled: boolean;
+  pendingFcmTokenAt: number;
+}
+
+interface NativeLogEntry {
+  t: string;
+  tag: string;
+  msg: string;
 }
 
 // Derive type from the actual function return
@@ -97,6 +118,8 @@ export default function AuthDebug() {
   const [copied, setCopied] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [notificationDiagnostics, setNotificationDiagnostics] = useState<NotificationDiagnostics | null>(null);
+  const [nativeDiagnostics, setNativeDiagnostics] = useState<NativeDiagnostics | null>(null);
+  const [nativeLog, setNativeLog] = useState<NativeLogEntry[]>([]);
   const autoRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadDebugInfo = useCallback(async () => {
@@ -109,16 +132,17 @@ export default function AuthDebug() {
       const permissionState = await checkNotificationPermission();
       let workerResult = { data: null as any, error: null as any };
       if (user?.id) {
+        const cols = 'id, fcm_token, fcm_token_updated_at, last_seen_at, last_notification_received_at, last_boot_at, last_boot_oem';
         workerResult = await supabase
           .from('workers')
-          .select('id, fcm_token, fcm_token_updated_at, last_seen_at')
+          .select(cols)
           .eq('user_id', user.id)
           .maybeSingle();
 
         if (!workerResult.data && !workerResult.error && UUID_RE.test(user.id)) {
           workerResult = await supabase
             .from('workers')
-            .select('id, fcm_token, fcm_token_updated_at, last_seen_at')
+            .select(cols)
             .eq('id', user.id)
             .maybeSingle();
         }
@@ -132,8 +156,33 @@ export default function AuthDebug() {
         notificationPermissionStatus: permissionState.status,
         lastTokenUpdatedAt: workerResult.data?.fcm_token_updated_at ?? null,
         lastSeenAt: workerResult.data?.last_seen_at ?? null,
+        lastNotificationReceivedAt: workerResult.data?.last_notification_received_at ?? null,
+        lastBootAt: workerResult.data?.last_boot_at ?? null,
+        lastBootOem: workerResult.data?.last_boot_oem ?? null,
         appVersion: CURRENT_VERSION_NAME,
       });
+
+      // Native diagnostics + logs (Android only)
+      if (Capacitor.isNativePlatform()) {
+        const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+        if (AuthBridge?.getDiagnostics) {
+          try {
+            const d = await AuthBridge.getDiagnostics();
+            setNativeDiagnostics(d as NativeDiagnostics);
+          } catch (e) {
+            console.warn('[AuthDebug] getDiagnostics failed', e);
+          }
+        }
+        if (AuthBridge?.readWorkerLog) {
+          try {
+            const r = await AuthBridge.readWorkerLog();
+            const arr = JSON.parse(r?.log || '[]') as NativeLogEntry[];
+            setNativeLog(arr.slice(-50).reverse());
+          } catch (e) {
+            console.warn('[AuthDebug] readWorkerLog failed', e);
+          }
+        }
+      }
 
       // Reload from persistent storage
       await reloadSessionFromStorage();
@@ -391,9 +440,68 @@ export default function AuthDebug() {
             <DebugRow label="Notification Permission" value={notificationDiagnostics?.notificationPermissionStatus || 'loading'} />
             <DebugRow label="Last Token Updated" value={notificationDiagnostics?.lastTokenUpdatedAt ? format(new Date(notificationDiagnostics.lastTokenUpdatedAt), 'dd MMM HH:mm') : 'N/A'} />
             <DebugRow label="Last Seen At" value={notificationDiagnostics?.lastSeenAt ? format(new Date(notificationDiagnostics.lastSeenAt), 'dd MMM HH:mm') : 'N/A'} />
+            <DebugRow label="Last FCM Received" value={notificationDiagnostics?.lastNotificationReceivedAt ? format(new Date(notificationDiagnostics.lastNotificationReceivedAt), 'dd MMM HH:mm') : 'Never'} />
+            <DebugRow label="Last Boot Ping" value={notificationDiagnostics?.lastBootAt ? format(new Date(notificationDiagnostics.lastBootAt), 'dd MMM HH:mm') : 'Never'} />
+            <DebugRow label="Boot OEM" value={notificationDiagnostics?.lastBootOem || 'N/A'} />
             <DebugRow label="App Version" value={notificationDiagnostics?.appVersion || CURRENT_VERSION_NAME} />
           </CardContent>
         </Card>
+
+        {/* Background Reliability (Native) */}
+        {Capacitor.isNativePlatform() && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Background Reliability</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-xs font-mono">
+              <DebugRow label="User ID Stored" value={nativeDiagnostics?.userId ? 'Yes' : 'No'} />
+              <DebugRow label="Logged In Flag" value={nativeDiagnostics?.isLoggedIn ? 'Yes' : 'No'} />
+              <DebugRow label="Available Flag" value={nativeDiagnostics?.isAvailable ? 'Yes' : 'No'} />
+              <DebugRow label="Notifications Enabled" value={nativeDiagnostics?.notificationsEnabled ? 'Yes' : 'No'} />
+              <DebugRow
+                label="Battery Opt Ignored"
+                value={nativeDiagnostics?.ignoringBatteryOptimizations ? 'Yes ✓' : 'No ✗'}
+              />
+              <DebugRow label="Manufacturer" value={nativeDiagnostics?.manufacturer || 'N/A'} />
+              <DebugRow label="Model" value={nativeDiagnostics?.model || 'N/A'} />
+              <DebugRow label="Android" value={nativeDiagnostics?.androidVersion || 'N/A'} />
+              <DebugRow
+                label="Pending Token At"
+                value={
+                  nativeDiagnostics?.pendingFcmTokenAt
+                    ? format(new Date(nativeDiagnostics.pendingFcmTokenAt), 'dd MMM HH:mm')
+                    : 'None'
+                }
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Native Worker Log */}
+        {Capacitor.isNativePlatform() && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Native Log ({nativeLog.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {nativeLog.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No native events yet</p>
+              ) : (
+                <div className="space-y-1 max-h-48 overflow-y-auto">
+                  {nativeLog.map((e, i) => (
+                    <div key={i} className="text-[10px] font-mono flex gap-1.5">
+                      <span className="text-muted-foreground shrink-0">
+                        {e.t.slice(11, 19)}
+                      </span>
+                      <span className="text-primary shrink-0">[{e.tag}]</span>
+                      <span className="break-all">{e.msg}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Storage Sync Status */}
         <Card>
