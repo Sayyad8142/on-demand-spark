@@ -225,7 +225,7 @@ async function sendMovementUpdate(reason: "interval" | "failsafe" | "final" | "s
     if (error) throw error;
     session.lastSentAt = Date.now();
     setStatus({ lastSentAt: nowIso, lastSendOk: true, lastError: null });
-    console.log("[Movement] API send success", { reason, response: data });
+    console.log("[Movement] Supabase log inserted", { booking_id: session.bookingId, worker_id: session.workerId, step_count: session.lastSteps, reason });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     setStatus({ lastSendOk: false, lastError: message, warning: `⚠️ Step tracking API failed: ${message}` });
