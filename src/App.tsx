@@ -314,7 +314,7 @@ function AppInner() {
       void stopMovementMonitoring();
       return;
     }
-    console.log(`[Movement] booking accepted — starting tracking booking_id=${trackedJob!.id} worker_id=${worker.id} status=${status}`);
+    console.log("[Movement] booking accepted");
     startMovementMonitoring(trackedJob!.id, worker.id).catch((error) => {
       console.error("[Movement] active-job start failed", error);
     });
