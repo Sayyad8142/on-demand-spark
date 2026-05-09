@@ -18,7 +18,10 @@ import { createClient } from "npm:@supabase/supabase-js@2.50.0";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const KEEPALIVE_ENABLED = (Deno.env.get("KEEPALIVE_ENABLED") ?? "true").toLowerCase() !== "false";
+// HARD KILL SWITCH — paused due to Supabase Disk IO budget warning.
+// Keepalive is disabled by default; native app boot/FCM recovery still works.
+// To re-enable later, set KEEPALIVE_ENABLED=true in edge function secrets.
+const KEEPALIVE_ENABLED = (Deno.env.get("KEEPALIVE_ENABLED") ?? "false").toLowerCase() === "true";
 const MIN_INTERVAL_MIN = Number(Deno.env.get("KEEPALIVE_MIN_INTERVAL_MINUTES") ?? "60");
 const MAX_BATCH = Math.min(Number(Deno.env.get("KEEPALIVE_MAX_BATCH") ?? "150"), 500);
 const STALE_MIN = 45; // primary signals considered stale after 45 min
