@@ -23,7 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { DEMO_WORKER, DEMO_ACTIVE_JOB, DEMO_BOOKINGS } from "@/config/demoData";
-import { startMovementMonitoring, stopMovementMonitoring } from "@/lib/stepMonitoring";
+// Movement monitoring is owned by App.tsx — no imports needed here.
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
