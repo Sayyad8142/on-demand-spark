@@ -64,7 +64,7 @@ export default function BottomNav() {
                 className="flex flex-col items-center justify-center flex-1 h-full group focus:outline-none"
               >
                 <div
-                  className="-mt-8 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg shadow-[#16C75A]/40 ring-4 ring-background transition-all duration-150 active:scale-95 group-hover:brightness-110"
+                  className="-mt-7 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg shadow-[#16C75A]/40 ring-4 ring-background transition-all duration-150 active:scale-95 group-hover:brightness-110"
                   style={{ backgroundColor: '#16C75A' }}
                 >
                   <Phone className="w-6 h-6 fill-white" strokeWidth={2.5} />
