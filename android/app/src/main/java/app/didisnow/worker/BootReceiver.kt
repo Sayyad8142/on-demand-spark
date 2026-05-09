@@ -8,42 +8,58 @@ import android.util.Log
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
-        if (intent?.action == Intent.ACTION_BOOT_COMPLETED || 
-            intent?.action == "android.intent.action.QUICKBOOT_POWERON") {
-            
-            // Check if user was logged in and available before reboot
-            val prefs = context.getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
-            val wasLoggedIn = prefs.getBoolean("is_logged_in", false)
-            val wasAvailable = prefs.getBoolean("is_available", false)
-            
-            Log.d("BootReceiver", "Device booted, was logged in: $wasLoggedIn, was available: $wasAvailable")
-            
-            if (wasLoggedIn) {
-                // No FCM-only foreground service — FCM handles notifications.
-                Log.d("BootReceiver", "Device booted, FCM handles notifications")
+        val action = intent?.action ?: return
+        WorkerLog.add(context, "BOOT", "Receiver fired action=$action")
 
-                // Restart movement tracking foreground service in passive mode
-                // so step tracking survives reboot. The actual workerId is unknown
-                // here; JS-side App.tsx will re-issue startPassiveMovementMonitoring
-                // with the correct workerId when it loads — this just keeps the
-                // service warm if the worker was online before reboot.
-                if (wasAvailable) {
-                    try {
-                        MovementTrackingService.startPassive(context, "passive:boot")
-                        Log.d("BootReceiver", "MovementTrackingService restarted (passive boot warm-up)")
-                    } catch (e: Exception) {
-                        Log.w("BootReceiver", "Could not warm-up MovementTrackingService: ${e.message}")
-                    }
+        val isBoot = action == Intent.ACTION_BOOT_COMPLETED ||
+            action == "android.intent.action.QUICKBOOT_POWERON"
+        val isPackageReplaced = action == Intent.ACTION_MY_PACKAGE_REPLACED
 
-                    val locationServiceIntent = Intent(context, LocationTrackingService::class.java)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        context.startForegroundService(locationServiceIntent)
-                    } else {
-                        context.startService(locationServiceIntent)
-                    }
-                    LocationUpdateWorker.schedule(context)
-                    Log.d("BootReceiver", "LocationTrackingService restarted after boot")
+        if (!isBoot && !isPackageReplaced) return
+
+        val prefs = context.getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
+        val wasLoggedIn = prefs.getBoolean("is_logged_in", false)
+        val wasAvailable = prefs.getBoolean("is_available", false)
+
+        Log.d(
+            "BootReceiver",
+            "action=$action wasLoggedIn=$wasLoggedIn wasAvailable=$wasAvailable"
+        )
+
+        if (!wasLoggedIn) {
+            WorkerLog.add(context, "BOOT", "Skip — not logged in")
+            return
+        }
+
+        // 1. Schedule silent FCM token sync to backend (works even if user
+        //    never opens the app after reboot).
+        val event = if (isPackageReplaced) "package_replaced" else "boot"
+        try {
+            FcmBootSyncWorker.enqueue(context, event)
+        } catch (e: Exception) {
+            WorkerLog.add(context, "BOOT", "Failed to enqueue FcmBootSyncWorker: ${e.message}")
+        }
+
+        // 2. Re-warm movement / location services if worker was online.
+        if (wasAvailable && isBoot) {
+            try {
+                MovementTrackingService.startPassive(context, "passive:boot")
+                WorkerLog.add(context, "SVC", "MovementTrackingService re-warmed")
+            } catch (e: Exception) {
+                WorkerLog.add(context, "SVC", "MovementTrackingService warm-up failed: ${e.message}")
+            }
+
+            try {
+                val locationServiceIntent = Intent(context, LocationTrackingService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(locationServiceIntent)
+                } else {
+                    context.startService(locationServiceIntent)
                 }
+                LocationUpdateWorker.schedule(context)
+                WorkerLog.add(context, "SVC", "LocationTrackingService restarted")
+            } catch (e: Exception) {
+                WorkerLog.add(context, "SVC", "LocationTrackingService restart failed: ${e.message}")
             }
         }
     }
