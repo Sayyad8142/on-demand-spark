@@ -369,6 +369,9 @@ export default function Home() {
       
       </div>
 
+      {/* Phase 2 reachability warning (hidden when healthy) */}
+      {!isGuestMode && worker && <ReachabilityBanner />}
+
       {/* Upcoming Bookings Bar */}
       {!isGuestMode && worker && <UpcomingBookingsBar />}
     </div>;
