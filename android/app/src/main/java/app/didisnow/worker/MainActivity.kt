@@ -36,6 +36,8 @@ class ForegroundServicePlugin : Plugin() {
 }
 
 class MainActivity : BridgeActivity() {
+    private val inAppUpdateManager by lazy { InAppUpdateManager(this) }
+
     private val cancellationReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val bookingId = intent?.getStringExtra("booking_id") ?: ""
@@ -71,6 +73,10 @@ class MainActivity : BridgeActivity() {
         // Handle intent if launched from overlay
         handleNavigationIntent(intent)
         deliverPendingCancellationAlert()
+
+        // Google Play In-App Updates — Immediate flow (primary force update)
+        // Supabase app_config force update screen remains as fallback.
+        inAppUpdateManager.checkForUpdate()
     }
 
     override fun onResume() {
@@ -80,6 +86,13 @@ class MainActivity : BridgeActivity() {
             IntentFilter("BOOKING_CANCELLED_ALERT")
         )
         deliverPendingCancellationAlert()
+        inAppUpdateManager.resumeUpdateIfPending()
+    }
+
+    @Deprecated("Capacitor still routes legacy startActivityForResult here")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        inAppUpdateManager.handleActivityResult(requestCode, resultCode, data)
     }
 
     override fun onPause() {
