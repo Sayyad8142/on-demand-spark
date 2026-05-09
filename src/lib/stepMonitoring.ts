@@ -388,7 +388,7 @@ export async function startMovementMonitoring(bookingId: string, workerId: strin
     });
 
     const startResult = await plugin.startMonitoring({ bookingId, windowSeconds: MONITORING_WINDOW_SECONDS });
-    console.log(`[Movement] ✅ Monitoring started — booking=${bookingId} window=${MONITORING_WINDOW_SECONDS}s minSteps=${minSteps}`, startResult);
+    console.log("[Movement] native service started", { booking_id: bookingId, window_seconds: MONITORING_WINDOW_SECONDS, sensor_type: startResult.sensorType ?? support.sensorType, min_steps: minSteps });
     setStatus({ status: "Not Moving", warning: null, sensorType: startResult.sensorType ?? support.sensorType });
     startLiveLoop();
     await sendMovementUpdate("startup");
