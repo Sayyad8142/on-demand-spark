@@ -2364,6 +2364,48 @@ export type Database = {
         }
         Relationships: []
       }
+      payout_provider_config: {
+        Row: {
+          active_payout_provider: string
+          allow_provider_fallback: boolean
+          cashfree_enabled: boolean
+          created_at: string
+          id: number
+          notes: string | null
+          payout_auto_enabled: boolean
+          payout_mode_preference: string
+          razorpayx_enabled: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active_payout_provider?: string
+          allow_provider_fallback?: boolean
+          cashfree_enabled?: boolean
+          created_at?: string
+          id?: number
+          notes?: string | null
+          payout_auto_enabled?: boolean
+          payout_mode_preference?: string
+          razorpayx_enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active_payout_provider?: string
+          allow_provider_fallback?: boolean
+          cashfree_enabled?: boolean
+          created_at?: string
+          id?: number
+          notes?: string | null
+          payout_auto_enabled?: boolean
+          payout_mode_preference?: string
+          razorpayx_enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       pricing: {
         Row: {
           active: boolean
@@ -4048,6 +4090,7 @@ export type Database = {
           platform_fee: number
           processed_at: string | null
           processed_by_admin_id: string | null
+          provider: string | null
           raw_response: Json | null
           razorpay_payout_id: string | null
           reference_id: string | null
@@ -4080,6 +4123,7 @@ export type Database = {
           platform_fee?: number
           processed_at?: string | null
           processed_by_admin_id?: string | null
+          provider?: string | null
           raw_response?: Json | null
           razorpay_payout_id?: string | null
           reference_id?: string | null
@@ -4112,6 +4156,7 @@ export type Database = {
           platform_fee?: number
           processed_at?: string | null
           processed_by_admin_id?: string | null
+          provider?: string | null
           raw_response?: Json | null
           razorpay_payout_id?: string | null
           reference_id?: string | null
@@ -4456,6 +4501,7 @@ export type Database = {
           payout_address: string | null
           payout_email: string | null
           payout_last_error: string | null
+          payout_provider_preference: string | null
           payout_ready: boolean
           payout_verified_at: string | null
           phone: string
@@ -4467,8 +4513,10 @@ export type Database = {
           push_health_status: string
           rating: number | null
           rating_bucket: string
+          razorpay_bank_fund_account_id: string | null
           razorpay_contact_id: string | null
           razorpay_fund_account_id: string | null
+          razorpay_vpa_fund_account_id: string | null
           reachability_score: number | null
           reachability_status: string | null
           respect_availability: boolean | null
@@ -4557,6 +4605,7 @@ export type Database = {
           payout_address?: string | null
           payout_email?: string | null
           payout_last_error?: string | null
+          payout_provider_preference?: string | null
           payout_ready?: boolean
           payout_verified_at?: string | null
           phone: string
@@ -4568,8 +4617,10 @@ export type Database = {
           push_health_status?: string
           rating?: number | null
           rating_bucket?: string
+          razorpay_bank_fund_account_id?: string | null
           razorpay_contact_id?: string | null
           razorpay_fund_account_id?: string | null
+          razorpay_vpa_fund_account_id?: string | null
           reachability_score?: number | null
           reachability_status?: string | null
           respect_availability?: boolean | null
@@ -4658,6 +4709,7 @@ export type Database = {
           payout_address?: string | null
           payout_email?: string | null
           payout_last_error?: string | null
+          payout_provider_preference?: string | null
           payout_ready?: boolean
           payout_verified_at?: string | null
           phone?: string
@@ -4669,8 +4721,10 @@ export type Database = {
           push_health_status?: string
           rating?: number | null
           rating_bucket?: string
+          razorpay_bank_fund_account_id?: string | null
           razorpay_contact_id?: string | null
           razorpay_fund_account_id?: string | null
+          razorpay_vpa_fund_account_id?: string | null
           reachability_score?: number | null
           reachability_status?: string | null
           respect_availability?: boolean | null
@@ -4931,6 +4985,7 @@ export type Database = {
               payout_address: string | null
               payout_email: string | null
               payout_last_error: string | null
+              payout_provider_preference: string | null
               payout_ready: boolean
               payout_verified_at: string | null
               phone: string
@@ -4942,8 +4997,10 @@ export type Database = {
               push_health_status: string
               rating: number | null
               rating_bucket: string
+              razorpay_bank_fund_account_id: string | null
               razorpay_contact_id: string | null
               razorpay_fund_account_id: string | null
+              razorpay_vpa_fund_account_id: string | null
               reachability_score: number | null
               reachability_status: string | null
               respect_availability: boolean | null
@@ -5041,6 +5098,7 @@ export type Database = {
               payout_address: string | null
               payout_email: string | null
               payout_last_error: string | null
+              payout_provider_preference: string | null
               payout_ready: boolean
               payout_verified_at: string | null
               phone: string
@@ -5052,8 +5110,10 @@ export type Database = {
               push_health_status: string
               rating: number | null
               rating_bucket: string
+              razorpay_bank_fund_account_id: string | null
               razorpay_contact_id: string | null
               razorpay_fund_account_id: string | null
+              razorpay_vpa_fund_account_id: string | null
               reachability_score: number | null
               reachability_status: string | null
               respect_availability: boolean | null
