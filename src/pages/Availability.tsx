@@ -326,6 +326,11 @@ export default function Availability() {
     });
     return summary.length > 0 ? summary.join(", ") : t('availability.noSlotsSelected');
   };
+  if (loading) {
+    return <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">{t('common.loading')}</p>
+      </div>;
+  }
   const GREEN = "#16C75A";
   return <div className="min-h-screen bg-background pb-32">
       {/* Header */}
