@@ -6386,6 +6386,10 @@ export type Database = {
         Args: { curlopt: string; value: string }
         Returns: boolean
       }
+      increment_worker_failure: {
+        Args: { _cooldown_until: string; _worker_id: string }
+        Returns: undefined
+      }
       initiate_booking_assignment: {
         Args: {
           p_booking_id: string
