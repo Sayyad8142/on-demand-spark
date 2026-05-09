@@ -118,6 +118,8 @@ export default function AuthDebug() {
   const [copied, setCopied] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [notificationDiagnostics, setNotificationDiagnostics] = useState<NotificationDiagnostics | null>(null);
+  const [nativeDiagnostics, setNativeDiagnostics] = useState<NativeDiagnostics | null>(null);
+  const [nativeLog, setNativeLog] = useState<NativeLogEntry[]>([]);
   const autoRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadDebugInfo = useCallback(async () => {
