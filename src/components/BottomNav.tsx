@@ -69,9 +69,6 @@ export default function BottomNav() {
                 >
                   <Phone className="w-6 h-6 fill-white" strokeWidth={2.5} />
                 </div>
-                <span className="text-xs mt-1 mb-0.5 font-semibold text-foreground">
-                  {label}
-                </span>
               </button>
             );
           }
