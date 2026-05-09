@@ -130,16 +130,17 @@ export default function AuthDebug() {
       const permissionState = await checkNotificationPermission();
       let workerResult = { data: null as any, error: null as any };
       if (user?.id) {
+        const cols = 'id, fcm_token, fcm_token_updated_at, last_seen_at, last_notification_received_at, last_boot_at, last_boot_oem';
         workerResult = await supabase
           .from('workers')
-          .select('id, fcm_token, fcm_token_updated_at, last_seen_at')
+          .select(cols)
           .eq('user_id', user.id)
           .maybeSingle();
 
         if (!workerResult.data && !workerResult.error && UUID_RE.test(user.id)) {
           workerResult = await supabase
             .from('workers')
-            .select('id, fcm_token, fcm_token_updated_at, last_seen_at')
+            .select(cols)
             .eq('id', user.id)
             .maybeSingle();
         }
@@ -153,8 +154,33 @@ export default function AuthDebug() {
         notificationPermissionStatus: permissionState.status,
         lastTokenUpdatedAt: workerResult.data?.fcm_token_updated_at ?? null,
         lastSeenAt: workerResult.data?.last_seen_at ?? null,
+        lastNotificationReceivedAt: workerResult.data?.last_notification_received_at ?? null,
+        lastBootAt: workerResult.data?.last_boot_at ?? null,
+        lastBootOem: workerResult.data?.last_boot_oem ?? null,
         appVersion: CURRENT_VERSION_NAME,
       });
+
+      // Native diagnostics + logs (Android only)
+      if (Capacitor.isNativePlatform()) {
+        const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+        if (AuthBridge?.getDiagnostics) {
+          try {
+            const d = await AuthBridge.getDiagnostics();
+            setNativeDiagnostics(d as NativeDiagnostics);
+          } catch (e) {
+            console.warn('[AuthDebug] getDiagnostics failed', e);
+          }
+        }
+        if (AuthBridge?.readWorkerLog) {
+          try {
+            const r = await AuthBridge.readWorkerLog();
+            const arr = JSON.parse(r?.log || '[]') as NativeLogEntry[];
+            setNativeLog(arr.slice(-50).reverse());
+          } catch (e) {
+            console.warn('[AuthDebug] readWorkerLog failed', e);
+          }
+        }
+      }
 
       // Reload from persistent storage
       await reloadSessionFromStorage();
