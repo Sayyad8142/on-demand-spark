@@ -23,7 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { DEMO_WORKER, DEMO_ACTIVE_JOB, DEMO_BOOKINGS } from "@/config/demoData";
-import { startMovementMonitoring, stopMovementMonitoring } from "@/lib/stepMonitoring";
+// Movement monitoring is owned by App.tsx — no imports needed here.
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -138,18 +138,9 @@ export default function Home() {
     clearAlert
   } = useUnifiedBookingAlerts(user?.id, isOnline && payoutReady, matches, worker?.id);
 
-  useEffect(() => {
-    if (!worker?.id || !activeJob?.id || !['accepted', 'on_the_way', 'started'].includes(activeJob.status)) {
-      stopMovementMonitoring();
-      return;
-    }
-    startMovementMonitoring(activeJob.id, worker.id).catch((error) => {
-      console.error('[Movement] Active booking movement tracking failed', error);
-    });
-    return () => {
-      stopMovementMonitoring();
-    };
-  }, [worker?.id, activeJob?.id, activeJob?.status]);
+  // Movement tracking lifecycle is owned globally by App.tsx (useActiveJob-driven)
+  // so it keeps running when the worker navigates to Profile/Bookings/Availability.
+  // Do NOT start/stop monitoring from Home — that caused tracking to die on nav.
 
   const handleToggle = async (value: boolean) => {
     if (isGuestMode) {

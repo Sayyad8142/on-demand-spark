@@ -55,10 +55,12 @@ import BottomNav from "./components/BottomNav";
 import PermissionOnboarding from "./components/PermissionOnboarding";
 import {
   startMovementMonitoring,
+  stopMovementMonitoring,
   startPassiveMovementMonitoring,
   stopPassiveMovementMonitoring,
   isPassiveMonitoringActive,
 } from "@/lib/stepMonitoring";
+import { useActiveJob } from "@/hooks/useActiveJob";
 
 const queryClient = new QueryClient();
 
@@ -291,13 +293,32 @@ function AppInner() {
   }, [checkAndroidSettingsPermissions, session?.user?.id]);
 
   // ── Passive movement tracking DISABLED ──
-  // Step/movement tracking now runs ONLY after a booking is accepted
-  // (see startMovementMonitoring on bookingAccepted below). This avoids
-  // running step counter / activity recognition while the worker is just
-  // online with no active booking, reducing battery + Supabase load.
+  // Step/movement tracking now runs ONLY after a booking is accepted.
+  // The active-job effect below owns the lifecycle globally so it survives
+  // navigation between Home / Profile / Bookings / Availability.
   useEffect(() => {
     void stopPassiveMovementMonitoring();
   }, [worker?.id]);
+
+  // ── Booking-driven movement tracking (global, survives navigation) ──
+  // Single source of truth for start/stop. Runs whenever the worker has an
+  // active booking in [accepted, on_the_way, started]. Stops as soon as the
+  // booking transitions to a terminal state (completed/cancelled/none).
+  const { activeJob: trackedJob } = useActiveJob(session?.user?.id);
+  useEffect(() => {
+    if (!worker?.id) return;
+    const status = trackedJob?.status;
+    const shouldTrack = !!trackedJob?.id && ["accepted", "on_the_way", "started"].includes(status ?? "");
+    if (!shouldTrack) {
+      console.log(`[Movement] stopped because booking ended (status=${status ?? "none"})`);
+      void stopMovementMonitoring();
+      return;
+    }
+    console.log(`[Movement] booking accepted — starting tracking booking_id=${trackedJob!.id} worker_id=${worker.id} status=${status}`);
+    startMovementMonitoring(trackedJob!.id, worker.id).catch((error) => {
+      console.error("[Movement] active-job start failed", error);
+    });
+  }, [worker?.id, trackedJob?.id, trackedJob?.status]);
 
 
   // Initialize native push notifications when we have a session.
