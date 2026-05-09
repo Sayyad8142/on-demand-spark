@@ -99,12 +99,35 @@ Deno.serve(async (req) => {
 
     if (upsertErr) return json({ error: "movement_update_failed", detail: upsertErr.message }, 500);
 
+    // Live admin feed — single row per booking, updated every ping.
+    // worker_live_steps is the source the Admin Panel reads for live movement.
+    const { error: liveErr } = await admin
+      .from("worker_live_steps")
+      .upsert({
+        booking_id: bookingId,
+        worker_id: workerId,
+        step_count: Math.round(stepCount),
+        motion_status: movementStatus,
+        last_step_at: timestamp,
+        updated_at: new Date().toISOString(),
+        device_info: {
+          previous_step_count: Number.isFinite(previousStepCount) ? Math.round(previousStepCount) : 0,
+          source: body.source ?? "worker-app",
+          booking_status: booking.status,
+        },
+      }, { onConflict: "booking_id" });
+
+    if (liveErr) {
+      console.error("[worker-movement-update] worker_live_steps upsert failed", liveErr.message);
+    }
+
     console.log("[worker-movement-update] success", {
       worker_id: workerId,
       booking_id: bookingId,
       step_count: Math.round(stepCount),
       is_moving: isMoving,
       timestamp,
+      live_steps_ok: !liveErr,
     });
 
     return json({ ok: true, success: true, movement_status: movementStatus, step_count: Math.round(stepCount) });

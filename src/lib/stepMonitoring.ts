@@ -68,7 +68,7 @@ export interface MovementDebugStatus {
 // after accepting a booking before the low-movement flag is evaluated.
 const MONITORING_WINDOW_SECONDS = 300;
 const DEFAULT_MIN_STEPS = 40;
-const LIVE_SEND_INTERVAL_MS = 12_000;
+const LIVE_SEND_INTERVAL_MS = 30_000;
 const NOT_MOVING_AFTER_MS = 150_000;
 const FAILSAFE_AFTER_MS = 60_000;
 
