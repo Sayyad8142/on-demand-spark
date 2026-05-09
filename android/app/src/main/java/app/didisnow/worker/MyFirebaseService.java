@@ -68,6 +68,20 @@ public class MyFirebaseService extends FirebaseMessagingService {
     String bookingType = data.get("booking_type"); // "instant" or "scheduled"
     Log.d(TAG, "🏷️ Message type: " + type);
     Log.d(TAG, "🏷️ Booking type: " + bookingType);
+
+    // Phase 2: silent keepalive PING — ack via background worker, no UI.
+    if ("PING".equals(type)) {
+      Log.d(TAG, "📡 Keepalive PING — enqueuing ack worker");
+      WorkerLog.INSTANCE.add(getApplicationContext(), "KEEPALIVE", "PING received");
+      try {
+        androidx.work.WorkManager.getInstance(getApplicationContext()).enqueue(
+          new androidx.work.OneTimeWorkRequest.Builder(KeepaliveAckWorker.class).build()
+        );
+      } catch (Exception e) {
+        Log.e(TAG, "Failed to enqueue KeepaliveAckWorker", e);
+      }
+      return;
+    }
     
     try {
       if ("BOOKING_CANCELLED".equals(type)) {
