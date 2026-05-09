@@ -122,6 +122,17 @@ export function useFCMTokenSync(userId: string | undefined) {
     mountedRef.current = true;
     if (!userId) return;
 
+    // Persist user_id natively so BootReceiver / FcmBootSyncWorker /
+    // MyFirebaseService can ping the backend even when JS isn't running.
+    if (Capacitor.isNativePlatform()) {
+      const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+      if (AuthBridge?.saveUserId) {
+        AuthBridge.saveUserId({ userId }).catch((e: unknown) =>
+          console.warn('⚠️ [FCMSync] saveUserId failed', e),
+        );
+      }
+    }
+
     // Cold start / login → force refresh evaluation immediately
     const initTimer = setTimeout(() => refreshToken('mount'), 500);
 
