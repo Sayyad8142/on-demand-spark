@@ -225,7 +225,7 @@ async function sendMovementUpdate(reason: "interval" | "failsafe" | "final" | "s
     if (error) throw error;
     session.lastSentAt = Date.now();
     setStatus({ lastSentAt: nowIso, lastSendOk: true, lastError: null });
-    console.log("[Movement] API send success", { reason, response: data });
+    console.log("[Movement] Supabase log inserted", { booking_id: session.bookingId, worker_id: session.workerId, step_count: session.lastSteps, reason });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     setStatus({ lastSendOk: false, lastError: message, warning: `⚠️ Step tracking API failed: ${message}` });
@@ -245,6 +245,7 @@ function handleStepUpdate(update: NativeStepUpdate) {
   const previous = activeSession.lastSteps;
   const current = Math.max(0, Number(update.stepCount ?? 0));
   const increased = current > previous;
+  console.log("[Movement] step event received", { booking_id: update.bookingId, step_count: current, previous, increased });
 
   activeSession.previousSteps = previous;
   activeSession.lastSteps = current;
@@ -290,9 +291,16 @@ function startLiveLoop() {
   }, LIVE_SEND_INTERVAL_MS);
 }
 
-/** Start movement monitoring after a booking is accepted. */
+/** Start movement monitoring after a booking is accepted. Idempotent for same booking+worker. */
 export async function startMovementMonitoring(bookingId: string, workerId: string): Promise<void> {
+  if (activeSession && activeSession.bookingId === bookingId && activeSession.workerId === workerId) {
+    console.log("[Movement] already tracking this booking — skipping duplicate start", { booking_id: bookingId, worker_id: workerId });
+    return;
+  }
   await stopMovementMonitoring();
+  console.log("[Movement] starting tracking");
+  console.log("[Movement] worker_id", workerId);
+  console.log("[Movement] booking_id", bookingId);
   activeSession = {
     bookingId,
     workerId,
@@ -336,7 +344,7 @@ export async function startMovementMonitoring(bookingId: string, workerId: strin
     }
 
     const { granted } = await plugin.requestPermission();
-    console.log(`[Movement] ACTIVITY_RECOGNITION permission_granted=${granted}`);
+    console.log("[Movement] permission status", { granted });
     setStatus({ permissionGranted: granted });
     if (!granted) {
       setStatus({ warning: "⚠️ Step tracking not active. Please enable permissions.", status: "Not Tracking", lastError: "ACTIVITY_RECOGNITION permission denied" });
@@ -380,7 +388,7 @@ export async function startMovementMonitoring(bookingId: string, workerId: strin
     });
 
     const startResult = await plugin.startMonitoring({ bookingId, windowSeconds: MONITORING_WINDOW_SECONDS });
-    console.log(`[Movement] ✅ Monitoring started — booking=${bookingId} window=${MONITORING_WINDOW_SECONDS}s minSteps=${minSteps}`, startResult);
+    console.log("[Movement] native service started", { booking_id: bookingId, window_seconds: MONITORING_WINDOW_SECONDS, sensor_type: startResult.sensorType ?? support.sensorType, min_steps: minSteps });
     setStatus({ status: "Not Moving", warning: null, sensorType: startResult.sensorType ?? support.sensorType });
     startLiveLoop();
     await sendMovementUpdate("startup");
