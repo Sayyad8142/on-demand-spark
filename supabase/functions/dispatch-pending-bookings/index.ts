@@ -56,6 +56,41 @@ Deno.serve(async (req) => {
     if (expErr) console.error("[dispatch] expire sweep failed:", expErr.message);
     const expiredCount = expired?.length ?? 0;
 
+    // Phase 2: per-worker cooldown after a delivery failure. Increments
+    // consecutive_delivery_failures and applies a 10-minute dispatch cooldown
+    // so the dispatcher stops hammering unreachable workers.
+    const failedWorkerIds = Array.from(new Set((expired ?? []).map((r) => r.worker_id).filter(Boolean)));
+    if (failedWorkerIds.length) {
+      const cooldownUntil = new Date(Date.now() + 10 * 60_000).toISOString();
+      for (const wid of failedWorkerIds) {
+        await admin.rpc("increment_worker_failure", { _worker_id: wid, _cooldown_until: cooldownUntil })
+          .catch(async () => {
+            // Fallback: direct update if RPC absent.
+            const { data: w } = await admin
+              .from("workers")
+              .select("consecutive_delivery_failures")
+              .eq("id", wid)
+              .maybeSingle();
+            const next = (w?.consecutive_delivery_failures ?? 0) + 1;
+            await admin
+              .from("workers")
+              .update({
+                consecutive_delivery_failures: next,
+                dispatch_cooldown_until: cooldownUntil,
+              })
+              .eq("id", wid);
+          });
+      }
+      await admin.from("notification_delivery_events").insert(
+        failedWorkerIds.map((wid) => ({
+          worker_id: wid,
+          event_type: "delivery_failed",
+          payload: { reason: "timeout_no_ack" },
+        })),
+      );
+      console.log(JSON.stringify({ evt: "cooldown_applied", workers: failedWorkerIds.length }));
+    }
+
     // ── 2. Find bookings still pending with no active request ───────────
     // Bookings created in last 30 minutes only — we don't want to retry
     // stale bookings indefinitely.

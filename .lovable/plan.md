@@ -1,123 +1,158 @@
-# Background Notification & FCM Recovery — Audit + Fix Plan
+# Phase 2 — Production-grade Reachability & Self-Healing
 
-## A. Audit findings (current state)
+Goal: workers receive bookings reliably even after reboot/idle/token rotation, and are auto-excluded from dispatch when notifications are not actually reaching the device. No manual app-open required.
 
-What already works:
-- `AndroidManifest` declares `RECEIVE_BOOT_COMPLETED`, `WAKE_LOCK`, `FOREGROUND_SERVICE`, `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, `POST_NOTIFICATIONS`.
-- `BootReceiver` is registered for `BOOT_COMPLETED`, `QUICKBOOT_POWERON`, `MY_PACKAGE_REPLACED` and re-warms `MovementTrackingService` + `LocationTrackingService` if the worker was online.
-- `MyFirebaseService` is registered as a `FirebaseMessagingService`, pre-creates notification channels in `onCreate`, persists token on `onNewToken` to `SharedPreferences("worker_prefs", "pending_fcm_token")`.
-- JS `useFCMTokenSync` re-evaluates token freshness on mount, app resume, and every 3 min (force refresh if missing/invalid/null platform/>7d old).
-- Backend tracks `workers.fcm_token`, `fcm_token_status`, `fcm_token_platform`, `fcm_token_updated_at`.
-- `AuthDebug` screen already exists at `/auth-debug` (5-tap on version).
+All changes are additive and gated by a `dispatch_reachability_guard` feature flag (default ON in code, easy to flip via env var) so the live dispatch flow is never broken.
 
-Gaps causing the user's scenario (phone reboot → no app open → bookings created):
-1. After reboot, **no Android component pulls a fresh FCM token until the user opens the app**. `FirebaseMessaging.getInstance().getToken()` is only triggered from JS via `PushNotifications.register()`. `onNewToken` only fires if Firebase rotates the token — not on plain reboot. Existing token from before reboot is still valid → notifications **should** arrive, but if the token was stale/invalidated by Play Services (e.g. APK update, data clear, long offline) we never know until the worker opens the app.
-2. `BootReceiver` does **not** schedule any token health-check or backend ping. We have no "alive after reboot" signal.
-3. Backend has no concept of **notification health heartbeat** — `last_active_at` is only refreshed when the JS layer is running. After reboot, worker may stay marked online for hours while unreachable.
-4. No **"silent FCM ping"** path. Dispatcher trusts `fcm_token_status='active'` even if the device hasn't been seen since last week.
-5. `MyFirebaseService.onNewToken` writes to SharedPreferences but **does not POST the new token to Supabase directly**. If the app is never opened again, the rotated token is never synced. This is the single biggest reliability gap.
-6. No tracking of `last_fcm_received_at` per worker → cannot detect "online but unreachable".
-7. No diagnostic surface for: battery-optimization status, auto-start status, last FCM received, last token sync, boot count.
-8. OEM auto-start (MIUI/Vivo/Oppo/Realme/OnePlus) is not surfaced to the worker as actionable guidance after first install. We have `BatteryOptimizationHelper` but no OEM-specific prompts.
+---
 
-## B. Real-world answers to user's questions
+## 1. Database (single migration)
 
-| Question | Today's reality |
-|---|---|
-| Notifications work after reboot without opening app? | Yes, **if** the existing FCM token is still valid. Android auto-starts `MyFirebaseService` on first FCM message — no manual open needed. |
-| Token survives reboot? | Yes — Firebase persists it. Token only changes on app reinstall, data clear, Play Services reset, or 270-day inactivity. |
-| App auto-starts? | No — only `MyFirebaseService` (on push) and `BootReceiver` (on boot) wake without user. Web layer / JS only runs after manual open. |
-| Token refreshed after reboot? | **No** — only on next manual app open. |
-| Worker shown online when unreachable? | **Yes — bug**. `last_active_at` decay isn't enforced; dispatcher will still target them. |
-| BOOT_COMPLETED handled? | Partially — services restarted, but no token validation, no backend ping. |
-| Battery opt / Doze impact? | High-priority `data` FCM bypasses Doze, but only if backend sends with `priority:'high'` — needs verify in `send-fcm`. |
-| OEM kills? | We don't probe; users on Xiaomi/Oppo silently lose alerts. |
-| Heartbeat reliable after reboot? | No — JS heartbeat doesn't run until app opens. |
+New columns on `workers`:
+- `availability_state` text default `'OFFLINE'` — enum-like: `ONLINE_HEALTHY | ONLINE_DEGRADED | OFFLINE | TOKEN_STALE | NOTIFICATION_BLOCKED | BATTERY_RESTRICTED`
+- `last_keepalive_sent_at` timestamptz
+- `last_keepalive_ack_at` timestamptz
+- `last_notification_received_at` timestamptz
+- `last_fcm_token_refresh_at` timestamptz
+- `notification_permission` text  (`granted|denied|unknown`)
+- `battery_optimized` boolean
+- `app_standby_bucket` text (active/working_set/frequent/rare/restricted)
+- `consecutive_delivery_failures` int default 0
+- `dispatch_cooldown_until` timestamptz
+- `reliability_score` numeric(5,2) default 100.0
 
-## C. Proposed changes (this plan)
+New table `notification_delivery_events`:
+- `worker_id`, `booking_id` (nullable), `event_type` (sent/delivered/opened/expired/ignored/failed/token_invalid/unreachable/keepalive_sent/keepalive_ack), `payload jsonb`, `created_at`. RLS: workers select own; service role full.
 
-### 1. Boot-time silent token sync (Android)
-- Extend `BootReceiver` to enqueue a one-shot `WorkManager` job (`FcmBootSyncWorker`) that:
-  - Fetches a fresh token via `FirebaseMessaging.getInstance().getToken()`.
-  - Reads stored `worker_prefs.user_id` (already saved at login).
-  - POSTs to a new edge function `worker-boot-ping` with `{ user_id, fcm_token, event:'boot', android_version, oem }`.
-  - Backed off + retried on network failure.
-- Same worker scheduled on `MY_PACKAGE_REPLACED`.
+Helper RPC `compute_worker_availability_state(uid)` returning the derived state — used by triggers and dispatcher.
 
-### 2. Native token-rotation auto-sync
-- In `MyFirebaseService.onNewToken`, in addition to SharedPreferences, fire-and-forget HTTP PATCH to Supabase REST (`/rest/v1/workers?user_id=eq.X`) using the saved access token. Falls back gracefully (still keeps SharedPreferences write so JS layer can re-sync on next open).
-- New helper `BackendSync.kt` for both `BootReceiver` and `onNewToken`.
+---
 
-### 3. Edge function `worker-boot-ping`
-- `verify_jwt = false` (called from native without bearer token possibly).
-- Validates `user_id` belongs to a worker.
-- Updates `workers.fcm_token`, `fcm_token_status='active'`, `fcm_token_updated_at=now()`, `fcm_token_platform='android'`, `last_boot_at=now()`.
-- Returns 200.
+## 2. Edge Functions
 
-### 4. Notification health heartbeat
-- Add columns: `workers.last_fcm_received_at timestamptz`, `workers.last_boot_at timestamptz`, `workers.fcm_send_count int`, `workers.fcm_fail_count int` (some already exist per memory — verify and reuse).
-- `MyFirebaseService.onMessageReceived` writes `last_fcm_received_at` via the same backend helper (or queues to SharedPreferences and lets next ping flush).
-- `dispatch-pending-bookings` / `notify-next-tier`: if `last_active_at` older than 5 min AND `last_fcm_received_at` older than 30 min → mark `is_available=false` (auto-offline) before tier escalation.
+**fcm-keepalive** (cron, every 20 min, `verify_jwt=false`)
+- Selects workers where `is_available=true` AND `fcm_token` not null AND (`last_keepalive_sent_at` is null OR < now()-15m).
+- Sends data-only FCM `{type:"PING", ts:...}` via existing send-fcm helper.
+- Stamps `last_keepalive_sent_at`, logs `keepalive_sent` event.
 
-### 5. Silent FCM keepalive
-- Cron edge function `fcm-keepalive` (every 30 min) sends `data:{type:'PING'}` to each online worker. `MyFirebaseService` receives → updates `last_fcm_received_at` via backend helper → no UI shown. This is the single source of truth for "device reachable".
+**worker-keepalive-ack** (`verify_jwt=false`, Firebase token verified in code)
+- Body: `{worker_id, battery_optimized, app_standby_bucket, notification_permission, fcm_token}`.
+- Updates `last_keepalive_ack_at`, `last_notification_received_at`, permission/battery/standby fields.
+- Resets `consecutive_delivery_failures=0`, recomputes `availability_state`.
+- Logs `keepalive_ack`.
 
-### 6. Battery / OEM diagnostics
-- New Capacitor plugin method `BatteryOptimizationHelper.getDiagnostics()` returning `{ ignoringBatteryOptimizations, autoStartIntentAvailable, oemManufacturer, notificationsEnabled, fcmTokenPresent, lastBootAt }`.
-- Surface in `AuthDebug` screen + add a banner on `Home` if any critical flag is red.
+**dispatch-pending-bookings** (modify)
+- Before invoking `booking-notifications`, call new SQL filter: exclude workers where guard fails.
+- New shared helper `reachabilityGuard(worker)`:
+  - TOKEN_STALE if `last_fcm_token_refresh_at < now()-7d`
+  - NOTIFICATION_BLOCKED if `notification_permission='denied'`
+  - cooldown if `dispatch_cooldown_until > now()`
+  - DEGRADED if `last_keepalive_ack_at < now()-45m` AND `last_active_at < now()-10m`
+  - UNREACHABLE if no ack in 90m AND no notif received in 60m
+- Increment `consecutive_delivery_failures` and set `dispatch_cooldown_until = now()+10m` after each timed-out booking_request (sweep step).
+- Behind env flag `DISPATCH_REACHABILITY_GUARD=1`.
 
-### 7. Diagnostic screen additions (`/auth-debug`)
-- Current FCM token (truncated)
-- `fcm_token_updated_at`, `last_fcm_received_at`, `last_boot_at`
-- Notification permission status
-- Battery optimization ignored?
-- OEM (manufacturer) + auto-start hint link
-- Last heartbeat time
-- Worker availability + reason
-- "Force token refresh" button + "Test FCM (silent ping)" button
+**booking-notifications** (modify)
+- Log `sent` event per worker request.
+- Skip workers with `availability_state IN ('TOKEN_STALE','NOTIFICATION_BLOCKED')` or active cooldown — log `dispatcher_skipped_unreachable`.
 
-### 8. Detailed logging
-- Single `WorkerLog` Kotlin helper writing tagged lines (`[BOOT]`, `[FCM]`, `[TOKEN]`, `[BACKEND]`) to logcat; a ring buffer of last 200 lines persisted to SharedPreferences and exposed via Capacitor plugin so AuthDebug can show them.
+**ack-booking-delivery** (modify)
+- Existing endpoint: also stamp `last_notification_received_at`, log `delivered`.
 
-## D. Out of scope for this iteration
-- iOS (project is Android-only per memory).
-- Replacing FCM with another channel.
-- UI redesign of normal screens.
+---
 
-## E. Files to add / modify
+## 3. Native Android
 
-```text
-android/app/src/main/java/app/didisnow/worker/
-  BootReceiver.kt                  (modify - schedule WorkManager job)
-  FcmBootSyncWorker.kt             (new)
-  BackendSync.kt                   (new - shared HTTP helper)
-  MyFirebaseService.java           (modify - sync onNewToken + onMessageReceived heartbeat)
-  BatteryOptimizationPlugin.kt     (modify - getDiagnostics method)
-  WorkerLog.kt                     (new - ring buffer logger)
-  WorkerLogPlugin.kt               (new - Capacitor bridge)
+**MyFirebaseService.java**
+- On `onMessageReceived`, if `data.type == "PING"`, call new `KeepaliveAckWorker` (WorkManager) — do NOT show notification.
+- Worker collects: token, battery-optimization status (`PowerManager.isIgnoringBatteryOptimizations`), standby bucket (`UsageStatsManager.getAppStandbyBucket` API 28+), notification permission (`NotificationManagerCompat.areNotificationsEnabled`), saved `worker_id`.
+- POSTs to `worker-keepalive-ack` with bearer token from SharedPreferences.
+- Always stamp `last_notification_received_at` on every FCM message via `BackendSync.pingReachable()`.
 
-android/app/src/main/AndroidManifest.xml   (no new permissions needed; WorkManager auto-registers)
+**BackendSync.kt**
+- Add `postKeepaliveAck(payload)` and `pingReachable()` helpers (reuses existing pattern).
+- Retry queue: persist failed POSTs to SharedPreferences, replay on next FCM/boot/network event via existing `FcmBootSyncWorker` extended with a `replayQueue()` step.
 
-supabase/functions/
-  worker-boot-ping/index.ts        (new)
-  fcm-keepalive/index.ts           (new, scheduled)
-  dispatch-pending-bookings/index.ts (modify - auto-offline guard)
+**WorkerLog.kt** — add tags `KEEPALIVE`, `REACHABILITY`.
 
-migration:
-  ALTER TABLE workers ADD COLUMN IF NOT EXISTS last_fcm_received_at timestamptz;
-  ALTER TABLE workers ADD COLUMN IF NOT EXISTS last_boot_at timestamptz;
-  (others already present per memory)
+---
 
-src/pages/AuthDebug.tsx            (modify - new diagnostics section)
-src/components/Header.tsx or Home  (modify - unreachable banner)
-```
+## 4. Frontend (Worker App)
 
-## F. Rollout order
-1. DB migration (new columns).
-2. Edge function `worker-boot-ping` + `fcm-keepalive` cron.
-3. Native: `BackendSync.kt`, `WorkerLog.kt`, `FcmBootSyncWorker.kt`, modify `BootReceiver` + `MyFirebaseService`.
-4. Capacitor plugin extensions + AuthDebug UI.
-5. Dispatcher auto-offline guard.
-6. Manual test matrix: airplane-mode reboot, force-stop + reboot, app-update, data-clear, 24h offline.
+**OEM Reliability Card** (`src/components/profile/OemReliabilityCard.tsx`)
+- Detects MIUI/Vivo/Oppo/Realme/Huawei via existing `oemHints.ts`.
+- Surfaces guided steps: auto-start, lock in recents, disable battery opt, allow background.
+- Banner on Home if `availability_state IN ('TOKEN_STALE','NOTIFICATION_BLOCKED','BATTERY_RESTRICTED')`.
 
-Confirm and I'll implement in this order. The native + edge changes are the most invasive — happy to split into smaller PRs if you'd prefer to land step 1+2+3 first and validate before adding the keepalive cron.
+**AvailabilityToggle** — show derived `availability_state` chip.
+
+**AuthDebug** — add Keepalive section (last sent/ack, reliability score, recent delivery events).
+
+---
+
+## 5. Admin Reliability Dashboard
+
+Out of scope of the worker app codebase but I will add a read-only Supabase view `worker_reliability_v` (last_active, last_keepalive_ack, fcm_token_updated_at, last_boot_at, success%, OEM, battery_optimized, permission, state) so the existing admin app can consume it.
+
+---
+
+## 6. Self-Healing Loop
+
+- **Token verification**: existing `useFCMTokenSync` extended to call `getToken({forceRefresh:true})` if `last_fcm_token_refresh_at > 6d`.
+- **Auto re-registration**: if `worker-boot-ping` returns `token_invalid`, native side requests fresh token and resyncs.
+- **Offline queue**: failed POSTs stored in `pending_backend_sync` SharedPreferences; replayed by `FcmBootSyncWorker` on every trigger (boot, FCM, manual).
+- **Safety**: if `notification_permission='denied'` OR `dispatch_cooldown_until>now()+1h`, set `availability_state='NOTIFICATION_BLOCKED'` and show full-width warning banner with "Fix now" CTA in worker app.
+
+---
+
+## 7. Logging
+
+Structured logs (`console.log` JSON) in every edge function for:
+`keepalive_sent`, `keepalive_ack`, `reachability_failure`, `token_stale`, `worker_degraded`, `dispatcher_skipped_unreachable`, `cooldown_applied`, `auto_offline`.
+
+Native: `WorkerLog.add(ctx, "KEEPALIVE", ...)` mirrored in AuthDebug.
+
+---
+
+## 8. Files to add / modify
+
+Add:
+- `supabase/migrations/<ts>_phase2_reachability.sql`
+- `supabase/functions/fcm-keepalive/index.ts`
+- `supabase/functions/worker-keepalive-ack/index.ts`
+- `supabase/functions/_shared/reachabilityGuard.ts`
+- `android/.../KeepaliveAckWorker.kt`
+- `android/.../DeviceDiagnostics.kt` (extracted from BatteryOptimizationPlugin)
+- `src/components/profile/OemReliabilityCard.tsx`
+- `src/components/ReachabilityBanner.tsx`
+
+Modify:
+- `supabase/config.toml` (register 2 new functions, verify_jwt=false)
+- `supabase/functions/dispatch-pending-bookings/index.ts`
+- `supabase/functions/booking-notifications/index.ts`
+- `supabase/functions/ack-booking-delivery/index.ts`
+- `android/.../MyFirebaseService.java`
+- `android/.../BackendSync.kt`
+- `android/.../FcmBootSyncWorker.kt`
+- `android/.../WorkerLog.kt`
+- `src/hooks/useFCMTokenSync.ts`
+- `src/pages/AuthDebug.tsx`
+- `src/pages/Home.tsx` (mount ReachabilityBanner)
+- `src/components/AvailabilityToggle.tsx`
+
+A pg_cron schedule (every 20 min) for `fcm-keepalive` will be inserted via the insert tool (contains anon key — not via migration).
+
+---
+
+## 9. Out of scope
+- iOS support
+- Replacing FCM/Cashfree
+- Admin UI implementation (only the SQL view is added)
+- Changing existing booking dispatch tier logic
+
+---
+
+## 10. Rollout
+1. Migration + edge functions deploy.
+2. Native release built (workers update via OTA/Play).
+3. Flip `DISPATCH_REACHABILITY_GUARD=1` once 80%+ workers have acked at least one keepalive (verified via dashboard view).

@@ -13,6 +13,7 @@ import { useAutoHeal } from "@/hooks/useAutoHeal";
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { UpcomingBookingsBar } from "@/components/UpcomingBookingsBar";
+import { ReachabilityBanner } from "@/components/ReachabilityBanner";
 import { OnboardingChecklist, useOnboardingStatus } from "@/components/OnboardingChecklist";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -367,6 +368,9 @@ export default function Home() {
       )}
       
       </div>
+
+      {/* Phase 2 reachability warning (hidden when healthy) */}
+      {!isGuestMode && worker && <ReachabilityBanner />}
 
       {/* Upcoming Bookings Bar */}
       {!isGuestMode && worker && <UpcomingBookingsBar />}
