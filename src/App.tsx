@@ -55,10 +55,12 @@ import BottomNav from "./components/BottomNav";
 import PermissionOnboarding from "./components/PermissionOnboarding";
 import {
   startMovementMonitoring,
+  stopMovementMonitoring,
   startPassiveMovementMonitoring,
   stopPassiveMovementMonitoring,
   isPassiveMonitoringActive,
 } from "@/lib/stepMonitoring";
+import { useActiveJob } from "@/hooks/useActiveJob";
 
 const queryClient = new QueryClient();
 
