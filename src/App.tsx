@@ -330,38 +330,9 @@ function AppInner() {
     initNativePush(userId);
   }, [session?.user?.id]);
 
-  useEffect(() => {
-    if (!worker?.id) return;
-
-    const startAcceptedBookingMovementCheck = (bookingId?: string) => {
-      if (!bookingId) return;
-      console.log(`[Movement] Native accept detected — starting movement monitoring for booking=${bookingId}`);
-      startMovementMonitoring(bookingId, worker.id).catch((error) => {
-        console.error("[Movement] Native accept movement monitoring failed", error);
-      });
-    };
-
-    const onBookingAccepted = (event: Event) => {
-      const bookingId = (event as CustomEvent)?.detail?.bookingId;
-      startAcceptedBookingMovementCheck(bookingId);
-    };
-
-    const onNativeNavigate = (event: Event) => {
-      const detail = (event as CustomEvent)?.detail || {};
-      const target = detail.navigateTo || detail.screen;
-      if (target === "home") startAcceptedBookingMovementCheck(detail.bookingId);
-    };
-
-    window.addEventListener("bookingAccepted", onBookingAccepted);
-    window.addEventListener("native:navigate", onNativeNavigate);
-    window.addEventListener("nativeNavigation", onNativeNavigate);
-
-    return () => {
-      window.removeEventListener("bookingAccepted", onBookingAccepted);
-      window.removeEventListener("native:navigate", onNativeNavigate);
-      window.removeEventListener("nativeNavigation", onNativeNavigate);
-    };
-  }, [worker?.id]);
+  // Movement tracking is owned exclusively by the global active-job effect above.
+  // No additional listeners — they previously caused redundant start/stop races
+  // that tore down the native step-event listener mid-session.
 
   // Handle deep links for booking acceptance
   useEffect(() => {
