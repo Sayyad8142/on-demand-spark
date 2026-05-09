@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { startMovementMonitoring } from "@/lib/stepMonitoring";
 import { canShowWorkerBookingOffer, isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 
 // Helper to ensure session is valid before making API calls
