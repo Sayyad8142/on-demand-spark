@@ -241,13 +241,18 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Complete the booking once only; simultaneous replays get no updated row and fall into the idempotent branch below
+    // Complete the booking once only; simultaneous replays get no updated row and fall into the idempotent branch below.
+    // Writes the new compliance fields required by DB completion guards:
+    //   completed_by = 'worker', completion_source = 'otp', otp_verified_at = now()
     const now = new Date().toISOString();
     const { data: completedBooking, error: updateError } = await adminClient
       .from("bookings")
       .update({
         status: "completed",
         completed_at: now,
+        completed_by: "worker",
+        completion_source: "otp",
+        otp_verified_at: now,
         updated_at: now,
       })
       .eq("id", booking_id)
@@ -258,7 +263,7 @@ Deno.serve(async (req) => {
 
     if (updateError) {
       console.error("Failed to complete booking:", updateError);
-      return jsonResponse({ error: "Failed to complete booking" }, 500);
+      return jsonResponse({ error: "Could not complete booking. Please try again." }, 500);
     }
 
     if (!completedBooking) {
@@ -270,7 +275,7 @@ Deno.serve(async (req) => {
 
       if (latestBookingError || !latestBooking) {
         console.error("Failed to re-check booking after completion race:", latestBookingError);
-        return jsonResponse({ error: "Failed to verify booking completion" }, 500);
+        return jsonResponse({ error: "Could not verify booking completion. Please try again." }, 500);
       }
 
       if (latestBooking.worker_id !== worker.id) {
@@ -300,13 +305,26 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: `Cannot complete booking in status: ${latestBooking.status}` }, 409);
     }
 
-    // Log status change
+    // Log status change (legacy table)
     await adminClient.from("booking_status_history").insert({
       booking_id,
       from_status: bookingRow.status,
       to_status: "completed",
       changed_by: worker.id,
       note: "Completed via OTP verification by worker",
+    });
+
+    // Structured event log
+    await adminClient.from("booking_events").insert({
+      booking_id,
+      type: "completed",
+      meta: {
+        completed_by: "worker",
+        completion_source: "otp",
+        otp_verified_at: now,
+        worker_id: worker.id,
+        from_status: bookingRow.status,
+      },
     });
 
     const payoutResult = await createOrFetchPayout(adminClient, booking_id, worker.id, bookingAmount, bookingRow.community);
