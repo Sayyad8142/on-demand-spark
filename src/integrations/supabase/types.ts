@@ -261,6 +261,13 @@ export type Database = {
             foreignKeyName: "assignments_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_reliability_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -372,6 +379,13 @@ export type Database = {
             foreignKeyName: "booking_assignments_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_reliability_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_assignments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -458,6 +472,13 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_issues_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_reliability_v"
             referencedColumns: ["id"]
           },
           {
@@ -637,6 +658,13 @@ export type Database = {
             foreignKeyName: "booking_requests_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_reliability_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_requests_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -756,6 +784,13 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_worker_movement_checks_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_reliability_v"
             referencedColumns: ["id"]
           },
           {
@@ -1028,6 +1063,13 @@ export type Database = {
             foreignKeyName: "bookings_preferred_worker_id_fkey"
             columns: ["preferred_worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_reliability_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_preferred_worker_id_fkey"
+            columns: ["preferred_worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -1036,6 +1078,13 @@ export type Database = {
             columns: ["previous_booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_reliability_v"
             referencedColumns: ["id"]
           },
           {
@@ -2083,6 +2132,48 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_delivery_events: {
+        Row: {
+          booking_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json
+          worker_id: string | null
+        }
+        Insert: {
+          booking_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json
+          worker_id?: string | null
+        }
+        Update: {
+          booking_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_delivery_events_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_reliability_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_delivery_events_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_logs: {
         Row: {
           booking_id: string | null
@@ -2144,6 +2235,13 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_logs_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_reliability_v"
             referencedColumns: ["id"]
           },
           {
@@ -2405,6 +2503,59 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: []
+      }
+      payout_webhook_events: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          event_type: string | null
+          external_payout_id: string | null
+          http_status: number | null
+          id: string
+          payout_id: string | null
+          provider: string
+          raw_body: Json | null
+          raw_headers: Json | null
+          signature_valid: boolean | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          event_type?: string | null
+          external_payout_id?: string | null
+          http_status?: number | null
+          id?: string
+          payout_id?: string | null
+          provider: string
+          raw_body?: Json | null
+          raw_headers?: Json | null
+          signature_valid?: boolean | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          event_type?: string | null
+          external_payout_id?: string | null
+          http_status?: number | null
+          id?: string
+          payout_id?: string | null
+          provider?: string
+          raw_body?: Json | null
+          raw_headers?: Json | null
+          signature_valid?: boolean | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payout_webhook_events_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payouts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pricing: {
         Row: {
@@ -3679,6 +3830,13 @@ export type Database = {
             foreignKeyName: "worker_availability_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_reliability_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_availability_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -3707,6 +3865,13 @@ export type Database = {
           worker_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "worker_blackouts_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_reliability_v"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "worker_blackouts_worker_id_fkey"
             columns: ["worker_id"]
@@ -3750,6 +3915,13 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_busy_log_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_reliability_v"
             referencedColumns: ["id"]
           },
           {
@@ -3830,6 +4002,13 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_fault_events_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_reliability_v"
             referencedColumns: ["id"]
           },
           {
@@ -4023,6 +4202,13 @@ export type Database = {
             foreignKeyName: "worker_payout_audit_log_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_reliability_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_payout_audit_log_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -4178,6 +4364,13 @@ export type Database = {
             foreignKeyName: "worker_payouts_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_reliability_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_payouts_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -4209,6 +4402,13 @@ export type Database = {
           worker_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "worker_presence_logs_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_reliability_v"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "worker_presence_logs_worker_id_fkey"
             columns: ["worker_id"]
@@ -4291,6 +4491,13 @@ export type Database = {
             foreignKeyName: "worker_ratings_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_reliability_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_ratings_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -4333,6 +4540,13 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_reach_events_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_reliability_v"
             referencedColumns: ["id"]
           },
           {
@@ -4436,7 +4650,9 @@ export type Database = {
           account_holder_name: string | null
           admin_fault_7d: number
           admin_override_rating: number | null
+          app_standby_bucket: string | null
           app_version: string | null
+          availability_state: string
           bank_account_number: string | null
           bank_details_source: string | null
           bank_details_verified: boolean
@@ -4445,6 +4661,7 @@ export type Database = {
           bank_verification_status: string
           bank_verified_at: string | null
           battery_optimization_disabled: boolean | null
+          battery_optimized: boolean | null
           blocked_at: string | null
           blocked_by: string | null
           blocked_reason: string | null
@@ -4457,9 +4674,11 @@ export type Database = {
           cashfree_beneficiary_synced_at: string | null
           communities: string[] | null
           community: string | null
+          consecutive_delivery_failures: number
           cook_cuisine_tags: string[]
           created_at: string
           device_manufacturer: string | null
+          dispatch_cooldown_until: string | null
           fcm_last_fail_at: string | null
           fcm_last_fail_reason: string | null
           fcm_last_send_at: string | null
@@ -4488,6 +4707,8 @@ export type Database = {
           last_boot_oem: string | null
           last_fcm_token_refresh_at: string | null
           last_heartbeat_at: string | null
+          last_keepalive_ack_at: string | null
+          last_keepalive_sent_at: string | null
           last_lat: number | null
           last_lng: number | null
           last_notification_received_at: string | null
@@ -4499,6 +4720,7 @@ export type Database = {
           location_enabled: boolean | null
           no_ack_count: number | null
           not_reached_7d: number
+          notification_permission: string | null
           notification_permission_granted: boolean | null
           passbook_url: string | null
           payout_address: string | null
@@ -4522,6 +4744,7 @@ export type Database = {
           razorpay_vpa_fund_account_id: string | null
           reachability_score: number | null
           reachability_status: string | null
+          reliability_score: number
           respect_availability: boolean | null
           score_reason: string | null
           selected_community_id: string | null
@@ -4543,7 +4766,9 @@ export type Database = {
           account_holder_name?: string | null
           admin_fault_7d?: number
           admin_override_rating?: number | null
+          app_standby_bucket?: string | null
           app_version?: string | null
+          availability_state?: string
           bank_account_number?: string | null
           bank_details_source?: string | null
           bank_details_verified?: boolean
@@ -4552,6 +4777,7 @@ export type Database = {
           bank_verification_status?: string
           bank_verified_at?: string | null
           battery_optimization_disabled?: boolean | null
+          battery_optimized?: boolean | null
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
@@ -4564,9 +4790,11 @@ export type Database = {
           cashfree_beneficiary_synced_at?: string | null
           communities?: string[] | null
           community?: string | null
+          consecutive_delivery_failures?: number
           cook_cuisine_tags?: string[]
           created_at?: string
           device_manufacturer?: string | null
+          dispatch_cooldown_until?: string | null
           fcm_last_fail_at?: string | null
           fcm_last_fail_reason?: string | null
           fcm_last_send_at?: string | null
@@ -4595,6 +4823,8 @@ export type Database = {
           last_boot_oem?: string | null
           last_fcm_token_refresh_at?: string | null
           last_heartbeat_at?: string | null
+          last_keepalive_ack_at?: string | null
+          last_keepalive_sent_at?: string | null
           last_lat?: number | null
           last_lng?: number | null
           last_notification_received_at?: string | null
@@ -4606,6 +4836,7 @@ export type Database = {
           location_enabled?: boolean | null
           no_ack_count?: number | null
           not_reached_7d?: number
+          notification_permission?: string | null
           notification_permission_granted?: boolean | null
           passbook_url?: string | null
           payout_address?: string | null
@@ -4629,6 +4860,7 @@ export type Database = {
           razorpay_vpa_fund_account_id?: string | null
           reachability_score?: number | null
           reachability_status?: string | null
+          reliability_score?: number
           respect_availability?: boolean | null
           score_reason?: string | null
           selected_community_id?: string | null
@@ -4650,7 +4882,9 @@ export type Database = {
           account_holder_name?: string | null
           admin_fault_7d?: number
           admin_override_rating?: number | null
+          app_standby_bucket?: string | null
           app_version?: string | null
+          availability_state?: string
           bank_account_number?: string | null
           bank_details_source?: string | null
           bank_details_verified?: boolean
@@ -4659,6 +4893,7 @@ export type Database = {
           bank_verification_status?: string
           bank_verified_at?: string | null
           battery_optimization_disabled?: boolean | null
+          battery_optimized?: boolean | null
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
@@ -4671,9 +4906,11 @@ export type Database = {
           cashfree_beneficiary_synced_at?: string | null
           communities?: string[] | null
           community?: string | null
+          consecutive_delivery_failures?: number
           cook_cuisine_tags?: string[]
           created_at?: string
           device_manufacturer?: string | null
+          dispatch_cooldown_until?: string | null
           fcm_last_fail_at?: string | null
           fcm_last_fail_reason?: string | null
           fcm_last_send_at?: string | null
@@ -4702,6 +4939,8 @@ export type Database = {
           last_boot_oem?: string | null
           last_fcm_token_refresh_at?: string | null
           last_heartbeat_at?: string | null
+          last_keepalive_ack_at?: string | null
+          last_keepalive_sent_at?: string | null
           last_lat?: number | null
           last_lng?: number | null
           last_notification_received_at?: string | null
@@ -4713,6 +4952,7 @@ export type Database = {
           location_enabled?: boolean | null
           no_ack_count?: number | null
           not_reached_7d?: number
+          notification_permission?: string | null
           notification_permission_granted?: boolean | null
           passbook_url?: string | null
           payout_address?: string | null
@@ -4736,6 +4976,7 @@ export type Database = {
           razorpay_vpa_fund_account_id?: string | null
           reachability_score?: number | null
           reachability_status?: string | null
+          reliability_score?: number
           respect_availability?: boolean | null
           score_reason?: string | null
           selected_community_id?: string | null
@@ -4788,10 +5029,98 @@ export type Database = {
             foreignKeyName: "worker_ratings_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_reliability_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_ratings_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
         ]
+      }
+      worker_reliability_v: {
+        Row: {
+          app_standby_bucket: string | null
+          availability_state: string | null
+          battery_optimized: boolean | null
+          consecutive_delivery_failures: number | null
+          dispatch_cooldown_until: string | null
+          fcm_token_platform: string | null
+          fcm_token_status: string | null
+          fcm_token_updated_at: string | null
+          full_name: string | null
+          id: string | null
+          is_available: boolean | null
+          last_active_at: string | null
+          last_boot_android_version: string | null
+          last_boot_at: string | null
+          last_boot_oem: string | null
+          last_fcm_token_refresh_at: string | null
+          last_keepalive_ack_at: string | null
+          last_keepalive_sent_at: string | null
+          last_notification_received_at: string | null
+          last_seen_at: string | null
+          notification_permission: string | null
+          phone: string | null
+          reliability_score: number | null
+          user_id: string | null
+        }
+        Insert: {
+          app_standby_bucket?: string | null
+          availability_state?: string | null
+          battery_optimized?: boolean | null
+          consecutive_delivery_failures?: number | null
+          dispatch_cooldown_until?: string | null
+          fcm_token_platform?: string | null
+          fcm_token_status?: string | null
+          fcm_token_updated_at?: string | null
+          full_name?: string | null
+          id?: string | null
+          is_available?: boolean | null
+          last_active_at?: string | null
+          last_boot_android_version?: string | null
+          last_boot_at?: string | null
+          last_boot_oem?: string | null
+          last_fcm_token_refresh_at?: string | null
+          last_keepalive_ack_at?: string | null
+          last_keepalive_sent_at?: string | null
+          last_notification_received_at?: string | null
+          last_seen_at?: string | null
+          notification_permission?: string | null
+          phone?: string | null
+          reliability_score?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          app_standby_bucket?: string | null
+          availability_state?: string | null
+          battery_optimized?: boolean | null
+          consecutive_delivery_failures?: number | null
+          dispatch_cooldown_until?: string | null
+          fcm_token_platform?: string | null
+          fcm_token_status?: string | null
+          fcm_token_updated_at?: string | null
+          full_name?: string | null
+          id?: string | null
+          is_available?: boolean | null
+          last_active_at?: string | null
+          last_boot_android_version?: string | null
+          last_boot_at?: string | null
+          last_boot_oem?: string | null
+          last_fcm_token_refresh_at?: string | null
+          last_keepalive_ack_at?: string | null
+          last_keepalive_sent_at?: string | null
+          last_notification_received_at?: string | null
+          last_seen_at?: string | null
+          notification_permission?: string | null
+          phone?: string | null
+          reliability_score?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
     }
     Functions: {
@@ -4929,7 +5258,9 @@ export type Database = {
               account_holder_name: string | null
               admin_fault_7d: number
               admin_override_rating: number | null
+              app_standby_bucket: string | null
               app_version: string | null
+              availability_state: string
               bank_account_number: string | null
               bank_details_source: string | null
               bank_details_verified: boolean
@@ -4938,6 +5269,7 @@ export type Database = {
               bank_verification_status: string
               bank_verified_at: string | null
               battery_optimization_disabled: boolean | null
+              battery_optimized: boolean | null
               blocked_at: string | null
               blocked_by: string | null
               blocked_reason: string | null
@@ -4950,9 +5282,11 @@ export type Database = {
               cashfree_beneficiary_synced_at: string | null
               communities: string[] | null
               community: string | null
+              consecutive_delivery_failures: number
               cook_cuisine_tags: string[]
               created_at: string
               device_manufacturer: string | null
+              dispatch_cooldown_until: string | null
               fcm_last_fail_at: string | null
               fcm_last_fail_reason: string | null
               fcm_last_send_at: string | null
@@ -4981,6 +5315,8 @@ export type Database = {
               last_boot_oem: string | null
               last_fcm_token_refresh_at: string | null
               last_heartbeat_at: string | null
+              last_keepalive_ack_at: string | null
+              last_keepalive_sent_at: string | null
               last_lat: number | null
               last_lng: number | null
               last_notification_received_at: string | null
@@ -4992,6 +5328,7 @@ export type Database = {
               location_enabled: boolean | null
               no_ack_count: number | null
               not_reached_7d: number
+              notification_permission: string | null
               notification_permission_granted: boolean | null
               passbook_url: string | null
               payout_address: string | null
@@ -5015,6 +5352,7 @@ export type Database = {
               razorpay_vpa_fund_account_id: string | null
               reachability_score: number | null
               reachability_status: string | null
+              reliability_score: number
               respect_availability: boolean | null
               score_reason: string | null
               selected_community_id: string | null
@@ -5045,7 +5383,9 @@ export type Database = {
               account_holder_name: string | null
               admin_fault_7d: number
               admin_override_rating: number | null
+              app_standby_bucket: string | null
               app_version: string | null
+              availability_state: string
               bank_account_number: string | null
               bank_details_source: string | null
               bank_details_verified: boolean
@@ -5054,6 +5394,7 @@ export type Database = {
               bank_verification_status: string
               bank_verified_at: string | null
               battery_optimization_disabled: boolean | null
+              battery_optimized: boolean | null
               blocked_at: string | null
               blocked_by: string | null
               blocked_reason: string | null
@@ -5066,9 +5407,11 @@ export type Database = {
               cashfree_beneficiary_synced_at: string | null
               communities: string[] | null
               community: string | null
+              consecutive_delivery_failures: number
               cook_cuisine_tags: string[]
               created_at: string
               device_manufacturer: string | null
+              dispatch_cooldown_until: string | null
               fcm_last_fail_at: string | null
               fcm_last_fail_reason: string | null
               fcm_last_send_at: string | null
@@ -5097,6 +5440,8 @@ export type Database = {
               last_boot_oem: string | null
               last_fcm_token_refresh_at: string | null
               last_heartbeat_at: string | null
+              last_keepalive_ack_at: string | null
+              last_keepalive_sent_at: string | null
               last_lat: number | null
               last_lng: number | null
               last_notification_received_at: string | null
@@ -5108,6 +5453,7 @@ export type Database = {
               location_enabled: boolean | null
               no_ack_count: number | null
               not_reached_7d: number
+              notification_permission: string | null
               notification_permission_granted: boolean | null
               passbook_url: string | null
               payout_address: string | null
@@ -5131,6 +5477,7 @@ export type Database = {
               razorpay_vpa_fund_account_id: string | null
               reachability_score: number | null
               reachability_status: string | null
+              reliability_score: number
               respect_availability: boolean | null
               score_reason: string | null
               selected_community_id: string | null
@@ -5319,6 +5666,10 @@ export type Database = {
           worker_id: string
           worker_name: string
         }[]
+      }
+      compute_worker_availability_state: {
+        Args: { _worker_id: string }
+        Returns: string
       }
       compute_worker_reachability: {
         Args: { p_worker_id: string }
