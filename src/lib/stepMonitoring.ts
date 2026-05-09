@@ -291,9 +291,16 @@ function startLiveLoop() {
   }, LIVE_SEND_INTERVAL_MS);
 }
 
-/** Start movement monitoring after a booking is accepted. */
+/** Start movement monitoring after a booking is accepted. Idempotent for same booking+worker. */
 export async function startMovementMonitoring(bookingId: string, workerId: string): Promise<void> {
+  if (activeSession && activeSession.bookingId === bookingId && activeSession.workerId === workerId) {
+    console.log("[Movement] already tracking this booking — skipping duplicate start", { booking_id: bookingId, worker_id: workerId });
+    return;
+  }
   await stopMovementMonitoring();
+  console.log("[Movement] starting tracking");
+  console.log("[Movement] worker_id", workerId);
+  console.log("[Movement] booking_id", bookingId);
   activeSession = {
     bookingId,
     workerId,
@@ -337,7 +344,7 @@ export async function startMovementMonitoring(bookingId: string, workerId: strin
     }
 
     const { granted } = await plugin.requestPermission();
-    console.log(`[Movement] ACTIVITY_RECOGNITION permission_granted=${granted}`);
+    console.log("[Movement] permission status", { granted });
     setStatus({ permissionGranted: granted });
     if (!granted) {
       setStatus({ warning: "⚠️ Step tracking not active. Please enable permissions.", status: "Not Tracking", lastError: "ACTIVITY_RECOGNITION permission denied" });
