@@ -70,7 +70,28 @@ interface NotificationDiagnostics {
   notificationPermissionStatus: PermissionStatus | "loading";
   lastTokenUpdatedAt: string | null;
   lastSeenAt: string | null;
+  lastNotificationReceivedAt: string | null;
+  lastBootAt: string | null;
+  lastBootOem: string | null;
   appVersion: string;
+}
+
+interface NativeDiagnostics {
+  userId: string | null;
+  isLoggedIn: boolean;
+  isAvailable: boolean;
+  manufacturer: string | null;
+  model: string | null;
+  androidVersion: string | null;
+  ignoringBatteryOptimizations: boolean;
+  notificationsEnabled: boolean;
+  pendingFcmTokenAt: number;
+}
+
+interface NativeLogEntry {
+  t: string;
+  tag: string;
+  msg: string;
 }
 
 // Derive type from the actual function return
