@@ -290,34 +290,13 @@ function AppInner() {
     };
   }, [checkAndroidSettingsPermissions, session?.user?.id]);
 
-  // ── Passive movement tracking while worker is logged in ──
-  // Starts when we have a worker.id, stops when worker logs out.
-  // Re-checks on app resume in case Android killed the sensor listener.
+  // ── Passive movement tracking DISABLED ──
+  // Step/movement tracking now runs ONLY after a booking is accepted
+  // (see startMovementMonitoring on bookingAccepted below). This avoids
+  // running step counter / activity recognition while the worker is just
+  // online with no active booking, reducing battery + Supabase load.
   useEffect(() => {
-    if (!worker?.id) {
-      void stopPassiveMovementMonitoring();
-      return;
-    }
-    if (!Capacitor.isNativePlatform()) return;
-
-    console.log(`[Passive] worker online (id=${worker.id}) — starting passive movement tracking`);
-    void startPassiveMovementMonitoring(worker.id);
-
-    const sub = CapApp.addListener("appStateChange", ({ isActive }) => {
-      if (!isActive) {
-        console.log("[Passive] app backgrounded");
-        return;
-      }
-      console.log("[Passive] app foregrounded — verifying tracking");
-      if (!isPassiveMonitoringActive()) {
-        console.log("[Passive] tracking stopped while in background — restarting");
-        void startPassiveMovementMonitoring(worker.id);
-      }
-    });
-
-    return () => {
-      sub.then((s) => s.remove());
-    };
+    void stopPassiveMovementMonitoring();
   }, [worker?.id]);
 
 
