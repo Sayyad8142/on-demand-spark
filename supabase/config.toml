@@ -41,3 +41,9 @@ verify_jwt = false
 
 [functions.worker-boot-ping]
 verify_jwt = false
+
+[functions.worker-keepalive-ack]
+verify_jwt = false
+
+[functions.fcm-keepalive]
+verify_jwt = false
