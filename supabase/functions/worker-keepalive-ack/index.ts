@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
 
     const { data: worker } = await supabase
       .from("workers")
-      .select("id")
+      .select("id, battery_optimized, app_standby_bucket, notification_permission, fcm_token, consecutive_delivery_failures, last_keepalive_ack_at")
       .eq("user_id", userId)
       .maybeSingle();
 
@@ -52,19 +52,29 @@ Deno.serve(async (req) => {
       });
     }
 
-    const now = new Date().toISOString();
+    const now = new Date();
+    const nowIso = now.toISOString();
+
+    // Always stamp ack/notification timestamps — this is the whole point of the
+    // call. Then only include other fields when they actually changed.
     const update: Record<string, unknown> = {
-      last_keepalive_ack_at: now,
-      last_notification_received_at: now,
-      consecutive_delivery_failures: 0,
+      last_keepalive_ack_at: nowIso,
+      last_notification_received_at: nowIso,
     };
-    if (typeof body.battery_optimized === "boolean") update.battery_optimized = body.battery_optimized;
-    if (body.app_standby_bucket) update.app_standby_bucket = body.app_standby_bucket;
-    if (body.notification_permission) update.notification_permission = body.notification_permission;
-    if (body.fcm_token) {
+    if ((worker.consecutive_delivery_failures ?? 0) > 0) update.consecutive_delivery_failures = 0;
+    if (typeof body.battery_optimized === "boolean" && body.battery_optimized !== worker.battery_optimized) {
+      update.battery_optimized = body.battery_optimized;
+    }
+    if (body.app_standby_bucket && body.app_standby_bucket !== worker.app_standby_bucket) {
+      update.app_standby_bucket = body.app_standby_bucket;
+    }
+    if (body.notification_permission && body.notification_permission !== worker.notification_permission) {
+      update.notification_permission = body.notification_permission;
+    }
+    if (body.fcm_token && body.fcm_token !== worker.fcm_token) {
       update.fcm_token = body.fcm_token;
-      update.fcm_token_updated_at = now;
-      update.last_fcm_token_refresh_at = now;
+      update.fcm_token_updated_at = nowIso;
+      update.last_fcm_token_refresh_at = nowIso;
       update.fcm_token_status = "active";
     }
 
@@ -80,18 +90,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    await supabase.from("notification_delivery_events").insert({
-      worker_id: worker.id,
-      event_type: "keepalive_ack",
-      payload: {
-        battery_optimized: body.battery_optimized,
-        app_standby_bucket: body.app_standby_bucket,
-        notification_permission: body.notification_permission,
-        oem: body.oem,
-      },
-    });
+    // Only write a delivery_event row if the worker was previously suspect
+    // (had failures) — successful steady-state acks produce zero event rows.
+    if ((worker.consecutive_delivery_failures ?? 0) > 0) {
+      await supabase.from("notification_delivery_events").insert({
+        worker_id: worker.id,
+        event_type: "keepalive_recovered",
+        payload: { prior_failures: worker.consecutive_delivery_failures },
+      });
+    }
 
-    console.log(JSON.stringify({ evt: "keepalive_ack", worker_id: worker.id }));
+    console.log(JSON.stringify({ evt: "keepalive_ack", worker_id: worker.id, fields: Object.keys(update).length }));
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
