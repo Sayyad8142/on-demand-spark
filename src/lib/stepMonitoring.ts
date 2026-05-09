@@ -245,6 +245,7 @@ function handleStepUpdate(update: NativeStepUpdate) {
   const previous = activeSession.lastSteps;
   const current = Math.max(0, Number(update.stepCount ?? 0));
   const increased = current > previous;
+  console.log("[Movement] step event received", { booking_id: update.bookingId, step_count: current, previous, increased });
 
   activeSession.previousSteps = previous;
   activeSession.lastSteps = current;
