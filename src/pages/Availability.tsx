@@ -332,38 +332,39 @@ export default function Availability() {
       </div>;
   }
   const GREEN = "#16C75A";
-  return <div className="min-h-screen bg-background pb-32">
+  const selectedCount = weekData[activeDay].filter(s => s.selected).length;
+  return <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/60">
-        <div className="px-5 py-4">
-          <h1 className="text-[17px] font-semibold tracking-tight">{t('availability.title')}</h1>
+      <div className="px-5 pt-3 pb-2 flex items-center justify-between">
+        <div>
+          <h1 className="text-[17px] font-semibold tracking-tight leading-tight">{t('availability.title')}</h1>
+          <p className="text-[11px] text-muted-foreground mt-0.5">{selectedCount} slots · {getDayName(activeDay)}</p>
         </div>
       </div>
 
       {fromSignup && (
-        <div className="px-5 pt-4">
-          <div className="rounded-2xl border p-4" style={{ borderColor: `${GREEN}40`, backgroundColor: `${GREEN}0D` }}>
-            <p className="text-sm font-semibold text-foreground">One last step — set your working hours</p>
-            <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-              Select the days and time slots when you're available. You won't receive any bookings until you save your availability.
+        <div className="px-5 pb-2">
+          <div className="rounded-xl px-3 py-2" style={{ backgroundColor: `${GREEN}10` }}>
+            <p className="text-[11px] text-foreground leading-snug">
+              <span className="font-semibold">Set your working hours</span> — you won't get bookings until saved.
             </p>
           </div>
         </div>
       )}
 
       {/* Day Selector */}
-      <div className="px-5 pt-5">
-        <div className="flex gap-2">
+      <div className="px-5 pt-1">
+        <div className="flex gap-1.5">
           {[0, 1, 2, 3, 4, 5, 6].map((i) => {
             const active = activeDay === i;
             return (
               <button
                 key={i}
                 onClick={() => setActiveDay(i as DayKey)}
-                className="flex-1 h-12 rounded-full text-[11px] font-semibold uppercase tracking-wide transition-all active:scale-95"
+                className="flex-1 h-10 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all active:scale-95"
                 style={
                   active
-                    ? { backgroundColor: GREEN, color: "#fff", boxShadow: `0 4px 12px ${GREEN}40` }
+                    ? { backgroundColor: GREEN, color: "#fff", boxShadow: `0 4px 14px ${GREEN}50` }
                     : { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
                 }
               >
@@ -375,50 +376,44 @@ export default function Availability() {
       </div>
 
       {/* Day Actions */}
-      <div className="px-5 pt-4">
-        <div className="flex gap-2">
+      <div className="px-5 pt-2.5">
+        <div className="flex gap-1.5">
           <button
             onClick={() => selectAllDay(activeDay)}
-            className="flex-1 h-10 rounded-full text-xs font-semibold text-white flex items-center justify-center gap-1.5 active:scale-95 transition"
+            className="flex-1 h-8 rounded-lg text-[11px] font-semibold text-white flex items-center justify-center gap-1 active:scale-95 transition"
             style={{ backgroundColor: GREEN }}
           >
-            <Check className="h-3.5 w-3.5" />
+            <Check className="h-3 w-3" strokeWidth={3} />
             {t('availability.selectAll')}
           </button>
           <button
             onClick={() => clearDay(activeDay)}
-            className="flex-1 h-10 rounded-full text-xs font-semibold border bg-background active:scale-95 transition"
-            style={{ borderColor: `${GREEN}40`, color: GREEN }}
+            className="flex-1 h-8 rounded-lg text-[11px] font-semibold transition active:scale-95"
+            style={{ backgroundColor: "hsl(var(--muted))", color: "hsl(var(--foreground))" }}
           >
             {t('availability.clear')}
           </button>
           <button
             onClick={() => copyToAllDays(activeDay)}
-            className="flex-1 h-10 rounded-full text-xs font-semibold border bg-background active:scale-95 transition"
-            style={{ borderColor: `${GREEN}40`, color: GREEN }}
+            className="flex-1 h-8 rounded-lg text-[11px] font-semibold transition active:scale-95"
+            style={{ backgroundColor: "hsl(var(--muted))", color: "hsl(var(--foreground))" }}
           >
             {t('availability.copyToAll')}
           </button>
         </div>
       </div>
 
-      {/* Time Slots */}
-      <div className="px-5 pt-6">
-        <div className="flex items-center gap-1.5 mb-3 px-1">
-          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-            {t('availability.selectTimeSlots', { day: getDayName(activeDay) })}
-          </span>
-        </div>
-        <div className="grid grid-cols-3 gap-2.5">
+      {/* Time Slots — fits one screen, no scroll */}
+      <div className="flex-1 px-5 pt-3 pb-2 min-h-0">
+        <div className="grid grid-cols-4 gap-1.5 h-full" style={{ gridTemplateRows: "repeat(6, minmax(0, 1fr))" }}>
           {weekData[activeDay].map((slot, i) => (
             <button
               key={i}
               onClick={() => toggleSlot(activeDay, i)}
-              className="h-11 rounded-full text-[13px] font-medium transition active:scale-95"
+              className="rounded-lg text-[11px] font-semibold transition active:scale-95"
               style={
                 slot.selected
-                  ? { backgroundColor: GREEN, color: "#fff", boxShadow: `0 2px 8px ${GREEN}33` }
+                  ? { backgroundColor: GREEN, color: "#fff", boxShadow: `0 2px 6px ${GREEN}30` }
                   : { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--foreground))" }
               }
             >
@@ -428,13 +423,13 @@ export default function Availability() {
         </div>
       </div>
 
-      {/* Sticky Save Button */}
-      <div className="fixed left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border/60 px-5 py-3 z-40" style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}>
+      {/* Save Button — above bottom nav */}
+      <div className="px-5 pt-2 pb-2" style={{ marginBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}>
         <button
           onClick={saveAvailability}
           disabled={saving}
-          className="w-full max-w-2xl mx-auto h-12 rounded-full text-sm font-semibold text-white active:scale-[0.98] transition disabled:opacity-60 flex items-center justify-center"
-          style={{ backgroundColor: GREEN, boxShadow: `0 6px 16px ${GREEN}50` }}
+          className="w-full h-12 rounded-2xl text-[14px] font-semibold text-white active:scale-[0.98] transition disabled:opacity-60 flex items-center justify-center"
+          style={{ backgroundColor: GREEN, boxShadow: `0 8px 20px ${GREEN}55` }}
         >
           {saving ? t('availability.saving') : t('availability.saveAvailability')}
         </button>
