@@ -4483,6 +4483,9 @@ export type Database = {
           last_active_at: string | null
           last_app_opened_at: string | null
           last_booking_completed_at: string | null
+          last_boot_android_version: string | null
+          last_boot_at: string | null
+          last_boot_oem: string | null
           last_fcm_token_refresh_at: string | null
           last_heartbeat_at: string | null
           last_lat: number | null
@@ -4587,6 +4590,9 @@ export type Database = {
           last_active_at?: string | null
           last_app_opened_at?: string | null
           last_booking_completed_at?: string | null
+          last_boot_android_version?: string | null
+          last_boot_at?: string | null
+          last_boot_oem?: string | null
           last_fcm_token_refresh_at?: string | null
           last_heartbeat_at?: string | null
           last_lat?: number | null
@@ -4691,6 +4697,9 @@ export type Database = {
           last_active_at?: string | null
           last_app_opened_at?: string | null
           last_booking_completed_at?: string | null
+          last_boot_android_version?: string | null
+          last_boot_at?: string | null
+          last_boot_oem?: string | null
           last_fcm_token_refresh_at?: string | null
           last_heartbeat_at?: string | null
           last_lat?: number | null
@@ -4967,6 +4976,9 @@ export type Database = {
               last_active_at: string | null
               last_app_opened_at: string | null
               last_booking_completed_at: string | null
+              last_boot_android_version: string | null
+              last_boot_at: string | null
+              last_boot_oem: string | null
               last_fcm_token_refresh_at: string | null
               last_heartbeat_at: string | null
               last_lat: number | null
@@ -5080,6 +5092,9 @@ export type Database = {
               last_active_at: string | null
               last_app_opened_at: string | null
               last_booking_completed_at: string | null
+              last_boot_android_version: string | null
+              last_boot_at: string | null
+              last_boot_oem: string | null
               last_fcm_token_refresh_at: string | null
               last_heartbeat_at: string | null
               last_lat: number | null
