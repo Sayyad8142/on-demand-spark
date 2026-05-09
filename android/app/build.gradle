@@ -70,6 +70,10 @@ dependencies {
 
     // Google Play Services Auth (for SMS Retriever API)
     implementation "com.google.android.gms:play-services-auth:21.2.0"
+
+    // Google Play In-App Updates (Immediate flow)
+    implementation "com.google.android.play:app-update:2.1.0"
+    implementation "com.google.android.play:app-update-ktx:2.1.0"
 }
 
 // Capacitor-generated dependencies
