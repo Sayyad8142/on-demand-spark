@@ -326,98 +326,125 @@ export default function Availability() {
     });
     return summary.length > 0 ? summary.join(", ") : t('availability.noSlotsSelected');
   };
-  if (loading) {
-    return <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">{t('common.loading')}</p>
-      </div>;
-  }
-  return <div className="min-h-screen bg-background pb-40">
+  const GREEN = "#16C75A";
+  return <div className="min-h-screen bg-background pb-32">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b">
-        <div className="flex items-center gap-3 p-4">
-          
+        <div className="flex items-center gap-3 px-4 py-3">
           <div className="flex-1">
-            <h1 className="text-xl font-semibold">{t('availability.title')}</h1>
-            
+            <h1 className="text-lg font-semibold">{t('availability.title')}</h1>
           </div>
         </div>
       </div>
 
       {fromSignup && (
-        <div className="px-4 pt-4">
-          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+        <div className="px-3 pt-3">
+          <div className="rounded-lg border p-3" style={{ borderColor: `${GREEN}55`, backgroundColor: `${GREEN}10` }}>
             <p className="text-sm font-semibold text-foreground">One last step — set your working hours</p>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground">
               Select the days and time slots when you're available. You won't receive any bookings until you save your availability.
             </p>
           </div>
         </div>
       )}
 
-      {/* Day Selector */}
-      <div className="p-4">
-        <Card className="p-4">
-          <h2 className="text-base font-semibold mb-4">{t('availability.selectDays')}</h2>
-          <div className="grid grid-cols-4 gap-2 mb-2">
-            {[0, 1, 2, 3].map((i) => <button key={i} onClick={() => setActiveDay(i as DayKey)} className={`w-full h-16 rounded-lg border-2 transition-all flex flex-col items-center justify-center ${activeDay === i ? "bg-primary border-primary text-primary-foreground shadow-md" : "bg-background border-border hover:border-primary/50"}`}>
-                <span className="text-xs font-medium uppercase">
-                  {getDayShort(i)}
-                </span>
-              </button>)}
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {[4, 5, 6].map((i) => <button key={i} onClick={() => setActiveDay(i as DayKey)} className={`w-full h-16 rounded-lg border-2 transition-all flex flex-col items-center justify-center ${activeDay === i ? "bg-primary border-primary text-primary-foreground shadow-md" : "bg-background border-border hover:border-primary/50"}`}>
-                <span className="text-xs font-medium uppercase">
-                  {getDayShort(i)}
-                </span>
-              </button>)}
-          </div>
-        </Card>
+      {/* Day Selector — single row of 7 */}
+      <div className="px-3 pt-3">
+        <div className="flex gap-1.5">
+          {[0, 1, 2, 3, 4, 5, 6].map((i) => {
+            const active = activeDay === i;
+            return (
+              <button
+                key={i}
+                onClick={() => setActiveDay(i as DayKey)}
+                className="flex-1 h-11 rounded-md border text-xs font-semibold uppercase transition-all active:scale-95"
+                style={
+                  active
+                    ? { backgroundColor: GREEN, borderColor: GREEN, color: "#fff" }
+                    : { backgroundColor: "transparent", borderColor: `${GREEN}55`, color: "hsl(var(--foreground))" }
+                }
+              >
+                {getDayShort(i)}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Day Actions */}
-      <div className="px-4 pb-4">
+      <div className="px-3 pt-3">
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={() => selectAllDay(activeDay)} className="flex-1">
-            <Check className="h-4 w-4 mr-1" />
+          <button
+            onClick={() => selectAllDay(activeDay)}
+            className="flex-1 h-9 rounded-md text-xs font-semibold text-white flex items-center justify-center gap-1 active:scale-95 transition"
+            style={{ backgroundColor: GREEN }}
+          >
+            <Check className="h-3.5 w-3.5" />
             {t('availability.selectAll')}
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => copyToAllDays(activeDay)} className="flex-1">
+          </button>
+          <button
+            onClick={() => clearDay(activeDay)}
+            className="flex-1 h-9 rounded-md text-xs font-semibold border bg-background active:scale-95 transition"
+            style={{ borderColor: `${GREEN}55`, color: GREEN }}
+          >
+            {t('availability.clear') || 'Clear'}
+          </button>
+          <button
+            onClick={() => copyToAllDays(activeDay)}
+            className="flex-1 h-9 rounded-md text-xs font-semibold border bg-background active:scale-95 transition"
+            style={{ borderColor: `${GREEN}55`, color: GREEN }}
+          >
             {t('availability.copyToAll')}
-          </Button>
+          </button>
         </div>
       </div>
 
       {/* Time Slots */}
-      <div className="px-4 pb-4">
-        <Card className="p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Clock className="h-5 w-5 text-muted-foreground" />
-            <span className="text-base font-semibold">{t('availability.selectTimeSlots', { day: getDayName(activeDay) })}</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {weekData[activeDay].map((slot, i) => <button key={i} className={`px-3 py-3 rounded-xl text-sm font-medium transition-all border-2 ${slot.selected ? "bg-primary/10 border-primary text-primary" : "bg-background border-border hover:border-primary/30 text-foreground"}`} onClick={() => toggleSlot(activeDay, i)}>
-                {slot.label}
-              </button>)}
-          </div>
-        </Card>
+      <div className="px-3 pt-3">
+        <div className="flex items-center gap-1.5 mb-2 px-0.5">
+          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-xs font-medium text-muted-foreground">
+            {t('availability.selectTimeSlots', { day: getDayName(activeDay) })}
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-1.5">
+          {weekData[activeDay].map((slot, i) => (
+            <button
+              key={i}
+              onClick={() => toggleSlot(activeDay, i)}
+              className="h-9 rounded-md text-xs font-medium border transition active:scale-95"
+              style={
+                slot.selected
+                  ? { backgroundColor: GREEN, borderColor: GREEN, color: "#fff" }
+                  : { backgroundColor: "transparent", borderColor: `${GREEN}40`, color: "hsl(var(--foreground))" }
+              }
+            >
+              {slot.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Summary */}
-      <div className="px-4 pb-4">
-        <Card className="p-4 bg-primary/5 border-primary/20">
-          <p className="text-sm font-semibold text-foreground mb-2">
+      <div className="px-3 pt-3">
+        <div className="rounded-md border p-2.5" style={{ borderColor: `${GREEN}40`, backgroundColor: `${GREEN}08` }}>
+          <p className="text-xs font-semibold text-foreground mb-0.5">
             {t('availability.selectedTimeSlots', { day: getDayName(activeDay) })}
           </p>
-          <p className="text-sm text-muted-foreground">{getSummary()}</p>
-        </Card>
+          <p className="text-xs text-muted-foreground">{getSummary()}</p>
+        </div>
       </div>
 
-      {/* Bottom Actions - positioned above BottomNav (h-16 + safe area) */}
-      <div className="fixed left-0 right-0 bg-background/95 backdrop-blur-sm border-t px-4 py-3 shadow-lg z-40" style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}>
-        <Button onClick={saveAvailability} disabled={saving} className="w-full max-w-2xl mx-auto" size="lg">
+      {/* Sticky Save Button */}
+      <div className="fixed left-0 right-0 bg-background/95 backdrop-blur-sm border-t px-3 py-2.5 z-40" style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}>
+        <button
+          onClick={saveAvailability}
+          disabled={saving}
+          className="w-full max-w-2xl mx-auto h-11 rounded-md text-sm font-semibold text-white shadow-md active:scale-[0.98] transition disabled:opacity-60 flex items-center justify-center"
+          style={{ backgroundColor: GREEN }}
+        >
           {saving ? t('availability.saving') : t('availability.saveAvailability')}
-        </Button>
+        </button>
       </div>
 
       <BottomNav />
