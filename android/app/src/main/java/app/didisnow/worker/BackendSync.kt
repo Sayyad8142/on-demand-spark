@@ -16,10 +16,11 @@ import java.net.URL
 object BackendSync {
     private const val SUPABASE_URL = "https://paywwbuqycovjopryele.supabase.co"
     // Public anon key (already shipped in JS bundle / .env).
-    private const val ANON_KEY =
+    const val ANON_KEY_PUBLIC =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
         "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheXd3YnVxeWNvdmpvcHJ5ZWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkyNjksImV4cCI6MjA3MDc0NTI2OX0." +
         "js1MaTBkjuGlaDfQjrZpZ9_G8Jy9ygNAB8KpNDiQg8o"
+    private const val ANON_KEY = ANON_KEY_PUBLIC
 
     private const val ENDPOINT = "$SUPABASE_URL/functions/v1/worker-boot-ping"
 
