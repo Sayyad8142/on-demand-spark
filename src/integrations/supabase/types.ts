@@ -674,28 +674,40 @@ export type Database = {
         Row: {
           booking_id: string
           changed_by: string | null
+          completed_at: string | null
+          completed_by: string | null
+          completion_source: string | null
           created_at: string
           from_status: string | null
           id: string
           note: string | null
+          otp_verified_at: string | null
           to_status: string | null
         }
         Insert: {
           booking_id: string
           changed_by?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          completion_source?: string | null
           created_at?: string
           from_status?: string | null
           id?: string
           note?: string | null
+          otp_verified_at?: string | null
           to_status?: string | null
         }
         Update: {
           booking_id?: string
           changed_by?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          completion_source?: string | null
           created_at?: string
           from_status?: string | null
           id?: string
           note?: string | null
+          otp_verified_at?: string | null
           to_status?: string | null
         }
         Relationships: [
@@ -819,7 +831,9 @@ export type Database = {
           cancelled_at: string | null
           community: string
           completed_at: string | null
+          completed_by: string | null
           completion_otp: string | null
+          completion_source: string | null
           confirmed_at: string | null
           cook_cuisine_pref: string | null
           cook_gender_pref: string | null
@@ -848,6 +862,7 @@ export type Database = {
           maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
           notes: string | null
           on_the_way_at: string | null
+          otp_verified_at: string | null
           paid_confirmed_at: string | null
           paid_confirmed_by_user: boolean | null
           pay_enabled_at: string | null
@@ -904,7 +919,9 @@ export type Database = {
           cancelled_at?: string | null
           community: string
           completed_at?: string | null
+          completed_by?: string | null
           completion_otp?: string | null
+          completion_source?: string | null
           confirmed_at?: string | null
           cook_cuisine_pref?: string | null
           cook_gender_pref?: string | null
@@ -933,6 +950,7 @@ export type Database = {
           maid_tasks?: Database["public"]["Enums"]["maid_task"][] | null
           notes?: string | null
           on_the_way_at?: string | null
+          otp_verified_at?: string | null
           paid_confirmed_at?: string | null
           paid_confirmed_by_user?: boolean | null
           pay_enabled_at?: string | null
@@ -989,7 +1007,9 @@ export type Database = {
           cancelled_at?: string | null
           community?: string
           completed_at?: string | null
+          completed_by?: string | null
           completion_otp?: string | null
+          completion_source?: string | null
           confirmed_at?: string | null
           cook_cuisine_pref?: string | null
           cook_gender_pref?: string | null
@@ -1018,6 +1038,7 @@ export type Database = {
           maid_tasks?: Database["public"]["Enums"]["maid_task"][] | null
           notes?: string | null
           on_the_way_at?: string | null
+          otp_verified_at?: string | null
           paid_confirmed_at?: string | null
           paid_confirmed_by_user?: boolean | null
           pay_enabled_at?: string | null
@@ -5546,7 +5567,9 @@ export type Database = {
               cancelled_at: string | null
               community: string
               completed_at: string | null
+              completed_by: string | null
               completion_otp: string | null
+              completion_source: string | null
               confirmed_at: string | null
               cook_cuisine_pref: string | null
               cook_gender_pref: string | null
@@ -5575,6 +5598,7 @@ export type Database = {
               maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
               notes: string | null
               on_the_way_at: string | null
+              otp_verified_at: string | null
               paid_confirmed_at: string | null
               paid_confirmed_by_user: boolean | null
               pay_enabled_at: string | null
@@ -6748,7 +6772,9 @@ export type Database = {
           cancelled_at: string | null
           community: string
           completed_at: string | null
+          completed_by: string | null
           completion_otp: string | null
+          completion_source: string | null
           confirmed_at: string | null
           cook_cuisine_pref: string | null
           cook_gender_pref: string | null
@@ -6777,6 +6803,7 @@ export type Database = {
           maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
           notes: string | null
           on_the_way_at: string | null
+          otp_verified_at: string | null
           paid_confirmed_at: string | null
           paid_confirmed_by_user: boolean | null
           pay_enabled_at: string | null
