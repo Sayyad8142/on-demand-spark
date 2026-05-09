@@ -430,16 +430,6 @@ export default function Availability() {
         </div>
       </div>
 
-      {/* Summary */}
-      <div className="px-3 pt-3">
-        <div className="rounded-md border p-2.5" style={{ borderColor: `${GREEN}40`, backgroundColor: `${GREEN}08` }}>
-          <p className="text-xs font-semibold text-foreground mb-0.5">
-            {t('availability.selectedTimeSlots', { day: getDayName(activeDay) })}
-          </p>
-          <p className="text-xs text-muted-foreground">{getSummary()}</p>
-        </div>
-      </div>
-
       {/* Sticky Save Button */}
       <div className="fixed left-0 right-0 bg-background/95 backdrop-blur-sm border-t px-3 py-2.5 z-40" style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}>
         <button
