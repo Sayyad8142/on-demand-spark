@@ -405,12 +405,12 @@ export default function Availability() {
 
       {/* Time Slots — fits one screen, no scroll */}
       <div className="flex-1 px-5 pt-3 pb-2 min-h-0">
-        <div className="grid grid-cols-4 gap-1.5 h-full" style={{ gridTemplateRows: "repeat(6, minmax(0, 1fr))" }}>
+        <div className="grid grid-cols-4 gap-1 h-full" style={{ gridTemplateRows: "repeat(6, minmax(0, 1fr))" }}>
           {weekData[activeDay].map((slot, i) => (
             <button
               key={i}
               onClick={() => toggleSlot(activeDay, i)}
-              className="rounded-md text-[10px] font-semibold transition active:scale-95 py-1.5"
+              className="rounded-md text-[9px] font-semibold transition active:scale-95 py-1"
               style={
                 slot.selected
                   ? { backgroundColor: GREEN, color: "#fff", boxShadow: `0 2px 6px ${GREEN}30` }
