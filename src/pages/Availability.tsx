@@ -361,7 +361,7 @@ export default function Availability() {
               <button
                 key={i}
                 onClick={() => setActiveDay(i as DayKey)}
-                className="flex-1 h-10 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all active:scale-95"
+                className="flex-1 h-8 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all active:scale-95"
                 style={
                   active
                     ? { backgroundColor: GREEN, color: "#fff", boxShadow: `0 4px 14px ${GREEN}50` }
@@ -410,7 +410,7 @@ export default function Availability() {
             <button
               key={i}
               onClick={() => toggleSlot(activeDay, i)}
-              className="rounded-lg text-[11px] font-semibold transition active:scale-95"
+              className="rounded-md text-[10px] font-semibold transition active:scale-95 py-1.5"
               style={
                 slot.selected
                   ? { backgroundColor: GREEN, color: "#fff", boxShadow: `0 2px 6px ${GREEN}30` }
