@@ -818,7 +818,9 @@ export type Database = {
         Row: {
           accepted_at: string | null
           assigned_at: string | null
+          assigned_by_admin: boolean
           assignment_method: string
+          assignment_reason: string | null
           auto_complete_after_minutes: number | null
           auto_complete_at: string | null
           bathroom_count: number | null
@@ -906,7 +908,9 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           assigned_at?: string | null
+          assigned_by_admin?: boolean
           assignment_method?: string
+          assignment_reason?: string | null
           auto_complete_after_minutes?: number | null
           auto_complete_at?: string | null
           bathroom_count?: number | null
@@ -994,7 +998,9 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           assigned_at?: string | null
+          assigned_by_admin?: boolean
           assignment_method?: string
+          assignment_reason?: string | null
           auto_complete_after_minutes?: number | null
           auto_complete_at?: string | null
           bathroom_count?: number | null
@@ -3986,6 +3992,54 @@ export type Database = {
           },
         ]
       }
+      worker_emergency_pause: {
+        Row: {
+          id: string
+          paused_at: string
+          paused_by: string | null
+          prev_is_available: boolean | null
+          reason: string | null
+          released_at: string | null
+          released_by: string | null
+          worker_id: string
+        }
+        Insert: {
+          id?: string
+          paused_at?: string
+          paused_by?: string | null
+          prev_is_available?: boolean | null
+          reason?: string | null
+          released_at?: string | null
+          released_by?: string | null
+          worker_id: string
+        }
+        Update: {
+          id?: string
+          paused_at?: string
+          paused_by?: string | null
+          prev_is_available?: boolean | null
+          reason?: string | null
+          released_at?: string | null
+          released_by?: string | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_emergency_pause_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_reliability_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_emergency_pause_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_fault_events: {
         Row: {
           booking_id: string | null
@@ -4741,6 +4795,9 @@ export type Database = {
           location_enabled: boolean | null
           no_ack_count: number | null
           not_reached_7d: number
+          notification_health: string
+          notification_health_score: number
+          notification_health_updated_at: string | null
           notification_permission: string | null
           notification_permission_granted: boolean | null
           passbook_url: string | null
@@ -4770,6 +4827,8 @@ export type Database = {
           score_reason: string | null
           selected_community_id: string | null
           service_types: string[]
+          stale_device: boolean
+          stale_since: string | null
           timezone: string | null
           total_bookings_completed: number
           total_earnings: number | null
@@ -4857,6 +4916,9 @@ export type Database = {
           location_enabled?: boolean | null
           no_ack_count?: number | null
           not_reached_7d?: number
+          notification_health?: string
+          notification_health_score?: number
+          notification_health_updated_at?: string | null
           notification_permission?: string | null
           notification_permission_granted?: boolean | null
           passbook_url?: string | null
@@ -4886,6 +4948,8 @@ export type Database = {
           score_reason?: string | null
           selected_community_id?: string | null
           service_types?: string[]
+          stale_device?: boolean
+          stale_since?: string | null
           timezone?: string | null
           total_bookings_completed?: number
           total_earnings?: number | null
@@ -4973,6 +5037,9 @@ export type Database = {
           location_enabled?: boolean | null
           no_ack_count?: number | null
           not_reached_7d?: number
+          notification_health?: string
+          notification_health_score?: number
+          notification_health_updated_at?: string | null
           notification_permission?: string | null
           notification_permission_granted?: boolean | null
           passbook_url?: string | null
@@ -5002,6 +5069,8 @@ export type Database = {
           score_reason?: string | null
           selected_community_id?: string | null
           service_types?: string[]
+          stale_device?: boolean
+          stale_since?: string | null
           timezone?: string | null
           total_bookings_completed?: number
           total_earnings?: number | null
@@ -5190,6 +5259,14 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_emergency_manual_assign: {
+        Args: { p_admin_id?: string; p_booking_id: string; p_worker_id: string }
+        Returns: Json
+      }
+      admin_emergency_undo_pauses: {
+        Args: { p_admin_id?: string }
+        Returns: Json
+      }
       admin_get_legal_pdfs: {
         Args: never
         Returns: {
@@ -5349,6 +5426,9 @@ export type Database = {
               location_enabled: boolean | null
               no_ack_count: number | null
               not_reached_7d: number
+              notification_health: string
+              notification_health_score: number
+              notification_health_updated_at: string | null
               notification_permission: string | null
               notification_permission_granted: boolean | null
               passbook_url: string | null
@@ -5378,6 +5458,8 @@ export type Database = {
               score_reason: string | null
               selected_community_id: string | null
               service_types: string[]
+              stale_device: boolean
+              stale_since: string | null
               timezone: string | null
               total_bookings_completed: number
               total_earnings: number | null
@@ -5474,6 +5556,9 @@ export type Database = {
               location_enabled: boolean | null
               no_ack_count: number | null
               not_reached_7d: number
+              notification_health: string
+              notification_health_score: number
+              notification_health_updated_at: string | null
               notification_permission: string | null
               notification_permission_granted: boolean | null
               passbook_url: string | null
@@ -5503,6 +5588,8 @@ export type Database = {
               score_reason: string | null
               selected_community_id: string | null
               service_types: string[]
+              stale_device: boolean
+              stale_since: string | null
               timezone: string | null
               total_bookings_completed: number
               total_earnings: number | null
@@ -5554,7 +5641,9 @@ export type Database = {
             Returns: {
               accepted_at: string | null
               assigned_at: string | null
+              assigned_by_admin: boolean
               assignment_method: string
+              assignment_reason: string | null
               auto_complete_after_minutes: number | null
               auto_complete_at: string | null
               bathroom_count: number | null
@@ -5867,6 +5956,26 @@ export type Database = {
           rating_avg: number
           rating_count: number
           worker_id: string
+        }[]
+      }
+      get_emergency_pending_view: {
+        Args: never
+        Returns: {
+          age_minutes: number
+          attempted_workers: Json
+          booking_id: string
+          booking_type: string
+          community: string
+          created_at: string
+          cust_name: string
+          cust_phone: string
+          dispatch_attempts: number
+          flat_no: string
+          flat_size: string
+          scheduled_date: string
+          scheduled_time: string
+          service_type: string
+          status: string
         }[]
       }
       get_favorite_workers:
@@ -6581,8 +6690,16 @@ export type Database = {
         Args: { p_worker_id: string }
         Returns: undefined
       }
+      recompute_all_workers_notification_health: {
+        Args: never
+        Returns: number
+      }
       recompute_worker_busy: {
         Args: { p_booking_id?: string; p_source?: string; p_worker_id: string }
+        Returns: undefined
+      }
+      recompute_worker_notification_health: {
+        Args: { p_worker_id: string }
         Returns: undefined
       }
       redispatch_booking: { Args: { p_booking_id: string }; Returns: undefined }
@@ -6759,7 +6876,9 @@ export type Database = {
         Returns: {
           accepted_at: string | null
           assigned_at: string | null
+          assigned_by_admin: boolean
           assignment_method: string
+          assignment_reason: string | null
           auto_complete_after_minutes: number | null
           auto_complete_at: string | null
           bathroom_count: number | null
