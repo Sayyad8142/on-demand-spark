@@ -353,7 +353,7 @@ export default function Availability() {
       )}
 
       {/* Day Selector */}
-      <div className="px-5 pt-1">
+      <div className="px-4 pt-1">
         <div className="flex gap-1.5">
           {[0, 1, 2, 3, 4, 5, 6].map((i) => {
             const active = activeDay === i;
@@ -361,7 +361,7 @@ export default function Availability() {
               <button
                 key={i}
                 onClick={() => setActiveDay(i as DayKey)}
-                className="flex-1 h-8 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all active:scale-95"
+                className="flex-1 h-12 rounded-2xl text-[12px] font-extrabold uppercase tracking-wider transition-all active:scale-95"
                 style={
                   active
                     ? { backgroundColor: GREEN, color: "#fff", boxShadow: `0 4px 14px ${GREEN}50` }
@@ -376,7 +376,7 @@ export default function Availability() {
       </div>
 
       {/* Day Actions */}
-      <div className="px-5 pt-2.5">
+      <div className="px-4 pt-2.5">
         <div className="flex gap-1.5">
           <button
             onClick={() => selectAllDay(activeDay)}
@@ -403,14 +403,14 @@ export default function Availability() {
         </div>
       </div>
 
-      {/* Time Slots — fits one screen, no scroll */}
-      <div className="flex-1 px-5 pt-3 pb-2 min-h-0">
+      {/* Time Slots — compact grid */}
+      <div className="flex-1 px-4 pt-2.5 pb-2 min-h-0">
         <div className="grid grid-cols-4 gap-1 h-full" style={{ gridTemplateRows: "repeat(6, minmax(0, 1fr))" }}>
           {weekData[activeDay].map((slot, i) => (
             <button
               key={i}
               onClick={() => toggleSlot(activeDay, i)}
-              className="rounded-md text-[9px] font-semibold transition active:scale-95 py-1"
+              className="rounded-md text-[10px] font-semibold transition active:scale-95 px-1 py-1"
               style={
                 slot.selected
                   ? { backgroundColor: GREEN, color: "#fff", boxShadow: `0 2px 6px ${GREEN}30` }
