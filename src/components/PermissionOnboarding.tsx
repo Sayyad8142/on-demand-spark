@@ -296,12 +296,37 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
               <Layers className="h-6 w-6" />
             </div>
             <DialogTitle className="text-center text-base">
-              Allow Activity Permission
+              Allow Physical Activity Permission
             </DialogTitle>
             <DialogDescription className="text-center text-sm">
-              Didi Now Partner uses activity permission to detect worker movement and improve booking reliability. Please allow this permission to continue.
+              Didi Now Partner needs the Physical Activity permission to keep
+              booking alerts reliable and to confirm you've started moving
+              after accepting a job.
             </DialogDescription>
           </DialogHeader>
+
+          <div className="rounded-lg bg-muted/50 p-3 text-xs space-y-2">
+            <p className="font-semibold text-foreground">Why this is needed</p>
+            <ul className="space-y-1.5 text-muted-foreground">
+              <li className="flex gap-2">
+                <span className="text-primary">•</span>
+                <span>Detect when you start walking after accepting a booking, so we can mark you as "on the way" automatically.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary">•</span>
+                <span>Improve your booking priority based on real activity, not just app opens.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary">•</span>
+                <span>Help our system route bookings to workers who are actually available and active.</span>
+              </li>
+            </ul>
+            <p className="pt-1 text-[11px] text-muted-foreground">
+              We only read step-count events. We never access your location or
+              other personal data through this permission.
+            </p>
+          </div>
+
           <DialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
             <Button
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
