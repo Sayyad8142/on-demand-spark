@@ -32,22 +32,33 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return json({ error: "Unauthorized" }, 401);
+    // Polling fallback: degrade gracefully if no/invalid session — caller will retry.
+    if (!authHeader) {
+      console.log("[get-pending-worker-bookings] no auth header, returning empty");
+      return json({ pending: [], reason: "no_auth" });
+    }
 
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: userData, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !userData?.user) return json({ error: "unauth" }, 401);
+    if (userErr || !userData?.user) {
+      console.log("[get-pending-worker-bookings] getUser failed, returning empty:", userErr?.message);
+      return json({ pending: [], reason: "unauth" });
+    }
     const authUid = userData.user.id;
 
+    // Worker resolution: user_id = uid::text OR id = uid (Firebase/Supabase UID compatibility)
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { data: worker, error: wErr } = await admin
       .from("workers")
       .select("id, payout_ready")
-      .eq("user_id", authUid)
+      .or(`user_id.eq.${authUid},id.eq.${authUid}`)
       .maybeSingle();
-    if (wErr || !worker) return json({ error: "worker_not_found" }, 403);
+    if (wErr || !worker) {
+      console.log("[get-pending-worker-bookings] worker_not_found for uid", authUid);
+      return json({ pending: [], reason: "worker_not_found" });
+    }
 
     if (worker.payout_ready !== true) {
       console.log("[get-pending-worker-bookings] hidden because payout_not_ready", { worker_id: worker.id });
