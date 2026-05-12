@@ -1825,6 +1825,50 @@ export type Database = {
           },
         ]
       }
+      invoices: {
+        Row: {
+          amount_inr: number
+          booking_id: string
+          created_at: string
+          generated_by: string | null
+          id: string
+          invoice_no: string
+          invoice_type: string
+          payload: Json
+          updated_at: string
+        }
+        Insert: {
+          amount_inr?: number
+          booking_id: string
+          created_at?: string
+          generated_by?: string | null
+          id?: string
+          invoice_no: string
+          invoice_type: string
+          payload?: Json
+          updated_at?: string
+        }
+        Update: {
+          amount_inr?: number
+          booking_id?: string
+          created_at?: string
+          generated_by?: string | null
+          id?: string
+          invoice_no?: string
+          invoice_type?: string
+          payload?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       landlord_properties: {
         Row: {
           id: string
@@ -6098,6 +6142,31 @@ export type Database = {
         }[]
       }
       get_ops_setting: { Args: { p_key: string }; Returns: string }
+      get_or_create_invoice: {
+        Args: {
+          p_amount: number
+          p_booking_id: string
+          p_invoice_type: string
+          p_payload: Json
+        }
+        Returns: {
+          amount_inr: number
+          booking_id: string
+          created_at: string
+          generated_by: string | null
+          id: string
+          invoice_no: string
+          invoice_type: string
+          payload: Json
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "invoices"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_payout_summary: { Args: never; Returns: Json }
       get_profile_id: { Args: never; Returns: string }
       get_realtime_active_workers: {
