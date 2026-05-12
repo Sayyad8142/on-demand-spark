@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.fcm-keepalive]
 verify_jwt = false
+
+[functions.admin-token-health]
+verify_jwt = false

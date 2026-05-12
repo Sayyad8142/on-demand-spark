@@ -45,6 +45,7 @@ import ContactSupport from "./pages/ContactSupport";
 import ForceUpdateScreen from "./pages/ForceUpdateScreen";
 import CustomerReviews from "./pages/CustomerReviews";
 import AdminUploadQr from "./pages/AdminUploadQr";
+import AdminTokenHealth from "./pages/AdminTokenHealth";
 import AuthDebug from "./pages/AuthDebug";
 import Earnings from "./pages/Earnings";
 import WorkerBlocked from "./pages/WorkerBlocked";
@@ -553,6 +554,7 @@ function AppInner() {
           <Route path="/contact-support" element={<ProtectedRoute><ContactSupport /></ProtectedRoute>} />
           <Route path="/customer-reviews" element={<ProtectedRoute><CustomerReviews /></ProtectedRoute>} />
           <Route path="/admin-upload-qr" element={<AdminUploadQr />} />
+          <Route path="/admin-token-health" element={<AdminTokenHealth />} />
           <Route path="/auth-debug" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
           <Route path="/support-diagnostics" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
           <Route path="/device-readiness" element={<ProtectedRoute><DeviceReadiness /></ProtectedRoute>} />
