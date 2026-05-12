@@ -78,32 +78,6 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
             </div>
           </div>
         </div>
-
-        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3">
-          <div className="flex items-center gap-1.5 mb-2">
-            <Lightbulb className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">
-              How to improve your score
-            </p>
-          </div>
-          <ul className="space-y-1 text-xs text-amber-900 dark:text-amber-200">
-            <li className="flex items-start gap-1.5">
-              <span className="text-amber-500 mt-0.5">•</span>
-              <span>Maintain high customer ratings</span>
-            </li>
-            <li className="flex items-start gap-1.5">
-              <span className="text-amber-500 mt-0.5">•</span>
-              <span>Complete bookings successfully</span>
-            </li>
-            <li className="flex items-start gap-1.5">
-              <span className="text-amber-500 mt-0.5">•</span>
-              <span>Stay active on the platform</span>
-            </li>
-          </ul>
-          <p className="text-xs text-amber-800 dark:text-amber-300 mt-2 italic">
-            {encouragement}
-          </p>
-        </div>
       </CardContent>
     </Card>
   );
