@@ -109,7 +109,7 @@ export function useFCMTokenSync(userId: string | undefined) {
         return;
       }
 
-      console.log(`✅ [FCMSync] ${reason}: token saved successfully for worker user_id=${userId}`);
+      console.log(`✅ [FCMSync] ${reason}: TOKEN_SYNC_OK worker_user_id=${userId} token_prefix=${token.substring(0, 12)} ts=${new Date().toISOString()}`);
       syncedRef.current = token;
 
       await clearPendingNativeFcmToken();
