@@ -54,10 +54,10 @@ const isPayoutCredited = (p: PayoutSummary | null) => {
 // Lightweight haptics using navigator.vibrate (works in Capacitor WebView on Android)
 const haptic = {
   success: () => {
-    try { navigator.vibrate?.([30]); } catch {}
+    try { navigator.vibrate?.([30]); } catch { return undefined; }
   },
   error: () => {
-    try { navigator.vibrate?.([60, 50, 60]); } catch {}
+    try { navigator.vibrate?.([60, 50, 60]); } catch { return undefined; }
   },
 };
 
@@ -73,17 +73,16 @@ const trackEvent = (
     | "otp_timeout_warning"
     | "otp_call_customer",
   bookingId: string,
-  meta: Record<string, any> = {},
+  meta: Record<string, unknown> = {},
 ) => {
   try {
-    // eslint-disable-next-line no-console
     console.log(`[analytics] ${event}`, { bookingId, ...meta });
     // Best-effort persistence — ignored if table policy blocks
     supabase.from("booking_events").insert({
       booking_id: bookingId,
       type: `worker_${event}`,
       meta: { ...meta, ts: new Date().toISOString() },
-    } as any).then(() => {}, () => {});
+    } as never).then(() => {}, () => {});
   } catch {
     // swallow
   }
@@ -99,7 +98,7 @@ const logOtpDebug = (label: string, payload: Record<string, unknown>) => {
   try {
     // Temporary production-safe OTP diagnostics for the Worker App completion flow.
     console.log(`[OTP_DEBUG] ${label}`, payload);
-  } catch {}
+  } catch { return undefined; }
 };
 
 export default function CompleteBooking() {
