@@ -252,17 +252,21 @@ export default function CompleteBooking() {
       // Try to extract the real backend error message even when invoke surfaces a generic non-2xx.
       // supabase-js attaches the response on fnError.context (a Response). We read its body if possible.
       let backendMessage: string | null = null;
-      let backendPayload: any = null;
+      let backendPayload: Record<string, unknown> | null = null;
       if (fnError) {
         try {
-          const ctx: any = (fnError as any).context;
+          const ctx = (fnError as { context?: Response }).context;
           if (ctx && typeof ctx.json === "function") {
-            backendPayload = await ctx.clone().json().catch(() => null);
+            const parsed = await ctx.clone().json().catch(() => null);
+            backendPayload = parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : null;
           }
           if (!backendPayload && ctx && typeof ctx.text === "function") {
             const txt = await ctx.clone().text().catch(() => "");
             if (txt) {
-              try { backendPayload = JSON.parse(txt); } catch { backendMessage = txt; }
+              try {
+                const parsed = JSON.parse(txt);
+                backendPayload = parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : null;
+              } catch { backendMessage = txt; }
             }
           }
           if (backendPayload?.error) backendMessage = String(backendPayload.error);
@@ -276,7 +280,7 @@ export default function CompleteBooking() {
           haptic.success();
           setSuccess(true);
           trackEvent("otp_success", bookingId, { already_completed: true });
-          if (data?.payout || backendPayload?.payout) setPayout(data?.payout ?? backendPayload?.payout);
+          if (data?.payout || backendPayload?.payout) setPayout(data?.payout ?? backendPayload?.payout as PayoutSummary);
         } else if (errorBody.includes("Invalid OTP")) {
           handleWrongOtp("Wrong OTP. Please ask the customer for the correct code.", enteredOtp);
         } else if (
@@ -323,11 +327,11 @@ export default function CompleteBooking() {
         trackEvent("otp_success", bookingId);
       }
       if (data?.payout) setPayout(data.payout);
-    } catch (err: any) {
+    } catch (err: unknown) {
       haptic.error();
       setError("Network error. Please try again.");
       setErrorKind("network");
-      trackEvent("otp_network_error", bookingId, { message: err?.message ?? "unknown" });
+      trackEvent("otp_network_error", bookingId, { message: err instanceof Error ? err.message : "unknown" });
     } finally {
       submitLockRef.current = false;
       setLoading(false);
