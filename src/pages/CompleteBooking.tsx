@@ -4,19 +4,14 @@ import {
   Check,
   Loader2,
   AlertCircle,
-  PartyPopper,
   ArrowLeft,
   KeyRound,
-  Home,
-  Sparkles,
   RefreshCw,
-  Phone,
-  HelpCircle,
-  ShieldCheck,
-  Clock,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -505,179 +500,112 @@ export default function CompleteBooking() {
           </div>
         </>
       ) : (
-        // Success — celebratory earnings hero
-        <>
-          {/* Pink gradient hero header */}
-          <div
-            className="relative overflow-hidden px-5 pt-[max(env(safe-area-inset-top),1.5rem)] pb-8 text-white text-center"
-            style={{ background: "linear-gradient(135deg, #ff007a 0%, #ff4da6 60%, #ff85c1 100%)" }}
-          >
-            {/* keep existing success body unchanged below */}
-            {/* Decorative confetti dots */}
-            <div className="pointer-events-none absolute inset-0 opacity-60">
-              <span className="absolute left-6 top-4 text-xl animate-bounce" style={{ animationDelay: "0ms" }}>✨</span>
-              <span className="absolute right-8 top-6 text-2xl animate-bounce" style={{ animationDelay: "150ms" }}>🎉</span>
-              <span className="absolute left-10 bottom-6 text-lg animate-bounce" style={{ animationDelay: "300ms" }}>🎊</span>
-              <span className="absolute right-6 bottom-4 text-xl animate-bounce" style={{ animationDelay: "450ms" }}>⭐</span>
+        // Success — minimal auto-close screen
+        <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center px-6 pb-[max(env(safe-area-inset-bottom),1rem)] text-center">
+          {/* Success icon */}
+          <div className="mb-5">
+            <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto animate-in zoom-in duration-500">
+              <Check className="w-10 h-10 text-green-600" strokeWidth={3} />
             </div>
-
-            <div className="relative z-10 flex flex-col items-center">
-              <div className="w-20 h-20 rounded-full bg-white/25 backdrop-blur flex items-center justify-center mb-3 shadow-lg animate-in zoom-in duration-500">
-                <Check className="w-12 h-12 text-white" strokeWidth={3} />
-              </div>
-              <p className="text-sm font-semibold uppercase tracking-wider text-white/90">
-                You Earned
-              </p>
-              <p className="text-6xl font-black mt-1 drop-shadow-md animate-in zoom-in duration-500">
-                ₹{payout?.payout_amount ?? 0}
-              </p>
-              <p className="text-base font-semibold mt-2 text-white/95">
-                Job Completed Successfully 🎉
-              </p>
-            </div>
+            <h1 className="text-xl font-bold text-foreground mt-4">
+              Job Completed Successfully
+            </h1>
           </div>
 
-          {/* Body */}
-          <div className="flex-1 overflow-y-auto px-5 py-6 space-y-4 -mt-4">
-            {/* Status pills */}
-            <div className="flex flex-wrap justify-center gap-2">
-              <div className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-900 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                Payment Secured
-              </div>
-              {isPayoutCredited(payout) ? (
-                <div className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-900 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm">
-                  <Check className="w-3.5 h-3.5" />
-                  Amount Credited
-                </div>
-              ) : (
-                <div className="inline-flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-900 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Payout Processing
-                </div>
-              )}
-            </div>
+          {/* Amount earned */}
+          <div className="mb-2">
+            <p className="text-5xl font-black text-foreground">
+              ₹{payout?.payout_amount ?? 0}
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">earned</p>
+          </div>
 
-            {/* Completed at */}
-            {completedAt && (
-              <p className="text-center text-xs text-muted-foreground">
-                Job completed at: <span className="font-semibold text-foreground">{formatTime(completedAt)}</span>
-              </p>
+          {/* Payout status */}
+          <div className="mb-8">
+            {isPayoutCredited(payout) ? (
+              <span className="inline-flex items-center gap-1.5 text-green-600 text-sm font-semibold">
+                <Check className="w-4 h-4" />
+                Payout credited
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-blue-600 text-sm font-semibold">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Payout processing
+              </span>
             )}
+          </div>
 
-            {/* Earnings breakdown card */}
-            {payout ? (
-              <div className="w-full max-w-sm mx-auto bg-card rounded-3xl p-5 shadow-xl border border-green-100 dark:border-green-900/40">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
-                    <Sparkles className="w-4 h-4 text-green-600" />
-                  </div>
-                  <h3 className="font-bold text-sm uppercase tracking-wide text-foreground">
-                    Earnings Breakdown
-                  </h3>
-                </div>
+          {/* Countdown */}
+          <p className="text-sm text-muted-foreground mb-6">
+            Returning to Home in {countdown}…
+          </p>
 
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center text-sm">
+          {/* View Earnings */}
+          <Button
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent("bookingCompleted", { detail: { bookingId } }));
+              navigate("/earnings");
+            }}
+            variant="outline"
+            className="mb-4 h-11 text-sm font-semibold rounded-xl border-pink-600 text-pink-600 hover:bg-pink-50"
+          >
+            View Earnings
+          </Button>
+
+          {/* View Details collapsible */}
+          <Collapsible className="w-full max-w-xs">
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground transition mx-auto"
+              >
+                View Details <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-3 text-left bg-muted/50 rounded-2xl p-4 space-y-2 text-xs">
+              {payout && (
+                <>
+                  <div className="flex justify-between">
                     <span className="text-muted-foreground">Customer Paid</span>
-                    <span className="font-bold text-foreground">₹{payout.gross_amount}</span>
+                    <span className="font-semibold">₹{payout.gross_amount}</span>
                   </div>
                   {payout.platform_fee > 0 && (
-                    <div className="flex justify-between items-center text-sm">
+                    <div className="flex justify-between">
                       <span className="text-muted-foreground">Platform Fee (20%)</span>
-                      <span className="font-bold text-destructive">−₹{payout.platform_fee}</span>
+                      <span className="font-semibold text-destructive">−₹{payout.platform_fee}</span>
                     </div>
                   )}
-                  <div className="border-t border-dashed pt-3 flex justify-between items-center bg-green-50 dark:bg-green-900/20 -mx-5 px-5 py-3 mt-3">
-                    <div>
-                      <p className="text-xs text-green-700 dark:text-green-400 font-semibold uppercase tracking-wide">Your Earnings</p>
-                      <p className="text-[10px] text-green-700/70 dark:text-green-400/70">Net payout</p>
-                    </div>
-                    <span className="font-black text-green-600 text-3xl">₹{payout.payout_amount}</span>
+                  <div className="flex justify-between border-t border-dashed pt-2">
+                    <span className="text-muted-foreground">Your Earnings</span>
+                    <span className="font-bold text-green-600">₹{payout.payout_amount}</span>
                   </div>
-                </div>
-
-                {/* Payout meta */}
-                <div className="mt-4 space-y-2 text-xs">
-                  {!isPayoutCredited(payout) && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5" />
-                        Expected Credit
-                      </span>
-                      <span className="font-semibold text-foreground">Within 24 hours</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between">
+                  <div className="flex justify-between">
                     <span className="text-muted-foreground">Payout Method</span>
-                    <span className="font-semibold text-foreground">{resolvePayoutMethod(payout)}</span>
+                    <span className="font-semibold">{resolvePayoutMethod(payout)}</span>
                   </div>
-                  {completedAt && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Completed At</span>
-                      <span className="font-semibold text-foreground">{formatTime(completedAt)}</span>
+                  {!isPayoutCredited(payout) && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Expected Credit</span>
+                      <span className="font-semibold">Within 24 hours</span>
                     </div>
                   )}
-                  {bookingId && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Booking ID</span>
-                      <span className="font-mono text-[10px] text-foreground">#{bookingId.slice(0, 8)}</span>
-                    </div>
-                  )}
+                </>
+              )}
+              {completedAt && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Completed At</span>
+                  <span className="font-semibold">{formatTime(completedAt)}</span>
                 </div>
-              </div>
-            ) : (
-              <div className="max-w-sm mx-auto bg-muted/50 border border-border rounded-2xl p-4 text-center">
-                <p className="text-sm font-semibold text-foreground">
-                  Job completed successfully.
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Payout details are being updated. Check the Earnings tab in a moment.
-                </p>
-              </div>
-            )}
-
-            {/* Reassurance message */}
-            {payout && (
-              <div className="max-w-sm mx-auto bg-pink-50 dark:bg-pink-950/20 border border-pink-100 dark:border-pink-900/40 rounded-2xl p-4 text-center">
-                <p className="text-sm font-semibold text-pink-900 dark:text-pink-300">
-                  {isPayoutCredited(payout)
-                    ? "✅ Amount credited to your account"
-                    : "💸 Your payout has been initiated"}
-                </p>
-                <p className="text-xs text-pink-800/80 dark:text-pink-400/80 mt-1 leading-relaxed">
-                  {isPayoutCredited(payout)
-                    ? `The amount has been sent via ${resolvePayoutMethod(payout)}. Track all payouts in the Earnings tab.`
-                    : `The amount will be credited to your registered ${resolvePayoutMethod(payout) === "Bank Transfer" ? "bank account" : "UPI"} shortly. You can track all payouts in the Earnings tab.`}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Sticky footer */}
-          <div
-            className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom),1rem)] border-t bg-background space-y-2"
-            style={{ boxShadow: "0 -4px 12px rgba(0,0,0,0.04)" }}
-          >
-            <Button
-              onClick={handleDone}
-              className="w-full h-14 text-base font-bold rounded-2xl bg-pink-600 hover:bg-pink-700 text-white shadow-lg"
-            >
-              <Home className="w-5 h-5 mr-2" />
-              Go to Home
-            </Button>
-            <Button
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent("bookingCompleted", { detail: { bookingId } }));
-                navigate("/earnings");
-              }}
-              variant="outline"
-              className="w-full h-12 text-sm font-bold rounded-2xl border-pink-600 text-pink-600 hover:bg-pink-50 hover:text-pink-700"
-            >
-              View Earnings
-            </Button>
-          </div>
-        </>
+              )}
+              {bookingId && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Booking ID</span>
+                  <span className="font-mono text-[10px]">#{bookingId.slice(0, 8)}</span>
+                </div>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
       )}
     </div>
   );
