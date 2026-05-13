@@ -1,3 +1,3 @@
 // Current app version - must match android/app/build.gradle versionCode/versionName
-export const CURRENT_VERSION_CODE = 39;
-export const CURRENT_VERSION_NAME = '6.0.39';
+export const CURRENT_VERSION_CODE = 60;
+export const CURRENT_VERSION_NAME = '6.0.60';
