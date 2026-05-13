@@ -155,7 +155,7 @@ public class CancellationVoicePlugin extends Plugin {
             }
         } catch (Exception e) {
             Log.e(TAG, "speakOnce error", e);
-            playFallback();
+            playFallbackLoop();
         }
     }
 
