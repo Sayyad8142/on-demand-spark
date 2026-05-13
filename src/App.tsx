@@ -550,7 +550,7 @@ function AppInner() {
             <h2 className="text-2xl font-bold text-destructive">Booking Cancelled</h2>
             <p className="mt-3 text-lg font-semibold text-foreground">Do not go to the flat</p>
             <p className="mt-2 text-sm text-muted-foreground">Your booking was cancelled.</p>
-            <Button className="mt-6 w-full" variant="destructive" size="lg" onClick={stopCancellationAlert}>
+            <Button className="mt-6 w-full" variant="destructive" size="lg" onClick={closeCancellationPopup}>
               OK
             </Button>
           </div>
