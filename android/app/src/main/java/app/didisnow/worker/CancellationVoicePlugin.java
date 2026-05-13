@@ -40,11 +40,13 @@ public class CancellationVoicePlugin extends Plugin {
     private boolean ttsReady = false;
     private boolean speaking = false;
     private int repeatsRemaining = 0;
+    private int totalRepeats = 0;
     private MediaPlayer fallbackPlayer;
     private PowerManager.WakeLock wakeLock;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
-    private String phrase = "Booking cancelled. Booking cancelled. Do not go to the flat.";
+    private String phrase = "Booking cancelled. Booking cancelled.";
+    private static final long REPEAT_GAP_MS = 600L;
 
     @Override
     public void load() {
