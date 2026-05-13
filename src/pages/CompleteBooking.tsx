@@ -4,19 +4,14 @@ import {
   Check,
   Loader2,
   AlertCircle,
-  PartyPopper,
   ArrowLeft,
   KeyRound,
-  Home,
-  Sparkles,
   RefreshCw,
-  Phone,
-  HelpCircle,
-  ShieldCheck,
-  Clock,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
