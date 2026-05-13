@@ -194,6 +194,7 @@ public class CancellationVoicePlugin extends Plugin {
                     Log.d(TAG, "[CANCEL_ALERT] completed_all_repeats");
                     Log.d(TAG, "[CANCEL_ALERT] speech_completed");
                     speaking = false;
+                    restoreAlarmVolume();
                     releaseWakeLock();
                 }
             });
