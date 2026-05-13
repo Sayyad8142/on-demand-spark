@@ -308,19 +308,8 @@ export default function ActiveJobCard({
           }
         </div>
 
-        {/* Call Manager Button (above Complete with OTP) */}
+        {/* Complete with OTP Button (above Call Manager) */}
         <div className="px-3">
-          <Button
-            size="lg"
-            className="w-full h-12 text-base font-bold bg-green-500 hover:bg-green-600 text-white shadow-md rounded-xl transition-all duration-200 active:scale-[0.98]"
-            onClick={handleCallManager}>
-            <Phone className="w-5 h-5 mr-2" />
-            Call Manager
-          </Button>
-        </div>
-
-        {/* Complete with OTP Button */}
-        <div className="px-3 pb-3">
           <Button
             size="lg"
             className={`w-full h-14 text-lg font-bold shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98] ${
@@ -336,6 +325,17 @@ export default function ActiveJobCard({
                 Complete with OTP
               </>
             }
+          </Button>
+        </div>
+
+        {/* Call Manager Button */}
+        <div className="px-3 pb-3">
+          <Button
+            size="lg"
+            className="w-full h-12 text-base font-bold bg-green-500 hover:bg-green-600 text-white shadow-md rounded-xl transition-all duration-200 active:scale-[0.98]"
+            onClick={handleCallManager}>
+            <Phone className="w-5 h-5 mr-2" />
+            Call Manager
           </Button>
         </div>
       </div>
