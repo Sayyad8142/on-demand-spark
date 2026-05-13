@@ -367,7 +367,18 @@ function AppInner() {
     return () => { sub.then(s => s.remove()); };
   }, [worker?.is_blocked]);
 
-  const stopCancellationAlert = useCallback(() => {
+  // Closes the popup only. Voice now auto-stops after 3 repeats and is NOT
+  // tied to this button (per spec). Use forceStopCancellationAlert to also
+  // silence audio (e.g. on a new booking acceptance).
+  const closeCancellationPopup = useCallback(() => {
+    if (cancellationTimeoutRef.current) {
+      window.clearTimeout(cancellationTimeoutRef.current);
+      cancellationTimeoutRef.current = null;
+    }
+    setCancellationAlert(null);
+  }, []);
+
+  const forceStopCancellationAlert = useCallback(() => {
     if (cancellationTimeoutRef.current) {
       window.clearTimeout(cancellationTimeoutRef.current);
       cancellationTimeoutRef.current = null;
@@ -389,8 +400,9 @@ function AppInner() {
     });
     if (cancellationTimeoutRef.current) window.clearTimeout(cancellationTimeoutRef.current);
     startCancellationVoice();
-    cancellationTimeoutRef.current = window.setTimeout(stopCancellationAlert, 45000);
-  }, [stopCancellationAlert]);
+    // Safety: auto-close popup after 45s even if worker doesn't tap OK.
+    cancellationTimeoutRef.current = window.setTimeout(closeCancellationPopup, 45000);
+  }, [closeCancellationPopup]);
 
   useEffect(() => {
     const onBookingCancelled = (event: Event) => {
@@ -398,17 +410,17 @@ function AppInner() {
       showCancellationAlert(bookingId);
     };
     const onBookingAccepted = () => {
-      // A new booking was accepted — silence cancellation alert immediately.
-      stopCancellationAlert();
+      // A new booking was accepted — silence cancellation voice + close popup.
+      forceStopCancellationAlert();
     };
     window.addEventListener("bookingCancelledAlert", onBookingCancelled);
     window.addEventListener("bookingAccepted", onBookingAccepted);
     return () => {
       window.removeEventListener("bookingCancelledAlert", onBookingCancelled);
       window.removeEventListener("bookingAccepted", onBookingAccepted);
-      stopCancellationAlert();
+      forceStopCancellationAlert();
     };
-  }, [showCancellationAlert, stopCancellationAlert]);
+  }, [showCancellationAlert, forceStopCancellationAlert]);
 
   // Listen for push notification messages
   useEffect(() => {
