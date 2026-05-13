@@ -317,74 +317,44 @@ export default function CompleteBooking() {
     <div className="min-h-[100dvh] bg-background flex flex-col">
       {!success ? (
         <>
-          {/* Header */}
-          <div
-            className="px-5 pt-[max(env(safe-area-inset-top),1rem)] pb-5 text-white relative"
-            style={{ background: "linear-gradient(135deg, #ff007a 0%, #ff4da6 100%)" }}
-          >
+          {/* Minimal header */}
+          <div className="px-5 pt-[max(env(safe-area-inset-top),1rem)] pb-2 flex items-center">
             <button
               onClick={handleBack}
               disabled={loading}
               aria-label="Back"
-              className="absolute left-3 top-[max(env(safe-area-inset-top),1rem)] p-2 rounded-full hover:bg-white/20 active:scale-95 transition disabled:opacity-50"
+              className="p-2 -ml-2 rounded-full hover:bg-muted active:scale-95 transition disabled:opacity-50"
             >
-              <ArrowLeft className="w-6 h-6" />
+              <ArrowLeft className="w-6 h-6 text-foreground" />
             </button>
-
-            <div className="flex flex-col items-center text-center mt-2">
-              <div className="bg-white/20 p-3 rounded-2xl mb-3">
-                <KeyRound className="w-7 h-7" />
-              </div>
-              <h1 className="text-2xl font-extrabold leading-tight">Complete Job</h1>
-              <p className="text-white/90 text-sm mt-1.5 max-w-xs">
-                Ask the customer for the 4-digit OTP
-              </p>
-            </div>
-
-            {(bookingMeta?.flat_no || bookingMeta?.service_type) && (
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                {bookingMeta?.flat_no && (
-                  <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur px-3 py-1.5 rounded-full text-sm font-semibold">
-                    <Home className="w-4 h-4" />
-                    <span>Flat {bookingMeta.flat_no}</span>
-                  </div>
-                )}
-                {bookingMeta?.service_type && (
-                  <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur px-3 py-1.5 rounded-full text-sm font-semibold capitalize">
-                    <Sparkles className="w-4 h-4" />
-                    <span>{bookingMeta.service_type.replace(/_/g, " ")}</span>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
-          {/* Body */}
-          <div className="flex-1 overflow-y-auto px-5 py-8 flex flex-col items-center">
-            <p className="text-base font-semibold text-foreground mb-2 text-center">
-              Enter 4-digit OTP
-            </p>
-            <p className="text-sm text-muted-foreground mb-2 text-center">
-              The OTP is shown in the customer's app
-            </p>
-            <p className="text-xs text-muted-foreground mb-6 text-center font-medium">
-              🔒 Only customer OTP will complete the job
+          {/* Body — OTP is the hero */}
+          <div className="flex-1 flex flex-col items-center justify-center px-6 pb-6">
+            <div className="w-14 h-14 rounded-2xl bg-pink-50 flex items-center justify-center mb-5">
+              <KeyRound className="w-7 h-7 text-pink-600" />
+            </div>
+            <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+              Enter OTP
+            </h1>
+            <p className="text-sm text-muted-foreground mt-2 mb-10 text-center">
+              Ask customer for the 4-digit code
             </p>
 
-            <div ref={otpContainerRef} className={cn("mb-6", shake && "animate-otp-shake")}>
+            <div ref={otpContainerRef} className={cn(shake && "animate-otp-shake")}>
               <InputOTP
                 maxLength={4}
                 value={otp}
-                 onChange={(v) => {
-                   setOtp(v);
-                   if (error && errorKind !== "network" && errorKind !== "timeout") {
-                     setError(null);
-                     setErrorKind(null);
-                   }
-                   if (v.length === 4 && !loading && !submitLockRef.current) {
-                     handleSubmit(false);
-                   }
-                 }}
+                onChange={(v) => {
+                  setOtp(v);
+                  if (error && errorKind !== "network" && errorKind !== "timeout") {
+                    setError(null);
+                    setErrorKind(null);
+                  }
+                  if (v.length === 4 && !loading && !submitLockRef.current) {
+                    handleSubmit(false);
+                  }
+                }}
                 inputMode="numeric"
                 pattern="[0-9]*"
                 autoFocus
@@ -395,13 +365,13 @@ export default function CompleteBooking() {
                       key={i}
                       index={i}
                       className={cn(
-                        "h-20 w-20 text-4xl font-extrabold rounded-2xl border-2",
+                        "h-16 w-16 text-3xl font-semibold rounded-2xl border",
                         "first:rounded-2xl last:rounded-2xl border-l",
-                        "bg-background shadow-sm transition-colors",
+                        "bg-background transition-all",
                         errorKind === "wrong_otp" || errorKind === "validation"
                           ? "border-destructive"
-                          : "border-input",
-                        "data-[active=true]:border-pink-600 data-[active=true]:ring-2 data-[active=true]:ring-pink-200",
+                          : "border-border",
+                        "data-[active=true]:border-pink-500 data-[active=true]:ring-4 data-[active=true]:ring-pink-100",
                       )}
                     />
                   ))}
@@ -410,107 +380,43 @@ export default function CompleteBooking() {
             </div>
 
             {error && (
-              <div className="flex items-start gap-2 text-destructive text-sm bg-destructive/10 border border-destructive/20 px-4 py-3 rounded-xl w-full max-w-sm mb-4">
-                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="font-medium">{error}</p>
-                  {errorKind === "network" && (
-                    <button
-                      onClick={() => handleSubmit(true)}
-                      className="mt-2 inline-flex items-center gap-1.5 text-destructive font-bold text-sm underline"
-                    >
-                      <RefreshCw className="w-4 h-4" /> Retry
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Slow network warning (shown while loading > 12s) */}
-            {loading && showSlowWarning && (
-              <div className="flex items-start gap-2 text-amber-700 dark:text-amber-400 text-sm bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 px-4 py-3 rounded-xl w-full max-w-sm mb-4">
-                <Clock className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="font-semibold">Taking longer than expected</p>
-                  <p className="text-xs mt-0.5 opacity-90">Please check your internet. We won't lose your OTP.</p>
+              <div className="flex items-center gap-2 text-destructive text-sm mt-6 max-w-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <p className="font-medium">{error}</p>
+                {errorKind === "network" && (
                   <button
-                    onClick={() => {
-                      stopSlowTimer();
-                      submitLockRef.current = false;
-                      setLoading(false);
-                      handleSubmit(true);
-                    }}
-                    className="mt-2 inline-flex items-center gap-1.5 font-bold text-sm underline"
+                    onClick={() => handleSubmit(true)}
+                    className="ml-1 inline-flex items-center gap-1 font-semibold underline"
                   >
-                    <RefreshCw className="w-4 h-4" /> Retry now
+                    <RefreshCw className="w-3.5 h-3.5" /> Retry
                   </button>
-                </div>
+                )}
               </div>
             )}
 
-            {/* Help / Customer not showing OTP */}
-            <div className="w-full max-w-sm mt-2">
-              <button
-                type="button"
-                onClick={() => setShowHelp((s) => !s)}
-                className="w-full flex items-center justify-center gap-1.5 text-sm font-semibold text-pink-600 py-2"
-              >
-                <HelpCircle className="w-4 h-4" />
-                Customer not showing OTP?
-              </button>
-
-              {showHelp && (
-                <div className="bg-muted rounded-2xl p-4 mt-2 text-sm text-foreground space-y-2">
-                  <p className="font-semibold">Ask the customer to:</p>
-                  <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-                    <li>Open the Didi Now app</li>
-                    <li>Go to the active booking screen</li>
-                    <li>Read out the 4-digit OTP shown there</li>
-                  </ol>
-                  {bookingMeta?.cust_phone && (
-                    <Button
-                      onClick={handleCallCustomer}
-                      variant="outline"
-                      className="w-full mt-3 h-12 rounded-xl border-pink-600 text-pink-600 hover:bg-pink-50 hover:text-pink-700 font-bold"
-                    >
-                      <Phone className="w-4 h-4 mr-2" />
-                      Call Customer
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
+            {loading && showSlowWarning && (
+              <p className="text-xs text-amber-600 mt-4 text-center">
+                Taking longer than usual… check your internet.
+              </p>
+            )}
           </div>
 
           {/* Sticky footer */}
-          <div
-            className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom),1rem)] border-t bg-background"
-            style={{ boxShadow: "0 -4px 12px rgba(0,0,0,0.04)" }}
-          >
+          <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom),1rem)] bg-background">
             <Button
               onClick={() => handleSubmit(false)}
               disabled={loading || otp.length < 4}
-              className="w-full h-14 text-base font-bold rounded-2xl bg-pink-600 hover:bg-pink-700 text-white"
+              className="w-full h-14 text-base font-semibold rounded-2xl bg-pink-600 hover:bg-pink-700 text-white shadow-sm disabled:opacity-40 disabled:shadow-none"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Verifying...
+                  Verifying…
                 </>
               ) : (
-                <>
-                  <Check className="w-6 h-6 mr-2" />
-                  Verify & Complete
-                </>
+                "Complete Job"
               )}
             </Button>
-            <button
-              onClick={handleBack}
-              disabled={loading}
-              className="w-full h-12 mt-2 text-muted-foreground font-semibold text-sm disabled:opacity-50"
-            >
-              Back
-            </button>
           </div>
         </>
       ) : (
@@ -521,6 +427,7 @@ export default function CompleteBooking() {
             className="relative overflow-hidden px-5 pt-[max(env(safe-area-inset-top),1.5rem)] pb-8 text-white text-center"
             style={{ background: "linear-gradient(135deg, #ff007a 0%, #ff4da6 60%, #ff85c1 100%)" }}
           >
+            {/* keep existing success body unchanged below */}
             {/* Decorative confetti dots */}
             <div className="pointer-events-none absolute inset-0 opacity-60">
               <span className="absolute left-6 top-4 text-xl animate-bounce" style={{ animationDelay: "0ms" }}>✨</span>
