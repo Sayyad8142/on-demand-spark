@@ -43,6 +43,7 @@ public class CancellationVoicePlugin extends Plugin {
     private int totalRepeats = 0;
     private MediaPlayer fallbackPlayer;
     private PowerManager.WakeLock wakeLock;
+    private int previousAlarmVolume = -1; // -1 = not changed / nothing to restore
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     private String phrase = "Booking cancelled. Booking cancelled.";
@@ -80,7 +81,7 @@ public class CancellationVoicePlugin extends Plugin {
                             Log.d(TAG, "[CANCEL_ALERT] completed_all_repeats");
                             Log.d(TAG, "[CANCEL_ALERT] speech_completed");
                             speaking = false;
-                            handler.post(CancellationVoicePlugin.this::releaseWakeLock);
+                            handler.post(() -> { restoreAlarmVolume(); releaseWakeLock(); });
                         }
                     }
                     @Override public void onError(String utteranceId) {
@@ -193,6 +194,7 @@ public class CancellationVoicePlugin extends Plugin {
                     Log.d(TAG, "[CANCEL_ALERT] completed_all_repeats");
                     Log.d(TAG, "[CANCEL_ALERT] speech_completed");
                     speaking = false;
+                    restoreAlarmVolume();
                     releaseWakeLock();
                 }
             });
@@ -200,6 +202,7 @@ public class CancellationVoicePlugin extends Plugin {
         } catch (Exception e) {
             Log.e(TAG, "fallback error", e);
             speaking = false;
+            restoreAlarmVolume();
             releaseWakeLock();
         }
     }
@@ -217,6 +220,7 @@ public class CancellationVoicePlugin extends Plugin {
             Vibrator v = (Vibrator) getContext().getSystemService(Context.VIBRATOR_SERVICE);
             if (v != null) v.cancel();
         } catch (Exception ignored) {}
+        restoreAlarmVolume();
         releaseWakeLock();
     }
 
@@ -238,10 +242,26 @@ public class CancellationVoicePlugin extends Plugin {
             AudioManager am = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
             if (am == null) return;
             int max = am.getStreamMaxVolume(AudioManager.STREAM_ALARM);
+            int current = am.getStreamVolume(AudioManager.STREAM_ALARM);
             // Bring alarm stream up to ~85% so the worker hears it but it isn't painful.
             int target = (int) Math.round(max * 0.85);
-            am.setStreamVolume(AudioManager.STREAM_ALARM, target, 0);
+            if (current != target) {
+                if (previousAlarmVolume < 0) previousAlarmVolume = current;
+                am.setStreamVolume(AudioManager.STREAM_ALARM, target, 0);
+            }
         } catch (Exception ignored) {}
+    }
+
+    private void restoreAlarmVolume() {
+        if (previousAlarmVolume < 0) return;
+        try {
+            AudioManager am = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+            if (am != null) {
+                am.setStreamVolume(AudioManager.STREAM_ALARM, previousAlarmVolume, 0);
+                Log.d(TAG, "[CANCEL_ALERT] alarm_volume_restored=" + previousAlarmVolume);
+            }
+        } catch (Exception ignored) {}
+        previousAlarmVolume = -1;
     }
 
     @SuppressWarnings("WakelockTimeout")
