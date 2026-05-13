@@ -159,10 +159,11 @@ export default function CompleteBooking() {
     return () => clearTimeout(t);
   }, []);
 
-  // Cleanup slow-warning timer on unmount
+  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
       if (slowTimerRef.current) window.clearTimeout(slowTimerRef.current);
+      if (autoVerifyTimerRef.current) window.clearTimeout(autoVerifyTimerRef.current);
     };
   }, []);
 
