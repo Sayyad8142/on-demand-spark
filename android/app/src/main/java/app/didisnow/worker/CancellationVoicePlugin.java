@@ -202,6 +202,7 @@ public class CancellationVoicePlugin extends Plugin {
         } catch (Exception e) {
             Log.e(TAG, "fallback error", e);
             speaking = false;
+            restoreAlarmVolume();
             releaseWakeLock();
         }
     }
