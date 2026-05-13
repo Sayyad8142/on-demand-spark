@@ -93,6 +93,15 @@ type ErrorKind = "validation" | "wrong_otp" | "payment" | "network" | "timeout" 
 
 const TIMEOUT_WARNING_MS = 12_000;
 
+const normalizeOtp = (value: unknown) => String(value ?? "").replace(/\D/g, "").trim().slice(0, 4);
+
+const logOtpDebug = (label: string, payload: Record<string, unknown>) => {
+  try {
+    // Temporary production-safe OTP diagnostics for the Worker App completion flow.
+    console.log(`[OTP_DEBUG] ${label}`, payload);
+  } catch {}
+};
+
 export default function CompleteBooking() {
   const { bookingId = "" } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
@@ -114,8 +123,17 @@ export default function CompleteBooking() {
   const [completedAt, setCompletedAt] = useState<string | null>(null);
 
   const submitLockRef = useRef(false);
+  const otpRef = useRef("");
   const otpContainerRef = useRef<HTMLDivElement | null>(null);
   const slowTimerRef = useRef<number | null>(null);
+  const debugMode = (() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.has("otpDebug") || localStorage.getItem("otp_debug") === "1";
+    } catch {
+      return false;
+    }
+  })();
 
   // Fetch booking meta (flat / service / phone) for header chips + Call button
   useEffect(() => {
