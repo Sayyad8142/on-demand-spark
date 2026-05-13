@@ -115,6 +115,7 @@ export default function CompleteBooking() {
   const [showSlowWarning, setShowSlowWarning] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [completedAt, setCompletedAt] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(3);
 
   const submitLockRef = useRef(false);
   const otpRef = useRef("");
@@ -168,6 +169,24 @@ export default function CompleteBooking() {
       setCompletedAt(payout?.completed_at ?? payout?.paid_at ?? new Date().toISOString());
     }
   }, [success, payout, completedAt]);
+
+  // Auto-navigate to Home 3 seconds after success
+  useEffect(() => {
+    if (!success) return;
+    setCountdown(3);
+    const interval = window.setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          window.clearInterval(interval);
+          window.dispatchEvent(new CustomEvent("bookingCompleted", { detail: { bookingId } }));
+          navigate("/home", { replace: true });
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [success, bookingId, navigate]);
 
   const triggerShake = () => {
     setShake(true);
