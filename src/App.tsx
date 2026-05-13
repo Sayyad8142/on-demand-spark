@@ -592,7 +592,7 @@ function AppInner() {
       <BrowserRouter>
         <NativeNavigationHandler />
         <Routes>
-          <Route path="/auth" element={<Auth />} />
+          <Route path="/auth" element={<PublicAuthRoute><Auth /></PublicAuthRoute>} />
           <Route path="/otp-verify" element={<OtpVerify />} />
           <Route path="/home" element={<ProtectedRoute showNav={true}><Home /></ProtectedRoute>} />
           <Route path="/bookings" element={<ProtectedRoute showNav={true}><Bookings /></ProtectedRoute>} />
@@ -614,7 +614,7 @@ function AppInner() {
           <Route path="/device-readiness" element={<ProtectedRoute><DeviceReadiness /></ProtectedRoute>} />
           <Route path="/complete-booking/:bookingId" element={<ProtectedRoute><CompleteBooking /></ProtectedRoute>} />
           <Route path="/account-details" element={<ProtectedRoute><AccountDetails /></ProtectedRoute>} />
-          <Route path="/" element={<Navigate to="/auth" replace />} />
+          <Route path="/" element={<RootRedirect />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
