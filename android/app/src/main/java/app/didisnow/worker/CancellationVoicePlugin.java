@@ -150,7 +150,7 @@ public class CancellationVoicePlugin extends Plugin {
             int result = tts.speak(phrase, TextToSpeech.QUEUE_FLUSH, params);
             if (result != TextToSpeech.SUCCESS) {
                 Log.w(TAG, "tts.speak returned " + result + " → fallback");
-                playFallback();
+                playFallbackLoop();
             }
         } catch (Exception e) {
             Log.e(TAG, "speakOnce error", e);
