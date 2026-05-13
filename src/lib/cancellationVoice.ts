@@ -55,15 +55,41 @@ function vibratePattern() {
   }
 }
 
-function playFallbackAudio() {
+function playFallbackAudioOnce(): Promise<void> {
+  return new Promise((resolve) => {
+    try {
+      fallbackAudio = new Audio(FALLBACK_AUDIO_SRC);
+      fallbackAudio.loop = false;
+      fallbackAudio.volume = 1;
+      fallbackAudio.onended = () => resolve();
+      fallbackAudio.onerror = () => resolve();
+      fallbackAudio.play().catch((err) => {
+        console.warn("[CANCEL_ALERT] fallback audio blocked", err);
+        resolve();
+      });
+    } catch (err) {
+      console.warn("[CANCEL_ALERT] fallback audio error", err);
+      resolve();
+    }
+  });
+}
+
+async function runFallbackAudioLoop() {
   console.log("[CANCEL_ALERT] fallback_audio_used");
-  try {
-    fallbackAudio = new Audio(FALLBACK_AUDIO_SRC);
-    fallbackAudio.loop = true;
-    fallbackAudio.volume = 1;
-    fallbackAudio.play().catch((err) => console.warn("[CANCEL_ALERT] fallback audio blocked", err));
-  } catch (err) {
-    console.warn("[CANCEL_ALERT] fallback audio error", err);
+  for (let i = 0; i < REPEATS; i++) {
+    if (!isPlaying) return;
+    console.log(`[CANCEL_ALERT] repeat_${i + 1}`);
+    await playFallbackAudioOnce();
+    if (i < REPEATS - 1 && isPlaying) {
+      await new Promise<void>((resolve) => {
+        const id = window.setTimeout(resolve, PAUSE_MS);
+        timers.push(id);
+      });
+    }
+  }
+  if (isPlaying) {
+    console.log("[CANCEL_ALERT] completed_all_repeats");
+    finishPlayback();
   }
 }
 
@@ -87,7 +113,7 @@ function speakOnce(synth: SpeechSynthesis): Promise<void> {
 async function runSpeechLoop() {
   const synth = (window as any).speechSynthesis as SpeechSynthesis | undefined;
   if (!synth || typeof SpeechSynthesisUtterance === "undefined") {
-    playFallbackAudio();
+    await runFallbackAudioLoop();
     return;
   }
   console.log("[CANCEL_ALERT] speech_started");
@@ -95,6 +121,7 @@ async function runSpeechLoop() {
     synth.cancel();
     for (let i = 0; i < REPEATS; i++) {
       if (!isPlaying) return;
+      console.log(`[CANCEL_ALERT] repeat_${i + 1}`);
       await speakOnce(synth);
       if (i < REPEATS - 1 && isPlaying) {
         await new Promise<void>((resolve) => {
@@ -103,12 +130,28 @@ async function runSpeechLoop() {
         });
       }
     }
-    console.log("[CANCEL_ALERT] speech_completed");
-    // After the spoken message, keep audible alert via fallback loop until dismissed.
-    if (isPlaying) playFallbackAudio();
+    if (isPlaying) {
+      console.log("[CANCEL_ALERT] completed_all_repeats");
+      console.log("[CANCEL_ALERT] speech_completed");
+      finishPlayback();
+    }
   } catch (err) {
     console.warn("[CANCEL_ALERT] speech error, using fallback", err);
-    playFallbackAudio();
+    await runFallbackAudioLoop();
+  }
+}
+
+/**
+ * Mark playback as finished (auto-stop after all repeats).
+ * Releases the duplicate-suppression flag without tearing down the popup —
+ * the OK button only closes the modal now.
+ */
+function finishPlayback() {
+  isPlaying = false;
+  clearTimers();
+  if (fallbackAudio) {
+    try { fallbackAudio.pause(); } catch { /* no-op */ }
+    fallbackAudio = null;
   }
 }
 
