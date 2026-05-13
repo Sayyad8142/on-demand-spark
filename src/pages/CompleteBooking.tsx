@@ -480,7 +480,16 @@ export default function CompleteBooking() {
           {/* Sticky footer */}
           <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom),1rem)] bg-background">
             <Button
-              onClick={() => handleSubmit(false)}
+              onClick={() => {
+                const current = normalizeOtp(otpRef.current || otp);
+                console.log("[OTP_MANUAL_VERIFY]", {
+                  otpFromState: otp,
+                  otpFromRef: otpRef.current,
+                  cleanedOtp: current,
+                  source: "manual",
+                });
+                handleSubmit(false, current);
+              }}
               disabled={loading || normalizeOtp(otp).length !== 4}
               className="w-full h-14 text-base font-semibold rounded-2xl bg-pink-600 hover:bg-pink-700 text-white shadow-sm disabled:opacity-40 disabled:shadow-none"
             >
