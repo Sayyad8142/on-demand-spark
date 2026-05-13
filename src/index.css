@@ -244,3 +244,16 @@ html.alert-overlay-active body {
 .animate-otp-shake {
   animation: otp-shake 0.5s ease-in-out;
 }
+
+@keyframes cancel-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-10px); }
+  40% { transform: translateX(10px); }
+  60% { transform: translateX(-7px); }
+  80% { transform: translateX(7px); }
+}
+
+@keyframes cancel-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 hsl(var(--destructive) / 0.55); }
+  50% { transform: scale(1.08); box-shadow: 0 0 0 14px hsl(var(--destructive) / 0); }
+}

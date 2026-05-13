@@ -26,6 +26,7 @@ import {
 } from "@/lib/permissions";
 // requestLocationPermissions intentionally not imported — see startup effect note below.
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
+import { startCancellationVoice, stopCancellationVoice } from "@/lib/cancellationVoice";
 import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import Auth from "./pages/Auth";
@@ -376,22 +377,18 @@ function AppInner() {
       cancellationAudioRef.current.currentTime = 0;
       cancellationAudioRef.current = null;
     }
-    if ("vibrate" in navigator) navigator.vibrate(0);
+    stopCancellationVoice();
     setCancellationAlert(null);
   }, []);
 
   const showCancellationAlert = useCallback((bookingId?: string) => {
-    setCancellationAlert({ bookingId });
+    setCancellationAlert((prev) => {
+      // Dedupe: same booking already showing → ignore.
+      if (prev && prev.bookingId === bookingId) return prev;
+      return { bookingId };
+    });
     if (cancellationTimeoutRef.current) window.clearTimeout(cancellationTimeoutRef.current);
-    if (cancellationAudioRef.current) {
-      cancellationAudioRef.current.pause();
-      cancellationAudioRef.current.currentTime = 0;
-    }
-    const audio = new Audio("/sounds/booking_cancellation_voice.mp3");
-    audio.loop = true;
-    cancellationAudioRef.current = audio;
-    audio.play().catch((error) => console.warn("Cancellation voice autoplay blocked", error));
-    if ("vibrate" in navigator) navigator.vibrate([700, 200, 700, 200, 1000]);
+    startCancellationVoice();
     cancellationTimeoutRef.current = window.setTimeout(stopCancellationAlert, 45000);
   }, [stopCancellationAlert]);
 
@@ -400,9 +397,15 @@ function AppInner() {
       const bookingId = (event as CustomEvent)?.detail?.bookingId;
       showCancellationAlert(bookingId);
     };
+    const onBookingAccepted = () => {
+      // A new booking was accepted — silence cancellation alert immediately.
+      stopCancellationAlert();
+    };
     window.addEventListener("bookingCancelledAlert", onBookingCancelled);
+    window.addEventListener("bookingAccepted", onBookingAccepted);
     return () => {
       window.removeEventListener("bookingCancelledAlert", onBookingCancelled);
+      window.removeEventListener("bookingAccepted", onBookingAccepted);
       stopCancellationAlert();
     };
   }, [showCancellationAlert, stopCancellationAlert]);
@@ -521,9 +524,15 @@ function AppInner() {
         </div>
       )}
       {cancellationAlert && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/90 p-5">
-          <div className="w-full max-w-sm rounded-lg border-2 border-destructive bg-card p-6 text-center shadow-2xl">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive text-destructive-foreground">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/90 p-5 animate-fade-in">
+          <div
+            className="w-full max-w-sm rounded-lg border-2 border-destructive bg-card p-6 text-center shadow-2xl"
+            style={{ animation: "cancel-shake 0.5s ease-in-out 0s 2, scale-in 0.2s ease-out" }}
+          >
+            <div
+              className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+              style={{ animation: "cancel-pulse 1.1s ease-in-out infinite" }}
+            >
               <span className="text-3xl font-bold">!</span>
             </div>
             <h2 className="text-2xl font-bold text-destructive">Booking Cancelled</h2>
