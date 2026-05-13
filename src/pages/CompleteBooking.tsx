@@ -115,6 +115,7 @@ export default function CompleteBooking() {
   const [showSlowWarning, setShowSlowWarning] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [completedAt, setCompletedAt] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(3);
 
   const submitLockRef = useRef(false);
   const otpRef = useRef("");
