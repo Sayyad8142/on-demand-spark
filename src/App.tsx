@@ -524,9 +524,15 @@ function AppInner() {
         </div>
       )}
       {cancellationAlert && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/90 p-5">
-          <div className="w-full max-w-sm rounded-lg border-2 border-destructive bg-card p-6 text-center shadow-2xl">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive text-destructive-foreground">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/90 p-5 animate-fade-in">
+          <div
+            className="w-full max-w-sm rounded-lg border-2 border-destructive bg-card p-6 text-center shadow-2xl"
+            style={{ animation: "cancel-shake 0.5s ease-in-out 0s 2, scale-in 0.2s ease-out" }}
+          >
+            <div
+              className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+              style={{ animation: "cancel-pulse 1.1s ease-in-out infinite" }}
+            >
               <span className="text-3xl font-bold">!</span>
             </div>
             <h2 className="text-2xl font-bold text-destructive">Booking Cancelled</h2>
