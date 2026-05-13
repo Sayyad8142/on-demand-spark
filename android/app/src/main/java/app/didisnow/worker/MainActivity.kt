@@ -60,6 +60,7 @@ class MainActivity : BridgeActivity() {
         registerPlugin(LiveUpdatePlugin::class.java) // registered as "DidiLiveUpdate" via annotation
         registerPlugin(StepCounterPlugin::class.java)
         registerPlugin(BatteryOptimizationPlugin::class.java)
+        registerPlugin(CancellationVoicePlugin::class.java)
         
         super.onCreate(savedInstanceState)
         
