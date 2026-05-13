@@ -376,22 +376,18 @@ function AppInner() {
       cancellationAudioRef.current.currentTime = 0;
       cancellationAudioRef.current = null;
     }
-    if ("vibrate" in navigator) navigator.vibrate(0);
+    stopCancellationVoice();
     setCancellationAlert(null);
   }, []);
 
   const showCancellationAlert = useCallback((bookingId?: string) => {
-    setCancellationAlert({ bookingId });
+    setCancellationAlert((prev) => {
+      // Dedupe: same booking already showing → ignore.
+      if (prev && prev.bookingId === bookingId) return prev;
+      return { bookingId };
+    });
     if (cancellationTimeoutRef.current) window.clearTimeout(cancellationTimeoutRef.current);
-    if (cancellationAudioRef.current) {
-      cancellationAudioRef.current.pause();
-      cancellationAudioRef.current.currentTime = 0;
-    }
-    const audio = new Audio("/sounds/booking_cancellation_voice.mp3");
-    audio.loop = true;
-    cancellationAudioRef.current = audio;
-    audio.play().catch((error) => console.warn("Cancellation voice autoplay blocked", error));
-    if ("vibrate" in navigator) navigator.vibrate([700, 200, 700, 200, 1000]);
+    startCancellationVoice();
     cancellationTimeoutRef.current = window.setTimeout(stopCancellationAlert, 45000);
   }, [stopCancellationAlert]);
 
@@ -400,9 +396,15 @@ function AppInner() {
       const bookingId = (event as CustomEvent)?.detail?.bookingId;
       showCancellationAlert(bookingId);
     };
+    const onBookingAccepted = () => {
+      // A new booking was accepted — silence cancellation alert immediately.
+      stopCancellationAlert();
+    };
     window.addEventListener("bookingCancelledAlert", onBookingCancelled);
+    window.addEventListener("bookingAccepted", onBookingAccepted);
     return () => {
       window.removeEventListener("bookingCancelledAlert", onBookingCancelled);
+      window.removeEventListener("bookingAccepted", onBookingAccepted);
       stopCancellationAlert();
     };
   }, [showCancellationAlert, stopCancellationAlert]);
