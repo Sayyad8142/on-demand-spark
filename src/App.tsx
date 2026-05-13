@@ -309,7 +309,7 @@ function AppInner() {
   useEffect(() => {
     if (!worker?.id) return;
     const status = trackedJob?.status;
-    const shouldTrack = !!trackedJob?.id && ["accepted", "on_the_way", "started"].includes(status ?? "");
+    const shouldTrack = !!trackedJob?.id && ["assigned", "accepted", "on_the_way", "started"].includes(status ?? "");
     if (!shouldTrack) {
       console.log(`[Movement] stopped because booking ended (status=${status ?? "none"})`);
       void stopMovementMonitoring();
