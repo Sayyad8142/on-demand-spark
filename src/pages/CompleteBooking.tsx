@@ -398,14 +398,31 @@ export default function CompleteBooking() {
                     rawValue: `[${v}]`,
                     cleanedOtp: `[${cleaned}]`,
                     length: cleaned.length,
-                    values: cleaned.split("").map((digit) => `[${digit}]`),
                   });
-                  if (error && errorKind !== "network" && errorKind !== "timeout") {
+                  // Only clear validation error once user actually has < 4 digits
+                  if (error && errorKind === "validation" && cleaned.length < 4) {
+                    setError(null);
+                    setErrorKind(null);
+                  } else if (error && errorKind !== "network" && errorKind !== "timeout" && errorKind !== "validation") {
                     setError(null);
                     setErrorKind(null);
                   }
+                  // Cancel any pending auto-verify if user is still typing/deleting
+                  if (autoVerifyTimerRef.current) {
+                    window.clearTimeout(autoVerifyTimerRef.current);
+                    autoVerifyTimerRef.current = null;
+                  }
                   if (cleaned.length === 4 && !loading && !submitLockRef.current) {
-                    handleSubmit(false, cleaned);
+                    console.log("[OTP_AUTO_VERIFY]", {
+                      finalOtp: cleaned,
+                      length: cleaned.length,
+                      source: "auto",
+                    });
+                    // Small debounce so React state + native IME settle on low-end Android
+                    autoVerifyTimerRef.current = window.setTimeout(() => {
+                      autoVerifyTimerRef.current = null;
+                      handleSubmit(false, cleaned);
+                    }, 200);
                   }
                 }}
                 inputMode="numeric"
