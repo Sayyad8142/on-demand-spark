@@ -158,15 +158,26 @@ public class CancellationVoicePlugin extends Plugin {
         }
     }
 
-    private void playFallback() {
+    private void playFallbackLoop() {
         Log.d(TAG, "[CANCEL_ALERT] fallback_audio_used");
+        playFallbackOnce();
+    }
+
+    private void playFallbackOnce() {
+        if (!speaking) return;
         try {
             if (fallbackPlayer != null) {
                 try { fallbackPlayer.release(); } catch (Exception ignored) {}
                 fallbackPlayer = null;
             }
+            int idx = totalRepeats - repeatsRemaining + 1;
+            Log.d(TAG, "[CANCEL_ALERT] repeat_" + idx);
             fallbackPlayer = MediaPlayer.create(getContext(), R.raw.booking_cancellation_voice);
-            if (fallbackPlayer == null) return;
+            if (fallbackPlayer == null) {
+                speaking = false;
+                releaseWakeLock();
+                return;
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 fallbackPlayer.setAudioAttributes(new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_ALARM)
@@ -174,10 +185,21 @@ public class CancellationVoicePlugin extends Plugin {
                     .build());
             }
             fallbackPlayer.setLooping(false);
-            fallbackPlayer.setOnCompletionListener(mp -> releaseWakeLock());
+            fallbackPlayer.setOnCompletionListener(mp -> {
+                repeatsRemaining--;
+                if (repeatsRemaining > 0 && speaking) {
+                    handler.postDelayed(this::playFallbackOnce, REPEAT_GAP_MS);
+                } else {
+                    Log.d(TAG, "[CANCEL_ALERT] completed_all_repeats");
+                    Log.d(TAG, "[CANCEL_ALERT] speech_completed");
+                    speaking = false;
+                    releaseWakeLock();
+                }
+            });
             fallbackPlayer.start();
         } catch (Exception e) {
             Log.e(TAG, "fallback error", e);
+            speaking = false;
             releaseWakeLock();
         }
     }
