@@ -386,13 +386,21 @@ export default function CompleteBooking() {
                 maxLength={4}
                 value={otp}
                 onChange={(v) => {
-                  setOtp(v);
+                  const cleaned = normalizeOtp(v);
+                  otpRef.current = cleaned;
+                  setOtp(cleaned);
+                  logOtpDebug("change", {
+                    rawValue: `[${v}]`,
+                    cleanedOtp: `[${cleaned}]`,
+                    length: cleaned.length,
+                    values: cleaned.split("").map((digit) => `[${digit}]`),
+                  });
                   if (error && errorKind !== "network" && errorKind !== "timeout") {
                     setError(null);
                     setErrorKind(null);
                   }
-                  if (v.length === 4 && !loading && !submitLockRef.current) {
-                    handleSubmit(false);
+                  if (cleaned.length === 4 && !loading && !submitLockRef.current) {
+                    handleSubmit(false, cleaned);
                   }
                 }}
                 inputMode="numeric"
@@ -439,13 +447,19 @@ export default function CompleteBooking() {
                 Taking longer than usual… check your internet.
               </p>
             )}
+
+            {debugMode && (
+              <div className="mt-4 rounded-xl border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
+                OTP: [{otpRef.current}] · length: {normalizeOtp(otpRef.current).length} · valid: {String(normalizeOtp(otpRef.current).length === 4)}
+              </div>
+            )}
           </div>
 
           {/* Sticky footer */}
           <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom),1rem)] bg-background">
             <Button
               onClick={() => handleSubmit(false)}
-              disabled={loading || otp.length < 4}
+              disabled={loading || normalizeOtp(otp).length !== 4}
               className="w-full h-14 text-base font-semibold rounded-2xl bg-pink-600 hover:bg-pink-700 text-white shadow-sm disabled:opacity-40 disabled:shadow-none"
             >
               {loading ? (
