@@ -112,6 +112,12 @@ async function runSpeechLoop() {
   }
 }
 
+function getNativePlugin(): any | null {
+  if (!Capacitor.isNativePlatform()) return null;
+  const plugin = (window as any)?.Capacitor?.Plugins?.CancellationVoice;
+  return plugin && typeof plugin.speak === "function" ? plugin : null;
+}
+
 export function startCancellationVoice() {
   if (isPlaying) {
     console.log("[CANCEL_ALERT] duplicate_suppressed");
@@ -119,9 +125,28 @@ export function startCancellationVoice() {
   }
   isPlaying = true;
   console.log("[CANCEL_ALERT] popup_shown");
+
+  const native = getNativePlugin();
+  if (native) {
+    // Native path: TTS + vibration + wakelock + alarm-stream all handled in Java.
+    native
+      .speak({ text: PHRASE, repeats: REPEATS })
+      .then((res: any) => console.log("[CANCEL_ALERT] native_started", res))
+      .catch((err: any) => {
+        console.warn("[CANCEL_ALERT] native plugin failed, using web fallback", err);
+        vibratePattern();
+        playWarningChirp();
+        const id = window.setTimeout(() => {
+          if (isPlaying) runSpeechLoop();
+        }, 350);
+        timers.push(id);
+      });
+    return;
+  }
+
+  // Web fallback (dev preview, browser).
   vibratePattern();
   playWarningChirp();
-  // Small delay so the chirp is heard before speech begins.
   const id = window.setTimeout(() => {
     if (isPlaying) runSpeechLoop();
   }, 350);
@@ -132,6 +157,12 @@ export function stopCancellationVoice() {
   if (!isPlaying) return;
   isPlaying = false;
   clearTimers();
+
+  const native = getNativePlugin();
+  if (native?.stop) {
+    native.stop().catch(() => {});
+  }
+
   try {
     (window as any).speechSynthesis?.cancel();
   } catch {
