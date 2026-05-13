@@ -68,20 +68,24 @@ public class CancellationVoicePlugin extends Plugin {
                 }
                 tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                     @Override public void onStart(String utteranceId) {
-                        Log.d(TAG, "[CANCEL_ALERT] speech_started");
+                        int idx = totalRepeats - repeatsRemaining + 1;
+                        Log.d(TAG, "[CANCEL_ALERT] repeat_" + idx);
+                        if (idx == 1) Log.d(TAG, "[CANCEL_ALERT] speech_started");
                     }
                     @Override public void onDone(String utteranceId) {
                         repeatsRemaining--;
                         if (repeatsRemaining > 0 && speaking) {
-                            handler.postDelayed(CancellationVoicePlugin.this::speakOnce, 500);
+                            handler.postDelayed(CancellationVoicePlugin.this::speakOnce, REPEAT_GAP_MS);
                         } else {
+                            Log.d(TAG, "[CANCEL_ALERT] completed_all_repeats");
                             Log.d(TAG, "[CANCEL_ALERT] speech_completed");
+                            speaking = false;
                             handler.post(CancellationVoicePlugin.this::releaseWakeLock);
                         }
                     }
                     @Override public void onError(String utteranceId) {
                         Log.w(TAG, "[CANCEL_ALERT] speech_error → fallback");
-                        handler.post(CancellationVoicePlugin.this::playFallback);
+                        handler.post(CancellationVoicePlugin.this::playFallbackLoop);
                     }
                 });
                 ttsReady = true;
