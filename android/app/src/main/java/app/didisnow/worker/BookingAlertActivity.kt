@@ -501,13 +501,18 @@ class BookingAlertActivity : AppCompatActivity() {
                                     ).show()
                                     Log.d("BookingAlert", "✅ Booking accepted successfully")
                                 } else {
-                                    val message = jsonResponse.optString("message", "Already taken")
+                                    // RPC returns { success:false, error:"..." } — read `error` first,
+                                    // fall back to `message` for older payloads.
+                                    val errorMsg = jsonResponse.optString(
+                                        "error",
+                                        jsonResponse.optString("message", "Booking unavailable")
+                                    )
                                     Toast.makeText(
                                         this@BookingAlertActivity,
-                                        "⚠️ $message",
+                                        "⚠️ $errorMsg",
                                         Toast.LENGTH_LONG
                                     ).show()
-                                    Log.w("BookingAlert", "⚠️ Accept failed: $message")
+                                    Log.w("BookingAlert", "⚠️ Accept failed: $errorMsg | raw=$responseBody")
                                 }
                             } catch (e: Exception) {
                                 Log.e("BookingAlert", "❌ Error parsing response", e)
