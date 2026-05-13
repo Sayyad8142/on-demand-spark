@@ -52,6 +52,8 @@ const formatPayout = (payout: WorkerPayoutRow | null) =>
       }
     : null;
 
+const normalizeOtp = (value: unknown) => String(value ?? "").replace(/\D/g, "").trim();
+
 async function getExistingPayout(adminClient: any, bookingId: string) {
   const { data, error } = await adminClient
     .from("worker_payouts")
@@ -158,8 +160,15 @@ Deno.serve(async (req) => {
     }
 
     const { booking_id, otp } = await req.json();
+    const enteredOtp = normalizeOtp(otp);
+    console.log("[OTP_DEBUG] request_received", {
+      booking_id,
+      raw_type: typeof otp,
+      raw_length: String(otp ?? "").length,
+      cleaned_length: enteredOtp.length,
+    });
 
-    if (!booking_id || !otp) {
+    if (!booking_id || !enteredOtp) {
       return jsonResponse({ error: "booking_id and otp are required" }, 400);
     }
 
@@ -219,7 +228,18 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "No completion OTP has been generated for this booking." }, 400);
     }
 
-    if (String(otp).trim() !== String(bookingRow.completion_otp).trim()) {
+    const dbOtp = normalizeOtp(bookingRow.completion_otp);
+    console.log("[OTP_COMPARE]", {
+      booking_id,
+      db_type: typeof bookingRow.completion_otp,
+      entered_type: typeof otp,
+      db_length: dbOtp.length,
+      entered_length: enteredOtp.length,
+      raw_string_match: String(otp).trim() === String(bookingRow.completion_otp).trim(),
+      normalized_match: dbOtp === enteredOtp,
+    });
+
+    if (enteredOtp.length !== 4 || dbOtp !== enteredOtp) {
       return jsonResponse({ error: "Invalid OTP. Please check with the customer." }, 400);
     }
 
