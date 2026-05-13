@@ -1,12 +1,16 @@
 /**
  * Cancellation voice alert.
- * Plays a short warning chirp + speaks "Booking cancelled. Booking cancelled. Do not go to the flat."
- * twice using the Web Speech API (which uses native Android TTS inside the Capacitor WebView).
- * Falls back to a bundled audio file if speech synthesis is unavailable.
  *
- * Singleton — repeated calls while playing are no-ops, so duplicate cancellation events
+ * Order of preference:
+ *  1. Native CancellationVoice plugin (Android TextToSpeech via STREAM_ALARM + wake lock).
+ *     This is the reliable path on real devices — Web Speech is flaky in WebView.
+ *  2. Web Speech API (browser / dev preview).
+ *  3. Bundled MP3 fallback.
+ *
+ * Singleton — duplicate calls while playing are no-ops, so duplicate cancellation events
  * (realtime + push + polling) cannot stack speech.
  */
+import { Capacitor } from "@capacitor/core";
 
 const PHRASE = "Booking cancelled. Booking cancelled. Do not go to the flat.";
 const REPEATS = 2;
