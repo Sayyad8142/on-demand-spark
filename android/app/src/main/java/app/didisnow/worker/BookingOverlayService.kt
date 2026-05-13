@@ -445,7 +445,8 @@ class BookingOverlayService : Service() {
                 } catch (t: Throwable) {
                     android.util.Log.e("BookingOverlay", "❌ Accept flow crashed", t)
                     outcome = "accept_exception"
-                    ui { Toast.makeText(this@BookingOverlayService, "Accept failed", Toast.LENGTH_SHORT).show() }
+                    val reason = t.message?.takeIf { it.isNotBlank() } ?: "Accept failed"
+                    ui { Toast.makeText(this@BookingOverlayService, "⚠️ $reason", Toast.LENGTH_LONG).show() }
                 } finally {
                     // Always close overlay and stop service
                     acceptInFlight = false
