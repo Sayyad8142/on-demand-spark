@@ -12,8 +12,8 @@
  */
 import { Capacitor } from "@capacitor/core";
 
-const PHRASE = "Booking cancelled. Booking cancelled. Do not go to the flat.";
-const REPEATS = 2;
+const PHRASE = "Booking cancelled. Booking cancelled.";
+const REPEATS = 3;
 const PAUSE_MS = 600;
 const FALLBACK_AUDIO_SRC = "/sounds/booking_cancellation_voice.mp3";
 
