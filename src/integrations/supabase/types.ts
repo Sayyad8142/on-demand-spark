@@ -5683,15 +5683,7 @@ export type Database = {
       }
       assign_booking_to_next_worker: {
         Args: { p_booking_id: string }
-        Returns: {
-          assignment_id: string
-          assignment_order: number
-          expires_at: string
-          worker_fcm_token: string
-          worker_id: string
-          worker_name: string
-          worker_phone: string
-        }[]
+        Returns: Record<string, unknown>
       }
       assign_to_next_worker: { Args: { p_booking_id: string }; Returns: Json }
       assign_worker: {
@@ -6014,6 +6006,7 @@ export type Database = {
           worker_ttl_seconds: number
         }[]
       }
+      get_dispatch_health: { Args: never; Returns: Json }
       get_eligible_workers: {
         Args: { p_community: string; p_limit?: number; p_service: string }
         Returns: {
@@ -6873,11 +6866,11 @@ export type Database = {
       }
       send_fcm_notification: {
         Args: {
-          p_body?: string
-          p_booking_id?: string
-          p_data?: Json
-          p_notification_type?: string
-          p_title?: string
+          p_body: string
+          p_booking_id: string
+          p_data: Json
+          p_notification_type: string
+          p_title: string
           p_worker_id: string
         }
         Returns: Json
