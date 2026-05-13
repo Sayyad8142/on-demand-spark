@@ -447,9 +447,9 @@ export default function Availability() {
                       boxShadow: "0 1px 3px rgba(22, 199, 90, 0.10)",
                     }
                   : {
-                      backgroundColor: "hsl(var(--background))",
-                      color: "hsl(var(--muted-foreground))",
-                      borderColor: "hsl(var(--border))",
+                      backgroundColor: "rgba(239, 68, 68, 0.06)",
+                      color: "#ef4444",
+                      borderColor: "rgba(239, 68, 68, 0.25)",
                       fontWeight: 500,
                     }
               }
