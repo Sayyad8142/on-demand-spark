@@ -559,10 +559,14 @@ class BookingOverlayService : Service() {
             // Track this window for guaranteed cleanup
             overlayView?.let { addedWindows.add(it) }
             android.util.Log.d("BookingOverlay", "✅ Overlay added successfully! Starting countdown and status monitoring...")
-            
+
+            // 📨 ACK popup_shown — overlay is actually on screen now.
+            android.util.Log.d("BookingOverlay", "📨 [ACK] Sending popup_shown for booking_id=$bookingId")
+            BackendSync.ackDeliveryAsync(applicationContext, bookingId, "popup_shown")
+
             // Start countdown AFTER view is added to window
             countdownRunnable?.let { r -> countdownHandler?.post(r) }
-            
+
             // Start booking status polling to detect if another worker accepts
             startBookingStatusPolling(bookingId)
         } catch (e: Exception) {
