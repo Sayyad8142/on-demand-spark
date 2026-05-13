@@ -94,6 +94,7 @@ export type Database = {
       }
       app_config: {
         Row: {
+          bypass_worker_freshness_gate: boolean
           created_at: string | null
           disable_online_payments: boolean
           enable_pay_after_service: boolean
@@ -124,6 +125,7 @@ export type Database = {
           worker_update_title: string
         }
         Insert: {
+          bypass_worker_freshness_gate?: boolean
           created_at?: string | null
           disable_online_payments?: boolean
           enable_pay_after_service?: boolean
@@ -154,6 +156,7 @@ export type Database = {
           worker_update_title?: string
         }
         Update: {
+          bypass_worker_freshness_gate?: boolean
           created_at?: string | null
           disable_online_payments?: boolean
           enable_pay_after_service?: boolean
