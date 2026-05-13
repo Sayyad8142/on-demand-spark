@@ -109,8 +109,9 @@ public class CancellationVoicePlugin extends Plugin {
 
         String text = call.getString("text");
         if (text != null && !text.isEmpty()) phrase = text;
-        int repeats = call.getInt("repeats", 2);
-        repeatsRemaining = Math.max(1, repeats);
+        int repeats = call.getInt("repeats", 3);
+        totalRepeats = Math.max(1, repeats);
+        repeatsRemaining = totalRepeats;
         speaking = true;
 
         Log.d(TAG, "[CANCEL_ALERT] popup_shown");
@@ -123,8 +124,9 @@ public class CancellationVoicePlugin extends Plugin {
         } else {
             // TTS not ready yet — wait briefly then try, else fallback.
             handler.postDelayed(() -> {
+                if (!speaking) return;
                 if (ttsReady && tts != null) speakOnce();
-                else playFallback();
+                else playFallbackLoop();
             }, 600);
         }
 
