@@ -220,6 +220,7 @@ public class CancellationVoicePlugin extends Plugin {
             Vibrator v = (Vibrator) getContext().getSystemService(Context.VIBRATOR_SERVICE);
             if (v != null) v.cancel();
         } catch (Exception ignored) {}
+        restoreAlarmVolume();
         releaseWakeLock();
     }
 
