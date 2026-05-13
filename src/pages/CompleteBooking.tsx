@@ -125,6 +125,7 @@ export default function CompleteBooking() {
   const otpRef = useRef("");
   const otpContainerRef = useRef<HTMLDivElement | null>(null);
   const slowTimerRef = useRef<number | null>(null);
+  const autoVerifyTimerRef = useRef<number | null>(null);
   const debugMode = (() => {
     try {
       const params = new URLSearchParams(window.location.search);
