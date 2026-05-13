@@ -66,25 +66,30 @@ import { useActiveJob } from "@/hooks/useActiveJob";
 
 const queryClient = new QueryClient();
 
+function StartupSplash({ label = "Loading..." }: { label?: string }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+        <p className="text-muted-foreground">{label}</p>
+      </div>
+    </div>
+  );
+}
+
 function ProtectedRoute({ children, showNav = false }: { children: React.ReactNode; showNav?: boolean }) {
   const { user, session, loading } = useAuth();
   const isGuestMode = localStorage.getItem('guest_mode') === 'true';
 
-  // Show loading state while checking auth
+  // Auth still restoring — never show login flash.
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground">Loading session...</p>
-        </div>
-      </div>
-    );
+    console.log('[AUTH_ROUTE_REDIRECT] ProtectedRoute waiting on auth init');
+    return <StartupSplash label="Loading session..." />;
   }
 
   // Allow guest mode access to /home only
   if (!user && !session && !isGuestMode) {
-    console.log('🚫 ProtectedRoute: No user/session, redirecting to /auth');
+    console.log('[AUTH_ROUTE_REDIRECT] ProtectedRoute → /auth (no session)');
     return <Navigate to="/auth" replace />;
   }
 
@@ -96,6 +101,34 @@ function ProtectedRoute({ children, showNav = false }: { children: React.ReactNo
       {showNav && <BottomNav />}
     </>
   );
+}
+
+/** Wrapper for /auth — keeps splash visible during session restore so the
+ *  Login screen never flashes when a valid session is being re-hydrated. */
+function PublicAuthRoute({ children }: { children: React.ReactNode }) {
+  const { user, session, loading } = useAuth();
+  const isGuestMode = typeof window !== 'undefined' && localStorage.getItem('guest_mode') === 'true';
+  if (loading) {
+    console.log('[AUTH_ROUTE_REDIRECT] /auth waiting on auth init');
+    return <StartupSplash label="Restoring session..." />;
+  }
+  if (user || session || isGuestMode) {
+    console.log('[AUTH_ROUTE_REDIRECT] /auth → /home (already authenticated)');
+    return <Navigate to="/home" replace />;
+  }
+  return <>{children}</>;
+}
+
+/** Root "/" — decide based on auth state, never redirect to /auth blindly. */
+function RootRedirect() {
+  const { user, session, loading } = useAuth();
+  const isGuestMode = typeof window !== 'undefined' && localStorage.getItem('guest_mode') === 'true';
+  if (loading) {
+    console.log('[AUTH_ROUTE_REDIRECT] / waiting on auth init');
+    return <StartupSplash label="Starting..." />;
+  }
+  if (user || session || isGuestMode) return <Navigate to="/home" replace />;
+  return <Navigate to="/auth" replace />;
 }
 
 // Component to handle native navigation events (must be inside BrowserRouter)
@@ -559,7 +592,7 @@ function AppInner() {
       <BrowserRouter>
         <NativeNavigationHandler />
         <Routes>
-          <Route path="/auth" element={<Auth />} />
+          <Route path="/auth" element={<PublicAuthRoute><Auth /></PublicAuthRoute>} />
           <Route path="/otp-verify" element={<OtpVerify />} />
           <Route path="/home" element={<ProtectedRoute showNav={true}><Home /></ProtectedRoute>} />
           <Route path="/bookings" element={<ProtectedRoute showNav={true}><Bookings /></ProtectedRoute>} />
@@ -581,7 +614,7 @@ function AppInner() {
           <Route path="/device-readiness" element={<ProtectedRoute><DeviceReadiness /></ProtectedRoute>} />
           <Route path="/complete-booking/:bookingId" element={<ProtectedRoute><CompleteBooking /></ProtectedRoute>} />
           <Route path="/account-details" element={<ProtectedRoute><AccountDetails /></ProtectedRoute>} />
-          <Route path="/" element={<Navigate to="/auth" replace />} />
+          <Route path="/" element={<RootRedirect />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

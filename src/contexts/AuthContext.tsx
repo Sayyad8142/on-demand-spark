@@ -137,36 +137,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const initAuth = async () => {
       try {
-        console.log('🔐 Initializing auth...');
+        console.log('[AUTH_INIT] starting auth bootstrap');
         await reloadSessionFromStorage();
-        console.log('📦 Storage state:', getStorageCacheDebug());
+        console.log('[SESSION_RESTORE] storage state:', getStorageCacheDebug());
 
         const { data, error } = await supabase.auth.getSession();
         if (error) {
-          console.error('❌ Error getting session:', error.message);
+          console.error('[AUTH_INIT] getSession error:', error.message);
           if (mountedRef.current) setLoading(false);
+          console.log('[AUTH_READY] unauthenticated (getSession error)');
           return;
         }
 
         let currentSession = data.session;
         if (currentSession) {
-          console.log('✅ Found session, user:', currentSession.user?.id);
+          console.log('[SESSION_RESTORE] found session for', currentSession.user?.id);
           const now = Date.now() / 1000;
           const expiresAt = currentSession.expires_at || 0;
           const isExpired = expiresAt < now;
           const isExpiringSoon = expiresAt < now + (10 * 60);
-          console.log('📅 Token expires:', new Date(expiresAt * 1000).toISOString(), isExpired ? '(EXPIRED)' : isExpiringSoon ? '(expiring soon)' : '(valid)');
+          console.log('[SESSION_RESTORE] expires:', new Date(expiresAt * 1000).toISOString(), isExpired ? '(EXPIRED)' : isExpiringSoon ? '(expiring soon)' : '(valid)');
 
           if (isExpired || isExpiringSoon) {
             try {
               const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
               if (refreshError) {
+                console.warn('[SESSION_RESTORE] refresh error:', refreshError.message);
                 if (refreshError.message.includes('already_used') || refreshError.message.includes('abuse') || refreshError.message.includes('revoked')) {
                   await new Promise(resolve => setTimeout(resolve, 500));
                   await reloadSessionFromStorage();
                   const { data: retryData, error: retryError } = await supabase.auth.refreshSession();
                   if (retryData.session && !retryError) {
                     currentSession = retryData.session;
+                    console.log('[SESSION_RESTORE] recovery refresh OK');
                   } else {
                     await clearSessionCompletely();
                     currentSession = null;
@@ -178,25 +181,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
               } else if (refreshData.session) {
                 currentSession = refreshData.session;
+                console.log('[SESSION_RESTORE] refresh OK');
               }
             } catch (refreshErr) {
+              console.error('[SESSION_RESTORE] refresh threw:', refreshErr);
               if (isExpired) currentSession = null;
             }
           }
+        } else {
+          console.log('[SESSION_RESTORE] no session in storage');
         }
 
         if (mountedRef.current) {
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
           setLoading(false);
+          console.log('[AUTH_READY]', currentSession ? `authenticated user=${currentSession.user?.id}` : 'unauthenticated');
           if (currentSession) {
             await saveSession(currentSession);
             if (currentSession.access_token) await saveJWT(currentSession.access_token);
           }
         }
       } catch (error) {
-        console.error('❌ Auth init error:', error);
+        console.error('[AUTH_INIT] fatal error:', error);
         if (mountedRef.current) setLoading(false);
+        console.log('[AUTH_READY] unauthenticated (fatal)');
       }
     };
 
