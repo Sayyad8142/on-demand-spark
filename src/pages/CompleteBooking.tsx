@@ -170,6 +170,24 @@ export default function CompleteBooking() {
     }
   }, [success, payout, completedAt]);
 
+  // Auto-navigate to Home 3 seconds after success
+  useEffect(() => {
+    if (!success) return;
+    setCountdown(3);
+    const interval = window.setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          window.clearInterval(interval);
+          window.dispatchEvent(new CustomEvent("bookingCompleted", { detail: { bookingId } }));
+          navigate("/home", { replace: true });
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [success, bookingId, navigate]);
+
   const triggerShake = () => {
     setShake(true);
     setTimeout(() => setShake(false), 500);
