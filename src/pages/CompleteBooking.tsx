@@ -125,6 +125,7 @@ export default function CompleteBooking() {
   const otpRef = useRef("");
   const otpContainerRef = useRef<HTMLDivElement | null>(null);
   const slowTimerRef = useRef<number | null>(null);
+  const autoVerifyTimerRef = useRef<number | null>(null);
   const debugMode = (() => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -158,10 +159,11 @@ export default function CompleteBooking() {
     return () => clearTimeout(t);
   }, []);
 
-  // Cleanup slow-warning timer on unmount
+  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
       if (slowTimerRef.current) window.clearTimeout(slowTimerRef.current);
+      if (autoVerifyTimerRef.current) window.clearTimeout(autoVerifyTimerRef.current);
     };
   }, []);
 
@@ -396,14 +398,31 @@ export default function CompleteBooking() {
                     rawValue: `[${v}]`,
                     cleanedOtp: `[${cleaned}]`,
                     length: cleaned.length,
-                    values: cleaned.split("").map((digit) => `[${digit}]`),
                   });
-                  if (error && errorKind !== "network" && errorKind !== "timeout") {
+                  // Only clear validation error once user actually has < 4 digits
+                  if (error && errorKind === "validation" && cleaned.length < 4) {
+                    setError(null);
+                    setErrorKind(null);
+                  } else if (error && errorKind !== "network" && errorKind !== "timeout" && errorKind !== "validation") {
                     setError(null);
                     setErrorKind(null);
                   }
+                  // Cancel any pending auto-verify if user is still typing/deleting
+                  if (autoVerifyTimerRef.current) {
+                    window.clearTimeout(autoVerifyTimerRef.current);
+                    autoVerifyTimerRef.current = null;
+                  }
                   if (cleaned.length === 4 && !loading && !submitLockRef.current) {
-                    handleSubmit(false, cleaned);
+                    console.log("[OTP_AUTO_VERIFY]", {
+                      finalOtp: cleaned,
+                      length: cleaned.length,
+                      source: "auto",
+                    });
+                    // Small debounce so React state + native IME settle on low-end Android
+                    autoVerifyTimerRef.current = window.setTimeout(() => {
+                      autoVerifyTimerRef.current = null;
+                      handleSubmit(false, cleaned);
+                    }, 200);
                   }
                 }}
                 inputMode="numeric"
@@ -461,7 +480,16 @@ export default function CompleteBooking() {
           {/* Sticky footer */}
           <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom),1rem)] bg-background">
             <Button
-              onClick={() => handleSubmit(false)}
+              onClick={() => {
+                const current = normalizeOtp(otpRef.current || otp);
+                console.log("[OTP_MANUAL_VERIFY]", {
+                  otpFromState: otp,
+                  otpFromRef: otpRef.current,
+                  cleanedOtp: current,
+                  source: "manual",
+                });
+                handleSubmit(false, current);
+              }}
               disabled={loading || normalizeOtp(otp).length !== 4}
               className="w-full h-14 text-base font-semibold rounded-2xl bg-pink-600 hover:bg-pink-700 text-white shadow-sm disabled:opacity-40 disabled:shadow-none"
             >
