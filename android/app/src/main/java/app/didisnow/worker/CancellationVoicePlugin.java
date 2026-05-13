@@ -40,11 +40,13 @@ public class CancellationVoicePlugin extends Plugin {
     private boolean ttsReady = false;
     private boolean speaking = false;
     private int repeatsRemaining = 0;
+    private int totalRepeats = 0;
     private MediaPlayer fallbackPlayer;
     private PowerManager.WakeLock wakeLock;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
-    private String phrase = "Booking cancelled. Booking cancelled. Do not go to the flat.";
+    private String phrase = "Booking cancelled. Booking cancelled.";
+    private static final long REPEAT_GAP_MS = 600L;
 
     @Override
     public void load() {
@@ -66,20 +68,24 @@ public class CancellationVoicePlugin extends Plugin {
                 }
                 tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                     @Override public void onStart(String utteranceId) {
-                        Log.d(TAG, "[CANCEL_ALERT] speech_started");
+                        int idx = totalRepeats - repeatsRemaining + 1;
+                        Log.d(TAG, "[CANCEL_ALERT] repeat_" + idx);
+                        if (idx == 1) Log.d(TAG, "[CANCEL_ALERT] speech_started");
                     }
                     @Override public void onDone(String utteranceId) {
                         repeatsRemaining--;
                         if (repeatsRemaining > 0 && speaking) {
-                            handler.postDelayed(CancellationVoicePlugin.this::speakOnce, 500);
+                            handler.postDelayed(CancellationVoicePlugin.this::speakOnce, REPEAT_GAP_MS);
                         } else {
+                            Log.d(TAG, "[CANCEL_ALERT] completed_all_repeats");
                             Log.d(TAG, "[CANCEL_ALERT] speech_completed");
+                            speaking = false;
                             handler.post(CancellationVoicePlugin.this::releaseWakeLock);
                         }
                     }
                     @Override public void onError(String utteranceId) {
                         Log.w(TAG, "[CANCEL_ALERT] speech_error → fallback");
-                        handler.post(CancellationVoicePlugin.this::playFallback);
+                        handler.post(CancellationVoicePlugin.this::playFallbackLoop);
                     }
                 });
                 ttsReady = true;
@@ -103,8 +109,9 @@ public class CancellationVoicePlugin extends Plugin {
 
         String text = call.getString("text");
         if (text != null && !text.isEmpty()) phrase = text;
-        int repeats = call.getInt("repeats", 2);
-        repeatsRemaining = Math.max(1, repeats);
+        int repeats = call.getInt("repeats", 3);
+        totalRepeats = Math.max(1, repeats);
+        repeatsRemaining = totalRepeats;
         speaking = true;
 
         Log.d(TAG, "[CANCEL_ALERT] popup_shown");
@@ -117,8 +124,9 @@ public class CancellationVoicePlugin extends Plugin {
         } else {
             // TTS not ready yet — wait briefly then try, else fallback.
             handler.postDelayed(() -> {
+                if (!speaking) return;
                 if (ttsReady && tts != null) speakOnce();
-                else playFallback();
+                else playFallbackLoop();
             }, 600);
         }
 
@@ -142,7 +150,7 @@ public class CancellationVoicePlugin extends Plugin {
             int result = tts.speak(phrase, TextToSpeech.QUEUE_FLUSH, params);
             if (result != TextToSpeech.SUCCESS) {
                 Log.w(TAG, "tts.speak returned " + result + " → fallback");
-                playFallback();
+                playFallbackLoop();
             }
         } catch (Exception e) {
             Log.e(TAG, "speakOnce error", e);
@@ -150,15 +158,26 @@ public class CancellationVoicePlugin extends Plugin {
         }
     }
 
-    private void playFallback() {
+    private void playFallbackLoop() {
         Log.d(TAG, "[CANCEL_ALERT] fallback_audio_used");
+        playFallbackOnce();
+    }
+
+    private void playFallbackOnce() {
+        if (!speaking) return;
         try {
             if (fallbackPlayer != null) {
                 try { fallbackPlayer.release(); } catch (Exception ignored) {}
                 fallbackPlayer = null;
             }
+            int idx = totalRepeats - repeatsRemaining + 1;
+            Log.d(TAG, "[CANCEL_ALERT] repeat_" + idx);
             fallbackPlayer = MediaPlayer.create(getContext(), R.raw.booking_cancellation_voice);
-            if (fallbackPlayer == null) return;
+            if (fallbackPlayer == null) {
+                speaking = false;
+                releaseWakeLock();
+                return;
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 fallbackPlayer.setAudioAttributes(new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_ALARM)
@@ -166,10 +185,21 @@ public class CancellationVoicePlugin extends Plugin {
                     .build());
             }
             fallbackPlayer.setLooping(false);
-            fallbackPlayer.setOnCompletionListener(mp -> releaseWakeLock());
+            fallbackPlayer.setOnCompletionListener(mp -> {
+                repeatsRemaining--;
+                if (repeatsRemaining > 0 && speaking) {
+                    handler.postDelayed(this::playFallbackOnce, REPEAT_GAP_MS);
+                } else {
+                    Log.d(TAG, "[CANCEL_ALERT] completed_all_repeats");
+                    Log.d(TAG, "[CANCEL_ALERT] speech_completed");
+                    speaking = false;
+                    releaseWakeLock();
+                }
+            });
             fallbackPlayer.start();
         } catch (Exception e) {
             Log.e(TAG, "fallback error", e);
+            speaking = false;
             releaseWakeLock();
         }
     }
