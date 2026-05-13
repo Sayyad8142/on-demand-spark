@@ -43,6 +43,7 @@ public class CancellationVoicePlugin extends Plugin {
     private int totalRepeats = 0;
     private MediaPlayer fallbackPlayer;
     private PowerManager.WakeLock wakeLock;
+    private int previousAlarmVolume = -1; // -1 = not changed / nothing to restore
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     private String phrase = "Booking cancelled. Booking cancelled.";
