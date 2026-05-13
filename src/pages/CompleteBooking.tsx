@@ -54,10 +54,10 @@ const isPayoutCredited = (p: PayoutSummary | null) => {
 // Lightweight haptics using navigator.vibrate (works in Capacitor WebView on Android)
 const haptic = {
   success: () => {
-    try { navigator.vibrate?.([30]); } catch {}
+    try { navigator.vibrate?.([30]); } catch { return undefined; }
   },
   error: () => {
-    try { navigator.vibrate?.([60, 50, 60]); } catch {}
+    try { navigator.vibrate?.([60, 50, 60]); } catch { return undefined; }
   },
 };
 
@@ -73,17 +73,16 @@ const trackEvent = (
     | "otp_timeout_warning"
     | "otp_call_customer",
   bookingId: string,
-  meta: Record<string, any> = {},
+  meta: Record<string, unknown> = {},
 ) => {
   try {
-    // eslint-disable-next-line no-console
     console.log(`[analytics] ${event}`, { bookingId, ...meta });
     // Best-effort persistence — ignored if table policy blocks
     supabase.from("booking_events").insert({
       booking_id: bookingId,
       type: `worker_${event}`,
       meta: { ...meta, ts: new Date().toISOString() },
-    } as any).then(() => {}, () => {});
+    } as never).then(() => {}, () => {});
   } catch {
     // swallow
   }
@@ -92,6 +91,15 @@ const trackEvent = (
 type ErrorKind = "validation" | "wrong_otp" | "payment" | "network" | "timeout" | "other" | null;
 
 const TIMEOUT_WARNING_MS = 12_000;
+
+const normalizeOtp = (value: unknown) => String(value ?? "").replace(/\D/g, "").trim().slice(0, 4);
+
+const logOtpDebug = (label: string, payload: Record<string, unknown>) => {
+  try {
+    // Temporary production-safe OTP diagnostics for the Worker App completion flow.
+    console.log(`[OTP_DEBUG] ${label}`, payload);
+  } catch { return undefined; }
+};
 
 export default function CompleteBooking() {
   const { bookingId = "" } = useParams<{ bookingId: string }>();
@@ -114,8 +122,17 @@ export default function CompleteBooking() {
   const [completedAt, setCompletedAt] = useState<string | null>(null);
 
   const submitLockRef = useRef(false);
+  const otpRef = useRef("");
   const otpContainerRef = useRef<HTMLDivElement | null>(null);
   const slowTimerRef = useRef<number | null>(null);
+  const debugMode = (() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.has("otpDebug") || localStorage.getItem("otp_debug") === "1";
+    } catch {
+      return false;
+    }
+  })();
 
   // Fetch booking meta (flat / service / phone) for header chips + Call button
   useEffect(() => {
@@ -160,14 +177,17 @@ export default function CompleteBooking() {
     setTimeout(() => setShake(false), 500);
   };
 
-  const handleWrongOtp = (msg: string) => {
+  const handleWrongOtp = (msg: string, attemptedOtp = otpRef.current) => {
     haptic.error();
     setError(msg);
     setErrorKind("wrong_otp");
     triggerShake();
-    trackEvent("otp_wrong", bookingId, { entered_length: otp.length });
+    trackEvent("otp_wrong", bookingId, { entered_length: normalizeOtp(attemptedOtp).length });
     // Clear OTP after 500ms (let user see what they typed + shake)
-    setTimeout(() => setOtp(""), 500);
+    setTimeout(() => {
+      otpRef.current = "";
+      setOtp("");
+    }, 500);
   };
 
   const startSlowTimer = () => {
@@ -187,9 +207,21 @@ export default function CompleteBooking() {
     setShowSlowWarning(false);
   };
 
-  const handleSubmit = async (isRetry = false) => {
+  const handleSubmit = async (isRetry = false, submittedOtp?: string) => {
     if (submitLockRef.current || loading) return;
-    if (otp.length < 4) {
+    const enteredOtp = normalizeOtp(submittedOtp ?? otpRef.current ?? otp);
+    logOtpDebug("submit", {
+      bookingId,
+      rawOtpState: `[${otp}]`,
+      rawRef: `[${otpRef.current}]`,
+      submittedOtp: submittedOtp === undefined ? undefined : `[${submittedOtp}]`,
+      cleanedOtp: `[${enteredOtp}]`,
+      length: enteredOtp.length,
+      values: enteredOtp.split("").map((v) => `[${v}]`),
+      isRetry,
+    });
+
+    if (enteredOtp.length !== 4) {
       setError("Please enter the complete 4-digit OTP");
       setErrorKind("validation");
       triggerShake();
@@ -207,23 +239,34 @@ export default function CompleteBooking() {
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke("complete-booking-with-otp", {
-        body: { booking_id: bookingId, otp },
+        body: { booking_id: bookingId, otp: enteredOtp },
+      });
+      logOtpDebug("function_response", {
+        bookingId,
+        cleanedOtpLength: enteredOtp.length,
+        hasError: !!fnError,
+        data,
+        errorMessage: fnError?.message,
       });
 
       // Try to extract the real backend error message even when invoke surfaces a generic non-2xx.
       // supabase-js attaches the response on fnError.context (a Response). We read its body if possible.
       let backendMessage: string | null = null;
-      let backendPayload: any = null;
+      let backendPayload: Record<string, unknown> | null = null;
       if (fnError) {
         try {
-          const ctx: any = (fnError as any).context;
+          const ctx = (fnError as { context?: Response }).context;
           if (ctx && typeof ctx.json === "function") {
-            backendPayload = await ctx.clone().json().catch(() => null);
+            const parsed = await ctx.clone().json().catch(() => null);
+            backendPayload = parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : null;
           }
           if (!backendPayload && ctx && typeof ctx.text === "function") {
             const txt = await ctx.clone().text().catch(() => "");
             if (txt) {
-              try { backendPayload = JSON.parse(txt); } catch { backendMessage = txt; }
+              try {
+                const parsed = JSON.parse(txt);
+                backendPayload = parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : null;
+              } catch { backendMessage = txt; }
             }
           }
           if (backendPayload?.error) backendMessage = String(backendPayload.error);
@@ -237,9 +280,9 @@ export default function CompleteBooking() {
           haptic.success();
           setSuccess(true);
           trackEvent("otp_success", bookingId, { already_completed: true });
-          if (data?.payout || backendPayload?.payout) setPayout(data?.payout ?? backendPayload?.payout);
+          if (data?.payout || backendPayload?.payout) setPayout(data?.payout ?? backendPayload?.payout as PayoutSummary);
         } else if (errorBody.includes("Invalid OTP")) {
-          handleWrongOtp("Wrong OTP. Please ask the customer for the correct code.");
+          handleWrongOtp("Wrong OTP. Please ask the customer for the correct code.", enteredOtp);
         } else if (
           isPaymentRequired ||
           errorBody.includes("Payment not collected") ||
@@ -284,11 +327,11 @@ export default function CompleteBooking() {
         trackEvent("otp_success", bookingId);
       }
       if (data?.payout) setPayout(data.payout);
-    } catch (err: any) {
+    } catch (err: unknown) {
       haptic.error();
       setError("Network error. Please try again.");
       setErrorKind("network");
-      trackEvent("otp_network_error", bookingId, { message: err?.message ?? "unknown" });
+      trackEvent("otp_network_error", bookingId, { message: err instanceof Error ? err.message : "unknown" });
     } finally {
       submitLockRef.current = false;
       setLoading(false);
@@ -346,13 +389,21 @@ export default function CompleteBooking() {
                 maxLength={4}
                 value={otp}
                 onChange={(v) => {
-                  setOtp(v);
+                  const cleaned = normalizeOtp(v);
+                  otpRef.current = cleaned;
+                  setOtp(cleaned);
+                  logOtpDebug("change", {
+                    rawValue: `[${v}]`,
+                    cleanedOtp: `[${cleaned}]`,
+                    length: cleaned.length,
+                    values: cleaned.split("").map((digit) => `[${digit}]`),
+                  });
                   if (error && errorKind !== "network" && errorKind !== "timeout") {
                     setError(null);
                     setErrorKind(null);
                   }
-                  if (v.length === 4 && !loading && !submitLockRef.current) {
-                    handleSubmit(false);
+                  if (cleaned.length === 4 && !loading && !submitLockRef.current) {
+                    handleSubmit(false, cleaned);
                   }
                 }}
                 inputMode="numeric"
@@ -399,13 +450,19 @@ export default function CompleteBooking() {
                 Taking longer than usual… check your internet.
               </p>
             )}
+
+            {debugMode && (
+              <div className="mt-4 rounded-xl border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
+                OTP: [{otpRef.current}] · length: {normalizeOtp(otpRef.current).length} · valid: {String(normalizeOtp(otpRef.current).length === 4)}
+              </div>
+            )}
           </div>
 
           {/* Sticky footer */}
           <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom),1rem)] bg-background">
             <Button
               onClick={() => handleSubmit(false)}
-              disabled={loading || otp.length < 4}
+              disabled={loading || normalizeOtp(otp).length !== 4}
               className="w-full h-14 text-base font-semibold rounded-2xl bg-pink-600 hover:bg-pink-700 text-white shadow-sm disabled:opacity-40 disabled:shadow-none"
             >
               {loading ? (
