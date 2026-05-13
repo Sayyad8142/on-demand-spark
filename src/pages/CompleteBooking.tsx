@@ -178,14 +178,17 @@ export default function CompleteBooking() {
     setTimeout(() => setShake(false), 500);
   };
 
-  const handleWrongOtp = (msg: string) => {
+  const handleWrongOtp = (msg: string, attemptedOtp = otpRef.current) => {
     haptic.error();
     setError(msg);
     setErrorKind("wrong_otp");
     triggerShake();
-    trackEvent("otp_wrong", bookingId, { entered_length: otp.length });
+    trackEvent("otp_wrong", bookingId, { entered_length: normalizeOtp(attemptedOtp).length });
     // Clear OTP after 500ms (let user see what they typed + shake)
-    setTimeout(() => setOtp(""), 500);
+    setTimeout(() => {
+      otpRef.current = "";
+      setOtp("");
+    }, 500);
   };
 
   const startSlowTimer = () => {
@@ -205,9 +208,21 @@ export default function CompleteBooking() {
     setShowSlowWarning(false);
   };
 
-  const handleSubmit = async (isRetry = false) => {
+  const handleSubmit = async (isRetry = false, submittedOtp?: string) => {
     if (submitLockRef.current || loading) return;
-    if (otp.length < 4) {
+    const enteredOtp = normalizeOtp(submittedOtp ?? otpRef.current ?? otp);
+    logOtpDebug("submit", {
+      bookingId,
+      rawOtpState: `[${otp}]`,
+      rawRef: `[${otpRef.current}]`,
+      submittedOtp: submittedOtp === undefined ? undefined : `[${submittedOtp}]`,
+      cleanedOtp: `[${enteredOtp}]`,
+      length: enteredOtp.length,
+      values: enteredOtp.split("").map((v) => `[${v}]`),
+      isRetry,
+    });
+
+    if (enteredOtp.length !== 4) {
       setError("Please enter the complete 4-digit OTP");
       setErrorKind("validation");
       triggerShake();
@@ -225,7 +240,14 @@ export default function CompleteBooking() {
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke("complete-booking-with-otp", {
-        body: { booking_id: bookingId, otp },
+        body: { booking_id: bookingId, otp: enteredOtp },
+      });
+      logOtpDebug("function_response", {
+        bookingId,
+        cleanedOtpLength: enteredOtp.length,
+        hasError: !!fnError,
+        data,
+        errorMessage: fnError?.message,
       });
 
       // Try to extract the real backend error message even when invoke surfaces a generic non-2xx.
@@ -257,7 +279,7 @@ export default function CompleteBooking() {
           trackEvent("otp_success", bookingId, { already_completed: true });
           if (data?.payout || backendPayload?.payout) setPayout(data?.payout ?? backendPayload?.payout);
         } else if (errorBody.includes("Invalid OTP")) {
-          handleWrongOtp("Wrong OTP. Please ask the customer for the correct code.");
+          handleWrongOtp("Wrong OTP. Please ask the customer for the correct code.", enteredOtp);
         } else if (
           isPaymentRequired ||
           errorBody.includes("Payment not collected") ||
