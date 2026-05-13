@@ -174,6 +174,11 @@ public class MyFirebaseService extends FirebaseMessagingService {
           return;
         }
 
+        // 📨 ACK push_received — tell backend this device received the alert.
+        // Fire-and-forget on a background thread so we never block the FCM handler.
+        Log.d(TAG, "📨 [ACK] Sending push_received for booking_id=" + bookingId);
+        BackendSync.INSTANCE.ackDeliveryAsync(getApplicationContext(), bookingId, "push_received");
+
         if ("scheduled".equals(bookingType) && !prealertSent) {
           Log.w(TAG, "🔕 Scheduled booking hidden until prealert_sent=true. booking_id=" + bookingId
               + ", scheduled_at=" + scheduledDate + "T" + scheduledTimeRaw
