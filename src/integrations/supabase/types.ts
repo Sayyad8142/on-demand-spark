@@ -2437,6 +2437,27 @@ export type Database = {
         }
         Relationships: []
       }
+      otp_rate_limits: {
+        Row: {
+          created_at: string
+          id: string
+          ip: string | null
+          phone: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip?: string | null
+          phone: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip?: string | null
+          phone?: string
+        }
+        Relationships: []
+      }
       payment_intents: {
         Row: {
           amount_inr: number
