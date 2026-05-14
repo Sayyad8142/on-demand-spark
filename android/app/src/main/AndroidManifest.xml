@@ -13,8 +13,9 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
-    
-    <!-- Explicitly remove USE_FULL_SCREEN_INTENT to prevent any library from adding it -->
+
+    <!-- USE_FULL_SCREEN_INTENT removed for Google Play policy compliance.
+         Booking alerts use SYSTEM_ALERT_WINDOW overlay + high-priority heads-up notification instead. -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" tools:node="remove" />
 
     <application
