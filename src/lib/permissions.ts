@@ -355,21 +355,57 @@ export async function checkActivityState(): Promise<PermissionState> {
   }
 }
 
+/**
+ * Sentinel error type — caller (PermissionOnboarding) detects this and shows
+ * a clear "open Settings manually" dialog instead of a blank toast.
+ */
+export class ActivityPermissionManualFallbackError extends Error {
+  constructor() {
+    super("Please open Android Settings > Apps > Didi Now > Permissions and allow Physical activity.");
+    this.name = "ActivityPermissionManualFallbackError";
+  }
+}
+
 export async function requestActivity(): Promise<boolean> {
-  reportPermissionDebug({ permissionId: "activity", step: "requestPermission", status: "started", message: "Opening Android physical activity permission prompt" });
+  console.log("[ACTIVITY_PERMISSION_REQUEST_START]");
+  reportPermissionDebug({ permissionId: "activity", step: "requestPermission", status: "started", message: "[ACTIVITY_PERMISSION_REQUEST_START] Opening Android physical activity permission prompt" });
+
+  // Auto-grant on Android < 10 (no runtime permission required)
+  if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
+    try {
+      const info = await Device.getInfo();
+      const apiLevel = (info as any)?.androidSDKVersion;
+      if (typeof apiLevel === "number" && apiLevel < 29) {
+        console.log("[ACTIVITY_PERMISSION_GRANTED] auto-granted (Android <10, api=" + apiLevel + ")");
+        reportPermissionDebug({ permissionId: "activity", step: "requestPermission", status: "success", message: "[ACTIVITY_PERMISSION_GRANTED] Auto-granted on Android <10" });
+        return true;
+      }
+    } catch { /* continue */ }
+  }
+
+  console.log("[ACTIVITY_PERMISSION_DIALOG_SHOWN] native OS prompt");
+  reportPermissionDebug({ permissionId: "activity", step: "dialog", status: "started", message: "[ACTIVITY_PERMISSION_DIALOG_SHOWN] Native OS prompt shown" });
+
   const granted = await requestActivityRecognitionPermission();
   if (granted) {
-    reportPermissionDebug({ permissionId: "activity", step: "requestPermission", status: "success", message: "Physical activity permission granted" });
+    console.log("[ACTIVITY_PERMISSION_GRANTED]");
+    reportPermissionDebug({ permissionId: "activity", step: "requestPermission", status: "success", message: "[ACTIVITY_PERMISSION_GRANTED] Physical activity permission granted" });
     return true;
   }
 
-  reportPermissionDebug({ permissionId: "activity", step: "requestPermission", status: "fallback", fallbackPath: "Capacitor App.openSettings", message: "Permission was not granted from the prompt; opening app settings" });
-  const opened = await tryOpenAppSettingsFallback("activity");
-  if (opened) return false;
+  console.log("[ACTIVITY_PERMISSION_DENIED]");
+  reportPermissionDebug({ permissionId: "activity", step: "requestPermission", status: "fallback", fallbackPath: "Capacitor App.openSettings", message: "[ACTIVITY_PERMISSION_DENIED] Permission was not granted from the prompt; trying to open app settings" });
 
-  const msg = "Physical activity permission was not granted and app settings could not be opened";
-  reportPermissionDebug({ permissionId: "activity", step: "App.openSettings", status: "failed", error: msg });
-  throw new Error(msg);
+  console.log("[ACTIVITY_PERMISSION_SETTINGS_FALLBACK] attempting App.openSettings");
+  const opened = await tryOpenAppSettingsFallback("activity");
+  if (opened) {
+    reportPermissionDebug({ permissionId: "activity", step: "App.openSettings", status: "success", message: "[ACTIVITY_PERMISSION_SETTINGS_FALLBACK] App settings opened" });
+    return false;
+  }
+
+  console.warn("[ACTIVITY_PERMISSION_ERROR] settings could not be opened — showing manual instructions dialog");
+  reportPermissionDebug({ permissionId: "activity", step: "App.openSettings", status: "failed", error: "[ACTIVITY_PERMISSION_ERROR] App settings could not be opened — showing manual instructions" });
+  throw new ActivityPermissionManualFallbackError();
 }
 
 // ---------- Aggregate ----------
