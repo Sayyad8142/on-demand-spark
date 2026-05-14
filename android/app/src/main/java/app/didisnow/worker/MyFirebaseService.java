@@ -452,7 +452,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
       .setContentTitle("New Booking")
       .setContentText("New Booking")
       .setPriority(NotificationCompat.PRIORITY_HIGH)
-      .setCategory(NotificationCompat.CATEGORY_ALARM)
+      .setCategory(NotificationCompat.CATEGORY_REMINDER)
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .setAutoCancel(true)
       .setContentIntent(pendingIntent);
@@ -496,7 +496,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
       .setContentTitle("BOOKING CANCELLED")
       .setContentText("Your booking was cancelled. Do not go to the flat.")
       .setPriority(NotificationCompat.PRIORITY_HIGH)
-      .setCategory(NotificationCompat.CATEGORY_ALARM)
+      .setCategory(NotificationCompat.CATEGORY_REMINDER)
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .setVibrate(new long[]{0, 700, 200, 700, 200, 1000})
       .setSound(soundUri)
