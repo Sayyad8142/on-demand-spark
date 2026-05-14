@@ -243,23 +243,15 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Invalid OTP. Please check with the customer." }, 400);
     }
 
-    // ── Payment safety gate ──
-    const paymentMethod = bookingRow.payment_method || "";
-    if (paymentMethod === "online") {
-      if (!VALID_ONLINE_PAYMENT_STATUSES.includes(bookingRow.payment_status || "")) {
-        return jsonResponse({
-          error: "Payment not completed. Customer has not paid online yet.",
-          payment_required: true,
-        }, 402);
-      }
-    } else if (paymentMethod === "pay_after_service") {
-      if (!bookingRow.worker_collected_payment) {
-        return jsonResponse({
-          error: "Payment not collected. Please collect payment before completing the job.",
-          payment_required: true,
-        }, 402);
-      }
-    }
+    // ── Payment gate removed (online-payment-only platform) ──
+    // OTP entry by the worker is the sole source of truth that service was delivered.
+    // Payment reconciliation happens out-of-band; never block completion on payment_status.
+    console.log("[PAYMENT_CHECK] skipped (online-only model)", {
+      booking_id,
+      payment_method: bookingRow.payment_method,
+      payment_status: bookingRow.payment_status,
+    });
+    console.log("[BOOKING_STATUS_BEFORE]", { booking_id, status: bookingRow.status });
 
     // Complete the booking once only; simultaneous replays get no updated row and fall into the idempotent branch below.
     // Writes the new compliance fields required by DB completion guards:
