@@ -103,7 +103,7 @@ export default function Auth() {
     let cancelled = false;
     (async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('app_config')
           .select('enable_bank_payout_details')
           .limit(1)
