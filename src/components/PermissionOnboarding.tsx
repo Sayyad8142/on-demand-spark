@@ -355,6 +355,33 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={activityManualOpen} onOpenChange={(o) => !o && setActivityManualOpen(false)}>
+        <DialogContent className="max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-base">
+              Physical Activity Permission Needed
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              Allow activity permission so Didi Now can keep step counter and
+              worker availability features working properly.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+            We couldn't open the settings screen automatically. Please open
+            <span className="font-semibold text-foreground"> Android Settings &rsaquo; Apps &rsaquo; Didi Now &rsaquo; Permissions </span>
+            and allow <span className="font-semibold text-foreground">Physical activity</span>.
+          </div>
+          <DialogFooter className="sm:justify-end">
+            <Button
+              className="w-full sm:w-auto"
+              onClick={() => setActivityManualOpen(false)}
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
