@@ -24,6 +24,7 @@ import {
   requestBatteryExemption,
   requestActivity,
   setPermissionDebugReporter,
+  ActivityPermissionManualFallbackError,
 } from "@/lib/permissions";
 import {
   type OemInfo,
@@ -89,6 +90,7 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
   const [oem, setOem] = useState<OemInfo | null>(null);
   const [fallbackModal, setFallbackModal] = useState<FallbackModalState>({ open: false, permissionId: null });
   const [activityRationaleOpen, setActivityRationaleOpen] = useState(false);
+  const [activityManualOpen, setActivityManualOpen] = useState(false);
   const [debugEvents, setDebugEvents] = useState<PermissionDebugEvent[]>([]);
 
   const addDebugEvent = useCallback((event: Omit<PermissionDebugEvent, "at">) => {
@@ -183,7 +185,12 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
       console.error(`[PermissionOnboarding] ${id} request failed`, e);
       addDebugEvent({ permissionId: id, step: "handleRequest", status: "failed", error: e instanceof Error ? e.message : String(e) });
       markFailed(id, true);
-        if (id === "overlay" || id === "battery" || id === "activity") {
+
+      // Activity-specific manual fallback: ALWAYS show a clear dialog with
+      // explicit title + message + OK so the user never sees a blank popup.
+      if (id === "activity" && e instanceof ActivityPermissionManualFallbackError) {
+        setActivityManualOpen(true);
+      } else if (id === "overlay" || id === "battery" || id === "activity") {
         openFallbackModal(id);
         if (!options?.silent) {
           toast({
@@ -344,6 +351,33 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
               onClick={() => setActivityRationaleOpen(false)}
             >
               Not now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={activityManualOpen} onOpenChange={(o) => !o && setActivityManualOpen(false)}>
+        <DialogContent className="max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-base">
+              Physical Activity Permission Needed
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              Allow activity permission so Didi Now can keep step counter and
+              worker availability features working properly.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+            We couldn't open the settings screen automatically. Please open
+            <span className="font-semibold text-foreground"> Android Settings &rsaquo; Apps &rsaquo; Didi Now &rsaquo; Permissions </span>
+            and allow <span className="font-semibold text-foreground">Physical activity</span>.
+          </div>
+          <DialogFooter className="sm:justify-end">
+            <Button
+              className="w-full sm:w-auto"
+              onClick={() => setActivityManualOpen(false)}
+            >
+              OK
             </Button>
           </DialogFooter>
         </DialogContent>
