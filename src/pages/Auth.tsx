@@ -95,6 +95,35 @@ export default function Auth() {
   const [extractingPassbook, setExtractingPassbook] = useState(false);
   const [signUpStep, setSignUpStep] = useState(1);
   const [showBankDetails, setShowBankDetails] = useState(true);
+  // Admin-controlled flag: when false, signup payout step shows ONLY UPI input.
+  // Default true to preserve existing behavior until config loads.
+  const [bankPayoutEnabled, setBankPayoutEnabled] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('app_config')
+          .select('enable_bank_payout_details')
+          .limit(1)
+          .maybeSingle();
+        if (error) {
+          console.warn('[PAYOUT_CONFIG_LOADED] failed, defaulting to bank ENABLED', error.message);
+          return;
+        }
+        const enabled = data?.enable_bank_payout_details !== false;
+        if (cancelled) return;
+        setBankPayoutEnabled(enabled);
+        console.log('[PAYOUT_CONFIG_LOADED]', { enable_bank_payout_details: enabled });
+        if (enabled) console.log('[BANK_DETAILS_VISIBLE]');
+        else console.log('[UPI_ONLY_MODE]');
+      } catch (e: any) {
+        console.warn('[PAYOUT_CONFIG_LOADED] error', e?.message);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
   const [draftRestored, setDraftRestored] = useState(false);
   const passbookInputRef = useRef<HTMLInputElement>(null);
   
