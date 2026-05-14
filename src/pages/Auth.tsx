@@ -526,12 +526,13 @@ export default function Auth() {
     }
 
     // Bank details are optional. If ANY bank field is filled, validate ALL required bank fields.
-    const bankAccountNumber = signUpBankAccountNumber.trim();
-    const confirmAccountNumber = signUpConfirmAccountNumber.trim();
-    const accountHolderNameBank = signUpAccountHolderName.trim();
-    const ifscCode = signUpIfscCode.trim().toUpperCase();
-    const bankName = signUpBankName.trim();
-    const anyBankFieldFilled = !!(bankAccountNumber || confirmAccountNumber || accountHolderNameBank || ifscCode || bankName);
+    // When admin flag `enable_bank_payout_details=false`, bank section is hidden — skip entirely.
+    const bankAccountNumber = bankPayoutEnabled ? signUpBankAccountNumber.trim() : "";
+    const confirmAccountNumber = bankPayoutEnabled ? signUpConfirmAccountNumber.trim() : "";
+    const accountHolderNameBank = bankPayoutEnabled ? signUpAccountHolderName.trim() : "";
+    const ifscCode = bankPayoutEnabled ? signUpIfscCode.trim().toUpperCase() : "";
+    const bankName = bankPayoutEnabled ? signUpBankName.trim() : "";
+    const anyBankFieldFilled = bankPayoutEnabled && !!(bankAccountNumber || confirmAccountNumber || accountHolderNameBank || ifscCode || bankName);
     let bankPayload: {
       account_holder_name: string;
       bank_account_number: string;
