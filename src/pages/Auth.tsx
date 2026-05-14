@@ -95,6 +95,35 @@ export default function Auth() {
   const [extractingPassbook, setExtractingPassbook] = useState(false);
   const [signUpStep, setSignUpStep] = useState(1);
   const [showBankDetails, setShowBankDetails] = useState(true);
+  // Admin-controlled flag: when false, signup payout step shows ONLY UPI input.
+  // Default true to preserve existing behavior until config loads.
+  const [bankPayoutEnabled, setBankPayoutEnabled] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await (supabase as any)
+          .from('app_config')
+          .select('enable_bank_payout_details')
+          .limit(1)
+          .maybeSingle();
+        if (error) {
+          console.warn('[PAYOUT_CONFIG_LOADED] failed, defaulting to bank ENABLED', error.message);
+          return;
+        }
+        const enabled = data?.enable_bank_payout_details !== false;
+        if (cancelled) return;
+        setBankPayoutEnabled(enabled);
+        console.log('[PAYOUT_CONFIG_LOADED]', { enable_bank_payout_details: enabled });
+        if (enabled) console.log('[BANK_DETAILS_VISIBLE]');
+        else console.log('[UPI_ONLY_MODE]');
+      } catch (e: any) {
+        console.warn('[PAYOUT_CONFIG_LOADED] error', e?.message);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
   const [draftRestored, setDraftRestored] = useState(false);
   const passbookInputRef = useRef<HTMLInputElement>(null);
   
@@ -247,6 +276,30 @@ export default function Auth() {
   const goToSignupStepThree = () => {
     const upi = signUpUpiId.trim();
     const hasUpi = !!upi;
+
+    // UPI-only mode (bank disabled by admin): UPI is mandatory and must be valid.
+    if (!bankPayoutEnabled) {
+      if (!hasUpi) {
+        toast({
+          title: "UPI ID is required",
+          description: "Please enter your UPI ID to receive payouts.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const upiValidation = upiSchema.safeParse(upi);
+      if (!upiValidation.success) {
+        toast({
+          title: "Invalid UPI ID",
+          description: upiValidation.error.errors[0].message,
+          variant: "destructive",
+        });
+        return;
+      }
+      setSignUpStep(3);
+      return;
+    }
+
     const hasAnyBankField = !!(signUpAccountHolderName.trim() || signUpBankAccountNumber.trim() || signUpConfirmAccountNumber.trim() || signUpIfscCode.trim());
 
     if (!hasUpi && !hasAnyBankField) {
@@ -473,12 +526,13 @@ export default function Auth() {
     }
 
     // Bank details are optional. If ANY bank field is filled, validate ALL required bank fields.
-    const bankAccountNumber = signUpBankAccountNumber.trim();
-    const confirmAccountNumber = signUpConfirmAccountNumber.trim();
-    const accountHolderNameBank = signUpAccountHolderName.trim();
-    const ifscCode = signUpIfscCode.trim().toUpperCase();
-    const bankName = signUpBankName.trim();
-    const anyBankFieldFilled = !!(bankAccountNumber || confirmAccountNumber || accountHolderNameBank || ifscCode || bankName);
+    // When admin flag `enable_bank_payout_details=false`, bank section is hidden — skip entirely.
+    const bankAccountNumber = bankPayoutEnabled ? signUpBankAccountNumber.trim() : "";
+    const confirmAccountNumber = bankPayoutEnabled ? signUpConfirmAccountNumber.trim() : "";
+    const accountHolderNameBank = bankPayoutEnabled ? signUpAccountHolderName.trim() : "";
+    const ifscCode = bankPayoutEnabled ? signUpIfscCode.trim().toUpperCase() : "";
+    const bankName = bankPayoutEnabled ? signUpBankName.trim() : "";
+    const anyBankFieldFilled = bankPayoutEnabled && !!(bankAccountNumber || confirmAccountNumber || accountHolderNameBank || ifscCode || bankName);
     let bankPayload: {
       account_holder_name: string;
       bank_account_number: string;
@@ -723,12 +777,18 @@ export default function Auth() {
                     </div>
                     <div>
                       <p className="text-lg font-bold">Step 2: Payout Details</p>
-                      <p className="text-sm font-medium">Add bank details for payouts</p>
-                      <p className="mt-1 text-sm text-muted-foreground">Enter your UPI ID or full bank details to continue.</p>
+                      <p className="text-sm font-medium">
+                        {bankPayoutEnabled ? "Add bank details for payouts" : "Add UPI for payouts"}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {bankPayoutEnabled
+                          ? "Enter your UPI ID or bank details for payouts"
+                          : "Enter your UPI ID for payouts"}
+                      </p>
                     </div>
                   </div>
 
-                  {!showBankDetails ? (
+                  {bankPayoutEnabled && !showBankDetails ? (
                     <div className="space-y-3">
                       <Button type="button" onClick={() => setShowBankDetails(true)} className="h-12 w-full rounded-2xl text-base font-semibold">
                         Add bank details now
@@ -736,66 +796,74 @@ export default function Auth() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-acct-name" className="text-base">Account Holder Name</Label>
-                        <Input id="signup-acct-name" type="text" placeholder="Name as on bank account" value={signUpAccountHolderName} onChange={e => setSignUpAccountHolderName(e.target.value)} disabled={loading} className="h-12 rounded-2xl text-base" />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-acct-no" className="text-base">Bank Account Number</Label>
-                        <Input id="signup-acct-no" inputMode="numeric" placeholder="9 to 18 digits" value={signUpBankAccountNumber} onChange={e => setSignUpBankAccountNumber(e.target.value.replace(/\D/g, ""))} maxLength={18} disabled={loading} className="h-12 rounded-2xl text-base" />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-acct-no-confirm" className="text-base">Confirm Account Number</Label>
-                        <Input id="signup-acct-no-confirm" inputMode="numeric" placeholder="Re-enter account number" value={signUpConfirmAccountNumber} onChange={e => setSignUpConfirmAccountNumber(e.target.value.replace(/\D/g, ""))} maxLength={18} disabled={loading} className="h-12 rounded-2xl text-base" />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-ifsc" className="text-base">IFSC Code</Label>
-                        <Input id="signup-ifsc" type="text" placeholder="e.g., HDFC0001234" value={signUpIfscCode} onChange={e => setSignUpIfscCode(e.target.value.toUpperCase())} maxLength={11} disabled={loading} className="h-12 rounded-2xl text-base uppercase" />
-                        <p className="text-xs text-muted-foreground">11 characters. Format: 4 letters + 0 + 6 alphanumeric.</p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-bank-name" className="text-base">Bank Name (optional)</Label>
-                        <Input id="signup-bank-name" type="text" placeholder="e.g., HDFC Bank" value={signUpBankName} onChange={e => setSignUpBankName(e.target.value)} disabled={loading} className="h-12 rounded-2xl text-base" />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-base">Account Details Image (optional)</Label>
-                        {signUpPassbookFile ? (
-                          <div className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted">
-                              <FileText className="h-5 w-5 text-muted-foreground" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-medium">{signUpPassbookFile.name}</p>
-                              <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <Check className="h-3 w-3" /> {extractingPassbook ? "Reading details..." : "Details read — verify above"}
-                              </p>
-                            </div>
-                            <Button type="button" variant="ghost" size="icon" onClick={() => {
-                              setSignUpPassbookFile(null);
-                              if (passbookInputRef.current) passbookInputRef.current.value = "";
-                            }} disabled={loading || extractingPassbook} className="h-9 w-9 rounded-full">
-                              <X className="h-4 w-4" />
-                            </Button>
+                      {bankPayoutEnabled && (
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="signup-acct-name" className="text-base">Account Holder Name</Label>
+                            <Input id="signup-acct-name" type="text" placeholder="Name as on bank account" value={signUpAccountHolderName} onChange={e => setSignUpAccountHolderName(e.target.value)} disabled={loading} className="h-12 rounded-2xl text-base" />
                           </div>
-                        ) : (
-                          <button type="button" onClick={() => passbookInputRef.current?.click()} disabled={loading || extractingPassbook} className="flex w-full flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-border bg-background p-5 text-center transition-colors hover:bg-muted/50 disabled:opacity-50">
-                            <Upload className="h-7 w-7 text-muted-foreground" />
-                            <span className="text-sm font-semibold">Upload passbook or cheque</span>
-                            <span className="text-xs text-muted-foreground">Fills name, account number, and IFSC instantly</span>
-                          </button>
-                        )}
-                        <input ref={passbookInputRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={handlePassbookSelect} className="hidden" />
-                      </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="signup-acct-no" className="text-base">Bank Account Number</Label>
+                            <Input id="signup-acct-no" inputMode="numeric" placeholder="9 to 18 digits" value={signUpBankAccountNumber} onChange={e => setSignUpBankAccountNumber(e.target.value.replace(/\D/g, ""))} maxLength={18} disabled={loading} className="h-12 rounded-2xl text-base" />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="signup-acct-no-confirm" className="text-base">Confirm Account Number</Label>
+                            <Input id="signup-acct-no-confirm" inputMode="numeric" placeholder="Re-enter account number" value={signUpConfirmAccountNumber} onChange={e => setSignUpConfirmAccountNumber(e.target.value.replace(/\D/g, ""))} maxLength={18} disabled={loading} className="h-12 rounded-2xl text-base" />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="signup-ifsc" className="text-base">IFSC Code</Label>
+                            <Input id="signup-ifsc" type="text" placeholder="e.g., HDFC0001234" value={signUpIfscCode} onChange={e => setSignUpIfscCode(e.target.value.toUpperCase())} maxLength={11} disabled={loading} className="h-12 rounded-2xl text-base uppercase" />
+                            <p className="text-xs text-muted-foreground">11 characters. Format: 4 letters + 0 + 6 alphanumeric.</p>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="signup-bank-name" className="text-base">Bank Name (optional)</Label>
+                            <Input id="signup-bank-name" type="text" placeholder="e.g., HDFC Bank" value={signUpBankName} onChange={e => setSignUpBankName(e.target.value)} disabled={loading} className="h-12 rounded-2xl text-base" />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-base">Account Details Image (optional)</Label>
+                            {signUpPassbookFile ? (
+                              <div className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted">
+                                  <FileText className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-medium">{signUpPassbookFile.name}</p>
+                                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Check className="h-3 w-3" /> {extractingPassbook ? "Reading details..." : "Details read — verify above"}
+                                  </p>
+                                </div>
+                                <Button type="button" variant="ghost" size="icon" onClick={() => {
+                                  setSignUpPassbookFile(null);
+                                  if (passbookInputRef.current) passbookInputRef.current.value = "";
+                                }} disabled={loading || extractingPassbook} className="h-9 w-9 rounded-full">
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <button type="button" onClick={() => passbookInputRef.current?.click()} disabled={loading || extractingPassbook} className="flex w-full flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-border bg-background p-5 text-center transition-colors hover:bg-muted/50 disabled:opacity-50">
+                                <Upload className="h-7 w-7 text-muted-foreground" />
+                                <span className="text-sm font-semibold">Upload passbook or cheque</span>
+                                <span className="text-xs text-muted-foreground">Fills name, account number, and IFSC instantly</span>
+                              </button>
+                            )}
+                            <input ref={passbookInputRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={handlePassbookSelect} className="hidden" />
+                          </div>
+                        </>
+                      )}
 
                       <div className="space-y-2">
                         <Label htmlFor="signup-upi" className="text-base">{t('auth.upiIdLabel', 'UPI ID')}</Label>
                         <Input id="signup-upi" type="text" required placeholder={t('auth.upiPlaceholder', 'e.g., name@paytm')} value={signUpUpiId} onChange={e => setSignUpUpiId(e.target.value)} disabled={loading} className="h-12 rounded-2xl text-base" />
-                        <p className="text-xs text-muted-foreground">Enter UPI ID or fill bank details above to continue.</p>
+                        <p className="text-xs text-muted-foreground">
+                          {bankPayoutEnabled
+                            ? "Enter UPI ID or fill bank details above to continue."
+                            : "UPI ID is required to receive payouts."}
+                        </p>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3 pt-1">
