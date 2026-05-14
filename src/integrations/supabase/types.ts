@@ -97,6 +97,7 @@ export type Database = {
           bypass_worker_freshness_gate: boolean
           created_at: string | null
           disable_online_payments: boolean
+          enable_bank_payout_details: boolean
           enable_pay_after_service: boolean
           force_update: boolean
           id: string
@@ -128,6 +129,7 @@ export type Database = {
           bypass_worker_freshness_gate?: boolean
           created_at?: string | null
           disable_online_payments?: boolean
+          enable_bank_payout_details?: boolean
           enable_pay_after_service?: boolean
           force_update?: boolean
           id?: string
@@ -159,6 +161,7 @@ export type Database = {
           bypass_worker_freshness_gate?: boolean
           created_at?: string | null
           disable_online_payments?: boolean
+          enable_bank_payout_details?: boolean
           enable_pay_after_service?: boolean
           force_update?: boolean
           id?: string

@@ -108,13 +108,18 @@ export default function Auth() {
           .select('enable_bank_payout_details')
           .limit(1)
           .maybeSingle();
+        console.log('[PAYOUT_CONFIG_RAW]', data, 'error:', error?.message);
+        console.log('[PAYOUT_CONFIG_VALUE]', data?.enable_bank_payout_details);
         if (error) {
           console.warn('[PAYOUT_CONFIG_LOADED] failed, defaulting to bank ENABLED', error.message);
           return;
         }
-        const enabled = data?.enable_bank_payout_details !== false;
+        // Strict: only true (or null/undefined fallback) keeps bank visible. false hides it.
+        const raw = data?.enable_bank_payout_details;
+        const enabled = raw === false ? false : true;
         if (cancelled) return;
         setBankPayoutEnabled(enabled);
+        console.log('[BANK_PAYOUT_STATE]', enabled);
         console.log('[PAYOUT_CONFIG_LOADED]', { enable_bank_payout_details: enabled });
         if (enabled) console.log('[BANK_DETAILS_VISIBLE]');
         else console.log('[UPI_ONLY_MODE]');
