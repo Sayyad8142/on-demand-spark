@@ -24,6 +24,7 @@ import {
   requestBatteryExemption,
   requestActivity,
   setPermissionDebugReporter,
+  ActivityPermissionManualFallbackError,
 } from "@/lib/permissions";
 import {
   type OemInfo,
