@@ -274,9 +274,14 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (updateError) {
-      console.error("Failed to complete booking:", updateError);
-      return jsonResponse({ error: "Could not complete booking. Please try again." }, 500);
+      console.error("[COMPLETE_BOOKING_ERROR] update failed", updateError);
+      return jsonResponse({
+        error: updateError.message || "Could not complete booking. Please try again.",
+        code: updateError.code ?? null,
+        details: updateError.details ?? null,
+      }, 500);
     }
+    console.log("[BOOKING_STATUS_AFTER]", { booking_id, status: "completed" });
 
     if (!completedBooking) {
       const { data: latestBooking, error: latestBookingError } = await adminClient
