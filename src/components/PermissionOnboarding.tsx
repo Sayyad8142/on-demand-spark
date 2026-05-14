@@ -90,6 +90,7 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
   const [oem, setOem] = useState<OemInfo | null>(null);
   const [fallbackModal, setFallbackModal] = useState<FallbackModalState>({ open: false, permissionId: null });
   const [activityRationaleOpen, setActivityRationaleOpen] = useState(false);
+  const [activityManualOpen, setActivityManualOpen] = useState(false);
   const [debugEvents, setDebugEvents] = useState<PermissionDebugEvent[]>([]);
 
   const addDebugEvent = useCallback((event: Omit<PermissionDebugEvent, "at">) => {
