@@ -276,6 +276,30 @@ export default function Auth() {
   const goToSignupStepThree = () => {
     const upi = signUpUpiId.trim();
     const hasUpi = !!upi;
+
+    // UPI-only mode (bank disabled by admin): UPI is mandatory and must be valid.
+    if (!bankPayoutEnabled) {
+      if (!hasUpi) {
+        toast({
+          title: "UPI ID is required",
+          description: "Please enter your UPI ID to receive payouts.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const upiValidation = upiSchema.safeParse(upi);
+      if (!upiValidation.success) {
+        toast({
+          title: "Invalid UPI ID",
+          description: upiValidation.error.errors[0].message,
+          variant: "destructive",
+        });
+        return;
+      }
+      setSignUpStep(3);
+      return;
+    }
+
     const hasAnyBankField = !!(signUpAccountHolderName.trim() || signUpBankAccountNumber.trim() || signUpConfirmAccountNumber.trim() || signUpIfscCode.trim());
 
     if (!hasUpi && !hasAnyBankField) {
