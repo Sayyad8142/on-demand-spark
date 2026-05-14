@@ -185,7 +185,12 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
       console.error(`[PermissionOnboarding] ${id} request failed`, e);
       addDebugEvent({ permissionId: id, step: "handleRequest", status: "failed", error: e instanceof Error ? e.message : String(e) });
       markFailed(id, true);
-        if (id === "overlay" || id === "battery" || id === "activity") {
+
+      // Activity-specific manual fallback: ALWAYS show a clear dialog with
+      // explicit title + message + OK so the user never sees a blank popup.
+      if (id === "activity" && e instanceof ActivityPermissionManualFallbackError) {
+        setActivityManualOpen(true);
+      } else if (id === "overlay" || id === "battery" || id === "activity") {
         openFallbackModal(id);
         if (!options?.silent) {
           toast({
