@@ -169,6 +169,27 @@ class MainActivity : BridgeActivity() {
         dispatchCancellationAlertToWebView(bookingId)
         prefs.edit().remove("pending_cancelled_booking_id").remove("pending_cancelled_booking_at").apply()
     }
+
+    private fun dispatchReassignedAlertToWebView(bookingId: String) {
+        bridge?.webView?.post {
+            val js = """
+                window.postMessage({ type: 'BOOKING_REASSIGNED', bookingId: '$bookingId' }, '*');
+            """.trimIndent()
+            bridge?.webView?.evaluateJavascript(js, null)
+        }
+    }
+
+    private fun deliverPendingReassignedAlert() {
+        val prefs = getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
+        val bookingId = prefs.getString("pending_reassigned_booking_id", null) ?: return
+        val createdAt = prefs.getLong("pending_reassigned_booking_at", 0L)
+        if (bookingId.isBlank() || createdAt <= 0L || System.currentTimeMillis() - createdAt > 300000L) {
+            prefs.edit().remove("pending_reassigned_booking_id").remove("pending_reassigned_booking_at").apply()
+            return
+        }
+        dispatchReassignedAlertToWebView(bookingId)
+        prefs.edit().remove("pending_reassigned_booking_id").remove("pending_reassigned_booking_at").apply()
+    }
     
     /**
      * OTA Boot Health Check — runs BEFORE super.onCreate() / WebView load.
