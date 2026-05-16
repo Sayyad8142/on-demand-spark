@@ -33,6 +33,13 @@ export async function initFCM() {
     const bookingId = data.bookingId || data.booking_id;
     const bookingRequestId = data.booking_request_id || data.bookingRequestId;
 
+    // Short-circuit: admin reassignment — not a new offer.
+    if (data.type === 'BOOKING_REASSIGNED') {
+      const { handleBookingReassigned } = await import('@/lib/bookingReassign');
+      handleBookingReassigned(bookingId, 'fcm');
+      return;
+    }
+
     if (bookingId) {
       const scheduleInfo = {
         bookingId,
@@ -82,7 +89,13 @@ export async function initFCM() {
     const data = notification.notification.data || {};
     const bookingId = data.bookingId || data.booking_id;
     const bookingRequestId = data.booking_request_id || data.bookingRequestId;
-    
+
+    if (data.type === 'BOOKING_REASSIGNED') {
+      const { handleBookingReassigned } = await import('@/lib/bookingReassign');
+      handleBookingReassigned(bookingId, 'fcm-tap');
+      return;
+    }
+
     if (bookingId) {
       const scheduleInfo = {
         bookingId,

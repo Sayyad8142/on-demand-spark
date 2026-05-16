@@ -94,6 +94,29 @@ public class MyFirebaseService extends FirebaseMessagingService {
         return;
       }
 
+      if ("BOOKING_REASSIGNED".equals(type)) {
+        String bookingId = data.get("bookingId");
+        if (bookingId == null || bookingId.isEmpty()) bookingId = data.get("booking_id");
+        Log.w(TAG, "[BOOKING_REASSIGNED_RECEIVED] booking_id=" + bookingId);
+        // Not a new offer, not a cancellation — silent local cleanup only.
+        // No notification, no overlay, no sound. Persist + broadcast so the
+        // WebView (if alive) can clear active-job state immediately, and pick
+        // it up on next resume otherwise.
+        try {
+          getSharedPreferences("worker_prefs", MODE_PRIVATE)
+            .edit()
+            .putString("pending_reassigned_booking_id", bookingId != null ? bookingId : "")
+            .putLong("pending_reassigned_booking_at", System.currentTimeMillis())
+            .apply();
+          Intent intent = new Intent("BOOKING_REASSIGNED_ALERT");
+          intent.putExtra("booking_id", bookingId != null ? bookingId : "");
+          LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+        } catch (Exception e) {
+          Log.e(TAG, "Failed to broadcast BOOKING_REASSIGNED", e);
+        }
+        return;
+      }
+
       // Handle BOOKING_ALERT for BOTH instant AND scheduled bookings
       if ("BOOKING_ALERT".equals(type)) {
         Log.d(TAG, "═══════════════════════════════════════════════════════════");

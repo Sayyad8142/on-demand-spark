@@ -45,6 +45,13 @@ class MainActivity : BridgeActivity() {
         }
     }
 
+    private val reassignedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val bookingId = intent?.getStringExtra("booking_id") ?: ""
+            dispatchReassignedAlertToWebView(bookingId)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // OTA: Check boot health and restore/rollback BEFORE Capacitor loads the WebView
         handleOtaBootHealth()
@@ -74,6 +81,7 @@ class MainActivity : BridgeActivity() {
         // Handle intent if launched from overlay
         handleNavigationIntent(intent)
         deliverPendingCancellationAlert()
+        deliverPendingReassignedAlert()
 
         // Google Play In-App Updates — Immediate flow (primary force update)
         // Supabase app_config force update screen remains as fallback.
@@ -86,7 +94,12 @@ class MainActivity : BridgeActivity() {
             cancellationReceiver,
             IntentFilter("BOOKING_CANCELLED_ALERT")
         )
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            reassignedReceiver,
+            IntentFilter("BOOKING_REASSIGNED_ALERT")
+        )
         deliverPendingCancellationAlert()
+        deliverPendingReassignedAlert()
         inAppUpdateManager.resumeUpdateIfPending()
     }
 
@@ -98,6 +111,7 @@ class MainActivity : BridgeActivity() {
 
     override fun onPause() {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(cancellationReceiver)
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(reassignedReceiver)
         super.onPause()
     }
     
@@ -155,6 +169,27 @@ class MainActivity : BridgeActivity() {
         }
         dispatchCancellationAlertToWebView(bookingId)
         prefs.edit().remove("pending_cancelled_booking_id").remove("pending_cancelled_booking_at").apply()
+    }
+
+    private fun dispatchReassignedAlertToWebView(bookingId: String) {
+        bridge?.webView?.post {
+            val js = """
+                window.postMessage({ type: 'BOOKING_REASSIGNED', bookingId: '$bookingId' }, '*');
+            """.trimIndent()
+            bridge?.webView?.evaluateJavascript(js, null)
+        }
+    }
+
+    private fun deliverPendingReassignedAlert() {
+        val prefs = getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
+        val bookingId = prefs.getString("pending_reassigned_booking_id", null) ?: return
+        val createdAt = prefs.getLong("pending_reassigned_booking_at", 0L)
+        if (bookingId.isBlank() || createdAt <= 0L || System.currentTimeMillis() - createdAt > 300000L) {
+            prefs.edit().remove("pending_reassigned_booking_id").remove("pending_reassigned_booking_at").apply()
+            return
+        }
+        dispatchReassignedAlertToWebView(bookingId)
+        prefs.edit().remove("pending_reassigned_booking_id").remove("pending_reassigned_booking_at").apply()
     }
     
     /**

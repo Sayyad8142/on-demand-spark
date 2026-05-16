@@ -464,6 +464,10 @@ function AppInner() {
         // which listens to the bookings table and shows the modal automatically
       } else if (event.data?.type === "BOOKING_CANCELLED") {
         showCancellationAlert(event.data?.bookingId || event.data?.booking_id);
+      } else if (event.data?.type === "BOOKING_REASSIGNED") {
+        import("@/lib/bookingReassign").then(({ handleBookingReassigned }) =>
+          handleBookingReassigned(event.data?.bookingId || event.data?.booking_id, "postMessage")
+        );
       }
     };
 

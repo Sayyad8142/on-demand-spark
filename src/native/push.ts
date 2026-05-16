@@ -71,6 +71,10 @@ export async function initNativePush(userId?: string) {
         window.dispatchEvent(new CustomEvent('bookingCancelledAlert', {
           detail: { bookingId: data.bookingId || data.booking_id, source: 'capacitor-push' },
         }));
+      } else if (data.type === 'BOOKING_REASSIGNED') {
+        import('@/lib/bookingReassign').then(({ handleBookingReassigned }) =>
+          handleBookingReassigned(data.bookingId || data.booking_id, 'capacitor-push')
+        );
       }
     });
 
