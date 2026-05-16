@@ -81,6 +81,7 @@ class MainActivity : BridgeActivity() {
         // Handle intent if launched from overlay
         handleNavigationIntent(intent)
         deliverPendingCancellationAlert()
+        deliverPendingReassignedAlert()
 
         // Google Play In-App Updates — Immediate flow (primary force update)
         // Supabase app_config force update screen remains as fallback.
