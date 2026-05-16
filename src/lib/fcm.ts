@@ -89,7 +89,13 @@ export async function initFCM() {
     const data = notification.notification.data || {};
     const bookingId = data.bookingId || data.booking_id;
     const bookingRequestId = data.booking_request_id || data.bookingRequestId;
-    
+
+    if (data.type === 'BOOKING_REASSIGNED') {
+      const { handleBookingReassigned } = await import('@/lib/bookingReassign');
+      handleBookingReassigned(bookingId, 'fcm-tap');
+      return;
+    }
+
     if (bookingId) {
       const scheduleInfo = {
         bookingId,
