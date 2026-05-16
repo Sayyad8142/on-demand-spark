@@ -45,6 +45,13 @@ class MainActivity : BridgeActivity() {
         }
     }
 
+    private val reassignedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val bookingId = intent?.getStringExtra("booking_id") ?: ""
+            dispatchReassignedAlertToWebView(bookingId)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // OTA: Check boot health and restore/rollback BEFORE Capacitor loads the WebView
         handleOtaBootHealth()
