@@ -93,7 +93,12 @@ class MainActivity : BridgeActivity() {
             cancellationReceiver,
             IntentFilter("BOOKING_CANCELLED_ALERT")
         )
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            reassignedReceiver,
+            IntentFilter("BOOKING_REASSIGNED_ALERT")
+        )
         deliverPendingCancellationAlert()
+        deliverPendingReassignedAlert()
         inAppUpdateManager.resumeUpdateIfPending()
     }
 
@@ -105,6 +110,7 @@ class MainActivity : BridgeActivity() {
 
     override fun onPause() {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(cancellationReceiver)
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(reassignedReceiver)
         super.onPause()
     }
     
