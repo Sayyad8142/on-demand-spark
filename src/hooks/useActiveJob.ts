@@ -185,7 +185,35 @@ export function useActiveJob(userId: string | undefined) {
     };
 
     window.addEventListener("bookingAccepted", onBookingAccepted);
-    return () => window.removeEventListener("bookingAccepted", onBookingAccepted);
+
+    // Admin reassignment — clear immediately and refetch to confirm.
+    const onBookingReassigned = async (event: Event) => {
+      const bookingId = (event as CustomEvent)?.detail?.bookingId;
+      setActiveJob((prev) => {
+        if (prev && prev.id === bookingId) {
+          console.log('[BOOKING_REASSIGNED_MATCHED_ACTIVE]', { bookingId });
+          console.log('[BOOKING_REASSIGNED_CLEARED_LOCAL]', { bookingId });
+          try {
+            window.dispatchEvent(new CustomEvent('nativeNavigation', { detail: { screen: 'home' } }));
+          } catch {}
+          return null;
+        }
+        console.log('[BOOKING_REASSIGNED_IGNORED_NOT_ACTIVE]', { bookingId, activeId: prev?.id ?? null });
+        return prev;
+      });
+      try {
+        await fetchActiveJob();
+        console.log('[BOOKING_REASSIGNED_REFETCH_DONE]', { bookingId });
+      } catch (e) {
+        console.warn('[BOOKING_REASSIGNED_REFETCH_DONE] failed', e);
+      }
+    };
+    window.addEventListener("bookingReassigned", onBookingReassigned);
+
+    return () => {
+      window.removeEventListener("bookingAccepted", onBookingAccepted);
+      window.removeEventListener("bookingReassigned", onBookingReassigned);
+    };
   }, [fetchActiveJob]);
 
   // Refetch active job when app comes back to foreground (native)
