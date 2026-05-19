@@ -603,7 +603,8 @@ function AppInner() {
         <Routes>
           <Route path="/auth" element={<PublicAuthRoute><Auth /></PublicAuthRoute>} />
           <Route path="/otp-verify" element={<OtpVerify />} />
-          <Route path="/home" element={<ProtectedRoute showNav={true}><Home /></ProtectedRoute>} />
+          <Route path="/daily-duty" element={<ProtectedRoute><DailyDuty /></ProtectedRoute>} />
+          <Route path="/home" element={<ProtectedRoute showNav={true}><HomeWithDutyGate /></ProtectedRoute>} />
           <Route path="/bookings" element={<ProtectedRoute showNav={true}><Bookings /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute showNav={true}><Profile /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
