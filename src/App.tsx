@@ -198,6 +198,13 @@ function AppInner() {
     completed: false,
   });
 
+  // Schedule the 6:45 AM daily-duty reminder once after login (native only).
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    scheduleMorningReminder().catch(() => {});
+  }, [session?.user?.id]);
+
+
   const checkAndroidSettingsPermissions = useCallback(async ({ allowHide }: { allowHide: boolean }) => {
     const userId = session?.user?.id;
     if (!userId || !Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
