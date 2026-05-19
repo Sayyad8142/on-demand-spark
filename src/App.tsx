@@ -53,6 +53,8 @@ import WorkerBlocked from "./pages/WorkerBlocked";
 import DeviceReadiness from "./pages/DeviceReadiness";
 import CompleteBooking from "./pages/CompleteBooking";
 import AccountDetails from "./pages/AccountDetails";
+import DailyDuty from "./pages/DailyDuty";
+import { shouldShowDailyDuty, scheduleMorningReminder } from "@/lib/dailyDuty";
 import BottomNav from "./components/BottomNav";
 import PermissionOnboarding from "./components/PermissionOnboarding";
 import {
