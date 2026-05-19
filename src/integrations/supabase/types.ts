@@ -4823,6 +4823,8 @@ export type Database = {
           consecutive_delivery_failures: number
           cook_cuisine_tags: string[]
           created_at: string
+          daily_duty_started_at: string | null
+          daily_streak_count: number
           device_manufacturer: string | null
           dispatch_cooldown_until: string | null
           fcm_last_fail_at: string | null
@@ -4863,6 +4865,7 @@ export type Database = {
           last_push_error_code: string | null
           last_push_success_at: string | null
           last_seen_at: string | null
+          last_streak_date: string | null
           location_enabled: boolean | null
           no_ack_count: number | null
           not_reached_7d: number
@@ -4944,6 +4947,8 @@ export type Database = {
           consecutive_delivery_failures?: number
           cook_cuisine_tags?: string[]
           created_at?: string
+          daily_duty_started_at?: string | null
+          daily_streak_count?: number
           device_manufacturer?: string | null
           dispatch_cooldown_until?: string | null
           fcm_last_fail_at?: string | null
@@ -4984,6 +4989,7 @@ export type Database = {
           last_push_error_code?: string | null
           last_push_success_at?: string | null
           last_seen_at?: string | null
+          last_streak_date?: string | null
           location_enabled?: boolean | null
           no_ack_count?: number | null
           not_reached_7d?: number
@@ -5065,6 +5071,8 @@ export type Database = {
           consecutive_delivery_failures?: number
           cook_cuisine_tags?: string[]
           created_at?: string
+          daily_duty_started_at?: string | null
+          daily_streak_count?: number
           device_manufacturer?: string | null
           dispatch_cooldown_until?: string | null
           fcm_last_fail_at?: string | null
@@ -5105,6 +5113,7 @@ export type Database = {
           last_push_error_code?: string | null
           last_push_success_at?: string | null
           last_seen_at?: string | null
+          last_streak_date?: string | null
           location_enabled?: boolean | null
           no_ack_count?: number | null
           not_reached_7d?: number
@@ -5454,6 +5463,8 @@ export type Database = {
               consecutive_delivery_failures: number
               cook_cuisine_tags: string[]
               created_at: string
+              daily_duty_started_at: string | null
+              daily_streak_count: number
               device_manufacturer: string | null
               dispatch_cooldown_until: string | null
               fcm_last_fail_at: string | null
@@ -5494,6 +5505,7 @@ export type Database = {
               last_push_error_code: string | null
               last_push_success_at: string | null
               last_seen_at: string | null
+              last_streak_date: string | null
               location_enabled: boolean | null
               no_ack_count: number | null
               not_reached_7d: number
@@ -5584,6 +5596,8 @@ export type Database = {
               consecutive_delivery_failures: number
               cook_cuisine_tags: string[]
               created_at: string
+              daily_duty_started_at: string | null
+              daily_streak_count: number
               device_manufacturer: string | null
               dispatch_cooldown_until: string | null
               fcm_last_fail_at: string | null
@@ -5624,6 +5638,7 @@ export type Database = {
               last_push_error_code: string | null
               last_push_success_at: string | null
               last_seen_at: string | null
+              last_streak_date: string | null
               location_enabled: boolean | null
               no_ack_count: number | null
               not_reached_7d: number
@@ -6903,6 +6918,13 @@ export type Database = {
       simple_assign_to_next_worker: {
         Args: { p_booking_id: string }
         Returns: Json
+      }
+      start_daily_duty: {
+        Args: { _worker_user_id: string }
+        Returns: {
+          started_at: string
+          streak: number
+        }[]
       }
       support_get_or_create_thread: {
         Args: { p_booking_id?: string }
