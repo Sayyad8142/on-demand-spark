@@ -129,7 +129,10 @@ function RootRedirect() {
     console.log('[AUTH_ROUTE_REDIRECT] / waiting on auth init');
     return <StartupSplash label="Starting..." />;
   }
-  if (user || session || isGuestMode) return <Navigate to="/home" replace />;
+  if (user || session || isGuestMode) {
+    if (shouldShowDailyDuty()) return <Navigate to="/daily-duty" replace />;
+    return <Navigate to="/home" replace />;
+  }
   return <Navigate to="/auth" replace />;
 }
 
