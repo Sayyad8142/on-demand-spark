@@ -136,6 +136,15 @@ function RootRedirect() {
   return <Navigate to="/auth" replace />;
 }
 
+/** Gate /home behind the Daily Duty Start screen once per day. */
+function HomeWithDutyGate() {
+  if (shouldShowDailyDuty()) {
+    return <Navigate to="/daily-duty" replace />;
+  }
+  return <Home />;
+}
+
+
 // Component to handle native navigation events (must be inside BrowserRouter)
 function NativeNavigationHandler() {
   const navigate = useNavigate();
