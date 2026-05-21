@@ -5962,6 +5962,10 @@ export type Database = {
         Args: { p_booking_id: string }
         Returns: Json
       }
+      get_booking_dispatch_audit: {
+        Args: { p_booking_id: string }
+        Returns: Json
+      }
       get_booking_participants: {
         Args: { p_booking_id: string }
         Returns: {
