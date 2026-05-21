@@ -219,7 +219,7 @@ Deno.serve(async (req) => {
 
     let workersQuery = supabase
       .from("workers")
-      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng, fcm_token, fcm_token_status, availability_state, dispatch_cooldown_until")
+      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng, fcm_token, fcm_token_status, availability_state, dispatch_cooldown_until, daily_duty_started_at, last_app_opened_at, last_heartbeat_at, daily_streak_count")
       .eq("is_active", true)
       .eq("is_available", true)
       .eq("is_busy", false)
@@ -294,15 +294,72 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Log each push-ready worker
+    // ─── Freshness ranking boost (Daily Duty / heartbeat / app open) ───
+    // SOFT priority only — never excludes a worker. Higher score = ranked first.
+    const istTodayStr = (() => {
+      const ist = new Date(Date.now() + (5 * 60 + 30) * 60_000);
+      return ist.toISOString().slice(0, 10);
+    })();
+    const nowMs = Date.now();
+
+    const computeFreshness = (w: any) => {
+      let boost = 0;
+      const reasons: string[] = [];
+
+      // Daily Duty started today (IST) — strongest boost
+      let dutyToday = false;
+      if (w.daily_duty_started_at) {
+        const dIst = new Date(new Date(w.daily_duty_started_at).getTime() + (5 * 60 + 30) * 60_000);
+        if (dIst.toISOString().slice(0, 10) === istTodayStr) {
+          dutyToday = true;
+          boost += 100;
+          reasons.push('duty_today');
+        }
+      }
+
+      // App opened within last 12h — medium boost
+      if (w.last_app_opened_at) {
+        const ageH = (nowMs - new Date(w.last_app_opened_at).getTime()) / 3_600_000;
+        if (ageH <= 12) { boost += 40; reasons.push('app_open_12h'); }
+        else if (ageH <= 24) { boost += 15; reasons.push('app_open_24h'); }
+      }
+
+      // Recent heartbeat — medium boost
+      if (w.last_heartbeat_at) {
+        const ageM = (nowMs - new Date(w.last_heartbeat_at).getTime()) / 60_000;
+        if (ageM <= 5) { boost += 30; reasons.push('hb_5m'); }
+        else if (ageM <= 30) { boost += 10; reasons.push('hb_30m'); }
+      }
+
+      // Streak — small boost (capped)
+      const streak = Number(w.daily_streak_count ?? 0) || 0;
+      if (streak > 0) {
+        const sBoost = Math.min(streak, 7) * 2;
+        boost += sBoost;
+        reasons.push(`streak_${streak}`);
+      }
+
+      return { boost, reasons, dutyToday, streak };
+    };
+
+    // Log each push-ready worker (with freshness audit)
     for (const w of pushReady) {
-      console.log(`  ✅ ${w.full_name} (${w.id}): rating=${w.rating}, token=YES, community=${w.selected_community_id}`);
+      const f = computeFreshness(w);
+      console.log(
+        `  ✅ ${w.full_name} (${w.id}): rating=${w.rating}, token=YES, community=${w.selected_community_id} | ` +
+        `DailyDuty=${f.dutyToday ? 'Yes' : 'No'}, LastAppOpen=${w.last_app_opened_at ?? 'never'}, ` +
+        `LastHeartbeat=${w.last_heartbeat_at ?? 'never'}, Streak=${f.streak}, ` +
+        `Boost=${f.boost > 0 ? 'Yes' : 'No'}(${f.boost}${f.reasons.length ? ':' + f.reasons.join(',') : ''})`
+      );
     }
 
-    // Sort by rating then distance
+    // Sort: freshness boost first, then rating, then distance/ratings count.
     const sortedWorkers = pushReady.sort((a, b) => {
-      const ratingDiff = (b.rating || 0) - (a.rating || 0);
-      if (ratingDiff !== 0) return ratingDiff;
+      const fa = computeFreshness(a).boost;
+      const fb = computeFreshness(b).boost;
+      const ratingScoreA = (a.rating || 0) * 20 + fa;
+      const ratingScoreB = (b.rating || 0) * 20 + fb;
+      if (ratingScoreA !== ratingScoreB) return ratingScoreB - ratingScoreA;
       if (hasCommunityCenter && a.last_lat && a.last_lng && b.last_lat && b.last_lng) {
         const distA = haversineM(a.last_lat, a.last_lng, communityData.center_lat, communityData.center_lng);
         const distB = haversineM(b.last_lat, b.last_lng, communityData.center_lat, communityData.center_lng);
@@ -315,6 +372,8 @@ Deno.serve(async (req) => {
     const TIER_1_MIN_RATING = 4.5;
     const TIER_2_MIN_RATING = 4.0;
     
+    // Tier filters remain rating-based (eligibility), but within each tier
+    // workers are already ordered by freshness boost.
     const tier1Workers = sortedWorkers.filter(w => (w.rating || 0) >= TIER_1_MIN_RATING);
     const tier2Workers = sortedWorkers.filter(w => (w.rating || 0) >= TIER_2_MIN_RATING && (w.rating || 0) < TIER_1_MIN_RATING);
     const tier3Workers = sortedWorkers.filter(w => (w.rating || 0) < TIER_2_MIN_RATING);
