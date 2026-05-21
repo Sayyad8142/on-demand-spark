@@ -219,7 +219,7 @@ Deno.serve(async (req) => {
 
     let workersQuery = supabase
       .from("workers")
-      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng, fcm_token, fcm_token_status, availability_state, dispatch_cooldown_until")
+      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng, fcm_token, fcm_token_status, availability_state, dispatch_cooldown_until, daily_duty_started_at, last_app_opened_at, last_heartbeat_at, daily_streak_count")
       .eq("is_active", true)
       .eq("is_available", true)
       .eq("is_busy", false)
