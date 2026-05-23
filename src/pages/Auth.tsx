@@ -951,10 +951,7 @@ export default function Auth() {
                           className="group relative block w-full overflow-hidden rounded-3xl border-2 border-dashed border-[#ff007a]/50 bg-gradient-to-br from-pink-50 via-white to-[#ff007a]/10 p-5 text-left shadow-sm transition-all hover:border-[#ff007a] hover:shadow-lg active:scale-[0.99] disabled:opacity-60"
                         >
                           {/* Top badge */}
-                          <div className="mb-4 flex items-center justify-between">
-                            <span className="inline-flex items-center gap-1 rounded-full bg-[#ff007a] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow">
-                              <Sparkles className="h-3 w-3" /> Fastest way
-                            </span>
+                          <div className="mb-4 flex items-center justify-end">
                             <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
                               ✓ No image saved
                             </span>
