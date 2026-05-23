@@ -731,7 +731,7 @@ export default function Auth() {
 
                   <div className="space-y-3">
                     <Label className="text-base">Service Type</Label>
-                    <div className="grid gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                       {SERVICES.map(service => {
                         const isSelected = signUpServices.includes(service.value);
                         const isMaid = service.value === "maid";
@@ -740,6 +740,8 @@ export default function Auth() {
                         const serviceDesc = isMaid
                           ? "Sweeping, mopping, dishwashing & more"
                           : "Deep bathroom & tile cleaning";
+                        const badgeText = isMaid ? "Popular" : "Deep Clean";
+                        const badgeColor = isMaid ? "bg-[#ff007a]" : "bg-emerald-500";
                         return (
                           <button
                             key={service.value}
@@ -752,13 +754,14 @@ export default function Auth() {
                               }
                             }}
                             disabled={loading}
-                            className={`group relative flex items-stretch gap-4 overflow-hidden rounded-2xl border-2 p-3 pr-12 text-left transition-all ${
+                            className={`group relative flex flex-col overflow-hidden rounded-[20px] border-2 text-left transition-all duration-200 ${
                               isSelected
-                                ? 'border-primary bg-primary/5 shadow-lg ring-2 ring-primary/30'
-                                : 'border-border bg-background hover:border-primary/50 hover:shadow-md'
+                                ? 'border-[#ff007a] bg-[#ff007a]/[0.06] shadow-[0_8px_24px_-6px_rgba(255,0,122,0.25)]'
+                                : 'border-transparent bg-white shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_24px_-6px_rgba(0,0,0,0.12)]'
                             }`}
                           >
-                            <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-xl bg-primary/5">
+                            {/* Image */}
+                            <div className="relative h-32 w-full overflow-hidden">
                               <img
                                 src={serviceImg}
                                 alt={serviceTitle}
@@ -767,14 +770,27 @@ export default function Auth() {
                                 height={512}
                                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                               />
+                              {/* Badge */}
+                              <span className={`absolute left-2.5 top-2.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold text-white shadow-sm ${badgeColor}`}>
+                                {badgeText}
+                              </span>
+                              {/* Checkmark overlay */}
+                              <span className={`absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all ${isSelected ? 'border-[#ff007a] bg-[#ff007a] text-white shadow-md scale-110' : 'border-white/80 bg-white/80 text-transparent'}`}>
+                                <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                              </span>
                             </div>
-                            <div className="flex min-w-0 flex-1 flex-col justify-center py-1">
-                              <span className="block text-lg font-bold leading-tight">{serviceTitle}</span>
-                              <span className="mt-1.5 block text-sm text-muted-foreground leading-snug">{serviceDesc}</span>
+
+                            {/* Text content */}
+                            <div className="flex flex-1 flex-col justify-between p-3">
+                              <div>
+                                <span className={`block text-sm font-bold leading-tight ${isSelected ? 'text-[#ff007a]' : 'text-gray-900'}`}>
+                                  {serviceTitle}
+                                </span>
+                                <span className="mt-1 block text-[11px] leading-snug text-gray-500">
+                                  {serviceDesc}
+                                </span>
+                              </div>
                             </div>
-                            <span className={`absolute right-4 top-1/2 -translate-y-1/2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-all ${isSelected ? 'border-primary bg-primary text-primary-foreground scale-110' : 'border-border bg-background'}`}>
-                              {isSelected && <Check className="h-4 w-4" strokeWidth={3} />}
-                            </span>
                           </button>
                         );
                       })}
