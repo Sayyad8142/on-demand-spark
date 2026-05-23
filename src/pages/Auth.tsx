@@ -94,6 +94,8 @@ export default function Auth() {
   const [signUpBankName, setSignUpBankName] = useState("");
   const [signUpPassbookFile, setSignUpPassbookFile] = useState<File | null>(null);
   const [extractingPassbook, setExtractingPassbook] = useState(false);
+  const [decodingUpiQr, setDecodingUpiQr] = useState(false);
+  const [upiQrFilledFrom, setUpiQrFilledFrom] = useState<string | null>(null);
   const [signUpStep, setSignUpStep] = useState(1);
   const [showBankDetails, setShowBankDetails] = useState(true);
   // Admin-controlled flag: when false, signup payout step shows ONLY UPI input.
