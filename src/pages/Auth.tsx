@@ -752,13 +752,13 @@ export default function Auth() {
                               }
                             }}
                             disabled={loading}
-                            className={`group relative flex items-stretch gap-3 overflow-hidden rounded-2xl border-2 p-2 pr-10 text-left transition-all ${
+                            className={`group relative flex items-stretch gap-4 overflow-hidden rounded-2xl border-2 p-3 pr-12 text-left transition-all ${
                               isSelected
-                                ? 'border-primary bg-primary/5 shadow-md ring-2 ring-primary/30'
-                                : 'border-border bg-background hover:border-primary/50 hover:shadow-sm'
+                                ? 'border-primary bg-primary/5 shadow-lg ring-2 ring-primary/30'
+                                : 'border-border bg-background hover:border-primary/50 hover:shadow-md'
                             }`}
                           >
-                            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-primary/5">
+                            <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-xl bg-primary/5">
                               <img
                                 src={serviceImg}
                                 alt={serviceTitle}
@@ -769,10 +769,10 @@ export default function Auth() {
                               />
                             </div>
                             <div className="flex min-w-0 flex-1 flex-col justify-center py-1">
-                              <span className="block text-base font-bold leading-tight">{serviceTitle}</span>
-                              <span className="mt-1 block text-xs text-muted-foreground leading-snug">{serviceDesc}</span>
+                              <span className="block text-lg font-bold leading-tight">{serviceTitle}</span>
+                              <span className="mt-1.5 block text-sm text-muted-foreground leading-snug">{serviceDesc}</span>
                             </div>
-                            <span className={`absolute right-3 top-1/2 -translate-y-1/2 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all ${isSelected ? 'border-primary bg-primary text-primary-foreground scale-110' : 'border-border bg-background'}`}>
+                            <span className={`absolute right-4 top-1/2 -translate-y-1/2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-all ${isSelected ? 'border-primary bg-primary text-primary-foreground scale-110' : 'border-border bg-background'}`}>
                               {isSelected && <Check className="h-4 w-4" strokeWidth={3} />}
                             </span>
                           </button>
