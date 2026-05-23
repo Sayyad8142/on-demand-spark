@@ -134,6 +134,59 @@ export default function Auth() {
   }, []);
   const [draftRestored, setDraftRestored] = useState(false);
   const passbookInputRef = useRef<HTMLInputElement>(null);
+  const upiQrInputRef = useRef<HTMLInputElement>(null);
+
+  const decodeUpiFromQrFile = (file: File): Promise<string | null> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return resolve(null);
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+          const payload = code?.data || "";
+          URL.revokeObjectURL(img.src);
+          if (!payload) return resolve(null);
+          const paMatch = payload.match(/[?&]pa=([^&]+)/i);
+          if (paMatch) return resolve(decodeURIComponent(paMatch[1]));
+          if (/^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/.test(payload)) return resolve(payload);
+          resolve(null);
+        } catch {
+          resolve(null);
+        }
+      };
+      img.onerror = () => resolve(null);
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleUpiQrSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (event.target) event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid file", description: "Please upload a QR code image", variant: "destructive" });
+      return;
+    }
+    setDecodingUpiQr(true);
+    try {
+      const upi = await decodeUpiFromQrFile(file);
+      if (!upi) {
+        toast({ title: "Could not read QR", description: "Try a clearer photo of your UPI QR", variant: "destructive" });
+        return;
+      }
+      setSignUpUpiId(upi);
+      setUpiQrFilledFrom(upi);
+      toast({ title: "UPI ID added", description: upi });
+    } finally {
+      setDecodingUpiQr(false);
+    }
+  };
   
 
   // Auto OTP detection moved to OtpVerify page
