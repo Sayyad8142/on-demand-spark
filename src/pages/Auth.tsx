@@ -948,25 +948,61 @@ export default function Auth() {
                           type="button"
                           onClick={() => upiQrInputRef.current?.click()}
                           disabled={loading || decodingUpiQr}
-                          className="group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border-2 border-dashed border-[#ff007a]/40 bg-gradient-to-br from-[#ff007a]/5 via-pink-50 to-white p-3 text-left transition-all hover:border-[#ff007a] hover:shadow-md disabled:opacity-60"
+                          className="group relative block w-full overflow-hidden rounded-3xl border-2 border-dashed border-[#ff007a]/50 bg-gradient-to-br from-pink-50 via-white to-[#ff007a]/10 p-5 text-left shadow-sm transition-all hover:border-[#ff007a] hover:shadow-lg active:scale-[0.99] disabled:opacity-60"
                         >
-                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#ff007a] text-white shadow-sm">
-                            {decodingUpiQr ? <Loader2 className="h-6 w-6 animate-spin" /> : <QrCode className="h-7 w-7" />}
+                          {/* Top badge */}
+                          <div className="mb-4 flex items-center justify-between">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[#ff007a] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow">
+                              <Sparkles className="h-3 w-3" /> Fastest way
+                            </span>
+                            <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
+                              ✓ No image saved
+                            </span>
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="flex items-center gap-1.5 text-sm font-bold text-gray-900">
-                              <Sparkles className="h-3.5 w-3.5 text-[#ff007a]" />
-                              {decodingUpiQr ? "Reading QR..." : upiQrFilledFrom ? "Re-scan UPI QR" : "Upload UPI QR code"}
+
+                          {/* Big visual QR */}
+                          <div className="mb-4 flex items-center justify-center gap-4">
+                            <div className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-white shadow-md ring-2 ring-[#ff007a]/20">
+                              {decodingUpiQr ? (
+                                <Loader2 className="h-12 w-12 animate-spin text-[#ff007a]" />
+                              ) : (
+                                <QrCode className="h-16 w-16 text-gray-900" strokeWidth={1.5} />
+                              )}
+                              {/* scanning line */}
+                              {!decodingUpiQr && (
+                                <span className="pointer-events-none absolute inset-x-2 top-1/2 h-0.5 animate-pulse rounded bg-[#ff007a]" />
+                              )}
+                            </div>
+
+                            {/* Arrow */}
+                            <div className="flex flex-col items-center gap-1">
+                              <span className="text-2xl text-[#ff007a]">→</span>
+                              <span className="text-[10px] font-bold uppercase tracking-wide text-[#ff007a]">Auto</span>
+                            </div>
+
+                            {/* UPI result mock */}
+                            <div className="flex h-24 w-24 shrink-0 flex-col items-center justify-center rounded-2xl bg-[#ff007a]/10 ring-2 ring-[#ff007a]/30">
+                              <Check className="mb-1 h-8 w-8 rounded-full bg-[#ff007a] p-1.5 text-white" />
+                              <span className="text-[10px] font-bold text-[#ff007a]">UPI ID</span>
+                              <span className="text-[9px] text-gray-600">filled</span>
+                            </div>
+                          </div>
+
+                          {/* CTA text */}
+                          <div className="text-center">
+                            <p className="text-base font-bold text-gray-900">
+                              {decodingUpiQr
+                                ? "Reading your QR..."
+                                : upiQrFilledFrom
+                                ? "✓ Tap to re-scan QR"
+                                : "Tap to upload UPI QR photo"}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="mt-0.5 text-xs text-muted-foreground">
                               {upiQrFilledFrom
-                                ? `Auto-filled from QR · ${upiQrFilledFrom}`
-                                : "We'll auto-fill your UPI ID — no image saved"}
+                                ? `Filled: ${upiQrFilledFrom}`
+                                : "From PhonePe, GPay, Paytm — any QR works"}
                             </p>
                           </div>
-                          <span className="rounded-full bg-[#ff007a]/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#ff007a]">
-                            Fast
-                          </span>
                         </button>
                         <input
                           ref={upiQrInputRef}
