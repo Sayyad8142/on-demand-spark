@@ -948,55 +948,63 @@ export default function Auth() {
                           type="button"
                           onClick={() => upiQrInputRef.current?.click()}
                           disabled={loading || decodingUpiQr}
-                          className="group relative block w-full overflow-hidden rounded-3xl border-2 border-dashed border-[#ff007a]/50 bg-gradient-to-br from-pink-50 via-white to-[#ff007a]/10 p-5 text-left shadow-sm transition-all hover:border-[#ff007a] hover:shadow-lg active:scale-[0.99] disabled:opacity-60"
+                          className={`group relative block w-full overflow-hidden rounded-3xl border-2 border-dashed p-5 text-left shadow-sm transition-all active:scale-[0.99] disabled:opacity-60 ${
+                            upiQrFilledFrom
+                              ? 'border-green-500 bg-gradient-to-br from-green-50 via-white to-green-100 hover:border-green-600 hover:shadow-lg'
+                              : 'border-[#ff007a]/50 bg-gradient-to-br from-pink-50 via-white to-[#ff007a]/10 hover:border-[#ff007a] hover:shadow-lg'
+                          }`}
                         >
                           {/* Top badge */}
                           <div className="mb-4 flex items-center justify-end">
-                            <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
-                              ✓ No image saved
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${upiQrFilledFrom ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700'}`}>
+                              {upiQrFilledFrom ? '✓ UPI ID captured' : '✓ No image saved'}
                             </span>
                           </div>
 
                           {/* Big visual QR */}
                           <div className="mb-4 flex items-center justify-center gap-4">
-                            <div className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-white shadow-md ring-2 ring-[#ff007a]/20">
+                            <div className={`relative flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-white shadow-md ring-2 ${upiQrFilledFrom ? 'ring-green-500/40' : 'ring-[#ff007a]/20'}`}>
                               {decodingUpiQr ? (
                                 <Loader2 className="h-12 w-12 animate-spin text-[#ff007a]" />
+                              ) : upiQrFilledFrom ? (
+                                <Check className="h-14 w-14 text-green-600" strokeWidth={2.5} />
                               ) : (
                                 <QrCode className="h-16 w-16 text-gray-900" strokeWidth={1.5} />
                               )}
                               {/* scanning line */}
-                              {!decodingUpiQr && (
+                              {!decodingUpiQr && !upiQrFilledFrom && (
                                 <span className="pointer-events-none absolute inset-x-2 top-1/2 h-0.5 animate-pulse rounded bg-[#ff007a]" />
                               )}
                             </div>
 
                             {/* Arrow */}
                             <div className="flex flex-col items-center gap-1">
-                              <span className="text-2xl text-[#ff007a]">→</span>
-                              <span className="text-[10px] font-bold uppercase tracking-wide text-[#ff007a]">Auto</span>
+                              <span className={`text-2xl ${upiQrFilledFrom ? 'text-green-600' : 'text-[#ff007a]'}`}>→</span>
+                              <span className={`text-[10px] font-bold uppercase tracking-wide ${upiQrFilledFrom ? 'text-green-600' : 'text-[#ff007a]'}`}>
+                                {upiQrFilledFrom ? 'Done' : 'Auto'}
+                              </span>
                             </div>
 
                             {/* UPI result mock */}
-                            <div className="flex h-24 w-24 shrink-0 flex-col items-center justify-center rounded-2xl bg-[#ff007a]/10 ring-2 ring-[#ff007a]/30">
-                              <Check className="mb-1 h-8 w-8 rounded-full bg-[#ff007a] p-1.5 text-white" />
-                              <span className="text-[10px] font-bold text-[#ff007a]">UPI ID</span>
+                            <div className={`flex h-24 w-24 shrink-0 flex-col items-center justify-center rounded-2xl ring-2 ${upiQrFilledFrom ? 'bg-green-500/15 ring-green-500/50' : 'bg-[#ff007a]/10 ring-[#ff007a]/30'}`}>
+                              <Check className={`mb-1 h-8 w-8 rounded-full p-1.5 text-white ${upiQrFilledFrom ? 'bg-green-600' : 'bg-[#ff007a]'}`} />
+                              <span className={`text-[10px] font-bold ${upiQrFilledFrom ? 'text-green-700' : 'text-[#ff007a]'}`}>UPI ID</span>
                               <span className="text-[9px] text-gray-600">filled</span>
                             </div>
                           </div>
 
                           {/* CTA text */}
                           <div className="text-center">
-                            <p className="text-base font-bold text-gray-900">
+                            <p className={`text-base font-bold ${upiQrFilledFrom ? 'text-green-700' : 'text-gray-900'}`}>
                               {decodingUpiQr
                                 ? "Reading your QR..."
                                 : upiQrFilledFrom
-                                ? "✓ Tap to re-scan QR"
+                                ? "✓ QR uploaded successfully"
                                 : "Tap to upload UPI QR photo"}
                             </p>
                             <p className="mt-0.5 text-xs text-muted-foreground">
                               {upiQrFilledFrom
-                                ? `Filled: ${upiQrFilledFrom}`
+                                ? `Filled: ${upiQrFilledFrom} · Tap to re-scan`
                                 : "From PhonePe, GPay, Paytm — any QR works"}
                             </p>
                           </div>
