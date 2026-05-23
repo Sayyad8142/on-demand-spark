@@ -734,8 +734,12 @@ export default function Auth() {
                     <div className="grid gap-3">
                       {SERVICES.map(service => {
                         const isSelected = signUpServices.includes(service.value);
-                        const serviceTitle = service.value === "maid" ? "Maid Service" : "Bathroom Cleaning";
-                        const serviceEmoji = service.value === "maid" ? "🧹" : "🛁";
+                        const isMaid = service.value === "maid";
+                        const serviceTitle = isMaid ? "Maid Service" : "Bathroom Cleaning";
+                        const serviceImg = isMaid ? maidServiceIcon : bathroomServiceIcon;
+                        const serviceDesc = isMaid
+                          ? "Sweeping, mopping, dishwashing & more"
+                          : "Deep bathroom & tile cleaning";
                         return (
                           <button
                             key={service.value}
@@ -748,19 +752,28 @@ export default function Auth() {
                               }
                             }}
                             disabled={loading}
-                            className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition-all ${
-                              isSelected ? 'border-primary bg-primary/10 shadow-sm ring-2 ring-primary/20' : 'border-border bg-background hover:border-primary/50'
+                            className={`group relative flex items-stretch gap-3 overflow-hidden rounded-2xl border-2 p-2 pr-10 text-left transition-all ${
+                              isSelected
+                                ? 'border-primary bg-primary/5 shadow-md ring-2 ring-primary/30'
+                                : 'border-border bg-background hover:border-primary/50 hover:shadow-sm'
                             }`}
                           >
-                            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-2xl" aria-hidden="true">
-                              {serviceEmoji}
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block font-semibold">{serviceTitle}</span>
-                              <span className="mt-1 block text-sm text-muted-foreground">{service.description}</span>
-                            </span>
-                            <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-border'}`}>
-                              {isSelected && <Check className="h-4 w-4" />}
+                            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-primary/5">
+                              <img
+                                src={serviceImg}
+                                alt={serviceTitle}
+                                loading="lazy"
+                                width={512}
+                                height={512}
+                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              />
+                            </div>
+                            <div className="flex min-w-0 flex-1 flex-col justify-center py-1">
+                              <span className="block text-base font-bold leading-tight">{serviceTitle}</span>
+                              <span className="mt-1 block text-xs text-muted-foreground leading-snug">{serviceDesc}</span>
+                            </div>
+                            <span className={`absolute right-3 top-1/2 -translate-y-1/2 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all ${isSelected ? 'border-primary bg-primary text-primary-foreground scale-110' : 'border-border bg-background'}`}>
+                              {isSelected && <Check className="h-4 w-4" strokeWidth={3} />}
                             </span>
                           </button>
                         );
