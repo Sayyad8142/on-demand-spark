@@ -940,15 +940,72 @@ export default function Auth() {
                         </>
                       )}
 
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <Label htmlFor="signup-upi" className="text-base">{t('auth.upiIdLabel', 'UPI ID')}</Label>
-                        <Input id="signup-upi" type="text" required placeholder={t('auth.upiPlaceholder', 'e.g., name@paytm')} value={signUpUpiId} onChange={e => setSignUpUpiId(e.target.value)} disabled={loading} className="h-12 rounded-2xl text-base" />
+
+                        {/* QR code upload — extracts UPI ID and discards the image */}
+                        <button
+                          type="button"
+                          onClick={() => upiQrInputRef.current?.click()}
+                          disabled={loading || decodingUpiQr}
+                          className="group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border-2 border-dashed border-[#ff007a]/40 bg-gradient-to-br from-[#ff007a]/5 via-pink-50 to-white p-3 text-left transition-all hover:border-[#ff007a] hover:shadow-md disabled:opacity-60"
+                        >
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#ff007a] text-white shadow-sm">
+                            {decodingUpiQr ? <Loader2 className="h-6 w-6 animate-spin" /> : <QrCode className="h-7 w-7" />}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="flex items-center gap-1.5 text-sm font-bold text-gray-900">
+                              <Sparkles className="h-3.5 w-3.5 text-[#ff007a]" />
+                              {decodingUpiQr ? "Reading QR..." : upiQrFilledFrom ? "Re-scan UPI QR" : "Upload UPI QR code"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {upiQrFilledFrom
+                                ? `Auto-filled from QR · ${upiQrFilledFrom}`
+                                : "We'll auto-fill your UPI ID — no image saved"}
+                            </p>
+                          </div>
+                          <span className="rounded-full bg-[#ff007a]/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#ff007a]">
+                            Fast
+                          </span>
+                        </button>
+                        <input
+                          ref={upiQrInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleUpiQrSelect}
+                          className="hidden"
+                        />
+
+                        <div className="flex items-center gap-3">
+                          <div className="h-px flex-1 bg-border" />
+                          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">or enter manually</span>
+                          <div className="h-px flex-1 bg-border" />
+                        </div>
+
+                        <div className="relative">
+                          <Input
+                            id="signup-upi"
+                            type="text"
+                            required
+                            placeholder={t('auth.upiPlaceholder', 'e.g., name@paytm')}
+                            value={signUpUpiId}
+                            onChange={e => { setSignUpUpiId(e.target.value); if (upiQrFilledFrom && e.target.value !== upiQrFilledFrom) setUpiQrFilledFrom(null); }}
+                            disabled={loading}
+                            className={`h-12 rounded-2xl pr-10 text-base ${upiQrFilledFrom ? 'border-[#ff007a]/50 bg-[#ff007a]/5' : ''}`}
+                          />
+                          {upiQrFilledFrom && (
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-[#ff007a] p-1 text-white">
+                              <Check className="h-3.5 w-3.5" />
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">
                           {bankPayoutEnabled
                             ? "Enter UPI ID or fill bank details above to continue."
                             : "UPI ID is required to receive payouts."}
                         </p>
                       </div>
+
 
                       <div className="grid grid-cols-2 gap-3 pt-1">
                         <Button type="button" variant="outline" onClick={() => setSignUpStep(1)} className="h-12 rounded-2xl">
