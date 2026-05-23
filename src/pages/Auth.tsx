@@ -740,8 +740,6 @@ export default function Auth() {
                         const serviceDesc = isMaid
                           ? "Sweeping, mopping, dishwashing & more"
                           : "Deep bathroom & tile cleaning";
-                        const badgeText = isMaid ? "Popular" : "Deep Clean";
-                        const badgeColor = isMaid ? "bg-[#ff007a]" : "bg-emerald-500";
                         return (
                           <button
                             key={service.value}
@@ -770,10 +768,6 @@ export default function Auth() {
                                 height={512}
                                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                               />
-                              {/* Badge */}
-                              <span className={`absolute left-2.5 top-2.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold text-white shadow-sm ${badgeColor}`}>
-                                {badgeText}
-                              </span>
                               {/* Checkmark overlay */}
                               <span className={`absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all ${isSelected ? 'border-[#ff007a] bg-[#ff007a] text-white shadow-md scale-110' : 'border-white/80 bg-white/80 text-transparent'}`}>
                                 <Check className="h-3.5 w-3.5" strokeWidth={3} />
