@@ -2655,6 +2655,54 @@ export type Database = {
           },
         ]
       }
+      pending_bookings: {
+        Row: {
+          amount_inr: number
+          booking_data: Json
+          booking_id: string | null
+          consumed_at: string | null
+          created_at: string
+          last_checked_at: string | null
+          last_error: string | null
+          payment_type: string
+          razorpay_order_id: string
+          request_id: string
+          status: string
+          user_id: string
+          wallet_amount: number | null
+        }
+        Insert: {
+          amount_inr: number
+          booking_data: Json
+          booking_id?: string | null
+          consumed_at?: string | null
+          created_at?: string
+          last_checked_at?: string | null
+          last_error?: string | null
+          payment_type: string
+          razorpay_order_id: string
+          request_id: string
+          status?: string
+          user_id: string
+          wallet_amount?: number | null
+        }
+        Update: {
+          amount_inr?: number
+          booking_data?: Json
+          booking_id?: string | null
+          consumed_at?: string | null
+          created_at?: string
+          last_checked_at?: string | null
+          last_error?: string | null
+          payment_type?: string
+          razorpay_order_id?: string
+          request_id?: string
+          status?: string
+          user_id?: string
+          wallet_amount?: number | null
+        }
+        Relationships: []
+      }
       pricing: {
         Row: {
           active: boolean
@@ -4796,6 +4844,7 @@ export type Database = {
           account_holder_name: string | null
           admin_fault_7d: number
           admin_override_rating: number | null
+          app_platform: string | null
           app_standby_bucket: string | null
           app_version: string | null
           availability_state: string
@@ -4811,6 +4860,7 @@ export type Database = {
           blocked_at: string | null
           blocked_by: string | null
           blocked_reason: string | null
+          build_number: string | null
           cashfree_beneficiary_address: string | null
           cashfree_beneficiary_email: string | null
           cashfree_beneficiary_id: string | null
@@ -4920,6 +4970,7 @@ export type Database = {
           account_holder_name?: string | null
           admin_fault_7d?: number
           admin_override_rating?: number | null
+          app_platform?: string | null
           app_standby_bucket?: string | null
           app_version?: string | null
           availability_state?: string
@@ -4935,6 +4986,7 @@ export type Database = {
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
+          build_number?: string | null
           cashfree_beneficiary_address?: string | null
           cashfree_beneficiary_email?: string | null
           cashfree_beneficiary_id?: string | null
@@ -5044,6 +5096,7 @@ export type Database = {
           account_holder_name?: string | null
           admin_fault_7d?: number
           admin_override_rating?: number | null
+          app_platform?: string | null
           app_standby_bucket?: string | null
           app_version?: string | null
           availability_state?: string
@@ -5059,6 +5112,7 @@ export type Database = {
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
+          build_number?: string | null
           cashfree_beneficiary_address?: string | null
           cashfree_beneficiary_email?: string | null
           cashfree_beneficiary_id?: string | null
@@ -5305,6 +5359,44 @@ export type Database = {
         Args: { p_photo_url?: string; p_request_id: string }
         Returns: undefined
       }
+      admin_audit_worker_eligibility: {
+        Args: {
+          p_booking_id?: string
+          p_community?: string
+          p_service?: string
+        }
+        Returns: {
+          already_attempted: boolean
+          app_version: string
+          attempt_status: string
+          bypass_active: boolean
+          communities: string[]
+          community_match: boolean
+          dispatch_eligible: boolean
+          exclusion_reasons: string[]
+          fcm_token_status: string
+          freshness_ok: boolean
+          full_name: string
+          has_fcm_token: boolean
+          in_availability_slot: boolean
+          is_active: boolean
+          is_available: boolean
+          is_blocked: boolean
+          is_busy: boolean
+          last_app_opened_at: string
+          last_heartbeat_at: string
+          last_seen_at: string
+          no_ack_count: number
+          notification_health: string
+          online: boolean
+          phone: string
+          reachable: boolean
+          service_match: boolean
+          service_types: string[]
+          stale_device: boolean
+          worker_id: string
+        }[]
+      }
       admin_block_worker_bank: {
         Args: { _reason: string; _worker_id: string }
         Returns: undefined
@@ -5436,6 +5528,7 @@ export type Database = {
               account_holder_name: string | null
               admin_fault_7d: number
               admin_override_rating: number | null
+              app_platform: string | null
               app_standby_bucket: string | null
               app_version: string | null
               availability_state: string
@@ -5451,6 +5544,7 @@ export type Database = {
               blocked_at: string | null
               blocked_by: string | null
               blocked_reason: string | null
+              build_number: string | null
               cashfree_beneficiary_address: string | null
               cashfree_beneficiary_email: string | null
               cashfree_beneficiary_id: string | null
@@ -5569,6 +5663,7 @@ export type Database = {
               account_holder_name: string | null
               admin_fault_7d: number
               admin_override_rating: number | null
+              app_platform: string | null
               app_standby_bucket: string | null
               app_version: string | null
               availability_state: string
@@ -5584,6 +5679,7 @@ export type Database = {
               blocked_at: string | null
               blocked_by: string | null
               blocked_reason: string | null
+              build_number: string | null
               cashfree_beneficiary_address: string | null
               cashfree_beneficiary_email: string | null
               cashfree_beneficiary_id: string | null
