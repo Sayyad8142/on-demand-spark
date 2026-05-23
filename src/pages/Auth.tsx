@@ -12,7 +12,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
-import { Check, ChevronLeft, FileText, Landmark, Phone, ShieldCheck, Upload, UserRound, X } from "lucide-react";
+import { Check, ChevronLeft, FileText, Landmark, Phone, QrCode, ShieldCheck, Sparkles, Upload, UserRound, X, Loader2 } from "lucide-react";
+import jsQR from "jsqr";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import maidServiceIcon from "@/assets/service-maid.png";
 import bathroomServiceIcon from "@/assets/service-bathroom.png";
@@ -93,6 +94,8 @@ export default function Auth() {
   const [signUpBankName, setSignUpBankName] = useState("");
   const [signUpPassbookFile, setSignUpPassbookFile] = useState<File | null>(null);
   const [extractingPassbook, setExtractingPassbook] = useState(false);
+  const [decodingUpiQr, setDecodingUpiQr] = useState(false);
+  const [upiQrFilledFrom, setUpiQrFilledFrom] = useState<string | null>(null);
   const [signUpStep, setSignUpStep] = useState(1);
   const [showBankDetails, setShowBankDetails] = useState(true);
   // Admin-controlled flag: when false, signup payout step shows ONLY UPI input.
@@ -131,6 +134,59 @@ export default function Auth() {
   }, []);
   const [draftRestored, setDraftRestored] = useState(false);
   const passbookInputRef = useRef<HTMLInputElement>(null);
+  const upiQrInputRef = useRef<HTMLInputElement>(null);
+
+  const decodeUpiFromQrFile = (file: File): Promise<string | null> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return resolve(null);
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+          const payload = code?.data || "";
+          URL.revokeObjectURL(img.src);
+          if (!payload) return resolve(null);
+          const paMatch = payload.match(/[?&]pa=([^&]+)/i);
+          if (paMatch) return resolve(decodeURIComponent(paMatch[1]));
+          if (/^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/.test(payload)) return resolve(payload);
+          resolve(null);
+        } catch {
+          resolve(null);
+        }
+      };
+      img.onerror = () => resolve(null);
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleUpiQrSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (event.target) event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid file", description: "Please upload a QR code image", variant: "destructive" });
+      return;
+    }
+    setDecodingUpiQr(true);
+    try {
+      const upi = await decodeUpiFromQrFile(file);
+      if (!upi) {
+        toast({ title: "Could not read QR", description: "Try a clearer photo of your UPI QR", variant: "destructive" });
+        return;
+      }
+      setSignUpUpiId(upi);
+      setUpiQrFilledFrom(upi);
+      toast({ title: "UPI ID added", description: upi });
+    } finally {
+      setDecodingUpiQr(false);
+    }
+  };
   
 
   // Auto OTP detection moved to OtpVerify page
@@ -884,15 +940,72 @@ export default function Auth() {
                         </>
                       )}
 
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <Label htmlFor="signup-upi" className="text-base">{t('auth.upiIdLabel', 'UPI ID')}</Label>
-                        <Input id="signup-upi" type="text" required placeholder={t('auth.upiPlaceholder', 'e.g., name@paytm')} value={signUpUpiId} onChange={e => setSignUpUpiId(e.target.value)} disabled={loading} className="h-12 rounded-2xl text-base" />
+
+                        {/* QR code upload — extracts UPI ID and discards the image */}
+                        <button
+                          type="button"
+                          onClick={() => upiQrInputRef.current?.click()}
+                          disabled={loading || decodingUpiQr}
+                          className="group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border-2 border-dashed border-[#ff007a]/40 bg-gradient-to-br from-[#ff007a]/5 via-pink-50 to-white p-3 text-left transition-all hover:border-[#ff007a] hover:shadow-md disabled:opacity-60"
+                        >
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#ff007a] text-white shadow-sm">
+                            {decodingUpiQr ? <Loader2 className="h-6 w-6 animate-spin" /> : <QrCode className="h-7 w-7" />}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="flex items-center gap-1.5 text-sm font-bold text-gray-900">
+                              <Sparkles className="h-3.5 w-3.5 text-[#ff007a]" />
+                              {decodingUpiQr ? "Reading QR..." : upiQrFilledFrom ? "Re-scan UPI QR" : "Upload UPI QR code"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {upiQrFilledFrom
+                                ? `Auto-filled from QR · ${upiQrFilledFrom}`
+                                : "We'll auto-fill your UPI ID — no image saved"}
+                            </p>
+                          </div>
+                          <span className="rounded-full bg-[#ff007a]/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#ff007a]">
+                            Fast
+                          </span>
+                        </button>
+                        <input
+                          ref={upiQrInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleUpiQrSelect}
+                          className="hidden"
+                        />
+
+                        <div className="flex items-center gap-3">
+                          <div className="h-px flex-1 bg-border" />
+                          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">or enter manually</span>
+                          <div className="h-px flex-1 bg-border" />
+                        </div>
+
+                        <div className="relative">
+                          <Input
+                            id="signup-upi"
+                            type="text"
+                            required
+                            placeholder={t('auth.upiPlaceholder', 'e.g., name@paytm')}
+                            value={signUpUpiId}
+                            onChange={e => { setSignUpUpiId(e.target.value); if (upiQrFilledFrom && e.target.value !== upiQrFilledFrom) setUpiQrFilledFrom(null); }}
+                            disabled={loading}
+                            className={`h-12 rounded-2xl pr-10 text-base ${upiQrFilledFrom ? 'border-[#ff007a]/50 bg-[#ff007a]/5' : ''}`}
+                          />
+                          {upiQrFilledFrom && (
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-[#ff007a] p-1 text-white">
+                              <Check className="h-3.5 w-3.5" />
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">
                           {bankPayoutEnabled
                             ? "Enter UPI ID or fill bank details above to continue."
                             : "UPI ID is required to receive payouts."}
                         </p>
                       </div>
+
 
                       <div className="grid grid-cols-2 gap-3 pt-1">
                         <Button type="button" variant="outline" onClick={() => setSignUpStep(1)} className="h-12 rounded-2xl">
