@@ -14,8 +14,8 @@ import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
 import { Check, ChevronLeft, FileText, Landmark, Phone, ShieldCheck, Upload, UserRound, X } from "lucide-react";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
-import maidServiceIcon from "@/assets/service-maid.jpg";
-import bathroomServiceIcon from "@/assets/service-bathroom.jpg";
+import maidServiceIcon from "@/assets/service-maid.png";
+import bathroomServiceIcon from "@/assets/service-bathroom.png";
 import { extractBankDetailsFromFile } from "@/lib/bankDetailsExtraction";
 
 
