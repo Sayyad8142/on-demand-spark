@@ -301,10 +301,7 @@ export default function Earnings() {
                       )}
                       {isFailed && (
                         <div className="flex gap-2 pt-1">
-                          <Button size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={() => toast.info("Retry payout triggered. Please wait...")}>
-                            <RefreshCw className="w-3 h-3" /> Retry Payout
-                          </Button>
-                          <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => navigate("/profile")}>
+                          <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => navigate("/profile")}>
                             Update UPI
                           </Button>
                         </div>
