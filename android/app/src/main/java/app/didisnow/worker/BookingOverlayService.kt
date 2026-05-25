@@ -57,6 +57,7 @@ class BookingOverlayService : Service() {
     private var statusCheckHandler: Handler? = null
     private var statusCheckRunnable: Runnable? = null
     private var currentBookingId: String? = null
+    private var currentBookingRequestId: String? = null
     
     // Track the startId so we can call stopSelfResult() with it
     private var startIdForStop: Int = 0
@@ -134,6 +135,7 @@ class BookingOverlayService : Service() {
                 }
                 "show" -> {
                     val bookingId = intent?.getStringExtra("booking_id") ?: ""
+                    currentBookingRequestId = intent?.getStringExtra("booking_request_id")
                     val bookingType = intent?.getStringExtra("booking_type") ?: "instant"
                     val prealertSent = intent?.getBooleanExtra("prealert_sent", false) ?: false
                     val scheduledTime = intent?.getStringExtra("scheduled_time") ?: ""
@@ -561,8 +563,9 @@ class BookingOverlayService : Service() {
             android.util.Log.d("BookingOverlay", "✅ Overlay added successfully! Starting countdown and status monitoring...")
 
             // 📨 ACK popup_shown — overlay is actually on screen now.
-            android.util.Log.d("BookingOverlay", "📨 [ACK] Sending popup_shown for booking_id=$bookingId")
-            BackendSync.ackDeliveryAsync(applicationContext, bookingId, "popup_shown")
+            android.util.Log.d("BookingOverlay", "📨 [ACK] Sending popup_shown for booking_id=$bookingId req=$currentBookingRequestId")
+            BackendSync.ackDeliveryAsync(applicationContext, bookingId, "popup_shown", currentBookingRequestId)
+
 
             // Start countdown AFTER view is added to window
             countdownRunnable?.let { r -> countdownHandler?.post(r) }
@@ -572,6 +575,8 @@ class BookingOverlayService : Service() {
         } catch (e: Exception) {
             android.util.Log.e("BookingOverlay", "❌ Failed to add overlay to window", e)
             e.printStackTrace()
+            // Tell backend exactly why the popup did not show
+            BackendSync.ackFailureAsync(applicationContext, bookingId, "popup_failed", currentBookingRequestId)
             Toast.makeText(this, "Failed to show overlay: ${e.message}", Toast.LENGTH_LONG).show()
             OverlaySingleton.isShowing = false
             stopSelf()

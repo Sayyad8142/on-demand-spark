@@ -197,10 +197,14 @@ public class MyFirebaseService extends FirebaseMessagingService {
           return;
         }
 
+        // booking_request_id may be supplied per-worker by backend for unambiguous ACK
+        String bookingRequestId = data.get("booking_request_id");
+        if (bookingRequestId != null && bookingRequestId.isEmpty()) bookingRequestId = null;
+
         // 📨 ACK push_received — tell backend this device received the alert.
         // Fire-and-forget on a background thread so we never block the FCM handler.
-        Log.d(TAG, "📨 [ACK] Sending push_received for booking_id=" + bookingId);
-        BackendSync.INSTANCE.ackDeliveryAsync(getApplicationContext(), bookingId, "push_received");
+        Log.d(TAG, "📨 [ACK] Sending push_received for booking_id=" + bookingId + " req=" + bookingRequestId);
+        BackendSync.INSTANCE.ackDeliveryAsync(getApplicationContext(), bookingId, "push_received", bookingRequestId);
 
         if ("scheduled".equals(bookingType) && !prealertSent) {
           Log.w(TAG, "🔕 Scheduled booking hidden until prealert_sent=true. booking_id=" + bookingId
@@ -211,26 +215,29 @@ public class MyFirebaseService extends FirebaseMessagingService {
         }
 
         showBookingNotification(bookingId, bookingType);
-        
+
         // Check overlay permission
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
           if (!android.provider.Settings.canDrawOverlays(this)) {
             Log.e(TAG, "❌ CRITICAL: No overlay permission! Falling back to Activity.");
+            // Tell backend exactly why the popup will not appear via overlay
+            BackendSync.INSTANCE.ackFailureAsync(getApplicationContext(), bookingId, "overlay_blocked", bookingRequestId);
             // Try to show BookingAlertActivity as fallback
-            launchBookingAlertActivity(bookingId, customer, community, serviceType, flatNo, price, bookingType, scheduledTime, prealertSent);
+            launchBookingAlertActivity(bookingId, customer, community, serviceType, flatNo, price, bookingType, scheduledTime, prealertSent, bookingRequestId);
             return;
           } else {
             Log.d(TAG, "✅ Overlay permission granted");
           }
         }
-        
+
         // Start BookingOverlayService to show system overlay
         // This works for BOTH instant AND scheduled bookings!
         Log.d(TAG, "🚀 Starting BookingOverlayService for " + bookingType + " booking...");
-        
+
         Intent serviceIntent = new Intent(this, BookingOverlayService.class);
         serviceIntent.putExtra("mode", "show");
         serviceIntent.putExtra("booking_id", bookingId);
+        if (bookingRequestId != null) serviceIntent.putExtra("booking_request_id", bookingRequestId);
         serviceIntent.putExtra("booking_type", bookingType != null ? bookingType : "instant");
         serviceIntent.putExtra("prealert_sent", prealertSent);
         serviceIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
@@ -239,7 +246,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
         serviceIntent.putExtra("flat_no", flatNo != null ? flatNo : "");
         serviceIntent.putExtra("price_inr", price);
         serviceIntent.putExtra("scheduled_time", scheduledTime != null ? scheduledTime : "");
-        
+
         // Try to get access token from SharedPreferences to pass via Intent
         try {
           String sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
@@ -259,17 +266,19 @@ public class MyFirebaseService extends FirebaseMessagingService {
         } catch (Exception e) {
           Log.e(TAG, "❌ Failed to read session for token", e);
         }
-        
+
         Log.d(TAG, "🚀 Starting BookingOverlayService with mode=show for " + bookingType + " booking...");
-        
+
         try {
           // Use regular startService since BookingOverlayService is no longer a foreground service
           startService(serviceIntent);
           Log.d(TAG, "✅ BookingOverlayService started successfully for " + bookingType + " booking!");
         } catch (Exception se) {
           Log.e(TAG, "❌ startService failed, falling back to BookingAlertActivity", se);
-          launchBookingAlertActivity(bookingId, customer, community, serviceType, location, price, bookingType, scheduledTime, prealertSent);
+          BackendSync.INSTANCE.ackFailureAsync(getApplicationContext(), bookingId, "popup_failed", bookingRequestId);
+          launchBookingAlertActivity(bookingId, customer, community, serviceType, location, price, bookingType, scheduledTime, prealertSent, bookingRequestId);
         }
+
       } else {
         Log.d(TAG, "⏭️ Not a BOOKING_ALERT, type: " + type + " - skipping overlay");
       }
@@ -283,15 +292,17 @@ public class MyFirebaseService extends FirebaseMessagingService {
    * or when starting the overlay service fails.
    * Works for BOTH instant AND scheduled bookings.
    */
-  private void launchBookingAlertActivity(String bookingId, String customer, String community, 
+  private void launchBookingAlertActivity(String bookingId, String customer, String community,
                                            String serviceType, String location, int price,
-                                            String bookingType, String scheduledTime, boolean prealertSent) {
+                                            String bookingType, String scheduledTime, boolean prealertSent,
+                                            String bookingRequestId) {
     Log.d(TAG, "🚀 Launching BookingAlertActivity as fallback for " + bookingType + " booking");
-    
+
     try {
       Intent activityIntent = new Intent(this, BookingAlertActivity.class);
       activityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
       activityIntent.putExtra("booking_id", bookingId);
+      if (bookingRequestId != null) activityIntent.putExtra("booking_request_id", bookingRequestId);
       activityIntent.putExtra("booking_type", bookingType != null ? bookingType : "instant");
       activityIntent.putExtra("prealert_sent", prealertSent);
       activityIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
@@ -300,7 +311,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
       activityIntent.putExtra("flat_no", location != null ? location : "");
       activityIntent.putExtra("price_inr", price);
       activityIntent.putExtra("scheduled_time", scheduledTime != null ? scheduledTime : "");
-      
+
       // Pass access token
       try {
         String sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
@@ -315,14 +326,17 @@ public class MyFirebaseService extends FirebaseMessagingService {
       } catch (Exception e) {
         Log.e(TAG, "❌ Failed to read session for activity token", e);
       }
-      
+
       startActivity(activityIntent);
       Log.d(TAG, "✅ BookingAlertActivity launched successfully for " + bookingType + " booking");
     } catch (Exception e) {
       Log.e(TAG, "❌ Failed to launch BookingAlertActivity", e);
+      // Final fallback failed — record exactly why the popup never showed
+      BackendSync.INSTANCE.ackFailureAsync(getApplicationContext(), bookingId, "popup_failed", bookingRequestId);
       showPermissionNotification();
     }
   }
+
 
   @Override
   public void onNewToken(final String token) {

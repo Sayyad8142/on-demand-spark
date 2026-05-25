@@ -74,45 +74,53 @@ object BackendSync {
     }
 
     /**
-     * Notify backend that an FCM booking alert reached the device or that the
-     * popup was rendered. Calls the `ack-booking-delivery` edge function with
-     * the worker's Supabase JWT (read from CapacitorStorage).
+     * Notify backend that an FCM booking alert reached the device, the popup
+     * was rendered, or that a hard failure occurred.
      *
-     * event ∈ "push_received" | "popup_shown" | "worker_seen"
-     * Safe to call from FCM service / overlay service. Idempotent server-side.
+     * event ∈
+     *   timestamps: "push_received" | "popup_shown" | "worker_seen"
+     *   failures:   "popup_failed" | "permission_missing" | "overlay_blocked" | "app_killed" | "token_invalid"
+     *
+     * Uses the public anon apikey + the locally-stored worker_id (Firebase UID
+     * in `worker_prefs.user_id`). Works in background, killed, and locked-screen
+     * states where the Supabase user JWT may have expired.
      */
     fun ackDelivery(
         ctx: Context,
         bookingId: String?,
         event: String,
+        bookingRequestId: String? = null,
     ): Boolean {
-        if (bookingId.isNullOrBlank()) {
-            WorkerLog.add(ctx, "ACK", "skip $event — no booking_id")
+        if (bookingId.isNullOrBlank() && bookingRequestId.isNullOrBlank()) {
+            WorkerLog.add(ctx, "ACK", "skip $event — no booking id/request id")
             return false
         }
 
-        // Resolve user JWT from CapacitorStorage (set by web layer on login/refresh)
-        val jwt: String? = try {
-            val capPrefs = ctx.applicationContext
-                .getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE)
-            val sessionJson = capPrefs.getString("didi_session", null)
-            if (!sessionJson.isNullOrBlank()) {
-                JSONObject(sessionJson).optString("accessToken", "").ifBlank { null }
-            } else null
-        } catch (e: Exception) {
-            WorkerLog.add(ctx, "ACK", "session parse failed: ${e.message}")
-            null
-        }
-
-        if (jwt.isNullOrBlank()) {
-            WorkerLog.add(ctx, "ACK", "skip $event booking=$bookingId — no JWT")
+        val prefs = ctx.applicationContext
+            .getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
+        val workerId = prefs.getString("user_id", null)
+        if (workerId.isNullOrBlank()) {
+            WorkerLog.add(ctx, "ACK", "skip $event — no worker_id in prefs")
             return false
         }
+
+        val appVersion = try {
+            val pi = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
+            "${pi.versionName}+${pi.longVersionCode}"
+        } catch (_: Exception) { "unknown" }
 
         val url = "$SUPABASE_URL/functions/v1/ack-booking-delivery"
         val body = JSONObject().apply {
-            put("booking_id", bookingId)
+            if (!bookingId.isNullOrBlank()) put("booking_id", bookingId)
+            if (!bookingRequestId.isNullOrBlank()) put("booking_request_id", bookingRequestId)
+            put("worker_id", workerId)
             put("event_type", event)
+            put("app_version", appVersion)
+            put("device_info", JSONObject().apply {
+                put("oem", "${Build.MANUFACTURER}/${Build.MODEL}")
+                put("android_version", Build.VERSION.RELEASE)
+                put("sdk", Build.VERSION.SDK_INT)
+            })
         }
 
         return try {
@@ -123,22 +131,28 @@ object BackendSync {
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json")
                 setRequestProperty("apikey", ANON_KEY)
-                setRequestProperty("Authorization", "Bearer $jwt")
+                setRequestProperty("Authorization", "Bearer $ANON_KEY")
             }
             conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             val code = conn.responseCode
             conn.disconnect()
             val ok = code in 200..299
-            WorkerLog.add(ctx, "ACK", "$event booking=$bookingId → http=$code")
+            WorkerLog.add(ctx, "ACK", "$event booking=${bookingId ?: bookingRequestId} → http=$code")
             ok
         } catch (e: Exception) {
-            WorkerLog.add(ctx, "ACK", "$event booking=$bookingId FAILED: ${e.message}")
+            WorkerLog.add(ctx, "ACK", "$event booking=${bookingId ?: bookingRequestId} FAILED: ${e.message}")
             false
         }
     }
 
     /** Fire-and-forget ack on a background thread. */
-    fun ackDeliveryAsync(ctx: Context, bookingId: String?, event: String) {
-        Thread({ ackDelivery(ctx, bookingId, event) }, "ack-$event").start()
+    fun ackDeliveryAsync(ctx: Context, bookingId: String?, event: String, bookingRequestId: String? = null) {
+        Thread({ ackDelivery(ctx, bookingId, event, bookingRequestId) }, "ack-$event").start()
+    }
+
+    /** Convenience for failure events (popup_failed, overlay_blocked, etc). */
+    fun ackFailureAsync(ctx: Context, bookingId: String?, reason: String, bookingRequestId: String? = null) {
+        ackDeliveryAsync(ctx, bookingId, reason, bookingRequestId)
     }
 }
+

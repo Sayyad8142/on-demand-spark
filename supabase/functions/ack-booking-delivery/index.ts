@@ -1,16 +1,18 @@
 // ack-booking-delivery
 //
-// Worker App calls this from 3 lifecycle moments:
+// Worker App calls this from booking lifecycle moments:
 //   - push_received: FCM payload arrived on device
 //   - popup_shown:   booking popup actually rendered on screen
 //   - worker_seen:   worker visibly opened/saw the booking card
 //
-// Source of truth = booking_requests table. Each event maps to one column.
-// Idempotent: only fills the timestamp if it's still NULL.
+// Failure events (recorded into failure_reason):
+//   - popup_failed | permission_missing | overlay_blocked | app_killed | token_invalid
 //
-// Auth: standard Supabase JWT (anon role) — we resolve the worker via
-// workers.user_id = auth.uid() and require the booking_request row to belong
-// to that worker. No service-role escalation needed.
+// Auth: dual-mode. Preferred: anon apikey + explicit worker_id (read from the
+// device's local prefs). This works in background / killed-app state where the
+// Supabase user JWT is often expired. Fallback: user JWT (legacy web call).
+//
+// Source of truth = booking_requests. Each timestamp event is idempotent.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -29,19 +31,28 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-type EventType = "push_received" | "popup_shown" | "worker_seen";
+type TimestampEvent = "push_received" | "popup_shown" | "worker_seen";
+type FailureEvent =
+  | "popup_failed"
+  | "permission_missing"
+  | "overlay_blocked"
+  | "app_killed"
+  | "token_invalid";
+type EventType = TimestampEvent | FailureEvent;
 
-const EVENT_TO_COL: Record<EventType, "push_delivered_at" | "popup_shown_at" | "worker_seen_at"> = {
+const TS_COL: Record<TimestampEvent, "push_delivered_at" | "popup_shown_at" | "worker_seen_at"> = {
   push_received: "push_delivered_at",
   popup_shown: "popup_shown_at",
   worker_seen: "worker_seen_at",
 };
-
-const EVENT_TO_CHANNEL: Record<EventType, string> = {
+const TS_CHANNEL: Record<TimestampEvent, string> = {
   push_received: "push",
   popup_shown: "popup",
   worker_seen: "popup",
 };
+const FAILURE_EVENTS = new Set<FailureEvent>([
+  "popup_failed", "permission_missing", "overlay_blocked", "app_killed", "token_invalid",
+]);
 
 const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -52,104 +63,138 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "Unauthorized" }, 401);
 
-    const body = await req.json().catch(() => ({}));
-    const { booking_id, booking_request_id, event_type } = body as {
+    const body = await req.json().catch(() => ({})) as {
       booking_id?: string;
       booking_request_id?: string;
+      worker_id?: string;          // workers.user_id (Firebase UID / text)
       event_type?: EventType;
+      app_version?: string;
+      device_info?: Record<string, unknown>;
     };
+    const { booking_id, booking_request_id, worker_id, event_type, app_version, device_info } = body;
 
-    if (!event_type || !(event_type in EVENT_TO_COL)) {
-      return json({ error: "invalid_event_type", allowed: Object.keys(EVENT_TO_COL) }, 400);
+    if (!event_type) return json({ error: "missing_event_type" }, 400);
+    const isFailure = FAILURE_EVENTS.has(event_type as FailureEvent);
+    const isTimestamp = (event_type as TimestampEvent) in TS_COL;
+    if (!isFailure && !isTimestamp) {
+      return json({ error: "invalid_event_type", got: event_type }, 400);
     }
     if (booking_id && !uuidRe.test(booking_id)) return json({ error: "bad booking_id" }, 400);
     if (booking_request_id && !uuidRe.test(booking_request_id)) return json({ error: "bad booking_request_id" }, 400);
     if (!booking_id && !booking_request_id) return json({ error: "booking_id_or_request_id_required" }, 400);
 
-    // 1. Identify the calling worker via their Supabase JWT
-    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !userData?.user) return json({ error: "unauth", detail: userErr?.message }, 401);
-    const authUid = userData.user.id;
-
-    // 2. Resolve worker row (workers.user_id is text → Firebase UID or Supabase UID)
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { data: worker, error: wErr } = await admin
-      .from("workers")
-      .select("id, user_id")
-      .eq("user_id", authUid)
-      .maybeSingle();
-    if (wErr || !worker) return json({ error: "worker_not_found" }, 403);
 
-    // 3. Find the matching booking_request belonging to this worker.
-    //    If booking_request_id supplied, prefer that. Otherwise grab the
-    //    latest active request for (booking_id, worker_id).
-    let query = admin
+    // 1. Resolve worker — prefer body-supplied worker_id (device prefs path).
+    //    Falls back to JWT resolution (legacy web path) only if not supplied.
+    let resolvedWorkerRowId: string | null = null;
+    let resolvedVia: "device_worker_id" | "jwt" | null = null;
+
+    if (worker_id) {
+      const { data: w } = await admin
+        .from("workers")
+        .select("id, user_id")
+        .or(`user_id.eq.${worker_id},id.eq.${worker_id}`)
+        .maybeSingle();
+      if (w?.id) { resolvedWorkerRowId = w.id; resolvedVia = "device_worker_id"; }
+    }
+
+    if (!resolvedWorkerRowId) {
+      try {
+        const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          global: { headers: { Authorization: authHeader } },
+        });
+        const { data: userData } = await userClient.auth.getUser();
+        const authUid = userData?.user?.id;
+        if (authUid) {
+          const { data: w } = await admin
+            .from("workers")
+            .select("id, user_id")
+            .eq("user_id", authUid)
+            .maybeSingle();
+          if (w?.id) { resolvedWorkerRowId = w.id; resolvedVia = "jwt"; }
+        }
+      } catch (_) { /* ignore — fall through */ }
+    }
+
+    if (!resolvedWorkerRowId) {
+      console.warn("[ack] worker_unresolved", { worker_id, booking_id, booking_request_id, event_type });
+      return json({ error: "worker_unresolved" }, 403);
+    }
+
+    // 2. Look up booking_request
+    let q = admin
       .from("booking_requests")
-      .select("id, booking_id, worker_id, status, push_delivered_at, popup_shown_at, worker_seen_at, alert_attempt_count")
-      .eq("worker_id", worker.id);
-
-    if (booking_request_id) query = query.eq("id", booking_request_id);
-    else query = query.eq("booking_id", booking_id!).order("created_at", { ascending: false }).limit(1);
-
-    const { data: rows, error: rErr } = await query;
+      .select("id, booking_id, worker_id, push_delivered_at, popup_shown_at, worker_seen_at, failure_reason")
+      .eq("worker_id", resolvedWorkerRowId);
+    q = booking_request_id ? q.eq("id", booking_request_id)
+                           : q.eq("booking_id", booking_id!).order("created_at", { ascending: false }).limit(1);
+    const { data: rows, error: rErr } = await q;
     if (rErr) return json({ error: "lookup_failed", detail: rErr.message }, 500);
     const reqRow = rows?.[0];
     if (!reqRow) {
-      console.warn("[ack-booking-delivery] request_not_found", {
-        booking_id,
-        booking_request_id,
-        event_type,
-        worker_id: worker.id,
-      });
-      return json({
-        ok: true,
-        skipped: true,
-        reason: "request_not_found",
-        booking_id,
-        booking_request_id,
-        event_type,
-      });
+      console.warn("[ack] request_not_found", { booking_id, booking_request_id, worker: resolvedWorkerRowId, event_type });
+      return json({ ok: true, skipped: true, reason: "request_not_found", event_type });
     }
 
-    const col = EVENT_TO_COL[event_type];
-    const channel = EVENT_TO_CHANNEL[event_type];
+    const nowIso = new Date().toISOString();
+    const updates: Record<string, unknown> = {};
 
-    // Idempotent: only set the timestamp the first time
-    const existing = (reqRow as any)[col];
-    if (existing) {
-      return json({ ok: true, idempotent: true, booking_request_id: reqRow.id, event_type });
+    if (isFailure) {
+      // Only set failure_reason the first time so the original cause wins.
+      if (!reqRow.failure_reason) {
+        updates.failure_reason = event_type;
+        updates.failure_reported_at = nowIso;
+      }
+    } else {
+      const col = TS_COL[event_type as TimestampEvent];
+      const channel = TS_CHANNEL[event_type as TimestampEvent];
+      if ((reqRow as any)[col]) {
+        // already stamped — idempotent
+        if (app_version) updates.device_app_version = app_version;
+        if (device_info) updates.device_info = device_info;
+        if (Object.keys(updates).length === 0) {
+          return json({ ok: true, idempotent: true, event_type, resolved_via: resolvedVia });
+        }
+      } else {
+        updates[col] = nowIso;
+        updates.last_alert_channel = channel;
+        if (event_type === "push_received") {
+          updates.device_received_at = nowIso;
+          updates.device_ack_status = "received";
+        }
+        if (event_type === "worker_seen") {
+          updates.device_opened_at = nowIso;
+          updates.device_ack_status = "opened";
+        }
+      }
     }
 
-    const updates: Record<string, unknown> = {
-      [col]: new Date().toISOString(),
-      last_alert_channel: channel,
-    };
+    if (app_version) updates.device_app_version = app_version;
+    if (device_info) updates.device_info = device_info;
 
-    // Keep existing device_received_at / device_opened_at columns in sync for
-    // backwards-compat with any code already reading them.
-    if (event_type === "push_received") {
-      updates.device_received_at = updates[col];
-      updates.device_ack_status = "received";
-    }
-    if (event_type === "worker_seen") {
-      updates.device_opened_at = updates[col];
-      updates.device_ack_status = "opened";
+    if (Object.keys(updates).length === 0) {
+      return json({ ok: true, noop: true, event_type, resolved_via: resolvedVia });
     }
 
     const { error: upErr } = await admin
       .from("booking_requests")
       .update(updates)
       .eq("id", reqRow.id);
-
     if (upErr) return json({ error: "update_failed", detail: upErr.message }, 500);
 
-    return json({ ok: true, booking_request_id: reqRow.id, booking_id: reqRow.booking_id, event_type });
+    console.log("[ack] ok", { event_type, booking_request_id: reqRow.id, resolved_via: resolvedVia });
+    return json({
+      ok: true,
+      event_type,
+      booking_request_id: reqRow.id,
+      booking_id: reqRow.booking_id,
+      resolved_via: resolvedVia,
+      failure: isFailure,
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown";
-    console.error("[ack-booking-delivery] fatal", msg);
+    console.error("[ack] fatal", msg);
     return json({ error: "fatal", detail: msg }, 500);
   }
 });
