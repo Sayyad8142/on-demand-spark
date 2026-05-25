@@ -57,6 +57,7 @@ class BookingOverlayService : Service() {
     private var statusCheckHandler: Handler? = null
     private var statusCheckRunnable: Runnable? = null
     private var currentBookingId: String? = null
+    private var currentBookingRequestId: String? = null
     
     // Track the startId so we can call stopSelfResult() with it
     private var startIdForStop: Int = 0
