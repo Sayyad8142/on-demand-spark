@@ -575,6 +575,8 @@ class BookingOverlayService : Service() {
         } catch (e: Exception) {
             android.util.Log.e("BookingOverlay", "❌ Failed to add overlay to window", e)
             e.printStackTrace()
+            // Tell backend exactly why the popup did not show
+            BackendSync.ackFailureAsync(applicationContext, bookingId, "popup_failed", currentBookingRequestId)
             Toast.makeText(this, "Failed to show overlay: ${e.message}", Toast.LENGTH_LONG).show()
             OverlaySingleton.isShowing = false
             stopSelf()
