@@ -1349,6 +1349,7 @@ export type Database = {
       }
       dispatch_config: {
         Row: {
+          booking_type: string
           community: string
           created_at: string
           dispatch_cooldown_seconds: number
@@ -1365,6 +1366,7 @@ export type Database = {
           worker_ttl_seconds: number
         }
         Insert: {
+          booking_type?: string
           community?: string
           created_at?: string
           dispatch_cooldown_seconds?: number
@@ -1381,6 +1383,7 @@ export type Database = {
           worker_ttl_seconds?: number
         }
         Update: {
+          booking_type?: string
           community?: string
           created_at?: string
           dispatch_cooldown_seconds?: number
@@ -4408,6 +4411,57 @@ export type Database = {
           },
         ]
       }
+      worker_payout_beneficiaries: {
+        Row: {
+          bank_account_number_hash: string
+          bank_ifsc: string
+          beneficiary_id: string
+          created_at: string
+          id: string
+          is_shared: boolean
+          provider: string
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          bank_account_number_hash: string
+          bank_ifsc: string
+          beneficiary_id: string
+          created_at?: string
+          id?: string
+          is_shared?: boolean
+          provider?: string
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          bank_account_number_hash?: string
+          bank_ifsc?: string
+          beneficiary_id?: string
+          created_at?: string
+          id?: string
+          is_shared?: boolean
+          provider?: string
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_payout_beneficiaries_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_reliability_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_payout_beneficiaries_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_payout_events: {
         Row: {
           created_at: string
@@ -6111,19 +6165,37 @@ export type Database = {
         Args: { _community: string }
         Returns: number
       }
-      get_dispatch_config: {
-        Args: { p_community: string; p_service_type: string }
-        Returns: {
-          dispatch_cooldown_seconds: number
-          first_batch_size: number
-          instant_expiry_minutes: number
-          max_consecutive_timeouts: number
-          max_dispatch_attempts: number
-          max_total_requests: number
-          retry_batch_size: number
-          worker_ttl_seconds: number
-        }[]
-      }
+      get_dispatch_config:
+        | {
+            Args: { p_community: string; p_service_type: string }
+            Returns: {
+              dispatch_cooldown_seconds: number
+              first_batch_size: number
+              instant_expiry_minutes: number
+              max_consecutive_timeouts: number
+              max_dispatch_attempts: number
+              max_total_requests: number
+              retry_batch_size: number
+              worker_ttl_seconds: number
+            }[]
+          }
+        | {
+            Args: {
+              p_booking_type?: string
+              p_community: string
+              p_service_type: string
+            }
+            Returns: {
+              dispatch_cooldown_seconds: number
+              first_batch_size: number
+              instant_expiry_minutes: number
+              max_consecutive_timeouts: number
+              max_dispatch_attempts: number
+              max_total_requests: number
+              retry_batch_size: number
+              worker_ttl_seconds: number
+            }[]
+          }
       get_dispatch_health: { Args: never; Returns: Json }
       get_eligible_workers: {
         Args: { p_community: string; p_limit?: number; p_service: string }
@@ -6327,6 +6399,14 @@ export type Database = {
       get_setting_int: {
         Args: { p_default: number; p_key: string }
         Returns: number
+      }
+      get_shared_bank_workers: {
+        Args: { _worker_id: string }
+        Returns: {
+          beneficiary_id: string
+          full_name: string
+          worker_id: string
+        }[]
       }
       get_slot_bookings_drilldown: {
         Args: {
