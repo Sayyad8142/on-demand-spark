@@ -134,6 +134,7 @@ class BookingOverlayService : Service() {
                 }
                 "show" -> {
                     val bookingId = intent?.getStringExtra("booking_id") ?: ""
+                    currentBookingRequestId = intent?.getStringExtra("booking_request_id")
                     val bookingType = intent?.getStringExtra("booking_type") ?: "instant"
                     val prealertSent = intent?.getBooleanExtra("prealert_sent", false) ?: false
                     val scheduledTime = intent?.getStringExtra("scheduled_time") ?: ""
