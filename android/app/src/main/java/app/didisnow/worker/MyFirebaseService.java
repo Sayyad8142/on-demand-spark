@@ -292,15 +292,17 @@ public class MyFirebaseService extends FirebaseMessagingService {
    * or when starting the overlay service fails.
    * Works for BOTH instant AND scheduled bookings.
    */
-  private void launchBookingAlertActivity(String bookingId, String customer, String community, 
+  private void launchBookingAlertActivity(String bookingId, String customer, String community,
                                            String serviceType, String location, int price,
-                                            String bookingType, String scheduledTime, boolean prealertSent) {
+                                            String bookingType, String scheduledTime, boolean prealertSent,
+                                            String bookingRequestId) {
     Log.d(TAG, "🚀 Launching BookingAlertActivity as fallback for " + bookingType + " booking");
-    
+
     try {
       Intent activityIntent = new Intent(this, BookingAlertActivity.class);
       activityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
       activityIntent.putExtra("booking_id", bookingId);
+      if (bookingRequestId != null) activityIntent.putExtra("booking_request_id", bookingRequestId);
       activityIntent.putExtra("booking_type", bookingType != null ? bookingType : "instant");
       activityIntent.putExtra("prealert_sent", prealertSent);
       activityIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
@@ -309,7 +311,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
       activityIntent.putExtra("flat_no", location != null ? location : "");
       activityIntent.putExtra("price_inr", price);
       activityIntent.putExtra("scheduled_time", scheduledTime != null ? scheduledTime : "");
-      
+
       // Pass access token
       try {
         String sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
@@ -324,14 +326,17 @@ public class MyFirebaseService extends FirebaseMessagingService {
       } catch (Exception e) {
         Log.e(TAG, "❌ Failed to read session for activity token", e);
       }
-      
+
       startActivity(activityIntent);
       Log.d(TAG, "✅ BookingAlertActivity launched successfully for " + bookingType + " booking");
     } catch (Exception e) {
       Log.e(TAG, "❌ Failed to launch BookingAlertActivity", e);
+      // Final fallback failed — record exactly why the popup never showed
+      BackendSync.INSTANCE.ackFailureAsync(getApplicationContext(), bookingId, "popup_failed", bookingRequestId);
       showPermissionNotification();
     }
   }
+
 
   @Override
   public void onNewToken(final String token) {
