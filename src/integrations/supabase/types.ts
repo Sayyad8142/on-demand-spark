@@ -583,8 +583,12 @@ export type Database = {
           booking_id: string
           created_at: string | null
           device_ack_status: string | null
+          device_app_version: string | null
+          device_info: Json | null
           device_opened_at: string | null
           device_received_at: string | null
+          failure_reason: string | null
+          failure_reported_at: string | null
           fallback_sms_count: number
           fallback_sms_sent_at: string | null
           id: string
@@ -608,8 +612,12 @@ export type Database = {
           booking_id: string
           created_at?: string | null
           device_ack_status?: string | null
+          device_app_version?: string | null
+          device_info?: Json | null
           device_opened_at?: string | null
           device_received_at?: string | null
+          failure_reason?: string | null
+          failure_reported_at?: string | null
           fallback_sms_count?: number
           fallback_sms_sent_at?: string | null
           id?: string
@@ -633,8 +641,12 @@ export type Database = {
           booking_id?: string
           created_at?: string | null
           device_ack_status?: string | null
+          device_app_version?: string | null
+          device_info?: Json | null
           device_opened_at?: string | null
           device_received_at?: string | null
+          failure_reason?: string | null
+          failure_reported_at?: string | null
           fallback_sms_count?: number
           fallback_sms_sent_at?: string | null
           id?: string
