@@ -1,14 +1,9 @@
 import { useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Capacitor } from "@capacitor/core";
-import { CURRENT_VERSION_CODE } from "@/config/version";
 import { processIncomingBooking } from "@/services/bookingAlertCoordinator";
 import { logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 
 const HEARTBEAT_INTERVAL_MS = 45 * 1000; // 45 seconds
-
-// @ts-ignore - Capacitor bridge
-const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
 
 /**
  * Enhanced heartbeat: sends device info every 45s while worker is online.
