@@ -65,6 +65,9 @@ export async function tryAccept(bookingId: string, workerId?: string): Promise<{
     }
   }
   
+  // ACK that the worker tapped Accept (fire-and-forget)
+  ackBookingDelivery({ bookingId, event: "worker_seen" }).catch(() => {});
+
   const { data, error } = await supabase.rpc("try_accept_booking", { p_booking_id: bookingId });
   
   if (error) {
