@@ -19,29 +19,14 @@ export function useEnhancedHeartbeat(
 
   const beat = useCallback(async () => {
     if (!workerId || !mountedRef.current) return;
-
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-
-      // Gather device info
-      let notificationPermission = "unknown";
-      try {
-        if (typeof Notification !== "undefined") {
-          notificationPermission = Notification.permission;
-        }
-      } catch {}
-
-      const now = new Date().toISOString();
-
-      // NOTE: heartbeat writes are now owned by the global useWorkerHeartbeat
-      // hook (mounted in App.tsx). This hook is kept only for the polling
-      // fallback that surfaces pending bookings missed by FCM/Realtime.
-
-      // POLLING FALLBACK: check for pending booking requests this worker hasn't seen
+      // Heartbeat writes are owned by the global useWorkerHeartbeat hook
+      // (mounted in App.tsx). This hook only drives the polling fallback.
       await checkPendingBookingRequests(workerId);
     } catch (err) {
-      console.warn("💓 Heartbeat error:", err);
+      console.warn("💓 Polling fallback error:", err);
     }
   }, [workerId]);
 
