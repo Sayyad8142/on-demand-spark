@@ -39,48 +39,9 @@ export function useEnhancedHeartbeat(
 
       const now = new Date().toISOString();
 
-      // Update worker heartbeat
-      const { data, error } = await supabase
-        .from("workers")
-        .update({
-          last_seen_at: now,
-          last_active_at: now,
-        })
-        .eq("id", workerId)
-        .select("fcm_token, fcm_token_status")
-        .single();
-
-      if (error) {
-        console.warn("💓 Heartbeat failed:", error.message);
-        return;
-      }
-
-      console.log("💓 Heartbeat sent");
-
-      // Self-heal FCM token if missing/invalid
-      if (data && (!data.fcm_token || data.fcm_token_status === "invalid")) {
-        if (Capacitor.isNativePlatform() && AuthBridge) {
-          try {
-            const result = await AuthBridge.getPendingFCMToken();
-            if (result?.token) {
-              await supabase
-                .from("workers")
-                .update({
-                  fcm_token: result.token,
-                  fcm_token_status: "active",
-                  fcm_token_updated_at: now,
-                  fcm_token_platform: "android",
-                  updated_at: now,
-                })
-                .eq("id", workerId);
-              await AuthBridge.clearPendingFCMToken();
-              console.log("✅ [Heartbeat] Token self-healed");
-            }
-          } catch (e) {
-            console.warn("⚠️ [Heartbeat] Token self-heal failed:", e);
-          }
-        }
-      }
+      // NOTE: heartbeat writes are now owned by the global useWorkerHeartbeat
+      // hook (mounted in App.tsx). This hook is kept only for the polling
+      // fallback that surfaces pending bookings missed by FCM/Realtime.
 
       // POLLING FALLBACK: check for pending booking requests this worker hasn't seen
       await checkPendingBookingRequests(workerId);
