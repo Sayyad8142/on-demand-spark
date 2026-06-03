@@ -98,6 +98,9 @@ export async function rejectBooking(bookingId: string, workerId: string) {
     return { success: false, shouldNotify: false };
   }
   
+  // ACK that the worker tapped Reject (fire-and-forget)
+  ackBookingDelivery({ bookingId, event: "worker_seen" }).catch(() => {});
+
   const { data, error } = await supabase.rpc("reject_booking_request", {
     p_booking_id: bookingId,
     p_worker_id: workerId,
