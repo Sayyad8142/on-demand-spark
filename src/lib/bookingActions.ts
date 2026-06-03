@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { canShowWorkerBookingOffer, isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
+import { ackBookingDelivery } from "@/lib/bookingAck";
 
 // Helper to ensure session is valid before making API calls
 async function ensureValidSession(): Promise<boolean> {
