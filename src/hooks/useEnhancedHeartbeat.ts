@@ -1,14 +1,9 @@
 import { useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Capacitor } from "@capacitor/core";
-import { CURRENT_VERSION_CODE } from "@/config/version";
 import { processIncomingBooking } from "@/services/bookingAlertCoordinator";
 import { logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 
 const HEARTBEAT_INTERVAL_MS = 45 * 1000; // 45 seconds
-
-// @ts-ignore - Capacitor bridge
-const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
 
 /**
  * Enhanced heartbeat: sends device info every 45s while worker is online.
@@ -24,68 +19,14 @@ export function useEnhancedHeartbeat(
 
   const beat = useCallback(async () => {
     if (!workerId || !mountedRef.current) return;
-
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-
-      // Gather device info
-      let notificationPermission = "unknown";
-      try {
-        if (typeof Notification !== "undefined") {
-          notificationPermission = Notification.permission;
-        }
-      } catch {}
-
-      const now = new Date().toISOString();
-
-      // Update worker heartbeat
-      const { data, error } = await supabase
-        .from("workers")
-        .update({
-          last_seen_at: now,
-          last_active_at: now,
-        })
-        .eq("id", workerId)
-        .select("fcm_token, fcm_token_status")
-        .single();
-
-      if (error) {
-        console.warn("💓 Heartbeat failed:", error.message);
-        return;
-      }
-
-      console.log("💓 Heartbeat sent");
-
-      // Self-heal FCM token if missing/invalid
-      if (data && (!data.fcm_token || data.fcm_token_status === "invalid")) {
-        if (Capacitor.isNativePlatform() && AuthBridge) {
-          try {
-            const result = await AuthBridge.getPendingFCMToken();
-            if (result?.token) {
-              await supabase
-                .from("workers")
-                .update({
-                  fcm_token: result.token,
-                  fcm_token_status: "active",
-                  fcm_token_updated_at: now,
-                  fcm_token_platform: "android",
-                  updated_at: now,
-                })
-                .eq("id", workerId);
-              await AuthBridge.clearPendingFCMToken();
-              console.log("✅ [Heartbeat] Token self-healed");
-            }
-          } catch (e) {
-            console.warn("⚠️ [Heartbeat] Token self-heal failed:", e);
-          }
-        }
-      }
-
-      // POLLING FALLBACK: check for pending booking requests this worker hasn't seen
+      // Heartbeat writes are owned by the global useWorkerHeartbeat hook
+      // (mounted in App.tsx). This hook only drives the polling fallback.
       await checkPendingBookingRequests(workerId);
     } catch (err) {
-      console.warn("💓 Heartbeat error:", err);
+      console.warn("💓 Polling fallback error:", err);
     }
   }, [workerId]);
 

@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAutoPushRepair } from "@/hooks/useAutoPushRepair";
 import { useFCMTokenSync } from "@/hooks/useFCMTokenSync";
 import { useAppState } from "@/hooks/useAppState";
+import { useWorkerHeartbeat } from "@/hooks/useWorkerHeartbeat";
 import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
 import { SoftUpdatePrompt } from "@/components/SoftUpdatePrompt";
 import { initNativePush } from "@/native/push";
@@ -184,6 +185,8 @@ function AppInner() {
   useAutoPushRepair(session?.user?.id); // Auto-heal push token on login, open, and resume
   const { needsUpdate, softUpdate, config: updateConfig, dismissSoftUpdate } = useForceUpdateCheck();
   const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
+  // Global always-on worker heartbeat (works regardless of online toggle).
+  useWorkerHeartbeat(worker?.id ?? session?.user?.id);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
   const [showPermissionOnboarding, setShowPermissionOnboarding] = useState(false);
   const [showBatteryWarning, setShowBatteryWarning] = useState(false);

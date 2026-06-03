@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.admin-token-health]
 verify_jwt = false
+
+[functions.worker-heartbeat]
+verify_jwt = false

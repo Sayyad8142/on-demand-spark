@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { canShowWorkerBookingOffer, isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
+import { ackBookingDelivery } from "@/lib/bookingAck";
 
 // Helper to ensure session is valid before making API calls
 async function ensureValidSession(): Promise<boolean> {
@@ -64,6 +65,9 @@ export async function tryAccept(bookingId: string, workerId?: string): Promise<{
     }
   }
   
+  // ACK that the worker tapped Accept (fire-and-forget)
+  ackBookingDelivery({ bookingId, event: "worker_seen" }).catch(() => {});
+
   const { data, error } = await supabase.rpc("try_accept_booking", { p_booking_id: bookingId });
   
   if (error) {
@@ -94,6 +98,9 @@ export async function rejectBooking(bookingId: string, workerId: string) {
     return { success: false, shouldNotify: false };
   }
   
+  // ACK that the worker tapped Reject (fire-and-forget)
+  ackBookingDelivery({ bookingId, event: "worker_seen" }).catch(() => {});
+
   const { data, error } = await supabase.rpc("reject_booking_request", {
     p_booking_id: bookingId,
     p_worker_id: workerId,
