@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAutoPushRepair } from "@/hooks/useAutoPushRepair";
 import { useFCMTokenSync } from "@/hooks/useFCMTokenSync";
 import { useAppState } from "@/hooks/useAppState";
+import { useWorkerHeartbeat } from "@/hooks/useWorkerHeartbeat";
 import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
 import { SoftUpdatePrompt } from "@/components/SoftUpdatePrompt";
 import { initNativePush } from "@/native/push";
