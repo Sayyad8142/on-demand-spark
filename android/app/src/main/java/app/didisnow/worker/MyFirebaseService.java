@@ -350,9 +350,12 @@ public class MyFirebaseService extends FirebaseMessagingService {
       if (!token.equals(previousToken)) {
         prefs.edit()
             .putString("pending_fcm_token", token)
+            .putString("last_known_fcm_token", token)
             .putLong("pending_fcm_token_timestamp", System.currentTimeMillis())
             .commit();
         Log.d(TAG, "✅ FCM token persisted to SharedPreferences for JS sync");
+      } else {
+        prefs.edit().putString("last_known_fcm_token", token).apply();
       }
     } catch (Exception e) {
       Log.e(TAG, "❌ Exception persisting FCM token", e);
