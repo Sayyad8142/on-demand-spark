@@ -118,6 +118,37 @@ class MovementTrackingService : Service(), SensorEventListener {
     private val handler = Handler(Looper.getMainLooper())
     private val tracks = mutableMapOf<String, Track>() // key = bookingId
 
+    // ── Heartbeat ticker (P0): keeps workers.last_heartbeat_at fresh while the
+    //    service is alive (worker is Online or has an active booking), even
+    //    when the app is backgrounded / screen is off.
+    private val HEARTBEAT_INTERVAL_MS = 60_000L
+    private val heartbeatRunnable = object : Runnable {
+        override fun run() {
+            try {
+                BackendSync.sendHeartbeatAsync(applicationContext, "background")
+            } catch (e: Exception) {
+                Log.w(TAG, "heartbeat tick failed: ${e.message}")
+            }
+            handler.postDelayed(this, HEARTBEAT_INTERVAL_MS)
+        }
+    }
+    private var heartbeatStarted = false
+
+    private fun startHeartbeatTicker() {
+        if (heartbeatStarted) return
+        heartbeatStarted = true
+        Log.d(TAG, "💓 starting 60s heartbeat ticker")
+        // Fire immediately, then every 60s.
+        handler.post(heartbeatRunnable)
+    }
+
+    private fun stopHeartbeatTicker() {
+        if (!heartbeatStarted) return
+        heartbeatStarted = false
+        Log.d(TAG, "💓 stopping heartbeat ticker")
+        handler.removeCallbacks(heartbeatRunnable)
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
@@ -126,6 +157,7 @@ class MovementTrackingService : Service(), SensorEventListener {
         ensureChannel()
         startInForeground()
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+        startHeartbeatTicker()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -388,6 +420,7 @@ class MovementTrackingService : Service(), SensorEventListener {
 
     override fun onDestroy() {
         Log.w(TAG, "❌ service onDestroy (tracks=${tracks.size}, listener=$listenerRegistered)")
+        stopHeartbeatTicker()
         detachSensor()
         handler.removeCallbacksAndMessages(null)
         tracks.clear()
