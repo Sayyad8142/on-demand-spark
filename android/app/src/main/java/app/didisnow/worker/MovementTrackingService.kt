@@ -157,6 +157,7 @@ class MovementTrackingService : Service(), SensorEventListener {
         ensureChannel()
         startInForeground()
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+        startHeartbeatTicker()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
