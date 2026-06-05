@@ -162,5 +162,116 @@ object BackendSync {
     fun ackFailureAsync(ctx: Context, bookingId: String?, reason: String, bookingRequestId: String? = null) {
         ackDeliveryAsync(ctx, bookingId, reason, bookingRequestId)
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Heartbeat — posts to worker-heartbeat edge function. Safe to call from a
+    // foreground service ticker; works in background / screen-off / locked.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private const val HEARTBEAT_ENDPOINT = "$SUPABASE_URL/functions/v1/worker-heartbeat"
+
+    private fun batteryLevel(ctx: Context): Int {
+        return try {
+            val bm = ctx.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
+            bm?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: -1
+        } catch (_: Exception) { -1 }
+    }
+
+    private fun networkType(ctx: Context): String {
+        return try {
+            val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+                ?: return "unknown"
+            val net = cm.activeNetwork ?: return "none"
+            val caps = cm.getNetworkCapabilities(net) ?: return "none"
+            when {
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "wifi"
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "cellular"
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "ethernet"
+                else -> "other"
+            }
+        } catch (_: Exception) { "unknown" }
+    }
+
+    private fun batteryOptimizationDisabled(ctx: Context): Boolean {
+        return try {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true
+            val pm = ctx.getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return false
+            pm.isIgnoringBatteryOptimizations(ctx.packageName)
+        } catch (_: Exception) { false }
+    }
+
+    private fun notificationsEnabled(ctx: Context): Boolean {
+        return try { NotificationManagerCompat.from(ctx).areNotificationsEnabled() } catch (_: Exception) { false }
+    }
+
+    private fun appVersion(ctx: Context): String {
+        return try {
+            val pi = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
+            pi.versionName ?: "unknown"
+        } catch (_: Exception) { "unknown" }
+    }
+
+    /**
+     * Fire a heartbeat. Returns true on HTTP 2xx.
+     * `appState` ∈ "foreground" | "background" | "interval" | "open" | "login".
+     */
+    fun sendHeartbeat(ctx: Context, appState: String): Boolean {
+        val prefs = ctx.applicationContext
+            .getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
+        val workerId = prefs.getString("user_id", null)
+        if (workerId.isNullOrBlank()) {
+            WorkerLog.add(ctx, "HEARTBEAT", "skip — no user_id stored")
+            return false
+        }
+        val fcmToken = prefs.getString("last_known_fcm_token", null)
+            ?: prefs.getString("pending_fcm_token", null)
+
+        val body = JSONObject().apply {
+            put("worker_id", workerId)
+            put("app_state", appState)
+            put("battery_level", batteryLevel(ctx))
+            put("network_type", networkType(ctx))
+            put("app_version", appVersion(ctx))
+            put("notification_permission_granted", notificationsEnabled(ctx))
+            put("battery_optimization_disabled", batteryOptimizationDisabled(ctx))
+            put("device_manufacturer", Build.MANUFACTURER.lowercase())
+            if (!fcmToken.isNullOrBlank()) put("fcm_token", fcmToken)
+            put("device_info", JSONObject().apply {
+                put("manufacturer", Build.MANUFACTURER)
+                put("model", Build.MODEL)
+                put("android_version", Build.VERSION.RELEASE)
+                put("sdk", Build.VERSION.SDK_INT)
+                put("platform", "android")
+                put("notification_permission", if (notificationsEnabled(ctx)) "granted" else "denied")
+                put("battery_optimized", !batteryOptimizationDisabled(ctx))
+            })
+        }
+
+        return try {
+            val conn = (URL(HEARTBEAT_ENDPOINT).openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = 8_000
+                readTimeout = 8_000
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json")
+                setRequestProperty("apikey", ANON_KEY)
+                setRequestProperty("Authorization", "Bearer $ANON_KEY")
+            }
+            conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+            val code = conn.responseCode
+            conn.disconnect()
+            val ok = code in 200..299
+            WorkerLog.add(ctx, "HEARTBEAT", "state=$appState token=${fcmToken != null} → http=$code")
+            ok
+        } catch (e: Exception) {
+            WorkerLog.add(ctx, "HEARTBEAT", "state=$appState FAILED: ${e.message}")
+            false
+        }
+    }
+
+    /** Fire-and-forget heartbeat on a background thread. */
+    fun sendHeartbeatAsync(ctx: Context, appState: String) {
+        Thread({ sendHeartbeat(ctx, appState) }, "heartbeat-$appState").start()
+    }
 }
 
