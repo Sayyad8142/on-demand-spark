@@ -420,6 +420,7 @@ class MovementTrackingService : Service(), SensorEventListener {
 
     override fun onDestroy() {
         Log.w(TAG, "❌ service onDestroy (tracks=${tracks.size}, listener=$listenerRegistered)")
+        stopHeartbeatTicker()
         detachSensor()
         handler.removeCallbacksAndMessages(null)
         tracks.clear()
