@@ -366,6 +366,9 @@ public class MyFirebaseService extends FirebaseMessagingService {
     new Thread(new Runnable() {
       @Override public void run() {
         BackendSync.INSTANCE.pingBootSync(getApplicationContext(), "manual", token);
+        // Also fire a heartbeat with the fresh token so workers.fcm_token
+        // updates immediately on rotation (P1 — onTokenRefresh path).
+        BackendSync.INSTANCE.sendHeartbeat(getApplicationContext(), "token_refresh");
       }
     }, "fcm-token-sync").start();
   }
