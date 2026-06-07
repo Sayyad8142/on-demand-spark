@@ -178,11 +178,29 @@ Deno.serve(async (req) => {
       return json({ error: "update_failed", detail: upErr.message }, 500);
     }
 
+    // Log auto-repair event for admin metrics
+    if (repairKind) {
+      try {
+        await admin.from("token_repair_events").insert({
+          worker_id: row.id,
+          event_type: repairKind,
+          previous_status: previousStatus,
+          new_status: "active",
+          source: app_state === "open" || app_state === "login" ? "app_open" : "heartbeat",
+          detail: { app_state, app_version: app_version ?? null },
+        });
+        console.log(`[heartbeat] token_auto_repaired worker=${row.id} kind=${repairKind} prev=${previousStatus}`);
+      } catch (logErr) {
+        console.warn("[heartbeat] repair_event_log_failed", logErr);
+      }
+    }
+
     console.log("[heartbeat] ok", {
       worker: row.id,
       app_state,
       resolved_via: resolvedVia,
       token_changed: tokenChanged,
+      repair: repairKind,
       health,
     });
 
@@ -191,8 +209,10 @@ Deno.serve(async (req) => {
       worker_id: row.id,
       resolved_via: resolvedVia,
       token_changed: tokenChanged,
+      token_repaired: repairKind,
       push_health_status: health,
     });
+
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown";
     console.error("[heartbeat] fatal", msg);
