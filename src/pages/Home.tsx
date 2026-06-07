@@ -360,8 +360,12 @@ export default function Home() {
       
       </div>
 
+      {/* Auto-heal warning for token/permission/overlay issues */}
+      {!isGuestMode && worker && <NotificationHealthWarning />}
+
       {/* Phase 2 reachability warning (hidden when healthy) */}
       {!isGuestMode && worker && <ReachabilityBanner />}
+
 
       {/* Upcoming Bookings Bar */}
       {!isGuestMode && worker && <UpcomingBookingsBar />}
