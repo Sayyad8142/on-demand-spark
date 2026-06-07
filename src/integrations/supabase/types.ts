@@ -3418,6 +3418,54 @@ export type Database = {
         }
         Relationships: []
       }
+      token_repair_events: {
+        Row: {
+          created_at: string
+          detail: Json | null
+          event_type: string
+          id: string
+          new_status: string | null
+          previous_status: string | null
+          source: string
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: Json | null
+          event_type: string
+          id?: string
+          new_status?: string | null
+          previous_status?: string | null
+          source: string
+          worker_id: string
+        }
+        Update: {
+          created_at?: string
+          detail?: Json | null
+          event_type?: string
+          id?: string
+          new_status?: string | null
+          previous_status?: string | null
+          source?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "token_repair_events_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_reliability_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "token_repair_events_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_fcm_tokens: {
         Row: {
           app_version: string | null

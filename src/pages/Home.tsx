@@ -14,6 +14,7 @@ import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { UpcomingBookingsBar } from "@/components/UpcomingBookingsBar";
 import { ReachabilityBanner } from "@/components/ReachabilityBanner";
+import { NotificationHealthWarning } from "@/components/NotificationHealthWarning";
 import { OnboardingChecklist, useOnboardingStatus } from "@/components/OnboardingChecklist";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -360,8 +361,12 @@ export default function Home() {
       
       </div>
 
+      {/* Auto-heal warning for token/permission/overlay issues */}
+      {!isGuestMode && worker && <NotificationHealthWarning />}
+
       {/* Phase 2 reachability warning (hidden when healthy) */}
       {!isGuestMode && worker && <ReachabilityBanner />}
+
 
       {/* Upcoming Bookings Bar */}
       {!isGuestMode && worker && <UpcomingBookingsBar />}

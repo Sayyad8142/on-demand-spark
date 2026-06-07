@@ -183,6 +183,49 @@ Deno.serve(async (req) => {
       .eq("id", reqRow.id);
     if (upErr) return json({ error: "update_failed", detail: upErr.message }, 500);
 
+    // Notification health recovery: a successful push_received proves the
+    // device is reachable again — decrement no_ack_count and mark health 'good'.
+    if (event_type === "push_received") {
+      try {
+        const { data: w } = await admin
+          .from("workers")
+          .select("no_ack_count, notification_health, fcm_token_status")
+          .eq("id", resolvedWorkerRowId)
+          .maybeSingle();
+        if (w) {
+          const prevCount = w.no_ack_count ?? 0;
+          const nextCount = Math.max(0, prevCount - 1);
+          const healthImproved = w.notification_health !== "good" && prevCount > 0;
+          const patch: Record<string, unknown> = {
+            last_notification_received_at: nowIso,
+          };
+          if (nextCount !== prevCount) patch.no_ack_count = nextCount;
+          if (healthImproved) {
+            patch.notification_health = "good";
+            patch.notification_health_updated_at = nowIso;
+          }
+          if (w.fcm_token_status === "invalid") {
+            patch.fcm_token_status = "active";
+          }
+          if (Object.keys(patch).length > 0) {
+            await admin.from("workers").update(patch).eq("id", resolvedWorkerRowId);
+          }
+          if (healthImproved || w.fcm_token_status === "invalid") {
+            await admin.from("token_repair_events").insert({
+              worker_id: resolvedWorkerRowId,
+              event_type: w.fcm_token_status === "invalid" ? "invalid_recovered" : "ack_recovered",
+              previous_status: w.fcm_token_status,
+              new_status: "active",
+              source: "ack",
+              detail: { prev_no_ack_count: prevCount, next_no_ack_count: nextCount },
+            });
+          }
+        }
+      } catch (e) {
+        console.warn("[ack] health_recovery_failed", e);
+      }
+    }
+
     console.log("[ack] ok", { event_type, booking_request_id: reqRow.id, resolved_via: resolvedVia });
     return json({
       ok: true,
@@ -192,6 +235,7 @@ Deno.serve(async (req) => {
       resolved_via: resolvedVia,
       failure: isFailure,
     });
+
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown";
     console.error("[ack] fatal", msg);

@@ -66,13 +66,19 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // 1. Resolve worker row
-    let row: { id: string; user_id: string | null; fcm_token: string | null } | null = null;
+    let row: {
+      id: string;
+      user_id: string | null;
+      fcm_token: string | null;
+      fcm_token_status: string | null;
+      no_ack_count: number | null;
+    } | null = null;
     let resolvedVia: "device_worker_id" | "jwt" | null = null;
 
     if (worker_id) {
       const { data } = await admin
         .from("workers")
-        .select("id, user_id, fcm_token")
+        .select("id, user_id, fcm_token, fcm_token_status, no_ack_count")
         .or(`user_id.eq.${worker_id},id.eq.${worker_id}`)
         .maybeSingle();
       if (data?.id) { row = data; resolvedVia = "device_worker_id"; }
@@ -88,7 +94,7 @@ Deno.serve(async (req) => {
         if (uid) {
           const { data } = await admin
             .from("workers")
-            .select("id, user_id, fcm_token")
+            .select("id, user_id, fcm_token, fcm_token_status, no_ack_count")
             .eq("user_id", uid)
             .maybeSingle();
           if (data?.id) { row = data; resolvedVia = "jwt"; }
@@ -126,15 +132,34 @@ Deno.serve(async (req) => {
       }
     }
 
-    // FCM token — write only if changed; never blank an existing token
+    // FCM token — auto-heal logic
+    //   - write fresh token whenever it changes
+    //   - whenever a valid token arrives, restore status='active' and clear
+    //     invalid/expired/no-ack flags so dispatch picks the worker back up
     let tokenChanged = false;
-    if (fcm_token && fcm_token.length > 20 && fcm_token !== row.fcm_token) {
-      updates.fcm_token = fcm_token;
-      updates.fcm_token_status = "active";
-      updates.fcm_token_platform = device_info?.platform ?? "android";
-      updates.fcm_token_updated_at = now;
-      tokenChanged = true;
+    let repairKind: "missing_recovered" | "invalid_recovered" | "rotated" | null = null;
+
+    const incomingToken = fcm_token && fcm_token.length > 20 ? fcm_token : null;
+    const previousStatus = row.fcm_token_status;
+
+    if (incomingToken) {
+      if (!row.fcm_token) repairKind = "missing_recovered";
+      else if (previousStatus === "invalid" || previousStatus === "expired") repairKind = "invalid_recovered";
+      else if (incomingToken !== row.fcm_token) repairKind = "rotated";
+
+      if (incomingToken !== row.fcm_token || previousStatus !== "active") {
+        updates.fcm_token = incomingToken;
+        updates.fcm_token_status = "active";
+        updates.fcm_token_platform = device_info?.platform ?? "android";
+        updates.fcm_token_updated_at = now;
+        updates.last_fcm_token_refresh_at = now;
+        updates.fcm_last_fail_reason = null;
+        tokenChanged = incomingToken !== row.fcm_token;
+        // Reset no_ack_count so dispatcher gives the worker another chance
+        if ((row.no_ack_count ?? 0) > 0) updates.no_ack_count = 0;
+      }
     }
+
 
     // Derive push_health_status
     const notifOk = device_info?.notification_permission === "granted" || device_info?.notification_permission === undefined;
@@ -153,11 +178,29 @@ Deno.serve(async (req) => {
       return json({ error: "update_failed", detail: upErr.message }, 500);
     }
 
+    // Log auto-repair event for admin metrics
+    if (repairKind) {
+      try {
+        await admin.from("token_repair_events").insert({
+          worker_id: row.id,
+          event_type: repairKind,
+          previous_status: previousStatus,
+          new_status: "active",
+          source: app_state === "open" || app_state === "login" ? "app_open" : "heartbeat",
+          detail: { app_state, app_version: app_version ?? null },
+        });
+        console.log(`[heartbeat] token_auto_repaired worker=${row.id} kind=${repairKind} prev=${previousStatus}`);
+      } catch (logErr) {
+        console.warn("[heartbeat] repair_event_log_failed", logErr);
+      }
+    }
+
     console.log("[heartbeat] ok", {
       worker: row.id,
       app_state,
       resolved_via: resolvedVia,
       token_changed: tokenChanged,
+      repair: repairKind,
       health,
     });
 
@@ -166,8 +209,10 @@ Deno.serve(async (req) => {
       worker_id: row.id,
       resolved_via: resolvedVia,
       token_changed: tokenChanged,
+      token_repaired: repairKind,
       push_health_status: health,
     });
+
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown";
     console.error("[heartbeat] fatal", msg);
