@@ -174,7 +174,8 @@ export default function Troubleshoot() {
           <div className="flex-1">
             <h1 className="text-xl font-bold">Troubleshooting</h1>
             <p className="text-sm text-muted-foreground">Fix common issues</p>
-            <div className="flex gap-2 mt-1">
+            <div className="flex gap-2 mt-1 flex-wrap">
+              <Link to="/booking-diagnostics" className="text-xs underline hover:opacity-80 font-semibold">Booking Diagnostics</Link>
               <Link to="/verify-push" className="text-xs underline hover:opacity-80">Verify Push</Link>
               <Link to="/dev-cache-reset" className="text-xs underline hover:opacity-80">Dev Cache Reset</Link>
             </div>
