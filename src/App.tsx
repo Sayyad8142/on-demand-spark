@@ -52,6 +52,7 @@ import AuthDebug from "./pages/AuthDebug";
 import Earnings from "./pages/Earnings";
 import WorkerBlocked from "./pages/WorkerBlocked";
 import DeviceReadiness from "./pages/DeviceReadiness";
+import BookingDiagnostics from "./pages/BookingDiagnostics";
 import CompleteBooking from "./pages/CompleteBooking";
 import AccountDetails from "./pages/AccountDetails";
 import DailyDuty from "./pages/DailyDuty";
@@ -641,6 +642,8 @@ function AppInner() {
           <Route path="/auth-debug" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
           <Route path="/support-diagnostics" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
           <Route path="/device-readiness" element={<ProtectedRoute><DeviceReadiness /></ProtectedRoute>} />
+          <Route path="/booking-diagnostics" element={<ProtectedRoute><BookingDiagnostics /></ProtectedRoute>} />
+          <Route path="/diagnostics" element={<ProtectedRoute><BookingDiagnostics /></ProtectedRoute>} />
           <Route path="/complete-booking/:bookingId" element={<ProtectedRoute><CompleteBooking /></ProtectedRoute>} />
           <Route path="/account-details" element={<ProtectedRoute><AccountDetails /></ProtectedRoute>} />
           <Route path="/" element={<RootRedirect />} />
