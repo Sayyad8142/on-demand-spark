@@ -69,7 +69,7 @@ export default function DailyDuty() {
     >
       {/* Top content */}
       <div className="w-full text-center mt-4">
-        <h1 className="text-3xl font-bold text-slate-800">Good Morning 🌞</h1>
+        
         <p className="text-slate-600 mt-2 text-base">
           Tap the button to start receiving today&rsquo;s bookings.
         </p>
