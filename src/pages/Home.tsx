@@ -13,8 +13,7 @@ import { useAutoHeal } from "@/hooks/useAutoHeal";
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { UpcomingBookingsBar } from "@/components/UpcomingBookingsBar";
-import { ReachabilityBanner } from "@/components/ReachabilityBanner";
-// NotificationHealthWarning is shown only in Profile/Troubleshoot — not on Home.
+// Notification health banners removed — token repair is fully automatic via useAutoPushRepair.
 import { OnboardingChecklist, useOnboardingStatus } from "@/components/OnboardingChecklist";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -361,12 +360,7 @@ export default function Home() {
       
       </div>
 
-      {/* NotificationHealthWarning intentionally NOT shown on Home — the system
-          self-heals silently. Workers can run a manual repair from Profile → Troubleshoot. */}
-
-
-      {/* Phase 2 reachability warning (hidden when healthy) */}
-      {!isGuestMode && worker && <ReachabilityBanner />}
+      {/* Notification/token health self-heals silently — no worker-facing banner. */}
 
 
       {/* Upcoming Bookings Bar */}
