@@ -146,7 +146,7 @@ export default function AdminTokenHealth() {
                 <div className="flex flex-wrap items-center gap-2 justify-between">
                   <div>
                     <div className="font-semibold">{w.full_name || "—"}</div>
-                    <div className="text-xs text-muted-foreground">{w.phone || "—"} · {w.id.slice(0, 8)}</div>
+                    <div className="text-xs text-muted-foreground">{w.phone || "—"} · {w.community || "no community"} · {w.id.slice(0, 8)}</div>
                   </div>
                   <div className="flex flex-wrap gap-1">
                     <Badge variant={statusVariant(w.fcm_token_status)}>
