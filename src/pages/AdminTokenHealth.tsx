@@ -163,6 +163,11 @@ export default function AdminTokenHealth() {
                     {w.notification_permission && (
                       <Badge variant="outline">perm: {w.notification_permission}</Badge>
                     )}
+                    {(w.notification_repair_failures ?? 0) > 0 && (
+                      <Badge variant={(w.notification_repair_failures ?? 0) >= 3 ? "destructive" : "secondary"}>
+                        repair fails: {w.notification_repair_failures}
+                      </Badge>
+                    )}
                   </div>
                 </div>
 
