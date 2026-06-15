@@ -140,7 +140,6 @@ export default function AdminTokenHealth() {
         <div className="space-y-3 pt-2">
           <h2 className="text-lg font-semibold">Notification Issues</h2>
 
-        <div className="space-y-3">
           {rows.map((w) => (
             <Card key={w.id}>
               <CardContent className="pt-4 space-y-2">
