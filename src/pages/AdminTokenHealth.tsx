@@ -57,27 +57,23 @@ export default function AdminTokenHealth() {
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (q: string) => {
+  const [filter, setFilter] = useState<FilterKey>("");
+
+  const load = useCallback(async (q: string, f: FilterKey) => {
     setLoading(true);
     setError(null);
     try {
-      const { data, error } = await supabase.functions.invoke("admin-token-health", {
-        body: undefined,
-        method: "GET" as any,
-        headers: {},
-      } as any);
-      // fallback: invoke with query — supabase-js doesn't support GET well; use fetch
-      let payload: any = data;
-      if (!payload || error) {
-        const url = `https://paywwbuqycovjopryele.supabase.co/functions/v1/admin-token-health${q ? `?search=${encodeURIComponent(q)}` : ""}`;
-        const res = await fetch(url, {
-          headers: {
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
-          },
-        });
-        payload = await res.json();
-        if (!res.ok) throw new Error(payload?.error || `HTTP ${res.status}`);
-      }
+      const params = new URLSearchParams();
+      if (q) params.set("search", q);
+      if (f) params.set("filter", f);
+      const url = `https://paywwbuqycovjopryele.supabase.co/functions/v1/admin-token-health${params.toString() ? `?${params.toString()}` : ""}`;
+      const res = await fetch(url, {
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
+        },
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload?.error || `HTTP ${res.status}`);
       setRows(payload?.workers || []);
     } catch (e: any) {
       setError(e?.message || "Failed to load");
@@ -88,7 +84,7 @@ export default function AdminTokenHealth() {
   }, []);
 
   useEffect(() => {
-    load("");
+    load("", "");
   }, [load]);
 
   return (
