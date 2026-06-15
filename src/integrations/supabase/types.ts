@@ -6845,6 +6845,7 @@ export type Database = {
         Args: { lat1: number; lat2: number; lng1: number; lng2: number }
         Returns: number
       }
+      heal_stuck_busy_workers: { Args: never; Returns: number }
       hold_worker_payout: {
         Args: {
           p_admin_notes?: string
@@ -7150,8 +7151,13 @@ export type Database = {
         Args: { p_worker_id: string }
         Returns: undefined
       }
+      recompute_all_priority_scores_v2: { Args: never; Returns: number }
       recompute_all_workers_notification_health: {
         Args: never
+        Returns: number
+      }
+      recompute_priority_score_v2: {
+        Args: { p_worker_id: string }
         Returns: number
       }
       recompute_worker_busy: {
