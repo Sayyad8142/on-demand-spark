@@ -12,6 +12,7 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const search = (url.searchParams.get("search") || "").trim();
     const limit = Math.min(parseInt(url.searchParams.get("limit") || "200", 10), 500);
+    const filter = (url.searchParams.get("filter") || "").trim(); // failures3 | permdenied | noheartbeat30
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -21,13 +22,22 @@ Deno.serve(async (req) => {
     let query = supabase
       .from("workers")
       .select(
-        "id, full_name, phone, fcm_token, fcm_token_status, fcm_token_platform, fcm_token_updated_at, last_fcm_token_refresh_at, last_notification_received_at, fcm_last_send_at, fcm_last_fail_at, fcm_last_fail_reason, notification_health, notification_health_score, notification_health_updated_at, notification_permission",
+        "id, full_name, phone, community, last_heartbeat_at, fcm_token, fcm_token_status, fcm_token_platform, fcm_token_updated_at, last_fcm_token_refresh_at, last_notification_received_at, fcm_last_send_at, fcm_last_fail_at, fcm_last_fail_reason, notification_health, notification_health_score, notification_health_updated_at, notification_permission, notification_repair_failures",
       )
-      .order("fcm_token_updated_at", { ascending: false, nullsFirst: false })
+      .order("notification_repair_failures", { ascending: false, nullsFirst: false })
       .limit(limit);
 
     if (search) {
       query = query.or(`full_name.ilike.%${search}%,phone.ilike.%${search}%`);
+    }
+
+    if (filter === "failures3") {
+      query = query.gte("notification_repair_failures", 3);
+    } else if (filter === "permdenied") {
+      query = query.eq("notification_permission", "denied");
+    } else if (filter === "noheartbeat30") {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      query = query.or(`last_heartbeat_at.lt.${thirtyDaysAgo},last_heartbeat_at.is.null`);
     }
 
     const { data, error } = await query;

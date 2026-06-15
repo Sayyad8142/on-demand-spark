@@ -1,4 +1,23 @@
 import { getPushHealthSnapshot, performPushRepair } from '@/lib/pushToken';
+import { supabase } from '@/integrations/supabase/client';
+
+async function recordRepairFailure(userId: string) {
+  try {
+    const { data } = await supabase
+      .from('workers')
+      .select('notification_repair_failures')
+      .or(`user_id.eq.${userId},id.eq.${userId}`)
+      .maybeSingle();
+    const next = (data?.notification_repair_failures ?? 0) + 1;
+    await supabase
+      .from('workers')
+      .update({ notification_repair_failures: next })
+      .or(`user_id.eq.${userId},id.eq.${userId}`);
+    console.warn(`📈 [PushRepair] notification_repair_failures incremented to ${next}`);
+  } catch (e) {
+    console.warn('[PushRepair] failed to record repair failure', e);
+  }
+}
 
 export type PushRepairPhase = 'idle' | 'checking' | 'preparing' | 'success' | 'failed';
 
@@ -154,6 +173,7 @@ export async function triggerAutomaticPushRepair(
       }
 
       console.error(`❌ [PushRepair] ${source}: automatic repair failed after retries`);
+      await recordRepairFailure(userId);
       emitStatus({
         phase: 'failed',
         attempt: retryDelaysMs.length,
@@ -166,6 +186,7 @@ export async function triggerAutomaticPushRepair(
     } catch (error: any) {
       const message = error?.message || 'Unexpected automatic push repair error';
       console.error(`❌ [PushRepair] ${source}: unexpected failure`, error);
+      await recordRepairFailure(userId);
       emitStatus({
         phase: 'failed',
         attempt: retryDelaysMs.length,

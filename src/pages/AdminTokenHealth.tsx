@@ -10,6 +10,8 @@ interface Row {
   id: string;
   full_name: string | null;
   phone: string | null;
+  community: string | null;
+  last_heartbeat_at: string | null;
   fcm_token: string | null;
   has_token: boolean;
   fcm_token_status: string | null;
@@ -23,7 +25,10 @@ interface Row {
   notification_health: string | null;
   notification_health_score: number | null;
   notification_permission: string | null;
+  notification_repair_failures: number | null;
 }
+
+type FilterKey = "" | "failures3" | "permdenied" | "noheartbeat30";
 
 const fmt = (s: string | null) => {
   if (!s) return "—";
@@ -52,27 +57,23 @@ export default function AdminTokenHealth() {
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (q: string) => {
+  const [filter, setFilter] = useState<FilterKey>("");
+
+  const load = useCallback(async (q: string, f: FilterKey) => {
     setLoading(true);
     setError(null);
     try {
-      const { data, error } = await supabase.functions.invoke("admin-token-health", {
-        body: undefined,
-        method: "GET" as any,
-        headers: {},
-      } as any);
-      // fallback: invoke with query — supabase-js doesn't support GET well; use fetch
-      let payload: any = data;
-      if (!payload || error) {
-        const url = `https://paywwbuqycovjopryele.supabase.co/functions/v1/admin-token-health${q ? `?search=${encodeURIComponent(q)}` : ""}`;
-        const res = await fetch(url, {
-          headers: {
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
-          },
-        });
-        payload = await res.json();
-        if (!res.ok) throw new Error(payload?.error || `HTTP ${res.status}`);
-      }
+      const params = new URLSearchParams();
+      if (q) params.set("search", q);
+      if (f) params.set("filter", f);
+      const url = `https://paywwbuqycovjopryele.supabase.co/functions/v1/admin-token-health${params.toString() ? `?${params.toString()}` : ""}`;
+      const res = await fetch(url, {
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
+        },
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload?.error || `HTTP ${res.status}`);
       setRows(payload?.workers || []);
     } catch (e: any) {
       setError(e?.message || "Failed to load");
@@ -83,7 +84,7 @@ export default function AdminTokenHealth() {
   }, []);
 
   useEffect(() => {
-    load("");
+    load("", "");
   }, [load]);
 
   return (
@@ -92,7 +93,7 @@ export default function AdminTokenHealth() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Admin: Worker Token Health</CardTitle>
-            <Button size="sm" variant="outline" onClick={() => load(search)} disabled={loading}>
+            <Button size="sm" variant="outline" onClick={() => load(search, filter)} disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             </Button>
           </CardHeader>
@@ -101,7 +102,7 @@ export default function AdminTokenHealth() {
               className="flex gap-2"
               onSubmit={(e) => {
                 e.preventDefault();
-                load(search);
+                load(search, filter);
               }}
             >
               <Input
@@ -111,6 +112,24 @@ export default function AdminTokenHealth() {
               />
               <Button type="submit" disabled={loading}>Search</Button>
             </form>
+            <div className="flex flex-wrap gap-2">
+              {([
+                ["", "All"],
+                ["failures3", "Failures ≥ 3"],
+                ["permdenied", "Permission denied"],
+                ["noheartbeat30", "No heartbeat > 30d"],
+              ] as [FilterKey, string][]).map(([key, label]) => (
+                <Button
+                  key={key || "all"}
+                  size="sm"
+                  variant={filter === key ? "default" : "outline"}
+                  onClick={() => { setFilter(key); load(search, key); }}
+                  disabled={loading}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
             {error && <div className="text-sm text-destructive">{error}</div>}
             <div className="text-xs text-muted-foreground">
               Showing {rows.length} workers (read-only). Tokens shown as prefix only.
@@ -118,14 +137,16 @@ export default function AdminTokenHealth() {
           </CardContent>
         </Card>
 
-        <div className="space-y-3">
+        <div className="space-y-3 pt-2">
+          <h2 className="text-lg font-semibold">Notification Issues</h2>
+
           {rows.map((w) => (
             <Card key={w.id}>
               <CardContent className="pt-4 space-y-2">
                 <div className="flex flex-wrap items-center gap-2 justify-between">
                   <div>
                     <div className="font-semibold">{w.full_name || "—"}</div>
-                    <div className="text-xs text-muted-foreground">{w.phone || "—"} · {w.id.slice(0, 8)}</div>
+                    <div className="text-xs text-muted-foreground">{w.phone || "—"} · {w.community || "no community"} · {w.id.slice(0, 8)}</div>
                   </div>
                   <div className="flex flex-wrap gap-1">
                     <Badge variant={statusVariant(w.fcm_token_status)}>
@@ -142,6 +163,11 @@ export default function AdminTokenHealth() {
                     {w.notification_permission && (
                       <Badge variant="outline">perm: {w.notification_permission}</Badge>
                     )}
+                    {(w.notification_repair_failures ?? 0) > 0 && (
+                      <Badge variant={(w.notification_repair_failures ?? 0) >= 3 ? "destructive" : "secondary"}>
+                        repair fails: {w.notification_repair_failures}
+                      </Badge>
+                    )}
                   </div>
                 </div>
 
@@ -150,6 +176,7 @@ export default function AdminTokenHealth() {
                   <div><span className="text-muted-foreground">Token updated:</span> {fmt(w.fcm_token_updated_at)}</div>
                   <div><span className="text-muted-foreground">Last token refresh:</span> {fmt(w.last_fcm_token_refresh_at)}</div>
                   <div><span className="text-muted-foreground">Last notification received:</span> {fmt(w.last_notification_received_at)}</div>
+                  <div><span className="text-muted-foreground">Last heartbeat:</span> {fmt(w.last_heartbeat_at)}</div>
                   <div><span className="text-muted-foreground">Last FCM send:</span> {fmt(w.fcm_last_send_at)}</div>
                   <div><span className="text-muted-foreground">Last FCM fail:</span> {fmt(w.fcm_last_fail_at)}</div>
                   <div className="md:col-span-2">
