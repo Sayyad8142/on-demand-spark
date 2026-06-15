@@ -93,7 +93,7 @@ export default function AdminTokenHealth() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Admin: Worker Token Health</CardTitle>
-            <Button size="sm" variant="outline" onClick={() => load(search)} disabled={loading}>
+            <Button size="sm" variant="outline" onClick={() => load(search, filter)} disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             </Button>
           </CardHeader>
@@ -102,7 +102,7 @@ export default function AdminTokenHealth() {
               className="flex gap-2"
               onSubmit={(e) => {
                 e.preventDefault();
-                load(search);
+                load(search, filter);
               }}
             >
               <Input
@@ -112,12 +112,33 @@ export default function AdminTokenHealth() {
               />
               <Button type="submit" disabled={loading}>Search</Button>
             </form>
+            <div className="flex flex-wrap gap-2">
+              {([
+                ["", "All"],
+                ["failures3", "Failures ≥ 3"],
+                ["permdenied", "Permission denied"],
+                ["noheartbeat30", "No heartbeat > 30d"],
+              ] as [FilterKey, string][]).map(([key, label]) => (
+                <Button
+                  key={key || "all"}
+                  size="sm"
+                  variant={filter === key ? "default" : "outline"}
+                  onClick={() => { setFilter(key); load(search, key); }}
+                  disabled={loading}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
             {error && <div className="text-sm text-destructive">{error}</div>}
             <div className="text-xs text-muted-foreground">
               Showing {rows.length} workers (read-only). Tokens shown as prefix only.
             </div>
           </CardContent>
         </Card>
+
+        <div className="space-y-3 pt-2">
+          <h2 className="text-lg font-semibold">Notification Issues</h2>
 
         <div className="space-y-3">
           {rows.map((w) => (
