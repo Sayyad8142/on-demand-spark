@@ -380,6 +380,9 @@ export default function OtpVerify() {
           : t('auth.accountCreated', 'Account created successfully')
       });
 
+      // Clear resume state once OTP is verified
+      try { sessionStorage.removeItem(OTP_STATE_KEY); } catch {}
+
       // Navigate based on mode
       if (state.mode === 'signup') {
         // New signup → send to Availability so worker selects time slots before receiving bookings
