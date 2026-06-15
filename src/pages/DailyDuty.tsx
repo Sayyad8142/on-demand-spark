@@ -92,7 +92,7 @@ export default function DailyDuty() {
             disabled={submitting}
             className="rounded-2xl font-bold text-white text-lg px-8 py-4 active:scale-95 transition-transform shadow-lg disabled:opacity-70"
             style={{
-              background: 'linear-gradient(180deg, #22:22c55e 0%, #16a34a 100%)',
+              background: 'linear-gradient(180deg, #22c55e 0%, #16a34a 100%)',
               boxShadow: '0 8px 20px -6px rgba(22, 163, 74, 0.55), inset 0 -3px 0 rgba(0,0,0,0.15)',
               minWidth: 220,
             }}
