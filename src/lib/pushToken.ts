@@ -146,6 +146,9 @@ export async function syncTokenToBackend(token: string, userId: string, reason: 
         fcm_token_status: 'active',
         fcm_token_updated_at: now,
         fcm_token_platform: Capacitor.isNativePlatform() ? 'android' : 'web',
+        availability_state: 'ONLINE_HEALTHY',
+        notification_health: 'good',
+        no_ack_count: 0,
         updated_at: now,
       })
       .eq('user_id', userId)
