@@ -531,7 +531,7 @@ export default function OtpVerify() {
             {/* Change Number */}
             <Button
               variant="outline"
-              onClick={() => navigate("/auth")}
+              onClick={() => { try { sessionStorage.removeItem(OTP_STATE_KEY); } catch {} navigate("/auth"); }}
               disabled={loading}
               className="w-full"
             >
