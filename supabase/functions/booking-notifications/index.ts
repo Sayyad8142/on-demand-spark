@@ -212,14 +212,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Query eligible workers — now also fetch token health + reachability fields.
-    // Reachability guard (Phase 2): excludes workers in TOKEN_STALE / NOTIFICATION_BLOCKED
-    // states or currently in dispatch cooldown. Gated by env flag for safe rollout.
-    const REACHABILITY_GUARD = (Deno.env.get("DISPATCH_REACHABILITY_GUARD") ?? "1") === "1";
-
+    // Dispatch eligibility is intentionally MINIMAL — heartbeat / staleness /
+    // no_ack_count / notification_health are analytics-only and never gate
+    // dispatch. A worker is eligible iff: active + available + not busy +
+    // payout ready + not blocked + matching service + matching community +
+    // has an FCM token. This guarantees workers never get dropped from
+    // dispatch because of a device-health signal.
     let workersQuery = supabase
       .from("workers")
-      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng, fcm_token, fcm_token_status, availability_state, dispatch_cooldown_until, daily_duty_started_at, last_app_opened_at, last_heartbeat_at, daily_streak_count")
+      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng, fcm_token, fcm_token_status, availability_state, daily_duty_started_at, last_app_opened_at, last_heartbeat_at, daily_streak_count")
       .eq("is_active", true)
       .eq("is_available", true)
       .eq("is_busy", false)
@@ -227,12 +228,6 @@ Deno.serve(async (req) => {
       .neq("is_blocked", true)
       .contains("service_types", [b.service_type]);
 
-    if (REACHABILITY_GUARD) {
-      const nowIso = new Date().toISOString();
-      workersQuery = workersQuery
-        .not("availability_state", "in", "(TOKEN_STALE,NOTIFICATION_BLOCKED)")
-        .or(`dispatch_cooldown_until.is.null,dispatch_cooldown_until.lt.${nowIso}`);
-    }
     
     if (communityData?.id) {
       workersQuery = workersQuery.eq("selected_community_id", communityData.id);
@@ -353,13 +348,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Sort: freshness boost first, then rating, then distance/ratings count.
+    // Sort: rating, then geo distance (if available), then ratings count.
+    // Heartbeat / app-open freshness is NOT used for dispatch ranking —
+    // we don't want notification-system flakiness to push workers down.
     const sortedWorkers = pushReady.sort((a, b) => {
-      const fa = computeFreshness(a).boost;
-      const fb = computeFreshness(b).boost;
-      const ratingScoreA = (a.rating || 0) * 20 + fa;
-      const ratingScoreB = (b.rating || 0) * 20 + fb;
-      if (ratingScoreA !== ratingScoreB) return ratingScoreB - ratingScoreA;
+      const ratingDiff = (b.rating || 0) - (a.rating || 0);
+      if (ratingDiff !== 0) return ratingDiff;
       if (hasCommunityCenter && a.last_lat && a.last_lng && b.last_lat && b.last_lng) {
         const distA = haversineM(a.last_lat, a.last_lng, communityData.center_lat, communityData.center_lng);
         const distB = haversineM(b.last_lat, b.last_lng, communityData.center_lat, communityData.center_lng);
@@ -367,6 +361,7 @@ Deno.serve(async (req) => {
       }
       return (b.total_ratings || 0) - (a.total_ratings || 0);
     });
+
 
     const TIER_TIMEOUT_SECONDS = 30;
     const TIER_1_MIN_RATING = 4.5;

@@ -14,7 +14,7 @@ import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { UpcomingBookingsBar } from "@/components/UpcomingBookingsBar";
 import { ReachabilityBanner } from "@/components/ReachabilityBanner";
-import { NotificationHealthWarning } from "@/components/NotificationHealthWarning";
+// NotificationHealthWarning is shown only in Profile/Troubleshoot — not on Home.
 import { OnboardingChecklist, useOnboardingStatus } from "@/components/OnboardingChecklist";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -361,8 +361,9 @@ export default function Home() {
       
       </div>
 
-      {/* Auto-heal warning for token/permission/overlay issues */}
-      {!isGuestMode && worker && <NotificationHealthWarning />}
+      {/* NotificationHealthWarning intentionally NOT shown on Home — the system
+          self-heals silently. Workers can run a manual repair from Profile → Troubleshoot. */}
+
 
       {/* Phase 2 reachability warning (hidden when healthy) */}
       {!isGuestMode && worker && <ReachabilityBanner />}
