@@ -161,13 +161,23 @@ Deno.serve(async (req) => {
     }
 
 
-    // Derive push_health_status
+    // Derive push_health_status AND notification_health (dashboard alias) so
+    // both columns stay in sync. NOTE: neither column is used to gate
+    // dispatch — they are analytics signals only.
     const notifOk = device_info?.notification_permission === "granted" || device_info?.notification_permission === undefined;
     const hasToken = !!(updates.fcm_token ?? row.fcm_token);
     let health: "good" | "degraded" | "blocked" = "good";
     if (!hasToken) health = "blocked";
     else if (!notifOk || device_info?.battery_optimized === true) health = "degraded";
     updates.push_health_status = health;
+    updates.notification_health = health === "good" ? "good" : health === "degraded" ? "degraded" : "bad";
+    updates.notification_health_updated_at = now;
+
+    // Any successful heartbeat clears stale-device + no-ack flags so dispatch
+    // never holds a worker back because of a delayed signal.
+    updates.stale_device = false;
+    if ((row.no_ack_count ?? 0) > 0) updates.no_ack_count = 0;
+
 
     const { error: upErr } = await admin
       .from("workers")

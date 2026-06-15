@@ -3,7 +3,7 @@ import { App as CapApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { sendWorkerHeartbeat } from "@/lib/workerHeartbeat";
 
-const INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
+const INTERVAL_MS = 30 * 60 * 1000; // 30 minutes — analytics-only ping
 
 /**
  * Global worker heartbeat — runs whenever the worker is logged in,

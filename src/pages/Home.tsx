@@ -361,8 +361,9 @@ export default function Home() {
       
       </div>
 
-      {/* Auto-heal warning for token/permission/overlay issues */}
-      {!isGuestMode && worker && <NotificationHealthWarning />}
+      {/* NotificationHealthWarning intentionally NOT shown on Home — the system
+          self-heals silently. Workers can run a manual repair from Profile → Troubleshoot. */}
+
 
       {/* Phase 2 reachability warning (hidden when healthy) */}
       {!isGuestMode && worker && <ReachabilityBanner />}

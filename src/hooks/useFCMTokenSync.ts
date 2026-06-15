@@ -136,8 +136,9 @@ export function useFCMTokenSync(userId: string | undefined) {
     // Cold start / login → force refresh evaluation immediately
     const initTimer = setTimeout(() => refreshToken('mount'), 500);
 
-    // Periodic self-heal every 3 minutes
-    const healInterval = setInterval(() => refreshToken('self-heal'), 3 * 60 * 1000);
+    // Periodic self-heal every 6 hours (was 3 minutes — too aggressive).
+    const healInterval = setInterval(() => refreshToken('self-heal'), 6 * 60 * 60 * 1000);
+
 
     // Re-check on app resume
     const handleVisibility = () => {
