@@ -4952,6 +4952,51 @@ export type Database = {
           },
         ]
       }
+      worker_telemetry_probes: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          device_received_at: string | null
+          fcm_send_error: string | null
+          fcm_send_ok: boolean | null
+          id: string
+          notes: string | null
+          popup_shown_at: string | null
+          started_at: string
+          worker_action: string | null
+          worker_id: string
+          worker_seen_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          device_received_at?: string | null
+          fcm_send_error?: string | null
+          fcm_send_ok?: boolean | null
+          id?: string
+          notes?: string | null
+          popup_shown_at?: string | null
+          started_at?: string
+          worker_action?: string | null
+          worker_id: string
+          worker_seen_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          device_received_at?: string | null
+          fcm_send_error?: string | null
+          fcm_send_ok?: boolean | null
+          id?: string
+          notes?: string | null
+          popup_shown_at?: string | null
+          started_at?: string
+          worker_action?: string | null
+          worker_id?: string
+          worker_seen_at?: string | null
+        }
+        Relationships: []
+      }
       workers: {
         Row: {
           acceptance_rate_7d: number | null
@@ -4960,6 +5005,7 @@ export type Database = {
           admin_override_rating: number | null
           app_platform: string | null
           app_standby_bucket: string | null
+          app_state: string | null
           app_version: string | null
           availability_state: string
           bank_account_number: string | null
@@ -4970,6 +5016,7 @@ export type Database = {
           bank_verification_status: string
           bank_verified_at: string | null
           battery_optimization_disabled: boolean | null
+          battery_optimization_status: string | null
           battery_optimized: boolean | null
           blocked_at: string | null
           blocked_by: string | null
@@ -4989,6 +5036,7 @@ export type Database = {
           created_at: string
           daily_duty_started_at: string | null
           daily_streak_count: number
+          device_info: Json | null
           device_manufacturer: string | null
           dispatch_cooldown_until: string | null
           fcm_last_fail_at: string | null
@@ -5017,6 +5065,7 @@ export type Database = {
           last_boot_android_version: string | null
           last_boot_at: string | null
           last_boot_oem: string | null
+          last_device_ack_at: string | null
           last_fcm_token_refresh_at: string | null
           last_heartbeat_at: string | null
           last_keepalive_ack_at: string | null
@@ -5025,6 +5074,7 @@ export type Database = {
           last_lng: number | null
           last_notification_received_at: string | null
           last_offer_at: string | null
+          last_popup_ack_at: string | null
           last_push_error_at: string | null
           last_push_error_code: string | null
           last_push_success_at: string | null
@@ -5038,6 +5088,7 @@ export type Database = {
           notification_health_updated_at: string | null
           notification_permission: string | null
           notification_permission_granted: boolean | null
+          overlay_permission: string | null
           passbook_url: string | null
           payout_address: string | null
           payout_email: string | null
@@ -5086,6 +5137,7 @@ export type Database = {
           admin_override_rating?: number | null
           app_platform?: string | null
           app_standby_bucket?: string | null
+          app_state?: string | null
           app_version?: string | null
           availability_state?: string
           bank_account_number?: string | null
@@ -5096,6 +5148,7 @@ export type Database = {
           bank_verification_status?: string
           bank_verified_at?: string | null
           battery_optimization_disabled?: boolean | null
+          battery_optimization_status?: string | null
           battery_optimized?: boolean | null
           blocked_at?: string | null
           blocked_by?: string | null
@@ -5115,6 +5168,7 @@ export type Database = {
           created_at?: string
           daily_duty_started_at?: string | null
           daily_streak_count?: number
+          device_info?: Json | null
           device_manufacturer?: string | null
           dispatch_cooldown_until?: string | null
           fcm_last_fail_at?: string | null
@@ -5143,6 +5197,7 @@ export type Database = {
           last_boot_android_version?: string | null
           last_boot_at?: string | null
           last_boot_oem?: string | null
+          last_device_ack_at?: string | null
           last_fcm_token_refresh_at?: string | null
           last_heartbeat_at?: string | null
           last_keepalive_ack_at?: string | null
@@ -5151,6 +5206,7 @@ export type Database = {
           last_lng?: number | null
           last_notification_received_at?: string | null
           last_offer_at?: string | null
+          last_popup_ack_at?: string | null
           last_push_error_at?: string | null
           last_push_error_code?: string | null
           last_push_success_at?: string | null
@@ -5164,6 +5220,7 @@ export type Database = {
           notification_health_updated_at?: string | null
           notification_permission?: string | null
           notification_permission_granted?: boolean | null
+          overlay_permission?: string | null
           passbook_url?: string | null
           payout_address?: string | null
           payout_email?: string | null
@@ -5212,6 +5269,7 @@ export type Database = {
           admin_override_rating?: number | null
           app_platform?: string | null
           app_standby_bucket?: string | null
+          app_state?: string | null
           app_version?: string | null
           availability_state?: string
           bank_account_number?: string | null
@@ -5222,6 +5280,7 @@ export type Database = {
           bank_verification_status?: string
           bank_verified_at?: string | null
           battery_optimization_disabled?: boolean | null
+          battery_optimization_status?: string | null
           battery_optimized?: boolean | null
           blocked_at?: string | null
           blocked_by?: string | null
@@ -5241,6 +5300,7 @@ export type Database = {
           created_at?: string
           daily_duty_started_at?: string | null
           daily_streak_count?: number
+          device_info?: Json | null
           device_manufacturer?: string | null
           dispatch_cooldown_until?: string | null
           fcm_last_fail_at?: string | null
@@ -5269,6 +5329,7 @@ export type Database = {
           last_boot_android_version?: string | null
           last_boot_at?: string | null
           last_boot_oem?: string | null
+          last_device_ack_at?: string | null
           last_fcm_token_refresh_at?: string | null
           last_heartbeat_at?: string | null
           last_keepalive_ack_at?: string | null
@@ -5277,6 +5338,7 @@ export type Database = {
           last_lng?: number | null
           last_notification_received_at?: string | null
           last_offer_at?: string | null
+          last_popup_ack_at?: string | null
           last_push_error_at?: string | null
           last_push_error_code?: string | null
           last_push_success_at?: string | null
@@ -5290,6 +5352,7 @@ export type Database = {
           notification_health_updated_at?: string | null
           notification_permission?: string | null
           notification_permission_granted?: boolean | null
+          overlay_permission?: string | null
           passbook_url?: string | null
           payout_address?: string | null
           payout_email?: string | null
@@ -5581,6 +5644,10 @@ export type Database = {
         Args: { p_booking_id: string; p_note?: string; p_outcome: string }
         Returns: string
       }
+      admin_mark_booking_failed_no_worker: {
+        Args: { p_admin_id: string; p_booking_id: string; p_reason?: string }
+        Returns: Json
+      }
       admin_mark_worker_payout_ready: {
         Args: { p_worker_id: string }
         Returns: Json
@@ -5644,6 +5711,7 @@ export type Database = {
               admin_override_rating: number | null
               app_platform: string | null
               app_standby_bucket: string | null
+              app_state: string | null
               app_version: string | null
               availability_state: string
               bank_account_number: string | null
@@ -5654,6 +5722,7 @@ export type Database = {
               bank_verification_status: string
               bank_verified_at: string | null
               battery_optimization_disabled: boolean | null
+              battery_optimization_status: string | null
               battery_optimized: boolean | null
               blocked_at: string | null
               blocked_by: string | null
@@ -5673,6 +5742,7 @@ export type Database = {
               created_at: string
               daily_duty_started_at: string | null
               daily_streak_count: number
+              device_info: Json | null
               device_manufacturer: string | null
               dispatch_cooldown_until: string | null
               fcm_last_fail_at: string | null
@@ -5701,6 +5771,7 @@ export type Database = {
               last_boot_android_version: string | null
               last_boot_at: string | null
               last_boot_oem: string | null
+              last_device_ack_at: string | null
               last_fcm_token_refresh_at: string | null
               last_heartbeat_at: string | null
               last_keepalive_ack_at: string | null
@@ -5709,6 +5780,7 @@ export type Database = {
               last_lng: number | null
               last_notification_received_at: string | null
               last_offer_at: string | null
+              last_popup_ack_at: string | null
               last_push_error_at: string | null
               last_push_error_code: string | null
               last_push_success_at: string | null
@@ -5722,6 +5794,7 @@ export type Database = {
               notification_health_updated_at: string | null
               notification_permission: string | null
               notification_permission_granted: boolean | null
+              overlay_permission: string | null
               passbook_url: string | null
               payout_address: string | null
               payout_email: string | null
@@ -5779,6 +5852,7 @@ export type Database = {
               admin_override_rating: number | null
               app_platform: string | null
               app_standby_bucket: string | null
+              app_state: string | null
               app_version: string | null
               availability_state: string
               bank_account_number: string | null
@@ -5789,6 +5863,7 @@ export type Database = {
               bank_verification_status: string
               bank_verified_at: string | null
               battery_optimization_disabled: boolean | null
+              battery_optimization_status: string | null
               battery_optimized: boolean | null
               blocked_at: string | null
               blocked_by: string | null
@@ -5808,6 +5883,7 @@ export type Database = {
               created_at: string
               daily_duty_started_at: string | null
               daily_streak_count: number
+              device_info: Json | null
               device_manufacturer: string | null
               dispatch_cooldown_until: string | null
               fcm_last_fail_at: string | null
@@ -5836,6 +5912,7 @@ export type Database = {
               last_boot_android_version: string | null
               last_boot_at: string | null
               last_boot_oem: string | null
+              last_device_ack_at: string | null
               last_fcm_token_refresh_at: string | null
               last_heartbeat_at: string | null
               last_keepalive_ack_at: string | null
@@ -5844,6 +5921,7 @@ export type Database = {
               last_lng: number | null
               last_notification_received_at: string | null
               last_offer_at: string | null
+              last_popup_ack_at: string | null
               last_push_error_at: string | null
               last_push_error_code: string | null
               last_push_success_at: string | null
@@ -5857,6 +5935,7 @@ export type Database = {
               notification_health_updated_at: string | null
               notification_permission: string | null
               notification_permission_granted: boolean | null
+              overlay_permission: string | null
               passbook_url: string | null
               payout_address: string | null
               payout_email: string | null
@@ -6506,6 +6585,27 @@ export type Database = {
           slot_time: string
         }[]
       }
+      get_stuck_pending_bookings: {
+        Args: { p_threshold_minutes?: number }
+        Returns: {
+          age_minutes: number
+          booking_id: string
+          booking_type: string
+          community: string
+          created_at: string
+          cust_name: string
+          dispatch_attempts: number
+          dispatch_expires_at: string
+          dispatch_status: string
+          last_dispatch_event: string
+          last_dispatch_event_at: string
+          service_type: string
+          workers_pending: number
+          workers_rejected: number
+          workers_timed_out: number
+          workers_tried: number
+        }[]
+      }
       get_supply_gap_analysis: {
         Args: never
         Returns: {
@@ -7025,6 +7125,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      raise_stuck_pending_booking_alerts: { Args: never; Returns: number }
       recalc_worker_priority_score_one: {
         Args: { p_worker_id: string }
         Returns: undefined
