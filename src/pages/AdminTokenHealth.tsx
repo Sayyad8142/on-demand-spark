@@ -10,6 +10,8 @@ interface Row {
   id: string;
   full_name: string | null;
   phone: string | null;
+  community: string | null;
+  last_heartbeat_at: string | null;
   fcm_token: string | null;
   has_token: boolean;
   fcm_token_status: string | null;
@@ -23,7 +25,10 @@ interface Row {
   notification_health: string | null;
   notification_health_score: number | null;
   notification_permission: string | null;
+  notification_repair_failures: number | null;
 }
+
+type FilterKey = "" | "failures3" | "permdenied" | "noheartbeat30";
 
 const fmt = (s: string | null) => {
   if (!s) return "—";
