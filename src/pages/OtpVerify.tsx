@@ -443,7 +443,7 @@ export default function OtpVerify() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate("/auth")}
+          onClick={() => { try { sessionStorage.removeItem(OTP_STATE_KEY); } catch {} navigate("/auth"); }}
           className="flex items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
