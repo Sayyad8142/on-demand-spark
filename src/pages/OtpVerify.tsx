@@ -52,12 +52,43 @@ export default function OtpVerify() {
   const [resendTimer, setResendTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
 
-  // Get state from navigation
-  const state = location.state as OtpVerifyState | null;
+  // Get state from navigation, falling back to sessionStorage so a
+  // page reload / live-update / app resume keeps the user on this page
+  // instead of bouncing back to /auth.
+  const OTP_STATE_KEY = 'didi_otp_verify_state';
+  const navState = location.state as OtpVerifyState | null;
+  const [state, setState] = useState<OtpVerifyState | null>(() => {
+    if (navState?.phone) return navState;
+    try {
+      const raw = sessionStorage.getItem(OTP_STATE_KEY);
+      if (raw) return JSON.parse(raw) as OtpVerifyState;
+    } catch {}
+    return null;
+  });
 
-  // Redirect if no state
+  // Persist nav state into sessionStorage on first mount; clear on redirect.
+  useEffect(() => {
+    if (navState?.phone) {
+      try {
+        // signUpData may include File objects (qrData.file / passbookFile)
+        // which cannot be serialized — strip them before persisting.
+        const safe: OtpVerifyState = {
+          phone: navState.phone,
+          mode: navState.mode,
+          signUpData: navState.signUpData
+            ? { ...navState.signUpData, qrData: null, passbookFile: null }
+            : undefined,
+        };
+        sessionStorage.setItem(OTP_STATE_KEY, JSON.stringify(safe));
+      } catch {}
+      setState(navState);
+    }
+  }, [navState]);
+
+  // Redirect only when truly nothing to resume from.
   useEffect(() => {
     if (!state?.phone) {
+      try { sessionStorage.removeItem(OTP_STATE_KEY); } catch {}
       navigate("/auth", { replace: true });
     }
   }, [state, navigate]);
