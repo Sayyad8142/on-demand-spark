@@ -84,73 +84,28 @@ export default function DailyDuty() {
         )}
       </div>
 
-      {/* Door */}
-      <div className="relative flex items-center justify-center my-6">
-        <div
-          className="relative"
-          style={{
-            width: 260,
-            height: 360,
-            perspective: '1000px',
-          }}
-        >
-          {/* Door frame */}
-          <div
-            className="absolute inset-0 rounded-[28px]"
+      {/* Get Bookings Button */}
+      <div className="flex flex-col items-center justify-center my-6">
+        {!activated ? (
+          <button
+            onClick={handleStart}
+            disabled={submitting}
+            className="rounded-2xl font-bold text-white text-lg px-8 py-4 active:scale-95 transition-transform shadow-lg disabled:opacity-70"
             style={{
-              background: 'linear-gradient(180deg, #8b5a2b 0%, #6b4423 100%)',
-              boxShadow: '0 20px 40px -10px rgba(80, 50, 20, 0.35), inset 0 -6px 0 rgba(0,0,0,0.15)',
-            }}
-          />
-          {/* Door panel (animates open) */}
-          <div
-            className="absolute inset-2 rounded-[22px] transition-transform duration-700 ease-out origin-left"
-            style={{
-              background:
-                'repeating-linear-gradient(90deg, #a87042 0px, #a87042 22px, #9a6438 22px, #9a6438 26px), linear-gradient(180deg, #b07a4a, #8a5a30)',
-              transform: doorOpen ? 'rotateY(-55deg)' : 'rotateY(0deg)',
-              boxShadow: 'inset 0 0 24px rgba(0,0,0,0.18)',
+              background: 'linear-gradient(180deg, #22c55e 0%, #16a34a 100%)',
+              boxShadow: '0 8px 20px -6px rgba(22, 163, 74, 0.55), inset 0 -3px 0 rgba(0,0,0,0.15)',
+              minWidth: 220,
             }}
           >
-            {/* Door knob */}
-            <div
-              className="absolute"
-              style={{
-                right: 18,
-                top: '50%',
-                width: 14,
-                height: 14,
-                borderRadius: 999,
-                background: '#f1c40f',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
-              }}
-            />
-
-            {/* Center button */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              {!activated ? (
-                <button
-                  onClick={handleStart}
-                  disabled={submitting}
-                  className="rounded-2xl font-bold text-white text-lg px-8 py-4 active:scale-95 transition-transform shadow-lg disabled:opacity-70"
-                  style={{
-                    background: 'linear-gradient(180deg, #22c55e 0%, #16a34a 100%)',
-                    boxShadow: '0 8px 20px -6px rgba(22, 163, 74, 0.55), inset 0 -3px 0 rgba(0,0,0,0.15)',
-                    minWidth: 180,
-                  }}
-                >
-                  {submitting ? 'Starting…' : 'Get Bookings'}
-                </button>
-              ) : (
-                <div className="text-center px-4">
-                  <div className="text-white text-xl font-bold drop-shadow">
-                    You are active today ✅
-                  </div>
-                </div>
-              )}
+            {submitting ? 'Starting…' : 'Get Bookings'}
+          </button>
+        ) : (
+          <div className="text-center px-4">
+            <div className="text-slate-800 text-xl font-bold drop-shadow">
+              You are active today ✅
             </div>
           </div>
-        </div>
+        )}
       </div>
 
     </div>
