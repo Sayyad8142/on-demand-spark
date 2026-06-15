@@ -5015,6 +5015,7 @@ export type Database = {
           bank_verification_notes: string | null
           bank_verification_status: string
           bank_verified_at: string | null
+          battery_hint_shown_at: string | null
           battery_optimization_disabled: boolean | null
           battery_optimization_status: string | null
           battery_optimized: boolean | null
@@ -5066,6 +5067,7 @@ export type Database = {
           last_boot_at: string | null
           last_boot_oem: string | null
           last_device_ack_at: string | null
+          last_fcm_success_at: string | null
           last_fcm_token_refresh_at: string | null
           last_heartbeat_at: string | null
           last_keepalive_ack_at: string | null
@@ -5096,6 +5098,7 @@ export type Database = {
           payout_provider_preference: string | null
           payout_ready: boolean
           payout_verified_at: string | null
+          permissions_onboarded_at: string | null
           phone: string
           photo_url: string | null
           preferred_payout_method: string | null
@@ -5147,6 +5150,7 @@ export type Database = {
           bank_verification_notes?: string | null
           bank_verification_status?: string
           bank_verified_at?: string | null
+          battery_hint_shown_at?: string | null
           battery_optimization_disabled?: boolean | null
           battery_optimization_status?: string | null
           battery_optimized?: boolean | null
@@ -5198,6 +5202,7 @@ export type Database = {
           last_boot_at?: string | null
           last_boot_oem?: string | null
           last_device_ack_at?: string | null
+          last_fcm_success_at?: string | null
           last_fcm_token_refresh_at?: string | null
           last_heartbeat_at?: string | null
           last_keepalive_ack_at?: string | null
@@ -5228,6 +5233,7 @@ export type Database = {
           payout_provider_preference?: string | null
           payout_ready?: boolean
           payout_verified_at?: string | null
+          permissions_onboarded_at?: string | null
           phone: string
           photo_url?: string | null
           preferred_payout_method?: string | null
@@ -5279,6 +5285,7 @@ export type Database = {
           bank_verification_notes?: string | null
           bank_verification_status?: string
           bank_verified_at?: string | null
+          battery_hint_shown_at?: string | null
           battery_optimization_disabled?: boolean | null
           battery_optimization_status?: string | null
           battery_optimized?: boolean | null
@@ -5330,6 +5337,7 @@ export type Database = {
           last_boot_at?: string | null
           last_boot_oem?: string | null
           last_device_ack_at?: string | null
+          last_fcm_success_at?: string | null
           last_fcm_token_refresh_at?: string | null
           last_heartbeat_at?: string | null
           last_keepalive_ack_at?: string | null
@@ -5360,6 +5368,7 @@ export type Database = {
           payout_provider_preference?: string | null
           payout_ready?: boolean
           payout_verified_at?: string | null
+          permissions_onboarded_at?: string | null
           phone?: string
           photo_url?: string | null
           preferred_payout_method?: string | null
@@ -5721,6 +5730,7 @@ export type Database = {
               bank_verification_notes: string | null
               bank_verification_status: string
               bank_verified_at: string | null
+              battery_hint_shown_at: string | null
               battery_optimization_disabled: boolean | null
               battery_optimization_status: string | null
               battery_optimized: boolean | null
@@ -5772,6 +5782,7 @@ export type Database = {
               last_boot_at: string | null
               last_boot_oem: string | null
               last_device_ack_at: string | null
+              last_fcm_success_at: string | null
               last_fcm_token_refresh_at: string | null
               last_heartbeat_at: string | null
               last_keepalive_ack_at: string | null
@@ -5802,6 +5813,7 @@ export type Database = {
               payout_provider_preference: string | null
               payout_ready: boolean
               payout_verified_at: string | null
+              permissions_onboarded_at: string | null
               phone: string
               photo_url: string | null
               preferred_payout_method: string | null
@@ -5862,6 +5874,7 @@ export type Database = {
               bank_verification_notes: string | null
               bank_verification_status: string
               bank_verified_at: string | null
+              battery_hint_shown_at: string | null
               battery_optimization_disabled: boolean | null
               battery_optimization_status: string | null
               battery_optimized: boolean | null
@@ -5913,6 +5926,7 @@ export type Database = {
               last_boot_at: string | null
               last_boot_oem: string | null
               last_device_ack_at: string | null
+              last_fcm_success_at: string | null
               last_fcm_token_refresh_at: string | null
               last_heartbeat_at: string | null
               last_keepalive_ack_at: string | null
@@ -5943,6 +5957,7 @@ export type Database = {
               payout_provider_preference: string | null
               payout_ready: boolean
               payout_verified_at: string | null
+              permissions_onboarded_at: string | null
               phone: string
               photo_url: string | null
               preferred_payout_method: string | null
