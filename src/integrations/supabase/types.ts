@@ -5090,6 +5090,7 @@ export type Database = {
           notification_health_updated_at: string | null
           notification_permission: string | null
           notification_permission_granted: boolean | null
+          notification_repair_failures: number
           overlay_permission: string | null
           passbook_url: string | null
           payout_address: string | null
@@ -5225,6 +5226,7 @@ export type Database = {
           notification_health_updated_at?: string | null
           notification_permission?: string | null
           notification_permission_granted?: boolean | null
+          notification_repair_failures?: number
           overlay_permission?: string | null
           passbook_url?: string | null
           payout_address?: string | null
@@ -5360,6 +5362,7 @@ export type Database = {
           notification_health_updated_at?: string | null
           notification_permission?: string | null
           notification_permission_granted?: boolean | null
+          notification_repair_failures?: number
           overlay_permission?: string | null
           passbook_url?: string | null
           payout_address?: string | null
@@ -5805,6 +5808,7 @@ export type Database = {
               notification_health_updated_at: string | null
               notification_permission: string | null
               notification_permission_granted: boolean | null
+              notification_repair_failures: number
               overlay_permission: string | null
               passbook_url: string | null
               payout_address: string | null
@@ -5949,6 +5953,7 @@ export type Database = {
               notification_health_updated_at: string | null
               notification_permission: string | null
               notification_permission_granted: boolean | null
+              notification_repair_failures: number
               overlay_permission: string | null
               passbook_url: string | null
               payout_address: string | null
