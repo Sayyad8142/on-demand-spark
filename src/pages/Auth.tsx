@@ -340,55 +340,32 @@ export default function Auth() {
     const upi = signUpUpiId.trim();
     const hasUpi = !!upi;
 
-    // UPI-only mode (bank disabled by admin): UPI is mandatory and must be valid.
-    if (!bankPayoutEnabled) {
-      if (!hasUpi) {
-        toast({
-          title: "UPI ID is required",
-          description: "Please enter your UPI ID to receive payouts.",
-          variant: "destructive",
-        });
-        return;
-      }
-      const upiValidation = upiSchema.safeParse(upi);
-      if (!upiValidation.success) {
-        toast({
-          title: "Invalid UPI ID",
-          description: upiValidation.error.errors[0].message,
-          variant: "destructive",
-        });
-        return;
-      }
-      setSignUpStep(3);
+    // UPI is ALWAYS required for payouts (instant settlement).
+    if (!hasUpi) {
+      toast({
+        title: "UPI ID is required",
+        description: "Please enter your UPI ID or scan a UPI QR code to receive payouts.",
+        variant: "destructive",
+      });
       return;
     }
-
-    const hasAnyBankField = !!(signUpAccountHolderName.trim() || signUpBankAccountNumber.trim() || signUpConfirmAccountNumber.trim() || signUpIfscCode.trim());
-
-    if (!hasUpi && !hasAnyBankField) {
+    const upiValidation = upiSchema.safeParse(upi);
+    if (!upiValidation.success) {
       toast({
-        title: "Payout details required",
-        description: "Please enter your UPI ID or complete bank account details to continue.",
+        title: "Invalid UPI ID",
+        description: upiValidation.error.errors[0].message,
         variant: "destructive",
       });
       return;
     }
 
-    if (hasUpi) {
-      const upiValidation = upiSchema.safeParse(upi);
-      if (!upiValidation.success) {
-        toast({
-          title: "Invalid UPI ID",
-          description: upiValidation.error.errors[0].message,
-          variant: "destructive",
-        });
-        return;
-      }
+    // UPI-only mode (bank disabled by admin) OR user picked UPI method — done.
+    if (!bankPayoutEnabled || payoutMethod === 'upi') {
       setSignUpStep(3);
       return;
     }
 
-    // No UPI — bank details must be fully valid
+    // Bank method selected — bank details must be fully valid in addition to UPI.
     if (!signUpAccountHolderName.trim()) {
       toast({ title: "Account holder name required", variant: "destructive" });
       return;
@@ -407,6 +384,7 @@ export default function Auth() {
     }
     setSignUpStep(3);
   };
+
 
   const goToSignupStepTwo = () => {
     if (!canContinueSignup) {
