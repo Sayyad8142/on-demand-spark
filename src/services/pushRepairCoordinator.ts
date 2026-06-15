@@ -173,6 +173,7 @@ export async function triggerAutomaticPushRepair(
       }
 
       console.error(`❌ [PushRepair] ${source}: automatic repair failed after retries`);
+      await recordRepairFailure(userId);
       emitStatus({
         phase: 'failed',
         attempt: retryDelaysMs.length,
@@ -185,6 +186,7 @@ export async function triggerAutomaticPushRepair(
     } catch (error: any) {
       const message = error?.message || 'Unexpected automatic push repair error';
       console.error(`❌ [PushRepair] ${source}: unexpected failure`, error);
+      await recordRepairFailure(userId);
       emitStatus({
         phase: 'failed',
         attempt: retryDelaysMs.length,
