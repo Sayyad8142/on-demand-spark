@@ -15,6 +15,7 @@ import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { UpcomingBookingsBar } from "@/components/UpcomingBookingsBar";
 // Notification health banners removed — token repair is fully automatic via useAutoPushRepair.
 import { OnboardingChecklist, useOnboardingStatus } from "@/components/OnboardingChecklist";
+import { NotificationsOffDialog } from "@/components/NotificationsOffDialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Bell, X, LogOut, AlertTriangle, RefreshCw, ShieldAlert } from "lucide-react";
