@@ -153,10 +153,6 @@ export default function DailyDuty() {
         </div>
       </div>
 
-      {/* Bottom helper text */}
-      <p className="text-center text-xs text-slate-600 max-w-xs pb-4">
-        Open the app daily to stay active and receive bookings faster.
-      </p>
     </div>
   );
 }
