@@ -48,6 +48,7 @@ import ForceUpdateScreen from "./pages/ForceUpdateScreen";
 import CustomerReviews from "./pages/CustomerReviews";
 import AdminUploadQr from "./pages/AdminUploadQr";
 import AdminTokenHealth from "./pages/AdminTokenHealth";
+import AdminPriorityShadow from "./pages/AdminPriorityShadow";
 import AuthDebug from "./pages/AuthDebug";
 import Earnings from "./pages/Earnings";
 import WorkerBlocked from "./pages/WorkerBlocked";
@@ -622,6 +623,7 @@ function AppInner() {
           <Route path="/customer-reviews" element={<ProtectedRoute><CustomerReviews /></ProtectedRoute>} />
           <Route path="/admin-upload-qr" element={<AdminUploadQr />} />
           <Route path="/admin-token-health" element={<AdminTokenHealth />} />
+          <Route path="/admin-priority-shadow" element={<AdminPriorityShadow />} />
           <Route path="/auth-debug" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
           <Route path="/support-diagnostics" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
           <Route path="/device-readiness" element={<ProtectedRoute><DeviceReadiness /></ProtectedRoute>} />
