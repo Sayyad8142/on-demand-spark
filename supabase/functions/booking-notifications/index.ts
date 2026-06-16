@@ -220,7 +220,7 @@ Deno.serve(async (req) => {
     // dispatch because of a device-health signal.
     let workersQuery = supabase
       .from("workers")
-      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng, fcm_token, fcm_token_status, availability_state, last_app_opened_at, last_heartbeat_at")
+      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng, fcm_token, fcm_token_status, availability_state, last_app_opened_at, last_heartbeat_at, priority_score, priority_score_v3")
       .eq("is_active", true)
       .eq("is_available", true)
       .eq("is_busy", false)
@@ -338,6 +338,42 @@ Deno.serve(async (req) => {
       }
       return (b.total_ratings || 0) - (a.total_ratings || 0);
     });
+
+    // ─── Dispatch simulation log (v2 live vs v3 shadow) ───
+    // Records, per booking, which worker each ranking system would have
+    // picked. Outcome is filled in later by triggers. Failures here MUST
+    // NEVER affect dispatch — wrapped in try/catch.
+    try {
+      const pickTop = (key: 'priority_score' | 'priority_score_v3') => {
+        let best: any = null;
+        let bestScore = -Infinity;
+        for (const w of pushReady) {
+          const s = Number((w as any)[key]);
+          if (!Number.isFinite(s)) continue;
+          if (s > bestScore) { bestScore = s; best = w; }
+        }
+        return best ? { id: best.id as string, score: bestScore } : null;
+      };
+      const topV2 = pickTop('priority_score');
+      const topV3 = pickTop('priority_score_v3');
+      const { error: simErr } = await supabase
+        .from('dispatch_simulation_logs')
+        .upsert({
+          booking_id,
+          candidate_count: pushReady.length,
+          top_worker_v2_id: topV2?.id ?? null,
+          top_worker_v2_score: topV2?.score ?? null,
+          top_worker_v3_id: topV3?.id ?? null,
+          top_worker_v3_score: topV3?.score ?? null,
+        }, { onConflict: 'booking_id' });
+      if (simErr) {
+        console.warn('[sim] dispatch_simulation_logs insert failed:', simErr.message);
+      } else {
+        console.log(`[sim] logged top v2=${topV2?.id ?? 'none'} v3=${topV3?.id ?? 'none'} same=${topV2?.id === topV3?.id}`);
+      }
+    } catch (e) {
+      console.warn('[sim] dispatch simulation logging error:', (e as Error)?.message);
+    }
 
 
     const TIER_TIMEOUT_SECONDS = 30;

@@ -1523,6 +1523,60 @@ export type Database = {
         }
         Relationships: []
       }
+      dispatch_simulation_logs: {
+        Row: {
+          accepted_at: string | null
+          accepted_worker_id: string | null
+          booking_id: string
+          candidate_count: number
+          created_at: string
+          dispatched_at: string
+          id: string
+          outcome: string
+          outcome_at: string | null
+          same_top: boolean | null
+          top_worker_v2_id: string | null
+          top_worker_v2_score: number | null
+          top_worker_v3_id: string | null
+          top_worker_v3_score: number | null
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_worker_id?: string | null
+          booking_id: string
+          candidate_count?: number
+          created_at?: string
+          dispatched_at?: string
+          id?: string
+          outcome?: string
+          outcome_at?: string | null
+          same_top?: boolean | null
+          top_worker_v2_id?: string | null
+          top_worker_v2_score?: number | null
+          top_worker_v3_id?: string | null
+          top_worker_v3_score?: number | null
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_worker_id?: string | null
+          booking_id?: string
+          candidate_count?: number
+          created_at?: string
+          dispatched_at?: string
+          id?: string
+          outcome?: string
+          outcome_at?: string | null
+          same_top?: boolean | null
+          top_worker_v2_id?: string | null
+          top_worker_v2_score?: number | null
+          top_worker_v3_id?: string | null
+          top_worker_v3_score?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       events_ingestion: {
         Row: {
           error_count: number | null
@@ -6366,6 +6420,10 @@ export type Database = {
             }[]
           }
       get_dispatch_health: { Args: never; Returns: Json }
+      get_dispatch_simulation_summary: {
+        Args: { p_days?: number }
+        Returns: Json
+      }
       get_eligible_workers: {
         Args: { p_community: string; p_limit?: number; p_service: string }
         Returns: {
