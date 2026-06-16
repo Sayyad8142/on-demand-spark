@@ -220,7 +220,7 @@ Deno.serve(async (req) => {
     // dispatch because of a device-health signal.
     let workersQuery = supabase
       .from("workers")
-      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng, fcm_token, fcm_token_status, availability_state, daily_duty_started_at, last_app_opened_at, last_heartbeat_at, daily_streak_count")
+      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng, fcm_token, fcm_token_status, availability_state, last_app_opened_at, last_heartbeat_at")
       .eq("is_active", true)
       .eq("is_available", true)
       .eq("is_busy", false)
@@ -289,28 +289,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ─── Freshness ranking boost (Daily Duty / heartbeat / app open) ───
+    // ─── Freshness ranking boost (heartbeat / app open) ───
     // SOFT priority only — never excludes a worker. Higher score = ranked first.
-    const istTodayStr = (() => {
-      const ist = new Date(Date.now() + (5 * 60 + 30) * 60_000);
-      return ist.toISOString().slice(0, 10);
-    })();
     const nowMs = Date.now();
 
     const computeFreshness = (w: any) => {
       let boost = 0;
       const reasons: string[] = [];
-
-      // Daily Duty started today (IST) — strongest boost
-      let dutyToday = false;
-      if (w.daily_duty_started_at) {
-        const dIst = new Date(new Date(w.daily_duty_started_at).getTime() + (5 * 60 + 30) * 60_000);
-        if (dIst.toISOString().slice(0, 10) === istTodayStr) {
-          dutyToday = true;
-          boost += 100;
-          reasons.push('duty_today');
-        }
-      }
 
       // App opened within last 12h — medium boost
       if (w.last_app_opened_at) {
@@ -326,15 +311,7 @@ Deno.serve(async (req) => {
         else if (ageM <= 30) { boost += 10; reasons.push('hb_30m'); }
       }
 
-      // Streak — small boost (capped)
-      const streak = Number(w.daily_streak_count ?? 0) || 0;
-      if (streak > 0) {
-        const sBoost = Math.min(streak, 7) * 2;
-        boost += sBoost;
-        reasons.push(`streak_${streak}`);
-      }
-
-      return { boost, reasons, dutyToday, streak };
+      return { boost, reasons };
     };
 
     // Log each push-ready worker (with freshness audit)
@@ -342,8 +319,8 @@ Deno.serve(async (req) => {
       const f = computeFreshness(w);
       console.log(
         `  ✅ ${w.full_name} (${w.id}): rating=${w.rating}, token=YES, community=${w.selected_community_id} | ` +
-        `DailyDuty=${f.dutyToday ? 'Yes' : 'No'}, LastAppOpen=${w.last_app_opened_at ?? 'never'}, ` +
-        `LastHeartbeat=${w.last_heartbeat_at ?? 'never'}, Streak=${f.streak}, ` +
+        `LastAppOpen=${w.last_app_opened_at ?? 'never'}, ` +
+        `LastHeartbeat=${w.last_heartbeat_at ?? 'never'}, ` +
         `Boost=${f.boost > 0 ? 'Yes' : 'No'}(${f.boost}${f.reasons.length ? ':' + f.reasons.join(',') : ''})`
       );
     }
