@@ -70,9 +70,6 @@ export default function DailyDuty() {
       {/* Top content */}
       <div className="w-full text-center mt-4">
         
-        <p className="text-slate-600 mt-2 text-base">
-          Tap the button to start receiving today&rsquo;s bookings.
-        </p>
 
         {streak > 1 && (
           <div className="inline-flex items-center gap-2 mt-4 px-4 py-1.5 rounded-full bg-white/70 shadow-sm border border-white">
