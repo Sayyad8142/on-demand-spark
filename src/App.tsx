@@ -55,8 +55,6 @@ import DeviceReadiness from "./pages/DeviceReadiness";
 import BookingDiagnostics from "./pages/BookingDiagnostics";
 import CompleteBooking from "./pages/CompleteBooking";
 import AccountDetails from "./pages/AccountDetails";
-import DailyDuty from "./pages/DailyDuty";
-import { shouldShowDailyDuty, scheduleMorningReminder } from "@/lib/dailyDuty";
 import BottomNav from "./components/BottomNav";
 import PermissionOnboarding from "./components/PermissionOnboarding";
 import {
@@ -132,18 +130,9 @@ function RootRedirect() {
     return <StartupSplash label="Starting..." />;
   }
   if (user || session || isGuestMode) {
-    if (shouldShowDailyDuty()) return <Navigate to="/daily-duty" replace />;
     return <Navigate to="/home" replace />;
   }
   return <Navigate to="/auth" replace />;
-}
-
-/** Gate /home behind the Daily Duty Start screen once per day. */
-function HomeWithDutyGate() {
-  if (shouldShowDailyDuty()) {
-    return <Navigate to="/daily-duty" replace />;
-  }
-  return <Home />;
 }
 
 
@@ -202,11 +191,6 @@ function AppInner() {
     completed: false,
   });
 
-  // Schedule the 6:45 AM daily-duty reminder once after login (native only).
-  useEffect(() => {
-    if (!session?.user?.id) return;
-    scheduleMorningReminder().catch(() => {});
-  }, [session?.user?.id]);
 
 
   const checkAndroidSettingsPermissions = useCallback(async ({ allowHide }: { allowHide: boolean }) => {
@@ -623,8 +607,7 @@ function AppInner() {
         <Routes>
           <Route path="/auth" element={<PublicAuthRoute><Auth /></PublicAuthRoute>} />
           <Route path="/otp-verify" element={<OtpVerify />} />
-          <Route path="/daily-duty" element={<ProtectedRoute><DailyDuty /></ProtectedRoute>} />
-          <Route path="/home" element={<ProtectedRoute showNav={true}><HomeWithDutyGate /></ProtectedRoute>} />
+          <Route path="/home" element={<ProtectedRoute showNav={true}><Home /></ProtectedRoute>} />
           <Route path="/bookings" element={<ProtectedRoute showNav={true}><Bookings /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute showNav={true}><Profile /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
