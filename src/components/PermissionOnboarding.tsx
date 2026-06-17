@@ -211,6 +211,8 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
       // Activity-specific manual fallback: ALWAYS show a clear dialog with
       // explicit title + message + OK so the user never sees a blank popup.
       if (id === "activity" && e instanceof ActivityPermissionManualFallbackError) {
+        console.log("[ActivityPermission] manual_instructions_shown");
+        addDebugEvent({ permissionId: "activity", step: "handleRequest", status: "fallback", message: "manual_instructions_shown" });
         setActivityManualOpen(true);
       } else if (id === "overlay" || id === "battery" || id === "activity") {
         openFallbackModal(id);
