@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
     let query = supabase
       .from("workers")
       .select(
-        "id, full_name, phone, community, last_heartbeat_at, fcm_token, fcm_token_status, fcm_token_platform, fcm_token_updated_at, last_fcm_token_refresh_at, last_notification_received_at, fcm_last_send_at, fcm_last_fail_at, fcm_last_fail_reason, notification_health, notification_health_score, notification_health_updated_at, notification_permission, notification_repair_failures",
+        "id, full_name, phone, community, last_heartbeat_at, fcm_token, fcm_token_status, fcm_token_platform, fcm_token_updated_at, last_fcm_token_refresh_at, last_notification_received_at, fcm_last_send_at, fcm_last_fail_at, fcm_last_fail_reason, notification_health, notification_health_score, notification_health_updated_at, notification_permission, notification_repair_failures, app_version, last_app_opened_at",
       )
       .order("notification_repair_failures", { ascending: false, nullsFirst: false })
       .limit(limit);
