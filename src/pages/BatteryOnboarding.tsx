@@ -1,4 +1,4 @@
-import { BatteryWarning, Battery, X, Check, ArrowDown } from "lucide-react";
+import { BatteryWarning, X, Check, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface BatteryOnboardingProps {
