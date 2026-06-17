@@ -26,6 +26,8 @@ interface Row {
   notification_health_score: number | null;
   notification_permission: string | null;
   notification_repair_failures: number | null;
+  app_version: string | null;
+  last_app_opened_at: string | null;
 }
 
 type FilterKey = "" | "failures3" | "permdenied" | "noheartbeat30";
