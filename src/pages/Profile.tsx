@@ -944,11 +944,6 @@ export default function Profile() {
           </Card>
         </div>
 
-        {/* Priority Score */}
-        <div className="px-4 mt-4">
-          <PriorityScoreCard worker={worker} />
-        </div>
-
         {/* Movement Status (debug) */}
         <div className="px-4 mt-4">
           <MovementStatusCard />
