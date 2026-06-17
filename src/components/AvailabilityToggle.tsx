@@ -13,6 +13,8 @@ interface AvailabilityToggleProps {
   onPushUnhealthy?: () => void;
   onboardingComplete?: boolean;
   onOnboardingIncomplete?: () => void;
+  hasAvailabilitySlots?: boolean;
+  onNoSlots?: () => void;
 }
 
 export function AvailabilityToggle({
@@ -24,6 +26,8 @@ export function AvailabilityToggle({
   onPushUnhealthy,
   onboardingComplete = true,
   onOnboardingIncomplete,
+  hasAvailabilitySlots = true,
+  onNoSlots,
 }: AvailabilityToggleProps) {
   const [isAvailable, setIsAvailable] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -55,6 +59,17 @@ export function AvailabilityToggle({
   const handleToggle = async () => {
     if (loading) return;
     const newValue = !isAvailable;
+
+    // HARD BLOCK: cannot go online without any availability slots selected
+    if (newValue && !hasAvailabilitySlots) {
+      toast({
+        title: "Select slot to start bookings",
+        description: "Please select at least one time slot in Availability.",
+        variant: "destructive",
+      });
+      onNoSlots?.();
+      return;
+    }
 
     // Soft warning: onboarding incomplete (allow going online)
     if (newValue && !onboardingComplete) {

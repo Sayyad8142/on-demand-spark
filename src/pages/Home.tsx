@@ -18,7 +18,16 @@ import { OnboardingChecklist, useOnboardingStatus } from "@/components/Onboardin
 import { NotificationsOffDialog } from "@/components/NotificationsOffDialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Bell, X, LogOut, AlertTriangle, RefreshCw, ShieldAlert } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Bell, X, LogOut, AlertTriangle, RefreshCw, ShieldAlert, Clock } from "lucide-react";
 import { Capacitor } from '@capacitor/core';
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
@@ -238,6 +247,8 @@ export default function Home() {
                 const el = document.getElementById('onboarding-checklist');
                 el?.scrollIntoView({ behavior: 'smooth' });
               }}
+              hasAvailabilitySlots={onboarding.hasAvailabilitySlots}
+              onNoSlots={() => navigate('/availability')}
             />
           </div>
         </div>
@@ -340,5 +351,29 @@ export default function Home() {
 
       {/* Upcoming Bookings Bar */}
       {!isGuestMode && worker && <UpcomingBookingsBar />}
+
+      {/* Block bookings if no time slots selected */}
+      {!isGuestMode && worker && !onboarding.hasAvailabilitySlots && (
+        <AlertDialog open>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <div className="flex items-center justify-center mb-2">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-primary" />
+                </div>
+              </div>
+              <AlertDialogTitle className="text-center">Select slot to start bookings</AlertDialogTitle>
+              <AlertDialogDescription className="text-center">
+                You haven't selected any time slots. Please choose your available hours to start receiving bookings.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => navigate('/availability')} className="w-full">
+                Set my time slots
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>;
 }

@@ -6214,6 +6214,7 @@ export type Database = {
         Returns: number
       }
       bytea_to_text: { Args: { data: string }; Returns: string }
+      check_dispatch_stuck_bookings: { Args: never; Returns: undefined }
       check_expired_assignments: { Args: never; Returns: Json }
       check_instant_supply: { Args: { p_community: string }; Returns: number }
       check_payout_eligibility: { Args: { p_payout_id: string }; Returns: Json }

@@ -27,11 +27,13 @@ export function useOnboardingStatus(workerId: string | undefined, worker: any): 
     if (!workerId) return;
     supabase
       .from("worker_availability")
-      .select("id")
+      .select("slots")
       .eq("worker_id", workerId)
-      .limit(1)
       .then(({ data }) => {
-        setHasSlots(!!(data && data.length > 0));
+        const anySelected = !!(data && data.some((row: any) =>
+          Array.isArray(row.slots) && row.slots.length > 0
+        ));
+        setHasSlots(anySelected);
       });
   }, [workerId]);
 
