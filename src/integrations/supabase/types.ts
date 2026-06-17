@@ -6265,6 +6265,10 @@ export type Database = {
       check_dispatch_stuck_bookings: { Args: never; Returns: undefined }
       check_expired_assignments: { Args: never; Returns: Json }
       check_instant_supply: { Args: { p_community: string }; Returns: number }
+      check_instant_supply_for_service: {
+        Args: { p_community: string; p_service_type: string }
+        Returns: number
+      }
       check_payout_eligibility: { Args: { p_payout_id: string }; Returns: Json }
       cleanup_old_booking_requests: { Args: never; Returns: undefined }
       cleanup_old_heartbeats: { Args: never; Returns: number }
@@ -7129,6 +7133,10 @@ export type Database = {
           p_service_type: string
         }
         Returns: Json
+      }
+      instant_limit_for_service: {
+        Args: { p_service_type: string }
+        Returns: number
       }
       is_admin: { Args: never; Returns: boolean }
       is_worker_available_at_time: {
