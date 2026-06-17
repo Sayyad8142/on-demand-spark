@@ -5194,6 +5194,8 @@ export type Database = {
           notification_permission_granted: boolean | null
           notification_repair_failures: number
           overlay_permission: string | null
+          overlay_permission_granted: boolean | null
+          overlay_permission_updated_at: string | null
           passbook_url: string | null
           payout_address: string | null
           payout_email: string | null
@@ -5332,6 +5334,8 @@ export type Database = {
           notification_permission_granted?: boolean | null
           notification_repair_failures?: number
           overlay_permission?: string | null
+          overlay_permission_granted?: boolean | null
+          overlay_permission_updated_at?: string | null
           passbook_url?: string | null
           payout_address?: string | null
           payout_email?: string | null
@@ -5470,6 +5474,8 @@ export type Database = {
           notification_permission_granted?: boolean | null
           notification_repair_failures?: number
           overlay_permission?: string | null
+          overlay_permission_granted?: boolean | null
+          overlay_permission_updated_at?: string | null
           passbook_url?: string | null
           payout_address?: string | null
           payout_email?: string | null
@@ -5918,6 +5924,8 @@ export type Database = {
               notification_permission_granted: boolean | null
               notification_repair_failures: number
               overlay_permission: string | null
+              overlay_permission_granted: boolean | null
+              overlay_permission_updated_at: string | null
               passbook_url: string | null
               payout_address: string | null
               payout_email: string | null
@@ -6065,6 +6073,8 @@ export type Database = {
               notification_permission_granted: boolean | null
               notification_repair_failures: number
               overlay_permission: string | null
+              overlay_permission_granted: boolean | null
+              overlay_permission_updated_at: string | null
               passbook_url: string | null
               payout_address: string | null
               payout_email: string | null

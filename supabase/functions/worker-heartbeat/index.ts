@@ -126,6 +126,11 @@ Deno.serve(async (req) => {
       if (device_info.manufacturer) updates.device_manufacturer = device_info.manufacturer;
       if (device_info.notification_permission) {
         updates.notification_permission_granted = device_info.notification_permission === "granted";
+        updates.notification_permission = device_info.notification_permission;
+      }
+      if (typeof device_info.overlay_granted === "boolean") {
+        updates.overlay_permission_granted = device_info.overlay_granted;
+        updates.overlay_permission_updated_at = now;
       }
       if (typeof device_info.battery_optimized === "boolean") {
         updates.battery_optimization_disabled = !device_info.battery_optimized;

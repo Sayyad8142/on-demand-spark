@@ -28,9 +28,17 @@ interface Row {
   notification_repair_failures: number | null;
   app_version: string | null;
   last_app_opened_at: string | null;
+  notifications_status: "enabled" | "missing" | "unknown";
+  overlay_status: "enabled" | "missing" | "unknown";
+  activity_status: string;
+  dispatch_eligible: boolean;
+  block_reasons: string[];
 }
 
-type FilterKey = "" | "failures3" | "permdenied" | "noheartbeat30";
+type FilterKey = "" | "failures3" | "permdenied" | "noheartbeat30" | "overlay_missing" | "notif_missing";
+
+const permVariant = (s: "enabled" | "missing" | "unknown"): "default" | "secondary" | "destructive" =>
+  s === "enabled" ? "default" : s === "missing" ? "destructive" : "secondary";
 
 const fmt = (s: string | null) => {
   if (!s) return "—";
@@ -119,6 +127,8 @@ export default function AdminTokenHealth() {
                 ["", "All"],
                 ["failures3", "Failures ≥ 3"],
                 ["permdenied", "Permission denied"],
+                ["notif_missing", "Notifications missing"],
+                ["overlay_missing", "Overlay missing"],
                 ["noheartbeat30", "No heartbeat > 30d"],
               ] as [FilterKey, string][]).map(([key, label]) => (
                 <Button
@@ -135,6 +145,8 @@ export default function AdminTokenHealth() {
             {error && <div className="text-sm text-destructive">{error}</div>}
             <div className="text-xs text-muted-foreground">
               Showing {rows.length} workers (read-only). Tokens shown as prefix only.
+              {" · "}Eligible: {rows.filter(r => r.dispatch_eligible).length}
+              {" · "}Blocked: {rows.filter(r => !r.dispatch_eligible).length}
             </div>
           </CardContent>
         </Card>
@@ -172,6 +184,28 @@ export default function AdminTokenHealth() {
                     )}
                   </div>
                 </div>
+
+                <div className="rounded-md border p-2 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-semibold">Dispatch diagnostics:</span>
+                    <Badge variant={permVariant(w.notifications_status)}>
+                      Notifications: {w.notifications_status === "enabled" ? "Enabled" : w.notifications_status === "missing" ? "Disabled" : "Unknown"}
+                    </Badge>
+                    <Badge variant={permVariant(w.overlay_status)}>
+                      Overlay: {w.overlay_status === "enabled" ? "Enabled" : w.overlay_status === "missing" ? "Missing" : "Unknown"}
+                    </Badge>
+                    <Badge variant="outline">Activity: {w.activity_status}</Badge>
+                    <Badge variant={w.dispatch_eligible ? "default" : "destructive"}>
+                      Dispatch eligible: {w.dispatch_eligible ? "Yes" : "No"}
+                    </Badge>
+                  </div>
+                  {!w.dispatch_eligible && w.block_reasons.length > 0 && (
+                    <div className="text-xs text-destructive">
+                      Reason blocked: {w.block_reasons.join(", ")}
+                    </div>
+                  )}
+                </div>
+
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-xs">
                   <div><span className="text-muted-foreground">Token:</span> {w.fcm_token || "—"}</div>

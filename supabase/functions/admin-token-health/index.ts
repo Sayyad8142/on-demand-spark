@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
     let query = supabase
       .from("workers")
       .select(
-        "id, full_name, phone, community, last_heartbeat_at, fcm_token, fcm_token_status, fcm_token_platform, fcm_token_updated_at, last_fcm_token_refresh_at, last_notification_received_at, fcm_last_send_at, fcm_last_fail_at, fcm_last_fail_reason, notification_health, notification_health_score, notification_health_updated_at, notification_permission, notification_repair_failures, app_version, last_app_opened_at",
+        "id, full_name, phone, community, is_active, is_available, is_busy, is_blocked, payout_ready, service_types, last_heartbeat_at, fcm_token, fcm_token_status, fcm_token_platform, fcm_token_updated_at, last_fcm_token_refresh_at, last_notification_received_at, fcm_last_send_at, fcm_last_fail_at, fcm_last_fail_reason, notification_health, notification_health_score, notification_health_updated_at, notification_permission, notification_permission_granted, overlay_permission_granted, overlay_permission_updated_at, notification_repair_failures, app_version, last_app_opened_at",
       )
       .order("notification_repair_failures", { ascending: false, nullsFirst: false })
       .limit(limit);
@@ -35,6 +35,10 @@ Deno.serve(async (req) => {
       query = query.gte("notification_repair_failures", 3);
     } else if (filter === "permdenied") {
       query = query.eq("notification_permission", "denied");
+    } else if (filter === "overlay_missing") {
+      query = query.eq("overlay_permission_granted", false);
+    } else if (filter === "notif_missing") {
+      query = query.eq("notification_permission_granted", false);
     } else if (filter === "noheartbeat30") {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       query = query.or(`last_heartbeat_at.lt.${thirtyDaysAgo},last_heartbeat_at.is.null`);
@@ -43,11 +47,44 @@ Deno.serve(async (req) => {
     const { data, error } = await query;
     if (error) throw error;
 
-    const workers = (data || []).map((w: any) => ({
-      ...w,
-      fcm_token: w.fcm_token ? `${String(w.fcm_token).slice(0, 12)}…` : null,
-      has_token: !!w.fcm_token,
-    }));
+    const workers = (data || []).map((w: any) => {
+      // Derive dispatch eligibility (mirrors booking-notifications filter).
+      // Permission columns: explicit `false` blocks; `null`/`true` allowed.
+      const blockReasons: string[] = [];
+      if (w.is_active === false) blockReasons.push("inactive");
+      if (w.is_available === false) blockReasons.push("availability_off");
+      if (w.is_busy === true) blockReasons.push("is_busy");
+      if (w.is_blocked === true) blockReasons.push("is_blocked");
+      if (w.payout_ready !== true) blockReasons.push("payout_not_ready");
+      if (!w.fcm_token) blockReasons.push("no_fcm_token");
+      else if (w.fcm_token_status === "invalid") blockReasons.push("token_invalid");
+      if (w.notification_permission_granted === false) blockReasons.push("notifications_missing");
+      if (w.overlay_permission_granted === false) blockReasons.push("overlay_missing");
+
+      const notifStatus = w.notification_permission_granted === false
+        ? "missing"
+        : w.notification_permission_granted === true
+          ? "enabled"
+          : "unknown";
+      const overlayStatus = w.overlay_permission_granted === false
+        ? "missing"
+        : w.overlay_permission_granted === true
+          ? "enabled"
+          : "unknown";
+
+      return {
+        ...w,
+        fcm_token: w.fcm_token ? `${String(w.fcm_token).slice(0, 12)}…` : null,
+        has_token: !!w.fcm_token,
+        notifications_status: notifStatus,
+        overlay_status: overlayStatus,
+        // Activity is reported separately by the app but never blocks dispatch.
+        // Surface it as "not_tracked" until we add a column for it.
+        activity_status: "not_tracked",
+        dispatch_eligible: blockReasons.length === 0,
+        block_reasons: blockReasons,
+      };
+    });
 
     // Auto-repair metrics
     const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
