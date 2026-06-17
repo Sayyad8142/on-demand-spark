@@ -18,7 +18,16 @@ import { OnboardingChecklist, useOnboardingStatus } from "@/components/Onboardin
 import { NotificationsOffDialog } from "@/components/NotificationsOffDialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Bell, X, LogOut, AlertTriangle, RefreshCw, ShieldAlert } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Bell, X, LogOut, AlertTriangle, RefreshCw, ShieldAlert, Clock } from "lucide-react";
 import { Capacitor } from '@capacitor/core';
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
