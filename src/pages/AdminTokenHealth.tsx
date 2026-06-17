@@ -179,6 +179,8 @@ export default function AdminTokenHealth() {
                   <div><span className="text-muted-foreground">Last token refresh:</span> {fmt(w.last_fcm_token_refresh_at)}</div>
                   <div><span className="text-muted-foreground">Last notification received:</span> {fmt(w.last_notification_received_at)}</div>
                   <div><span className="text-muted-foreground">Last heartbeat:</span> {fmt(w.last_heartbeat_at)}</div>
+                  <div><span className="text-muted-foreground">Last app open:</span> {fmt(w.last_app_opened_at)}</div>
+                  <div><span className="text-muted-foreground">App version:</span> {w.app_version || "—"}</div>
                   <div><span className="text-muted-foreground">Last FCM send:</span> {fmt(w.fcm_last_send_at)}</div>
                   <div><span className="text-muted-foreground">Last FCM fail:</span> {fmt(w.fcm_last_fail_at)}</div>
                   <div className="md:col-span-2">
