@@ -158,8 +158,22 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
       });
       return;
     }
-    // Show a clear, pink-themed rationale before the system activity prompt
+    // Show a clear, pink-themed rationale before the system activity prompt.
+    // Skip rationale entirely if the permission is already granted — the
+    // worker should never see a dialog in that case.
     if (id === "activity" && !options?.silent) {
+      const current = states.find((s) => s.id === "activity");
+      if (current?.status === "granted") {
+        console.log("[ActivityPermission] already_granted — skipping rationale");
+        addDebugEvent({ permissionId: "activity", step: "rationale", status: "success", message: "Already granted — skipped" });
+        return;
+      }
+      if (activityRationaleOpen) {
+        // Guard against double-tap opening duplicate dialogs
+        return;
+      }
+      console.log("[ActivityPermission] rationale_opened");
+      addDebugEvent({ permissionId: "activity", step: "rationale", status: "started", message: "rationale_opened" });
       setActivityRationaleOpen(true);
       return;
     }
@@ -174,7 +188,15 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
           await requestBatteryExemption();
           break;
         case "activity":
-          await requestActivity();
+          console.log("[ActivityPermission] permission_requested");
+          {
+            const result = await requestActivity();
+            if (result) {
+              console.log("[ActivityPermission] permission_granted");
+            } else {
+              console.log("[ActivityPermission] permission_denied");
+            }
+          }
           break;
         default:
           return;
@@ -189,6 +211,8 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
       // Activity-specific manual fallback: ALWAYS show a clear dialog with
       // explicit title + message + OK so the user never sees a blank popup.
       if (id === "activity" && e instanceof ActivityPermissionManualFallbackError) {
+        console.log("[ActivityPermission] manual_instructions_shown");
+        addDebugEvent({ permissionId: "activity", step: "handleRequest", status: "fallback", message: "manual_instructions_shown" });
         setActivityManualOpen(true);
       } else if (id === "overlay" || id === "battery" || id === "activity") {
         openFallbackModal(id);
@@ -209,7 +233,7 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
       setBusyId(null);
       setTimeout(refresh, 900);
     }
-  }, [addDebugEvent, oem?.id, openFallbackModal, refresh]);
+  }, [addDebugEvent, oem?.id, openFallbackModal, refresh, states, activityRationaleOpen]);
 
   const visibleStates = states.filter(s => ONBOARDING_PERMISSION_IDS.includes(s.id) && s.status !== "not_required");
   const allDone = !loading && !hasOutstandingPermissions(visibleStates);
