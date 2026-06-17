@@ -133,11 +133,28 @@ export function useFCMTokenSync(userId: string | undefined) {
       }
     }
 
+    // Sync current app_version + last_app_opened_at so admins can see which
+    // build the worker is on. Best-effort; never blocks.
+    (async () => {
+      try {
+        const { CURRENT_VERSION_NAME } = await import('@/config/version');
+        await supabase
+          .from('workers')
+          .update({
+            app_version: CURRENT_VERSION_NAME,
+            last_app_opened_at: new Date().toISOString(),
+          })
+          .eq('user_id', userId);
+      } catch (e) {
+        console.warn('⚠️ [FCMSync] app_version sync failed', e);
+      }
+    })();
+
     // Cold start / login → force refresh evaluation immediately
     const initTimer = setTimeout(() => refreshToken('mount'), 500);
 
-    // Periodic self-heal every 6 hours (was 3 minutes — too aggressive).
-    const healInterval = setInterval(() => refreshToken('self-heal'), 6 * 60 * 60 * 1000);
+    // Periodic retry every 30 minutes while the app is active (was 6h).
+    const healInterval = setInterval(() => refreshToken('self-heal'), 30 * 60 * 1000);
 
 
     // Re-check on app resume
@@ -149,11 +166,19 @@ export function useFCMTokenSync(userId: string | undefined) {
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
+    // Retry on network reconnect — handles offline → online transitions.
+    const handleOnline = () => {
+      console.log('🌐 [FCMSync] network reconnected, re-syncing token');
+      refreshToken('network-reconnect');
+    };
+    window.addEventListener('online', handleOnline);
+
     return () => {
       mountedRef.current = false;
       clearTimeout(initTimer);
       clearInterval(healInterval);
       document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('online', handleOnline);
     };
   }, [userId, refreshToken]);
 
