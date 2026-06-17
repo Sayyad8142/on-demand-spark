@@ -127,6 +127,8 @@ export default function AdminTokenHealth() {
                 ["", "All"],
                 ["failures3", "Failures ≥ 3"],
                 ["permdenied", "Permission denied"],
+                ["notif_missing", "Notifications missing"],
+                ["overlay_missing", "Overlay missing"],
                 ["noheartbeat30", "No heartbeat > 30d"],
               ] as [FilterKey, string][]).map(([key, label]) => (
                 <Button
@@ -143,6 +145,8 @@ export default function AdminTokenHealth() {
             {error && <div className="text-sm text-destructive">{error}</div>}
             <div className="text-xs text-muted-foreground">
               Showing {rows.length} workers (read-only). Tokens shown as prefix only.
+              {" · "}Eligible: {rows.filter(r => r.dispatch_eligible).length}
+              {" · "}Blocked: {rows.filter(r => !r.dispatch_eligible).length}
             </div>
           </CardContent>
         </Card>
