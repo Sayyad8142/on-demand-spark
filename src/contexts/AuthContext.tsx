@@ -264,13 +264,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const userId = session?.user?.id;
       if (userId) {
-        // Clear token and mark status as missing for clean logout
-        await supabase.from('workers').update({ 
-          fcm_token: null, 
+        // Logout cleanup: clear FCM token, mark unavailable so dispatcher
+        // immediately stops offering bookings to this device.
+        await supabase.from('workers').update({
+          fcm_token: null,
           fcm_token_status: 'missing',
-          updated_at: new Date().toISOString() 
+          is_available: false,
+          updated_at: new Date().toISOString(),
         }).eq('user_id', userId);
         await supabase.from('fcm_tokens').delete().eq('user_id', userId);
+
+        // Unsubscribe native push listeners so a stale token can't be re-saved.
+        if (Capacitor.isNativePlatform()) {
+          try {
+            const { PushNotifications } = await import('@capacitor/push-notifications');
+            await PushNotifications.removeAllListeners();
+          } catch (e) {
+            console.warn('⚠️ [Logout] push unsubscribe failed', e);
+          }
+        }
       }
     } catch (error) {
       console.error('⚠️ [Logout] FCM cleanup error:', error);
