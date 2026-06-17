@@ -351,5 +351,29 @@ export default function Home() {
 
       {/* Upcoming Bookings Bar */}
       {!isGuestMode && worker && <UpcomingBookingsBar />}
+
+      {/* Block bookings if no time slots selected */}
+      {!isGuestMode && worker && !onboarding.hasAvailabilitySlots && (
+        <AlertDialog open>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <div className="flex items-center justify-center mb-2">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-primary" />
+                </div>
+              </div>
+              <AlertDialogTitle className="text-center">Select slot to start bookings</AlertDialogTitle>
+              <AlertDialogDescription className="text-center">
+                You haven't selected any time slots. Please choose your available hours to start receiving bookings.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => navigate('/availability')} className="w-full">
+                Set my time slots
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>;
 }
