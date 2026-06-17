@@ -28,9 +28,17 @@ interface Row {
   notification_repair_failures: number | null;
   app_version: string | null;
   last_app_opened_at: string | null;
+  notifications_status: "enabled" | "missing" | "unknown";
+  overlay_status: "enabled" | "missing" | "unknown";
+  activity_status: string;
+  dispatch_eligible: boolean;
+  block_reasons: string[];
 }
 
-type FilterKey = "" | "failures3" | "permdenied" | "noheartbeat30";
+type FilterKey = "" | "failures3" | "permdenied" | "noheartbeat30" | "overlay_missing" | "notif_missing";
+
+const permVariant = (s: "enabled" | "missing" | "unknown"): "default" | "secondary" | "destructive" =>
+  s === "enabled" ? "default" : s === "missing" ? "destructive" : "secondary";
 
 const fmt = (s: string | null) => {
   if (!s) return "—";
