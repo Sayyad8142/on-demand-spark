@@ -233,7 +233,7 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
       setBusyId(null);
       setTimeout(refresh, 900);
     }
-  }, [addDebugEvent, oem?.id, openFallbackModal, refresh]);
+  }, [addDebugEvent, oem?.id, openFallbackModal, refresh, states, activityRationaleOpen]);
 
   const visibleStates = states.filter(s => ONBOARDING_PERMISSION_IDS.includes(s.id) && s.status !== "not_required");
   const allDone = !loading && !hasOutstandingPermissions(visibleStates);
