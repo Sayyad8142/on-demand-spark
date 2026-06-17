@@ -198,6 +198,8 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
             }
           }
           break;
+        default:
+          return;
       }
       console.log(`[PermissionOnboarding] ✅ ${id} request returned without throwing`);
       addDebugEvent({ permissionId: id, step: "handleRequest", status: "success", message: id === "activity" ? "Permission prompt/settings opened" : "Request completed without throwing" });
