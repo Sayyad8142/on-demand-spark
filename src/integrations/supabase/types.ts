@@ -5006,6 +5006,54 @@ export type Database = {
           },
         ]
       }
+      worker_status_history: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_state: Json | null
+          prev_state: Json | null
+          reason: string | null
+          worker_id: string
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_state?: Json | null
+          prev_state?: Json | null
+          reason?: string | null
+          worker_id: string
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_state?: Json | null
+          prev_state?: Json | null
+          reason?: string | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_status_history_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_reliability_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_status_history_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_telemetry_probes: {
         Row: {
           created_at: string
