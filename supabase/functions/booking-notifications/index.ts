@@ -216,16 +216,21 @@ Deno.serve(async (req) => {
     // no_ack_count / notification_health are analytics-only and never gate
     // dispatch. A worker is eligible iff: active + available + not busy +
     // payout ready + not blocked + matching service + matching community +
-    // has an FCM token. This guarantees workers never get dropped from
-    // dispatch because of a device-health signal.
+    // has an FCM token + Notifications permission is not explicitly denied
+    // + Overlay permission is not explicitly denied. (Activity permission is
+    // NEVER used to gate dispatch.) Null permission values are treated as
+    // "unknown=allow" so legacy workers are not regressed before their first
+    // permission-aware heartbeat.
     let workersQuery = supabase
       .from("workers")
-      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng, fcm_token, fcm_token_status, availability_state, last_offer_at, priority_score, priority_score_v3")
+      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng, fcm_token, fcm_token_status, availability_state, last_offer_at, priority_score, priority_score_v3, notification_permission_granted, overlay_permission_granted")
       .eq("is_active", true)
       .eq("is_available", true)
       .eq("is_busy", false)
       .eq("payout_ready", true)
       .neq("is_blocked", true)
+      .not("notification_permission_granted", "is", false)
+      .not("overlay_permission_granted", "is", false)
       .contains("service_types", [b.service_type]);
 
     
