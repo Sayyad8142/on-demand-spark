@@ -247,6 +247,8 @@ export default function Home() {
                 const el = document.getElementById('onboarding-checklist');
                 el?.scrollIntoView({ behavior: 'smooth' });
               }}
+              hasAvailabilitySlots={onboarding.hasAvailabilitySlots}
+              onNoSlots={() => navigate('/availability')}
             />
           </div>
         </div>
