@@ -208,11 +208,13 @@ export async function checkOverlayState(): Promise<PermissionState> {
 export async function requestOverlay(): Promise<boolean> {
   if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return true;
   console.log("[Permissions] 🟦 requestOverlay() invoked — opening Android Settings...");
-  reportPermissionDebug({ permissionId: "overlay", step: "requestPermission", status: "started", message: "Opening Android overlay settings" });
+  console.log("[OverlayPermission] settings_open_requested");
+  reportPermissionDebug({ permissionId: "overlay", step: "requestPermission", status: "started", message: "[OverlayPermission] settings_open_requested" });
   const p = getOverlayPlugin();
   if (!p) {
     const msg = "[Permissions] OverlayPlugin not available (registerPlugin returned null)";
     console.error(msg);
+    console.log("[OverlayPermission] settings_open_failed plugin_missing");
     reportPermissionDebug({ permissionId: "overlay", step: "plugin", status: "failed", error: msg });
     throw new Error(msg);
   }
@@ -224,11 +226,13 @@ export async function requestOverlay(): Promise<boolean> {
     const result = await p.requestPermission();
     console.log("[Permissions] ✅ OverlayPlugin.requestPermission resolved", result);
     if (result?.opened) {
-      reportPermissionDebug({ permissionId: "overlay", step: "requestPermission", status: "success", fallbackPath: "per-package/global/app-details native chain", message: "Native settings screen opened" });
+      console.log("[OverlayPermission] settings_open_success path=native");
+      reportPermissionDebug({ permissionId: "overlay", step: "requestPermission", status: "success", fallbackPath: "per-package/global/app-details native chain", message: "[OverlayPermission] settings_open_success" });
       return false;
     }
     if (result?.granted) {
-      reportPermissionDebug({ permissionId: "overlay", step: "checkPermission", status: "success", message: "Overlay permission already granted" });
+      console.log("[OverlayPermission] permission_granted");
+      reportPermissionDebug({ permissionId: "overlay", step: "checkPermission", status: "success", message: "[OverlayPermission] permission_granted (already)" });
       return true;
     }
   } catch (e) {
@@ -238,7 +242,8 @@ export async function requestOverlay(): Promise<boolean> {
       const fallback = await p.openOverlaySettings();
       console.log("[Permissions] ✅ OverlayPlugin.openOverlaySettings resolved", fallback);
       if (fallback?.opened) {
-        reportPermissionDebug({ permissionId: "overlay", step: "openOverlaySettings", status: "success", fallbackPath: "explicit native overlay settings", message: "Fallback settings screen opened" });
+        console.log("[OverlayPermission] settings_open_success path=openOverlaySettings");
+        reportPermissionDebug({ permissionId: "overlay", step: "openOverlaySettings", status: "success", fallbackPath: "explicit native overlay settings", message: "[OverlayPermission] settings_open_success (fallback)" });
         return false;
       }
     } catch (e2) {
@@ -247,19 +252,23 @@ export async function requestOverlay(): Promise<boolean> {
       try {
         const opened = await tryOpenAppSettingsFallback("overlay");
         if (opened) {
-          reportPermissionDebug({ permissionId: "overlay", step: "App.openSettings", status: "success", fallbackPath: "Android app settings", message: "App settings opened as last resort" });
+          console.log("[OverlayPermission] settings_open_success path=appSettings");
+          reportPermissionDebug({ permissionId: "overlay", step: "App.openSettings", status: "success", fallbackPath: "Android app settings", message: "[OverlayPermission] settings_open_success (App.openSettings)" });
           return false;
         }
         throw e2;
       } catch (e3) {
         console.error("[Permissions] ❌ All overlay setting paths failed", e3);
+        console.log("[OverlayPermission] settings_open_failed all_paths_exhausted");
         reportPermissionDebug({ permissionId: "overlay", step: "all fallback paths", status: "failed", fallbackPath: "none left", error: e3 instanceof Error ? e3.message : String(e3) });
         throw e3;
       }
     }
   }
   await new Promise(r => setTimeout(r, 400));
-  return await checkOverlayGrantedNative();
+  const finalGranted = await checkOverlayGrantedNative();
+  console.log(finalGranted ? "[OverlayPermission] permission_granted" : "[OverlayPermission] permission_missing");
+  return finalGranted;
 }
 
 // ---------- Battery optimization (Android only) ----------
