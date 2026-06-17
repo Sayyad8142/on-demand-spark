@@ -158,8 +158,22 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
       });
       return;
     }
-    // Show a clear, pink-themed rationale before the system activity prompt
+    // Show a clear, pink-themed rationale before the system activity prompt.
+    // Skip rationale entirely if the permission is already granted — the
+    // worker should never see a dialog in that case.
     if (id === "activity" && !options?.silent) {
+      const current = states.find((s) => s.id === "activity");
+      if (current?.status === "granted") {
+        console.log("[ActivityPermission] already_granted — skipping rationale");
+        addDebugEvent({ permissionId: "activity", step: "rationale", status: "skipped", message: "Already granted" });
+        return;
+      }
+      if (activityRationaleOpen) {
+        // Guard against double-tap opening duplicate dialogs
+        return;
+      }
+      console.log("[ActivityPermission] rationale_opened");
+      addDebugEvent({ permissionId: "activity", step: "rationale", status: "started", message: "rationale_opened" });
       setActivityRationaleOpen(true);
       return;
     }
