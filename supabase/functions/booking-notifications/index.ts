@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
     // Fetch ALL active workers for this community to understand skip reasons
     const { data: allCommunityWorkers } = await supabase
       .from("workers")
-      .select("id, full_name, is_available, is_busy, is_blocked, payout_ready, service_types, fcm_token, fcm_token_status, selected_community_id")
+      .select("id, full_name, is_available, is_busy, is_blocked, payout_ready, service_types, fcm_token, fcm_token_status, selected_community_id, notification_permission_granted, overlay_permission_granted")
       .eq("is_active", true)
       .eq("selected_community_id", communityData?.id || '');
 
@@ -199,9 +199,20 @@ Deno.serve(async (req) => {
         if (!w.service_types || !w.service_types.includes(b.service_type)) reasons.push(`no_service(has:${(w.service_types||[]).join(',')})`);
         if (!w.fcm_token) reasons.push('no_fcm_token');
         if (w.fcm_token_status === 'invalid') reasons.push('token_invalid');
+        if (w.notification_permission_granted === false) {
+          reasons.push('notifications_missing');
+          console.log(`[DispatchEligibility] notifications_missing worker=${w.full_name || w.id}`);
+        }
+        if (w.overlay_permission_granted === false) {
+          reasons.push('overlay_missing');
+          console.log(`[DispatchEligibility] overlay_missing worker=${w.full_name || w.id}`);
+        }
         if (!availableWorkerIds.has(w.id)) reasons.push('no_slots_for_time');
         if (reasons.length > 0) {
           skipReasons.push({ name: w.full_name || w.id, reasons });
+          console.log(`[DispatchEligibility] blocked worker=${w.full_name || w.id} reasons=${reasons.join('|')}`);
+        } else {
+          console.log(`[DispatchEligibility] eligible worker=${w.full_name || w.id}`);
         }
       }
       if (skipReasons.length > 0) {
