@@ -297,84 +297,87 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
       />
 
       <Dialog open={activityRationaleOpen} onOpenChange={(o) => !o && setActivityRationaleOpen(false)}>
-        <DialogContent className="max-w-sm rounded-2xl border-2 border-primary/30">
+        <DialogContent className="max-w-sm rounded-2xl bg-white border border-gray-200">
           <DialogHeader>
-            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Layers className="h-6 w-6" />
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full" style={{ backgroundColor: '#ffe6f2' }}>
+              <Layers className="h-6 w-6" style={{ color: '#ff007a' }} />
             </div>
-            <DialogTitle className="text-center text-base">
-              Allow Physical Activity Permission
+            <DialogTitle className="text-center text-base text-gray-900">
+              Physical Activity Permission Required
             </DialogTitle>
-            <DialogDescription className="text-center text-sm">
-              Didi Now Partner needs the Physical Activity permission to keep
-              booking alerts reliable and to confirm you've started moving
-              after accepting a job.
+            <DialogDescription className="text-center text-sm text-gray-700">
+              Didi Now uses your phone's activity sensor to verify that you have started travelling after accepting a booking.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="rounded-lg bg-muted/50 p-3 text-xs space-y-2">
-            <p className="font-semibold text-foreground">Why this is needed</p>
-            <ul className="space-y-1.5 text-muted-foreground">
+          <div className="rounded-lg p-3 text-xs space-y-2" style={{ backgroundColor: '#fff5f9' }}>
+            <p className="font-semibold text-gray-900">Benefits</p>
+            <ul className="space-y-1.5 text-gray-700">
               <li className="flex gap-2">
-                <span className="text-primary">•</span>
-                <span>Detect when you start walking after accepting a booking, so we can mark you as "on the way" automatically.</span>
+                <span style={{ color: '#ff007a' }}>•</span>
+                <span>Helps confirm worker movement after accepting jobs</span>
               </li>
               <li className="flex gap-2">
-                <span className="text-primary">•</span>
-                <span>Improve your booking priority based on real activity, not just app opens.</span>
+                <span style={{ color: '#ff007a' }}>•</span>
+                <span>Improves booking reliability</span>
               </li>
               <li className="flex gap-2">
-                <span className="text-primary">•</span>
-                <span>Help our system route bookings to workers who are actually available and active.</span>
+                <span style={{ color: '#ff007a' }}>•</span>
+                <span>Prevents false acceptance of bookings</span>
+              </li>
+              <li className="flex gap-2">
+                <span style={{ color: '#ff007a' }}>•</span>
+                <span>Does not track your exact location</span>
               </li>
             </ul>
-            <p className="pt-1 text-[11px] text-muted-foreground">
-              We only read step-count events. We never access your location or
-              other personal data through this permission.
-            </p>
           </div>
+
+          <p className="text-[11px] text-gray-500 text-center">
+            This permission is required to continue.
+          </p>
 
           <DialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
             <Button
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+              className="w-full text-white hover:opacity-90"
+              style={{ backgroundColor: '#ff007a' }}
               onClick={() => {
                 setActivityRationaleOpen(false);
                 handleRequest("activity", { silent: true });
               }}
             >
-              OK, allow
+              Continue
             </Button>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              className="w-full text-muted-foreground"
+              className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
               onClick={() => setActivityRationaleOpen(false)}
             >
-              Not now
+              Not Now
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={activityManualOpen} onOpenChange={(o) => !o && setActivityManualOpen(false)}>
-        <DialogContent className="max-w-sm rounded-2xl">
+        <DialogContent className="max-w-sm rounded-2xl bg-white border border-gray-200">
           <DialogHeader>
-            <DialogTitle className="text-base">
+            <DialogTitle className="text-base text-gray-900">
               Physical Activity Permission Needed
             </DialogTitle>
-            <DialogDescription className="text-sm">
-              Allow activity permission so Didi Now can keep step counter and
-              worker availability features working properly.
+            <DialogDescription className="text-sm text-gray-700">
+              This permission is required to continue.
             </DialogDescription>
           </DialogHeader>
-          <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+          <div className="rounded-lg p-3 text-xs text-gray-700" style={{ backgroundColor: '#f9fafb' }}>
             We couldn't open the settings screen automatically. Please open
-            <span className="font-semibold text-foreground"> Android Settings &rsaquo; Apps &rsaquo; Didi Now &rsaquo; Permissions </span>
-            and allow <span className="font-semibold text-foreground">Physical activity</span>.
+            <span className="font-semibold text-gray-900"> Android Settings › Apps › Didi Now › Permissions </span>
+            and allow <span className="font-semibold text-gray-900">Physical activity</span>.
           </div>
           <DialogFooter className="sm:justify-end">
             <Button
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto text-white hover:opacity-90"
+              style={{ backgroundColor: '#ff007a' }}
               onClick={() => setActivityManualOpen(false)}
             >
               OK
