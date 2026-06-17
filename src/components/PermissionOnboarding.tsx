@@ -215,6 +215,10 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
         addDebugEvent({ permissionId: "activity", step: "handleRequest", status: "fallback", message: "manual_instructions_shown" });
         setActivityManualOpen(true);
       } else if (id === "overlay" || id === "battery" || id === "activity") {
+        if (id === "overlay") {
+          console.log("[OverlayPermission] manual_instructions_shown");
+          addDebugEvent({ permissionId: "overlay", step: "handleRequest", status: "fallback", message: "manual_instructions_shown" });
+        }
         openFallbackModal(id);
         if (!options?.silent) {
           toast({
