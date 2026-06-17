@@ -165,7 +165,7 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
       const current = states.find((s) => s.id === "activity");
       if (current?.status === "granted") {
         console.log("[ActivityPermission] already_granted — skipping rationale");
-        addDebugEvent({ permissionId: "activity", step: "rationale", status: "skipped", message: "Already granted" });
+        addDebugEvent({ permissionId: "activity", step: "rationale", status: "success", message: "Already granted — skipped" });
         return;
       }
       if (activityRationaleOpen) {
