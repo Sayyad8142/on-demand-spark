@@ -56,6 +56,7 @@ import DeviceReadiness from "./pages/DeviceReadiness";
 import BookingDiagnostics from "./pages/BookingDiagnostics";
 import CompleteBooking from "./pages/CompleteBooking";
 import AccountDetails from "./pages/AccountDetails";
+import BatteryOnboarding from "./pages/BatteryOnboarding";
 import BottomNav from "./components/BottomNav";
 import PermissionOnboarding from "./components/PermissionOnboarding";
 import {
@@ -542,44 +543,14 @@ function AppInner() {
       {showOtaMandatory && <OtaMandatoryModal bundleInfo={otaResult.bundleInfo!} />}
       <SoftUpdatePrompt open={softUpdate && !showOtaMandatory} config={updateConfig} onRemindLater={dismissSoftUpdate} />
       {showBatteryWarning && session?.user?.id && (
-        <div
-          className="fixed inset-0 z-[90] flex items-center justify-center bg-background/70 backdrop-blur-sm p-5"
-          onClick={() => setShowBatteryWarning(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl border-2 border-primary bg-card p-6 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <span className="text-2xl">🔋</span>
-            </div>
-            <h2 className="text-center text-lg font-bold text-foreground">
-              Battery optimization may block booking alerts
-            </h2>
-            <p className="mt-2 text-center text-sm text-muted-foreground">
-              Disable battery optimization for Didi Now Partner to receive jobs reliably.
-            </p>
-            <div className="mt-6 flex flex-col gap-2">
-              <Button
-                size="lg"
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={() => {
-                  requestBatteryExemption();
-                  setShowBatteryWarning(false);
-                }}
-              >
-                Open settings
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="w-full text-muted-foreground"
-                onClick={() => setShowBatteryWarning(false)}
-              >
-                Not now
-              </Button>
-            </div>
-          </div>
+        <div className="fixed inset-0 z-[90]">
+          <BatteryOnboarding
+            onFixNow={() => {
+              requestBatteryExemption();
+              setShowBatteryWarning(false);
+            }}
+            onSkip={() => setShowBatteryWarning(false)}
+          />
         </div>
       )}
       {cancellationAlert && (
