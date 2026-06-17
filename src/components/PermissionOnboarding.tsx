@@ -188,10 +188,16 @@ export default function PermissionOnboarding({ onComplete }: PermissionOnboardin
           await requestBatteryExemption();
           break;
         case "activity":
-          await requestActivity();
+          console.log("[ActivityPermission] permission_requested");
+          {
+            const result = await requestActivity();
+            if (result) {
+              console.log("[ActivityPermission] permission_granted");
+            } else {
+              console.log("[ActivityPermission] permission_denied");
+            }
+          }
           break;
-        default:
-          return;
       }
       console.log(`[PermissionOnboarding] ✅ ${id} request returned without throwing`);
       addDebugEvent({ permissionId: id, step: "handleRequest", status: "success", message: id === "activity" ? "Permission prompt/settings opened" : "Request completed without throwing" });
