@@ -110,6 +110,8 @@ class MainActivity : BridgeActivity() {
         deliverPendingCancellationAlert()
         deliverPendingReassignedAlert()
         inAppUpdateManager.resumeUpdateIfPending()
+        // Fire a foreground heartbeat each time worker brings the app back.
+        try { BackendSync.sendHeartbeatAsync(this, "foreground") } catch (_: Exception) {}
     }
 
     @Deprecated("Capacitor still routes legacy startActivityForResult here")
