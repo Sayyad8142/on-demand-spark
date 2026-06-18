@@ -478,7 +478,10 @@ export default function OtpVerify() {
                 value={otp}
                 onChange={setOtp}
                 disabled={loading}
-                className="gap-2"
+                autoFocus
+                inputMode="numeric"
+                pattern="[0-9]*"
+                containerClassName="gap-2"
               >
                 <InputOTPGroup className="gap-2">
                   <InputOTPSlot index={0} className="w-12 h-14 text-xl font-bold border-2 rounded-lg" />
