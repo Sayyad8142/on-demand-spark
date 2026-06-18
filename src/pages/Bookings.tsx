@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,83 +15,146 @@ type Booking = BookingWithAddress & {
   rating?: number | null;
 };
 
+const PAGE_SIZE = 15;
+const HISTORY_STATUSES = ['completed', 'cancelled'] as const;
+
 export default function Bookings() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isGuestMode = localStorage.getItem('guest_mode') === 'true';
+
+  const [workerId, setWorkerId] = useState<string | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(0);
+  const [summary, setSummary] = useState({ today: 0, week: 0, jobs: 0 });
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
+  // Resolve worker id once
   useEffect(() => {
     if (isGuestMode) {
       setBookings(DEMO_BOOKINGS as any);
+      setSummary({ today: 0, week: 0, jobs: (DEMO_BOOKINGS as any).length });
+      setHasMore(false);
       setLoading(false);
       return;
     }
     if (!user) return;
-
     (async () => {
-      try {
-        let workerId: string | null = null;
-        const { data: w1 } = await supabase.from('workers').select('id').eq('user_id', user.id).maybeSingle();
-        if (w1) workerId = w1.id;
-        else {
-          const { data: w2 } = await supabase.from('workers').select('id').eq('id', user.id).maybeSingle();
-          workerId = w2?.id ?? null;
-        }
-        if (!workerId) { setBookings([]); setLoading(false); return; }
-
-        const { data, error } = await supabase
-          .from('bookings')
-          .select('*')
-          .eq('worker_id', workerId)
-          .order('created_at', { ascending: false });
-        if (error) throw error;
-
-        const bookingIds = (data || []).map(b => b.id);
-
-        const [payoutsRes, ratingsRes] = await Promise.all([
-          supabase.from('worker_payouts').select('booking_id, status, payout_amount').in('booking_id', bookingIds),
-          supabase.from('worker_ratings').select('booking_id, rating').in('booking_id', bookingIds),
-        ]);
-
-        const payoutsMap = new Map(payoutsRes.data?.map(p => [p.booking_id, { status: p.status, amount: p.payout_amount }]) || []);
-        const ratingsMap = new Map(ratingsRes.data?.map(r => [r.booking_id, r.rating]) || []);
-
-        setBookings((data || []).map(b => ({
-          ...b,
-          payout_status: payoutsMap.get(b.id)?.status ?? null,
-          payout_amount: payoutsMap.get(b.id)?.amount ?? null,
-          rating: ratingsMap.get(b.id) ?? null,
-        })));
-      } catch (e) {
-        console.error('Error fetching bookings:', e);
-      } finally {
-        setLoading(false);
-      }
+      const { data: w1 } = await supabase.from('workers').select('id').eq('user_id', user.id).maybeSingle();
+      if (w1) { setWorkerId(w1.id); return; }
+      const { data: w2 } = await supabase.from('workers').select('id').eq('id', user.id).maybeSingle();
+      setWorkerId(w2?.id ?? null);
+      if (!w2) setLoading(false);
     })();
   }, [user, isGuestMode]);
 
-  const historyBookings = useMemo(
-    () => bookings.filter(b => ['completed', 'cancelled'].includes(b.status)),
-    [bookings]
-  );
-
-  const summary = useMemo(() => {
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const startOfWeek = startOfToday - 6 * 24 * 60 * 60 * 1000;
-    let today = 0, week = 0, jobs = 0;
-    for (const b of bookings) {
-      if (b.status !== 'completed') continue;
-      jobs++;
-      const amt = Number(b.payout_amount ?? 0);
-      const t = b.created_at ? new Date(b.created_at).getTime() : 0;
-      if (t >= startOfToday) today += amt;
-      if (t >= startOfWeek) week += amt;
+  const loadPage = useCallback(async (wId: string, pageIdx: number) => {
+    const from = pageIdx * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('worker_id', wId)
+      .in('status', HISTORY_STATUSES as unknown as string[])
+      .order('created_at', { ascending: false })
+      .range(from, to);
+    if (error) throw error;
+    const rows = data || [];
+    const ids = rows.map(b => b.id);
+    let enriched: Booking[] = rows as any;
+    if (ids.length) {
+      const [payoutsRes, ratingsRes] = await Promise.all([
+        supabase.from('worker_payouts').select('booking_id, status, payout_amount').in('booking_id', ids),
+        supabase.from('worker_ratings').select('booking_id, rating').in('booking_id', ids),
+      ]);
+      const payoutsMap = new Map(payoutsRes.data?.map(p => [p.booking_id, { status: p.status, amount: p.payout_amount }]) || []);
+      const ratingsMap = new Map(ratingsRes.data?.map(r => [r.booking_id, r.rating]) || []);
+      enriched = rows.map(b => ({
+        ...b,
+        payout_status: payoutsMap.get(b.id)?.status ?? null,
+        payout_amount: payoutsMap.get(b.id)?.amount ?? null,
+        rating: ratingsMap.get(b.id) ?? null,
+      })) as any;
     }
-    return { today, week, jobs };
-  }, [bookings]);
+    return enriched;
+  }, []);
+
+  // Initial page + summary in parallel
+  useEffect(() => {
+    if (!workerId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const startOfWeek = new Date(startOfToday.getTime() - 6 * 24 * 60 * 60 * 1000);
+
+        const [firstPage, totalCountRes, weekPayoutsRes] = await Promise.all([
+          loadPage(workerId, 0),
+          supabase
+            .from('bookings')
+            .select('id', { count: 'exact', head: true })
+            .eq('worker_id', workerId)
+            .eq('status', 'completed'),
+          supabase
+            .from('worker_payouts')
+            .select('payout_amount, created_at')
+            .eq('worker_id', workerId)
+            .gte('created_at', startOfWeek.toISOString()),
+        ]);
+
+        if (cancelled) return;
+
+        let today = 0, week = 0;
+        for (const p of (weekPayoutsRes.data || [])) {
+          const amt = Number(p.payout_amount ?? 0);
+          const t = p.created_at ? new Date(p.created_at).getTime() : 0;
+          week += amt;
+          if (t >= startOfToday.getTime()) today += amt;
+        }
+        setSummary({ today, week, jobs: totalCountRes.count ?? 0 });
+        setBookings(firstPage);
+        setHasMore(firstPage.length === PAGE_SIZE);
+        setPage(0);
+      } catch (e) {
+        console.error('Error fetching bookings:', e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [workerId, loadPage]);
+
+  // Load more
+  const loadMore = useCallback(async () => {
+    if (!workerId || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const next = page + 1;
+      const more = await loadPage(workerId, next);
+      setBookings(prev => [...prev, ...more]);
+      setPage(next);
+      setHasMore(more.length === PAGE_SIZE);
+    } catch (e) {
+      console.error('Error loading more bookings:', e);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [workerId, page, hasMore, loadingMore, loadPage]);
+
+  // Intersection observer for infinite scroll
+  useEffect(() => {
+    if (!sentinelRef.current || !hasMore) return;
+    const el = sentinelRef.current;
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) loadMore();
+    }, { rootMargin: '200px' });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [loadMore, hasMore]);
 
   if (loading) {
     return (
@@ -120,7 +183,7 @@ export default function Bookings() {
           <SummaryCard label="Total Jobs" value={`${summary.jobs}`} accent="text-foreground" />
         </div>
 
-        {historyBookings.length === 0 ? (
+        {bookings.length === 0 ? (
           <div className="text-center py-12">
             <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="font-semibold mb-2">No jobs yet</h3>
@@ -128,7 +191,17 @@ export default function Bookings() {
           </div>
         ) : (
           <div className="space-y-3">
-            {historyBookings.map(b => <BookingCard key={b.id} booking={b} />)}
+            {bookings.map(b => <BookingCard key={b.id} booking={b} />)}
+
+            {/* Infinite scroll sentinel */}
+            {hasMore && (
+              <div ref={sentinelRef} className="flex items-center justify-center py-6">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {!hasMore && bookings.length > PAGE_SIZE && (
+              <p className="text-center text-xs text-muted-foreground py-4">No more bookings</p>
+            )}
           </div>
         )}
       </main>
@@ -165,7 +238,6 @@ function BookingCard({ booking }: { booking: Booking }) {
 
   const rating = booking.rating ?? null;
 
-  // Theme by status
   const theme = isCancelled
     ? {
         bar: 'bg-red-500',
@@ -188,11 +260,9 @@ function BookingCard({ booking }: { booking: Booking }) {
 
   return (
     <div className={`relative overflow-hidden rounded-2xl border shadow-sm ${theme.cardBg} ${theme.border}`}>
-      {/* Left accent bar */}
       <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${theme.bar}`} />
 
       <div className="p-4 pl-5">
-        {/* Header: status pill + date */}
         <div className="flex items-center justify-between mb-3">
           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-white text-xs font-bold ${theme.pillBg}`}>
             <StatusIcon className="w-3.5 h-3.5" />
@@ -204,7 +274,6 @@ function BookingCard({ booking }: { booking: Booking }) {
           </div>
         </div>
 
-        {/* Flat / Address */}
         <div className="flex items-start gap-2 mb-3">
           <MapPin className={`w-4 h-4 mt-0.5 shrink-0 ${isCancelled ? 'text-red-500' : 'text-green-600'}`} />
           <p className="text-sm font-bold text-foreground leading-snug">
@@ -212,7 +281,6 @@ function BookingCard({ booking }: { booking: Booking }) {
           </p>
         </div>
 
-        {/* Amount + payment row */}
         {isCompleted ? (
           <div className="flex items-end justify-between bg-white/60 dark:bg-black/20 rounded-xl px-3 py-2.5 mb-3">
             <div>
@@ -231,7 +299,6 @@ function BookingCard({ booking }: { booking: Booking }) {
           </div>
         )}
 
-        {/* Rating */}
         {isCompleted && (
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground">Customer Rating</span>
