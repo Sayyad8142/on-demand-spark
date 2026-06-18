@@ -68,6 +68,7 @@ class MainActivity : BridgeActivity() {
         registerPlugin(StepCounterPlugin::class.java)
         registerPlugin(BatteryOptimizationPlugin::class.java)
         registerPlugin(CancellationVoicePlugin::class.java)
+        registerPlugin(AgoraCallPlugin::class.java)
         
         super.onCreate(savedInstanceState)
         
@@ -136,23 +137,31 @@ class MainActivity : BridgeActivity() {
     // Accept nullable Intent and guard reads
     private fun handleNavigationIntent(intent: Intent?) {
         val bookingId = intent?.getStringExtra("booking_id") ?: intent?.getStringExtra("bookingId")
+        val customerName = intent?.getStringExtra("customer_name") ?: ""
+        val callAction = intent?.getStringExtra("call_action") ?: ""
         val navigateTo = intent?.getStringExtra("navigate_to")
             ?: intent?.getStringExtra("screen")
             ?: if (!bookingId.isNullOrEmpty()) "bookings" else null
-        
-        android.util.Log.d("MainActivity", "🧭 Navigation intent: navigateTo=$navigateTo, bookingId=$bookingId")
-        
+
+        android.util.Log.d("MainActivity", "🧭 Navigation intent: navigateTo=$navigateTo, bookingId=$bookingId, call=$callAction")
+
         if (navigateTo.isNullOrEmpty()) return
 
         if (intent?.getStringExtra("alert_type") == "BOOKING_CANCELLED") {
             dispatchCancellationAlertToWebView(bookingId ?: "")
         }
-        
+
         // Send event to WebView/JS
         bridge?.webView?.post {
+            val safeCustomer = customerName.replace("'", "\\'")
             val js = """
                 window.dispatchEvent(new CustomEvent('native:navigate', {
-                  detail: { screen: '$navigateTo', bookingId: '${bookingId ?: ""}' }
+                  detail: {
+                    screen: '$navigateTo',
+                    bookingId: '${bookingId ?: ""}',
+                    customerName: '$safeCustomer',
+                    callAction: '$callAction'
+                  }
                 }));
             """.trimIndent()
             bridge?.webView?.evaluateJavascript(js, null)
