@@ -55,6 +55,9 @@ class FcmBootSyncWorker(
         WorkerLog.add(ctx, "TOKEN", "boot token fetched len=${token.length}")
 
         val ok = BackendSync.pingBootSync(ctx, event, token)
+        // Telemetry — heartbeat right after boot so the device shows reachable
+        // even if the user never opens the app.
+        try { BackendSync.sendHeartbeat(ctx, event) } catch (_: Exception) {}
         return if (ok) Result.success() else Result.retry()
     }
 

@@ -86,6 +86,15 @@ class MainActivity : BridgeActivity() {
         // Google Play In-App Updates — Immediate flow (primary force update)
         // Supabase app_config force update screen remains as fallback.
         inAppUpdateManager.checkForUpdate()
+
+        // Telemetry — schedule periodic native heartbeat + fire one immediately
+        // so the backend sees this device is reachable even before JS layer boots.
+        try {
+            HeartbeatWorker.schedule(this)
+            BackendSync.sendHeartbeatAsync(this, "open")
+        } catch (e: Exception) {
+            android.util.Log.w("MainActivity", "Heartbeat schedule failed: ${e.message}")
+        }
     }
 
     override fun onResume() {
@@ -101,6 +110,8 @@ class MainActivity : BridgeActivity() {
         deliverPendingCancellationAlert()
         deliverPendingReassignedAlert()
         inAppUpdateManager.resumeUpdateIfPending()
+        // Fire a foreground heartbeat each time worker brings the app back.
+        try { BackendSync.sendHeartbeatAsync(this, "foreground") } catch (_: Exception) {}
     }
 
     @Deprecated("Capacitor still routes legacy startActivityForResult here")

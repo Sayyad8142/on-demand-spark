@@ -43,10 +43,12 @@ public class MyFirebaseService extends FirebaseMessagingService {
     Log.d(TAG, "📩 Message ID: " + message.getMessageId());
     WorkerLog.INSTANCE.add(getApplicationContext(), "FCM", "onMessageReceived id=" + message.getMessageId());
 
-    // Notify backend that this device is reachable (updates last_notification_received_at).
+    // Notify backend that this device is reachable (updates last_notification_received_at)
+    // AND fire a heartbeat so reachability telemetry is fresh even from a killed app.
     new Thread(new Runnable() {
       @Override public void run() {
         BackendSync.INSTANCE.pingBootSync(getApplicationContext(), "fcm_received", null);
+        BackendSync.INSTANCE.sendHeartbeat(getApplicationContext(), "fcm_received");
       }
     }, "fcm-recv-ping").start();
 
