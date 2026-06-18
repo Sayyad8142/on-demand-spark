@@ -40,6 +40,14 @@ class BootReceiver : BroadcastReceiver() {
             WorkerLog.add(context, "BOOT", "Failed to enqueue FcmBootSyncWorker: ${e.message}")
         }
 
+        // Telemetry — periodic heartbeat must survive reboot / app upgrade.
+        try {
+            HeartbeatWorker.schedule(context)
+            BackendSync.sendHeartbeatAsync(context, event)
+        } catch (e: Exception) {
+            WorkerLog.add(context, "BOOT", "Failed to schedule HeartbeatWorker: ${e.message}")
+        }
+
         // 2. Re-warm movement / location services if worker was online.
         if (wasAvailable && isBoot) {
             try {
