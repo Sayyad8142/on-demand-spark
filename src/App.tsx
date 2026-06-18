@@ -147,11 +147,15 @@ function NativeNavigationHandler() {
   useEffect(() => {
     const handleNativeNavigation = (event: CustomEvent) => {
       console.log("📱 Native navigation event received:", event.detail);
-      
-      const { navigateTo, screen, bookingId } = event.detail || {};
+
+      const { navigateTo, screen, bookingId, customerName, callAction } = event.detail || {};
       const target = navigateTo || screen;
-      
-      if (target === "home") {
+
+      if (target === "in_call" && bookingId) {
+        const qs = customerName ? `?customer=${encodeURIComponent(customerName)}` : "";
+        console.log("📞 Navigating to in-call screen", bookingId, "action=", callAction);
+        navigate(`/in-call/${bookingId}${qs}`);
+      } else if (target === "home") {
         console.log("🏠 Navigating to home screen", bookingId ? `with booking ${bookingId}` : "");
         navigate("/home");
       } else if (target === "bookings" || target === "booking_requests") {
