@@ -49,6 +49,7 @@ import CustomerReviews from "./pages/CustomerReviews";
 import AdminUploadQr from "./pages/AdminUploadQr";
 import AdminTokenHealth from "./pages/AdminTokenHealth";
 import AdminPriorityShadow from "./pages/AdminPriorityShadow";
+import AdminDispatchTelemetry from "./pages/AdminDispatchTelemetry";
 import AuthDebug from "./pages/AuthDebug";
 import Earnings from "./pages/Earnings";
 import WorkerBlocked from "./pages/WorkerBlocked";
