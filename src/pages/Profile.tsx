@@ -24,7 +24,7 @@ import UpiQrUpload from "@/components/UpiQrUpload";
 import { CURRENT_VERSION_CODE } from "@/config/version";
 
 import PriorityScoreCard from "@/components/profile/PriorityScoreCard";
-import MovementStatusCard from "@/components/profile/MovementStatusCard";
+
 const SERVICES = [{
   value: "maid",
   label: "Maid Service",
@@ -944,10 +944,6 @@ export default function Profile() {
           </Card>
         </div>
 
-        {/* Movement Status (debug) */}
-        <div className="px-4 mt-4">
-          <MovementStatusCard />
-        </div>
         <div className="px-4 mt-4 space-y-4">
 
 
