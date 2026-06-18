@@ -85,7 +85,7 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
   const tier = tierLabelFromScore(score);
 
   const [faults, setFaults] = useState<FaultEvent[]>([]);
-  const [recentCompleted, setRecentCompleted] = useState<{ id: string; completed_at: string }[]>([]);
+  const [recentCompleted, setRecentCompleted] = useState<{ id: string; completed_at: string; flat_no: string | null; community: string | null }[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
 
   useEffect(() => {
