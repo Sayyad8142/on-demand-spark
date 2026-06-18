@@ -119,6 +119,24 @@ public class MyFirebaseService extends FirebaseMessagingService {
         return;
       }
 
+      // ── Incoming Agora voice call ─────────────────────────────────────────
+      if ("incoming_call".equals(type)) {
+        String callBookingId = data.get("booking_id");
+        if (callBookingId == null || callBookingId.isEmpty()) callBookingId = data.get("bookingId");
+        String customer = data.get("customer_name");
+        if (customer == null || customer.isEmpty()) customer = data.get("customer");
+        if (customer == null || customer.isEmpty()) customer = "Customer";
+
+        Log.d(TAG, "📞 INCOMING_CALL booking_id=" + callBookingId + " customer=" + customer);
+        if (callBookingId == null || callBookingId.isEmpty()) {
+          Log.e(TAG, "❌ incoming_call missing booking_id");
+          return;
+        }
+        showIncomingCallNotification(callBookingId, customer);
+        launchIncomingCallActivity(callBookingId, customer);
+        return;
+      }
+
       // Handle BOOKING_ALERT for BOTH instant AND scheduled bookings
       if ("BOOKING_ALERT".equals(type)) {
         Log.d(TAG, "═══════════════════════════════════════════════════════════");
