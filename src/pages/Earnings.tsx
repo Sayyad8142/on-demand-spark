@@ -264,21 +264,9 @@ export default function Earnings() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-2 text-sm">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Customer Pays</p>
-                          <p className="font-semibold">{p.isEstimate ? '~' : ''}₹{p.gross_amount}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Platform Fee</p>
-                          <p className={`font-semibold ${p.platform_fee > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                            {p.platform_fee > 0 ? `−${p.isEstimate ? '~' : ''}₹${p.platform_fee}` : '₹0'}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">You Earn</p>
-                          <p className="font-bold text-green-600">{p.isEstimate ? '~' : ''}₹{p.payout_amount}</p>
-                        </div>
+                      <div className="text-sm">
+                        <p className="text-xs text-muted-foreground">You Earn</p>
+                        <p className="text-xl font-bold text-green-600">{p.isEstimate ? '~' : ''}₹{p.payout_amount}</p>
                       </div>
 
                       {p.isEstimate && (
