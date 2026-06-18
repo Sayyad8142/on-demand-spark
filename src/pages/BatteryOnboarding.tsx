@@ -1,4 +1,4 @@
-import { BatteryWarning, X, Check, ArrowDown } from "lucide-react";
+import { BatteryLow, Bell, BellOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface BatteryOnboardingProps {
@@ -9,82 +9,101 @@ interface BatteryOnboardingProps {
 export default function BatteryOnboarding({ onFixNow, onSkip }: BatteryOnboardingProps) {
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {/* Top decorative arc */}
-      <div
-        className="absolute top-0 left-0 right-0 h-[45vh] rounded-b-[3rem]"
-        style={{ background: "linear-gradient(180deg, #ffe6f2 0%, #fff0f7 60%, #ffffff 100%)" }}
-      />
-
-      <div className="relative flex-1 flex flex-col items-center justify-center px-6 pt-12 pb-8">
-        {/* Large battery warning icon */}
-        <div className="mb-8">
+      <div className="flex-1 flex flex-col items-center justify-center px-8 pt-16 pb-8">
+        {/* Battery icon */}
+        <div className="relative mb-12">
           <div
-            className="w-28 h-28 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: "#ffe6f2" }}
+            className="w-24 h-24 rounded-3xl flex items-center justify-center"
+            style={{ backgroundColor: "#fff0f6" }}
           >
-            <BatteryWarning className="w-14 h-14" style={{ color: "#ff007a" }} />
+            <BatteryLow
+              className="w-12 h-12"
+              strokeWidth={1.75}
+              style={{ color: "#ff007a" }}
+            />
           </div>
         </div>
 
         {/* Headline */}
         <h1
-          className="text-center font-extrabold leading-tight tracking-tight"
-          style={{ fontSize: "2rem", color: "#1a1a1a" }}
+          className="text-center font-bold leading-[1.15] tracking-tight"
+          style={{ fontSize: "1.75rem", color: "#0f172a" }}
         >
-          Don&apos;t Miss
+          Don&apos;t miss
           <br />
-          Booking Alerts
+          booking alerts
         </h1>
 
-        {/* Visual chain */}
-        <div className="mt-10 flex flex-col items-center gap-3">
-          <div className="flex items-center gap-3">
+        <p
+          className="mt-3 text-center text-sm leading-relaxed max-w-[280px]"
+          style={{ color: "#64748b" }}
+        >
+          Battery Saver stops notifications from reaching you in the background.
+        </p>
+
+        {/* Before / After row */}
+        <div className="mt-10 w-full max-w-[320px] grid grid-cols-2 gap-3">
+          <div
+            className="rounded-2xl p-4 flex flex-col items-start gap-2"
+            style={{ backgroundColor: "#fafafa" }}
+          >
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-              style={{ backgroundColor: "#ffebee" }}
+              className="w-8 h-8 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: "#fee2e2" }}
             >
-              <X className="w-5 h-5" style={{ color: "#e53935" }} />
+              <BellOff className="w-4 h-4" style={{ color: "#dc2626" }} />
             </div>
-            <span className="font-semibold text-base" style={{ color: "#1a1a1a" }}>
-              Battery Saver ON
-            </span>
+            <div>
+              <p className="text-xs font-medium" style={{ color: "#64748b" }}>
+                Now
+              </p>
+              <p className="text-sm font-semibold" style={{ color: "#0f172a" }}>
+                Alerts off
+              </p>
+            </div>
           </div>
 
-          <ArrowDown className="w-5 h-5" style={{ color: "#ff007a" }} />
-
-          <div className="flex items-center gap-3">
+          <div
+            className="rounded-2xl p-4 flex flex-col items-start gap-2"
+            style={{ backgroundColor: "#f0fdf4" }}
+          >
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-              style={{ backgroundColor: "#e8f5e9" }}
+              className="w-8 h-8 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: "#dcfce7" }}
             >
-              <Check className="w-5 h-5" style={{ color: "#43a047" }} />
+              <Bell className="w-4 h-4" style={{ color: "#16a34a" }} />
             </div>
-            <span className="font-semibold text-base" style={{ color: "#1a1a1a" }}>
-              Booking alerts stop
-            </span>
+            <div>
+              <p className="text-xs font-medium" style={{ color: "#16a34a" }}>
+                After fix
+              </p>
+              <p className="text-sm font-semibold" style={{ color: "#0f172a" }}>
+                Alerts on
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Bottom action area */}
-      <div className="relative px-6 pb-10 pt-4 space-y-3">
+      <div className="px-6 pb-8 pt-4 space-y-2">
         <Button
           size="lg"
-          className="w-full h-14 text-base font-bold rounded-2xl"
+          className="w-full h-12 text-[15px] font-semibold rounded-xl shadow-none"
           style={{
             backgroundColor: "#ff007a",
             color: "#ffffff",
           }}
           onClick={onFixNow}
         >
-          Fix Now
+          Fix now
         </Button>
         <button
           onClick={onSkip}
-          className="w-full h-10 text-sm font-medium rounded-xl transition-colors hover:bg-gray-50"
-          style={{ color: "#6b7280" }}
+          className="w-full h-11 text-sm font-medium rounded-xl transition-colors hover:bg-slate-50"
+          style={{ color: "#94a3b8" }}
         >
-          Skip
+          Not now
         </button>
       </div>
     </div>
