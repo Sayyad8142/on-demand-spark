@@ -24,7 +24,7 @@ import UpiQrUpload from "@/components/UpiQrUpload";
 import { CURRENT_VERSION_CODE } from "@/config/version";
 
 import PriorityScoreCard from "@/components/profile/PriorityScoreCard";
-import MovementStatusCard from "@/components/profile/MovementStatusCard";
+
 const SERVICES = [{
   value: "maid",
   label: "Maid Service",
