@@ -56,6 +56,7 @@ import WorkerBlocked from "./pages/WorkerBlocked";
 import DeviceReadiness from "./pages/DeviceReadiness";
 import BookingDiagnostics from "./pages/BookingDiagnostics";
 import CompleteBooking from "./pages/CompleteBooking";
+import InCall from "./pages/InCall";
 import AccountDetails from "./pages/AccountDetails";
 import BatteryOnboarding from "./pages/BatteryOnboarding";
 import BottomNav from "./components/BottomNav";
