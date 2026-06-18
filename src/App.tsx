@@ -49,6 +49,7 @@ import CustomerReviews from "./pages/CustomerReviews";
 import AdminUploadQr from "./pages/AdminUploadQr";
 import AdminTokenHealth from "./pages/AdminTokenHealth";
 import AdminPriorityShadow from "./pages/AdminPriorityShadow";
+import AdminDispatchTelemetry from "./pages/AdminDispatchTelemetry";
 import AuthDebug from "./pages/AuthDebug";
 import Earnings from "./pages/Earnings";
 import WorkerBlocked from "./pages/WorkerBlocked";
@@ -595,6 +596,7 @@ function AppInner() {
           <Route path="/admin-upload-qr" element={<AdminUploadQr />} />
           <Route path="/admin-token-health" element={<AdminTokenHealth />} />
           <Route path="/admin-priority-shadow" element={<AdminPriorityShadow />} />
+          <Route path="/admin-dispatch-telemetry" element={<AdminDispatchTelemetry />} />
           <Route path="/auth-debug" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
           <Route path="/support-diagnostics" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
           <Route path="/device-readiness" element={<ProtectedRoute><DeviceReadiness /></ProtectedRoute>} />
