@@ -153,10 +153,11 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
       id: b.id,
       when: b.completed_at,
       label: "Completed Booking",
+      sublabel: formatBookingAddress(b as any),
       points: 1,
       positive: true,
     })),
-  ].sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime());
+  ].sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime()) as Array<{ id: string; when: string; label: string; sublabel?: string; points: number; positive: boolean }>;
 
   return (
     <Card className="border-0 shadow-lg overflow-hidden">
