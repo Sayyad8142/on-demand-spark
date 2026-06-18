@@ -2818,6 +2818,7 @@ export type Database = {
           building_id: string | null
           community: string
           community_id: string | null
+          completed_bookings_count: number
           created_at: string
           firebase_uid: string | null
           flat_id: string | null
@@ -2839,6 +2840,7 @@ export type Database = {
           building_id?: string | null
           community: string
           community_id?: string | null
+          completed_bookings_count?: number
           created_at?: string
           firebase_uid?: string | null
           flat_id?: string | null
@@ -2860,6 +2862,7 @@ export type Database = {
           building_id?: string | null
           community?: string
           community_id?: string | null
+          completed_bookings_count?: number
           created_at?: string
           firebase_uid?: string | null
           flat_id?: string | null
