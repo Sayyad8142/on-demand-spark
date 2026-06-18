@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Trophy, Star, TrendingUp, TrendingDown, CheckCircle2, XCircle, AlertTriangle, Clock, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatBookingAddress } from "@/lib/address";
 
 interface PriorityScoreCardProps {
   worker: {
@@ -85,7 +86,7 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
   const tier = tierLabelFromScore(score);
 
   const [faults, setFaults] = useState<FaultEvent[]>([]);
-  const [recentCompleted, setRecentCompleted] = useState<{ id: string; completed_at: string }[]>([]);
+  const [recentCompleted, setRecentCompleted] = useState<{ id: string; completed_at: string; flat_no: string | null; community: string | null }[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
 
   useEffect(() => {
@@ -101,7 +102,7 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
           .limit(50),
         supabase
           .from("bookings")
-          .select("id, completed_at")
+          .select("id, completed_at, flat_no, community")
           .eq("worker_id", worker.id)
           .eq("status", "completed")
           .not("completed_at", "is", null)
@@ -152,10 +153,11 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
       id: b.id,
       when: b.completed_at,
       label: "Completed Booking",
+      sublabel: formatBookingAddress(b as any),
       points: 1,
       positive: true,
     })),
-  ].sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime());
+  ].sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime()) as Array<{ id: string; when: string; label: string; sublabel?: string; points: number; positive: boolean }>;
 
   return (
     <Card className="border-0 shadow-lg overflow-hidden">
@@ -348,6 +350,9 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
                       <span className="text-lg">{t.positive ? "🟢" : "🔴"}</span>
                       <div>
                         <p className="text-sm font-semibold">{t.label}</p>
+                        {t.sublabel && (
+                          <p className="text-[11px] font-medium text-foreground/80 leading-tight">{t.sublabel}</p>
+                        )}
                         <p className="text-[10px] text-muted-foreground">{formatWhen(t.when)}</p>
                       </div>
                     </div>
