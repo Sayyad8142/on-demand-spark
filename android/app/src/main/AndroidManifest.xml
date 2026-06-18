@@ -75,6 +75,32 @@
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"
             android:launchMode="singleTop" />
 
+        <!-- Incoming Agora Voice Call (full-screen, lock-screen) -->
+        <activity
+            android:name=".IncomingCallActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
+            android:showWhenLocked="true"
+            android:theme="@style/Theme.AppCompat.NoActionBar"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+
+        <!-- Call accept/decline button receiver -->
+        <receiver
+            android:name=".CallActionReceiver"
+            android:exported="false" />
+
+        <!-- Foreground service that keeps mic/audio alive in background -->
+        <service
+            android:name=".CallForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="microphone|phoneCall" />
+
+
+
 
         <!-- Firebase Messaging Service -->
         <service
