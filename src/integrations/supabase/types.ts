@@ -868,6 +868,7 @@ export type Database = {
           dispatch_anomaly_at: string | null
           dispatch_attempts: number
           dispatch_expires_at: string | null
+          dispatch_lock_until: string | null
           dispatch_started_at: string | null
           dispatch_status: string
           family_count: number | null
@@ -958,6 +959,7 @@ export type Database = {
           dispatch_anomaly_at?: string | null
           dispatch_attempts?: number
           dispatch_expires_at?: string | null
+          dispatch_lock_until?: string | null
           dispatch_started_at?: string | null
           dispatch_status?: string
           family_count?: number | null
@@ -1048,6 +1050,7 @@ export type Database = {
           dispatch_anomaly_at?: string | null
           dispatch_attempts?: number
           dispatch_expires_at?: string | null
+          dispatch_lock_until?: string | null
           dispatch_started_at?: string | null
           dispatch_status?: string
           family_count?: number | null
@@ -5673,6 +5676,7 @@ export type Database = {
           app_version: string
           attempt_status: string
           bypass_active: boolean
+          client_tier: string
           communities: string[]
           community_match: boolean
           dispatch_eligible: boolean
@@ -6182,6 +6186,7 @@ export type Database = {
               dispatch_anomaly_at: string | null
               dispatch_attempts: number
               dispatch_expires_at: string | null
+              dispatch_lock_until: string | null
               dispatch_started_at: string | null
               dispatch_status: string
               family_count: number | null
@@ -7543,6 +7548,7 @@ export type Database = {
           dispatch_anomaly_at: string | null
           dispatch_attempts: number
           dispatch_expires_at: string | null
+          dispatch_lock_until: string | null
           dispatch_started_at: string | null
           dispatch_status: string
           family_count: number | null
