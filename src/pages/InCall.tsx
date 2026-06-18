@@ -50,10 +50,18 @@ export default function InCall() {
       }
       try {
         setStatus("Requesting token...");
-        const { data, error } = await supabase.functions.invoke("agora-token", {
-          body: { channel, role: "worker", uid },
+        const { data: sessionData } = await supabase.auth.getSession();
+        const firebaseToken = sessionData?.session?.access_token ?? "";
+        const resp = await fetch("https://api.didisnow.com/functions/v1/agora-token", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(firebaseToken ? { "x-firebase-token": firebaseToken } : {}),
+          },
+          body: JSON.stringify({ channel, role: "worker", uid }),
         });
-        if (error) throw error;
+        if (!resp.ok) throw new Error(`agora-token HTTP ${resp.status}`);
+        const data = await resp.json();
         const { token, appId } = (data || {}) as { token: string; appId: string };
         if (!appId) throw new Error("agora-token did not return appId");
 
