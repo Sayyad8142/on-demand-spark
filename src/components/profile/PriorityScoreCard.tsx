@@ -350,6 +350,9 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
                       <span className="text-lg">{t.positive ? "🟢" : "🔴"}</span>
                       <div>
                         <p className="text-sm font-semibold">{t.label}</p>
+                        {t.sublabel && (
+                          <p className="text-[11px] font-medium text-foreground/80 leading-tight">{t.sublabel}</p>
+                        )}
                         <p className="text-[10px] text-muted-foreground">{formatWhen(t.when)}</p>
                       </div>
                     </div>
