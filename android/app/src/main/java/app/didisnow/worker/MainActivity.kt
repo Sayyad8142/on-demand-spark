@@ -68,6 +68,7 @@ class MainActivity : BridgeActivity() {
         registerPlugin(StepCounterPlugin::class.java)
         registerPlugin(BatteryOptimizationPlugin::class.java)
         registerPlugin(CancellationVoicePlugin::class.java)
+        registerPlugin(AgoraCallPlugin::class.java)
         
         super.onCreate(savedInstanceState)
         
