@@ -65,7 +65,7 @@ class AgoraCallPlugin : Plugin() {
             notifyListeners("agora:remote-left", JSObject().put("uid", uid).put("reason", reason))
         }
 
-        override fun onLeaveChannel(stats: RtcStats?) {
+        override fun onLeaveChannel(stats: IRtcEngineEventHandler.RtcStats?) {
             Log.d(TAG, "👋 left channel")
             notifyListeners("agora:left", JSObject())
         }
