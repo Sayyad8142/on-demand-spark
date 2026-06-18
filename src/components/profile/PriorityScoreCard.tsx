@@ -101,7 +101,7 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
           .limit(50),
         supabase
           .from("bookings")
-          .select("id, completed_at")
+          .select("id, completed_at, flat_no, community")
           .eq("worker_id", worker.id)
           .eq("status", "completed")
           .not("completed_at", "is", null)
