@@ -24,7 +24,7 @@ import UpiQrUpload from "@/components/UpiQrUpload";
 import { CURRENT_VERSION_CODE } from "@/config/version";
 
 import PriorityScoreCard from "@/components/profile/PriorityScoreCard";
-import HourlyBookingsChart from "@/components/profile/HourlyBookingsChart";
+
 import BestTimeToEarnCard from "@/components/profile/BestTimeToEarnCard";
 
 const SERVICES = [{
@@ -859,10 +859,8 @@ export default function Profile() {
           <PriorityScoreCard worker={worker} />
         </div>
 
-        {/* Hourly Booking Demand + Availability */}
-        <div className="px-4 mt-4">
-          <HourlyBookingsChart workerId={worker?.id} />
-        </div>
+
+
 
         {/* Best Time to Get Bookings (society-filtered) */}
         <div className="px-4 mt-4">
