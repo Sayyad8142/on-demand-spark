@@ -299,6 +299,24 @@ export default function InCall() {
         <p className="mt-6 text-lg text-slate-200">
           {connected ? `${mm}:${ss}` : status}
         </p>
+        {status.startsWith("Call failed") && (
+          <div className="mt-4 mx-auto max-h-72 w-full max-w-sm overflow-auto rounded-md border border-red-500/40 bg-black/60 p-3 text-left text-[11px] leading-tight font-mono text-red-200">
+            <div className="mb-1 font-semibold text-red-300">DEBUG (temporary)</div>
+            <div><span className="text-slate-400">URL:</span> {String(diag.url ?? "—")}</div>
+            <div><span className="text-slate-400">token-present:</span> {String(diag.tokenPresent ?? "—")}</div>
+            <div><span className="text-slate-400">token kind:</span> {String(diag.tokenKind ?? "—")}</div>
+            <div><span className="text-slate-400">navigator.onLine:</span> {String(diag.online ?? "—")}</div>
+            <div className="mt-1"><span className="text-slate-400">OPTIONS:</span> {String(diag.optionsResult ?? "—")}</div>
+            <div className="mt-1"><span className="text-slate-400">HTTP status:</span> {String(diag.httpStatus ?? "—")}</div>
+            <div className="mt-1">
+              <span className="text-slate-400">response body:</span>
+              <pre className="whitespace-pre-wrap break-all">{String(diag.responseBody ?? "—")}</pre>
+            </div>
+            <div className="mt-1"><span className="text-slate-400">error name:</span> {String(diag.errorName ?? "—")}</div>
+            <div><span className="text-slate-400">error message:</span> {String(diag.errorMessage ?? "—")}</div>
+            <div><span className="text-slate-400">fetch threw:</span> {String(diag.fetchThrew ?? false)}</div>
+          </div>
+        )}
       </div>
 
       <div className="mx-auto mb-12 flex w-full max-w-sm items-center justify-around">
