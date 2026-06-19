@@ -92,6 +92,12 @@ export default function InCall() {
         });
         console.log("[InCall][diag] token-present:", !!firebaseToken, "kind:", tokenKind);
         console.log("[InCall][diag] online:", navigator.onLine, "ua:", navigator.userAgent);
+        updateDiag({
+          url: tokenUrl,
+          tokenPresent: !!firebaseToken,
+          tokenKind,
+          online: navigator.onLine,
+        });
 
         // === Reachability probe (separate from main request) ===
         const probeStart = Date.now();
