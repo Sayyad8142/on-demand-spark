@@ -103,26 +103,13 @@ export default function InCall() {
         const probeStart = Date.now();
         try {
           const probe = await fetch(tokenUrl, { method: "OPTIONS" });
-          console.log(
-            "[InCall][diag] OPTIONS probe:",
-            probe.status,
-            "in",
-            Date.now() - probeStart,
-            "ms",
-            "cors-allow-origin:",
-            probe.headers.get("access-control-allow-origin"),
-            "cors-allow-headers:",
-            probe.headers.get("access-control-allow-headers"),
-          );
+          const probeResult = `OPTIONS ${probe.status} in ${Date.now() - probeStart}ms; allow-origin=${probe.headers.get("access-control-allow-origin")}; allow-headers=${probe.headers.get("access-control-allow-headers")}`;
+          console.log("[InCall][diag]", probeResult);
+          updateDiag({ optionsResult: probeResult });
         } catch (probeErr: any) {
-          console.error(
-            "[InCall][diag] OPTIONS probe FAILED in",
-            Date.now() - probeStart,
-            "ms — name:",
-            probeErr?.name,
-            "msg:",
-            probeErr?.message,
-          );
+          const probeResult = `OPTIONS THREW in ${Date.now() - probeStart}ms — ${probeErr?.name}: ${probeErr?.message}`;
+          console.error("[InCall][diag]", probeResult);
+          updateDiag({ optionsResult: probeResult });
         }
 
         // === Main token request ===
