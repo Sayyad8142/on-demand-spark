@@ -25,6 +25,7 @@ import { CURRENT_VERSION_CODE } from "@/config/version";
 
 import PriorityScoreCard from "@/components/profile/PriorityScoreCard";
 import HourlyBookingsChart from "@/components/profile/HourlyBookingsChart";
+import BestTimeToEarnCard from "@/components/profile/BestTimeToEarnCard";
 
 const SERVICES = [{
   value: "maid",
@@ -55,6 +56,7 @@ export default function Profile() {
     worker: realWorker,
     loading: realWorkerLoading,
     updateWorker,
+    updateAvailability,
     refetch: refetchWorker
   } = useWorkerProfile(!isGuestMode ? user?.id : undefined);
   const worker = isGuestMode ? DEMO_WORKER : realWorker;
@@ -860,6 +862,16 @@ export default function Profile() {
         {/* Hourly Booking Demand + Availability */}
         <div className="px-4 mt-4">
           <HourlyBookingsChart workerId={worker?.id} />
+        </div>
+
+        {/* Best Time to Get Bookings (society-filtered) */}
+        <div className="px-4 mt-4">
+          <BestTimeToEarnCard
+            workerId={worker?.id}
+            communities={(worker as any)?.communities || (worker?.community ? [worker.community] : [])}
+            isOnline={!!(worker as any)?.is_available}
+            onGoOnline={isGuestMode ? undefined : async () => { await updateAvailability(true); }}
+          />
         </div>
 
         {/* Language Selection */}
