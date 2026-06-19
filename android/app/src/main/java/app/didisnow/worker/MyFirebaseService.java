@@ -669,4 +669,3 @@ public class MyFirebaseService extends FirebaseMessagingService {
     }
   }
 }
-}
