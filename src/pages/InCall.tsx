@@ -48,20 +48,120 @@ export default function InCall() {
         setStatus("Voice calls require the mobile app");
         return;
       }
+      const tokenUrl = "https://api.didisnow.com/functions/v1/agora-token";
       try {
         setStatus("Requesting token...");
         const { data: sessionData } = await supabase.auth.getSession();
         const firebaseToken = sessionData?.session?.access_token ?? "";
-        const resp = await fetch("https://api.didisnow.com/functions/v1/agora-token", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(firebaseToken ? { "x-firebase-token": firebaseToken } : {}),
-          },
-          body: JSON.stringify({ channel, role: "worker", uid }),
+
+        // === Diagnostics: classify token ===
+        let tokenKind = "none";
+        if (firebaseToken) {
+          try {
+            const parts = firebaseToken.split(".");
+            const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+            // Firebase ID tokens: iss = https://securetoken.google.com/<projectId>
+            // Supabase JWTs:     iss = https://<ref>.supabase.co/auth/v1
+            tokenKind = payload?.iss?.includes("securetoken.google.com")
+              ? "firebase-id-token"
+              : payload?.iss?.includes("supabase")
+              ? "supabase-jwt"
+              : `other(iss=${payload?.iss})`;
+          } catch (e) {
+            tokenKind = "unparseable";
+          }
+        }
+
+        const reqBody = JSON.stringify({ channel, role: "worker", uid });
+        const reqHeaders: Record<string, string> = {
+          "Content-Type": "application/json",
+          ...(firebaseToken ? { "x-firebase-token": firebaseToken } : {}),
+        };
+        console.log("[InCall][diag] === Agora token request ===");
+        console.log("[InCall][diag] url:", tokenUrl);
+        console.log("[InCall][diag] method: POST");
+        console.log("[InCall][diag] body:", reqBody);
+        console.log("[InCall][diag] headers:", {
+          ...reqHeaders,
+          "x-firebase-token": firebaseToken
+            ? `${firebaseToken.slice(0, 12)}…(${firebaseToken.length}ch)`
+            : "(missing)",
         });
-        if (!resp.ok) throw new Error(`agora-token HTTP ${resp.status}`);
-        const data = await resp.json();
+        console.log("[InCall][diag] token-present:", !!firebaseToken, "kind:", tokenKind);
+        console.log("[InCall][diag] online:", navigator.onLine, "ua:", navigator.userAgent);
+
+        // === Reachability probe (separate from main request) ===
+        const probeStart = Date.now();
+        try {
+          const probe = await fetch(tokenUrl, { method: "OPTIONS" });
+          console.log(
+            "[InCall][diag] OPTIONS probe:",
+            probe.status,
+            "in",
+            Date.now() - probeStart,
+            "ms",
+            "cors-allow-origin:",
+            probe.headers.get("access-control-allow-origin"),
+            "cors-allow-headers:",
+            probe.headers.get("access-control-allow-headers"),
+          );
+        } catch (probeErr: any) {
+          console.error(
+            "[InCall][diag] OPTIONS probe FAILED in",
+            Date.now() - probeStart,
+            "ms — name:",
+            probeErr?.name,
+            "msg:",
+            probeErr?.message,
+          );
+        }
+
+        // === Main token request ===
+        const fetchStart = Date.now();
+        let resp: Response;
+        try {
+          resp = await fetch(tokenUrl, {
+            method: "POST",
+            headers: reqHeaders,
+            body: reqBody,
+          });
+        } catch (netErr: any) {
+          console.error(
+            "[InCall][diag] FETCH THREW (no response received) after",
+            Date.now() - fetchStart,
+            "ms — name:",
+            netErr?.name,
+            "msg:",
+            netErr?.message,
+            "stack:",
+            netErr?.stack,
+          );
+          throw new Error(`Network: ${netErr?.name || "Error"}: ${netErr?.message || "fetch failed"}`);
+        }
+        console.log(
+          "[InCall][diag] HTTP status:",
+          resp.status,
+          resp.statusText,
+          "in",
+          Date.now() - fetchStart,
+          "ms",
+        );
+        console.log(
+          "[InCall][diag] response headers:",
+          Object.fromEntries(resp.headers.entries()),
+        );
+        const respText = await resp.text();
+        console.log("[InCall][diag] response body:", respText);
+
+        if (!resp.ok) throw new Error(`agora-token HTTP ${resp.status}: ${respText.slice(0, 200)}`);
+
+        let data: any;
+        try {
+          data = JSON.parse(respText);
+        } catch (parseErr: any) {
+          console.error("[InCall][diag] JSON parse failed:", parseErr?.message);
+          throw new Error(`Bad JSON from agora-token: ${parseErr?.message}`);
+        }
         const { token, appId } = (data || {}) as { token: string; appId: string };
         if (!appId) throw new Error("agora-token did not return appId");
 
@@ -76,7 +176,14 @@ export default function InCall() {
         setConnected(true);
         setStatus("Connected");
       } catch (e: any) {
-        console.error("[InCall] join failed", e);
+        console.error(
+          "[InCall][diag] join failed — name:",
+          e?.name,
+          "msg:",
+          e?.message,
+          "stack:",
+          e?.stack,
+        );
         setStatus(`Call failed: ${e?.message || "unknown error"}`);
         toast({
           title: "Call failed",
