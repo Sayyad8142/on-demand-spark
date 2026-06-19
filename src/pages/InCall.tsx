@@ -29,8 +29,11 @@ export default function InCall() {
   const [speaker, setSpeaker] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [status, setStatus] = useState("Connecting...");
+  const [diag, setDiag] = useState<Record<string, any>>({});
   const endedRef = useRef(false);
   const timerRef = useRef<number | null>(null);
+  const updateDiag = (patch: Record<string, any>) =>
+    setDiag((d) => ({ ...d, ...patch }));
 
   // Connect
   useEffect(() => {
