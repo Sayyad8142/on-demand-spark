@@ -4000,42 +4000,6 @@ export type Database = {
         }
         Relationships: []
       }
-      voice_calls: {
-        Row: {
-          agora_channel: string
-          booking_id: string
-          created_at: string | null
-          customer_id: string
-          ended_at: string | null
-          id: string
-          started_at: string | null
-          status: string | null
-          worker_id: string
-        }
-        Insert: {
-          agora_channel: string
-          booking_id: string
-          created_at?: string | null
-          customer_id: string
-          ended_at?: string | null
-          id?: string
-          started_at?: string | null
-          status?: string | null
-          worker_id: string
-        }
-        Update: {
-          agora_channel?: string
-          booking_id?: string
-          created_at?: string | null
-          customer_id?: string
-          ended_at?: string | null
-          id?: string
-          started_at?: string | null
-          status?: string | null
-          worker_id?: string
-        }
-        Relationships: []
-      }
       wallet_transactions: {
         Row: {
           amount_inr: number

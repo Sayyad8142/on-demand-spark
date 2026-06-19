@@ -119,24 +119,6 @@ public class MyFirebaseService extends FirebaseMessagingService {
         return;
       }
 
-      // ── Incoming Agora voice call ─────────────────────────────────────────
-      if ("incoming_call".equals(type)) {
-        String callBookingId = data.get("booking_id");
-        if (callBookingId == null || callBookingId.isEmpty()) callBookingId = data.get("bookingId");
-        String customer = data.get("customer_name");
-        if (customer == null || customer.isEmpty()) customer = data.get("customer");
-        if (customer == null || customer.isEmpty()) customer = "Customer";
-
-        Log.d(TAG, "📞 INCOMING_CALL booking_id=" + callBookingId + " customer=" + customer);
-        if (callBookingId == null || callBookingId.isEmpty()) {
-          Log.e(TAG, "❌ incoming_call missing booking_id");
-          return;
-        }
-        showIncomingCallNotification(callBookingId, customer);
-        launchIncomingCallActivity(callBookingId, customer);
-        return;
-      }
-
       // Handle BOOKING_ALERT for BOTH instant AND scheduled bookings
       if ("BOOKING_ALERT".equals(type)) {
         Log.d(TAG, "═══════════════════════════════════════════════════════════");
@@ -574,98 +556,6 @@ public class MyFirebaseService extends FirebaseMessagingService {
       } catch (SecurityException e) {
         Log.w(TAG, "🔕 Cancellation notification blocked by Android permission. booking_id=" + bookingId, e);
       }
-    }
-  }
-
-  // ── Incoming Agora voice call helpers ──────────────────────────────────────
-  private static final String CALL_CHANNEL_ID = "incoming_voice_calls";
-  private static final int INCOMING_CALL_NOTIF_ID = 98765;
-
-  private void createIncomingCallChannel() {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      NotificationChannel ch = new NotificationChannel(
-        CALL_CHANNEL_ID, "Incoming Calls",
-        NotificationManager.IMPORTANCE_HIGH
-      );
-      ch.setDescription("Incoming voice calls from customers");
-      ch.setLockscreenVisibility(NotificationCompat.VISIBILITY_PUBLIC);
-      ch.enableVibration(true);
-      ch.setBypassDnd(true);
-      Uri ringtone = android.media.RingtoneManager.getDefaultUri(     android.media.RingtoneManager.TYPE_RINGTONE );
-      AudioAttributes attrs = new AudioAttributes.Builder()
-        .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-        .build();
-      ch.setSound(ringtone, attrs);
-      NotificationManager nm = getSystemService(NotificationManager.class);
-      if (nm != null) nm.createNotificationChannel(ch);
-    }
-  }
-
-  private void showIncomingCallNotification(String bookingId, String customerName) {
-    createIncomingCallChannel();
-
-    // Full-screen intent → IncomingCallActivity
-    Intent fullScreenIntent = new Intent(this, IncomingCallActivity.class);
-    fullScreenIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-    fullScreenIntent.putExtra("booking_id", bookingId);
-    fullScreenIntent.putExtra("customer_name", customerName);
-    PendingIntent fullScreenPi = PendingIntent.getActivity(
-      this, bookingId.hashCode(), fullScreenIntent,
-      PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-    );
-
-    // Accept → opens MainActivity at /in-call/<bookingId>
-    Intent acceptIntent = new Intent(this, MainActivity.class);
-    acceptIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-    acceptIntent.putExtra("navigate_to", "in_call");
-    acceptIntent.putExtra("booking_id", bookingId);
-    acceptIntent.putExtra("customer_name", customerName);
-    acceptIntent.putExtra("call_action", "accept");
-    PendingIntent acceptPi = PendingIntent.getActivity(
-      this, bookingId.hashCode() + 1, acceptIntent,
-      PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-    );
-
-    // Decline → CallActionReceiver
-    Intent declineIntent = new Intent(this, CallActionReceiver.class);
-    declineIntent.putExtra("action", "decline");
-    declineIntent.putExtra("booking_id", bookingId);
-    PendingIntent declinePi = PendingIntent.getBroadcast(
-      this, bookingId.hashCode() + 2, declineIntent,
-      PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-    );
-
-    NotificationCompat.Builder b = new NotificationCompat.Builder(this, CALL_CHANNEL_ID)
-      .setSmallIcon(R.drawable.ic_notification)
-      .setContentTitle("Incoming call")
-      .setContentText(customerName + " is calling")
-      .setPriority(NotificationCompat.PRIORITY_HIGH)
-      .setCategory(NotificationCompat.CATEGORY_CALL)
-      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-      .setOngoing(true)
-      .setAutoCancel(false)
-      .setFullScreenIntent(fullScreenPi, true)
-      .setContentIntent(acceptPi)
-      .addAction(android.R.drawable.ic_menu_call, "Accept", acceptPi)
-      .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Decline", declinePi);
-
-    NotificationManager nm = getSystemService(NotificationManager.class);
-    if (nm != null) {
-      try { nm.notify(INCOMING_CALL_NOTIF_ID, b.build()); }
-      catch (SecurityException e) { Log.w(TAG, "Notification blocked", e); }
-    }
-  }
-
-  private void launchIncomingCallActivity(String bookingId, String customerName) {
-    try {
-      Intent i = new Intent(this, IncomingCallActivity.class);
-      i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-      i.putExtra("booking_id", bookingId);
-      i.putExtra("customer_name", customerName);
-      startActivity(i);
-    } catch (Exception e) {
-      Log.e(TAG, "❌ Failed to launch IncomingCallActivity", e);
     }
   }
 }

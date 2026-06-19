@@ -56,7 +56,6 @@ import WorkerBlocked from "./pages/WorkerBlocked";
 import DeviceReadiness from "./pages/DeviceReadiness";
 import BookingDiagnostics from "./pages/BookingDiagnostics";
 import CompleteBooking from "./pages/CompleteBooking";
-import InCall from "./pages/InCall";
 import AccountDetails from "./pages/AccountDetails";
 import BatteryOnboarding from "./pages/BatteryOnboarding";
 import BottomNav from "./components/BottomNav";
@@ -147,15 +146,11 @@ function NativeNavigationHandler() {
   useEffect(() => {
     const handleNativeNavigation = (event: CustomEvent) => {
       console.log("📱 Native navigation event received:", event.detail);
-
-      const { navigateTo, screen, bookingId, customerName, callAction } = event.detail || {};
+      
+      const { navigateTo, screen, bookingId } = event.detail || {};
       const target = navigateTo || screen;
-
-      if (target === "in_call" && bookingId) {
-        const qs = customerName ? `?customer=${encodeURIComponent(customerName)}` : "";
-        console.log("📞 Navigating to in-call screen", bookingId, "action=", callAction);
-        navigate(`/in-call/${bookingId}${qs}`);
-      } else if (target === "home") {
+      
+      if (target === "home") {
         console.log("🏠 Navigating to home screen", bookingId ? `with booking ${bookingId}` : "");
         navigate("/home");
       } else if (target === "bookings" || target === "booking_requests") {
@@ -608,7 +603,6 @@ function AppInner() {
           <Route path="/booking-diagnostics" element={<ProtectedRoute><BookingDiagnostics /></ProtectedRoute>} />
           <Route path="/diagnostics" element={<ProtectedRoute><BookingDiagnostics /></ProtectedRoute>} />
           <Route path="/complete-booking/:bookingId" element={<ProtectedRoute><CompleteBooking /></ProtectedRoute>} />
-          <Route path="/in-call/:bookingId" element={<ProtectedRoute><InCall /></ProtectedRoute>} />
           <Route path="/account-details" element={<ProtectedRoute><AccountDetails /></ProtectedRoute>} />
           <Route path="/" element={<RootRedirect />} />
           <Route path="*" element={<NotFound />} />
