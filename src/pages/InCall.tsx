@@ -29,8 +29,11 @@ export default function InCall() {
   const [speaker, setSpeaker] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [status, setStatus] = useState("Connecting...");
+  const [diag, setDiag] = useState<Record<string, any>>({});
   const endedRef = useRef(false);
   const timerRef = useRef<number | null>(null);
+  const updateDiag = (patch: Record<string, any>) =>
+    setDiag((d) => ({ ...d, ...patch }));
 
   // Connect
   useEffect(() => {
@@ -89,31 +92,24 @@ export default function InCall() {
         });
         console.log("[InCall][diag] token-present:", !!firebaseToken, "kind:", tokenKind);
         console.log("[InCall][diag] online:", navigator.onLine, "ua:", navigator.userAgent);
+        updateDiag({
+          url: tokenUrl,
+          tokenPresent: !!firebaseToken,
+          tokenKind,
+          online: navigator.onLine,
+        });
 
         // === Reachability probe (separate from main request) ===
         const probeStart = Date.now();
         try {
           const probe = await fetch(tokenUrl, { method: "OPTIONS" });
-          console.log(
-            "[InCall][diag] OPTIONS probe:",
-            probe.status,
-            "in",
-            Date.now() - probeStart,
-            "ms",
-            "cors-allow-origin:",
-            probe.headers.get("access-control-allow-origin"),
-            "cors-allow-headers:",
-            probe.headers.get("access-control-allow-headers"),
-          );
+          const probeResult = `OPTIONS ${probe.status} in ${Date.now() - probeStart}ms; allow-origin=${probe.headers.get("access-control-allow-origin")}; allow-headers=${probe.headers.get("access-control-allow-headers")}`;
+          console.log("[InCall][diag]", probeResult);
+          updateDiag({ optionsResult: probeResult });
         } catch (probeErr: any) {
-          console.error(
-            "[InCall][diag] OPTIONS probe FAILED in",
-            Date.now() - probeStart,
-            "ms — name:",
-            probeErr?.name,
-            "msg:",
-            probeErr?.message,
-          );
+          const probeResult = `OPTIONS THREW in ${Date.now() - probeStart}ms — ${probeErr?.name}: ${probeErr?.message}`;
+          console.error("[InCall][diag]", probeResult);
+          updateDiag({ optionsResult: probeResult });
         }
 
         // === Main token request ===
@@ -136,6 +132,11 @@ export default function InCall() {
             "stack:",
             netErr?.stack,
           );
+          updateDiag({
+            fetchThrew: true,
+            errorName: netErr?.name,
+            errorMessage: netErr?.message,
+          });
           throw new Error(`Network: ${netErr?.name || "Error"}: ${netErr?.message || "fetch failed"}`);
         }
         console.log(
@@ -152,6 +153,10 @@ export default function InCall() {
         );
         const respText = await resp.text();
         console.log("[InCall][diag] response body:", respText);
+        updateDiag({
+          httpStatus: `${resp.status} ${resp.statusText}`,
+          responseBody: respText?.slice(0, 2000),
+        });
 
         if (!resp.ok) throw new Error(`agora-token HTTP ${resp.status}: ${respText.slice(0, 200)}`);
 
@@ -184,6 +189,10 @@ export default function InCall() {
           "stack:",
           e?.stack,
         );
+        updateDiag({
+          errorName: e?.name,
+          errorMessage: e?.message,
+        });
         setStatus(`Call failed: ${e?.message || "unknown error"}`);
         toast({
           title: "Call failed",
@@ -290,6 +299,24 @@ export default function InCall() {
         <p className="mt-6 text-lg text-slate-200">
           {connected ? `${mm}:${ss}` : status}
         </p>
+        {status.startsWith("Call failed") && (
+          <div className="mt-4 mx-auto max-h-72 w-full max-w-sm overflow-auto rounded-md border border-red-500/40 bg-black/60 p-3 text-left text-[11px] leading-tight font-mono text-red-200">
+            <div className="mb-1 font-semibold text-red-300">DEBUG (temporary)</div>
+            <div><span className="text-slate-400">URL:</span> {String(diag.url ?? "—")}</div>
+            <div><span className="text-slate-400">token-present:</span> {String(diag.tokenPresent ?? "—")}</div>
+            <div><span className="text-slate-400">token kind:</span> {String(diag.tokenKind ?? "—")}</div>
+            <div><span className="text-slate-400">navigator.onLine:</span> {String(diag.online ?? "—")}</div>
+            <div className="mt-1"><span className="text-slate-400">OPTIONS:</span> {String(diag.optionsResult ?? "—")}</div>
+            <div className="mt-1"><span className="text-slate-400">HTTP status:</span> {String(diag.httpStatus ?? "—")}</div>
+            <div className="mt-1">
+              <span className="text-slate-400">response body:</span>
+              <pre className="whitespace-pre-wrap break-all">{String(diag.responseBody ?? "—")}</pre>
+            </div>
+            <div className="mt-1"><span className="text-slate-400">error name:</span> {String(diag.errorName ?? "—")}</div>
+            <div><span className="text-slate-400">error message:</span> {String(diag.errorMessage ?? "—")}</div>
+            <div><span className="text-slate-400">fetch threw:</span> {String(diag.fetchThrew ?? false)}</div>
+          </div>
+        )}
       </div>
 
       <div className="mx-auto mb-12 flex w-full max-w-sm items-center justify-around">
