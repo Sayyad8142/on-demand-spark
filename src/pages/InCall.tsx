@@ -132,6 +132,11 @@ export default function InCall() {
             "stack:",
             netErr?.stack,
           );
+          updateDiag({
+            fetchThrew: true,
+            errorName: netErr?.name,
+            errorMessage: netErr?.message,
+          });
           throw new Error(`Network: ${netErr?.name || "Error"}: ${netErr?.message || "fetch failed"}`);
         }
         console.log(
@@ -148,6 +153,10 @@ export default function InCall() {
         );
         const respText = await resp.text();
         console.log("[InCall][diag] response body:", respText);
+        updateDiag({
+          httpStatus: `${resp.status} ${resp.statusText}`,
+          responseBody: respText?.slice(0, 2000),
+        });
 
         if (!resp.ok) throw new Error(`agora-token HTTP ${resp.status}: ${respText.slice(0, 200)}`);
 
@@ -180,6 +189,10 @@ export default function InCall() {
           "stack:",
           e?.stack,
         );
+        updateDiag({
+          errorName: e?.name,
+          errorMessage: e?.message,
+        });
         setStatus(`Call failed: ${e?.message || "unknown error"}`);
         toast({
           title: "Call failed",
