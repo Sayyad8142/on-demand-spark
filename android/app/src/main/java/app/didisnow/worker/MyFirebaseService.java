@@ -591,7 +591,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
       ch.setLockscreenVisibility(NotificationCompat.VISIBILITY_PUBLIC);
       ch.enableVibration(true);
       ch.setBypassDnd(true);
-      Uri ringtone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+      Uri ringtone = android.media.RingtoneManager.getDefaultUri(     android.media.RingtoneManager.TYPE_RINGTONE );
       AudioAttributes attrs = new AudioAttributes.Builder()
         .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
