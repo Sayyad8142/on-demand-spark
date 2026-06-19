@@ -75,7 +75,7 @@ export default function HourlyBookingsChart({ workerId }: Props) {
         .maybeSingle();
       if (cancelled) return;
       const set = new Set<number>();
-      const slots = (data?.slots as boolean[] | null) || null;
+      const slots = (data?.slots as unknown as boolean[] | null) || null;
       if (slots) {
         // Slots are 30-min from 7:00 onward. Hour h => indices (h-7)*2 and (h-7)*2+1
         for (const h of HOURS) {
