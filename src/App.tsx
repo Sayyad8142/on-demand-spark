@@ -412,14 +412,12 @@ function AppInner() {
     return () => { sub.then(s => s.remove()); };
   }, [worker?.is_blocked]);
 
-  // Closes the popup only. Voice now auto-stops after 3 repeats and is NOT
-  // tied to this button (per spec). Use forceStopCancellationAlert to also
-  // silence audio (e.g. on a new booking acceptance).
   const closeCancellationPopup = useCallback(() => {
     if (cancellationTimeoutRef.current) {
       window.clearTimeout(cancellationTimeoutRef.current);
       cancellationTimeoutRef.current = null;
     }
+    stopCancellationVoice();
     setCancellationAlert(null);
   }, []);
 
