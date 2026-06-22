@@ -662,6 +662,7 @@ function AppInner() {
       )}
       <BrowserRouter>
         <NativeNavigationHandler />
+        <OtpPendingBanner bookings={otpPendingBookings} />
         <Routes>
           <Route path="/auth" element={<PublicAuthRoute><Auth /></PublicAuthRoute>} />
           <Route path="/otp-verify" element={<OtpVerify />} />
