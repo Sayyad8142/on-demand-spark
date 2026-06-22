@@ -2594,6 +2594,36 @@ export type Database = {
         }
         Relationships: []
       }
+      otp_reminder_events: {
+        Row: {
+          booking_id: string
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          user_id: string | null
+          worker_id: string | null
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+          worker_id?: string | null
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+          worker_id?: string | null
+        }
+        Relationships: []
+      }
       payment_intents: {
         Row: {
           amount_inr: number
@@ -7359,6 +7389,10 @@ export type Database = {
           user_id: string
           wallet_transaction_id: string
         }[]
+      }
+      log_otp_reminder_event: {
+        Args: { p_booking_id: string; p_event_type: string; p_metadata?: Json }
+        Returns: string
       }
       maid_total_price: {
         Args: {
