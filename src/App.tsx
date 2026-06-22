@@ -469,7 +469,7 @@ function AppInner() {
   }, [showCancellationAlert, forceStopCancellationAlert]);
 
   // OTP completion reminder escalation (60 min after accept, every 10 min).
-  useOtpReminderEscalation(session?.user?.id);
+  const { pendingBookings: otpPendingBookings } = useOtpReminderEscalation(session?.user?.id);
   useEffect(() => {
     const onOtpReminder = (event: Event) => {
       const detail = (event as CustomEvent)?.detail || {};
@@ -487,7 +487,7 @@ function AppInner() {
   }, []);
 
   const closeOtpReminder = useCallback(
-    (acknowledgedVia: "ok" | "enter_otp") => {
+    (acknowledgedVia: "ok" | "enter_otp" | "auto_open") => {
       const current = otpReminderAlert;
       stopOtpReminderVoice();
       setOtpReminderAlert(null);
@@ -497,12 +497,26 @@ function AppInner() {
           count: current.count,
         });
       }
-      if (acknowledgedVia === "enter_otp" && current?.bookingId) {
+      // Reminder #1 (count=1): OK just closes.
+      // Reminder #2 (count=2): OK also navigates to the OTP screen.
+      // Reminder #3+ (count>=3): auto-opens after the voice finishes.
+      const shouldNavigate =
+        acknowledgedVia !== "ok" || (current?.count ?? 0) >= 2;
+      if (shouldNavigate && current?.bookingId) {
         window.location.assign(`/complete-booking/${current.bookingId}?focusOtp=1`);
       }
     },
     [otpReminderAlert]
   );
+
+  // Reminder #3+: auto-open the OTP screen once the voice finishes (~13s).
+  useEffect(() => {
+    if (!otpReminderAlert || otpReminderAlert.count < 3) return;
+    const t = window.setTimeout(() => {
+      closeOtpReminder("auto_open");
+    }, 13000);
+    return () => window.clearTimeout(t);
+  }, [otpReminderAlert, closeOtpReminder]);
 
   // Listen for push notification messages
   useEffect(() => {
