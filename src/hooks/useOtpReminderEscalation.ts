@@ -220,6 +220,8 @@ export function useOtpReminderEscalation(userId: string | undefined) {
       window.clearInterval(interval);
     };
   }, [userId]);
+
+  return { pendingBookings };
 }
 
 export { logEvent as logOtpReminderEvent };
