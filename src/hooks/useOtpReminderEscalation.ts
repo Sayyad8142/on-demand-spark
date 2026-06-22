@@ -135,6 +135,7 @@ export function useOtpReminderEscalation(userId: string | undefined) {
 
         const now = Date.now();
         const activeIds = new Set<string>();
+        const pending: OtpPendingBooking[] = [];
 
         for (const b of data) {
           activeIds.add(b.id);
