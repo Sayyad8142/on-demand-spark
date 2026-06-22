@@ -9,7 +9,7 @@
  * active status. Per-booking state is persisted to localStorage so the cadence
  * survives reloads.
  */
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 const ACTIVE_STATUSES = [
