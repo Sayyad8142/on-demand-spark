@@ -68,9 +68,15 @@ async function logEvent(bookingId: string, eventType: string, metadata: Record<s
   }
 }
 
+export type OtpPendingBooking = {
+  id: string;
+  accepted_at: string | null;
+};
+
 export function useOtpReminderEscalation(userId: string | undefined) {
   const workerIdRef = useRef<string | null>(null);
   const previouslyOtpVerifiedRef = useRef<Set<string>>(new Set());
+  const [pendingBookings, setPendingBookings] = useState<OtpPendingBooking[]>([]);
 
   // Resolve worker id once per user.
   useEffect(() => {
