@@ -158,6 +158,9 @@ export function useOtpReminderEscalation(userId: string | undefined) {
 
           if (now - accepted < FIRST_DELAY_MS) continue;
 
+          // Eligible for banner regardless of cadence.
+          pending.push({ id: b.id, accepted_at: b.accepted_at });
+
           const state = loadState(b.id);
           const lastShown = state.lastShownAt ?? 0;
           const elapsedSinceLast = now - lastShown;
@@ -185,6 +188,8 @@ export function useOtpReminderEscalation(userId: string | undefined) {
             })
           );
         }
+
+        setPendingBookings(pending);
 
         // Clean up storage for bookings no longer active.
         try {
