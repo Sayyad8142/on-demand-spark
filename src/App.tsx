@@ -28,6 +28,8 @@ import {
 // requestLocationPermissions intentionally not imported — see startup effect note below.
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
 import { startCancellationVoice, stopCancellationVoice } from "@/lib/cancellationVoice";
+import { startOtpReminderVoice, stopOtpReminderVoice } from "@/lib/otpReminderVoice";
+import { useOtpReminderEscalation, logOtpReminderEvent } from "@/hooks/useOtpReminderEscalation";
 import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import Auth from "./pages/Auth";
