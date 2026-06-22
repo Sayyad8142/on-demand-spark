@@ -852,6 +852,7 @@ export type Database = {
           community: string
           completed_at: string | null
           completed_by: string | null
+          completed_count_at_booking: number | null
           completion_otp: string | null
           completion_source: string | null
           confirmed_at: string | null
@@ -880,6 +881,8 @@ export type Database = {
           id: string
           is_demo: boolean
           last_dispatch_at: string | null
+          loyalty_surcharge_inr: number
+          loyalty_tier_id: string | null
           maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
           notes: string | null
           on_the_way_at: string | null
@@ -914,6 +917,9 @@ export type Database = {
           user_marked_paid_at: string | null
           user_payment_utr: string | null
           user_reminder_sent: boolean | null
+          waiting_busy_worker_count: number | null
+          waiting_started_at: string | null
+          waiting_until: string | null
           worker_collected_at: string | null
           worker_collected_payment: boolean | null
           worker_collection_method: string | null
@@ -943,6 +949,7 @@ export type Database = {
           community: string
           completed_at?: string | null
           completed_by?: string | null
+          completed_count_at_booking?: number | null
           completion_otp?: string | null
           completion_source?: string | null
           confirmed_at?: string | null
@@ -971,6 +978,8 @@ export type Database = {
           id?: string
           is_demo?: boolean
           last_dispatch_at?: string | null
+          loyalty_surcharge_inr?: number
+          loyalty_tier_id?: string | null
           maid_tasks?: Database["public"]["Enums"]["maid_task"][] | null
           notes?: string | null
           on_the_way_at?: string | null
@@ -1005,6 +1014,9 @@ export type Database = {
           user_marked_paid_at?: string | null
           user_payment_utr?: string | null
           user_reminder_sent?: boolean | null
+          waiting_busy_worker_count?: number | null
+          waiting_started_at?: string | null
+          waiting_until?: string | null
           worker_collected_at?: string | null
           worker_collected_payment?: boolean | null
           worker_collection_method?: string | null
@@ -1034,6 +1046,7 @@ export type Database = {
           community?: string
           completed_at?: string | null
           completed_by?: string | null
+          completed_count_at_booking?: number | null
           completion_otp?: string | null
           completion_source?: string | null
           confirmed_at?: string | null
@@ -1062,6 +1075,8 @@ export type Database = {
           id?: string
           is_demo?: boolean
           last_dispatch_at?: string | null
+          loyalty_surcharge_inr?: number
+          loyalty_tier_id?: string | null
           maid_tasks?: Database["public"]["Enums"]["maid_task"][] | null
           notes?: string | null
           on_the_way_at?: string | null
@@ -1096,6 +1111,9 @@ export type Database = {
           user_marked_paid_at?: string | null
           user_payment_utr?: string | null
           user_reminder_sent?: boolean | null
+          waiting_busy_worker_count?: number | null
+          waiting_started_at?: string | null
+          waiting_until?: string | null
           worker_collected_at?: string | null
           worker_collected_payment?: boolean | null
           worker_collection_method?: string | null
@@ -1107,6 +1125,13 @@ export type Database = {
           worker_upi?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "bookings_loyalty_tier_id_fkey"
+            columns: ["loyalty_tier_id"]
+            isOneToOne: false
+            referencedRelation: "dynamic_pricing_tiers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bookings_preferred_worker_id_fkey"
             columns: ["preferred_worker_id"]
@@ -1375,6 +1400,7 @@ export type Database = {
           max_consecutive_timeouts: number
           max_dispatch_attempts: number
           max_total_requests: number
+          max_wait_for_worker_minutes: number
           retry_batch_size: number
           service_type: string
           updated_at: string
@@ -1392,6 +1418,7 @@ export type Database = {
           max_consecutive_timeouts?: number
           max_dispatch_attempts?: number
           max_total_requests?: number
+          max_wait_for_worker_minutes?: number
           retry_batch_size?: number
           service_type?: string
           updated_at?: string
@@ -1409,6 +1436,7 @@ export type Database = {
           max_consecutive_timeouts?: number
           max_dispatch_attempts?: number
           max_total_requests?: number
+          max_wait_for_worker_minutes?: number
           retry_batch_size?: number
           service_type?: string
           updated_at?: string
@@ -1576,6 +1604,36 @@ export type Database = {
           top_worker_v2_score?: number | null
           top_worker_v3_id?: string | null
           top_worker_v3_score?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      dynamic_pricing_tiers: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          max_completed: number | null
+          min_completed: number
+          surcharge_inr: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_completed?: number | null
+          min_completed: number
+          surcharge_inr?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_completed?: number | null
+          min_completed?: number
+          surcharge_inr?: number
           updated_at?: string
         }
         Relationships: []
@@ -5574,6 +5632,19 @@ export type Database = {
       }
     }
     Views: {
+      community_hourly_availability: {
+        Row: {
+          community: string | null
+          computed_at: string | null
+          failed_bookings: number | null
+          fulfilled_bookings: number | null
+          fulfillment_rate: number | null
+          hour_of_day: number | null
+          service_type: string | null
+          total_bookings: number | null
+        }
+        Relationships: []
+      }
       v_payment_wallet_issues: {
         Row: {
           booking_id: string | null
@@ -5822,6 +5893,10 @@ export type Database = {
         Returns: Json
       }
       admin_quick_stats: { Args: never; Returns: Json }
+      admin_recreate_cancelled_booking: {
+        Args: { p_booking_id: string }
+        Returns: Json
+      }
       admin_reject_worker_bank: {
         Args: { _reason: string; _worker_id: string }
         Returns: undefined
@@ -6209,6 +6284,7 @@ export type Database = {
               community: string
               completed_at: string | null
               completed_by: string | null
+              completed_count_at_booking: number | null
               completion_otp: string | null
               completion_source: string | null
               confirmed_at: string | null
@@ -6237,6 +6313,8 @@ export type Database = {
               id: string
               is_demo: boolean
               last_dispatch_at: string | null
+              loyalty_surcharge_inr: number
+              loyalty_tier_id: string | null
               maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
               notes: string | null
               on_the_way_at: string | null
@@ -6271,6 +6349,9 @@ export type Database = {
               user_marked_paid_at: string | null
               user_payment_utr: string | null
               user_reminder_sent: boolean | null
+              waiting_busy_worker_count: number | null
+              waiting_started_at: string | null
+              waiting_until: string | null
               worker_collected_at: string | null
               worker_collected_payment: boolean | null
               worker_collection_method: string | null
@@ -6346,6 +6427,13 @@ export type Database = {
         Args: { p_worker_id: string }
         Returns: string
       }
+      count_matching_busy_workers: {
+        Args: { p_booking_id: string }
+        Returns: {
+          busy_count: number
+          worker_ids: string[]
+        }[]
+      }
       create_admin_email_user: { Args: never; Returns: undefined }
       create_wallet_booking: {
         Args: { p_amount_inr: number; p_booking: Json; p_user_id: string }
@@ -6399,6 +6487,17 @@ export type Database = {
           worker_photo_url: string
           worker_rating: number
           worker_total_ratings: number
+        }[]
+      }
+      get_availability_forecast: {
+        Args: { p_community: string; p_service: string }
+        Returns: {
+          availability_pct: number
+          bucket: string
+          failed_bookings: number
+          fulfilled_bookings: number
+          hour_of_day: number
+          total_bookings: number
         }[]
       }
       get_available_experts_for_booking: {
@@ -6630,6 +6729,24 @@ export type Database = {
           terms_url: string
         }[]
       }
+      get_loyalty_tier_for_count: {
+        Args: { p_count: number }
+        Returns: {
+          created_at: string
+          id: string
+          is_active: boolean
+          max_completed: number | null
+          min_completed: number
+          surcharge_inr: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "dynamic_pricing_tiers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_my_wallet_balance: {
         Args: never
         Returns: {
@@ -6828,6 +6945,10 @@ export type Database = {
           rejected: number
           total_requests: number
         }[]
+      }
+      get_user_post_launch_completed_count: {
+        Args: { p_user_id: string }
+        Returns: number
       }
       get_worker_contact: { Args: { p_booking_id: string }; Returns: Json }
       get_worker_dispatch_scores: {
@@ -7375,6 +7496,7 @@ export type Database = {
         Returns: undefined
       }
       redispatch_booking: { Args: { p_booking_id: string }; Returns: undefined }
+      refresh_community_hourly_availability: { Args: never; Returns: undefined }
       register_worker: {
         Args: {
           p_community: string
@@ -7571,6 +7693,7 @@ export type Database = {
           community: string
           completed_at: string | null
           completed_by: string | null
+          completed_count_at_booking: number | null
           completion_otp: string | null
           completion_source: string | null
           confirmed_at: string | null
@@ -7599,6 +7722,8 @@ export type Database = {
           id: string
           is_demo: boolean
           last_dispatch_at: string | null
+          loyalty_surcharge_inr: number
+          loyalty_tier_id: string | null
           maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
           notes: string | null
           on_the_way_at: string | null
@@ -7633,6 +7758,9 @@ export type Database = {
           user_marked_paid_at: string | null
           user_payment_utr: string | null
           user_reminder_sent: boolean | null
+          waiting_busy_worker_count: number | null
+          waiting_started_at: string | null
+          waiting_until: string | null
           worker_collected_at: string | null
           worker_collected_payment: boolean | null
           worker_collection_method: string | null
@@ -7649,6 +7777,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      try_enter_waiting_for_worker: {
+        Args: { p_booking_id: string; p_max_wait_minutes?: number }
+        Returns: {
+          busy_count: number
+          entered: boolean
+          waiting_until: string
+        }[]
       }
       update_booking_status: {
         Args: { p_booking_id: string; p_status: string }
