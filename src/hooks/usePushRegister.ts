@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 import { getPushService } from '@/services/push';
+import { syncTokenToBackend } from '@/lib/pushToken';
 
 export function usePushRegister() {
   const [registeredToken, setRegisteredToken] = useState<string | null>(null);
@@ -14,60 +14,38 @@ export function usePushRegister() {
     try {
       const pushService = getPushService();
 
-      // Check if push is supported
       if (!pushService.isSupported()) {
         throw new Error('Push notifications not supported on this platform');
       }
 
       console.log('📱 Requesting push notification permission...');
-      
-      // Request permissions safely
       const hasPermission = await pushService.requestPermission();
-      
       if (!hasPermission) {
         throw new Error('Push notification permission denied');
       }
 
       console.log('✅ Permission granted, getting token...');
-
-      // Get push token
       const token = await pushService.getToken();
-      
       if (!token) {
         throw new Error('Failed to get push token');
       }
 
       console.log('✅ Token received:', token.substring(0, 20) + '...');
 
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('No authenticated user');
       }
 
-      console.log('💾 Saving token to database...');
-
-      // Register token with backend (saves to fcm_tokens table)
-      await pushService.registerToken(token, user.id);
-
-      // Also save to workers table with health tracking
-      const { error: workerError } = await supabase
-        .from('workers')
-        .update({
-          fcm_token: token,
-          fcm_token_status: 'active',
-          fcm_token_updated_at: new Date().toISOString(),
-          fcm_token_platform: Capacitor.isNativePlatform() ? 'android' : 'web',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', user.id);
-
-      if (workerError) {
-        console.error('❌ Failed to save token to workers table:', workerError);
-        throw new Error('Failed to save token to workers table');
+      // Single source of truth: delegate ALL token writes to syncTokenToBackend.
+      // This resets fcm_token_status='active', no_ack_count=0,
+      // notification_repair_failures=0, last_app_opened_at, app_version, etc.
+      const synced = await syncTokenToBackend(token, user.id, 'usePushRegister');
+      if (!synced) {
+        throw new Error('Failed to sync token to backend');
       }
 
-      console.log('✅ Token registered successfully in both tables');
+      console.log('✅ Token registered via syncTokenToBackend (single writer)');
 
       setRegisteredToken(token);
       setLastSyncTime(new Date());

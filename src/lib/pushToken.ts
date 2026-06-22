@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { supabase } from '@/integrations/supabase/client';
+import { CURRENT_VERSION_NAME } from '@/config/version';
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -151,6 +152,10 @@ export async function syncTokenToBackend(token: string, userId: string, reason: 
         notification_health: 'good',
         no_ack_count: 0,
         notification_repair_failures: 0,
+        fcm_last_fail_at: null,
+        fcm_last_fail_reason: null,
+        last_app_opened_at: now,
+        app_version: CURRENT_VERSION_NAME,
         updated_at: now,
       })
       .eq('user_id', userId)
