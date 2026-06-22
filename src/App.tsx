@@ -613,6 +613,38 @@ function AppInner() {
           </div>
         </div>
       )}
+      {otpReminderAlert && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-background/95 p-5 animate-fade-in">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-7 text-center shadow-2xl">
+            <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-foreground">⚠ OTP Pending</h2>
+            <p className="mt-3 text-base text-foreground">
+              This booking was accepted more than 60 minutes ago and the customer OTP has not been entered.
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Please collect the OTP from the customer and complete the booking.
+            </p>
+            <button
+              className="mt-7 w-full rounded-xl bg-primary py-4 text-lg font-bold text-primary-foreground active:scale-[0.98] transition-transform"
+              onClick={() => closeOtpReminder("enter_otp")}
+            >
+              Enter OTP Now
+            </button>
+            <button
+              className="mt-3 w-full rounded-xl border border-border bg-card py-3 text-base font-semibold text-foreground active:scale-[0.98] transition-transform"
+              onClick={() => closeOtpReminder("ok")}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
       <BrowserRouter>
         <NativeNavigationHandler />
         <Routes>
