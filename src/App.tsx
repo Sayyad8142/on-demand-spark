@@ -62,6 +62,7 @@ import AccountDetails from "./pages/AccountDetails";
 import BatteryOnboarding from "./pages/BatteryOnboarding";
 import BottomNav from "./components/BottomNav";
 import PermissionOnboarding from "./components/PermissionOnboarding";
+import OtpPendingBanner from "./components/OtpPendingBanner";
 import {
   startMovementMonitoring,
   stopMovementMonitoring,
