@@ -468,6 +468,42 @@ function AppInner() {
     };
   }, [showCancellationAlert, forceStopCancellationAlert]);
 
+  // OTP completion reminder escalation (60 min after accept, every 10 min).
+  useOtpReminderEscalation(session?.user?.id);
+  useEffect(() => {
+    const onOtpReminder = (event: Event) => {
+      const detail = (event as CustomEvent)?.detail || {};
+      const bookingId = detail.bookingId as string | undefined;
+      const count = (detail.count as number | undefined) ?? 1;
+      if (!bookingId) return;
+      setOtpReminderAlert({ bookingId, count });
+      startOtpReminderVoice();
+    };
+    window.addEventListener("otpReminderAlert", onOtpReminder);
+    return () => {
+      window.removeEventListener("otpReminderAlert", onOtpReminder);
+      stopOtpReminderVoice();
+    };
+  }, []);
+
+  const closeOtpReminder = useCallback(
+    (acknowledgedVia: "ok" | "enter_otp") => {
+      const current = otpReminderAlert;
+      stopOtpReminderVoice();
+      setOtpReminderAlert(null);
+      if (current?.bookingId) {
+        void logOtpReminderEvent(current.bookingId, "otp_reminder_acknowledged", {
+          via: acknowledgedVia,
+          count: current.count,
+        });
+      }
+      if (acknowledgedVia === "enter_otp" && current?.bookingId) {
+        window.location.assign(`/complete-booking/${current.bookingId}?focusOtp=1`);
+      }
+    },
+    [otpReminderAlert]
+  );
+
   // Listen for push notification messages
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
