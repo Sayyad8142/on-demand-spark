@@ -9,7 +9,7 @@
  * active status. Per-booking state is persisted to localStorage so the cadence
  * survives reloads.
  */
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 const ACTIVE_STATUSES = [
@@ -68,9 +68,15 @@ async function logEvent(bookingId: string, eventType: string, metadata: Record<s
   }
 }
 
+export type OtpPendingBooking = {
+  id: string;
+  accepted_at: string | null;
+};
+
 export function useOtpReminderEscalation(userId: string | undefined) {
   const workerIdRef = useRef<string | null>(null);
   const previouslyOtpVerifiedRef = useRef<Set<string>>(new Set());
+  const [pendingBookings, setPendingBookings] = useState<OtpPendingBooking[]>([]);
 
   // Resolve worker id once per user.
   useEffect(() => {
@@ -129,6 +135,7 @@ export function useOtpReminderEscalation(userId: string | undefined) {
 
         const now = Date.now();
         const activeIds = new Set<string>();
+        const pending: OtpPendingBooking[] = [];
 
         for (const b of data) {
           activeIds.add(b.id);
@@ -150,6 +157,9 @@ export function useOtpReminderEscalation(userId: string | undefined) {
           }
 
           if (now - accepted < FIRST_DELAY_MS) continue;
+
+          // Eligible for banner regardless of cadence.
+          pending.push({ id: b.id, accepted_at: b.accepted_at });
 
           const state = loadState(b.id);
           const lastShown = state.lastShownAt ?? 0;
@@ -178,6 +188,8 @@ export function useOtpReminderEscalation(userId: string | undefined) {
             })
           );
         }
+
+        setPendingBookings(pending);
 
         // Clean up storage for bookings no longer active.
         try {
@@ -208,6 +220,8 @@ export function useOtpReminderEscalation(userId: string | undefined) {
       window.clearInterval(interval);
     };
   }, [userId]);
+
+  return { pendingBookings };
 }
 
 export { logEvent as logOtpReminderEvent };
