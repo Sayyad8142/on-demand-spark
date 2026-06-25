@@ -5860,6 +5860,10 @@ export type Database = {
         Args: { p_worker_id: string }
         Returns: undefined
       }
+      admin_complete_booking_with_otp: {
+        Args: { p_booking_id: string; p_otp: string }
+        Returns: Json
+      }
       admin_credit_wallet: {
         Args: {
           p_amount: number
