@@ -245,58 +245,6 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
           </div>
         </div>
 
-        {/* Positive Actions */}
-        <div className="rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/60 dark:bg-emerald-950/20 p-3">
-          <div className="flex items-center gap-1.5 mb-2">
-            <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <p className="text-xs font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-              What Increases Your Score
-            </p>
-          </div>
-          <ul className="space-y-1.5 text-sm">
-            <li className="flex items-center justify-between">
-              <span className="flex items-center gap-2">✅ Complete bookings</span>
-              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">+1 each</span>
-            </li>
-            <li className="flex items-center justify-between">
-              <span className="flex items-center gap-2">⭐ Maintain high ratings</span>
-              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">+5 bonus</span>
-            </li>
-            <li className="flex items-center gap-2">✅ Reach customer on time</li>
-            <li className="flex items-center gap-2">✅ Accept bookings regularly</li>
-          </ul>
-          <div className="mt-2 pt-2 border-t border-emerald-200/60 dark:border-emerald-900/40 text-xs text-emerald-700 dark:text-emerald-300">
-            You've completed <span className="font-bold">{completedCount}</span> bookings so far.
-          </div>
-        </div>
-
-        {/* Negative Actions */}
-        <div className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50/60 dark:bg-red-950/20 p-3">
-          <div className="flex items-center gap-1.5 mb-2">
-            <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400" />
-            <p className="text-xs font-bold uppercase tracking-wide text-red-700 dark:text-red-300">
-              What Reduces Your Score
-            </p>
-          </div>
-          <ul className="space-y-1.5 text-sm">
-            <li className="flex items-center justify-between">
-              <span>❌ Cancel After Accept</span>
-              <span className="text-xs font-bold text-red-600 dark:text-red-400">-10</span>
-            </li>
-            <li className="flex items-center justify-between">
-              <span>❌ No Show</span>
-              <span className="text-xs font-bold text-red-600 dark:text-red-400">-20</span>
-            </li>
-            <li className="flex items-center justify-between">
-              <span>❌ Accept but No Movement</span>
-              <span className="text-xs font-bold text-red-600 dark:text-red-400">-15</span>
-            </li>
-            <li className="flex items-center justify-between">
-              <span>⚠️ Customer Complaint</span>
-              <span className="text-xs font-bold text-red-600 dark:text-red-400">-10</span>
-            </li>
-          </ul>
-        </div>
 
         {/* How to reach 100 */}
         {score < 100 && (
