@@ -893,36 +893,6 @@ export default function Profile() {
           </Card>
         </div>
 
-        {/* Manage Account Details Link */}
-        <div className="px-4 mt-4">
-          <Card className="border-0 shadow-lg cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => navigate('/account-details')}>
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <CreditCard className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">Manage Account Details</p>
-                    <p className="text-xs text-muted-foreground">
-                      {payoutReady ? "Payout ready ✅" : "Payout details not added"}
-                    </p>
-                  </div>
-                </div>
-                {payoutReady ? (
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                ) : (
-                  <Button size="sm" className="h-8 px-3" onClick={(event) => {
-                    event.stopPropagation();
-                    navigate('/account-details');
-                  }}>
-                    Add now
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Earnings Link */}
         <div className="px-4 mt-4">
