@@ -277,7 +277,7 @@ function BookingCard({ booking }: { booking: Booking }) {
         <div className="flex items-start gap-2 mb-3">
           <MapPin className={`w-4 h-4 mt-0.5 shrink-0 ${isCancelled ? 'text-red-500' : 'text-green-600'}`} />
           <p className="text-sm font-bold text-foreground leading-snug">
-            {formatBookingAddress(booking)}
+            {booking.flat_no ? `Flat ${booking.flat_no}` : 'Flat not set'}
           </p>
         </div>
 
