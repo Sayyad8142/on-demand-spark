@@ -11,7 +11,7 @@
  */
 import { Capacitor } from "@capacitor/core";
 
-const PHRASE = "OTP pending. Please enter customer OTP.";
+const PHRASE = "OTP, OTP, please enter OTP.";
 const REPEATS = 3;
 const PAUSE_MS = 600;
 
