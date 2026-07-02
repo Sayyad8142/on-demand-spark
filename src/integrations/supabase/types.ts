@@ -6539,6 +6539,44 @@ export type Database = {
           worker_total_ratings: number
         }[]
       }
+      get_auto_cancel_audit: {
+        Args: {
+          p_community?: string
+          p_from?: string
+          p_limit?: number
+          p_reason?: string
+          p_service?: string
+          p_to?: string
+          p_under_minutes?: number
+          p_wrong_only?: boolean
+        }
+        Returns: {
+          age_minutes: number
+          booking_id: string
+          booking_type: string
+          cancel_reason: string
+          cancel_source: string
+          cancellation_function: string
+          cancelled_at: string
+          community: string
+          created_at: string
+          cust_name: string
+          cust_phone: string
+          decision_explanation: string
+          dispatch_attempts: number
+          flat_size: string
+          is_wrong_cancellation: boolean
+          last_offer_at: string
+          matching_busy_workers_count: number
+          service_type: string
+          waiting_until: string
+          was_waiting_for_worker: boolean
+          workers_failed: number
+          workers_notified: number
+          workers_rejected: number
+          workers_timedout: number
+        }[]
+      }
       get_availability_forecast: {
         Args: { p_community: string; p_service: string }
         Returns: {
