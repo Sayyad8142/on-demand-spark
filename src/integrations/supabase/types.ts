@@ -841,6 +841,7 @@ export type Database = {
           assignment_reason: string | null
           auto_complete_after_minutes: number | null
           auto_complete_at: string | null
+          base_price_inr: number | null
           bathroom_count: number | null
           booking_type: string
           can_cancel_until: string | null
@@ -882,6 +883,7 @@ export type Database = {
           is_demo: boolean
           last_dispatch_at: string | null
           loyalty_surcharge_inr: number
+          loyalty_surge_amount: number
           loyalty_tier_id: string | null
           maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
           notes: string | null
@@ -938,6 +940,7 @@ export type Database = {
           assignment_reason?: string | null
           auto_complete_after_minutes?: number | null
           auto_complete_at?: string | null
+          base_price_inr?: number | null
           bathroom_count?: number | null
           booking_type: string
           can_cancel_until?: string | null
@@ -979,6 +982,7 @@ export type Database = {
           is_demo?: boolean
           last_dispatch_at?: string | null
           loyalty_surcharge_inr?: number
+          loyalty_surge_amount?: number
           loyalty_tier_id?: string | null
           maid_tasks?: Database["public"]["Enums"]["maid_task"][] | null
           notes?: string | null
@@ -1035,6 +1039,7 @@ export type Database = {
           assignment_reason?: string | null
           auto_complete_after_minutes?: number | null
           auto_complete_at?: string | null
+          base_price_inr?: number | null
           bathroom_count?: number | null
           booking_type?: string
           can_cancel_until?: string | null
@@ -1076,6 +1081,7 @@ export type Database = {
           is_demo?: boolean
           last_dispatch_at?: string | null
           loyalty_surcharge_inr?: number
+          loyalty_surge_amount?: number
           loyalty_tier_id?: string | null
           maid_tasks?: Database["public"]["Enums"]["maid_task"][] | null
           notes?: string | null
@@ -5882,6 +5888,14 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_dismiss_all_failed_payouts: {
+        Args: { p_note?: string }
+        Returns: number
+      }
+      admin_dismiss_failed_payout: {
+        Args: { p_note?: string; p_payout_id: string }
+        Returns: undefined
+      }
       admin_emergency_manual_assign: {
         Args: { p_admin_id?: string; p_booking_id: string; p_worker_id: string }
         Returns: Json
@@ -6307,6 +6321,7 @@ export type Database = {
               assignment_reason: string | null
               auto_complete_after_minutes: number | null
               auto_complete_at: string | null
+              base_price_inr: number | null
               bathroom_count: number | null
               booking_type: string
               can_cancel_until: string | null
@@ -6348,6 +6363,7 @@ export type Database = {
               is_demo: boolean
               last_dispatch_at: string | null
               loyalty_surcharge_inr: number
+              loyalty_surge_amount: number
               loyalty_tier_id: string | null
               maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
               notes: string | null
@@ -6983,6 +6999,16 @@ export type Database = {
       get_user_post_launch_completed_count: {
         Args: { p_user_id: string }
         Returns: number
+      }
+      get_user_surge_amount: {
+        Args: { p_user_id: string }
+        Returns: {
+          booking_count: number
+          next_surge_amount: number
+          next_tier_booking: number
+          surge_amount: number
+          tier_number: number
+        }[]
       }
       get_worker_contact: { Args: { p_booking_id: string }; Returns: Json }
       get_worker_dispatch_scores: {
@@ -7720,6 +7746,7 @@ export type Database = {
           assignment_reason: string | null
           auto_complete_after_minutes: number | null
           auto_complete_at: string | null
+          base_price_inr: number | null
           bathroom_count: number | null
           booking_type: string
           can_cancel_until: string | null
@@ -7761,6 +7788,7 @@ export type Database = {
           is_demo: boolean
           last_dispatch_at: string | null
           loyalty_surcharge_inr: number
+          loyalty_surge_amount: number
           loyalty_tier_id: string | null
           maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
           notes: string | null
