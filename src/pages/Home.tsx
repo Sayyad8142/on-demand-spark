@@ -266,6 +266,26 @@ export default function Home() {
       {/* Main Content with top padding for fixed header */}
       <div className={`p-4 space-y-4 pb-32 ${isGuestMode ? 'pt-4' : 'pt-28'}`}>
 
+      {/* Worker Health badge — unified status from all signals */}
+      {!isGuestMode && worker && (
+        <WorkerHealthBadge
+          health={workerHealth}
+          onRepair={async () => {
+            if (pushHealth.isChecking) return;
+            const ok = await pushHealth.repair();
+            toast({
+              title: ok ? "Booking alerts restored" : "Still unable to restore",
+              description: ok
+                ? "You're ready to receive bookings."
+                : "Please open Device Readiness to fix remaining issues.",
+              variant: ok ? "default" : "destructive",
+            });
+            if (!ok) navigate("/device-readiness");
+          }}
+        />
+      )}
+
+
       {!isGuestMode && worker && !payoutReady && (
         <Card className="p-5 border-2 border-primary/30 bg-primary/5 shadow-sm">
           <div className="space-y-3">
