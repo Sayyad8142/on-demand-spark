@@ -11,6 +11,7 @@ import { usePushHealthGuard } from "@/hooks/usePushHealthGuard";
 import { useAutoHeal } from "@/hooks/useAutoHeal";
 
 import ActiveJobCard from "@/components/ActiveJobCard";
+import AiCoachCard from "@/components/AiCoachCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { UpcomingBookingsBar } from "@/components/UpcomingBookingsBar";
 // Notification health banners removed — token repair is fully automatic via useAutoPushRepair.
