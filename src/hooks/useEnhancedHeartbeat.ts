@@ -2,6 +2,10 @@ import { useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { processIncomingBooking } from "@/services/bookingAlertCoordinator";
 import { logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
+import { reportMissedBooking } from "@/lib/missedBookingDiagnostics";
+
+// If polling finds a pending request older than this, FCM/realtime failed to deliver → report.
+const MISSED_BOOKING_THRESHOLD_MS = 45 * 1000;
 
 const HEARTBEAT_INTERVAL_MS = 45 * 1000; // 45 seconds
 
@@ -86,7 +90,7 @@ async function checkPendingBookingRequests(workerId: string) {
   try {
     const { data: requests, error } = await supabase
       .from("booking_requests")
-      .select("id, booking_id, status, timeout_at")
+      .select("id, booking_id, status, timeout_at, created_at")
       .eq("worker_id", workerId)
       .eq("status", "pending")
       .gt("timeout_at", new Date().toISOString())
@@ -107,6 +111,22 @@ async function checkPendingBookingRequests(workerId: string) {
 
       if (!booking || booking.status !== "pending") continue;
       logScheduledOfferDecision(booking, "heartbeat", true);
+
+      // Missed-booking detection: if we're finding this via heartbeat polling and it's
+      // older than the delivery threshold, FCM/realtime failed to surface it in time.
+      // Fire diagnostics before we try to recover.
+      const createdMs = req.created_at ? Date.parse(req.created_at) : 0;
+      const ageMs = createdMs ? Date.now() - createdMs : 0;
+      if (createdMs && ageMs > MISSED_BOOKING_THRESHOLD_MS) {
+        void reportMissedBooking({
+          workerId,
+          bookingId: booking.id,
+          bookingRequestId: req.id,
+          reason: "heartbeat_recovered_stale_pending",
+          isOnlineToggle: true,
+          extra: { request_age_ms: ageMs, source: "heartbeat" },
+        });
+      }
 
       await processIncomingBooking({
         bookingId: booking.id,
