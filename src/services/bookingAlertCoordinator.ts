@@ -70,6 +70,9 @@ export function dismissAlert(bookingId: string) {
     currentAlert = null;
   }
   dismissListeners.forEach((l) => l(bookingId));
+  import("@/lib/fcmAckTracker").then(({ resolveFcmOffer }) =>
+    resolveFcmOffer(bookingId, "dismissed")
+  ).catch(() => {});
 }
 
 export function clearAlertState() {
