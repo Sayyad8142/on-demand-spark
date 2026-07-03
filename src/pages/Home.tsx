@@ -330,6 +330,12 @@ export default function Home() {
         </Card>}
 
       {activeJob && <ActiveJobCard booking={activeJob} onStatusUpdate={handleStatusUpdate} updating={updating} onRefresh={refetchActiveJob} />}
+
+      {/* AI Coach — personal coaching card */}
+      {!isGuestMode && worker && (
+        <AiCoachCard workerId={worker.id} workerRow={worker} />
+      )}
+      
       
       {/* Guest Mode Logout Button - Big Red */}
       {isGuestMode && (
