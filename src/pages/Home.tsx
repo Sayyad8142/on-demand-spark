@@ -11,6 +11,7 @@ import { usePushHealthGuard } from "@/hooks/usePushHealthGuard";
 import { useAutoHeal } from "@/hooks/useAutoHeal";
 
 import ActiveJobCard from "@/components/ActiveJobCard";
+import AiCoachCard from "@/components/AiCoachCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { UpcomingBookingsBar } from "@/components/UpcomingBookingsBar";
 // Notification health banners removed — token repair is fully automatic via useAutoPushRepair.
@@ -330,6 +331,12 @@ export default function Home() {
         </Card>}
 
       {activeJob && <ActiveJobCard booking={activeJob} onStatusUpdate={handleStatusUpdate} updating={updating} onRefresh={refetchActiveJob} />}
+
+      {/* AI Coach — personal coaching card */}
+      {!isGuestMode && worker && (
+        <AiCoachCard workerId={worker.id} workerRow={worker} />
+      )}
+      
       
       {/* Guest Mode Logout Button - Big Red */}
       {isGuestMode && (
