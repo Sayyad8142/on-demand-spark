@@ -1560,33 +1560,6 @@ export type Database = {
         }
         Relationships: []
       }
-      dispatch_self_test_runs: {
-        Row: {
-          checks: Json
-          function_version: string | null
-          id: string
-          pass: boolean
-          ran_at: string
-          run_by: string | null
-        }
-        Insert: {
-          checks: Json
-          function_version?: string | null
-          id?: string
-          pass: boolean
-          ran_at?: string
-          run_by?: string | null
-        }
-        Update: {
-          checks?: Json
-          function_version?: string | null
-          id?: string
-          pass?: boolean
-          ran_at?: string
-          run_by?: string | null
-        }
-        Relationships: []
-      }
       dispatch_simulation_logs: {
         Row: {
           accepted_at: string | null
@@ -4569,42 +4542,6 @@ export type Database = {
         }
         Relationships: []
       }
-      worker_issue_contacts: {
-        Row: {
-          contacted_at: string
-          contacted_by: string | null
-          contacted_by_name: string | null
-          created_at: string
-          id: string
-          issue_keys: string[]
-          note: string | null
-          outcome: string | null
-          worker_id: string
-        }
-        Insert: {
-          contacted_at?: string
-          contacted_by?: string | null
-          contacted_by_name?: string | null
-          created_at?: string
-          id?: string
-          issue_keys?: string[]
-          note?: string | null
-          outcome?: string | null
-          worker_id: string
-        }
-        Update: {
-          contacted_at?: string
-          contacted_by?: string | null
-          contacted_by_name?: string | null
-          created_at?: string
-          id?: string
-          issue_keys?: string[]
-          note?: string | null
-          outcome?: string | null
-          worker_id?: string
-        }
-        Relationships: []
-      }
       worker_live_steps: {
         Row: {
           booking_id: string
@@ -4645,176 +4582,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      worker_ops_case_events: {
-        Row: {
-          actor_id: string | null
-          actor_name: string | null
-          case_id: string
-          created_at: string
-          event_type: string
-          id: string
-          message: string | null
-          payload: Json | null
-        }
-        Insert: {
-          actor_id?: string | null
-          actor_name?: string | null
-          case_id: string
-          created_at?: string
-          event_type: string
-          id?: string
-          message?: string | null
-          payload?: Json | null
-        }
-        Update: {
-          actor_id?: string | null
-          actor_name?: string | null
-          case_id?: string
-          created_at?: string
-          event_type?: string
-          id?: string
-          message?: string | null
-          payload?: Json | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "worker_ops_case_events_case_id_fkey"
-            columns: ["case_id"]
-            isOneToOne: false
-            referencedRelation: "worker_ops_cases"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      worker_ops_cases: {
-        Row: {
-          all_issue_keys: string[]
-          assigned_at: string | null
-          assigned_to: string | null
-          assigned_to_name: string | null
-          auto_resolved: boolean
-          case_number: number
-          category: string | null
-          community: string | null
-          created_at: string
-          downtime_seconds: number | null
-          escalation: string
-          first_response_at: string | null
-          id: string
-          issue_key: string
-          issue_label: string | null
-          last_reminder_at: string | null
-          reminders_sent: number
-          resolution_code: string | null
-          resolution_note: string | null
-          resolved_at: string | null
-          resolved_by: string | null
-          resolved_by_name: string | null
-          service: string | null
-          severity: string
-          sla_breached_at: string | null
-          sla_due_at: string
-          sla_target_minutes: number
-          status: string
-          updated_at: string
-          worker_id: string
-          worker_name: string | null
-          worker_phone: string | null
-        }
-        Insert: {
-          all_issue_keys?: string[]
-          assigned_at?: string | null
-          assigned_to?: string | null
-          assigned_to_name?: string | null
-          auto_resolved?: boolean
-          case_number?: number
-          category?: string | null
-          community?: string | null
-          created_at?: string
-          downtime_seconds?: number | null
-          escalation?: string
-          first_response_at?: string | null
-          id?: string
-          issue_key: string
-          issue_label?: string | null
-          last_reminder_at?: string | null
-          reminders_sent?: number
-          resolution_code?: string | null
-          resolution_note?: string | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          resolved_by_name?: string | null
-          service?: string | null
-          severity?: string
-          sla_breached_at?: string | null
-          sla_due_at?: string
-          sla_target_minutes?: number
-          status?: string
-          updated_at?: string
-          worker_id: string
-          worker_name?: string | null
-          worker_phone?: string | null
-        }
-        Update: {
-          all_issue_keys?: string[]
-          assigned_at?: string | null
-          assigned_to?: string | null
-          assigned_to_name?: string | null
-          auto_resolved?: boolean
-          case_number?: number
-          category?: string | null
-          community?: string | null
-          created_at?: string
-          downtime_seconds?: number | null
-          escalation?: string
-          first_response_at?: string | null
-          id?: string
-          issue_key?: string
-          issue_label?: string | null
-          last_reminder_at?: string | null
-          reminders_sent?: number
-          resolution_code?: string | null
-          resolution_note?: string | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          resolved_by_name?: string | null
-          service?: string | null
-          severity?: string
-          sla_breached_at?: string | null
-          sla_due_at?: string
-          sla_target_minutes?: number
-          status?: string
-          updated_at?: string
-          worker_id?: string
-          worker_name?: string | null
-          worker_phone?: string | null
-        }
-        Relationships: []
-      }
-      worker_ops_resolution_codes: {
-        Row: {
-          category: string | null
-          code: string
-          is_success: boolean
-          label: string
-          sort_order: number
-        }
-        Insert: {
-          category?: string | null
-          code: string
-          is_success?: boolean
-          label: string
-          sort_order?: number
-        }
-        Update: {
-          category?: string | null
-          code?: string
-          is_success?: boolean
-          label?: string
-          sort_order?: number
-        }
-        Relationships: []
       }
       worker_passive_movement: {
         Row: {
@@ -6039,14 +5806,9 @@ export type Database = {
       }
       _is_admin_message: { Args: { rec: unknown }; Returns: boolean }
       _sla_core_work: { Args: never; Returns: undefined }
-      _woc_sla_minutes: { Args: { p_esc: string }; Returns: number }
       accept_booking: { Args: { p_booking_id: string }; Returns: Json }
       admin_approve_worker_registration: {
         Args: { p_photo_url?: string; p_request_id: string }
-        Returns: undefined
-      }
-      admin_assign_case: {
-        Args: { p_assignee: string; p_assignee_name: string; p_case: string }
         Returns: undefined
       }
       admin_audit_worker_eligibility: {
@@ -6088,17 +5850,9 @@ export type Database = {
           worker_id: string
         }[]
       }
-      admin_auto_resolve_healthy_cases: {
-        Args: { p_still_open?: Json }
-        Returns: number
-      }
       admin_block_worker_bank: {
         Args: { _reason: string; _worker_id: string }
         Returns: undefined
-      }
-      admin_booking_opportunity_audit: {
-        Args: { _day?: string }
-        Returns: Json
       }
       admin_cancel_booking: {
         Args: { p_booking_id: string; p_reason: string }
@@ -6164,13 +5918,6 @@ export type Database = {
           web_version: string
         }[]
       }
-      admin_list_admins_for_assignment: {
-        Args: never
-        Returns: {
-          name: string
-          user_id: string
-        }[]
-      }
       admin_log_worker_fault: {
         Args: {
           p_booking_id: string
@@ -6193,12 +5940,6 @@ export type Database = {
         Args: { p_worker_id: string }
         Returns: Json
       }
-      admin_ops_case_analytics: {
-        Args: { p_from?: string; p_to?: string }
-        Returns: Json
-      }
-      admin_ops_case_dashboard: { Args: never; Returns: Json }
-      admin_process_case_reminders: { Args: never; Returns: number }
       admin_quick_stats: { Args: never; Returns: Json }
       admin_recreate_cancelled_booking: {
         Args: { p_booking_id: string }
@@ -6212,20 +5953,10 @@ export type Database = {
         Args: { p_rejection_reason: string; p_request_id: string }
         Returns: undefined
       }
-      admin_resolve_case: {
-        Args: {
-          p_case: string
-          p_closed_unresolved?: boolean
-          p_code: string
-          p_note: string
-        }
-        Returns: undefined
-      }
       admin_revoke_worker_payout_ready: {
         Args: { p_reason?: string; p_worker_id: string }
         Returns: Json
       }
-      admin_run_dispatch_self_test: { Args: never; Returns: Json }
       admin_save_worker_payout_details: {
         Args: {
           p_account_holder_name: string
@@ -6252,17 +5983,6 @@ export type Database = {
       }
       admin_set_worker_rating: {
         Args: { p_rating: number; p_worker_id: string }
-        Returns: undefined
-      }
-      admin_sync_worker_cases: {
-        Args: { p_rows: Json }
-        Returns: {
-          case_id: string
-          created: boolean
-        }[]
-      }
-      admin_update_case_status: {
-        Args: { p_case: string; p_note: string; p_status: string }
         Returns: undefined
       }
       admin_upsert_worker:
@@ -6572,65 +6292,6 @@ export type Database = {
               isSetofReturn: false
             }
           }
-      admin_worker_issue_daily_analytics: { Args: never; Returns: Json }
-      admin_worker_issue_impact: {
-        Args: { p_worker_ids: string[] }
-        Returns: {
-          estimated_revenue_lost: number
-          last_accepted_at: string
-          last_completed_at: string
-          last_contact_note: string
-          last_contact_outcome: string
-          last_contacted_at: string
-          last_contacted_by_name: string
-          missed_7d: number
-          missed_today: number
-          worker_id: string
-        }[]
-      }
-      admin_worker_reach_audit: {
-        Args: never
-        Returns: {
-          app_version: string
-          battery_optimization_disabled: boolean
-          category: string
-          communities: string[]
-          device_manufacturer: string
-          evidence: string
-          fcm_token_present: boolean
-          fcm_token_status: string
-          full_name: string
-          is_active: boolean
-          is_available: boolean
-          is_blocked: boolean
-          is_busy: boolean
-          is_dispatch_eligible: boolean
-          is_online: boolean
-          is_reachable: boolean
-          last_acknowledged_booking_at: string
-          last_app_opened_at: string
-          last_booking_completed_at: string
-          last_heartbeat_at: string
-          last_offer_at: string
-          last_seen_at: string
-          no_ack_count: number
-          notification_permission_granted: boolean
-          offers_accepted_today: number
-          offers_no_ack_today: number
-          offers_rejected_today: number
-          offers_timeout_today: number
-          offers_today: number
-          phone: string
-          primary_reason: string
-          push_health_status: string
-          reachability_score: number
-          reachability_status: string
-          recommended_fix: string
-          service_types: string[]
-          worker_id: string
-        }[]
-      }
-      admin_worker_reach_audit_counts: { Args: never; Returns: Json }
       approve_worker_payout: {
         Args: { p_admin_notes?: string; p_payout_id: string }
         Returns: Json
@@ -7056,15 +6717,6 @@ export type Database = {
       get_dispatch_simulation_summary: {
         Args: { p_days?: number }
         Returns: Json
-      }
-      get_edge_function_versions: {
-        Args: never
-        Returns: {
-          events_last_hour: number
-          function_name: string
-          last_seen_at: string
-          observed_version: string
-        }[]
       }
       get_eligible_workers: {
         Args: { p_community: string; p_limit?: number; p_service: string }
