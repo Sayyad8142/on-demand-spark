@@ -60,6 +60,8 @@ import BookingDiagnostics from "./pages/BookingDiagnostics";
 import CompleteBooking from "./pages/CompleteBooking";
 import AccountDetails from "./pages/AccountDetails";
 import BatteryOnboarding from "./pages/BatteryOnboarding";
+import Learn from "./pages/Learn";
+import LessonDetail from "./pages/LessonDetail";
 import BottomNav from "./components/BottomNav";
 import PermissionOnboarding from "./components/PermissionOnboarding";
 import OtpPendingBanner from "./components/OtpPendingBanner";
