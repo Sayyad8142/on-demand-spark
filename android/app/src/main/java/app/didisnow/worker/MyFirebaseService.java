@@ -208,6 +208,15 @@ public class MyFirebaseService extends FirebaseMessagingService {
         Log.d(TAG, "📨 [ACK] Sending push_received for booking_id=" + bookingId + " req=" + bookingRequestId);
         BackendSync.INSTANCE.ackDeliveryAsync(getApplicationContext(), bookingId, "push_received", bookingRequestId);
 
+        // 🐕 Native FCM ack watchdog — fires diagnostic if popup never shows.
+        // Cancelled from BackendSync.ackDelivery on popup_shown / worker_seen.
+        try {
+          AckWatchdogWorker.Companion.schedule(getApplicationContext(), bookingId, bookingRequestId);
+        } catch (Exception e) {
+          Log.w(TAG, "AckWatchdogWorker schedule failed", e);
+        }
+
+
         if ("scheduled".equals(bookingType) && !prealertSent) {
           Log.w(TAG, "🔕 Scheduled booking hidden until prealert_sent=true. booking_id=" + bookingId
               + ", scheduled_at=" + scheduledDate + "T" + scheduledTimeRaw
