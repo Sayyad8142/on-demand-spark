@@ -70,6 +70,9 @@ export function dismissAlert(bookingId: string) {
     currentAlert = null;
   }
   dismissListeners.forEach((l) => l(bookingId));
+  import("@/lib/fcmAckTracker").then(({ resolveFcmOffer }) =>
+    resolveFcmOffer(bookingId, "dismissed")
+  ).catch(() => {});
 }
 
 export function clearAlertState() {
@@ -181,6 +184,11 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
       bookingRequestId: alert.bookingRequestId,
       event: "popup_shown",
     })
+  ).catch(() => {});
+
+  // Resolve any pending FCM ack-timeout tracker for this booking.
+  import("@/lib/fcmAckTracker").then(({ resolveFcmOffer }) =>
+    resolveFcmOffer(alert.bookingId, "popup_shown")
   ).catch(() => {});
 
   return true;

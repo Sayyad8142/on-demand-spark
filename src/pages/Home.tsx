@@ -9,6 +9,9 @@ import { useBookingRequestsRealtime } from "@/hooks/useBookingRequestsRealtime";
 import { useBookingPollingFallback } from "@/hooks/useBookingPollingFallback";
 import { usePushHealthGuard } from "@/hooks/usePushHealthGuard";
 import { useAutoHeal } from "@/hooks/useAutoHeal";
+import { useWorkerHealth } from "@/hooks/useWorkerHealth";
+import { useStartupHealthAudit } from "@/hooks/useStartupHealthAudit";
+import { WorkerHealthBadge } from "@/components/WorkerHealthBadge";
 
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
@@ -63,6 +66,12 @@ export default function Home() {
 
   // Push health guard: mandatory token validation
   const pushHealth = usePushHealthGuard(isGuestMode ? undefined : user?.id);
+
+  // Startup health audit (silent) — one-shot on cold launch
+  useStartupHealthAudit(isGuestMode ? undefined : user?.id);
+
+  // Unified Worker Health Engine
+  const workerHealth = useWorkerHealth(isGuestMode ? undefined : worker?.id, pushHealth);
 
   // Auto-heal missing data (service_types, availability slots)
   useAutoHeal(isGuestMode ? undefined : worker?.id, isGuestMode ? null : worker);
@@ -256,6 +265,26 @@ export default function Home() {
 
       {/* Main Content with top padding for fixed header */}
       <div className={`p-4 space-y-4 pb-32 ${isGuestMode ? 'pt-4' : 'pt-28'}`}>
+
+      {/* Worker Health badge — unified status from all signals */}
+      {!isGuestMode && worker && (
+        <WorkerHealthBadge
+          health={workerHealth}
+          onRepair={async () => {
+            if (pushHealth.isChecking) return;
+            const ok = await pushHealth.repair();
+            toast({
+              title: ok ? "Booking alerts restored" : "Still unable to restore",
+              description: ok
+                ? "You're ready to receive bookings."
+                : "Please open Device Readiness to fix remaining issues.",
+              variant: ok ? "default" : "destructive",
+            });
+            if (!ok) navigate("/device-readiness");
+          }}
+        />
+      )}
+
 
       {!isGuestMode && worker && !payoutReady && (
         <Card className="p-5 border-2 border-primary/30 bg-primary/5 shadow-sm">
