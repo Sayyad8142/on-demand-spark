@@ -46,7 +46,8 @@ function ytThumb(l: Lesson) {
 
 export default function Learn() {
   const navigate = useNavigate();
-  const { data: worker } = useWorkerProfile();
+  const { user } = useAuth();
+  const { worker } = useWorkerProfile(user?.id);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
