@@ -60,8 +60,6 @@ import BookingDiagnostics from "./pages/BookingDiagnostics";
 import CompleteBooking from "./pages/CompleteBooking";
 import AccountDetails from "./pages/AccountDetails";
 import BatteryOnboarding from "./pages/BatteryOnboarding";
-import Learn from "./pages/Learn";
-import LessonDetail from "./pages/LessonDetail";
 import BottomNav from "./components/BottomNav";
 import PermissionOnboarding from "./components/PermissionOnboarding";
 import OtpPendingBanner from "./components/OtpPendingBanner";
@@ -671,8 +669,6 @@ function AppInner() {
           <Route path="/home" element={<ProtectedRoute showNav={true}><Home /></ProtectedRoute>} />
           <Route path="/bookings" element={<ProtectedRoute showNav={true}><Bookings /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute showNav={true}><Profile /></ProtectedRoute>} />
-          <Route path="/learn" element={<ProtectedRoute showNav={true}><Learn /></ProtectedRoute>} />
-          <Route path="/learn/:lessonId" element={<ProtectedRoute><LessonDetail /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/troubleshoot" element={<ProtectedRoute><Troubleshoot /></ProtectedRoute>} />
           <Route path="/availability" element={<ProtectedRoute><Availability /></ProtectedRoute>} />
