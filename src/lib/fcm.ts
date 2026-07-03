@@ -66,6 +66,11 @@ export async function initFCM() {
         ackBookingDelivery({ bookingId, bookingRequestId, event: 'push_received' })
       ).catch(() => {});
 
+      // Start FCM ack timeout tracker — if popup never shows, report missed
+      import('@/lib/fcmAckTracker').then(({ trackFcmOffer }) =>
+        trackFcmOffer(bookingId, bookingRequestId)
+      ).catch(() => {});
+
       await processIncomingBooking({
         bookingId,
         bookingRequestId,
