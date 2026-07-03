@@ -146,11 +146,86 @@ object BackendSync {
             conn.disconnect()
             val ok = code in 200..299
             WorkerLog.add(ctx, "ACK", "$event booking=${bookingId ?: bookingRequestId} → http=$code")
+
+            // Cancel the native ack watchdog once the popup is actually up or seen.
+            if (ok && !bookingId.isNullOrBlank() && (event == "popup_shown" || event == "worker_seen")) {
+                try { AckWatchdogWorker.cancel(ctx, bookingId) } catch (_: Exception) {}
+            }
             ok
         } catch (e: Exception) {
             WorkerLog.add(ctx, "ACK", "$event booking=${bookingId ?: bookingRequestId} FAILED: ${e.message}")
             false
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Missed-booking diagnostic — mirrors src/lib/missedBookingDiagnostics.ts
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private const val MISSED_ENDPOINT = "$SUPABASE_URL/functions/v1/report-missed-booking"
+
+    fun reportMissedBooking(
+        ctx: Context,
+        bookingId: String?,
+        bookingRequestId: String?,
+        reason: String,
+        extra: JSONObject? = null,
+    ): Boolean {
+        val prefs = ctx.applicationContext
+            .getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
+        val userId = prefs.getString("user_id", null)
+        if (userId.isNullOrBlank()) {
+            WorkerLog.add(ctx, "MISSED", "skip $reason — no user_id in prefs")
+            return false
+        }
+
+        val body = JSONObject().apply {
+            put("user_id", userId)
+            if (!bookingId.isNullOrBlank()) put("booking_id", bookingId)
+            if (!bookingRequestId.isNullOrBlank()) put("booking_request_id", bookingRequestId)
+            put("reason", reason)
+            put("platform", "android")
+            put("app_state", "background_native")
+            put("app_version", appVersion(ctx))
+            put("network_online", networkType(ctx) != "none")
+            put("notification_permission", if (notificationsEnabled(ctx)) "granted" else "denied")
+            put("battery_optimized", !batteryOptimizationDisabled(ctx))
+            put("manufacturer", Build.MANUFACTURER)
+            put("model", Build.MODEL)
+            put("sdk", Build.VERSION.SDK_INT)
+            if (extra != null) put("extra", extra)
+        }
+
+        return try {
+            val conn = (URL(MISSED_ENDPOINT).openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = 8_000
+                readTimeout = 8_000
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json")
+                setRequestProperty("apikey", ANON_KEY)
+                setRequestProperty("Authorization", "Bearer $ANON_KEY")
+            }
+            conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+            val code = conn.responseCode
+            conn.disconnect()
+            val ok = code in 200..299
+            WorkerLog.add(ctx, "MISSED", "$reason booking=$bookingId → http=$code")
+            ok
+        } catch (e: Exception) {
+            WorkerLog.add(ctx, "MISSED", "$reason booking=$bookingId FAILED: ${e.message}")
+            false
+        }
+    }
+
+    fun reportMissedBookingAsync(
+        ctx: Context,
+        bookingId: String?,
+        bookingRequestId: String?,
+        reason: String,
+        extra: JSONObject? = null,
+    ) {
+        Thread({ reportMissedBooking(ctx, bookingId, bookingRequestId, reason, extra) }, "missed-$reason").start()
     }
 
     /** Fire-and-forget ack on a background thread. */
