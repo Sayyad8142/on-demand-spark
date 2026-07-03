@@ -183,6 +183,11 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
     })
   ).catch(() => {});
 
+  // Resolve any pending FCM ack-timeout tracker for this booking.
+  import("@/lib/fcmAckTracker").then(({ resolveFcmOffer }) =>
+    resolveFcmOffer(alert.bookingId, "popup_shown")
+  ).catch(() => {});
+
   return true;
 }
 
