@@ -33,12 +33,27 @@ export function AvailabilityToggle({
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [pressed, setPressed] = useState(false);
+  const [networkOnline, setNetworkOnline] = useState(
+    typeof navigator !== "undefined" ? navigator.onLine : true
+  );
   const { toast } = useToast();
   const { t } = useTranslation();
 
   useEffect(() => {
     loadAvailability();
   }, [workerId]);
+
+  // Track network status live so the hard-block reflects reality.
+  useEffect(() => {
+    const on = () => setNetworkOnline(true);
+    const off = () => setNetworkOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => {
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
+    };
+  }, []);
 
   const loadAvailability = async () => {
     try {
@@ -71,6 +86,28 @@ export function AvailabilityToggle({
       return;
     }
 
+    // HARD BLOCK: no internet — bookings can't be delivered.
+    if (newValue && !networkOnline) {
+      toast({
+        title: "No internet connection",
+        description: "Reconnect to Wi-Fi or mobile data to go online.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // HARD BLOCK: FCM/notifications not healthy — worker would silently miss bookings.
+    // Trigger repair automatically and prompt the parent to guide the worker.
+    if (newValue && !pushHealthy) {
+      toast({
+        title: "Booking alerts not ready",
+        description: "Fixing notifications in the background. You'll be able to go online once it's ready.",
+        variant: "destructive",
+      });
+      onPushUnhealthy?.();
+      return;
+    }
+
     // Soft warning: onboarding incomplete (allow going online)
     if (newValue && !onboardingComplete) {
       toast({
@@ -85,14 +122,6 @@ export function AvailabilityToggle({
       toast({
         title: "Payout setup pending",
         description: "You can receive bookings, but complete payout setup to get paid.",
-      });
-    }
-
-    // Soft warning: push not healthy (allow going online)
-    if (newValue && !pushHealthy) {
-      toast({
-        title: "Booking alerts may be delayed",
-        description: "Notifications are syncing. You may miss alerts until ready.",
       });
     }
 

@@ -29,7 +29,13 @@ export function useAutoPushRepair(userId: string | undefined) {
       }
     };
 
+    const handleOnline = () => {
+      console.log('🌐 [PushAutoRepair] network reconnected, re-checking push health');
+      void triggerAutomaticPushRepair(userId, 'network-online');
+    };
+
     document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('online', handleOnline);
 
     let nativeListener: { remove: () => Promise<void> | void } | null = null;
     const setupNativeListener = async () => {
@@ -47,6 +53,7 @@ export function useAutoPushRepair(userId: string | undefined) {
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('online', handleOnline);
       nativeListener?.remove?.();
     };
   }, [userId]);
