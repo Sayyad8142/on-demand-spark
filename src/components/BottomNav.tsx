@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Calendar, User, Clock, Phone } from "lucide-react";
+import { Home, Calendar, User, Clock, Phone, GraduationCap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +42,7 @@ export default function BottomNav() {
   { path: "/home", icon: Home, label: t('nav.home') },
   { path: "/bookings", icon: Calendar, label: t('nav.bookings') },
   { path: "tel:8008180018", icon: Phone, label: "Call", isExternal: true },
+  { path: "/learn", icon: GraduationCap, label: "Learn" },
   { path: "/availability", icon: Clock, label: t('nav.availability'), showBadge: hasAvailability },
   { path: "/profile", icon: User, label: t('nav.profile') }];
 
