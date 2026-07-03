@@ -310,13 +310,28 @@ export default function LessonDetail() {
         )}
 
         {phase === "celebrate" && (
-          <div className="p-8 flex flex-col items-center text-center gap-4">
-            <PartyPopper className="w-20 h-20 text-primary" />
+          <div className="p-8 flex flex-col items-center text-center gap-4 animate-fade-in">
+            <div className="animate-scale-in">
+              <PartyPopper className="w-24 h-24 text-primary" />
+            </div>
             <h2 className="text-2xl font-bold">Great job!</h2>
             <p className="text-muted-foreground">You completed this lesson.</p>
-            <Button size="lg" className="w-full max-w-xs" onClick={() => navigate("/learn")}>
-              Back to Learn
+            <div className="flex gap-2">
+              <Badge className="text-sm px-3 py-1 bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+                +10 XP
+              </Badge>
+              {quiz.length > 0 && answerCorrect && (
+                <Badge className="text-sm px-3 py-1 bg-green-100 text-green-800 hover:bg-green-100">
+                  Quiz Passed
+                </Badge>
+              )}
+            </div>
+            <Button size="lg" className="w-full max-w-xs mt-2" onClick={() => navigate("/learn")}>
+              Next Lesson →
             </Button>
+            <button className="text-sm text-muted-foreground underline" onClick={() => navigate("/learn")}>
+              Back to Learn
+            </button>
           </div>
         )}
       </div>
