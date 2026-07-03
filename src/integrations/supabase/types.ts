@@ -5875,6 +5875,11 @@ export type Database = {
           app_standby_bucket: string | null
           app_state: string | null
           app_version: string | null
+          auto_pause_notified_at: string | null
+          auto_paused_at: string | null
+          auto_paused_reason: string | null
+          auto_paused_restored_at: string | null
+          auto_paused_source: string | null
           availability_state: string
           bank_account_number: string | null
           bank_details_source: string | null
@@ -6015,6 +6020,11 @@ export type Database = {
           app_standby_bucket?: string | null
           app_state?: string | null
           app_version?: string | null
+          auto_pause_notified_at?: string | null
+          auto_paused_at?: string | null
+          auto_paused_reason?: string | null
+          auto_paused_restored_at?: string | null
+          auto_paused_source?: string | null
           availability_state?: string
           bank_account_number?: string | null
           bank_details_source?: string | null
@@ -6155,6 +6165,11 @@ export type Database = {
           app_standby_bucket?: string | null
           app_state?: string | null
           app_version?: string | null
+          auto_pause_notified_at?: string | null
+          auto_paused_at?: string | null
+          auto_paused_reason?: string | null
+          auto_paused_restored_at?: string | null
+          auto_paused_source?: string | null
           availability_state?: string
           bank_account_number?: string | null
           bank_details_source?: string | null
@@ -6683,6 +6698,11 @@ export type Database = {
               app_standby_bucket: string | null
               app_state: string | null
               app_version: string | null
+              auto_pause_notified_at: string | null
+              auto_paused_at: string | null
+              auto_paused_reason: string | null
+              auto_paused_restored_at: string | null
+              auto_paused_source: string | null
               availability_state: string
               bank_account_number: string | null
               bank_details_source: string | null
@@ -6832,6 +6852,11 @@ export type Database = {
               app_standby_bucket: string | null
               app_state: string | null
               app_version: string | null
+              auto_pause_notified_at: string | null
+              auto_paused_at: string | null
+              auto_paused_reason: string | null
+              auto_paused_restored_at: string | null
+              auto_paused_source: string | null
               availability_state: string
               bank_account_number: string | null
               bank_details_source: string | null
