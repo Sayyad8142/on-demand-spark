@@ -67,6 +67,12 @@ export default function Home() {
   // Push health guard: mandatory token validation
   const pushHealth = usePushHealthGuard(isGuestMode ? undefined : user?.id);
 
+  // Startup health audit (silent) — one-shot on cold launch
+  useStartupHealthAudit(isGuestMode ? undefined : user?.id);
+
+  // Unified Worker Health Engine
+  const workerHealth = useWorkerHealth(isGuestMode ? undefined : worker?.id, pushHealth);
+
   // Auto-heal missing data (service_types, availability slots)
   useAutoHeal(isGuestMode ? undefined : worker?.id, isGuestMode ? null : worker);
 
