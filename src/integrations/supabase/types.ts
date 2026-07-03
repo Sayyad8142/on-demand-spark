@@ -7160,6 +7160,7 @@ export type Database = {
         }
         Returns: Json
       }
+      current_worker_id: { Args: never; Returns: string }
       debit_wallet_for_booking: {
         Args: { p_amount: number; p_booking_id: string }
         Returns: undefined
