@@ -9,6 +9,9 @@ import { useBookingRequestsRealtime } from "@/hooks/useBookingRequestsRealtime";
 import { useBookingPollingFallback } from "@/hooks/useBookingPollingFallback";
 import { usePushHealthGuard } from "@/hooks/usePushHealthGuard";
 import { useAutoHeal } from "@/hooks/useAutoHeal";
+import { useWorkerHealth } from "@/hooks/useWorkerHealth";
+import { useStartupHealthAudit } from "@/hooks/useStartupHealthAudit";
+import { WorkerHealthBadge } from "@/components/WorkerHealthBadge";
 
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
