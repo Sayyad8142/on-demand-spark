@@ -4965,6 +4965,84 @@ export type Database = {
           },
         ]
       }
+      worker_missed_booking_diagnostics: {
+        Row: {
+          app_state: string | null
+          app_version: string | null
+          battery_optimized: boolean | null
+          booking_id: string | null
+          booking_request_id: string | null
+          created_at: string
+          extra: Json | null
+          fcm_token_present: boolean | null
+          fcm_token_status: string | null
+          id: string
+          is_online_toggle: boolean | null
+          last_heartbeat_at: string | null
+          last_notification_at: string | null
+          manufacturer: string | null
+          model: string | null
+          network_online: boolean | null
+          notification_permission: string | null
+          overlay_granted: boolean | null
+          platform: string | null
+          reason: string
+          sdk: number | null
+          user_id: string | null
+          worker_id: string | null
+        }
+        Insert: {
+          app_state?: string | null
+          app_version?: string | null
+          battery_optimized?: boolean | null
+          booking_id?: string | null
+          booking_request_id?: string | null
+          created_at?: string
+          extra?: Json | null
+          fcm_token_present?: boolean | null
+          fcm_token_status?: string | null
+          id?: string
+          is_online_toggle?: boolean | null
+          last_heartbeat_at?: string | null
+          last_notification_at?: string | null
+          manufacturer?: string | null
+          model?: string | null
+          network_online?: boolean | null
+          notification_permission?: string | null
+          overlay_granted?: boolean | null
+          platform?: string | null
+          reason: string
+          sdk?: number | null
+          user_id?: string | null
+          worker_id?: string | null
+        }
+        Update: {
+          app_state?: string | null
+          app_version?: string | null
+          battery_optimized?: boolean | null
+          booking_id?: string | null
+          booking_request_id?: string | null
+          created_at?: string
+          extra?: Json | null
+          fcm_token_present?: boolean | null
+          fcm_token_status?: string | null
+          id?: string
+          is_online_toggle?: boolean | null
+          last_heartbeat_at?: string | null
+          last_notification_at?: string | null
+          manufacturer?: string | null
+          model?: string | null
+          network_online?: boolean | null
+          notification_permission?: string | null
+          overlay_granted?: boolean | null
+          platform?: string | null
+          reason?: string
+          sdk?: number | null
+          user_id?: string | null
+          worker_id?: string | null
+        }
+        Relationships: []
+      }
       worker_ops_case_events: {
         Row: {
           actor_id: string | null
