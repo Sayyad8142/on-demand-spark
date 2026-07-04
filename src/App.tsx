@@ -10,6 +10,8 @@ import { App as CapApp } from "@capacitor/app";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useAutoPushRepair } from "@/hooks/useAutoPushRepair";
+import { usePostBootVerification } from "@/hooks/usePostBootVerification";
+import { usePermissionRegressionWatch } from "@/hooks/usePermissionRegressionWatch";
 import { useFCMTokenSync } from "@/hooks/useFCMTokenSync";
 import { useAppState } from "@/hooks/useAppState";
 import { useWorkerHeartbeat } from "@/hooks/useWorkerHeartbeat";
@@ -183,6 +185,10 @@ function AppInner() {
   const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
   // Global always-on worker heartbeat (works regardless of online toggle).
   useWorkerHeartbeat(worker?.id ?? session?.user?.id);
+  // Pass 3: verify recovery actually succeeded after boot/app-update.
+  usePostBootVerification(session?.user?.id, worker?.id);
+  // Pass 3: watch for permission regressions (notification/overlay/battery) and auto-repair.
+  usePermissionRegressionWatch(session?.user?.id, worker?.id, !!worker?.is_available);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
   const [showPermissionOnboarding, setShowPermissionOnboarding] = useState(false);
   const [showBatteryWarning, setShowBatteryWarning] = useState(false);
