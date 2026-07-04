@@ -185,6 +185,10 @@ function AppInner() {
   const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
   // Global always-on worker heartbeat (works regardless of online toggle).
   useWorkerHeartbeat(worker?.id ?? session?.user?.id);
+  // Pass 3: verify recovery actually succeeded after boot/app-update.
+  usePostBootVerification(session?.user?.id, worker?.id);
+  // Pass 3: watch for permission regressions (notification/overlay/battery) and auto-repair.
+  usePermissionRegressionWatch(session?.user?.id, worker?.id, !!worker?.is_available);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
   const [showPermissionOnboarding, setShowPermissionOnboarding] = useState(false);
   const [showBatteryWarning, setShowBatteryWarning] = useState(false);
