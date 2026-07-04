@@ -10,6 +10,8 @@ import { App as CapApp } from "@capacitor/app";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useAutoPushRepair } from "@/hooks/useAutoPushRepair";
+import { usePostBootVerification } from "@/hooks/usePostBootVerification";
+import { usePermissionRegressionWatch } from "@/hooks/usePermissionRegressionWatch";
 import { useFCMTokenSync } from "@/hooks/useFCMTokenSync";
 import { useAppState } from "@/hooks/useAppState";
 import { useWorkerHeartbeat } from "@/hooks/useWorkerHeartbeat";
