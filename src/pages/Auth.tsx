@@ -100,6 +100,8 @@ export default function Auth() {
   const [showBankDetails, setShowBankDetails] = useState(true);
   // Selected payout method on Step 2. UPI is the default and recommended path.
   const [payoutMethod, setPayoutMethod] = useState<'upi' | 'bank'>('upi');
+  // Collapsible bank fallback section on Step 2.
+  const [showBankFallback, setShowBankFallback] = useState(false);
   // Admin-controlled flag: when false, signup payout step shows ONLY UPI input.
   // Default true to preserve existing behavior until config loads.
   const [bankPayoutEnabled, setBankPayoutEnabled] = useState(true);
