@@ -982,24 +982,24 @@ export default function Auth() {
 
                   {/* Bank fallback (collapsed) */}
                   {bankPayoutEnabled && (
-                    <div className="rounded-3xl border bg-card">
+                    <div className="rounded-2xl border bg-card">
                       {!showBankFallback ? (
                         <button
                           type="button"
                           onClick={() => setShowBankFallback(true)}
-                          className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left"
+                          className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-                              <Landmark className="h-4 w-4" />
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                              <Landmark className="h-3 w-3" />
                             </div>
-                            <div>
-                              <p className="text-sm font-semibold">Can't receive UPI?</p>
-                              <p className="text-[11px] text-muted-foreground">Add bank account instead</p>
-                            </div>
+                            <p className="text-xs font-medium">
+                              Can't receive UPI? <span className="text-muted-foreground">Add bank account</span>
+                            </p>
                           </div>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
                         </button>
+
                       ) : (
                         <div className="space-y-4 p-4">
                           <div className="flex items-start justify-between gap-3">
