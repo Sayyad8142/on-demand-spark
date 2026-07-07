@@ -1091,8 +1091,6 @@ export default function Auth() {
               })()}
 
 
-                </div>
-              )}
 
               {signUpStep === 3 && (
                 <div className="space-y-5 rounded-3xl border bg-card p-4 shadow-sm">
