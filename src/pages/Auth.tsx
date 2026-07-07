@@ -841,158 +841,82 @@ export default function Auth() {
                 </div>
               )}
 
-              {signUpStep === 2 && (
-                <div className="space-y-5 rounded-3xl border bg-card p-4 shadow-sm">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                      <Landmark className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-lg font-bold">Step 2: Payout Details</p>
-                      <p className="text-sm font-medium">UPI Details</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Get paid instantly using your UPI ID
-                      </p>
-                    </div>
+              {signUpStep === 2 && (() => {
+                const trimmedUpi = signUpUpiId.trim();
+                const upiValid = upiSchema.safeParse(trimmedUpi).success;
+                const upiShowError = trimmedUpi.length > 0 && !upiValid;
+                return (
+                <div className="space-y-5">
+                  {/* Header */}
+                  <div className="space-y-1.5 px-1">
+                    <h2 className="text-2xl font-bold tracking-tight">
+                      Get Paid Instantly <span aria-hidden>💸</span>
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Add your UPI ID so we can send your earnings instantly after every completed booking.
+                    </p>
                   </div>
 
-                  {/* Method selector — UPI (default) vs Bank. Hidden when bank disabled by admin. */}
-                  {bankPayoutEnabled && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setPayoutMethod('upi')}
-                        className={`relative flex flex-col items-start gap-1 rounded-2xl border-2 p-3 text-left transition-all ${
-                          payoutMethod === 'upi'
-                            ? 'border-[#ff007a] bg-[#ff007a]/5 shadow-sm'
-                            : 'border-border bg-background hover:border-muted-foreground/40'
-                        }`}
-                      >
-                        <span className="absolute right-2 top-2 rounded-full bg-green-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-green-700">
-                          Recommended
-                        </span>
-                        <QrCode className={`h-5 w-5 ${payoutMethod === 'upi' ? 'text-[#ff007a]' : 'text-muted-foreground'}`} />
-                        <span className="text-sm font-bold">UPI ID / QR</span>
-                        <span className="text-[11px] text-muted-foreground">Instant payouts · 30s setup</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPayoutMethod('bank')}
-                        className={`flex flex-col items-start gap-1 rounded-2xl border-2 p-3 text-left transition-all ${
-                          payoutMethod === 'bank'
-                            ? 'border-[#ff007a] bg-[#ff007a]/5 shadow-sm'
-                            : 'border-border bg-background hover:border-muted-foreground/40'
-                        }`}
-                      >
-                        <Landmark className={`h-5 w-5 ${payoutMethod === 'bank' ? 'text-[#ff007a]' : 'text-muted-foreground'}`} />
-                        <span className="text-sm font-bold">Bank Account</span>
-                        <span className="text-[11px] text-muted-foreground">UPI still required</span>
-                      </button>
+                  {/* Primary UPI card */}
+                  <div className="space-y-5 rounded-3xl border-2 border-[#ff007a]/20 bg-gradient-to-br from-pink-50/60 via-white to-white p-4 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#ff007a]/10 text-[#ff007a]">
+                        <QrCode className="h-6 w-6" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-base font-bold">UPI ID</p>
+                          <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-green-700">
+                            Recommended
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          Instant payouts • Takes less than 30 seconds
+                        </p>
+                      </div>
                     </div>
-                  )}
 
-                  <div className="space-y-4">
-                    {/* Bank fields — only when bank method is selected */}
-                    {bankPayoutEnabled && payoutMethod === 'bank' && (
-                      <>
-                        <div className="space-y-2">
-                          <Label htmlFor="signup-acct-name" className="text-base">Account Holder Name</Label>
-                          <Input id="signup-acct-name" type="text" placeholder="Name as on bank account" value={signUpAccountHolderName} onChange={e => setSignUpAccountHolderName(e.target.value)} disabled={loading} className="h-12 rounded-2xl text-base" />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="signup-acct-no" className="text-base">Bank Account Number</Label>
-                          <Input id="signup-acct-no" inputMode="numeric" placeholder="9 to 18 digits" value={signUpBankAccountNumber} onChange={e => setSignUpBankAccountNumber(e.target.value.replace(/\D/g, ""))} maxLength={18} disabled={loading} className="h-12 rounded-2xl text-base" />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="signup-acct-no-confirm" className="text-base">Confirm Account Number</Label>
-                          <Input id="signup-acct-no-confirm" inputMode="numeric" placeholder="Re-enter account number" value={signUpConfirmAccountNumber} onChange={e => setSignUpConfirmAccountNumber(e.target.value.replace(/\D/g, ""))} maxLength={18} disabled={loading} className="h-12 rounded-2xl text-base" />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="signup-ifsc" className="text-base">IFSC Code</Label>
-                          <Input id="signup-ifsc" type="text" placeholder="e.g., HDFC0001234" value={signUpIfscCode} onChange={e => setSignUpIfscCode(e.target.value.toUpperCase())} maxLength={11} disabled={loading} className="h-12 rounded-2xl text-base uppercase" />
-                          <p className="text-xs text-muted-foreground">11 characters. Format: 4 letters + 0 + 6 alphanumeric.</p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-base">Passbook / Cancelled Cheque (optional)</Label>
-                          {signUpPassbookFile ? (
-                            <div className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3">
-                              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted">
-                                <FileText className="h-5 w-5 text-muted-foreground" />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-medium">{signUpPassbookFile.name}</p>
-                                <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  <Check className="h-3 w-3" /> {extractingPassbook ? "Reading details..." : "Details auto-filled — verify above"}
-                                </p>
-                              </div>
-                              <Button type="button" variant="ghost" size="icon" onClick={() => {
-                                setSignUpPassbookFile(null);
-                                if (passbookInputRef.current) passbookInputRef.current.value = "";
-                              }} disabled={loading || extractingPassbook} className="h-9 w-9 rounded-full">
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <button type="button" onClick={() => passbookInputRef.current?.click()} disabled={loading || extractingPassbook} className="flex w-full flex-col items-center gap-1 rounded-2xl border-2 border-dashed border-border bg-background p-4 text-center transition-colors hover:bg-muted/50 disabled:opacity-50">
-                              <Upload className="h-5 w-5 text-muted-foreground" />
-                              <span className="text-sm font-semibold">Upload passbook or cheque</span>
-                              <span className="text-[11px] text-muted-foreground">Auto-fills bank details</span>
-                            </button>
-                          )}
-                          <input ref={passbookInputRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={handlePassbookSelect} className="hidden" />
-                        </div>
-
-                        <div className="rounded-2xl bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                          UPI ID is still required for instant payouts. Add it below.
-                        </div>
-                      </>
-                    )}
-
-                    {/* UPI section — always shown */}
-                    <div className="space-y-3">
-                      <Label htmlFor="signup-upi" className="text-base">{t('auth.upiIdLabel', 'UPI ID')}</Label>
-
-                      {/* QR code upload — extracts UPI ID and discards the image */}
+                    {/* Option 1 — Upload QR */}
+                    <div className="space-y-2">
                       <button
                         type="button"
                         onClick={() => upiQrInputRef.current?.click()}
                         disabled={loading || decodingUpiQr}
-                        className={`group relative block w-full overflow-hidden rounded-3xl border-2 border-dashed p-4 text-left shadow-sm transition-all active:scale-[0.99] disabled:opacity-60 ${
+                        className={`group relative block w-full overflow-hidden rounded-2xl border-2 border-dashed p-4 text-left transition-all active:scale-[0.99] disabled:opacity-60 ${
                           upiQrFilledFrom
-                            ? 'border-green-500 bg-gradient-to-br from-green-50 via-white to-green-100'
-                            : 'border-[#ff007a]/50 bg-gradient-to-br from-pink-50 via-white to-[#ff007a]/10 hover:border-[#ff007a]'
+                            ? 'border-green-500 bg-green-50'
+                            : 'border-[#ff007a]/40 bg-white hover:border-[#ff007a]'
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm ring-2 ${upiQrFilledFrom ? 'ring-green-500/40' : 'ring-[#ff007a]/20'}`}>
+                          <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm ring-2 ${upiQrFilledFrom ? 'ring-green-500/40' : 'ring-[#ff007a]/20'}`}>
                             {decodingUpiQr ? (
-                              <Loader2 className="h-8 w-8 animate-spin text-[#ff007a]" />
+                              <Loader2 className="h-7 w-7 animate-spin text-[#ff007a]" />
                             ) : upiQrFilledFrom ? (
-                              <Check className="h-10 w-10 text-green-600" strokeWidth={2.5} />
+                              <Check className="h-8 w-8 text-green-600" strokeWidth={2.5} />
                             ) : (
-                              <QrCode className="h-10 w-10 text-gray-900" strokeWidth={1.5} />
+                              <QrCode className="h-8 w-8 text-gray-900" strokeWidth={1.5} />
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className={`text-sm font-bold ${upiQrFilledFrom ? 'text-green-700' : 'text-gray-900'}`}>
                               {decodingUpiQr
-                                ? "Reading your QR..."
+                                ? 'Reading your QR...'
                                 : upiQrFilledFrom
-                                ? "✓ UPI ID detected successfully"
-                                : "Upload UPI QR code"}
+                                ? '✓ UPI QR uploaded'
+                                : '📷 Upload UPI QR'}
                             </p>
                             <p className="mt-0.5 text-[11px] text-muted-foreground">
                               {upiQrFilledFrom
-                                ? `Filled: ${upiQrFilledFrom} · Tap to re-scan`
-                                : "PhonePe, GPay, Paytm, BHIM — any QR works"}
+                                ? `Detected: ${upiQrFilledFrom} · Tap to re-scan`
+                                : 'PhonePe • Google Pay • Paytm • BHIM'}
                             </p>
                           </div>
                         </div>
                       </button>
+                      {!upiQrFilledFrom && (
+                        <p className="px-1 text-[11px] text-muted-foreground">Any UPI QR works.</p>
+                      )}
                       <input
                         ref={upiQrInputRef}
                         type="file"
@@ -1000,50 +924,172 @@ export default function Auth() {
                         onChange={handleUpiQrSelect}
                         className="hidden"
                       />
+                    </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="h-px flex-1 bg-border" />
-                        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">or enter manually</span>
-                        <div className="h-px flex-1 bg-border" />
-                      </div>
+                    {/* Divider */}
+                    <div className="flex items-center gap-3">
+                      <div className="h-px flex-1 bg-border" />
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">OR</span>
+                      <div className="h-px flex-1 bg-border" />
+                    </div>
 
+                    {/* Option 2 — Type UPI */}
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-upi" className="text-sm font-semibold">
+                        Enter UPI ID
+                      </Label>
                       <div className="relative">
                         <Input
                           id="signup-upi"
                           type="text"
                           required
-                          placeholder="yourname@bank"
+                          placeholder="yourname@okaxis"
                           value={signUpUpiId}
                           onChange={e => { setSignUpUpiId(e.target.value); if (upiQrFilledFrom && e.target.value !== upiQrFilledFrom) setUpiQrFilledFrom(null); }}
                           disabled={loading}
-                          className={`h-12 rounded-2xl pr-10 text-base ${upiQrFilledFrom ? 'border-[#ff007a]/50 bg-[#ff007a]/5' : ''}`}
+                          className={`h-12 rounded-2xl pr-10 text-base ${
+                            upiValid
+                              ? 'border-green-500/60 bg-green-50/40'
+                              : upiShowError
+                              ? 'border-amber-500/70 bg-amber-50/40'
+                              : ''
+                          }`}
                         />
-                        {upiQrFilledFrom && (
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-[#ff007a] p-1 text-white">
+                        {upiValid && (
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-green-600 p-1 text-white">
                             <Check className="h-3.5 w-3.5" />
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-muted-foreground">
-                        Examples: 9876543210@ybl · name@oksbi · username@paytm
-                      </p>
-                    </div>
-
-
-                    <div className="grid grid-cols-2 gap-3 pt-1">
-                      <Button type="button" variant="outline" onClick={() => setSignUpStep(1)} className="h-12 rounded-2xl">
-                        <ChevronLeft className="mr-1 h-4 w-4" /> Back
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={goToSignupStepThree}
-                        disabled={extractingPassbook || !upiSchema.safeParse(signUpUpiId.trim()).success}
-                        className="h-12 rounded-2xl font-semibold"
-                      >
-                        Continue
-                      </Button>
+                      {upiValid ? (
+                        <p className="flex items-center gap-1 text-xs font-medium text-green-700">
+                          ✅ UPI ID looks valid
+                        </p>
+                      ) : upiShowError ? (
+                        <p className="flex items-center gap-1 text-xs font-medium text-amber-700">
+                          ⚠️ Please enter a valid UPI ID
+                        </p>
+                      ) : (
+                        <div className="rounded-xl bg-muted/50 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+                          <span className="font-semibold text-foreground">Examples:</span>
+                          <br />9876543210@ybl
+                          <br />name@oksbi
+                          <br />username@paytm
+                        </div>
+                      )}
                     </div>
                   </div>
+
+                  {/* Bank fallback (collapsed) */}
+                  {bankPayoutEnabled && (
+                    <div className="rounded-3xl border bg-card">
+                      {!showBankFallback ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowBankFallback(true)}
+                          className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                              <Landmark className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold">Can't receive UPI?</p>
+                              <p className="text-[11px] text-muted-foreground">Add bank account instead</p>
+                            </div>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      ) : (
+                        <div className="space-y-4 p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-bold">Bank Account (Optional)</p>
+                              <p className="text-[11px] text-muted-foreground">Used only if UPI payouts are unavailable.</p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-full"
+                              onClick={() => setShowBankFallback(false)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="signup-acct-name" className="text-sm">Account Holder Name</Label>
+                            <Input id="signup-acct-name" type="text" placeholder="Name as on bank account" value={signUpAccountHolderName} onChange={e => setSignUpAccountHolderName(e.target.value)} disabled={loading} className="h-12 rounded-2xl text-base" />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="signup-acct-no" className="text-sm">Account Number</Label>
+                            <Input id="signup-acct-no" inputMode="numeric" placeholder="9 to 18 digits" value={signUpBankAccountNumber} onChange={e => setSignUpBankAccountNumber(e.target.value.replace(/\D/g, ""))} maxLength={18} disabled={loading} className="h-12 rounded-2xl text-base" />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="signup-acct-no-confirm" className="text-sm">Confirm Account Number</Label>
+                            <Input id="signup-acct-no-confirm" inputMode="numeric" placeholder="Re-enter account number" value={signUpConfirmAccountNumber} onChange={e => setSignUpConfirmAccountNumber(e.target.value.replace(/\D/g, ""))} maxLength={18} disabled={loading} className="h-12 rounded-2xl text-base" />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="signup-ifsc" className="text-sm">IFSC Code</Label>
+                            <Input id="signup-ifsc" type="text" placeholder="e.g., HDFC0001234" value={signUpIfscCode} onChange={e => setSignUpIfscCode(e.target.value.toUpperCase())} maxLength={11} disabled={loading} className="h-12 rounded-2xl text-base uppercase" />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm">Passbook / Cancelled Cheque (optional)</Label>
+                            {signUpPassbookFile ? (
+                              <div className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted">
+                                  <FileText className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-medium">{signUpPassbookFile.name}</p>
+                                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Check className="h-3 w-3" /> {extractingPassbook ? "Reading details..." : "Details auto-filled — verify above"}
+                                  </p>
+                                </div>
+                                <Button type="button" variant="ghost" size="icon" onClick={() => {
+                                  setSignUpPassbookFile(null);
+                                  if (passbookInputRef.current) passbookInputRef.current.value = "";
+                                }} disabled={loading || extractingPassbook} className="h-9 w-9 rounded-full">
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <button type="button" onClick={() => passbookInputRef.current?.click()} disabled={loading || extractingPassbook} className="flex w-full flex-col items-center gap-1 rounded-2xl border-2 border-dashed border-border bg-background p-4 text-center transition-colors hover:bg-muted/50 disabled:opacity-50">
+                                <Upload className="h-5 w-5 text-muted-foreground" />
+                                <span className="text-sm font-semibold">Upload passbook or cheque</span>
+                                <span className="text-[11px] text-muted-foreground">Auto-fills bank details</span>
+                              </button>
+                            )}
+                            <input ref={passbookInputRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={handlePassbookSelect} className="hidden" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="grid grid-cols-[auto_1fr] gap-3 pt-1">
+                    <Button type="button" variant="outline" onClick={() => setSignUpStep(1)} className="h-14 rounded-2xl px-5">
+                      <ChevronLeft className="h-5 w-5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={goToSignupStepThree}
+                      disabled={extractingPassbook || !upiValid}
+                      className="h-14 rounded-2xl bg-[#ff007a] text-base font-semibold text-white hover:bg-[#ff007a]/90"
+                    >
+                      Continue
+                    </Button>
+                  </div>
+                </div>
+                );
+              })()}
+
 
                 </div>
               )}
