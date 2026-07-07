@@ -3076,6 +3076,7 @@ export type Database = {
         Row: {
           active_payout_provider: string
           allow_provider_fallback: boolean
+          bank_transfer_provider: string
           cashfree_enabled: boolean
           created_at: string
           id: number
@@ -3085,10 +3086,12 @@ export type Database = {
           razorpayx_enabled: boolean
           updated_at: string
           updated_by: string | null
+          upi_provider: string
         }
         Insert: {
           active_payout_provider?: string
           allow_provider_fallback?: boolean
+          bank_transfer_provider?: string
           cashfree_enabled?: boolean
           created_at?: string
           id?: number
@@ -3098,10 +3101,12 @@ export type Database = {
           razorpayx_enabled?: boolean
           updated_at?: string
           updated_by?: string | null
+          upi_provider?: string
         }
         Update: {
           active_payout_provider?: string
           allow_provider_fallback?: boolean
+          bank_transfer_provider?: string
           cashfree_enabled?: boolean
           created_at?: string
           id?: number
@@ -3111,6 +3116,7 @@ export type Database = {
           razorpayx_enabled?: boolean
           updated_at?: string
           updated_by?: string | null
+          upi_provider?: string
         }
         Relationships: []
       }
