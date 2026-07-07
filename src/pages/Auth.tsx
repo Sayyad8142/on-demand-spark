@@ -361,13 +361,18 @@ export default function Auth() {
       return;
     }
 
-    // UPI-only mode (bank disabled by admin) OR user picked UPI method — done.
-    if (!bankPayoutEnabled || payoutMethod === 'upi') {
+    // Bank fields are optional. Only validate if the fallback is open AND any field filled.
+    const anyBankFilled = bankPayoutEnabled && showBankFallback && !!(
+      signUpAccountHolderName.trim() ||
+      signUpBankAccountNumber.trim() ||
+      signUpConfirmAccountNumber.trim() ||
+      signUpIfscCode.trim()
+    );
+    if (!anyBankFilled) {
       setSignUpStep(3);
       return;
     }
 
-    // Bank method selected — bank details must be fully valid in addition to UPI.
     if (!signUpAccountHolderName.trim()) {
       toast({ title: "Account holder name required", variant: "destructive" });
       return;
@@ -386,6 +391,7 @@ export default function Auth() {
     }
     setSignUpStep(3);
   };
+
 
 
   const goToSignupStepTwo = () => {
