@@ -45,7 +45,11 @@ export async function synthesizeSpeech(text: string, language: string): Promise<
 }
 
 export type AssistantTurn = { role: "user" | "assistant"; content: string };
-export type PendingAction = { type: "update_upi" | "update_name" | "set_online" | "set_offline"; value?: string; spoken_confirmation: string };
+export type PendingAction =
+  | { type: "update_upi" | "update_name"; value: string; spoken_confirmation: string }
+  | { type: "set_online" | "set_offline"; value?: string; spoken_confirmation: string }
+  | { type: "accept_booking" | "reject_booking"; bookingId: string; spoken_confirmation: string };
+
 export type AssistantResponse = {
   reply: string;
   conversationId: string | null;
@@ -55,11 +59,14 @@ export type AssistantResponse = {
   language: string;
 };
 
+export type AssistantMode = "chat" | "signup" | "tour" | "booking_offer" | "briefing" | "summary" | "coach" | "active_job";
+
 export async function askAssistant(params: {
   messages: AssistantTurn[];
   conversationId?: string | null;
   language: string;
-  mode?: "chat" | "signup" | "tour";
+  mode?: AssistantMode;
+  context?: Record<string, unknown>;
 }): Promise<AssistantResponse> {
   const res = await fetch(`${FUNCTIONS_BASE}/voice-assistant`, {
     method: "POST",
@@ -75,4 +82,5 @@ export async function askAssistant(params: {
   }
   return await res.json();
 }
+
 
