@@ -35,7 +35,7 @@ function newId() {
 }
 
 export default function VoiceAssistantSheet() {
-  const { open, closeAssistant } = useVoiceAssistant();
+  const { open, closeAssistant, mode: initialMode, booking: bookingOffer, seed } = useVoiceAssistant();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
