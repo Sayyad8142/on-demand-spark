@@ -73,6 +73,9 @@ import {
   isPassiveMonitoringActive,
 } from "@/lib/stepMonitoring";
 import { useActiveJob } from "@/hooks/useActiveJob";
+import { VoiceAssistantProvider, useVoiceAssistant } from "@/contexts/VoiceAssistantContext";
+import VoiceAssistantFAB from "@/components/voice/VoiceAssistantFAB";
+import VoiceAssistantSheet from "@/components/voice/VoiceAssistantSheet";
 
 const queryClient = new QueryClient();
 
