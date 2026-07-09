@@ -455,6 +455,12 @@ Deno.serve(async (req) => {
           formPatch[args.field] = String(args.value).slice(0, 200);
         } else if (name === "propose_write" && typeof args?.type === "string" && typeof args?.spoken_confirmation === "string") {
           pendingAction = { type: args.type, value: typeof args.value === "string" ? args.value : undefined, spoken_confirmation: args.spoken_confirmation };
+        } else if (name === "propose_booking_action" && typeof args?.type === "string" && typeof args?.bookingId === "string") {
+          pendingAction = {
+            type: args.type,
+            bookingId: String(args.bookingId),
+            spoken_confirmation: typeof args.spoken_confirmation === "string" ? args.spoken_confirmation : "Please say Confirm.",
+          };
         } else if (readTools[name]) {
           try { result = await readTools[name](); }
           catch (e) { result = { error: "tool_failed", message: String((e as Error)?.message ?? e) }; }
