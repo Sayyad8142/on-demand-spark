@@ -124,12 +124,11 @@ export default function VoiceAssistantSheet() {
       setStatus("thinking");
       try {
         const messages: AssistantTurn[] = nextTurns.map((tt) => ({ role: tt.role, content: tt.content }));
-        const res = await askAssistant({ messages, conversationId, language: languageHint });
+        const res = await askAssistant({ messages, conversationId, language: languageHint, mode: "chat" });
         if (res.conversationId) setConversationId(res.conversationId);
         const assistantTurn: Turn = { id: newId(), role: "assistant", content: res.reply };
         setTurns((prev) => [...prev, assistantTurn]);
 
-        // Handle any navigation the model asked for.
         for (const screen of res.navigate || []) {
           const path = ROUTE_MAP[screen];
           if (path) {
@@ -137,8 +136,13 @@ export default function VoiceAssistantSheet() {
             navigate(path);
           }
         }
+        if (res.pendingAction) {
+          setPending(res.pendingAction);
+          void logEvent("assistant_pending_action", { type: res.pendingAction.type });
+        }
         if (res.language) setLanguageHint(res.language);
         void playSpeech(res.reply, res.language || languageHint);
+
       } catch (err) {
         console.error("[voice] assistant call failed", err);
         setErrorMsg(t("voice.errorGeneric", "Something went wrong. Please try again."));
