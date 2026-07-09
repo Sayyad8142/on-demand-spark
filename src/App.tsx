@@ -76,6 +76,10 @@ import { useActiveJob } from "@/hooks/useActiveJob";
 import { VoiceAssistantProvider, useVoiceAssistant } from "@/contexts/VoiceAssistantContext";
 import VoiceAssistantFAB from "@/components/voice/VoiceAssistantFAB";
 import VoiceAssistantSheet from "@/components/voice/VoiceAssistantSheet";
+import { useVoiceBookingAnnouncements } from "@/hooks/useVoiceBookingAnnouncements";
+import { useMorningBriefing } from "@/hooks/useMorningBriefing";
+import { useEveningSummary } from "@/hooks/useEveningSummary";
+import { useIdleTips } from "@/hooks/useIdleTips";
 import GuidedTour, { tourAlreadyCompleted, markTourCompleted } from "@/components/voice/GuidedTour";
 
 function FirstTimeTourMount() {
