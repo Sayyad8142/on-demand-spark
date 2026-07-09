@@ -12,7 +12,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
-import { Check, ChevronLeft, ChevronRight, FileText, Landmark, Phone, QrCode, ShieldCheck, Sparkles, Upload, UserRound, X, Loader2 } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, FileText, Landmark, Mic, Phone, QrCode, ShieldCheck, Sparkles, Upload, UserRound, X, Loader2 } from "lucide-react";
+import SignupCoach, { type SignupPatch } from "@/components/voice/SignupCoach";
+
 import jsQR from "jsqr";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import maidServiceIcon from "@/assets/service-maid.png";
