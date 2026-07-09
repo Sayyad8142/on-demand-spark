@@ -769,6 +769,19 @@ export default function Auth() {
               </div>
 
               {signUpStep === 1 && (
+                <>
+                <button
+                  type="button"
+                  onClick={() => setVoiceSignupOpen(true)}
+                  className="w-full h-12 rounded-2xl border-2 border-primary/40 bg-primary/5 text-primary font-semibold text-sm inline-flex items-center justify-center gap-2 active:scale-95"
+                >
+                  <Mic className="h-4 w-4" />
+                  {t("auth.fillWithVoice", "Fill with voice")}
+                </button>
+                </>
+              )}
+              {signUpStep === 1 && (
+
                 <div className="space-y-5 rounded-3xl border bg-card p-4 shadow-sm">
                   <div>
                     <p className="text-lg font-bold">Step 1: Basic Details</p>
