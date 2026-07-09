@@ -76,6 +76,20 @@ import { useActiveJob } from "@/hooks/useActiveJob";
 import { VoiceAssistantProvider, useVoiceAssistant } from "@/contexts/VoiceAssistantContext";
 import VoiceAssistantFAB from "@/components/voice/VoiceAssistantFAB";
 import VoiceAssistantSheet from "@/components/voice/VoiceAssistantSheet";
+import GuidedTour, { tourAlreadyCompleted, markTourCompleted } from "@/components/voice/GuidedTour";
+
+function FirstTimeTourMount() {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!user) return;
+    if (tourAlreadyCompleted()) return;
+    const t = setTimeout(() => setOpen(true), 1200);
+    return () => clearTimeout(t);
+  }, [user]);
+  return <GuidedTour open={open} onFinish={() => { markTourCompleted(); setOpen(false); }} />;
+}
+
 
 const queryClient = new QueryClient();
 
