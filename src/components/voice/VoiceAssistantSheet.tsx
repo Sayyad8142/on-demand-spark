@@ -128,7 +128,10 @@ export default function VoiceAssistantSheet() {
       setStatus("thinking");
       try {
         const messages: AssistantTurn[] = nextTurns.map((tt) => ({ role: tt.role, content: tt.content }));
-        const res = await askAssistant({ messages, conversationId, language: languageHint, mode: "chat" });
+        const mode = initialMode === "chat" ? "chat" : (initialMode as any);
+        const context: Record<string, unknown> = {};
+        if (bookingOffer) context.booking = bookingOffer;
+        const res = await askAssistant({ messages, conversationId, language: languageHint, mode, context });
         if (res.conversationId) setConversationId(res.conversationId);
         const assistantTurn: Turn = { id: newId(), role: "assistant", content: res.reply };
         setTurns((prev) => [...prev, assistantTurn]);
