@@ -286,7 +286,59 @@ export default function VoiceAssistantSheet() {
           {errorMsg && (
             <div className="text-xs text-destructive text-center">{errorMsg}</div>
           )}
+          {pending && (
+            <div className="rounded-2xl border-2 border-primary/40 bg-primary/5 p-4 space-y-3 animate-fade-in">
+              <div className="text-sm font-semibold text-foreground">
+                {pending.type === "update_upi" && `${t("voice.confirmUpi", "Confirm UPI")}: ${pending.value ?? ""}`}
+                {pending.type === "update_name" && `${t("voice.confirmName", "Confirm name")}: ${pending.value ?? ""}`}
+                {pending.type === "set_online" && t("voice.confirmOnline", "Go online now?")}
+                {pending.type === "set_offline" && t("voice.confirmOffline", "Go offline now?")}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={confirming}
+                  onClick={async () => {
+                    if (!pending) return;
+                    setConfirming(true);
+                    try {
+                      if (pending.type === "update_upi" && pending.value) {
+                        await updateWorker({ upi_id: pending.value } as any);
+                      } else if (pending.type === "update_name" && pending.value) {
+                        await updateWorker({ full_name: pending.value } as any);
+                      } else if (pending.type === "set_online") {
+                        await updateAvailability(true);
+                      } else if (pending.type === "set_offline") {
+                        await updateAvailability(false);
+                      }
+                      toast({ title: t("common.success", "Saved") });
+                      void logEvent("assistant_action_confirmed", { type: pending.type });
+                      setPending(null);
+                    } catch (e) {
+                      console.error("[voice] confirm action failed", e);
+                      toast({ title: t("common.error", "Error"), description: String((e as Error)?.message ?? e), variant: "destructive" });
+                    } finally {
+                      setConfirming(false);
+                    }
+                  }}
+                  className="flex-1 h-11 rounded-xl bg-primary text-primary-foreground font-semibold text-sm inline-flex items-center justify-center gap-2 active:scale-95 disabled:opacity-60"
+                >
+                  {confirming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  {t("common.confirm", "Confirm")}
+                </button>
+                <button
+                  type="button"
+                  disabled={confirming}
+                  onClick={() => { setPending(null); void logEvent("assistant_action_cancelled", { type: pending?.type }); }}
+                  className="h-11 px-4 rounded-xl border border-border text-sm font-medium active:scale-95"
+                >
+                  {t("common.cancel", "Cancel")}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
+
 
         <div className="px-5 py-4 border-t border-border space-y-3">
           {!micDenied ? (
