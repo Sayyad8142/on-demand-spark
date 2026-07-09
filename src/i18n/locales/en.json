@@ -259,9 +259,7 @@
     "profile": { "title": "Your Profile", "body": "Update your name, photo, UPI ID, and communities from here." },
     "settings": { "title": "Settings", "body": "Change your language, notification preferences, and app options here." },
     "coach": { "title": "Ask Didi Anytime", "body": "Tap the pink microphone button anytime to ask me anything — earnings, bookings, or help. You're all set!" }
-  },
-  "auth": {
-    "fillWithVoice": "Fill with voice"
   }
 }
+
 
