@@ -157,8 +157,19 @@ export default function VoiceAssistantSheet() {
         void logEvent("assistant_error", { message: String((err as Error)?.message ?? err) });
       }
     },
-    [turns, conversationId, languageHint, navigate, playSpeech, t, logEvent],
+    [turns, conversationId, languageHint, navigate, playSpeech, t, logEvent, initialMode, bookingOffer],
   );
+
+  // Auto-submit seed prompt when opened programmatically (briefing, summary, coach).
+  const seedFiredRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) { seedFiredRef.current = null; return; }
+    if (!seed) return;
+    if (seedFiredRef.current === seed) return;
+    seedFiredRef.current = seed;
+    void submitTurn(seed);
+  }, [open, seed, submitTurn]);
+
 
   const startRecording = useCallback(async () => {
     if (status !== "idle") return;
