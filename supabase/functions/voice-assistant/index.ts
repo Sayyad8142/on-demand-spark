@@ -382,10 +382,22 @@ Deno.serve(async (req) => {
 
   const clientNavigations: string[] = [];
   const formPatch: Record<string, string> = {};
-  let pendingAction: { type: string; value?: string; spoken_confirmation: string } | null = null;
+  let pendingAction: Record<string, unknown> | null = null;
 
   const TOOL_LIST = buildTools(mode);
-  const systemPrompt = mode === "signup" ? SIGNUP_SYSTEM_PROMPT : mode === "tour" ? TOUR_SYSTEM_PROMPT : CHAT_SYSTEM_PROMPT;
+  const systemPromptBase =
+    mode === "signup" ? SIGNUP_SYSTEM_PROMPT
+    : mode === "tour" ? TOUR_SYSTEM_PROMPT
+    : mode === "booking_offer" ? BOOKING_OFFER_SYSTEM_PROMPT
+    : mode === "briefing" ? BRIEFING_SYSTEM_PROMPT
+    : mode === "summary" ? SUMMARY_SYSTEM_PROMPT
+    : mode === "coach" ? COACH_SYSTEM_PROMPT
+    : mode === "active_job" ? ACTIVE_JOB_SYSTEM_PROMPT
+    : CHAT_SYSTEM_PROMPT;
+  const contextBlock = context && Object.keys(context).length > 0
+    ? `\n\nCONTEXT: ${JSON.stringify(context).slice(0, 800)}`
+    : "";
+  const systemPrompt = systemPromptBase + contextBlock;
 
   // --- conversation record (only if authenticated) ---
   let conversationId = typeof body.conversationId === "string" ? body.conversationId : null;
@@ -407,6 +419,7 @@ Deno.serve(async (req) => {
     { role: "system", content: systemPrompt },
     ...trimmed as ChatMessage[],
   ];
+
 
   let assistantFinal = "";
 
