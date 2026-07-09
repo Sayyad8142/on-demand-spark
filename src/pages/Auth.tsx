@@ -1008,14 +1008,7 @@ export default function Auth() {
                         <p className="flex items-center gap-1 text-xs font-medium text-amber-700">
                           ⚠️ Please enter a valid UPI ID
                         </p>
-                      ) : (
-                        <div className="rounded-xl bg-muted/50 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-                          <span className="font-semibold text-foreground">Examples:</span>
-                          <br />9876543210@ybl
-                          <br />name@oksbi
-                          <br />username@paytm
-                        </div>
-                      )}
+                      ) : null}
                     </div>
                   </div>
 
