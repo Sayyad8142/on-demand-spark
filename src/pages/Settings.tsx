@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { Capacitor } from "@capacitor/core";
+import VoiceAssistantPrefsCard from "@/components/voice/VoiceAssistantPrefsCard";
 import { 
   requestOverlayPermission, 
   checkOverlayPermission,
