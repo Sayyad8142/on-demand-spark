@@ -318,6 +318,66 @@ Deno.serve(async (req) => {
       notifications_allowed: workerRow.notification_permission_granted !== false,
       overlay_allowed: workerRow.overlay_permission_granted !== false,
     } : { error: "no_worker_profile" },
+    get_active_booking: async () => {
+      if (!workerId) return { error: "no_worker_profile" };
+      const { data } = await supabase.from("bookings")
+        .select("id, service_type, community, flat_no, price_inr, status, scheduled_date, scheduled_time")
+        .eq("worker_id", workerId)
+        .in("status", ["assigned","accepted","on_the_way","started"])
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (!data) return { none: true };
+      return {
+        id: data.id, service: data.service_type, community: data.community,
+        flat: data.flat_no, price_rupees: data.price_inr ?? 0, status: data.status,
+        scheduled_date: data.scheduled_date, scheduled_time: data.scheduled_time,
+      };
+    },
+    get_daily_summary: async () => {
+      if (!workerId) return { error: "no_worker_profile" };
+      const now = new Date();
+      const startToday = new Date(now); startToday.setHours(0,0,0,0);
+      const startYesterday = new Date(startToday); startYesterday.setDate(startYesterday.getDate() - 1);
+      const { data: bookings } = await supabase.from("bookings")
+        .select("status, price_inr, created_at, updated_at")
+        .eq("worker_id", workerId)
+        .gte("updated_at", startYesterday.toISOString()).limit(500);
+      const rows = bookings || [];
+      const inRange = (r: any, from: Date, to: Date) => {
+        const t = new Date(r.updated_at || r.created_at);
+        return t >= from && t < to;
+      };
+      const bucket = (from: Date, to: Date) => {
+        const b = rows.filter((r: any) => inRange(r, from, to) && r.status === "completed");
+        const gross = b.reduce((a: number, r: any) => a + Number(r.price_inr || 0), 0);
+        return { completed: b.length, rupees_net: Math.round(gross * 0.8) };
+      };
+      const { data: ratingsToday } = await supabase.from("worker_ratings")
+        .select("rating").eq("worker_id", workerId).gte("created_at", startToday.toISOString()).limit(50);
+      const rs = ratingsToday || [];
+      const avg = rs.length ? Math.round((rs.reduce((a: number, r: any) => a + Number(r.rating || 0), 0) / rs.length) * 10) / 10 : null;
+      return {
+        yesterday: bucket(startYesterday, startToday),
+        today: bucket(startToday, new Date(startToday.getTime() + 86400000)),
+        today_rating_avg: avg, today_rating_count: rs.length,
+      };
+    },
+    diagnose_no_bookings: async () => {
+      if (!workerRow || !workerId) return { error: "no_worker_profile" };
+      const { data: avail } = await supabase.from("worker_availability").select("day_of_week, slots").eq("worker_id", workerId);
+      const totalSlots = (avail || []).reduce((a: number, r: any) => a + (Array.isArray(r.slots) ? r.slots.length : 0), 0);
+      return {
+        is_online: workerRow.is_available,
+        priority_score: workerRow.priority_score ?? 50,
+        priority_tier: (workerRow.priority_score ?? 50) >= 80 ? "top" : (workerRow.priority_score ?? 50) >= 60 ? "mid" : "low",
+        community: workerRow.community,
+        services: workerRow.services,
+        total_availability_slots: totalSlots,
+        payout_ready: workerRow.payout_ready,
+        notifications_ok: workerRow.notification_permission_granted !== false,
+        overlay_ok: workerRow.overlay_permission_granted !== false,
+        fcm_ok: !!workerRow.fcm_token,
+      };
+    },
   };
 
   const clientNavigations: string[] = [];
