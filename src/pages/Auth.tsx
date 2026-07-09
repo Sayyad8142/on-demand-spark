@@ -113,14 +113,13 @@ export default function Auth() {
     }
     if (patch.services) {
       const wanted = patch.services.split(/[,;/]| and /i).map((s) => s.trim().toLowerCase()).filter(Boolean);
-      const mapped = wanted
-        .map((s) => {
-          if (s.includes("maid")) return "maid";
-          if (s.includes("bath")) return "bathroom_cleaning";
-          return null;
-        })
-        .filter((v): v is string => !!v);
+      const mapped: string[] = [];
+      for (const s of wanted) {
+        if (s.includes("maid")) mapped.push("maid");
+        else if (s.includes("bath")) mapped.push("bathroom_cleaning");
+      }
       if (mapped.length) setSignUpServices(Array.from(new Set(mapped)));
+
     }
   };
 
