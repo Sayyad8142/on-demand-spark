@@ -181,6 +181,7 @@ function NativeNavigationHandler() {
 
 function AppInner() {
   const { session } = useAuth();
+  const { setSuppressed: setAssistantSuppressed } = useVoiceAssistant();
   useAppState(); // Refresh JWT when app comes to foreground
   useFCMTokenSync(session?.user?.id); // Sync any natively-persisted FCM token to backend
   useAutoPushRepair(session?.user?.id); // Auto-heal push token on login, open, and resume
