@@ -64,6 +64,38 @@ const TOUR_SYSTEM_PROMPT = `You are "Didi", a friendly coach explaining the Didi
 Answer the worker's question about the app in 1–2 short sentences, in the worker's language (English/Hindi/Telugu).
 Never use markdown, lists, code, or emojis. Never invent numbers. Encourage them.`;
 
+const BOOKING_OFFER_SYSTEM_PROMPT = `You are "Didi", assisting a worker who just received a NEW booking offer.
+The booking details are provided in the assistant context. Never guess.
+GOAL: help the worker accept or reject this ONE booking.
+- If the worker says accept/haan/sari/yes, call propose_booking_action with type "accept_booking" and the bookingId, and speak: "You want to accept this booking. Please say Confirm."
+- If the worker says reject/skip/no/nahi, call propose_booking_action with type "reject_booking" and speak the same style Confirm prompt.
+- Never accept or reject on your own. The app only saves after the worker taps Confirm on screen.
+- Answer questions about earning, community, or flat briefly from the context.
+- Never speak the customer's phone number.
+- Reply in the worker's language. 1–2 short sentences. No emojis, no markdown.`;
+
+const BRIEFING_SYSTEM_PROMPT = `You are "Didi" giving a short MORNING briefing to a worker.
+Use get_daily_summary first, then speak 2 warm short sentences in the worker's language:
+1) yesterday: bookings completed and rupees earned (say "rupees").
+2) today: encouragement + one concrete tip based on their data (availability, priority).
+No emojis, no lists, no markdown. Never invent numbers.`;
+
+const SUMMARY_SYSTEM_PROMPT = `You are "Didi" giving a short EVENING summary to a worker.
+Use get_daily_summary first, then speak 2 warm short sentences in the worker's language:
+1) today's bookings completed and rupees earned.
+2) rating average today (if any) + a warm goodnight-style close.
+No emojis, no lists, no markdown. Never invent numbers.`;
+
+const COACH_SYSTEM_PROMPT = `You are "Didi" — a personal coach. The worker asked why bookings are low or how to improve.
+Call diagnose_no_bookings FIRST, then answer in 2 short sentences in the worker's language.
+Be specific to their data (mention their actual availability slots, community, priority tier).
+No generic advice. No emojis, no lists.`;
+
+const ACTIVE_JOB_SYSTEM_PROMPT = `You are "Didi" helping a worker DURING an active booking.
+Use get_active_booking FIRST to load the current job. Answer briefly about: address flat, service, price, or navigation.
+Never speak the customer's phone number. To open a screen, call navigate_to_screen.
+Reply in the worker's language, 1–2 short sentences.`;
+
 function buildTools(mode: string) {
   const readTools = [
     { name: "get_worker_profile", description: "Read the worker's own profile (name, services, community, online status, payout readiness)." },
@@ -73,6 +105,9 @@ function buildTools(mode: string) {
     { name: "get_ratings_summary", description: "Average rating, total review count, and up to 3 latest reviews." },
     { name: "get_availability", description: "Availability slots grouped by day." },
     { name: "get_health_status", description: "Notification and FCM health flags (push token, permissions)." },
+    { name: "get_active_booking", description: "Read the worker's current active booking (assigned/accepted/on_the_way/started) with service, flat, community, price." },
+    { name: "get_daily_summary", description: "Aggregate for today and yesterday: bookings completed, rupees earned, ratings today." },
+    { name: "diagnose_no_bookings", description: "Explain why the worker may not be getting bookings today: online, availability slots, priority, community demand, health." },
   ].map((t) => ({
     type: "function" as const,
     function: { name: t.name, description: t.description, parameters: { type: "object", properties: {}, additionalProperties: false } },
@@ -106,10 +141,28 @@ function buildTools(mode: string) {
         type: "object",
         properties: {
           type: { type: "string", enum: ["update_upi","update_name","set_online","set_offline"] },
-          value: { type: "string", description: "New value (name text, UPI id). Omit for online/offline toggles." },
-          spoken_confirmation: { type: "string", description: "One short sentence in the worker's language read aloud before confirmation, e.g. 'Set UPI to name at bank. Tap Confirm to save.'" },
+          value: { type: "string" },
+          spoken_confirmation: { type: "string" },
         },
         required: ["type","spoken_confirmation"],
+        additionalProperties: false,
+      },
+    },
+  };
+
+  const proposeBookingAction = {
+    type: "function" as const,
+    function: {
+      name: "propose_booking_action",
+      description: "Propose accept or reject on a specific booking. The worker must tap Confirm — the app performs the accept/reject then.",
+      parameters: {
+        type: "object",
+        properties: {
+          type: { type: "string", enum: ["accept_booking","reject_booking"] },
+          bookingId: { type: "string" },
+          spoken_confirmation: { type: "string" },
+        },
+        required: ["type","bookingId","spoken_confirmation"],
         additionalProperties: false,
       },
     },
@@ -124,7 +177,7 @@ function buildTools(mode: string) {
         type: "object",
         properties: {
           field: { type: "string", enum: ["full_name","phone","community","services","upi_id"] },
-          value: { type: "string", description: "For services, comma-separate: 'Maid' or 'Bathroom Cleaning' or 'Maid, Bathroom Cleaning'." },
+          value: { type: "string" },
         },
         required: ["field","value"],
         additionalProperties: false,
@@ -134,8 +187,13 @@ function buildTools(mode: string) {
 
   if (mode === "signup") return [captureSignup];
   if (mode === "tour") return [navTool];
+  if (mode === "booking_offer") return [proposeBookingAction];
+  if (mode === "briefing" || mode === "summary") return readTools.filter(t => ["get_daily_summary","get_priority_score","get_availability"].includes(t.function.name));
+  if (mode === "coach") return readTools.filter(t => ["diagnose_no_bookings","get_priority_score","get_availability","get_health_status"].includes(t.function.name));
+  if (mode === "active_job") return [...readTools.filter(t => t.function.name === "get_active_booking"), navTool];
   return [...readTools, navTool, proposeWrite];
 }
+
 
 
 function jsonResponse(body: unknown, status = 200) {
