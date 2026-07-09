@@ -8,6 +8,10 @@ import { askAssistant, synthesizeSpeech, transcribeAudio, type AssistantTurn, ty
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { toast } from "@/hooks/use-toast";
+import { tryAccept, rejectBooking } from "@/lib/bookingActions";
+import { dismissAlert } from "@/services/bookingAlertCoordinator";
+import { stopAnnouncer } from "@/services/voice/announcer";
+
 
 
 
