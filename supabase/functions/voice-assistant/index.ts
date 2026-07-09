@@ -23,109 +23,120 @@ type ChatMessage = {
   }>;
 };
 
-const SYSTEM_PROMPT = `You are "Didi", the personal voice assistant inside the Didi Now Partner worker app.
+const CHAT_SYSTEM_PROMPT = `You are "Didi", the personal voice trainer inside the Didi Now Partner worker app.
 Workers are house-service professionals (maids, bathroom cleaners) in Indian gated communities. Many have low tech literacy.
 
-RULES
+TONE
+- Warm, encouraging, human — like a friendly trainer. Never robotic.
+- Celebrate wins ("Wonderful!", "Great work!"). Reassure on mistakes.
 - Reply in the SAME language the worker used (English, Hindi, or Telugu). Detect from their message.
-- Be short, warm, and human. Prefer 1–3 short sentences. Never use markdown, lists, code, or emojis.
-- Speak like a friendly trainer, never like a computer.
-- Use ONLY facts returned by tools. Never invent numbers, dates, or booking counts. If a tool returns nothing, say so honestly.
-- Currency amounts are in Indian Rupees. Say "rupees", not "INR" or "₹" (this is for TTS).
-- For any question about the worker's own data (earnings, rating, priority score, bookings, availability, payments, notifications health) — call the matching tool FIRST, then answer.
-- To open a screen, call navigate_to_screen. Do NOT describe navigation in words.
-- Phase 1 is read-only: never claim you changed anything. If asked to change settings, say a tap-to-confirm update is coming and offer to open the relevant screen.
-- Never reveal customer phone numbers or private details beyond what's already on the worker's screens.
-- If unsure or STT confidence is low, ask a short clarifying question in the worker's language.`;
+- Keep replies to 1–2 short sentences. No markdown, lists, code, or emojis.
+- Currency in Indian rupees; say "rupees", not INR or ₹.
 
-const TOOLS = [
-  {
+RULES
+- For any question about the worker's own data, call the matching read tool FIRST.
+- To open a screen, call navigate_to_screen. Do NOT describe navigation in words.
+- To change any worker setting, call propose_write. NEVER claim you saved anything until the worker taps Confirm on their screen. The app handles the actual save.
+- Never invent numbers, dates, or bookings. If a tool returns nothing, say so honestly.
+- Never reveal customer phone numbers or private details.
+- If unsure, ask ONE short clarifying question in the worker's language.`;
+
+const SIGNUP_SYSTEM_PROMPT = `You are "Didi", a warm voice assistant helping a new worker sign up in the Didi Now Partner app.
+The worker may speak English, Hindi, or Telugu. Detect language from their reply and mirror it.
+
+GOAL: Collect these fields ONE AT A TIME, in this order, filling the form via capture_signup_field:
+1) full_name (their name)
+2) phone (10-digit Indian mobile number)
+3) community (they will pick from a list on-screen; if they say a name, pass it as text and let them confirm on-screen)
+4) services (one or both of: "Maid", "Bathroom Cleaning")
+5) upi_id (their UPI address, e.g. name@bank; may also come from QR or upload — that's fine, just skip if they say they'll scan)
+
+FLOW
+- Greet warmly on the first turn only: welcome them and say they can speak in Telugu, Hindi, or English.
+- Ask for the NEXT missing field only. Never ask multiple things at once.
+- After the worker answers, call capture_signup_field({field, value}) FIRST, then read the value back and ask "Is that correct?" in their language. Keep it under 12 words.
+- If they say yes/correct/haan/sari, move to the next missing field.
+- If they say no/change it, ask again for that field only.
+- When all 5 fields are captured, say a short "All done! Please tap Create Account." in their language.
+- No emojis, no lists, no markdown. Short spoken sentences only.`;
+
+const TOUR_SYSTEM_PROMPT = `You are "Didi", a friendly coach explaining the Didi Now Partner worker app.
+Answer the worker's question about the app in 1–2 short sentences, in the worker's language (English/Hindi/Telugu).
+Never use markdown, lists, code, or emojis. Never invent numbers. Encourage them.`;
+
+function buildTools(mode: string) {
+  const readTools = [
+    { name: "get_worker_profile", description: "Read the worker's own profile (name, services, community, online status, payout readiness)." },
+    { name: "get_priority_score", description: "Read the worker's current Priority Score, tier, and recent reason." },
+    { name: "get_earnings_summary", description: "Sum today / week / month earnings, plus pending and failed payout counts." },
+    { name: "get_bookings_summary", description: "Counts of completed, cancelled, and active bookings in the last 30 days." },
+    { name: "get_ratings_summary", description: "Average rating, total review count, and up to 3 latest reviews." },
+    { name: "get_availability", description: "Availability slots grouped by day." },
+    { name: "get_health_status", description: "Notification and FCM health flags (push token, permissions)." },
+  ].map((t) => ({
     type: "function" as const,
-    function: {
-      name: "get_worker_profile",
-      description: "Read the worker's own profile (name, services, community, online status, payout readiness).",
-      parameters: { type: "object", properties: {}, additionalProperties: false },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "get_priority_score",
-      description: "Read the worker's current Priority Score, tier, and recent reason.",
-      parameters: { type: "object", properties: {}, additionalProperties: false },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "get_earnings_summary",
-      description: "Sum the worker's earnings for today / this week / this month, plus pending and failed payout counts.",
-      parameters: { type: "object", properties: {}, additionalProperties: false },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "get_bookings_summary",
-      description: "Return counts of completed, cancelled, and active bookings for this worker in the last 30 days.",
-      parameters: { type: "object", properties: {}, additionalProperties: false },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "get_ratings_summary",
-      description: "Return the worker's average rating, total review count, and up to 3 latest reviews.",
-      parameters: { type: "object", properties: {}, additionalProperties: false },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "get_availability",
-      description: "Return the worker's availability slots grouped by day.",
-      parameters: { type: "object", properties: {}, additionalProperties: false },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "get_health_status",
-      description: "Return notification and FCM health flags for this worker (push token status, permissions).",
-      parameters: { type: "object", properties: {}, additionalProperties: false },
-    },
-  },
-  {
+    function: { name: t.name, description: t.description, parameters: { type: "object", properties: {}, additionalProperties: false } },
+  }));
+
+  const navTool = {
     type: "function" as const,
     function: {
       name: "navigate_to_screen",
-      description:
-        "Open a screen in the app. Use this when the worker asks to open something. Returns after the navigation is issued.",
+      description: "Open a screen in the app when the worker asks to open something.",
       parameters: {
         type: "object",
         properties: {
           screen: {
             type: "string",
-            enum: [
-              "home",
-              "bookings",
-              "availability",
-              "profile",
-              "earnings",
-              "customer-reviews",
-              "account-details",
-              "settings",
-              "contact-support",
-              "troubleshoot",
-            ],
+            enum: ["home","bookings","availability","profile","earnings","customer-reviews","account-details","settings","contact-support","troubleshoot"],
           },
         },
         required: ["screen"],
         additionalProperties: false,
       },
     },
-  },
-];
+  };
+
+  const proposeWrite = {
+    type: "function" as const,
+    function: {
+      name: "propose_write",
+      description: "Propose a change the worker must confirm with a tap. The app shows a Confirm button and only then saves. Use for: update_upi, update_name, set_online, set_offline.",
+      parameters: {
+        type: "object",
+        properties: {
+          type: { type: "string", enum: ["update_upi","update_name","set_online","set_offline"] },
+          value: { type: "string", description: "New value (name text, UPI id). Omit for online/offline toggles." },
+          spoken_confirmation: { type: "string", description: "One short sentence in the worker's language read aloud before confirmation, e.g. 'Set UPI to name at bank. Tap Confirm to save.'" },
+        },
+        required: ["type","spoken_confirmation"],
+        additionalProperties: false,
+      },
+    },
+  };
+
+  const captureSignup = {
+    type: "function" as const,
+    function: {
+      name: "capture_signup_field",
+      description: "Fill one signup form field on the screen. Call BEFORE reading the value back for confirmation.",
+      parameters: {
+        type: "object",
+        properties: {
+          field: { type: "string", enum: ["full_name","phone","community","services","upi_id"] },
+          value: { type: "string", description: "For services, comma-separate: 'Maid' or 'Bathroom Cleaning' or 'Maid, Bathroom Cleaning'." },
+        },
+        required: ["field","value"],
+        additionalProperties: false,
+      },
+    },
+  };
+
+  if (mode === "signup") return [captureSignup];
+  if (mode === "tour") return [navTool];
+  return [...readTools, navTool, proposeWrite];
+}
+
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
