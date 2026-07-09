@@ -6087,8 +6087,6 @@ export type Database = {
           preferred_payout_method: string | null
           priority_score: number
           priority_score_updated_at: string | null
-          priority_score_v3: number | null
-          priority_score_v3_updated_at: string | null
           push_block_reason: string | null
           push_health_status: string
           rating: number | null
@@ -6232,8 +6230,6 @@ export type Database = {
           preferred_payout_method?: string | null
           priority_score?: number
           priority_score_updated_at?: string | null
-          priority_score_v3?: number | null
-          priority_score_v3_updated_at?: string | null
           push_block_reason?: string | null
           push_health_status?: string
           rating?: number | null
@@ -6377,8 +6373,6 @@ export type Database = {
           preferred_payout_method?: string | null
           priority_score?: number
           priority_score_updated_at?: string | null
-          priority_score_v3?: number | null
-          priority_score_v3_updated_at?: string | null
           push_block_reason?: string | null
           push_health_status?: string
           rating?: number | null
@@ -6910,8 +6904,6 @@ export type Database = {
               preferred_payout_method: string | null
               priority_score: number
               priority_score_updated_at: string | null
-              priority_score_v3: number | null
-              priority_score_v3_updated_at: string | null
               push_block_reason: string | null
               push_health_status: string
               rating: number | null
@@ -7064,8 +7056,6 @@ export type Database = {
               preferred_payout_method: string | null
               priority_score: number
               priority_score_updated_at: string | null
-              priority_score_v3: number | null
-              priority_score_v3_updated_at: string | null
               push_block_reason: string | null
               push_health_status: string
               rating: number | null
@@ -8454,18 +8444,8 @@ export type Database = {
         Args: { p_worker_id: string }
         Returns: undefined
       }
-      recompute_all_priority_scores_v2: { Args: never; Returns: number }
-      recompute_all_priority_scores_v3: { Args: never; Returns: number }
       recompute_all_workers_notification_health: {
         Args: never
-        Returns: number
-      }
-      recompute_priority_score_v2: {
-        Args: { p_worker_id: string }
-        Returns: number
-      }
-      recompute_priority_score_v3: {
-        Args: { p_worker_id: string }
         Returns: number
       }
       recompute_worker_busy: {
