@@ -688,6 +688,8 @@ function AppInner() {
         <OtpPendingBanner bookings={otpPendingBookings} />
         <VoiceAssistantFAB />
         <VoiceAssistantSheet />
+        <FirstTimeTourMount />
+
         <Routes>
           <Route path="/auth" element={<PublicAuthRoute><Auth /></PublicAuthRoute>} />
           <Route path="/otp-verify" element={<OtpVerify />} />
