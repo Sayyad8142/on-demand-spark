@@ -34,6 +34,7 @@ export default function VoiceAssistantSheet() {
   const { open, closeAssistant } = useVoiceAssistant();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const { updateWorker, updateAvailability } = useWorkerProfile();
 
   const [turns, setTurns] = useState<Turn[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -43,6 +44,9 @@ export default function VoiceAssistantSheet() {
   const [level, setLevel] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [languageHint, setLanguageHint] = useState<string>(i18n.language || "en");
+  const [pending, setPending] = useState<PendingAction | null>(null);
+  const [confirming, setConfirming] = useState(false);
+
 
   const recorderRef = useRef<Recorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
