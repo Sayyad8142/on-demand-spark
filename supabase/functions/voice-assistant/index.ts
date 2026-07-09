@@ -64,6 +64,38 @@ const TOUR_SYSTEM_PROMPT = `You are "Didi", a friendly coach explaining the Didi
 Answer the worker's question about the app in 1–2 short sentences, in the worker's language (English/Hindi/Telugu).
 Never use markdown, lists, code, or emojis. Never invent numbers. Encourage them.`;
 
+const BOOKING_OFFER_SYSTEM_PROMPT = `You are "Didi", assisting a worker who just received a NEW booking offer.
+The booking details are provided in the assistant context. Never guess.
+GOAL: help the worker accept or reject this ONE booking.
+- If the worker says accept/haan/sari/yes, call propose_booking_action with type "accept_booking" and the bookingId, and speak: "You want to accept this booking. Please say Confirm."
+- If the worker says reject/skip/no/nahi, call propose_booking_action with type "reject_booking" and speak the same style Confirm prompt.
+- Never accept or reject on your own. The app only saves after the worker taps Confirm on screen.
+- Answer questions about earning, community, or flat briefly from the context.
+- Never speak the customer's phone number.
+- Reply in the worker's language. 1–2 short sentences. No emojis, no markdown.`;
+
+const BRIEFING_SYSTEM_PROMPT = `You are "Didi" giving a short MORNING briefing to a worker.
+Use get_daily_summary first, then speak 2 warm short sentences in the worker's language:
+1) yesterday: bookings completed and rupees earned (say "rupees").
+2) today: encouragement + one concrete tip based on their data (availability, priority).
+No emojis, no lists, no markdown. Never invent numbers.`;
+
+const SUMMARY_SYSTEM_PROMPT = `You are "Didi" giving a short EVENING summary to a worker.
+Use get_daily_summary first, then speak 2 warm short sentences in the worker's language:
+1) today's bookings completed and rupees earned.
+2) rating average today (if any) + a warm goodnight-style close.
+No emojis, no lists, no markdown. Never invent numbers.`;
+
+const COACH_SYSTEM_PROMPT = `You are "Didi" — a personal coach. The worker asked why bookings are low or how to improve.
+Call diagnose_no_bookings FIRST, then answer in 2 short sentences in the worker's language.
+Be specific to their data (mention their actual availability slots, community, priority tier).
+No generic advice. No emojis, no lists.`;
+
+const ACTIVE_JOB_SYSTEM_PROMPT = `You are "Didi" helping a worker DURING an active booking.
+Use get_active_booking FIRST to load the current job. Answer briefly about: address flat, service, price, or navigation.
+Never speak the customer's phone number. To open a screen, call navigate_to_screen.
+Reply in the worker's language, 1–2 short sentences.`;
+
 function buildTools(mode: string) {
   const readTools = [
     { name: "get_worker_profile", description: "Read the worker's own profile (name, services, community, online status, payout readiness)." },
@@ -73,6 +105,9 @@ function buildTools(mode: string) {
     { name: "get_ratings_summary", description: "Average rating, total review count, and up to 3 latest reviews." },
     { name: "get_availability", description: "Availability slots grouped by day." },
     { name: "get_health_status", description: "Notification and FCM health flags (push token, permissions)." },
+    { name: "get_active_booking", description: "Read the worker's current active booking (assigned/accepted/on_the_way/started) with service, flat, community, price." },
+    { name: "get_daily_summary", description: "Aggregate for today and yesterday: bookings completed, rupees earned, ratings today." },
+    { name: "diagnose_no_bookings", description: "Explain why the worker may not be getting bookings today: online, availability slots, priority, community demand, health." },
   ].map((t) => ({
     type: "function" as const,
     function: { name: t.name, description: t.description, parameters: { type: "object", properties: {}, additionalProperties: false } },
@@ -106,10 +141,28 @@ function buildTools(mode: string) {
         type: "object",
         properties: {
           type: { type: "string", enum: ["update_upi","update_name","set_online","set_offline"] },
-          value: { type: "string", description: "New value (name text, UPI id). Omit for online/offline toggles." },
-          spoken_confirmation: { type: "string", description: "One short sentence in the worker's language read aloud before confirmation, e.g. 'Set UPI to name at bank. Tap Confirm to save.'" },
+          value: { type: "string" },
+          spoken_confirmation: { type: "string" },
         },
         required: ["type","spoken_confirmation"],
+        additionalProperties: false,
+      },
+    },
+  };
+
+  const proposeBookingAction = {
+    type: "function" as const,
+    function: {
+      name: "propose_booking_action",
+      description: "Propose accept or reject on a specific booking. The worker must tap Confirm — the app performs the accept/reject then.",
+      parameters: {
+        type: "object",
+        properties: {
+          type: { type: "string", enum: ["accept_booking","reject_booking"] },
+          bookingId: { type: "string" },
+          spoken_confirmation: { type: "string" },
+        },
+        required: ["type","bookingId","spoken_confirmation"],
         additionalProperties: false,
       },
     },
@@ -124,7 +177,7 @@ function buildTools(mode: string) {
         type: "object",
         properties: {
           field: { type: "string", enum: ["full_name","phone","community","services","upi_id"] },
-          value: { type: "string", description: "For services, comma-separate: 'Maid' or 'Bathroom Cleaning' or 'Maid, Bathroom Cleaning'." },
+          value: { type: "string" },
         },
         required: ["field","value"],
         additionalProperties: false,
@@ -134,8 +187,13 @@ function buildTools(mode: string) {
 
   if (mode === "signup") return [captureSignup];
   if (mode === "tour") return [navTool];
+  if (mode === "booking_offer") return [proposeBookingAction];
+  if (mode === "briefing" || mode === "summary") return readTools.filter(t => ["get_daily_summary","get_priority_score","get_availability"].includes(t.function.name));
+  if (mode === "coach") return readTools.filter(t => ["diagnose_no_bookings","get_priority_score","get_availability","get_health_status"].includes(t.function.name));
+  if (mode === "active_job") return [...readTools.filter(t => t.function.name === "get_active_booking"), navTool];
   return [...readTools, navTool, proposeWrite];
 }
+
 
 
 function jsonResponse(body: unknown, status = 200) {
@@ -166,7 +224,9 @@ Deno.serve(async (req) => {
   const inboundMessages = Array.isArray(body.messages) ? body.messages : [];
   if (inboundMessages.length === 0) return jsonResponse({ error: "missing_messages" }, 400);
   const language = typeof body.language === "string" ? body.language : "en";
-  const mode = body.mode === "signup" || body.mode === "tour" ? body.mode : "chat";
+  const ALLOWED_MODES = new Set(["chat","signup","tour","booking_offer","briefing","summary","coach","active_job"]);
+  const mode = typeof body.mode === "string" && ALLOWED_MODES.has(body.mode) ? body.mode : "chat";
+  const context = (body as any).context && typeof (body as any).context === "object" ? (body as any).context : {};
 
   // Signup mode runs BEFORE the worker exists, so auth is optional there.
   const authHeader = req.headers.get("Authorization") || "";
@@ -258,14 +318,86 @@ Deno.serve(async (req) => {
       notifications_allowed: workerRow.notification_permission_granted !== false,
       overlay_allowed: workerRow.overlay_permission_granted !== false,
     } : { error: "no_worker_profile" },
+    get_active_booking: async () => {
+      if (!workerId) return { error: "no_worker_profile" };
+      const { data } = await supabase.from("bookings")
+        .select("id, service_type, community, flat_no, price_inr, status, scheduled_date, scheduled_time")
+        .eq("worker_id", workerId)
+        .in("status", ["assigned","accepted","on_the_way","started"])
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (!data) return { none: true };
+      return {
+        id: data.id, service: data.service_type, community: data.community,
+        flat: data.flat_no, price_rupees: data.price_inr ?? 0, status: data.status,
+        scheduled_date: data.scheduled_date, scheduled_time: data.scheduled_time,
+      };
+    },
+    get_daily_summary: async () => {
+      if (!workerId) return { error: "no_worker_profile" };
+      const now = new Date();
+      const startToday = new Date(now); startToday.setHours(0,0,0,0);
+      const startYesterday = new Date(startToday); startYesterday.setDate(startYesterday.getDate() - 1);
+      const { data: bookings } = await supabase.from("bookings")
+        .select("status, price_inr, created_at, updated_at")
+        .eq("worker_id", workerId)
+        .gte("updated_at", startYesterday.toISOString()).limit(500);
+      const rows = bookings || [];
+      const inRange = (r: any, from: Date, to: Date) => {
+        const t = new Date(r.updated_at || r.created_at);
+        return t >= from && t < to;
+      };
+      const bucket = (from: Date, to: Date) => {
+        const b = rows.filter((r: any) => inRange(r, from, to) && r.status === "completed");
+        const gross = b.reduce((a: number, r: any) => a + Number(r.price_inr || 0), 0);
+        return { completed: b.length, rupees_net: Math.round(gross * 0.8) };
+      };
+      const { data: ratingsToday } = await supabase.from("worker_ratings")
+        .select("rating").eq("worker_id", workerId).gte("created_at", startToday.toISOString()).limit(50);
+      const rs = ratingsToday || [];
+      const avg = rs.length ? Math.round((rs.reduce((a: number, r: any) => a + Number(r.rating || 0), 0) / rs.length) * 10) / 10 : null;
+      return {
+        yesterday: bucket(startYesterday, startToday),
+        today: bucket(startToday, new Date(startToday.getTime() + 86400000)),
+        today_rating_avg: avg, today_rating_count: rs.length,
+      };
+    },
+    diagnose_no_bookings: async () => {
+      if (!workerRow || !workerId) return { error: "no_worker_profile" };
+      const { data: avail } = await supabase.from("worker_availability").select("day_of_week, slots").eq("worker_id", workerId);
+      const totalSlots = (avail || []).reduce((a: number, r: any) => a + (Array.isArray(r.slots) ? r.slots.length : 0), 0);
+      return {
+        is_online: workerRow.is_available,
+        priority_score: workerRow.priority_score ?? 50,
+        priority_tier: (workerRow.priority_score ?? 50) >= 80 ? "top" : (workerRow.priority_score ?? 50) >= 60 ? "mid" : "low",
+        community: workerRow.community,
+        services: workerRow.services,
+        total_availability_slots: totalSlots,
+        payout_ready: workerRow.payout_ready,
+        notifications_ok: workerRow.notification_permission_granted !== false,
+        overlay_ok: workerRow.overlay_permission_granted !== false,
+        fcm_ok: !!workerRow.fcm_token,
+      };
+    },
   };
 
   const clientNavigations: string[] = [];
   const formPatch: Record<string, string> = {};
-  let pendingAction: { type: string; value?: string; spoken_confirmation: string } | null = null;
+  let pendingAction: Record<string, unknown> | null = null;
 
   const TOOL_LIST = buildTools(mode);
-  const systemPrompt = mode === "signup" ? SIGNUP_SYSTEM_PROMPT : mode === "tour" ? TOUR_SYSTEM_PROMPT : CHAT_SYSTEM_PROMPT;
+  const systemPromptBase =
+    mode === "signup" ? SIGNUP_SYSTEM_PROMPT
+    : mode === "tour" ? TOUR_SYSTEM_PROMPT
+    : mode === "booking_offer" ? BOOKING_OFFER_SYSTEM_PROMPT
+    : mode === "briefing" ? BRIEFING_SYSTEM_PROMPT
+    : mode === "summary" ? SUMMARY_SYSTEM_PROMPT
+    : mode === "coach" ? COACH_SYSTEM_PROMPT
+    : mode === "active_job" ? ACTIVE_JOB_SYSTEM_PROMPT
+    : CHAT_SYSTEM_PROMPT;
+  const contextBlock = context && Object.keys(context).length > 0
+    ? `\n\nCONTEXT: ${JSON.stringify(context).slice(0, 800)}`
+    : "";
+  const systemPrompt = systemPromptBase + contextBlock;
 
   // --- conversation record (only if authenticated) ---
   let conversationId = typeof body.conversationId === "string" ? body.conversationId : null;
@@ -287,6 +419,7 @@ Deno.serve(async (req) => {
     { role: "system", content: systemPrompt },
     ...trimmed as ChatMessage[],
   ];
+
 
   let assistantFinal = "";
 
@@ -322,6 +455,12 @@ Deno.serve(async (req) => {
           formPatch[args.field] = String(args.value).slice(0, 200);
         } else if (name === "propose_write" && typeof args?.type === "string" && typeof args?.spoken_confirmation === "string") {
           pendingAction = { type: args.type, value: typeof args.value === "string" ? args.value : undefined, spoken_confirmation: args.spoken_confirmation };
+        } else if (name === "propose_booking_action" && typeof args?.type === "string" && typeof args?.bookingId === "string") {
+          pendingAction = {
+            type: args.type,
+            bookingId: String(args.bookingId),
+            spoken_confirmation: typeof args.spoken_confirmation === "string" ? args.spoken_confirmation : "Please say Confirm.",
+          };
         } else if (readTools[name]) {
           try { result = await readTools[name](); }
           catch (e) { result = { error: "tool_failed", message: String((e as Error)?.message ?? e) }; }

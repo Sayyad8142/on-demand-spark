@@ -76,6 +76,10 @@ import { useActiveJob } from "@/hooks/useActiveJob";
 import { VoiceAssistantProvider, useVoiceAssistant } from "@/contexts/VoiceAssistantContext";
 import VoiceAssistantFAB from "@/components/voice/VoiceAssistantFAB";
 import VoiceAssistantSheet from "@/components/voice/VoiceAssistantSheet";
+import { useVoiceBookingAnnouncements } from "@/hooks/useVoiceBookingAnnouncements";
+import { useMorningBriefing } from "@/hooks/useMorningBriefing";
+import { useEveningSummary } from "@/hooks/useEveningSummary";
+import { useIdleTips } from "@/hooks/useIdleTips";
 import GuidedTour, { tourAlreadyCompleted, markTourCompleted } from "@/components/voice/GuidedTour";
 
 function FirstTimeTourMount() {
@@ -394,6 +398,16 @@ function AppInner() {
       console.error("[Movement] active-job start failed", error);
     });
   }, [worker?.id, trackedJob?.id, trackedJob?.status]);
+
+  // ── Phase 3: Voice assistant global hooks ──
+  const isOnline = !!worker?.is_available;
+  const hasActiveJob = !!trackedJob?.id && ["assigned","accepted","on_the_way","started"].includes(trackedJob?.status ?? "");
+  useVoiceBookingAnnouncements({ hasActiveJob, suppressed: false });
+  useMorningBriefing(session?.user?.id, hasActiveJob);
+  useEveningSummary({ isOnline, suppressed: hasActiveJob });
+  useIdleTips({ isOnline, hasActiveJob, suppressed: false });
+
+
 
 
   // Initialize native push notifications when we have a session.

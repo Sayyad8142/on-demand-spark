@@ -8,6 +8,10 @@ import { askAssistant, synthesizeSpeech, transcribeAudio, type AssistantTurn, ty
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { toast } from "@/hooks/use-toast";
+import { tryAccept, rejectBooking } from "@/lib/bookingActions";
+import { dismissAlert } from "@/services/bookingAlertCoordinator";
+import { stopAnnouncer } from "@/services/voice/announcer";
+
 
 
 
@@ -31,7 +35,7 @@ function newId() {
 }
 
 export default function VoiceAssistantSheet() {
-  const { open, closeAssistant } = useVoiceAssistant();
+  const { open, closeAssistant, mode: initialMode, booking: bookingOffer, seed } = useVoiceAssistant();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
@@ -124,7 +128,10 @@ export default function VoiceAssistantSheet() {
       setStatus("thinking");
       try {
         const messages: AssistantTurn[] = nextTurns.map((tt) => ({ role: tt.role, content: tt.content }));
-        const res = await askAssistant({ messages, conversationId, language: languageHint, mode: "chat" });
+        const mode = initialMode === "chat" ? "chat" : (initialMode as any);
+        const context: Record<string, unknown> = {};
+        if (bookingOffer) context.booking = bookingOffer;
+        const res = await askAssistant({ messages, conversationId, language: languageHint, mode, context });
         if (res.conversationId) setConversationId(res.conversationId);
         const assistantTurn: Turn = { id: newId(), role: "assistant", content: res.reply };
         setTurns((prev) => [...prev, assistantTurn]);
@@ -150,8 +157,19 @@ export default function VoiceAssistantSheet() {
         void logEvent("assistant_error", { message: String((err as Error)?.message ?? err) });
       }
     },
-    [turns, conversationId, languageHint, navigate, playSpeech, t, logEvent],
+    [turns, conversationId, languageHint, navigate, playSpeech, t, logEvent, initialMode, bookingOffer],
   );
+
+  // Auto-submit seed prompt when opened programmatically (briefing, summary, coach).
+  const seedFiredRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) { seedFiredRef.current = null; return; }
+    if (!seed) return;
+    if (seedFiredRef.current === seed) return;
+    seedFiredRef.current = seed;
+    void submitTurn(seed);
+  }, [open, seed, submitTurn]);
+
 
   const startRecording = useCallback(async () => {
     if (status !== "idle") return;
@@ -286,6 +304,20 @@ export default function VoiceAssistantSheet() {
           {errorMsg && (
             <div className="text-xs text-destructive text-center">{errorMsg}</div>
           )}
+          {bookingOffer && (
+            <div className="rounded-2xl border border-primary/30 bg-primary/5 p-3 text-sm">
+              <div className="font-semibold text-foreground">{bookingOffer.serviceType || "Booking"}</div>
+              <div className="text-muted-foreground text-xs mt-0.5">
+                {bookingOffer.community} {bookingOffer.flatNo ? `• ${bookingOffer.flatNo}` : ""}
+              </div>
+              {bookingOffer.priceInr ? (
+                <div className="text-xs mt-1">
+                  <span className="text-muted-foreground">You earn: </span>
+                  <span className="font-semibold text-primary">₹{Math.round(bookingOffer.priceInr * 0.8)}</span>
+                </div>
+              ) : null}
+            </div>
+          )}
           {pending && (
             <div className="rounded-2xl border-2 border-primary/40 bg-primary/5 p-4 space-y-3 animate-fade-in">
               <div className="text-sm font-semibold text-foreground">
@@ -293,6 +325,8 @@ export default function VoiceAssistantSheet() {
                 {pending.type === "update_name" && `${t("voice.confirmName", "Confirm name")}: ${pending.value ?? ""}`}
                 {pending.type === "set_online" && t("voice.confirmOnline", "Go online now?")}
                 {pending.type === "set_offline" && t("voice.confirmOffline", "Go offline now?")}
+                {pending.type === "accept_booking" && t("voice.confirmAccept", "Accept this booking?")}
+                {pending.type === "reject_booking" && t("voice.confirmReject", "Reject this booking?")}
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -310,10 +344,26 @@ export default function VoiceAssistantSheet() {
                         await updateAvailability(true);
                       } else if (pending.type === "set_offline") {
                         await updateAvailability(false);
+                      } else if (pending.type === "accept_booking") {
+                        const bid = (pending as any).bookingId || bookingOffer?.bookingId;
+                        if (!bid) throw new Error("Missing booking id");
+                        stopAnnouncer();
+                        const r = await tryAccept(bid);
+                        if (!r.success) throw new Error(r.error || "Booking already taken");
+                        dismissAlert(bid);
+                      } else if (pending.type === "reject_booking") {
+                        const bid = (pending as any).bookingId || bookingOffer?.bookingId;
+                        if (!bid || !currentUserId) throw new Error("Missing booking id");
+                        stopAnnouncer();
+                        await rejectBooking(bid, currentUserId);
+                        dismissAlert(bid);
                       }
-                      toast({ title: t("common.success", "Saved") });
+                      toast({ title: t("common.success", "Done") });
                       void logEvent("assistant_action_confirmed", { type: pending.type });
                       setPending(null);
+                      if (pending.type === "accept_booking" || pending.type === "reject_booking") {
+                        closeAssistant();
+                      }
                     } catch (e) {
                       console.error("[voice] confirm action failed", e);
                       toast({ title: t("common.error", "Error"), description: String((e as Error)?.message ?? e), variant: "destructive" });
@@ -326,6 +376,7 @@ export default function VoiceAssistantSheet() {
                   {confirming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                   {t("common.confirm", "Confirm")}
                 </button>
+
                 <button
                   type="button"
                   disabled={confirming}
