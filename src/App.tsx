@@ -395,6 +395,16 @@ function AppInner() {
     });
   }, [worker?.id, trackedJob?.id, trackedJob?.status]);
 
+  // ── Phase 3: Voice assistant global hooks ──
+  const isOnline = !!worker?.is_available;
+  const hasActiveJob = !!trackedJob?.id && ["assigned","accepted","on_the_way","started"].includes(trackedJob?.status ?? "");
+  useVoiceBookingAnnouncements({ hasActiveJob, suppressed: false });
+  useMorningBriefing(session?.user?.id, hasActiveJob);
+  useEveningSummary({ isOnline, suppressed: hasActiveJob });
+  useIdleTips({ isOnline, hasActiveJob, suppressed: false });
+
+
+
 
   // Initialize native push notifications when we have a session.
   useEffect(() => {
