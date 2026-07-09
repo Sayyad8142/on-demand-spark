@@ -34,7 +34,12 @@ export default function VoiceAssistantSheet() {
   const { open, closeAssistant } = useVoiceAssistant();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { updateWorker, updateAvailability } = useWorkerProfile();
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id));
+  }, []);
+  const { updateWorker, updateAvailability } = useWorkerProfile(currentUserId);
+
 
   const [turns, setTurns] = useState<Turn[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
