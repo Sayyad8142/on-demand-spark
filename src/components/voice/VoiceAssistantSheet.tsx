@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mic, Send, X, Volume2, Loader2 } from "lucide-react";
+import { Mic, Send, X, Volume2, Loader2, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useVoiceAssistant } from "@/contexts/VoiceAssistantContext";
 import { startRecorder, type Recorder } from "@/lib/voice/recorder";
-import { askAssistant, synthesizeSpeech, transcribeAudio, type AssistantTurn } from "@/lib/voice/api";
+import { askAssistant, synthesizeSpeech, transcribeAudio, type AssistantTurn, type PendingAction } from "@/lib/voice/api";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkerProfile } from "@/hooks/useWorkerProfile";
+import { toast } from "@/hooks/use-toast";
+
+
 
 const ROUTE_MAP: Record<string, string> = {
   home: "/home",
