@@ -1207,5 +1207,17 @@ export default function Auth() {
 
 
       </div>
+      <SignupCoach
+        open={voiceSignupOpen}
+        onClose={() => setVoiceSignupOpen(false)}
+        onPatch={applyVoicePatch}
+        presentValues={{
+          full_name: signUpFullName,
+          phone: signUpPhone,
+          community: signUpCommunity,
+          services: signUpServices,
+          upi_id: signUpUpiId,
+        }}
+      />
     </div>;
 }
