@@ -99,6 +99,31 @@ export default function Auth() {
   const [decodingUpiQr, setDecodingUpiQr] = useState(false);
   const [upiQrFilledFrom, setUpiQrFilledFrom] = useState<string | null>(null);
   const [signUpStep, setSignUpStep] = useState(1);
+  const [voiceSignupOpen, setVoiceSignupOpen] = useState(false);
+
+  const applyVoicePatch = (patch: SignupPatch) => {
+    if (patch.full_name) setSignUpFullName(patch.full_name);
+    if (patch.phone) setSignUpPhone(patch.phone.replace(/\D/g, "").slice(-10));
+    if (patch.upi_id) setSignUpUpiId(patch.upi_id.trim());
+    if (patch.community) {
+      const match = communities.find(
+        (c) => c.value === patch.community || c.name?.toLowerCase() === patch.community?.toLowerCase(),
+      );
+      if (match) setSignUpCommunity(match.value);
+    }
+    if (patch.services) {
+      const wanted = patch.services.split(/[,;/]| and /i).map((s) => s.trim().toLowerCase()).filter(Boolean);
+      const mapped = wanted
+        .map((s) => {
+          if (s.includes("maid")) return "maid";
+          if (s.includes("bath")) return "bathroom_cleaning";
+          return null;
+        })
+        .filter((v): v is string => !!v);
+      if (mapped.length) setSignUpServices(Array.from(new Set(mapped)));
+    }
+  };
+
   const [showBankDetails, setShowBankDetails] = useState(true);
   // Selected payout method on Step 2. UPI is the default and recommended path.
   const [payoutMethod, setPayoutMethod] = useState<'upi' | 'bank'>('upi');
