@@ -224,7 +224,9 @@ Deno.serve(async (req) => {
   const inboundMessages = Array.isArray(body.messages) ? body.messages : [];
   if (inboundMessages.length === 0) return jsonResponse({ error: "missing_messages" }, 400);
   const language = typeof body.language === "string" ? body.language : "en";
-  const mode = body.mode === "signup" || body.mode === "tour" ? body.mode : "chat";
+  const ALLOWED_MODES = new Set(["chat","signup","tour","booking_offer","briefing","summary","coach","active_job"]);
+  const mode = typeof body.mode === "string" && ALLOWED_MODES.has(body.mode) ? body.mode : "chat";
+  const context = (body as any).context && typeof (body as any).context === "object" ? (body as any).context : {};
 
   // Signup mode runs BEFORE the worker exists, so auth is optional there.
   const authHeader = req.headers.get("Authorization") || "";
