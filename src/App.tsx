@@ -599,6 +599,19 @@ function AppInner() {
   // If mandatory OTA update is required, show OTA modal over the app
   const showOtaMandatory = otaResult?.isMandatory && otaResult?.bundleInfo;
 
+  // Suppress the Voice Assistant FAB whenever a fullscreen modal is on screen
+  // so it never covers OTA/permission/battery/cancellation/OTP overlays.
+  useEffect(() => {
+    const suppress = Boolean(
+      showOtaMandatory ||
+      showBatteryWarning ||
+      cancellationAlert ||
+      otpReminderAlert,
+    );
+    setAssistantSuppressed(suppress);
+  }, [showOtaMandatory, showBatteryWarning, cancellationAlert, otpReminderAlert, setAssistantSuppressed]);
+
+
   return (
     <TooltipProvider>
       <Toaster />
@@ -673,6 +686,8 @@ function AppInner() {
       <BrowserRouter>
         <NativeNavigationHandler />
         <OtpPendingBanner bookings={otpPendingBookings} />
+        <VoiceAssistantFAB />
+        <VoiceAssistantSheet />
         <Routes>
           <Route path="/auth" element={<PublicAuthRoute><Auth /></PublicAuthRoute>} />
           <Route path="/otp-verify" element={<OtpVerify />} />
@@ -712,7 +727,9 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <AppInner />
+        <VoiceAssistantProvider>
+          <AppInner />
+        </VoiceAssistantProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
