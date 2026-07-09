@@ -73,6 +73,9 @@ import {
   isPassiveMonitoringActive,
 } from "@/lib/stepMonitoring";
 import { useActiveJob } from "@/hooks/useActiveJob";
+import { VoiceAssistantProvider, useVoiceAssistant } from "@/contexts/VoiceAssistantContext";
+import VoiceAssistantFAB from "@/components/voice/VoiceAssistantFAB";
+import VoiceAssistantSheet from "@/components/voice/VoiceAssistantSheet";
 
 const queryClient = new QueryClient();
 
@@ -178,6 +181,7 @@ function NativeNavigationHandler() {
 
 function AppInner() {
   const { session } = useAuth();
+  const { setSuppressed: setAssistantSuppressed } = useVoiceAssistant();
   useAppState(); // Refresh JWT when app comes to foreground
   useFCMTokenSync(session?.user?.id); // Sync any natively-persisted FCM token to backend
   useAutoPushRepair(session?.user?.id); // Auto-heal push token on login, open, and resume
@@ -595,6 +599,19 @@ function AppInner() {
   // If mandatory OTA update is required, show OTA modal over the app
   const showOtaMandatory = otaResult?.isMandatory && otaResult?.bundleInfo;
 
+  // Suppress the Voice Assistant FAB whenever a fullscreen modal is on screen
+  // so it never covers OTA/permission/battery/cancellation/OTP overlays.
+  useEffect(() => {
+    const suppress = Boolean(
+      showOtaMandatory ||
+      showBatteryWarning ||
+      cancellationAlert ||
+      otpReminderAlert,
+    );
+    setAssistantSuppressed(suppress);
+  }, [showOtaMandatory, showBatteryWarning, cancellationAlert, otpReminderAlert, setAssistantSuppressed]);
+
+
   return (
     <TooltipProvider>
       <Toaster />
@@ -669,6 +686,8 @@ function AppInner() {
       <BrowserRouter>
         <NativeNavigationHandler />
         <OtpPendingBanner bookings={otpPendingBookings} />
+        <VoiceAssistantFAB />
+        <VoiceAssistantSheet />
         <Routes>
           <Route path="/auth" element={<PublicAuthRoute><Auth /></PublicAuthRoute>} />
           <Route path="/otp-verify" element={<OtpVerify />} />
@@ -708,7 +727,9 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <AppInner />
+        <VoiceAssistantProvider>
+          <AppInner />
+        </VoiceAssistantProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
