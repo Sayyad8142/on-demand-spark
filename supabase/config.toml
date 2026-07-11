@@ -53,12 +53,3 @@ verify_jwt = false
 
 [functions.worker-heartbeat]
 verify_jwt = false
-
-[functions.voice-stt]
-verify_jwt = false
-
-[functions.voice-tts]
-verify_jwt = false
-
-[functions.voice-assistant]
-verify_jwt = false

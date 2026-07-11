@@ -73,27 +73,6 @@ import {
   isPassiveMonitoringActive,
 } from "@/lib/stepMonitoring";
 import { useActiveJob } from "@/hooks/useActiveJob";
-import { VoiceAssistantProvider, useVoiceAssistant } from "@/contexts/VoiceAssistantContext";
-import VoiceAssistantFAB from "@/components/voice/VoiceAssistantFAB";
-import VoiceAssistantSheet from "@/components/voice/VoiceAssistantSheet";
-import { useVoiceBookingAnnouncements } from "@/hooks/useVoiceBookingAnnouncements";
-import { useMorningBriefing } from "@/hooks/useMorningBriefing";
-import { useEveningSummary } from "@/hooks/useEveningSummary";
-import { useIdleTips } from "@/hooks/useIdleTips";
-import GuidedTour, { tourAlreadyCompleted, markTourCompleted } from "@/components/voice/GuidedTour";
-
-function FirstTimeTourMount() {
-  const { user } = useAuth();
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    if (!user) return;
-    if (tourAlreadyCompleted()) return;
-    const t = setTimeout(() => setOpen(true), 1200);
-    return () => clearTimeout(t);
-  }, [user]);
-  return <GuidedTour open={open} onFinish={() => { markTourCompleted(); setOpen(false); }} />;
-}
-
 
 const queryClient = new QueryClient();
 
@@ -199,7 +178,6 @@ function NativeNavigationHandler() {
 
 function AppInner() {
   const { session } = useAuth();
-  const { setSuppressed: setAssistantSuppressed } = useVoiceAssistant();
   useAppState(); // Refresh JWT when app comes to foreground
   useFCMTokenSync(session?.user?.id); // Sync any natively-persisted FCM token to backend
   useAutoPushRepair(session?.user?.id); // Auto-heal push token on login, open, and resume
@@ -398,16 +376,6 @@ function AppInner() {
       console.error("[Movement] active-job start failed", error);
     });
   }, [worker?.id, trackedJob?.id, trackedJob?.status]);
-
-  // ── Phase 3: Voice assistant global hooks ──
-  const isOnline = !!worker?.is_available;
-  const hasActiveJob = !!trackedJob?.id && ["assigned","accepted","on_the_way","started"].includes(trackedJob?.status ?? "");
-  useVoiceBookingAnnouncements({ hasActiveJob, suppressed: false });
-  useMorningBriefing(session?.user?.id, hasActiveJob);
-  useEveningSummary({ isOnline, suppressed: hasActiveJob });
-  useIdleTips({ isOnline, hasActiveJob, suppressed: false });
-
-
 
 
   // Initialize native push notifications when we have a session.
@@ -627,19 +595,6 @@ function AppInner() {
   // If mandatory OTA update is required, show OTA modal over the app
   const showOtaMandatory = otaResult?.isMandatory && otaResult?.bundleInfo;
 
-  // Suppress the Voice Assistant FAB whenever a fullscreen modal is on screen
-  // so it never covers OTA/permission/battery/cancellation/OTP overlays.
-  useEffect(() => {
-    const suppress = Boolean(
-      showOtaMandatory ||
-      showBatteryWarning ||
-      cancellationAlert ||
-      otpReminderAlert,
-    );
-    setAssistantSuppressed(suppress);
-  }, [showOtaMandatory, showBatteryWarning, cancellationAlert, otpReminderAlert, setAssistantSuppressed]);
-
-
   return (
     <TooltipProvider>
       <Toaster />
@@ -714,10 +669,6 @@ function AppInner() {
       <BrowserRouter>
         <NativeNavigationHandler />
         <OtpPendingBanner bookings={otpPendingBookings} />
-        <VoiceAssistantFAB />
-        <VoiceAssistantSheet />
-        <FirstTimeTourMount />
-
         <Routes>
           <Route path="/auth" element={<PublicAuthRoute><Auth /></PublicAuthRoute>} />
           <Route path="/otp-verify" element={<OtpVerify />} />
@@ -757,9 +708,7 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <VoiceAssistantProvider>
-          <AppInner />
-        </VoiceAssistantProvider>
+        <AppInner />
       </AuthProvider>
     </QueryClientProvider>
   );

@@ -1,48 +1,62 @@
-# Phase 3 – AI Booking Assistant & Worker Coach
 
-Builds on the existing Voice Assistant (Phases 1–2). No changes to dispatch, OTP, or payout logic. All new behavior is additive; if TTS/STT/network fails, the current UI keeps working unchanged.
+# OTP Completion Reminder Escalation
 
-## What ships
+Mandatory full-screen reminder to workers when an accepted booking has no OTP entered after 60 minutes, repeating every 10 minutes until OTP is verified.
 
-1. **Voice booking announcement** – when a new booking alert arrives (unified via `useUnifiedBookingAlerts` / `useBookingAlerts` pending state), assistant speaks a ≤10s summary: service, community, flat/BHK, est. earning, and "Would you like to accept?". If the assistant sheet is mid-conversation, pause current TTS, announce, then restore.
-2. **Voice accept/reject with confirmation** – worker says "accept" / "reject" / "skip". Assistant always replies "You want to accept this booking. Please say Confirm." Only on explicit "confirm" it calls the existing `tryAccept` / `rejectBooking` in `src/lib/bookingActions.ts`. Never auto-fires.
-3. **Active booking assistant** – once accepted, assistant gains booking context (from `useActiveJob`) and answers: navigate, call customer, OTP, earnings, service type, typical duration. Adds tools: `get_active_booking`, `open_navigation`, `call_customer`, `show_otp_screen`.
-4. **Intelligent worker coach** – new tool `diagnose_no_bookings` that reads availability, priority score, rating, missed bookings, recent activity, community demand, accepted/completed counts and returns a personalized answer. Never generic.
-5. **Morning briefing** – on first app open per day (localStorage `didi:lastBriefingDate`), auto-open assistant in "briefing" mode with yesterday's stats + today's high-demand hours. Toggle in Settings (`briefing_enabled`).
-6. **Evening summary** – after last completed booking of the day, or when worker toggles offline in the evening, deliver spoken summary of today's bookings, earnings, ratings, priority delta. Same Settings toggle.
-7. **Idle tips** – occasional short tip if worker online, idle >20 min, no active booking, no fullscreen modal. Rate-limited (max 1/2h). Toggle in Settings (`tips_enabled`).
-8. **Voice navigation during jobs** – expanded `navigate_to_screen` routes: customer details, call, OTP screen, earnings, home.
-9. **Safety guardrails** – suppression flag already exists; extend to also suppress announcements/tips during OTP verification, payment, emergency, cancellation. Never speak customer phone/address in tips or briefings.
-10. **Performance** – announcements triggered directly from the realtime alert callback (no polling). All heavy state read via existing hooks; no new subscriptions. Assistant sheet stays lazy.
+## Trigger Conditions
 
-## Technical details
+Active booking for the current worker where ALL apply:
+- `status IN ('accepted','confirmed','on_the_way','started','in_progress')`
+- `otp_verified = false`
+- `accepted_at <= now() - 60 minutes`
 
-**Frontend**
-- New `src/services/voice/BookingAnnouncer.ts` – queue of TTS utterances; pause/resume around active conversation.
-- New `src/hooks/useVoiceBookingAnnouncements.ts` – subscribes to pending booking alerts; calls announcer; opens assistant in `mode: "booking_offer"` with booking payload; listens for "confirm"/"cancel" transcripts.
-- New `src/hooks/useMorningBriefing.ts` – runs once/day on app boot after auth.
-- New `src/hooks/useEveningSummary.ts` – triggers when worker goes offline after ≥1 completed booking today.
-- New `src/hooks/useIdleTips.ts` – 20-min idle timer, guarded.
-- Extend `VoiceAssistantContext` with `announceBooking(booking)`, `speak(text)`, `isSpeaking`, `suppress` (respects existing modals).
-- Extend `VoiceAssistantSheet.tsx` to render a Booking Offer card (accept/reject buttons + "say Confirm" hint) when `mode === "booking_offer"`.
-- Settings toggles in `src/pages/Settings.tsx` for briefing/summary/tips (persisted in `profiles` or `workers` settings JSON — reuse existing per-worker settings if present, else localStorage).
+Stop immediately when `otp_verified = true` or status becomes cancelled/completed.
 
-**Backend (`supabase/functions/voice-assistant/index.ts`)**
-- Add modes: `"booking_offer"`, `"briefing"`, `"summary"`, `"coach"`, `"active_job"`.
-- Add tools: `get_active_booking`, `diagnose_no_bookings`, `get_daily_summary` (yesterday + today aggregates), `propose_booking_action` (accept/reject/skip — returns pendingAction requiring "Confirm").
-- Extend `PendingAction` union with `{ type: "accept_booking" | "reject_booking", bookingId }`. Client executes via existing `tryAccept` / `rejectBooking`.
+## Implementation
 
-**Safety**
-- Announcer checks: no active fullscreen modal (OTA, battery, cancellation, OTP, payment), no in-flight OTP entry, no emergency pause.
-- Coach/briefings never include customer phone or full address.
+### 1. New hook: `src/hooks/useOtpReminderEscalation.ts`
+- Runs while the worker is signed in.
+- Every 30s polls (or reuses existing active-booking subscription) for the worker's eligible bookings.
+- Maintains per-booking state in `localStorage` (`otp_reminder:{bookingId}`):
+  - `firstTriggeredAt`, `lastShownAt`, `acknowledgedCount`.
+- Fires the alert when:
+  - first time after 60min elapsed, or
+  - 10min elapsed since `lastShownAt` and OTP still not entered.
+- On fire: opens the alert UI, plays voice 3x, vibrates, logs audit event.
 
-## Out of scope
+### 2. New voice helper: `src/lib/otpReminderVoice.ts`
+- Mirrors `cancellationVoice.ts` pattern.
+- `playOtpReminderVoice()`: uses Web Speech API (`speechSynthesis`) to say "OTP pending. Please enter customer OTP." 3 times, then stops.
+- `stopOtpReminderVoice()`: cancels speech.
 
-- No changes to `booking-notifications`, dispatch, `tryAccept`, `rejectBooking` internals, OTP completion, or payouts.
-- No new DB tables; briefing/tips preferences stored in existing `profiles`/localStorage.
+### 3. New full-screen alert UI in `src/App.tsx`
+- Mirrors the existing booking-cancelled modal (calm amber, big OK button, no shake).
+- Title: ⚠ OTP Pending
+- Message: "This booking was accepted more than 60 minutes ago and the customer OTP has not been entered. Please collect the OTP from the customer and complete the booking."
+- Buttons:
+  - **Enter OTP Now** (primary) → navigates to `/complete-booking/:id` with `?focusOtp=1`, stops voice, logs `otp_reminder_acknowledged` + sets `acknowledged_via='enter_otp'`.
+  - **OK** (secondary) → closes modal, stops voice, logs `otp_reminder_acknowledged`.
+- Vibration: `navigator.vibrate([500,200,500,200,500])`.
 
-## Rollout
+### 4. CompleteBooking focus
+- `src/pages/CompleteBooking.tsx`: when `?focusOtp=1` is present, scroll to and focus the OTP input on mount.
 
-1. Backend: extend `voice-assistant` with new modes/tools.
-2. Client: announcer service + hooks + context extensions + sheet UI for booking offer + Settings toggles.
-3. Verify with existing realtime alert (Home page) — announcement fires, confirm path calls `tryAccept`, cancel does nothing.
+### 5. Audit table + RPC
+Migration creating `public.otp_reminder_events`:
+```
+id uuid pk, booking_id uuid, worker_id uuid,
+event_type text check in ('otp_reminder_triggered','otp_reminder_acknowledged','otp_reminder_repeated','otp_entered_after_reminder'),
+metadata jsonb, created_at timestamptz default now()
+```
+With GRANTs, RLS (worker can insert their own events; admins can read all), and `service_role` full access.
+
+Hook calls a small `log_otp_reminder_event` RPC (security definer) to insert rows safely.
+
+### 6. Wire into App
+Add `useOtpReminderEscalation()` to `App.tsx` alongside the existing booking-cancellation handling, with state controlling the new modal.
+
+## Out of Scope
+- Native overlay (web/in-app modal only; same surface used for current cancel popup).
+- Push/FCM-triggered escalation when app is killed (future).
+
+Continue?

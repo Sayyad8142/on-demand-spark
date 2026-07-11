@@ -12,7 +12,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { Capacitor } from "@capacitor/core";
-import VoiceAssistantPrefsCard from "@/components/voice/VoiceAssistantPrefsCard";
 import { 
   requestOverlayPermission, 
   checkOverlayPermission,
@@ -254,11 +253,6 @@ export default function Settings() {
             />
           </div>
         </Card>
-
-        {/* Voice Assistant preferences */}
-        <VoiceAssistantPrefsCard />
-
-
 
         {/* Info Card */}
         <Card className="p-6 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">

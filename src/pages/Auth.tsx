@@ -12,9 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
-import { Check, ChevronLeft, ChevronRight, FileText, Landmark, Mic, Phone, QrCode, ShieldCheck, Sparkles, Upload, UserRound, X, Loader2 } from "lucide-react";
-import SignupCoach, { type SignupPatch } from "@/components/voice/SignupCoach";
-
+import { Check, ChevronLeft, ChevronRight, FileText, Landmark, Phone, QrCode, ShieldCheck, Sparkles, Upload, UserRound, X, Loader2 } from "lucide-react";
 import jsQR from "jsqr";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import maidServiceIcon from "@/assets/service-maid.png";
@@ -99,30 +97,6 @@ export default function Auth() {
   const [decodingUpiQr, setDecodingUpiQr] = useState(false);
   const [upiQrFilledFrom, setUpiQrFilledFrom] = useState<string | null>(null);
   const [signUpStep, setSignUpStep] = useState(1);
-  const [voiceSignupOpen, setVoiceSignupOpen] = useState(false);
-
-  const applyVoicePatch = (patch: SignupPatch) => {
-    if (patch.full_name) setSignUpFullName(patch.full_name);
-    if (patch.phone) setSignUpPhone(patch.phone.replace(/\D/g, "").slice(-10));
-    if (patch.upi_id) setSignUpUpiId(patch.upi_id.trim());
-    if (patch.community) {
-      const match = communities.find(
-        (c) => c.value === patch.community || c.name?.toLowerCase() === patch.community?.toLowerCase(),
-      );
-      if (match) setSignUpCommunity(match.value);
-    }
-    if (patch.services) {
-      const wanted = patch.services.split(/[,;/]| and /i).map((s) => s.trim().toLowerCase()).filter(Boolean);
-      const mapped: string[] = [];
-      for (const s of wanted) {
-        if (s.includes("maid")) mapped.push("maid");
-        else if (s.includes("bath")) mapped.push("bathroom_cleaning");
-      }
-      if (mapped.length) setSignUpServices(Array.from(new Set(mapped)));
-
-    }
-  };
-
   const [showBankDetails, setShowBankDetails] = useState(true);
   // Selected payout method on Step 2. UPI is the default and recommended path.
   const [payoutMethod, setPayoutMethod] = useState<'upi' | 'bank'>('upi');
@@ -769,19 +743,6 @@ export default function Auth() {
               </div>
 
               {signUpStep === 1 && (
-                <>
-                <button
-                  type="button"
-                  onClick={() => setVoiceSignupOpen(true)}
-                  className="w-full h-12 rounded-2xl border-2 border-primary/40 bg-primary/5 text-primary font-semibold text-sm inline-flex items-center justify-center gap-2 active:scale-95"
-                >
-                  <Mic className="h-4 w-4" />
-                  {t("auth.fillWithVoice", "Fill with voice")}
-                </button>
-                </>
-              )}
-              {signUpStep === 1 && (
-
                 <div className="space-y-5 rounded-3xl border bg-card p-4 shadow-sm">
                   <div>
                     <p className="text-lg font-bold">Step 1: Basic Details</p>
@@ -1008,7 +969,14 @@ export default function Auth() {
                         <p className="flex items-center gap-1 text-xs font-medium text-amber-700">
                           ⚠️ Please enter a valid UPI ID
                         </p>
-                      ) : null}
+                      ) : (
+                        <div className="rounded-xl bg-muted/50 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+                          <span className="font-semibold text-foreground">Examples:</span>
+                          <br />9876543210@ybl
+                          <br />name@oksbi
+                          <br />username@paytm
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1200,17 +1168,5 @@ export default function Auth() {
 
 
       </div>
-      <SignupCoach
-        open={voiceSignupOpen}
-        onClose={() => setVoiceSignupOpen(false)}
-        onPatch={applyVoicePatch}
-        presentValues={{
-          full_name: signUpFullName,
-          phone: signUpPhone,
-          community: signUpCommunity,
-          services: signUpServices,
-          upi_id: signUpUpiId,
-        }}
-      />
     </div>;
 }

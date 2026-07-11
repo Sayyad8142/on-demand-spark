@@ -220,46 +220,5 @@
     "delete": "Delete",
     "edit": "Edit",
     "confirm": "Confirm"
-  },
-  "voice": {
-    "openAssistant": "Ask Didi",
-    "title": "Didi Assistant",
-    "tapToSpeak": "Tap and hold the mic to speak",
-    "holdToTalk": "Hold to talk",
-    "listening": "Listening…",
-    "transcribing": "Understanding…",
-    "thinking": "Thinking…",
-    "speaking": "Speaking…",
-    "typePlaceholder": "Or type your question…",
-    "micDenied": "Microphone is off. Type your question below.",
-    "tooShort": "That was too quiet. Please hold the button and speak.",
-    "noSpeech": "I didn't catch that. Please try again.",
-    "errorGeneric": "Something went wrong. Please try again.",
-    "emptyState": "Ask me anything — earnings, priority score, ratings, bookings, or how to fix notifications.",
-    "signupTitle": "Sign up with voice",
-    "signupIntro": "I'll help you create your account. You can speak in Telugu, Hindi, or English.",
-    "confirmUpi": "Confirm UPI",
-    "confirmName": "Confirm name",
-    "confirmOnline": "Go online now?",
-    "confirmOffline": "Go offline now?"
-  },
-  "tour": {
-    "stepLabel": "Step",
-    "repeat": "Repeat",
-    "ask": "Ask",
-    "skip": "Skip",
-    "next": "Next",
-    "finish": "Finish",
-    "home": { "title": "This is your Home", "body": "This is your home screen. Here you can see your active job, health status, and go online to accept bookings." },
-    "bookings": { "title": "Your Bookings", "body": "All your upcoming and completed jobs live here. Green cards mean paid, yellow means payment pending." },
-    "availability": { "title": "Set Availability", "body": "Choose your working days and time slots here. Only bookings inside these slots will reach you." },
-    "priority": { "title": "Your Priority Score", "body": "This score decides how many bookings you receive. Higher score = more bookings. Complete jobs on time and stay online to grow it." },
-    "ratings": { "title": "Customer Ratings", "body": "See what customers say about you. Keep your rating above 4.5 stars to receive priority in bookings." },
-    "payments": { "title": "Your Earnings", "body": "Every completed job shows here. You earn 80 percent of every booking. Payouts go to your UPI ID." },
-    "profile": { "title": "Your Profile", "body": "Update your name, photo, UPI ID, and communities from here." },
-    "settings": { "title": "Settings", "body": "Change your language, notification preferences, and app options here." },
-    "coach": { "title": "Ask Didi Anytime", "body": "Tap the pink microphone button anytime to ask me anything — earnings, bookings, or help. You're all set!" }
   }
 }
-
-

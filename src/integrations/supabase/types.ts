@@ -4482,107 +4482,6 @@ export type Database = {
         }
         Relationships: []
       }
-      voice_conversations: {
-        Row: {
-          created_at: string
-          ended_at: string | null
-          id: string
-          language: string | null
-          started_at: string
-          turn_count: number
-          user_id: string
-          worker_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          ended_at?: string | null
-          id?: string
-          language?: string | null
-          started_at?: string
-          turn_count?: number
-          user_id: string
-          worker_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          ended_at?: string | null
-          id?: string
-          language?: string | null
-          started_at?: string
-          turn_count?: number
-          user_id?: string
-          worker_id?: string | null
-        }
-        Relationships: []
-      }
-      voice_events: {
-        Row: {
-          created_at: string
-          event_type: string
-          id: string
-          payload: Json | null
-          user_id: string
-          worker_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          event_type: string
-          id?: string
-          payload?: Json | null
-          user_id: string
-          worker_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          event_type?: string
-          id?: string
-          payload?: Json | null
-          user_id?: string
-          worker_id?: string | null
-        }
-        Relationships: []
-      }
-      voice_messages: {
-        Row: {
-          content: string | null
-          conversation_id: string
-          created_at: string
-          id: string
-          language: string | null
-          role: string
-          tool_calls: Json | null
-          user_id: string
-        }
-        Insert: {
-          content?: string | null
-          conversation_id: string
-          created_at?: string
-          id?: string
-          language?: string | null
-          role: string
-          tool_calls?: Json | null
-          user_id: string
-        }
-        Update: {
-          content?: string | null
-          conversation_id?: string
-          created_at?: string
-          id?: string
-          language?: string | null
-          role?: string
-          tool_calls?: Json | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "voice_messages_conversation_id_fkey"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "voice_conversations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       wallet_transactions: {
         Row: {
           amount_inr: number
@@ -6087,6 +5986,8 @@ export type Database = {
           preferred_payout_method: string | null
           priority_score: number
           priority_score_updated_at: string | null
+          priority_score_v3: number | null
+          priority_score_v3_updated_at: string | null
           push_block_reason: string | null
           push_health_status: string
           rating: number | null
@@ -6230,6 +6131,8 @@ export type Database = {
           preferred_payout_method?: string | null
           priority_score?: number
           priority_score_updated_at?: string | null
+          priority_score_v3?: number | null
+          priority_score_v3_updated_at?: string | null
           push_block_reason?: string | null
           push_health_status?: string
           rating?: number | null
@@ -6373,6 +6276,8 @@ export type Database = {
           preferred_payout_method?: string | null
           priority_score?: number
           priority_score_updated_at?: string | null
+          priority_score_v3?: number | null
+          priority_score_v3_updated_at?: string | null
           push_block_reason?: string | null
           push_health_status?: string
           rating?: number | null
@@ -6904,6 +6809,8 @@ export type Database = {
               preferred_payout_method: string | null
               priority_score: number
               priority_score_updated_at: string | null
+              priority_score_v3: number | null
+              priority_score_v3_updated_at: string | null
               push_block_reason: string | null
               push_health_status: string
               rating: number | null
@@ -7056,6 +6963,8 @@ export type Database = {
               preferred_payout_method: string | null
               priority_score: number
               priority_score_updated_at: string | null
+              priority_score_v3: number | null
+              priority_score_v3_updated_at: string | null
               push_block_reason: string | null
               push_health_status: string
               rating: number | null
@@ -8444,8 +8353,18 @@ export type Database = {
         Args: { p_worker_id: string }
         Returns: undefined
       }
+      recompute_all_priority_scores_v2: { Args: never; Returns: number }
+      recompute_all_priority_scores_v3: { Args: never; Returns: number }
       recompute_all_workers_notification_health: {
         Args: never
+        Returns: number
+      }
+      recompute_priority_score_v2: {
+        Args: { p_worker_id: string }
+        Returns: number
+      }
+      recompute_priority_score_v3: {
+        Args: { p_worker_id: string }
         Returns: number
       }
       recompute_worker_busy: {
