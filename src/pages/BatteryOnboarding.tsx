@@ -1,4 +1,4 @@
-import { BatteryFull } from "lucide-react";
+import { BatteryCharging } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface BatteryOnboardingProps {
@@ -19,10 +19,9 @@ export default function BatteryOnboarding({ onFixNow }: BatteryOnboardingProps) 
           backgroundColor: "#e8f9ee",
         }}
       >
-        <BatteryFull
+        <BatteryCharging
           style={{ width: 96, height: 96, color: "#16a34a" }}
           strokeWidth={2}
-          fill="#16a34a"
         />
       </div>
 
