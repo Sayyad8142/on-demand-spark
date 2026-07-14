@@ -77,7 +77,7 @@ export default function HomePerformanceCard({ priorityScore, rating, totalRating
             </div>
             <Progress value={(rate / 5) * 100} className="h-1.5 mt-1.5" indicatorClassName={rc.bar} />
             <p className="text-[11px] text-muted-foreground mt-1">
-              {hasRatings ? `${rate.toFixed(1)} ★ · ${totalRatings} ratings` : "Default rating for new workers"}
+              {hasRatings ? `${rate.toFixed(1)} ★ · ${totalRatings} ratings` : "\u00A0"}
             </p>
           </div>
         </div>
