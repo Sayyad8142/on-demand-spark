@@ -269,7 +269,7 @@ export default function Home() {
       <div className={`p-4 space-y-4 pb-32 ${isGuestMode ? 'pt-4' : 'pt-28'}`}>
 
       {/* Worker Health badge — unified status from all signals */}
-      {!isGuestMode && worker && (
+      {!isGuestMode && worker && workerHealth.status !== "ready" && (
         <WorkerHealthBadge
           health={workerHealth}
           onRepair={async () => {
@@ -287,7 +287,7 @@ export default function Home() {
         />
       )}
 
-      {!isGuestMode && worker && (
+      {!isGuestMode && worker && !activeJob && (
         <HomePerformanceCard
           priorityScore={(worker as any)?.priority_score}
           rating={(worker as any)?.admin_override_rating ?? worker?.rating}
