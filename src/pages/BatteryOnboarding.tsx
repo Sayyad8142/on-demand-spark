@@ -1,4 +1,4 @@
-import { BatteryFull } from "lucide-react";
+import { BatteryCharging } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface BatteryOnboardingProps {
