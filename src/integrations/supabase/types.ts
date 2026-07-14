@@ -1726,6 +1726,8 @@ export type Database = {
           max_dispatch_attempts: number
           max_total_requests: number
           max_wait_for_worker_minutes: number
+          no_ack_fallback_enabled: boolean
+          no_ack_fallback_seconds: number
           retry_batch_size: number
           service_type: string
           updated_at: string
@@ -1744,6 +1746,8 @@ export type Database = {
           max_dispatch_attempts?: number
           max_total_requests?: number
           max_wait_for_worker_minutes?: number
+          no_ack_fallback_enabled?: boolean
+          no_ack_fallback_seconds?: number
           retry_batch_size?: number
           service_type?: string
           updated_at?: string
@@ -1762,10 +1766,63 @@ export type Database = {
           max_dispatch_attempts?: number
           max_total_requests?: number
           max_wait_for_worker_minutes?: number
+          no_ack_fallback_enabled?: boolean
+          no_ack_fallback_seconds?: number
           retry_batch_size?: number
           service_type?: string
           updated_at?: string
           worker_ttl_seconds?: number
+        }
+        Relationships: []
+      }
+      dispatch_health: {
+        Row: {
+          checked_at: string
+          checks: Json
+          deployed_version: string | null
+          drift: boolean
+          errors: Json
+          expected_version: string | null
+          id: string
+          last_failure_at: string | null
+          last_success_at: string | null
+          latency_ms: number | null
+          ok: boolean
+          queue_length: number | null
+          requests_last_minute: number | null
+          stale_pending: number | null
+        }
+        Insert: {
+          checked_at?: string
+          checks?: Json
+          deployed_version?: string | null
+          drift?: boolean
+          errors?: Json
+          expected_version?: string | null
+          id?: string
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          latency_ms?: number | null
+          ok: boolean
+          queue_length?: number | null
+          requests_last_minute?: number | null
+          stale_pending?: number | null
+        }
+        Update: {
+          checked_at?: string
+          checks?: Json
+          deployed_version?: string | null
+          drift?: boolean
+          errors?: Json
+          expected_version?: string | null
+          id?: string
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          latency_ms?: number | null
+          ok?: boolean
+          queue_length?: number | null
+          requests_last_minute?: number | null
+          stale_pending?: number | null
         }
         Relationships: []
       }
@@ -4482,6 +4539,107 @@ export type Database = {
         }
         Relationships: []
       }
+      voice_conversations: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          language: string | null
+          started_at: string
+          turn_count: number
+          user_id: string
+          worker_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          language?: string | null
+          started_at?: string
+          turn_count?: number
+          user_id: string
+          worker_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          language?: string | null
+          started_at?: string
+          turn_count?: number
+          user_id?: string
+          worker_id?: string | null
+        }
+        Relationships: []
+      }
+      voice_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json | null
+          user_id: string
+          worker_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json | null
+          user_id: string
+          worker_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json | null
+          user_id?: string
+          worker_id?: string | null
+        }
+        Relationships: []
+      }
+      voice_messages: {
+        Row: {
+          content: string | null
+          conversation_id: string
+          created_at: string
+          id: string
+          language: string | null
+          role: string
+          tool_calls: Json | null
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          conversation_id: string
+          created_at?: string
+          id?: string
+          language?: string | null
+          role: string
+          tool_calls?: Json | null
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          language?: string | null
+          role?: string
+          tool_calls?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "voice_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wallet_transactions: {
         Row: {
           amount_inr: number
@@ -5901,6 +6059,7 @@ export type Database = {
           blocked_at: string | null
           blocked_by: string | null
           blocked_reason: string | null
+          blocked_until: string | null
           build_number: string | null
           cashfree_beneficiary_address: string | null
           cashfree_beneficiary_email: string | null
@@ -5986,9 +6145,8 @@ export type Database = {
           preferred_payout_method: string | null
           priority_score: number
           priority_score_updated_at: string | null
-          priority_score_v3: number | null
-          priority_score_v3_updated_at: string | null
           push_block_reason: string | null
+          push_deprioritized_until: string | null
           push_health_status: string
           rating: number | null
           rating_bucket: string
@@ -6046,6 +6204,7 @@ export type Database = {
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
+          blocked_until?: string | null
           build_number?: string | null
           cashfree_beneficiary_address?: string | null
           cashfree_beneficiary_email?: string | null
@@ -6131,9 +6290,8 @@ export type Database = {
           preferred_payout_method?: string | null
           priority_score?: number
           priority_score_updated_at?: string | null
-          priority_score_v3?: number | null
-          priority_score_v3_updated_at?: string | null
           push_block_reason?: string | null
+          push_deprioritized_until?: string | null
           push_health_status?: string
           rating?: number | null
           rating_bucket?: string
@@ -6191,6 +6349,7 @@ export type Database = {
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
+          blocked_until?: string | null
           build_number?: string | null
           cashfree_beneficiary_address?: string | null
           cashfree_beneficiary_email?: string | null
@@ -6276,9 +6435,8 @@ export type Database = {
           preferred_payout_method?: string | null
           priority_score?: number
           priority_score_updated_at?: string | null
-          priority_score_v3?: number | null
-          priority_score_v3_updated_at?: string | null
           push_block_reason?: string | null
+          push_deprioritized_until?: string | null
           push_health_status?: string
           rating?: number | null
           rating_bucket?: string
@@ -6523,6 +6681,7 @@ export type Database = {
         Args: { p_booking_id: string; p_reason: string }
         Returns: undefined
       }
+      admin_clear_stale_requests: { Args: never; Returns: Json }
       admin_clear_worker_bank_block: {
         Args: { _worker_id: string }
         Returns: undefined
@@ -6561,6 +6720,7 @@ export type Database = {
         Args: { p_note?: string; p_payout_id: string }
         Returns: undefined
       }
+      admin_dispatch_health_snapshot: { Args: never; Returns: Json }
       admin_emergency_manual_assign: {
         Args: { p_admin_id?: string; p_booking_id: string; p_worker_id: string }
         Returns: Json
@@ -6569,6 +6729,7 @@ export type Database = {
         Args: { p_admin_id?: string }
         Returns: Json
       }
+      admin_force_dispatch_now: { Args: never; Returns: Json }
       admin_get_legal_pdfs: {
         Args: never
         Returns: {
@@ -6618,6 +6779,10 @@ export type Database = {
       }
       admin_ops_case_dashboard: { Args: never; Returns: Json }
       admin_process_case_reminders: { Args: never; Returns: number }
+      admin_push_health_daily_metrics: {
+        Args: { p_day?: string }
+        Returns: Json
+      }
       admin_quick_stats: { Args: never; Returns: Json }
       admin_recreate_cancelled_booking: {
         Args: { p_booking_id: string }
@@ -6640,6 +6805,8 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_restart_dispatch_engine: { Args: never; Returns: Json }
+      admin_retry_failed_dispatch: { Args: never; Returns: Json }
       admin_revoke_worker_payout_ready: {
         Args: { p_reason?: string; p_worker_id: string }
         Returns: Json
@@ -6724,6 +6891,7 @@ export type Database = {
               blocked_at: string | null
               blocked_by: string | null
               blocked_reason: string | null
+              blocked_until: string | null
               build_number: string | null
               cashfree_beneficiary_address: string | null
               cashfree_beneficiary_email: string | null
@@ -6809,9 +6977,8 @@ export type Database = {
               preferred_payout_method: string | null
               priority_score: number
               priority_score_updated_at: string | null
-              priority_score_v3: number | null
-              priority_score_v3_updated_at: string | null
               push_block_reason: string | null
+              push_deprioritized_until: string | null
               push_health_status: string
               rating: number | null
               rating_bucket: string
@@ -6878,6 +7045,7 @@ export type Database = {
               blocked_at: string | null
               blocked_by: string | null
               blocked_reason: string | null
+              blocked_until: string | null
               build_number: string | null
               cashfree_beneficiary_address: string | null
               cashfree_beneficiary_email: string | null
@@ -6963,9 +7131,8 @@ export type Database = {
               preferred_payout_method: string | null
               priority_score: number
               priority_score_updated_at: string | null
-              priority_score_v3: number | null
-              priority_score_v3_updated_at: string | null
               push_block_reason: string | null
+              push_deprioritized_until: string | null
               push_health_status: string
               rating: number | null
               rating_bucket: string
@@ -7014,6 +7181,33 @@ export type Database = {
           last_contacted_by_name: string
           missed_7d: number
           missed_today: number
+          worker_id: string
+        }[]
+      }
+      admin_worker_push_health: {
+        Args: never
+        Returns: {
+          accepts_last_24h: number
+          android_version: string
+          app_version: string
+          consecutive_no_ack_count: number
+          device_manufacturer: string
+          device_model: string
+          full_name: string
+          has_fcm_token: boolean
+          last_acknowledged_booking_at: string
+          last_device_ack_at: string
+          last_heartbeat_at: string
+          last_notification_received_at: string
+          last_push_error_at: string
+          last_push_error_code: string
+          last_push_success_at: string
+          needs_battery_config: boolean
+          no_ack_last_24h: number
+          offers_last_24h: number
+          phone: string
+          push_deprioritized_until: string
+          push_health_status: string
           worker_id: string
         }[]
       }
@@ -7210,6 +7404,7 @@ export type Database = {
           worker_name: string
         }[]
       }
+      auto_unblock_expired_workers: { Args: never; Returns: undefined }
       bath_total_price: {
         Args: { p_community?: string; p_count: number }
         Returns: number
@@ -7280,6 +7475,7 @@ export type Database = {
         Returns: undefined
       }
       dispatch_booking: { Args: { p_booking_id: string }; Returns: undefined }
+      dispatch_health_probe: { Args: never; Returns: undefined }
       ensure_worker_profile: { Args: never; Returns: Json }
       escalate_overdue_bookings: { Args: never; Returns: undefined }
       export_my_data: { Args: never; Returns: Json }
@@ -7409,6 +7605,10 @@ export type Database = {
           worker_id: string
         }[]
       }
+      get_booking_starvation_audit: {
+        Args: { p_booking_id: string }
+        Returns: Json
+      }
       get_booking_status: { Args: { p_booking_id: string }; Returns: Json }
       get_cancel_reason_breakdown:
         | {
@@ -7445,6 +7645,10 @@ export type Database = {
           p_start: string
           p_type?: string
         }
+        Returns: Json
+      }
+      get_cancelled_booking_audit: {
+        Args: { p_booking_id: string }
         Returns: Json
       }
       get_community_platform_fee_percent: {
@@ -8039,6 +8243,7 @@ export type Database = {
         Args: { lat1: number; lat2: number; lng1: number; lng2: number }
         Returns: number
       }
+      heal_black_hole_bookings: { Args: never; Returns: Json }
       heal_stuck_busy_workers: { Args: never; Returns: number }
       hold_worker_payout: {
         Args: {
@@ -8353,18 +8558,8 @@ export type Database = {
         Args: { p_worker_id: string }
         Returns: undefined
       }
-      recompute_all_priority_scores_v2: { Args: never; Returns: number }
-      recompute_all_priority_scores_v3: { Args: never; Returns: number }
       recompute_all_workers_notification_health: {
         Args: never
-        Returns: number
-      }
-      recompute_priority_score_v2: {
-        Args: { p_worker_id: string }
-        Returns: number
-      }
-      recompute_priority_score_v3: {
-        Args: { p_worker_id: string }
         Returns: number
       }
       recompute_worker_busy: {
