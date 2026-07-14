@@ -287,7 +287,7 @@ export default function Home() {
         />
       )}
 
-      {!isGuestMode && worker && (
+      {!isGuestMode && worker && !activeJob && (
         <HomePerformanceCard
           priorityScore={(worker as any)?.priority_score}
           rating={(worker as any)?.admin_override_rating ?? worker?.rating}
