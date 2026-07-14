@@ -58,7 +58,7 @@ export default function AdminPriorityShadow() {
   const recompute = useCallback(async () => {
     setRecomputing(true);
     try {
-      const { error: e } = await supabase.rpc("recompute_all_priority_scores_v3");
+      const { error: e } = await (supabase.rpc as any)("recompute_all_priority_scores_v3");
       if (e) throw e;
       await load();
     } catch (e: any) {
