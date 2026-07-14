@@ -12,6 +12,7 @@ import { useAutoHeal } from "@/hooks/useAutoHeal";
 import { useWorkerHealth } from "@/hooks/useWorkerHealth";
 import { useStartupHealthAudit } from "@/hooks/useStartupHealthAudit";
 import { WorkerHealthBadge } from "@/components/WorkerHealthBadge";
+import HomePerformanceCard from "@/components/HomePerformanceCard";
 
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
@@ -263,6 +264,7 @@ export default function Home() {
         </div>
       )}
 
+
       {/* Main Content with top padding for fixed header */}
       <div className={`p-4 space-y-4 pb-32 ${isGuestMode ? 'pt-4' : 'pt-28'}`}>
 
@@ -284,6 +286,16 @@ export default function Home() {
           }}
         />
       )}
+
+      {!isGuestMode && worker && (
+        <HomePerformanceCard
+          priorityScore={(worker as any)?.priority_score}
+          rating={(worker as any)?.admin_override_rating ?? worker?.rating}
+          totalRatings={(worker as any)?.total_ratings}
+        />
+      )}
+
+
 
 
       {!isGuestMode && worker && !payoutReady && (
