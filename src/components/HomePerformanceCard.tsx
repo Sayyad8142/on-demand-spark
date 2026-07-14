@@ -49,7 +49,7 @@ export default function HomePerformanceCard({ priorityScore, rating, totalRating
               </div>
             </div>
             <Progress value={score} className="h-1.5 mt-1.5" indicatorClassName={sc.bar} />
-            <p className="text-[11px] text-muted-foreground mt-1">Improve your score to receive more bookings</p>
+            <p className="text-[11px] text-muted-foreground mt-1">&nbsp;</p>
           </div>
         </div>
       </button>
@@ -77,7 +77,7 @@ export default function HomePerformanceCard({ priorityScore, rating, totalRating
             </div>
             <Progress value={(rate / 5) * 100} className="h-1.5 mt-1.5" indicatorClassName={rc.bar} />
             <p className="text-[11px] text-muted-foreground mt-1">
-              {hasRatings ? `${rate.toFixed(1)} ★ · ${totalRatings} ratings` : "Default rating for new workers"}
+              {hasRatings ? `${rate.toFixed(1)} ★ · ${totalRatings} ratings` : "\u00A0"}
             </p>
           </div>
         </div>
