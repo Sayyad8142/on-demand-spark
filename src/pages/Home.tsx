@@ -12,6 +12,7 @@ import { useAutoHeal } from "@/hooks/useAutoHeal";
 import { useWorkerHealth } from "@/hooks/useWorkerHealth";
 import { useStartupHealthAudit } from "@/hooks/useStartupHealthAudit";
 import { WorkerHealthBadge } from "@/components/WorkerHealthBadge";
+import HomePerformanceCard from "@/components/HomePerformanceCard";
 
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
