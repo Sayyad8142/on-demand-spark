@@ -228,61 +228,8 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
             </div>
           </div>
         </div>
-
-
-
-          <DialogContent className="max-w-sm max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-primary" />
-                Score History
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-2 mt-2">
-              {timeline.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-6">
-                  No recent activity yet.
-                </p>
-              ) : (
-                timeline.slice(0, 30).map((t) => (
-                  <div
-                    key={t.id}
-                    className={`flex items-center justify-between rounded-lg p-2.5 border ${
-                      t.positive
-                        ? "border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/20"
-                        : "border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{t.positive ? "🟢" : "🔴"}</span>
-                      <div>
-                        <p className="text-sm font-semibold">{t.label}</p>
-                        {t.sublabel && (
-                          <p className="text-[11px] font-medium text-foreground/80 leading-tight">{t.sublabel}</p>
-                        )}
-                        <p className="text-[10px] text-muted-foreground">{formatWhen(t.when)}</p>
-                      </div>
-                    </div>
-                    <span
-                      className={`text-sm font-bold tabular-nums ${
-                        t.positive
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : "text-red-600 dark:text-red-400"
-                      }`}
-                    >
-                      {t.points > 0 ? `+${t.points}` : t.points}
-                    </span>
-                  </div>
-                ))
-              )}
-              <div className="border-t border-border pt-3 mt-3 flex items-center justify-between">
-                <span className="text-sm font-bold">Current Score</span>
-                <span className="text-lg font-extrabold text-primary">{score}</span>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
       </CardContent>
     </Card>
   );
 }
+
