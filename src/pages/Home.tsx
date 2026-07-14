@@ -264,13 +264,6 @@ export default function Home() {
         </div>
       )}
 
-      {!isGuestMode && worker && (
-        <HomePerformanceCard
-          priorityScore={(worker as any)?.priority_score}
-          rating={(worker as any)?.admin_override_rating ?? worker?.rating}
-          totalRatings={(worker as any)?.total_ratings}
-        />
-      )}
 
       {/* Main Content with top padding for fixed header */}
       <div className={`p-4 space-y-4 pb-32 ${isGuestMode ? 'pt-4' : 'pt-28'}`}>
