@@ -287,6 +287,16 @@ export default function Home() {
         />
       )}
 
+      {!isGuestMode && worker && (
+        <HomePerformanceCard
+          priorityScore={(worker as any)?.priority_score}
+          rating={(worker as any)?.admin_override_rating ?? worker?.rating}
+          totalRatings={(worker as any)?.total_ratings}
+        />
+      )}
+
+
+
 
       {!isGuestMode && worker && !payoutReady && (
         <Card className="p-5 border-2 border-primary/30 bg-primary/5 shadow-sm">
