@@ -198,36 +198,6 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
           </div>
         </div>
 
-        {/* Breakdown */}
-        <div className="rounded-xl border border-border bg-muted/30 p-3">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-              Score Breakdown
-            </p>
-            <span className="text-[10px] text-muted-foreground">How your score is built</span>
-          </div>
-          <div className="space-y-1.5">
-            {breakdown.map((row, i) => (
-              <div key={i} className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-1.5 text-foreground">
-                  {row.positive ? (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                  ) : (
-                    <XCircle className="w-3.5 h-3.5 text-red-500" />
-                  )}
-                  {row.label}
-                </span>
-                <span className={`font-bold tabular-nums ${row.positive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
-                  {row.value > 0 ? "+" : ""}{row.value}
-                </span>
-              </div>
-            ))}
-            <div className="border-t border-border pt-1.5 mt-1.5 flex items-center justify-between">
-              <span className="text-sm font-bold">Final Priority Score</span>
-              <span className="text-base font-extrabold text-primary tabular-nums">{score}</span>
-            </div>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );
