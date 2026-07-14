@@ -229,49 +229,8 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
           </div>
         </div>
 
-        {/* Your Rating */}
-        <div className="bg-muted/40 rounded-lg p-3 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
-            <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Your Rating</p>
-            <p className="text-base font-bold text-foreground">
-              {effectiveRating > 0 ? `${effectiveRating.toFixed(1)} ★` : "—"}
-            </p>
-            <p className="text-[10px] text-muted-foreground">
-              {totalRatings > 0 ? `${totalRatings} reviews` : "No reviews yet"}
-            </p>
-          </div>
-        </div>
 
 
-        {/* How to reach 100 */}
-        {score < 100 && (
-          <div className="rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-primary mb-2">
-              🎯 How to Reach 100
-            </p>
-            <ul className="space-y-1 text-sm text-foreground">
-              <li>✅ Complete more bookings</li>
-              <li>✅ Avoid cancellations</li>
-              <li>✅ Avoid no-shows</li>
-              <li>⭐ Maintain a 5-star rating</li>
-            </ul>
-          </div>
-        )}
-
-        {/* View Details */}
-        <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-          <DialogTrigger asChild>
-            <button className="w-full flex items-center justify-between rounded-lg border border-border bg-card hover:bg-muted/40 px-3 py-2.5 text-sm font-semibold transition-colors">
-              <span className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-primary" />
-                View Score History
-              </span>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </button>
-          </DialogTrigger>
           <DialogContent className="max-w-sm max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
