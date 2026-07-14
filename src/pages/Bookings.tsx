@@ -176,12 +176,8 @@ export default function Bookings() {
       </header>
 
       <main className="max-w-2xl mx-auto p-4 space-y-4">
-        {/* Quick Summary */}
-        <div className="grid grid-cols-3 gap-2">
-          <SummaryCard label="Today" value={`₹${Math.round(summary.today)}`} accent="text-green-600" />
-          <SummaryCard label="This Week" value={`₹${Math.round(summary.week)}`} accent="text-green-600" />
-          <SummaryCard label="Total Jobs" value={`${summary.jobs}`} accent="text-foreground" />
-        </div>
+
+
 
         {bookings.length === 0 ? (
           <div className="text-center py-12">
