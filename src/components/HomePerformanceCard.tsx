@@ -49,7 +49,7 @@ export default function HomePerformanceCard({ priorityScore, rating, totalRating
               </div>
             </div>
             <Progress value={score} className="h-1.5 mt-1.5" indicatorClassName={sc.bar} />
-            <p className="text-[11px] text-muted-foreground mt-1">Improve your score to receive more bookings</p>
+            <p className="text-[11px] text-muted-foreground mt-1">&nbsp;</p>
           </div>
         </div>
       </button>
