@@ -383,13 +383,18 @@ export default function OtpVerify() {
       // Clear resume state once OTP is verified
       try { sessionStorage.removeItem(OTP_STATE_KEY); } catch {}
 
-      // Navigate based on mode
-      if (state.mode === 'signup') {
-        // New signup → send to Availability so worker selects time slots before receiving bookings
-        navigate("/availability?from=signup", { replace: true });
-      } else {
-        navigate("/home", { replace: true });
-      }
+      // Navigate based on mode. Fallback with window.location because the
+      // react-router navigate is occasionally swallowed by the auth-state
+      // change re-render on native webview (toast shows "Signed in" but
+      // the page stays on /otp-verify until the app is reopened).
+      const target = state.mode === 'signup' ? '/availability?from=signup' : '/home';
+      navigate(target, { replace: true });
+      setTimeout(() => {
+        if (window.location.pathname.startsWith('/otp')) {
+          console.warn('[OtpVerify] navigate() did not change route, forcing hard redirect to', target);
+          window.location.replace(target);
+        }
+      }, 400);
     } catch (error: any) {
       toast({
         title: t('auth.error', 'Error'),
