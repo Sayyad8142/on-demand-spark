@@ -5509,8 +5509,10 @@ export type Database = {
       worker_payout_events: {
         Row: {
           created_at: string
+          event_type: string | null
           from_status: string | null
           id: string
+          metadata: Json
           notes: string | null
           payout_id: string
           performed_by: string | null
@@ -5518,8 +5520,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          event_type?: string | null
           from_status?: string | null
           id?: string
+          metadata?: Json
           notes?: string | null
           payout_id: string
           performed_by?: string | null
@@ -5527,8 +5531,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          event_type?: string | null
           from_status?: string | null
           id?: string
+          metadata?: Json
           notes?: string | null
           payout_id?: string
           performed_by?: string | null
@@ -5548,19 +5554,23 @@ export type Database = {
         Row: {
           admin_notes: string | null
           approved_at: string | null
+          auto_retry_enabled: boolean
           booking_id: string
           created_at: string
           currency: string
           external_reference: string | null
           failed_at: string | null
+          failure_category: string | null
           failure_reason: string | null
           gross_amount: number
           held_at: string | null
           hold_reason: string | null
           id: string
           idempotency_key: string | null
+          last_error: string | null
           last_retry_at: string | null
           manual_utr: string | null
+          next_retry_at: string | null
           paid_at: string | null
           payout_amount: number
           payout_method: string | null
@@ -5573,6 +5583,7 @@ export type Database = {
           razorpay_payout_id: string | null
           reference_id: string | null
           retry_count: number
+          retry_stage: string | null
           reversed_at: string | null
           status: string
           updated_at: string
@@ -5581,19 +5592,23 @@ export type Database = {
         Insert: {
           admin_notes?: string | null
           approved_at?: string | null
+          auto_retry_enabled?: boolean
           booking_id: string
           created_at?: string
           currency?: string
           external_reference?: string | null
           failed_at?: string | null
+          failure_category?: string | null
           failure_reason?: string | null
           gross_amount: number
           held_at?: string | null
           hold_reason?: string | null
           id?: string
           idempotency_key?: string | null
+          last_error?: string | null
           last_retry_at?: string | null
           manual_utr?: string | null
+          next_retry_at?: string | null
           paid_at?: string | null
           payout_amount: number
           payout_method?: string | null
@@ -5606,6 +5621,7 @@ export type Database = {
           razorpay_payout_id?: string | null
           reference_id?: string | null
           retry_count?: number
+          retry_stage?: string | null
           reversed_at?: string | null
           status?: string
           updated_at?: string
@@ -5614,19 +5630,23 @@ export type Database = {
         Update: {
           admin_notes?: string | null
           approved_at?: string | null
+          auto_retry_enabled?: boolean
           booking_id?: string
           created_at?: string
           currency?: string
           external_reference?: string | null
           failed_at?: string | null
+          failure_category?: string | null
           failure_reason?: string | null
           gross_amount?: number
           held_at?: string | null
           hold_reason?: string | null
           id?: string
           idempotency_key?: string | null
+          last_error?: string | null
           last_retry_at?: string | null
           manual_utr?: string | null
+          next_retry_at?: string | null
           paid_at?: string | null
           payout_amount?: number
           payout_method?: string | null
@@ -5639,6 +5659,7 @@ export type Database = {
           razorpay_payout_id?: string | null
           reference_id?: string | null
           retry_count?: number
+          retry_stage?: string | null
           reversed_at?: string | null
           status?: string
           updated_at?: string
@@ -6066,6 +6087,8 @@ export type Database = {
           cashfree_beneficiary_id: string | null
           cashfree_beneficiary_last_attempt_at: string | null
           cashfree_beneficiary_last_error: string | null
+          cashfree_beneficiary_next_retry_at: string | null
+          cashfree_beneficiary_retry_count: number
           cashfree_beneficiary_status: string
           cashfree_beneficiary_synced_at: string | null
           communities: string[] | null
@@ -6211,6 +6234,8 @@ export type Database = {
           cashfree_beneficiary_id?: string | null
           cashfree_beneficiary_last_attempt_at?: string | null
           cashfree_beneficiary_last_error?: string | null
+          cashfree_beneficiary_next_retry_at?: string | null
+          cashfree_beneficiary_retry_count?: number
           cashfree_beneficiary_status?: string
           cashfree_beneficiary_synced_at?: string | null
           communities?: string[] | null
@@ -6356,6 +6381,8 @@ export type Database = {
           cashfree_beneficiary_id?: string | null
           cashfree_beneficiary_last_attempt_at?: string | null
           cashfree_beneficiary_last_error?: string | null
+          cashfree_beneficiary_next_retry_at?: string | null
+          cashfree_beneficiary_retry_count?: number
           cashfree_beneficiary_status?: string
           cashfree_beneficiary_synced_at?: string | null
           communities?: string[] | null
@@ -6669,6 +6696,22 @@ export type Database = {
         Args: { p_still_open?: Json }
         Returns: number
       }
+      admin_beneficiary_health: { Args: never; Returns: Json }
+      admin_beneficiary_pending_workers: {
+        Args: never
+        Returns: {
+          full_name: string
+          last_attempt_at: string
+          last_error: string
+          minutes_pending: number
+          next_retry_at: string
+          phone: string
+          retry_count: number
+          status: string
+          worker_created_at: string
+          worker_id: string
+        }[]
+      }
       admin_block_worker_bank: {
         Args: { _reason: string; _worker_id: string }
         Returns: undefined
@@ -6898,6 +6941,8 @@ export type Database = {
               cashfree_beneficiary_id: string | null
               cashfree_beneficiary_last_attempt_at: string | null
               cashfree_beneficiary_last_error: string | null
+              cashfree_beneficiary_next_retry_at: string | null
+              cashfree_beneficiary_retry_count: number
               cashfree_beneficiary_status: string
               cashfree_beneficiary_synced_at: string | null
               communities: string[] | null
@@ -7052,6 +7097,8 @@ export type Database = {
               cashfree_beneficiary_id: string | null
               cashfree_beneficiary_last_attempt_at: string | null
               cashfree_beneficiary_last_error: string | null
+              cashfree_beneficiary_next_retry_at: string | null
+              cashfree_beneficiary_retry_count: number
               cashfree_beneficiary_status: string
               cashfree_beneficiary_synced_at: string | null
               communities: string[] | null
@@ -7895,6 +7942,8 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_payout_health_today: { Args: never; Returns: Json }
+      get_payout_reliability_metrics: { Args: never; Returns: Json }
       get_payout_summary: { Args: never; Returns: Json }
       get_priority_shadow_comparison: {
         Args: never
@@ -8443,6 +8492,16 @@ export type Database = {
       }
       log_otp_reminder_event: {
         Args: { p_booking_id: string; p_event_type: string; p_metadata?: Json }
+        Returns: string
+      }
+      log_payout_event: {
+        Args: {
+          p_event_type: string
+          p_metadata?: Json
+          p_notes?: string
+          p_payout_id: string
+          p_to_status: string
+        }
         Returns: string
       }
       maid_total_price: {
