@@ -44,6 +44,7 @@ class BootReceiver : BroadcastReceiver() {
         try {
             HeartbeatWorker.schedule(context)
             BackendSync.sendHeartbeatAsync(context, event)
+            AckRetryWorker.flushOpportunistic(context, "boot:$event")
         } catch (e: Exception) {
             WorkerLog.add(context, "BOOT", "Failed to schedule HeartbeatWorker: ${e.message}")
         }
