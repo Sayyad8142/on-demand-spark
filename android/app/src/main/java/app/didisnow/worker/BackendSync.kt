@@ -93,6 +93,49 @@ object BackendSync {
      * in `worker_prefs.user_id`). Works in background, killed, and locked-screen
      * states where the Supabase user JWT may have expired.
      */
+    /**
+     * Resolve worker_id (== Firebase UID) from any durable store.
+     * Falls back to CapacitorStorage.didi_session when worker_prefs.user_id
+     * is missing (common after first login before AuthBridge writes, or after
+     * a data-clear that only preserved CapacitorStorage). Backfills
+     * worker_prefs on success.
+     */
+    private fun resolveWorkerId(ctx: Context): String? {
+        val app = ctx.applicationContext
+        val workerPrefs = app.getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
+        val fromPrefs = workerPrefs.getString("user_id", null)
+        if (!fromPrefs.isNullOrBlank()) return fromPrefs
+
+        val capPrefs = app.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE)
+        val sessionJson = capPrefs.getString("didi_session", null)
+            ?: capPrefs.getString("didi-worker-session", null)
+        if (!sessionJson.isNullOrBlank()) {
+            try {
+                val obj = JSONObject(sessionJson)
+                val userObj = obj.optJSONObject("user")
+                val uid = userObj?.optString("id")?.takeIf { it.isNotBlank() }
+                if (!uid.isNullOrBlank()) {
+                    workerPrefs.edit().putString("user_id", uid).apply()
+                    WorkerLog.add(ctx, "ACK", "backfilled user_id from CapacitorStorage")
+                    return uid
+                }
+            } catch (_: Exception) {}
+        }
+        return null
+    }
+
+    /**
+     * Notify backend of a booking delivery lifecycle event.
+     *
+     * event ∈
+     *   timestamps: "push_received" | "popup_shown" | "worker_seen"
+     *   failures:   "popup_failed" | "permission_missing" | "overlay_blocked" | "app_killed" | "token_invalid"
+     *
+     * Durability:
+     *   - missing worker_id → queued, flushed on next login / resume / boot
+     *   - network / 5xx failure → queued + AckRetryWorker scheduled (exp backoff)
+     *   - terminal 4xx (except 401/403) → dropped, not retried
+     */
     fun ackDelivery(
         ctx: Context,
         bookingId: String?,
@@ -104,26 +147,49 @@ object BackendSync {
             return false
         }
 
-        val prefs = ctx.applicationContext
-            .getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
-        val workerId = prefs.getString("user_id", null)
+        val workerId = resolveWorkerId(ctx)
         if (workerId.isNullOrBlank()) {
-            WorkerLog.add(ctx, "ACK", "skip $event — no worker_id in prefs")
+            WorkerLog.add(ctx, "ACK", "queue $event — no worker_id available yet")
+            AckQueue.enqueue(ctx, bookingId, bookingRequestId, event, appVersion(ctx), "no_worker_id")
             return false
         }
 
-        val appVersion = try {
-            val pi = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
-            "${pi.versionName}+${pi.longVersionCode}"
-        } catch (_: Exception) { "unknown" }
+        val ok = sendAckHttp(ctx, workerId, bookingId, bookingRequestId, event, attempt = 1)
+        if (!ok) {
+            AckQueue.enqueue(ctx, bookingId, bookingRequestId, event, appVersion(ctx), "http_fail")
+            AckRetryWorker.enqueue(ctx, "ack_fail:$event")
+        }
+        return ok
+    }
 
+    /** Called by AckRetryWorker — never re-enqueues (WorkManager owns retries). */
+    fun sendAckDirect(
+        ctx: Context,
+        bookingId: String?,
+        bookingRequestId: String?,
+        event: String,
+        attempt: Int,
+    ): Boolean {
+        val workerId = resolveWorkerId(ctx) ?: return false
+        return sendAckHttp(ctx, workerId, bookingId, bookingRequestId, event, attempt)
+    }
+
+    private fun sendAckHttp(
+        ctx: Context,
+        workerId: String,
+        bookingId: String?,
+        bookingRequestId: String?,
+        event: String,
+        attempt: Int,
+    ): Boolean {
         val url = "$SUPABASE_URL/functions/v1/ack-booking-delivery"
         val body = JSONObject().apply {
             if (!bookingId.isNullOrBlank()) put("booking_id", bookingId)
             if (!bookingRequestId.isNullOrBlank()) put("booking_request_id", bookingRequestId)
             put("worker_id", workerId)
             put("event_type", event)
-            put("app_version", appVersion)
+            put("app_version", appVersion(ctx))
+            put("attempt", attempt)
             put("device_info", JSONObject().apply {
                 put("oem", "${Build.MANUFACTURER}/${Build.MODEL}")
                 put("android_version", Build.VERSION.RELEASE)
@@ -145,15 +211,27 @@ object BackendSync {
             val code = conn.responseCode
             conn.disconnect()
             val ok = code in 200..299
-            WorkerLog.add(ctx, "ACK", "$event booking=${bookingId ?: bookingRequestId} → http=$code")
+            WorkerLog.add(
+                ctx,
+                "ACK",
+                "$event booking=${bookingId ?: bookingRequestId} attempt=$attempt → http=$code"
+            )
 
-            // Cancel the native ack watchdog once the popup is actually up or seen.
             if (ok && !bookingId.isNullOrBlank() && (event == "popup_shown" || event == "worker_seen")) {
                 try { AckWatchdogWorker.cancel(ctx, bookingId) } catch (_: Exception) {}
             }
+            // Terminal 4xx (except auth) — treat as done so queue drops it.
+            if (!ok && code in 400..499 && code != 401 && code != 403) {
+                WorkerLog.add(ctx, "ACK", "$event terminal http=$code — dropping")
+                return true
+            }
             ok
         } catch (e: Exception) {
-            WorkerLog.add(ctx, "ACK", "$event booking=${bookingId ?: bookingRequestId} FAILED: ${e.message}")
+            WorkerLog.add(
+                ctx,
+                "ACK",
+                "$event booking=${bookingId ?: bookingRequestId} attempt=$attempt FAILED: ${e.message}"
+            )
             false
         }
     }
