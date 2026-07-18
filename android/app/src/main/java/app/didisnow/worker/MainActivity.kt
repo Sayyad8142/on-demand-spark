@@ -92,6 +92,7 @@ class MainActivity : BridgeActivity() {
         try {
             HeartbeatWorker.schedule(this)
             BackendSync.sendHeartbeatAsync(this, "open")
+            AckRetryWorker.flushOpportunistic(this, "open")
         } catch (e: Exception) {
             android.util.Log.w("MainActivity", "Heartbeat schedule failed: ${e.message}")
         }
@@ -112,6 +113,8 @@ class MainActivity : BridgeActivity() {
         inAppUpdateManager.resumeUpdateIfPending()
         // Fire a foreground heartbeat each time worker brings the app back.
         try { BackendSync.sendHeartbeatAsync(this, "foreground") } catch (_: Exception) {}
+        // Flush any ACKs that failed to send in the background.
+        try { AckRetryWorker.flushOpportunistic(this, "resume") } catch (_: Exception) {}
     }
 
     @Deprecated("Capacitor still routes legacy startActivityForResult here")

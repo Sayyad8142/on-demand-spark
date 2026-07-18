@@ -31,6 +31,8 @@ class HeartbeatWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(
         }
         val ok = BackendSync.sendHeartbeat(ctx, "interval")
         WorkerLog.add(ctx, "HEARTBEAT", "periodic result=$ok")
+        // Piggyback ACK-queue flush on every heartbeat tick.
+        try { AckRetryWorker.flushOpportunistic(ctx, "heartbeat") } catch (_: Exception) {}
         return if (ok) Result.success() else Result.retry()
     }
 
