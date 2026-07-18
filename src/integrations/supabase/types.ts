@@ -4712,6 +4712,72 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_archive: {
+        Row: {
+          archived_at: string
+          archived_by: string | null
+          bank_account_number: string | null
+          bank_name: string | null
+          cashfree_beneficiary_id: string | null
+          communities: string[] | null
+          community: string | null
+          deletion_reason: string | null
+          first_seen_at: string | null
+          full_name: string | null
+          id: string
+          last_seen_at: string | null
+          phone: string | null
+          razorpay_bank_fund_account_id: string | null
+          razorpay_contact_id: string | null
+          razorpay_fund_account_id: string | null
+          razorpay_vpa_fund_account_id: string | null
+          snapshot: Json | null
+          upi_id: string | null
+        }
+        Insert: {
+          archived_at?: string
+          archived_by?: string | null
+          bank_account_number?: string | null
+          bank_name?: string | null
+          cashfree_beneficiary_id?: string | null
+          communities?: string[] | null
+          community?: string | null
+          deletion_reason?: string | null
+          first_seen_at?: string | null
+          full_name?: string | null
+          id: string
+          last_seen_at?: string | null
+          phone?: string | null
+          razorpay_bank_fund_account_id?: string | null
+          razorpay_contact_id?: string | null
+          razorpay_fund_account_id?: string | null
+          razorpay_vpa_fund_account_id?: string | null
+          snapshot?: Json | null
+          upi_id?: string | null
+        }
+        Update: {
+          archived_at?: string
+          archived_by?: string | null
+          bank_account_number?: string | null
+          bank_name?: string | null
+          cashfree_beneficiary_id?: string | null
+          communities?: string[] | null
+          community?: string | null
+          deletion_reason?: string | null
+          first_seen_at?: string | null
+          full_name?: string | null
+          id?: string
+          last_seen_at?: string | null
+          phone?: string | null
+          razorpay_bank_fund_account_id?: string | null
+          razorpay_contact_id?: string | null
+          razorpay_fund_account_id?: string | null
+          razorpay_vpa_fund_account_id?: string | null
+          snapshot?: Json | null
+          upi_id?: string | null
+        }
+        Relationships: []
+      }
       worker_availability: {
         Row: {
           day_of_week: number
@@ -4873,6 +4939,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      worker_deletion_audit: {
+        Row: {
+          deleted_at: string
+          deleted_by: string | null
+          deleted_by_email: string | null
+          id: string
+          month_end: string | null
+          month_start: string | null
+          reason: string
+          snapshot: Json | null
+          worker_community: string | null
+          worker_id: string
+          worker_name: string | null
+          worker_phone: string | null
+        }
+        Insert: {
+          deleted_at?: string
+          deleted_by?: string | null
+          deleted_by_email?: string | null
+          id?: string
+          month_end?: string | null
+          month_start?: string | null
+          reason?: string
+          snapshot?: Json | null
+          worker_community?: string | null
+          worker_id: string
+          worker_name?: string | null
+          worker_phone?: string | null
+        }
+        Update: {
+          deleted_at?: string
+          deleted_by?: string | null
+          deleted_by_email?: string | null
+          id?: string
+          month_end?: string | null
+          month_start?: string | null
+          reason?: string
+          snapshot?: Json | null
+          worker_community?: string | null
+          worker_id?: string
+          worker_name?: string | null
+          worker_phone?: string | null
+        }
+        Relationships: []
       }
       worker_emergency_pause: {
         Row: {
@@ -6060,11 +6171,15 @@ export type Database = {
           app_standby_bucket: string | null
           app_state: string | null
           app_version: string | null
+          archived_provider_snapshot: Json | null
           auto_pause_notified_at: string | null
           auto_paused_at: string | null
           auto_paused_reason: string | null
           auto_paused_restored_at: string | null
           auto_paused_source: string | null
+          availability_last_changed_at: string | null
+          availability_last_reason: string | null
+          availability_last_source: string | null
           availability_state: string
           bank_account_number: string | null
           bank_details_source: string | null
@@ -6098,6 +6213,9 @@ export type Database = {
           created_at: string
           daily_duty_started_at: string | null
           daily_streak_count: number
+          deleted_at: string | null
+          deleted_by: string | null
+          deletion_reason: string | null
           device_info: Json | null
           device_manufacturer: string | null
           dispatch_cooldown_until: string | null
@@ -6162,6 +6280,7 @@ export type Database = {
           payout_provider_preference: string | null
           payout_ready: boolean
           payout_verified_at: string | null
+          pending_permanent_delete_at: string | null
           permissions_onboarded_at: string | null
           phone: string
           photo_url: string | null
@@ -6207,11 +6326,15 @@ export type Database = {
           app_standby_bucket?: string | null
           app_state?: string | null
           app_version?: string | null
+          archived_provider_snapshot?: Json | null
           auto_pause_notified_at?: string | null
           auto_paused_at?: string | null
           auto_paused_reason?: string | null
           auto_paused_restored_at?: string | null
           auto_paused_source?: string | null
+          availability_last_changed_at?: string | null
+          availability_last_reason?: string | null
+          availability_last_source?: string | null
           availability_state?: string
           bank_account_number?: string | null
           bank_details_source?: string | null
@@ -6245,6 +6368,9 @@ export type Database = {
           created_at?: string
           daily_duty_started_at?: string | null
           daily_streak_count?: number
+          deleted_at?: string | null
+          deleted_by?: string | null
+          deletion_reason?: string | null
           device_info?: Json | null
           device_manufacturer?: string | null
           dispatch_cooldown_until?: string | null
@@ -6309,6 +6435,7 @@ export type Database = {
           payout_provider_preference?: string | null
           payout_ready?: boolean
           payout_verified_at?: string | null
+          pending_permanent_delete_at?: string | null
           permissions_onboarded_at?: string | null
           phone: string
           photo_url?: string | null
@@ -6354,11 +6481,15 @@ export type Database = {
           app_standby_bucket?: string | null
           app_state?: string | null
           app_version?: string | null
+          archived_provider_snapshot?: Json | null
           auto_pause_notified_at?: string | null
           auto_paused_at?: string | null
           auto_paused_reason?: string | null
           auto_paused_restored_at?: string | null
           auto_paused_source?: string | null
+          availability_last_changed_at?: string | null
+          availability_last_reason?: string | null
+          availability_last_source?: string | null
           availability_state?: string
           bank_account_number?: string | null
           bank_details_source?: string | null
@@ -6392,6 +6523,9 @@ export type Database = {
           created_at?: string
           daily_duty_started_at?: string | null
           daily_streak_count?: number
+          deleted_at?: string | null
+          deleted_by?: string | null
+          deletion_reason?: string | null
           device_info?: Json | null
           device_manufacturer?: string | null
           dispatch_cooldown_until?: string | null
@@ -6456,6 +6590,7 @@ export type Database = {
           payout_provider_preference?: string | null
           payout_ready?: boolean
           payout_verified_at?: string | null
+          pending_permanent_delete_at?: string | null
           permissions_onboarded_at?: string | null
           phone?: string
           photo_url?: string | null
@@ -6645,6 +6780,27 @@ export type Database = {
       _woc_sla_minutes: { Args: { p_esc: string }; Returns: number }
       academy_dashboard_stats: { Args: never; Returns: Json }
       accept_booking: { Args: { p_booking_id: string }; Returns: Json }
+      admin_ack_chain_for_booking: {
+        Args: { p_booking_id: string }
+        Returns: {
+          app_version: string
+          break_stage: string
+          delivered_at: string
+          device_ack_at: string
+          fcm_error_code: string
+          fcm_send_status: string
+          fcm_status: string
+          last_heartbeat_at: string
+          offered_at: string
+          popup_opened_at: string
+          request_status: string
+          responded_at: string
+          response_action: string
+          worker_id: string
+          worker_name: string
+          worker_phone: string
+        }[]
+      }
       admin_approve_worker_registration: {
         Args: { p_photo_url?: string; p_request_id: string }
         Returns: undefined
@@ -6652,6 +6808,10 @@ export type Database = {
       admin_assign_case: {
         Args: { p_assignee: string; p_assignee_name: string; p_case: string }
         Returns: undefined
+      }
+      admin_audit_inactive_worker: {
+        Args: { p_worker_id: string }
+        Returns: Json
       }
       admin_audit_worker_eligibility: {
         Args: {
@@ -6724,6 +6884,10 @@ export type Database = {
         Args: { p_booking_id: string; p_reason: string }
         Returns: undefined
       }
+      admin_classify_inactive_worker: {
+        Args: { p_worker_id: string }
+        Returns: string
+      }
       admin_clear_stale_requests: { Args: never; Returns: Json }
       admin_clear_worker_bank_block: {
         Args: { _worker_id: string }
@@ -6755,6 +6919,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_delete_inactive_worker: {
+        Args: { p_worker_id: string }
+        Returns: Json
+      }
       admin_dismiss_all_failed_payouts: {
         Args: { p_note?: string }
         Returns: number
@@ -6771,6 +6939,15 @@ export type Database = {
       admin_emergency_undo_pauses: {
         Args: { p_admin_id?: string }
         Returns: Json
+      }
+      admin_find_worker_duplicates: {
+        Args: { p_worker_id: string }
+        Returns: {
+          full_name: string
+          id: string
+          match_reason: string
+          phone: string
+        }[]
       }
       admin_force_dispatch_now: { Args: never; Returns: Json }
       admin_get_legal_pdfs: {
@@ -6792,6 +6969,60 @@ export type Database = {
         Returns: {
           name: string
           user_id: string
+        }[]
+      }
+      admin_list_archive_candidates: {
+        Args: { p_community?: string; p_service?: string }
+        Returns: {
+          accepted_this_month: number
+          archive_reasons: string[]
+          completed_this_month: number
+          fcm_status: string
+          full_name: string
+          has_active_booking: boolean
+          has_pending_payout: boolean
+          is_available: boolean
+          last_seen_at: string
+          offers_this_month: number
+          phone: string
+          worker_id: string
+        }[]
+      }
+      admin_list_inactive_workers: {
+        Args: never
+        Returns: {
+          accepted_this_month: number
+          app_version: string
+          assigned_this_month: number
+          cashfree_beneficiary_status: string
+          classification: string
+          communities: string[]
+          community: string
+          completed_this_month: number
+          created_at: string
+          deleted_at: string
+          device_acks_this_month: number
+          eligible: boolean
+          fcm_token_count: number
+          full_name: string
+          has_active_booking: boolean
+          has_duplicates: boolean
+          has_processing_payout: boolean
+          id: string
+          is_active: boolean
+          is_available: boolean
+          is_blocked: boolean
+          last_app_opened_at: string
+          last_booking_assigned_at: string
+          last_booking_offer_at: string
+          last_completed_booking_at: string
+          last_fcm_token_refresh_at: string
+          last_heartbeat_at: string
+          offers_received_this_month: number
+          pending_permanent_delete_at: string
+          phone: string
+          skip_reason: string
+          status: string
         }[]
       }
       admin_log_worker_fault: {
@@ -6816,11 +7047,35 @@ export type Database = {
         Args: { p_worker_id: string }
         Returns: Json
       }
+      admin_offline_worker_forensics: {
+        Args: { p_community?: string; p_service?: string }
+        Returns: {
+          app_version: string
+          availability_last_changed_at: string
+          availability_last_reason: string
+          availability_last_source: string
+          fcm_status: string
+          full_name: string
+          is_active: boolean
+          is_available: boolean
+          last_availability_on: string
+          last_heartbeat_at: string
+          last_seen_at: string
+          last_toggle_by: string
+          last_toggle_reason: string
+          phone: string
+          worker_id: string
+        }[]
+      }
       admin_ops_case_analytics: {
         Args: { p_from?: string; p_to?: string }
         Returns: Json
       }
       admin_ops_case_dashboard: { Args: never; Returns: Json }
+      admin_permanent_delete_worker: {
+        Args: { p_force?: boolean; p_worker_id: string }
+        Returns: Json
+      }
       admin_process_case_reminders: { Args: never; Returns: number }
       admin_push_health_daily_metrics: {
         Args: { p_day?: string }
@@ -6849,6 +7104,7 @@ export type Database = {
         Returns: undefined
       }
       admin_restart_dispatch_engine: { Args: never; Returns: Json }
+      admin_restore_worker: { Args: { p_worker_id: string }; Returns: Json }
       admin_retry_failed_dispatch: { Args: never; Returns: Json }
       admin_revoke_worker_payout_ready: {
         Args: { p_reason?: string; p_worker_id: string }
@@ -6883,6 +7139,14 @@ export type Database = {
         Args: { p_rating: number; p_worker_id: string }
         Returns: undefined
       }
+      admin_slot_supply_breakdown: {
+        Args: { p_community?: string; p_slot_start: string }
+        Returns: Json
+      }
+      admin_soft_delete_worker: {
+        Args: { p_reason?: string; p_worker_id: string }
+        Returns: Json
+      }
       admin_sync_worker_cases: {
         Args: { p_rows: Json }
         Returns: {
@@ -6914,11 +7178,15 @@ export type Database = {
               app_standby_bucket: string | null
               app_state: string | null
               app_version: string | null
+              archived_provider_snapshot: Json | null
               auto_pause_notified_at: string | null
               auto_paused_at: string | null
               auto_paused_reason: string | null
               auto_paused_restored_at: string | null
               auto_paused_source: string | null
+              availability_last_changed_at: string | null
+              availability_last_reason: string | null
+              availability_last_source: string | null
               availability_state: string
               bank_account_number: string | null
               bank_details_source: string | null
@@ -6952,6 +7220,9 @@ export type Database = {
               created_at: string
               daily_duty_started_at: string | null
               daily_streak_count: number
+              deleted_at: string | null
+              deleted_by: string | null
+              deletion_reason: string | null
               device_info: Json | null
               device_manufacturer: string | null
               dispatch_cooldown_until: string | null
@@ -7016,6 +7287,7 @@ export type Database = {
               payout_provider_preference: string | null
               payout_ready: boolean
               payout_verified_at: string | null
+              pending_permanent_delete_at: string | null
               permissions_onboarded_at: string | null
               phone: string
               photo_url: string | null
@@ -7070,11 +7342,15 @@ export type Database = {
               app_standby_bucket: string | null
               app_state: string | null
               app_version: string | null
+              archived_provider_snapshot: Json | null
               auto_pause_notified_at: string | null
               auto_paused_at: string | null
               auto_paused_reason: string | null
               auto_paused_restored_at: string | null
               auto_paused_source: string | null
+              availability_last_changed_at: string | null
+              availability_last_reason: string | null
+              availability_last_source: string | null
               availability_state: string
               bank_account_number: string | null
               bank_details_source: string | null
@@ -7108,6 +7384,9 @@ export type Database = {
               created_at: string
               daily_duty_started_at: string | null
               daily_streak_count: number
+              deleted_at: string | null
+              deleted_by: string | null
+              deletion_reason: string | null
               device_info: Json | null
               device_manufacturer: string | null
               dispatch_cooldown_until: string | null
@@ -7172,6 +7451,7 @@ export type Database = {
               payout_provider_preference: string | null
               payout_ready: boolean
               payout_verified_at: string | null
+              pending_permanent_delete_at: string | null
               permissions_onboarded_at: string | null
               phone: string
               photo_url: string | null
@@ -8736,6 +9016,16 @@ export type Database = {
           p_worker_id: string
         }
         Returns: Json
+      }
+      set_worker_availability: {
+        Args: {
+          p_changed_by?: string
+          p_is_available: boolean
+          p_reason?: string
+          p_source: string
+          p_worker_id: string
+        }
+        Returns: undefined
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
