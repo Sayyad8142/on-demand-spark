@@ -92,6 +92,7 @@ class MainActivity : BridgeActivity() {
         try {
             HeartbeatWorker.schedule(this)
             BackendSync.sendHeartbeatAsync(this, "open")
+            AckRetryWorker.flushOpportunistic(this, "open")
         } catch (e: Exception) {
             android.util.Log.w("MainActivity", "Heartbeat schedule failed: ${e.message}")
         }
