@@ -159,6 +159,11 @@ export function AvailabilityToggle({
     setPressed(true);
     setTimeout(() => setPressed(false), 200);
     setLoading(true);
+
+    // Optimistic UI — flip instantly so the worker sees OFF/ON immediately.
+    const prevValue = isAvailable;
+    setIsAvailable(newValue);
+
     try {
       const { data, error } = await supabase.rpc("update_worker_availability", {
         worker_id_param: workerId,
@@ -166,15 +171,16 @@ export function AvailabilityToggle({
       });
       if (error) throw error;
       if (data === false) throw new Error("Worker not found");
-      setIsAvailable(newValue);
       toast({
         title: newValue ? t("home.nowAvailable") : t("home.nowUnavailable"),
         description: newValue
           ? t("home.willReceiveAlerts")
-          : t("home.willNotReceiveAlerts"),
+          : "You won't receive new booking requests while unavailable.",
       });
     } catch (error: any) {
       console.error("Error updating availability:", error);
+      // Roll back optimistic flip if backend update failed.
+      setIsAvailable(prevValue);
       toast({
         title: "Error",
         description: error.message || "Failed to update availability",
@@ -184,6 +190,7 @@ export function AvailabilityToggle({
       setLoading(false);
     }
   };
+
 
   if (initialLoading) {
     return (
