@@ -7722,6 +7722,13 @@ export type Database = {
       }
       auto_cancel_stale_instant_bookings: { Args: never; Returns: number }
       auto_complete_assigned: { Args: never; Returns: undefined }
+      auto_enable_stale_offline_workers: {
+        Args: never
+        Returns: {
+          hours_offline: number
+          worker_id: string
+        }[]
+      }
       auto_handle_overdue_bookings: { Args: never; Returns: number }
       auto_heal_stale_worker_busy: {
         Args: never

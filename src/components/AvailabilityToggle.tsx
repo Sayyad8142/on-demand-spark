@@ -3,6 +3,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
+import { App as CapApp } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
 
 interface AvailabilityToggleProps {
   workerId: string;
@@ -16,6 +18,8 @@ interface AvailabilityToggleProps {
   hasAvailabilitySlots?: boolean;
   onNoSlots?: () => void;
 }
+
+const REFRESH_INTERVAL_MS = 2 * 60 * 1000; // heartbeat cadence
 
 export function AvailabilityToggle({
   workerId,
@@ -39,23 +43,7 @@ export function AvailabilityToggle({
   const { toast } = useToast();
   const { t } = useTranslation();
 
-  useEffect(() => {
-    loadAvailability();
-  }, [workerId]);
-
-  // Track network status live so the hard-block reflects reality.
-  useEffect(() => {
-    const on = () => setNetworkOnline(true);
-    const off = () => setNetworkOnline(false);
-    window.addEventListener("online", on);
-    window.addEventListener("offline", off);
-    return () => {
-      window.removeEventListener("online", on);
-      window.removeEventListener("offline", off);
-    };
-  }, []);
-
-  const loadAvailability = async () => {
+  const loadAvailability = async (opts: { silent?: boolean } = {}) => {
     try {
       const { data, error } = await supabase
         .from("workers")
@@ -63,13 +51,56 @@ export function AvailabilityToggle({
         .eq("id", workerId)
         .single();
       if (error) throw error;
-      setIsAvailable(data?.is_available || false);
+      setIsAvailable((prev) => {
+        const next = data?.is_available || false;
+        // Notify worker if backend flipped ON automatically (e.g. after 48h auto-enable).
+        if (opts.silent && !prev && next) {
+          toast({
+            title: t("home.nowAvailable"),
+            description: t("home.willReceiveAlerts"),
+          });
+        }
+        return next;
+      });
     } catch (error) {
-      console.error("Error loading availability:", error);
+      if (!opts.silent) console.error("Error loading availability:", error);
     } finally {
       setInitialLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!workerId) return;
+    loadAvailability();
+  }, [workerId]);
+
+  // Keep availability in sync with backend (handles 48h auto-enable, cross-device changes).
+  useEffect(() => {
+    if (!workerId) return;
+    const refresh = () => loadAvailability({ silent: true });
+
+    const interval = setInterval(refresh, REFRESH_INTERVAL_MS);
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    let nativeSub: any;
+    if (Capacitor.isNativePlatform()) {
+      CapApp.addListener("appStateChange", ({ isActive }) => {
+        if (isActive) refresh();
+      }).then((sub) => { nativeSub = sub; });
+    }
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+      if (nativeSub) nativeSub.remove();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workerId]);
+
 
   const handleToggle = async () => {
     if (loading) return;
@@ -128,6 +159,11 @@ export function AvailabilityToggle({
     setPressed(true);
     setTimeout(() => setPressed(false), 200);
     setLoading(true);
+
+    // Optimistic UI — flip instantly so the worker sees OFF/ON immediately.
+    const prevValue = isAvailable;
+    setIsAvailable(newValue);
+
     try {
       const { data, error } = await supabase.rpc("update_worker_availability", {
         worker_id_param: workerId,
@@ -135,15 +171,16 @@ export function AvailabilityToggle({
       });
       if (error) throw error;
       if (data === false) throw new Error("Worker not found");
-      setIsAvailable(newValue);
       toast({
         title: newValue ? t("home.nowAvailable") : t("home.nowUnavailable"),
         description: newValue
           ? t("home.willReceiveAlerts")
-          : t("home.willNotReceiveAlerts"),
+          : "You won't receive new booking requests while unavailable.",
       });
     } catch (error: any) {
       console.error("Error updating availability:", error);
+      // Roll back optimistic flip if backend update failed.
+      setIsAvailable(prevValue);
       toast({
         title: "Error",
         description: error.message || "Failed to update availability",
@@ -153,6 +190,7 @@ export function AvailabilityToggle({
       setLoading(false);
     }
   };
+
 
   if (initialLoading) {
     return (
