@@ -301,6 +301,7 @@ export default function Home() {
           currentWorkerId={worker.id}
           community={worker.community || ""}
           serviceTypes={worker.service_types || []}
+          isAvailable={!!worker.is_available}
         />
       )}
 

@@ -21,12 +21,14 @@ interface WorkerLeaderboardCardProps {
   currentWorkerId: string;
   community: string;
   serviceTypes: string[];
+  isAvailable?: boolean;
 }
 
 export default function WorkerLeaderboardCard({
   currentWorkerId,
   community,
   serviceTypes,
+  isAvailable = false,
 }: WorkerLeaderboardCardProps) {
   const [workers, setWorkers] = useState<LeaderboardWorker[]>([]);
   const [currentUserRank, setCurrentUserRank] = useState<number | null>(null);
@@ -114,6 +116,14 @@ export default function WorkerLeaderboardCard({
           </Tooltip>
         </TooltipProvider>
       </div>
+
+      {!isAvailable && (
+        <div className="mx-3 mt-3 px-3 py-2 bg-amber-50 rounded-lg border border-amber-100 flex items-center gap-2">
+          <p className="text-[10px] text-amber-800 font-medium">
+            You must be <span className="font-bold">Available</span> to be ranked on the leaderboard.
+          </p>
+        </div>
+      )}
 
       <div className="p-3 space-y-3">
         {top3.map((w, i) => (
