@@ -1826,6 +1826,66 @@ export type Database = {
         }
         Relationships: []
       }
+      dispatch_reachability_audit: {
+        Row: {
+          ack_status: string | null
+          app_version: string | null
+          attempted_at: string
+          booking_id: string | null
+          eligible_after: boolean | null
+          eligible_before: boolean | null
+          extra: Json | null
+          fcm_status: string | null
+          heartbeat_age_s: number | null
+          id: string
+          is_available: boolean | null
+          is_busy: boolean | null
+          pool_type: string | null
+          reason_dropped: string | null
+          suppressed_until: string | null
+          suppression_active: boolean | null
+          worker_id: string | null
+        }
+        Insert: {
+          ack_status?: string | null
+          app_version?: string | null
+          attempted_at?: string
+          booking_id?: string | null
+          eligible_after?: boolean | null
+          eligible_before?: boolean | null
+          extra?: Json | null
+          fcm_status?: string | null
+          heartbeat_age_s?: number | null
+          id?: string
+          is_available?: boolean | null
+          is_busy?: boolean | null
+          pool_type?: string | null
+          reason_dropped?: string | null
+          suppressed_until?: string | null
+          suppression_active?: boolean | null
+          worker_id?: string | null
+        }
+        Update: {
+          ack_status?: string | null
+          app_version?: string | null
+          attempted_at?: string
+          booking_id?: string | null
+          eligible_after?: boolean | null
+          eligible_before?: boolean | null
+          extra?: Json | null
+          fcm_status?: string | null
+          heartbeat_age_s?: number | null
+          id?: string
+          is_available?: boolean | null
+          is_busy?: boolean | null
+          pool_type?: string | null
+          reason_dropped?: string | null
+          suppressed_until?: string | null
+          suppression_active?: boolean | null
+          worker_id?: string | null
+        }
+        Relationships: []
+      }
       dispatch_run_workers: {
         Row: {
           created_at: string
@@ -6876,6 +6936,34 @@ export type Database = {
         Args: { _reason: string; _worker_id: string }
         Returns: undefined
       }
+      admin_booking_dispatch_analytics: {
+        Args: {
+          _community?: string
+          _from?: string
+          _limit?: number
+          _service?: string
+          _status?: string
+          _to?: string
+        }
+        Returns: {
+          assigned_at: string
+          booking_id: string
+          community: string
+          created_at: string
+          eligible_workers: number
+          filter_reasons: Json
+          filtered_workers: number
+          first_ack_at: string
+          last_ack_at: string
+          offers_accepted: number
+          offers_rejected: number
+          offers_sent: number
+          offers_timed_out: number
+          scheduled_time: string
+          service_type: string
+          status: string
+        }[]
+      }
       admin_booking_opportunity_audit: {
         Args: { _day?: string }
         Returns: Json
@@ -6883,6 +6971,17 @@ export type Database = {
       admin_cancel_booking: {
         Args: { p_booking_id: string; p_reason: string }
         Returns: undefined
+      }
+      admin_capacity_trends: {
+        Args: { _days?: number }
+        Returns: {
+          cancelled: number
+          community: string
+          completed: number
+          demand: number
+          recommended_workers: number
+          slot_hour: number
+        }[]
       }
       admin_classify_inactive_worker: {
         Args: { p_worker_id: string }
@@ -7067,6 +7166,17 @@ export type Database = {
           worker_id: string
         }[]
       }
+      admin_ops_alerts_live: {
+        Args: never
+        Returns: {
+          created_at: string
+          key: string
+          message: string
+          severity: string
+          title: string
+          value: number
+        }[]
+      }
       admin_ops_case_analytics: {
         Args: { p_from?: string; p_to?: string }
         Returns: Json
@@ -7142,6 +7252,25 @@ export type Database = {
       admin_slot_supply_breakdown: {
         Args: { p_community?: string; p_slot_start: string }
         Returns: Json
+      }
+      admin_slot_supply_demand: {
+        Args: { _date?: string }
+        Returns: {
+          assigned: number
+          available_workers: number
+          bookings_received: number
+          busy_workers: number
+          cancel_rate: number
+          cancelled: number
+          completed: number
+          fill_rate: number
+          health: string
+          pending: number
+          reachable_workers: number
+          required_workers: number
+          slot_start: string
+          supply_gap: number
+        }[]
       }
       admin_soft_delete_worker: {
         Args: { p_reason?: string; p_worker_id: string }
@@ -7495,6 +7624,7 @@ export type Database = {
               isSetofReturn: false
             }
           }
+      admin_worker_health_buckets: { Args: never; Returns: Json }
       admin_worker_issue_daily_analytics: { Args: never; Returns: Json }
       admin_worker_issue_impact: {
         Args: { p_worker_ids: string[] }
@@ -7581,6 +7711,36 @@ export type Database = {
         }[]
       }
       admin_worker_reach_audit_counts: { Args: never; Returns: Json }
+      admin_worker_status_counts: { Args: never; Returns: Json }
+      admin_worker_status_list: {
+        Args: {
+          _community?: string
+          _search?: string
+          _service?: string
+          _tab?: string
+        }
+        Returns: {
+          app_version: string
+          communities: string[]
+          current_booking_id: string
+          fcm_token_present: boolean
+          full_name: string
+          is_active: boolean
+          is_available: boolean
+          is_busy: boolean
+          issue_flags: Json
+          last_device_ack_at: string
+          last_heartbeat_at: string
+          no_ack_count: number
+          phone: string
+          push_deprioritized_until: string
+          reachable: boolean
+          services: string[]
+          status: string
+          today_completed: number
+          worker_id: string
+        }[]
+      }
       approve_worker_payout: {
         Args: { p_admin_notes?: string; p_payout_id: string }
         Returns: Json
@@ -7738,6 +7898,7 @@ export type Database = {
           worker_name: string
         }[]
       }
+      auto_offline_stale_heartbeat_workers: { Args: never; Returns: number }
       auto_unblock_expired_workers: { Args: never; Returns: undefined }
       bath_total_price: {
         Args: { p_community?: string; p_count: number }
@@ -7808,11 +7969,26 @@ export type Database = {
         Args: { p_worker_id: string }
         Returns: undefined
       }
+      detect_and_suppress_silent_workers: {
+        Args: never
+        Returns: {
+          suppressed_until: string
+          worker_id: string
+        }[]
+      }
       dispatch_booking: { Args: { p_booking_id: string }; Returns: undefined }
       dispatch_health_probe: { Args: never; Returns: undefined }
       ensure_worker_profile: { Args: never; Returns: Json }
       escalate_overdue_bookings: { Args: never; Returns: undefined }
       export_my_data: { Args: never; Returns: Json }
+      filter_reachable_workers: {
+        Args: { p_worker_ids: string[] }
+        Returns: {
+          reachable: boolean
+          reason: string
+          worker_id: string
+        }[]
+      }
       generate_worker_payout_address: {
         Args: { _community: string }
         Returns: string
@@ -8735,6 +8911,7 @@ export type Database = {
         Args: { p_timestamp: string; p_worker_id: string }
         Returns: boolean
       }
+      is_worker_reachable: { Args: { p_worker_id: string }; Returns: boolean }
       list_payment_wallet_issues: {
         Args: {
           p_booking_status?: string
@@ -8777,6 +8954,7 @@ export type Database = {
           wallet_transaction_id: string
         }[]
       }
+      log_dispatch_reachability: { Args: { p_rows: Json }; Returns: number }
       log_otp_reminder_event: {
         Args: { p_booking_id: string; p_event_type: string; p_metadata?: Json }
         Returns: string
@@ -8839,6 +9017,14 @@ export type Database = {
       }
       norm_phone: { Args: { p: string }; Returns: string }
       notify_next_worker: { Args: { p_booking_id: string }; Returns: Json }
+      p2_is_reachable: {
+        Args: { _w: Database["public"]["Tables"]["workers"]["Row"] }
+        Returns: boolean
+      }
+      p2_issue_flags: {
+        Args: { _w: Database["public"]["Tables"]["workers"]["Row"] }
+        Returns: Json
+      }
       payment_wallet_issues_summary: { Args: never; Returns: Json }
       pending_sla_minutes: { Args: never; Returns: number }
       pg_advisory_unlock_booking: {
@@ -8859,6 +9045,7 @@ export type Database = {
           unknown_version_workers: number
         }[]
       }
+      prune_dispatch_reachability_audit: { Args: never; Returns: number }
       pushcut_notify_support:
         | {
             Args: {
