@@ -73,7 +73,7 @@ export default function WorkerLeaderboardCard({
     return () => clearInterval(interval);
   }, [community, serviceTypes, currentWorkerId]);
 
-  if (loading || workers.length <= 1) return null;
+  if (loading || workers.length === 0) return null;
 
   const top3 = workers.slice(0, 3);
   const isTop1 = currentUserRank === 1;
