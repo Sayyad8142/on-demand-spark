@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { Trophy, Star, TrendingUp, HelpCircle } from "lucide-react";
+import { Trophy, Star, HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Tooltip,
@@ -37,14 +37,13 @@ export default function WorkerLeaderboardCard({
     if (!community || !serviceTypes?.length) return;
 
     try {
-      // Fetch active, available workers in the same community and service
-      // We sort by priority_score, rating, and completed_jobs (simulated by rating count here if needed)
-      const { data, error } = await supabase
-        .from("workers")
+      // Use any to bypass TS generation issues for specific columns
+      const { data, error } = await (supabase
+        .from("workers") as any)
         .select("id, first_name, photo_url, rating, priority_score, total_bookings_completed")
         .eq("is_available", true)
         .eq("community", community)
-        .contains("service_types", [serviceTypes[0]]) // Simple match for now
+        .contains("service_types", [serviceTypes[0]])
         .eq("is_blocked", false)
         .order("priority_score", { ascending: false })
         .order("rating", { ascending: false })
@@ -54,8 +53,8 @@ export default function WorkerLeaderboardCard({
       if (error) throw error;
 
       if (data) {
-        setWorkers(data as any);
-        const rank = data.findIndex((w) => w.id === currentWorkerId);
+        setWorkers(data);
+        const rank = data.findIndex((w: any) => w.id === currentWorkerId);
         if (rank !== -1) {
           setCurrentUserRank(rank + 1);
           setCurrentUserScore(data[rank].priority_score || 0);
