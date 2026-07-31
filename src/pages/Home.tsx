@@ -13,6 +13,7 @@ import { useWorkerHealth } from "@/hooks/useWorkerHealth";
 import { useStartupHealthAudit } from "@/hooks/useStartupHealthAudit";
 import { WorkerHealthBadge } from "@/components/WorkerHealthBadge";
 import HomePerformanceCard from "@/components/HomePerformanceCard";
+import WorkerLeaderboardCard from "@/components/WorkerLeaderboardCard";
 
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
@@ -294,6 +295,13 @@ export default function Home() {
           totalRatings={(worker as any)?.total_ratings}
         />
       )}
+
+      {!isGuestMode && worker && !activeJob && (
+        <WorkerLeaderboardCard 
+          currentWorkerId={worker.id}
+          community={worker.community || ""}
+          serviceTypes={worker.service_types || []}
+        />
 
 
 
