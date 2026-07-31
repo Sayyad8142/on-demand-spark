@@ -129,7 +129,7 @@ export default function WorkerLeaderboardCard({
         {top3.map((w, i) => (
           <div key={w.id} className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-base w-6">{getMedal(i)}</span>
+              <span className="text-base w-6 grayscale-[0.5] opacity-80">{getMedal(i)}</span>
               <div className="w-8 h-8 rounded-full bg-muted overflow-hidden">
                 {w.photo_url ? (
                   <img src={w.photo_url} alt={w.first_name} className="w-full h-full object-cover" />
@@ -139,8 +139,13 @@ export default function WorkerLeaderboardCard({
                   </div>
                 )}
               </div>
-              <div>
-                <p className="text-xs font-bold">{w.first_name}</p>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-bold leading-none">{w.first_name}</p>
+                  {!(w as any).is_available && (
+                    <span className="text-[8px] bg-red-100 text-red-700 px-1 py-0 rounded font-medium">OFF</span>
+                  )}
+                </div>
                 <div className="flex items-center gap-1">
                   <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
                   <span className="text-[10px] text-muted-foreground">{(w.rating || 5).toFixed(2)}</span>
