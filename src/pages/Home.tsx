@@ -302,9 +302,7 @@ export default function Home() {
           community={worker.community || ""}
           serviceTypes={worker.service_types || []}
         />
-
-
-
+      )}
 
       {!isGuestMode && worker && !payoutReady && (
         <Card className="p-5 border-2 border-primary/30 bg-primary/5 shadow-sm">
