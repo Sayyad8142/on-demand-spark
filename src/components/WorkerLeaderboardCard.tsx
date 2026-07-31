@@ -43,7 +43,7 @@ export default function WorkerLeaderboardCard({
       const { data, error } = await (supabase
         .from("workers") as any)
         .select("id, first_name, photo_url, rating, priority_score, total_bookings_completed, is_available")
-        .eq("is_available", true)
+        
         .eq("community", community)
         .contains("service_types", [serviceTypes[0]])
         .eq("is_blocked", false)
