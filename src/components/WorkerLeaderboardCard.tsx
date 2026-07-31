@@ -92,8 +92,8 @@ export default function WorkerLeaderboardCard({
         <div className="flex items-center gap-2">
           <Trophy className="w-5 h-5 text-primary" />
           <div>
-            <h3 className="text-sm font-bold text-foreground leading-tight">
-              🏆 Workers Getting Bookings First
+            <h3 className="text-xs font-bold text-foreground leading-tight">
+              🏆 Top Worker Leaderboard
             </h3>
             <p className="text-[10px] text-muted-foreground">
               Improve your score to receive bookings earlier.
