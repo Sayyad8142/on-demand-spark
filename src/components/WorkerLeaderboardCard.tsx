@@ -21,12 +21,14 @@ interface WorkerLeaderboardCardProps {
   currentWorkerId: string;
   community: string;
   serviceTypes: string[];
+  isAvailable?: boolean;
 }
 
 export default function WorkerLeaderboardCard({
   currentWorkerId,
   community,
   serviceTypes,
+  isAvailable = false,
 }: WorkerLeaderboardCardProps) {
   const [workers, setWorkers] = useState<LeaderboardWorker[]>([]);
   const [currentUserRank, setCurrentUserRank] = useState<number | null>(null);
@@ -40,8 +42,8 @@ export default function WorkerLeaderboardCard({
       // Use any to bypass TS generation issues for specific columns
       const { data, error } = await (supabase
         .from("workers") as any)
-        .select("id, first_name, photo_url, rating, priority_score, total_bookings_completed")
-        .eq("is_available", true)
+        .select("id, first_name, photo_url, rating, priority_score, total_bookings_completed, is_available")
+        
         .eq("community", community)
         .contains("service_types", [serviceTypes[0]])
         .eq("is_blocked", false)
@@ -92,8 +94,8 @@ export default function WorkerLeaderboardCard({
         <div className="flex items-center gap-2">
           <Trophy className="w-5 h-5 text-primary" />
           <div>
-            <h3 className="text-sm font-bold text-foreground leading-tight">
-              🏆 Workers Getting Bookings First
+            <h3 className="text-xs font-bold text-foreground leading-tight">
+              🏆 Top Worker Leaderboard
             </h3>
             <p className="text-[10px] text-muted-foreground">
               Improve your score to receive bookings earlier.
@@ -115,11 +117,19 @@ export default function WorkerLeaderboardCard({
         </TooltipProvider>
       </div>
 
+      {!isAvailable && (
+        <div className="mx-3 mt-3 px-3 py-2 bg-amber-50 rounded-lg border border-amber-100 flex items-center gap-2">
+          <p className="text-[10px] text-amber-800 font-medium">
+            You must be <span className="font-bold">Available</span> to be ranked on the leaderboard.
+          </p>
+        </div>
+      )}
+
       <div className="p-3 space-y-3">
         {top3.map((w, i) => (
           <div key={w.id} className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-base w-6">{getMedal(i)}</span>
+              <span className="text-base w-6 grayscale-[0.5] opacity-80">{getMedal(i)}</span>
               <div className="w-8 h-8 rounded-full bg-muted overflow-hidden">
                 {w.photo_url ? (
                   <img src={w.photo_url} alt={w.first_name} className="w-full h-full object-cover" />
@@ -129,8 +139,13 @@ export default function WorkerLeaderboardCard({
                   </div>
                 )}
               </div>
-              <div>
-                <p className="text-xs font-bold">{w.first_name}</p>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-bold leading-none">{w.first_name}</p>
+                  {!(w as any).is_available && (
+                    <span className="text-[8px] bg-red-100 text-red-700 px-1 py-0 rounded font-medium">OFF</span>
+                  )}
+                </div>
                 <div className="flex items-center gap-1">
                   <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
                   <span className="text-[10px] text-muted-foreground">{(w.rating || 5).toFixed(2)}</span>
