@@ -42,7 +42,7 @@ export default function WorkerLeaderboardCard({
       // Use any to bypass TS generation issues for specific columns
       const { data, error } = await (supabase
         .from("workers") as any)
-        .select("id, first_name, photo_url, rating, priority_score, total_bookings_completed")
+        .select("id, first_name, photo_url, rating, priority_score, total_bookings_completed, is_available")
         .eq("is_available", true)
         .eq("community", community)
         .contains("service_types", [serviceTypes[0]])
