@@ -385,7 +385,13 @@ function AppInner() {
     if (!Capacitor.isNativePlatform()) return;
     console.log("🔔 Initializing native push for user:", userId);
     initNativePush(userId);
+    // Foreground booking-alert routing + push_received ACK.
+    // (Previously never initialized, so foreground FCM booking payloads were dropped.)
+    import("@/lib/fcm")
+      .then(({ initFCM }) => initFCM())
+      .catch((e) => console.warn("initFCM failed", e));
   }, [session?.user?.id]);
+
 
   // Movement tracking is owned exclusively by the global active-job effect above.
   // No additional listeners — they previously caused redundant start/stop races
