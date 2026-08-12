@@ -14,6 +14,9 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { Capacitor } from "@capacitor/core";
+import { CURRENT_VERSION_NAME } from "@/config/version";
+
 
 export type AckEvent = "push_received" | "popup_shown" | "worker_seen";
 
