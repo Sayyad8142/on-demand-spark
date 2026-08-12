@@ -22,7 +22,7 @@ const key = (id: string, ev: AckEvent) => `${id}::${ev}`;
 let cachedWorkerId: string | null | undefined;
 
 async function getWorkerId(): Promise<string | null> {
-  if (cachedWorkerId !== undefined) return cachedWorkerId;
+  if (cachedWorkerId !== undefined && cachedWorkerId !== null) return cachedWorkerId;
 
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
@@ -30,10 +30,11 @@ async function getWorkerId(): Promise<string | null> {
     return null;
   }
 
+  // Worker ID resolution pattern: user_id = uid OR id = uid
   const { data: worker, error: workerError } = await supabase
     .from("workers")
     .select("id")
-    .eq("user_id", user.id)
+    .or(`user_id.eq.${user.id},id.eq.${user.id}`)
     .maybeSingle();
 
   if (workerError || !worker?.id) {
@@ -45,6 +46,7 @@ async function getWorkerId(): Promise<string | null> {
   cachedWorkerId = worker.id;
   return cachedWorkerId;
 }
+
 
 interface AckArgs {
   bookingId?: string;
