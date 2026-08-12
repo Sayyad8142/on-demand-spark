@@ -901,11 +901,13 @@ export type Database = {
           alert_last_error: string | null
           booking_id: string
           created_at: string | null
+          delivery_stage: string | null
           device_ack_status: string | null
           device_app_version: string | null
           device_info: Json | null
           device_opened_at: string | null
           device_received_at: string | null
+          eligibility_reason: string | null
           failure_reason: string | null
           failure_reported_at: string | null
           fallback_sms_count: number
@@ -918,10 +920,14 @@ export type Database = {
           order_sequence: number
           popup_shown_at: string | null
           push_delivered_at: string | null
+          push_provider_message_id: string | null
+          push_requested_at: string | null
           push_sent_at: string | null
           responded_at: string | null
+          selected_at: string | null
           status: string | null
           timeout_at: string
+          visible_at: string | null
           worker_id: string
           worker_seen_at: string | null
         }
@@ -930,11 +936,13 @@ export type Database = {
           alert_last_error?: string | null
           booking_id: string
           created_at?: string | null
+          delivery_stage?: string | null
           device_ack_status?: string | null
           device_app_version?: string | null
           device_info?: Json | null
           device_opened_at?: string | null
           device_received_at?: string | null
+          eligibility_reason?: string | null
           failure_reason?: string | null
           failure_reported_at?: string | null
           fallback_sms_count?: number
@@ -947,10 +955,14 @@ export type Database = {
           order_sequence: number
           popup_shown_at?: string | null
           push_delivered_at?: string | null
+          push_provider_message_id?: string | null
+          push_requested_at?: string | null
           push_sent_at?: string | null
           responded_at?: string | null
+          selected_at?: string | null
           status?: string | null
           timeout_at?: string
+          visible_at?: string | null
           worker_id: string
           worker_seen_at?: string | null
         }
@@ -959,11 +971,13 @@ export type Database = {
           alert_last_error?: string | null
           booking_id?: string
           created_at?: string | null
+          delivery_stage?: string | null
           device_ack_status?: string | null
           device_app_version?: string | null
           device_info?: Json | null
           device_opened_at?: string | null
           device_received_at?: string | null
+          eligibility_reason?: string | null
           failure_reason?: string | null
           failure_reported_at?: string | null
           fallback_sms_count?: number
@@ -976,10 +990,14 @@ export type Database = {
           order_sequence?: number
           popup_shown_at?: string | null
           push_delivered_at?: string | null
+          push_provider_message_id?: string | null
+          push_requested_at?: string | null
           push_sent_at?: string | null
           responded_at?: string | null
+          selected_at?: string | null
           status?: string | null
           timeout_at?: string
+          visible_at?: string | null
           worker_id?: string
           worker_seen_at?: string | null
         }
@@ -6936,6 +6954,10 @@ export type Database = {
         Args: { _reason: string; _worker_id: string }
         Returns: undefined
       }
+      admin_booking_delivery_health: {
+        Args: { p_booking_id: string }
+        Returns: Json
+      }
       admin_booking_dispatch_analytics: {
         Args: {
           _community?: string
@@ -7711,6 +7733,16 @@ export type Database = {
         }[]
       }
       admin_worker_reach_audit_counts: { Args: never; Returns: Json }
+      admin_worker_status_bulk: {
+        Args: never
+        Returns: {
+          is_online: boolean
+          is_reachable: boolean
+          reason: string
+          status: string
+          worker_id: string
+        }[]
+      }
       admin_worker_status_counts: { Args: never; Returns: Json }
       admin_worker_status_list: {
         Args: {
@@ -7741,6 +7773,7 @@ export type Database = {
           worker_id: string
         }[]
       }
+      admin_worker_status_one: { Args: { p_worker_id: string }; Returns: Json }
       approve_worker_payout: {
         Args: { p_admin_notes?: string; p_payout_id: string }
         Returns: Json
@@ -9024,6 +9057,18 @@ export type Database = {
       p2_issue_flags: {
         Args: { _w: Database["public"]["Tables"]["workers"]["Row"] }
         Returns: Json
+      }
+      p2_request_delivery_stage: {
+        Args: { _r: Database["public"]["Tables"]["booking_requests"]["Row"] }
+        Returns: string
+      }
+      p2_worker_status: {
+        Args: { _w: Database["public"]["Tables"]["workers"]["Row"] }
+        Returns: string
+      }
+      p2_worker_status_reason: {
+        Args: { _w: Database["public"]["Tables"]["workers"]["Row"] }
+        Returns: string
       }
       payment_wallet_issues_summary: { Args: never; Returns: Json }
       pending_sla_minutes: { Args: never; Returns: number }
