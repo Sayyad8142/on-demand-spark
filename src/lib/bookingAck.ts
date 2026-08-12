@@ -75,8 +75,15 @@ export async function ackBookingDelivery({ bookingId, bookingRequestId, event }:
         booking_request_id: bookingRequestId,
         worker_id: workerId,
         event_type: event,
+        app_version: CURRENT_VERSION_NAME,
+        device_info: {
+          platform: Capacitor.getPlatform(),
+          native: Capacitor.isNativePlatform(),
+          source: "webview",
+        },
       },
     });
+
     if (error) {
       console.warn(`[ACK] ${event} failed`, error.message);
       // allow retry next time
