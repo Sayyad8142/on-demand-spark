@@ -45,10 +45,38 @@ type AlertListener = (alert: BookingAlert) => void;
 type DismissListener = (bookingId: string) => void;
 
 // Singleton state
-let currentAlert: BookingAlert | null = null;
+// Durable state: key is bookingId, value is timestamp
+const STORAGE_KEY = "didi_shown_bookings";
 const shownBookingIds = new Set<string>();
 const ackedReceived = new Set<string>();
 const ackedOpened = new Set<string>();
+
+// Initialize from storage for durability across process restarts
+try {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    const parsed = JSON.parse(stored);
+    // Keep only last 48h to prevent unbounded growth
+    const threshold = Date.now() - 48 * 3600 * 1000;
+    Object.entries(parsed).forEach(([id, ts]) => {
+      if ((ts as number) > threshold) shownBookingIds.add(id);
+    });
+  }
+} catch (e) {
+  console.warn("[Coordinator] Storage restore failed", e);
+}
+
+function persistShown() {
+  try {
+    const data: Record<string, number> = {};
+    shownBookingIds.forEach(id => { data[id] = Date.now(); });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error("[Coordinator] Persist failed", e);
+  }
+}
+
+let currentAlert: BookingAlert | null = null;
 const listeners: Set<AlertListener> = new Set();
 const dismissListeners: Set<DismissListener> = new Set();
 
@@ -165,8 +193,9 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
     console.warn(`⚠️ [Coordinator] Staleness check failed, showing anyway`, e);
   }
 
-  // Mark as shown
+  // Mark as shown and persist
   shownBookingIds.add(bookingId);
+  persistShown();
   currentAlert = alert;
 
   console.log(`🔔 [Coordinator] NEW alert: ${bookingId} (source: ${alert.source})`);
@@ -264,11 +293,15 @@ export function markAlertOpened(bookingId: string, bookingRequestId?: string) {
  * Called periodically.
  */
 export function pruneShownBookings(maxSize = 200) {
+  let changed = false;
   if (shownBookingIds.size > maxSize) {
     const arr = Array.from(shownBookingIds);
     const toRemove = arr.slice(0, arr.length - maxSize);
     toRemove.forEach((id) => shownBookingIds.delete(id));
+    changed = true;
   }
+  if (changed) persistShown();
+  
   if (ackedReceived.size > maxSize) {
     const arr = Array.from(ackedReceived);
     arr.slice(0, arr.length - maxSize).forEach((k) => ackedReceived.delete(k));
