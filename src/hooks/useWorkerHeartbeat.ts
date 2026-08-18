@@ -25,12 +25,16 @@ export function useWorkerHeartbeat(workerIdOrUserId: string | undefined | null) 
     const run = async () => {
       const { getWorkerId } = await import("@/lib/workerId");
       const workerId = await getWorkerId(workerIdOrUserId);
-      if (!workerId) return;
+      if (!workerId) {
+        console.warn("[Heartbeat] Skipping: workerId not resolved for", workerIdOrUserId);
+        return;
+      }
 
-      const reason = firedOnceRef.current ? "login" : "open";
+      const reason = firedOnceRef.current ? "interval" : "open";
       firedOnceRef.current = true;
       sendWorkerHeartbeat(workerId, reason);
 
+      if (intervalRef.current) clearInterval(intervalRef.current);
       intervalRef.current = setInterval(() => {
         sendWorkerHeartbeat(workerId, "interval");
       }, INTERVAL_MS);
