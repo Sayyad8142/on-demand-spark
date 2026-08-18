@@ -119,17 +119,20 @@ export function useOtpReminderEscalation(
             state.lastShownAt = now;
             localStorage.setItem(stateKey, JSON.stringify(state));
 
+            const overdueMinutes = Math.floor(elapsed / 60000);
             setActiveReminder({
               bookingId: booking.id,
               flatNo: (booking as any).flat_no || "N/A",
-              count: state.acknowledgedCount + 1
+              count: state.acknowledgedCount + 1,
+              overdueMinutes
             });
 
             // Emit window event for App.tsx to pick up
             window.dispatchEvent(new CustomEvent("otpReminderAlert", {
               detail: { 
                 bookingId: booking.id,
-                count: state.acknowledgedCount + 1
+                count: state.acknowledgedCount + 1,
+                overdueMinutes
               }
             }));
           }
