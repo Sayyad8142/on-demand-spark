@@ -659,7 +659,7 @@ function AppInner() {
             <div className="p-8 space-y-6">
               <div className="space-y-3">
                 <p className="text-zinc-600 dark:text-zinc-400 text-center leading-relaxed font-medium text-lg">
-                  Booking accepted <span className="text-amber-600 font-bold">60+ mins</span> ago.
+                  Overdue by <span className="text-amber-600 font-bold">{otpReminderAlert.overdueMinutes} mins</span>.
                 </p>
                 <p className="text-zinc-500 dark:text-zinc-500 text-center text-sm">
                   Please collect the customer OTP to complete the booking and get paid.
