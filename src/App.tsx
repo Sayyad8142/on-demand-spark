@@ -33,6 +33,7 @@ import { startCancellationVoice, stopCancellationVoice } from "@/lib/cancellatio
 import { playOtpReminderVoice, stopOtpReminderVoice } from "@/lib/otpReminderVoice";
 import { useOtpReminderEscalation, logOtpReminderEvent } from "@/hooks/useOtpReminderEscalation";
 import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
+import { ShieldAlert } from "lucide-react";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import Auth from "./pages/Auth";
 import OtpVerify from "./pages/OtpVerify";
@@ -641,34 +642,43 @@ function AppInner() {
         </div>
       )}
       {otpReminderAlert && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-background/95 p-5 animate-fade-in">
-          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-7 text-center shadow-2xl">
-            <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-amber-100 text-amber-700">
-              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                <line x1="12" y1="9" x2="12" y2="13" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6 animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 border border-amber-500/20">
+            <div className="bg-amber-500 p-8 flex flex-col items-center text-center">
+              <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                <ShieldAlert className="w-10 h-10 text-white" />
+              </div>
+              <h2 className="text-3xl font-extrabold text-white tracking-tight">⚠ OTP Pending</h2>
+              <div className="mt-1 px-3 py-1 bg-white/20 rounded-full text-xs font-bold text-white uppercase tracking-wider">
+                Action Required
+              </div>
             </div>
-            <h2 className="text-2xl font-bold text-foreground">⚠ OTP Pending</h2>
-            <p className="mt-3 text-base text-foreground">
-              This booking was accepted more than 60 minutes ago and the customer OTP has not been entered.
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Please collect the OTP from the customer and complete the booking.
-            </p>
-            <button
-              className="mt-7 w-full rounded-xl bg-primary py-4 text-lg font-bold text-primary-foreground active:scale-[0.98] transition-transform"
-              onClick={() => closeOtpReminder("enter_otp")}
-            >
-              Enter OTP Now
-            </button>
-            <button
-              className="mt-3 w-full rounded-xl border border-border bg-card py-3 text-base font-semibold text-foreground active:scale-[0.98] transition-transform"
-              onClick={() => closeOtpReminder("ok")}
-            >
-              OK
-            </button>
+            <div className="p-8 space-y-6">
+              <div className="space-y-3">
+                <p className="text-zinc-600 dark:text-zinc-400 text-center leading-relaxed font-medium text-lg">
+                  Booking accepted <span className="text-amber-600 font-bold">60+ mins</span> ago.
+                </p>
+                <p className="text-zinc-500 dark:text-zinc-500 text-center text-sm">
+                  Please collect the customer OTP to complete the booking and get paid.
+                </p>
+              </div>
+              
+              <div className="space-y-3 pt-2">
+                <Button 
+                  className="w-full h-16 text-xl font-bold bg-pink-600 hover:bg-pink-700 text-white rounded-2xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  onClick={() => closeOtpReminder("enter_otp")}
+                >
+                  Enter OTP Now
+                </Button>
+                <Button 
+                  variant="ghost"
+                  className="w-full h-12 text-zinc-400 font-semibold hover:text-zinc-600 dark:hover:text-zinc-200"
+                  onClick={() => closeOtpReminder("ok")}
+                >
+                  Maybe Later
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}
