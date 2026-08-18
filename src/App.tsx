@@ -13,6 +13,7 @@ import { useAutoPushRepair } from "@/hooks/useAutoPushRepair";
 import { usePostBootVerification } from "@/hooks/usePostBootVerification";
 import { usePermissionRegressionWatch } from "@/hooks/usePermissionRegressionWatch";
 import { useFCMTokenSync } from "@/hooks/useFCMTokenSync";
+import { useUnifiedBookingAlerts } from "@/hooks/useUnifiedBookingAlerts";
 import { useAppState } from "@/hooks/useAppState";
 import { useWorkerHeartbeat } from "@/hooks/useWorkerHeartbeat";
 import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
