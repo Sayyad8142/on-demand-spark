@@ -68,6 +68,8 @@ export default function AdminDispatchTelemetry() {
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
 
+  const since3m = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+
   useEffect(() => {
     const t = setInterval(() => setTick((x) => x + 1), 5000);
     return () => clearInterval(t);
@@ -78,7 +80,6 @@ export default function AdminDispatchTelemetry() {
     (async () => {
       setLoading(true);
       const since24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-      const since3m = new Date(Date.now() - 3 * 60 * 1000).toISOString();
 
       const { data: w } = await supabase
         .from("workers")
