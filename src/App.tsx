@@ -196,7 +196,7 @@ function AppInner() {
   const [showBatteryWarning, setShowBatteryWarning] = useState(false);
   const [permissionCheckLoading, setPermissionCheckLoading] = useState(false);
   const [cancellationAlert, setCancellationAlert] = useState<{ bookingId?: string } | null>(null);
-  const [otpReminderAlert, setOtpReminderAlert] = useState<{ bookingId: string; count: number } | null>(null);
+  const [otpReminderAlert, setOtpReminderAlert] = useState<{ bookingId: string; count: number; overdueMinutes: number } | null>(null);
   const cancellationAudioRef = useRef<HTMLAudioElement | null>(null);
   const cancellationTimeoutRef = useRef<number | null>(null);
   const notificationWarningShownRef = useRef(false);
