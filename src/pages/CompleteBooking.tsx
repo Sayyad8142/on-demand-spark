@@ -148,11 +148,18 @@ export default function CompleteBooking() {
 
   // Auto-focus first OTP slot so numeric keyboard opens
   useEffect(() => {
-    const t = setTimeout(() => {
-      const input = otpContainerRef.current?.querySelector<HTMLInputElement>("input");
-      input?.focus();
-    }, 250);
-    return () => clearTimeout(t);
+    const focusTimeout = setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      const shouldFocus = params.get("focusOtp") === "1";
+      if (shouldFocus) {
+        const input = otpContainerRef.current?.querySelector<HTMLInputElement>("input");
+        if (input) {
+          input.focus();
+          input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }, 500);
+    return () => clearTimeout(focusTimeout);
   }, []);
 
   // Cleanup timers on unmount

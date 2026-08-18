@@ -7,36 +7,70 @@ const REMINDER_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 const ELAPSED_THRESHOLD_MS = 60 * 60 * 1000; // 60 minutes
 const POLL_INTERVAL_MS = 30 * 1000; // 30 seconds
 
+export interface OtpPendingBooking {
+  id: string;
+  flat_no: string | null;
+  accepted_at: string | null;
+}
+
 interface OtpReminderState {
   firstTriggeredAt: number;
   lastShownAt: number;
   acknowledgedCount: number;
 }
 
+export async function logOtpReminderEvent(
+  bookingId: string,
+  eventType: 'otp_reminder_triggered' | 'otp_reminder_acknowledged' | 'otp_reminder_repeated' | 'otp_entered_after_reminder',
+  metadata: any = {}
+) {
+  try {
+    const { error } = await supabase.rpc("log_otp_reminder_event", {
+      p_booking_id: bookingId,
+      p_event_type: eventType,
+      p_metadata: metadata
+    });
+    if (error) console.warn("Failed to log OTP reminder event:", error.message);
+  } catch (e) {
+    console.warn("logOtpReminderEvent error:", e);
+  }
+}
+
 export function useOtpReminderEscalation(
-  userId: string | undefined,
-  workerId: string | undefined | null
+  userId: string | undefined
 ) {
   const [activeReminder, setActiveReminder] = useState<{
     bookingId: string;
     flatNo: string;
+    count: number;
   } | null>(null);
   
+  const [pendingBookings, setPendingBookings] = useState<OtpPendingBooking[]>([]);
   const pollTimerRef = useRef<number | null>(null);
 
   const checkEscalation = useCallback(async () => {
-    if (!workerId) return;
+    if (!userId) return;
 
     try {
+      // Get worker profile first to get internal ID
+      const { data: worker } = await supabase
+        .from('workers')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (!worker) return;
+
       const { data: bookings, error } = await supabase
         .from("bookings")
         .select("id, flat_no, accepted_at, status, otp_verified")
-        .eq("worker_id", workerId)
+        .eq("worker_id", worker.id)
         .in("status", ["accepted", "confirmed", "on_the_way", "started", "in_progress"])
         .eq("otp_verified", false)
         .not("accepted_at", "is", null);
 
-      if (error || !bookings || bookings.length === 0) {
+      if (error || !bookings) {
+        setPendingBookings([]);
         if (activeReminder) {
           setActiveReminder(null);
           stopOtpReminderVoice();
@@ -45,71 +79,76 @@ export function useOtpReminderEscalation(
       }
 
       const now = Date.now();
+      const overdueBookings: OtpPendingBooking[] = [];
 
       for (const booking of bookings) {
-        const acceptedAt = new Date(booking.accepted_at!).getTime();
+        const acceptedAt = new Date(booking.accepted_at as string).getTime();
         const elapsed = now - acceptedAt;
 
-        if (elapsed < ELAPSED_THRESHOLD_MS) continue;
-
-        const stateKey = `otp_reminder:${booking.id}`;
-        const rawState = localStorage.getItem(stateKey);
-        const state: OtpReminderState = rawState 
-          ? JSON.parse(rawState) 
-          : { firstTriggeredAt: 0, lastShownAt: 0, acknowledgedCount: 0 };
-
-        const shouldShow = state.lastShownAt === 0 || (now - state.lastShownAt >= REMINDER_INTERVAL_MS);
-
-        if (shouldShow) {
-          console.log(`⚠ OTP Reminder Triggered for ${booking.id}`);
-          
-          if (state.firstTriggeredAt === 0) {
-            state.firstTriggeredAt = now;
-            await supabase.rpc("log_otp_reminder_event", {
-              p_booking_id: booking.id,
-              p_event_type: "otp_reminder_triggered",
-              p_metadata: { elapsed_min: Math.floor(elapsed / 60000) }
-            });
-          } else {
-            await supabase.rpc("log_otp_reminder_event", {
-              p_booking_id: booking.id,
-              p_event_type: "otp_reminder_repeated",
-              p_metadata: { 
-                elapsed_min: Math.floor(elapsed / 60000),
-                prev_shown_at: new Date(state.lastShownAt).toISOString()
-              }
-            });
-          }
-
-          state.lastShownAt = now;
-          localStorage.setItem(stateKey, JSON.stringify(state));
-
-          setActiveReminder({
-            bookingId: booking.id,
-            flatNo: booking.flat_no || "N/A"
+        if (elapsed >= ELAPSED_THRESHOLD_MS) {
+          overdueBookings.push({
+            id: booking.id,
+            flat_no: booking.flat_no,
+            accepted_at: booking.accepted_at
           });
 
-          // Play voice and vibrate
-          playOtpReminderVoice();
-          if (navigator.vibrate) {
-            navigator.vibrate([500, 200, 500, 200, 500]);
+          const stateKey = `otp_reminder:${booking.id}`;
+          const rawState = localStorage.getItem(stateKey);
+          const state: OtpReminderState = rawState 
+            ? JSON.parse(rawState) 
+            : { firstTriggeredAt: 0, lastShownAt: 0, acknowledgedCount: 0 };
+
+          const shouldShow = state.lastShownAt === 0 || (now - state.lastShownAt >= REMINDER_INTERVAL_MS);
+
+          if (shouldShow && !activeReminder) {
+            console.log(`⚠ OTP Reminder Triggered for ${booking.id}`);
+            
+            const isFirst = state.firstTriggeredAt === 0;
+            if (isFirst) {
+              state.firstTriggeredAt = now;
+              void logOtpReminderEvent(booking.id, "otp_reminder_triggered", { 
+                elapsed_min: Math.floor(elapsed / 60000) 
+              });
+            } else {
+              void logOtpReminderEvent(booking.id, "otp_reminder_repeated", { 
+                elapsed_min: Math.floor(elapsed / 60000),
+                prev_shown_at: new Date(state.lastShownAt).toISOString()
+              });
+            }
+
+            state.lastShownAt = now;
+            localStorage.setItem(stateKey, JSON.stringify(state));
+
+            setActiveReminder({
+              bookingId: booking.id,
+              flatNo: booking.flat_no || "N/A",
+              count: state.acknowledgedCount + 1
+            });
+
+            // Emit window event for App.tsx to pick up
+            window.dispatchEvent(new CustomEvent("otpReminderAlert", {
+              detail: { 
+                bookingId: booking.id,
+                count: state.acknowledgedCount + 1
+              }
+            }));
           }
-          
-          // Only show one at a time
-          break;
         }
       }
+      
+      setPendingBookings(overdueBookings);
     } catch (e) {
       console.warn("OTP Escalation check failed:", e);
     }
-  }, [workerId, activeReminder]);
+  }, [userId, activeReminder]);
 
   useEffect(() => {
-    if (!userId || !workerId) {
+    if (!userId) {
       if (pollTimerRef.current) {
         window.clearInterval(pollTimerRef.current);
         pollTimerRef.current = null;
       }
+      setPendingBookings([]);
       return;
     }
 
@@ -121,7 +160,7 @@ export function useOtpReminderEscalation(
         window.clearInterval(pollTimerRef.current);
       }
     };
-  }, [userId, workerId, checkEscalation]);
+  }, [userId, checkEscalation]);
 
   const acknowledge = useCallback(async (bookingId: string, metadata: any = {}) => {
     setActiveReminder(null);
@@ -135,12 +174,8 @@ export function useOtpReminderEscalation(
       localStorage.setItem(stateKey, JSON.stringify(state));
     }
 
-    await supabase.rpc("log_otp_reminder_event", {
-      p_booking_id: bookingId,
-      p_event_type: "otp_reminder_acknowledged",
-      p_metadata: metadata
-    });
+    void logOtpReminderEvent(bookingId, "otp_reminder_acknowledged", metadata);
   }, []);
 
-  return { activeReminder, acknowledge };
+  return { activeReminder, pendingBookings, acknowledge };
 }

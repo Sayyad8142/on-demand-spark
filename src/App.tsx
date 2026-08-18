@@ -30,7 +30,7 @@ import {
 // requestLocationPermissions intentionally not imported — see startup effect note below.
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
 import { startCancellationVoice, stopCancellationVoice } from "@/lib/cancellationVoice";
-import { startOtpReminderVoice, stopOtpReminderVoice } from "@/lib/otpReminderVoice";
+import { playOtpReminderVoice, stopOtpReminderVoice } from "@/lib/otpReminderVoice";
 import { useOtpReminderEscalation, logOtpReminderEvent } from "@/hooks/useOtpReminderEscalation";
 import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
@@ -490,7 +490,7 @@ function AppInner() {
       const count = (detail.count as number | undefined) ?? 1;
       if (!bookingId) return;
       setOtpReminderAlert({ bookingId, count });
-      startOtpReminderVoice();
+      playOtpReminderVoice();
     };
     window.addEventListener("otpReminderAlert", onOtpReminder);
     return () => {
