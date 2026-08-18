@@ -32,7 +32,15 @@ async function ensureValidSession(): Promise<boolean> {
   }
 }
 
+const activeAttempts = new Set<string>();
+
 export async function tryAccept(bookingId: string, workerId?: string): Promise<{ success: boolean; error?: string }> {
+  if (activeAttempts.has(bookingId)) {
+    return { success: false, error: "Acceptance already in progress..." };
+  }
+  activeAttempts.add(bookingId);
+  
+  try {
   // Ensure valid session before accepting
   const sessionValid = await ensureValidSession();
   if (!sessionValid) {
@@ -89,6 +97,9 @@ export async function tryAccept(bookingId: string, workerId?: string): Promise<{
   // tear down the native step-event listener mid-session.
 
   return { success: true };
+  } finally {
+    activeAttempts.delete(bookingId);
+  }
 }
 
 export async function rejectBooking(bookingId: string, workerId: string) {
