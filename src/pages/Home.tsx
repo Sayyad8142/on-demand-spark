@@ -152,6 +152,8 @@ export default function Home() {
     const inCommunity = (worker?.communities || [worker?.community]).includes?.(b.community);
     return !!(inService && inCommunity);
   };
+
+  // UI state for the Home screen (the background coordinator logic is already mounted in App.tsx)
   const {
     pending,
     accept,
