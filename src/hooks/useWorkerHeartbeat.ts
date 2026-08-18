@@ -22,14 +22,21 @@ export function useWorkerHeartbeat(workerIdOrUserId: string | undefined | null) 
   useEffect(() => {
     if (!workerIdOrUserId) return;
 
-    // First beat — treated as "open" on cold start, "login" if mounted later.
-    const reason = firedOnceRef.current ? "login" : "open";
-    firedOnceRef.current = true;
-    sendWorkerHeartbeat(workerIdOrUserId, reason);
+    const run = async () => {
+      const { getWorkerId } = await import("@/lib/workerId");
+      const workerId = await getWorkerId(workerIdOrUserId);
+      if (!workerId) return;
 
-    intervalRef.current = setInterval(() => {
-      sendWorkerHeartbeat(workerIdOrUserId, "interval");
-    }, INTERVAL_MS);
+      const reason = firedOnceRef.current ? "login" : "open";
+      firedOnceRef.current = true;
+      sendWorkerHeartbeat(workerId, reason);
+
+      intervalRef.current = setInterval(() => {
+        sendWorkerHeartbeat(workerId, "interval");
+      }, INTERVAL_MS);
+    };
+
+    run();
 
     // Web visibility resume
     const onVisible = () => {

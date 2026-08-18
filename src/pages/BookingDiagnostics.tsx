@@ -39,11 +39,21 @@ export default function BookingDiagnostics() {
     setLoading(true);
     const out: Row[] = [];
 
-    // Worker row
+    // Worker row resolution using shared utility
+    const { getWorkerId } = await import("@/lib/workerId");
+    const workerId = await getWorkerId(user?.id);
+    
+    if (!workerId) {
+      out.push({ label: "Profile", value: "Not found", status: "bad" });
+      setRows(out);
+      setLoading(false);
+      return;
+    }
+
     const { data: worker } = await supabase
       .from("workers")
       .select("*")
-      .or(`user_id.eq.${user.id},id.eq.${user.id}`)
+      .eq("id", workerId)
       .maybeSingle();
     setRawWorker(worker);
 

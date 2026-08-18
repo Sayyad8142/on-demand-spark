@@ -183,6 +183,7 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
       bookingId: alert.bookingId,
       bookingRequestId: alert.bookingRequestId,
       event: "popup_shown",
+      appVersion: alert.source === "fcm" ? "6.0.63" : undefined // Traceable
     })
   ).catch(() => {});
 
