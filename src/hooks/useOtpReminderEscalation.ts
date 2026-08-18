@@ -1,227 +1,146 @@
-/**
- * OTP completion reminder escalation.
- *
- * Watches the worker's active bookings and, when a booking has been accepted
- * for >= 60 minutes without the customer OTP being entered, dispatches an
- * `otpReminderAlert` window event so App.tsx can render the full-screen alert.
- *
- * Repeats every 10 minutes until the OTP is entered or the booking leaves an
- * active status. Per-booking state is persisted to localStorage so the cadence
- * survives reloads.
- */
-import { useEffect, useRef, useState } from "react";
+
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { playOtpReminderVoice, stopOtpReminderVoice } from "@/lib/otpReminderVoice";
 
-const ACTIVE_STATUSES = [
-  "accepted",
-  "confirmed",
-  "on_the_way",
-  "started",
-  "in_progress",
-];
-
-const FIRST_DELAY_MS = 60 * 60 * 1000; // 60 minutes
-const REPEAT_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+const REMINDER_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+const ELAPSED_THRESHOLD_MS = 60 * 60 * 1000; // 60 minutes
 const POLL_INTERVAL_MS = 30 * 1000; // 30 seconds
-const STORAGE_PREFIX = "otp_reminder:";
 
-type ReminderState = {
-  firstTriggeredAt?: number;
-  lastShownAt?: number;
-  count?: number;
-};
-
-function loadState(bookingId: string): ReminderState {
-  try {
-    const raw = localStorage.getItem(STORAGE_PREFIX + bookingId);
-    return raw ? (JSON.parse(raw) as ReminderState) : {};
-  } catch {
-    return {};
-  }
+interface OtpReminderState {
+  firstTriggeredAt: number;
+  lastShownAt: number;
+  acknowledgedCount: number;
 }
 
-function saveState(bookingId: string, state: ReminderState) {
-  try {
-    localStorage.setItem(STORAGE_PREFIX + bookingId, JSON.stringify(state));
-  } catch {
-    /* no-op */
-  }
-}
+export function useOtpReminderEscalation(
+  userId: string | undefined,
+  workerId: string | undefined | null
+) {
+  const [activeReminder, setActiveReminder] = useState<{
+    bookingId: string;
+    flatNo: string;
+  } | null>(null);
+  
+  const pollTimerRef = useRef<number | null>(null);
 
-function clearState(bookingId: string) {
-  try {
-    localStorage.removeItem(STORAGE_PREFIX + bookingId);
-  } catch {
-    /* no-op */
-  }
-}
+  const checkEscalation = useCallback(async () => {
+    if (!workerId) return;
 
-async function logEvent(bookingId: string, eventType: string, metadata: Record<string, unknown> = {}) {
-  try {
-    await supabase.rpc("log_otp_reminder_event" as any, {
+    try {
+      const { data: bookings, error } = await supabase
+        .from("bookings")
+        .select("id, flat_no, accepted_at, status, otp_verified")
+        .eq("worker_id", workerId)
+        .in("status", ["accepted", "confirmed", "on_the_way", "started", "in_progress"])
+        .eq("otp_verified", false)
+        .not("accepted_at", "is", null);
+
+      if (error || !bookings || bookings.length === 0) {
+        if (activeReminder) {
+          setActiveReminder(null);
+          stopOtpReminderVoice();
+        }
+        return;
+      }
+
+      const now = Date.now();
+
+      for (const booking of bookings) {
+        const acceptedAt = new Date(booking.accepted_at!).getTime();
+        const elapsed = now - acceptedAt;
+
+        if (elapsed < ELAPSED_THRESHOLD_MS) continue;
+
+        const stateKey = `otp_reminder:${booking.id}`;
+        const rawState = localStorage.getItem(stateKey);
+        const state: OtpReminderState = rawState 
+          ? JSON.parse(rawState) 
+          : { firstTriggeredAt: 0, lastShownAt: 0, acknowledgedCount: 0 };
+
+        const shouldShow = state.lastShownAt === 0 || (now - state.lastShownAt >= REMINDER_INTERVAL_MS);
+
+        if (shouldShow) {
+          console.log(`⚠ OTP Reminder Triggered for ${booking.id}`);
+          
+          if (state.firstTriggeredAt === 0) {
+            state.firstTriggeredAt = now;
+            await supabase.rpc("log_otp_reminder_event", {
+              p_booking_id: booking.id,
+              p_event_type: "otp_reminder_triggered",
+              p_metadata: { elapsed_min: Math.floor(elapsed / 60000) }
+            });
+          } else {
+            await supabase.rpc("log_otp_reminder_event", {
+              p_booking_id: booking.id,
+              p_event_type: "otp_reminder_repeated",
+              p_metadata: { 
+                elapsed_min: Math.floor(elapsed / 60000),
+                prev_shown_at: new Date(state.lastShownAt).toISOString()
+              }
+            });
+          }
+
+          state.lastShownAt = now;
+          localStorage.setItem(stateKey, JSON.stringify(state));
+
+          setActiveReminder({
+            bookingId: booking.id,
+            flatNo: booking.flat_no || "N/A"
+          });
+
+          // Play voice and vibrate
+          playOtpReminderVoice();
+          if (navigator.vibrate) {
+            navigator.vibrate([500, 200, 500, 200, 500]);
+          }
+          
+          // Only show one at a time
+          break;
+        }
+      }
+    } catch (e) {
+      console.warn("OTP Escalation check failed:", e);
+    }
+  }, [workerId, activeReminder]);
+
+  useEffect(() => {
+    if (!userId || !workerId) {
+      if (pollTimerRef.current) {
+        window.clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+      return;
+    }
+
+    checkEscalation();
+    pollTimerRef.current = window.setInterval(checkEscalation, POLL_INTERVAL_MS);
+
+    return () => {
+      if (pollTimerRef.current) {
+        window.clearInterval(pollTimerRef.current);
+      }
+    };
+  }, [userId, workerId, checkEscalation]);
+
+  const acknowledge = useCallback(async (bookingId: string, metadata: any = {}) => {
+    setActiveReminder(null);
+    stopOtpReminderVoice();
+    
+    const stateKey = `otp_reminder:${bookingId}`;
+    const rawState = localStorage.getItem(stateKey);
+    if (rawState) {
+      const state: OtpReminderState = JSON.parse(rawState);
+      state.acknowledgedCount++;
+      localStorage.setItem(stateKey, JSON.stringify(state));
+    }
+
+    await supabase.rpc("log_otp_reminder_event", {
       p_booking_id: bookingId,
-      p_event_type: eventType,
-      p_metadata: metadata as any,
+      p_event_type: "otp_reminder_acknowledged",
+      p_metadata: metadata
     });
-  } catch (err) {
-    console.warn("[OTP_REMINDER] log event failed", eventType, err);
-  }
+  }, []);
+
+  return { activeReminder, acknowledge };
 }
-
-export type OtpPendingBooking = {
-  id: string;
-  accepted_at: string | null;
-};
-
-export function useOtpReminderEscalation(userId: string | undefined) {
-  const workerIdRef = useRef<string | null>(null);
-  const previouslyOtpVerifiedRef = useRef<Set<string>>(new Set());
-  const [pendingBookings, setPendingBookings] = useState<OtpPendingBooking[]>([]);
-
-  // Resolve worker id once per user.
-  useEffect(() => {
-    let cancelled = false;
-    workerIdRef.current = null;
-    if (!userId) return;
-
-    (async () => {
-      try {
-        let { data } = await supabase
-          .from("workers")
-          .select("id")
-          .eq("user_id", userId)
-          .maybeSingle();
-        if (!data) {
-          const { data: legacy } = await supabase
-            .from("workers")
-            .select("id")
-            .eq("id", userId)
-            .maybeSingle();
-          data = legacy;
-        }
-        if (!cancelled) workerIdRef.current = data?.id ?? null;
-      } catch (err) {
-        console.warn("[OTP_REMINDER] resolve worker failed", err);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
-
-  useEffect(() => {
-    if (!userId) return;
-
-    let cancelled = false;
-
-    const check = async () => {
-      const workerId = workerIdRef.current;
-      if (!workerId) return;
-
-      try {
-        const { data, error } = await supabase
-          .from("bookings")
-          .select("id, status, accepted_at, otp_verified_at")
-          .eq("worker_id", workerId)
-          .in("status", ACTIVE_STATUSES)
-          .limit(20);
-
-        if (error) {
-          console.warn("[OTP_REMINDER] poll failed", error);
-          return;
-        }
-        if (cancelled || !data) return;
-
-        const now = Date.now();
-        const activeIds = new Set<string>();
-        const pending: OtpPendingBooking[] = [];
-
-        for (const b of data) {
-          activeIds.add(b.id);
-          const accepted = b.accepted_at ? new Date(b.accepted_at).getTime() : 0;
-          if (!accepted) continue;
-
-          // OTP already entered: log first-time transition and clean up state.
-          if (b.otp_verified_at) {
-            const had = loadState(b.id).firstTriggeredAt;
-            if (had && !previouslyOtpVerifiedRef.current.has(b.id)) {
-              previouslyOtpVerifiedRef.current.add(b.id);
-              void logEvent(b.id, "otp_entered_after_reminder", {
-                first_triggered_at: new Date(had).toISOString(),
-                otp_verified_at: b.otp_verified_at,
-              });
-            }
-            clearState(b.id);
-            continue;
-          }
-
-          if (now - accepted < FIRST_DELAY_MS) continue;
-
-          // Eligible for banner regardless of cadence.
-          pending.push({ id: b.id, accepted_at: b.accepted_at });
-
-          const state = loadState(b.id);
-          const lastShown = state.lastShownAt ?? 0;
-          const elapsedSinceLast = now - lastShown;
-          const isFirst = !state.firstTriggeredAt;
-
-          if (!isFirst && elapsedSinceLast < REPEAT_INTERVAL_MS) continue;
-
-          const nextCount = (state.count ?? 0) + 1;
-          const nextState: ReminderState = {
-            firstTriggeredAt: state.firstTriggeredAt ?? now,
-            lastShownAt: now,
-            count: nextCount,
-          };
-          saveState(b.id, nextState);
-
-          void logEvent(
-            b.id,
-            isFirst ? "otp_reminder_triggered" : "otp_reminder_repeated",
-            { count: nextCount, accepted_at: b.accepted_at }
-          );
-
-          window.dispatchEvent(
-            new CustomEvent("otpReminderAlert", {
-              detail: { bookingId: b.id, count: nextCount },
-            })
-          );
-        }
-
-        setPendingBookings(pending);
-
-        // Clean up storage for bookings no longer active.
-        try {
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (!key?.startsWith(STORAGE_PREFIX)) continue;
-            const bid = key.slice(STORAGE_PREFIX.length);
-            if (!activeIds.has(bid)) {
-              localStorage.removeItem(key);
-              i--;
-            }
-          }
-        } catch {
-          /* no-op */
-        }
-      } catch (err) {
-        console.warn("[OTP_REMINDER] check failed", err);
-      }
-    };
-
-    // Run once shortly after mount, then on an interval.
-    const initial = window.setTimeout(check, 5000);
-    const interval = window.setInterval(check, POLL_INTERVAL_MS);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(initial);
-      window.clearInterval(interval);
-    };
-  }, [userId]);
-
-  return { pendingBookings };
-}
-
-export { logEvent as logOtpReminderEvent };
