@@ -81,7 +81,7 @@ export function useOtpReminderEscalation(
       const now = Date.now();
       const overdueBookings: OtpPendingBooking[] = [];
 
-      for (const booking of bookings) {
+      for (const booking of (bookings as any[])) {
         const acceptedAt = new Date(booking.accepted_at as string).getTime();
         const elapsed = now - acceptedAt;
 
@@ -121,7 +121,7 @@ export function useOtpReminderEscalation(
 
             setActiveReminder({
               bookingId: booking.id,
-              flatNo: booking.flat_no || "N/A",
+              flatNo: (booking as any).flat_no || "N/A",
               count: state.acknowledgedCount + 1
             });
 
