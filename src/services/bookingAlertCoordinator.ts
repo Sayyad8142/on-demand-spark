@@ -29,7 +29,7 @@ export interface BookingAlert {
   prealertSent?: boolean;
   requestStatus?: string;
   timeoutAt?: string;
-  source: "fcm" | "realtime_bookings" | "realtime_requests" | "heartbeat" | "resume";
+  source: "fcm" | "realtime_bookings" | "realtime_requests" | "heartbeat" | "resume" | "recovery";
 }
 
 const sourceForLog: Record<BookingAlert["source"], ScheduledOfferLogSource> = {
@@ -38,6 +38,7 @@ const sourceForLog: Record<BookingAlert["source"], ScheduledOfferLogSource> = {
   realtime_requests: "realtime",
   heartbeat: "heartbeat",
   resume: "resume",
+  recovery: "recovery",
 };
 
 type AlertListener = (alert: BookingAlert) => void;

@@ -3,7 +3,7 @@ import { App as CapApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { sendWorkerHeartbeat } from "@/lib/workerHeartbeat";
 
-const INTERVAL_MS = 30 * 60 * 1000; // 30 minutes — analytics-only ping
+const INTERVAL_MS = 2 * 60 * 1000; // 2 minutes - was 30 mins (analytics-only), now dispatch-critical
 
 /**
  * Global worker heartbeat — runs whenever the worker is logged in,
@@ -25,12 +25,16 @@ export function useWorkerHeartbeat(workerIdOrUserId: string | undefined | null) 
     const run = async () => {
       const { getWorkerId } = await import("@/lib/workerId");
       const workerId = await getWorkerId(workerIdOrUserId);
-      if (!workerId) return;
+      if (!workerId) {
+        console.warn("[Heartbeat] Skipping: workerId not resolved for", workerIdOrUserId);
+        return;
+      }
 
-      const reason = firedOnceRef.current ? "login" : "open";
+      const reason = firedOnceRef.current ? "interval" : "open";
       firedOnceRef.current = true;
       sendWorkerHeartbeat(workerId, reason);
 
+      if (intervalRef.current) clearInterval(intervalRef.current);
       intervalRef.current = setInterval(() => {
         sendWorkerHeartbeat(workerId, "interval");
       }, INTERVAL_MS);

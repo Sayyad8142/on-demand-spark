@@ -138,66 +138,89 @@ export function useUnifiedBookingAlerts(
     return () => clearInterval(interval);
   }, []);
 
-  // On app resume, check for pending booking requests
+  // On app resume, reconnect, or periodic interval: fetch currently valid offers
+  const fetchValidOffers = useCallback(async () => {
+    if (!workerId || !isOnline) return;
+    if (document.visibilityState !== "visible" && Capacitor.isNativePlatform()) return;
+    
+    console.log("📱 [UnifiedAlerts] Fetching valid offers from server...");
+
+    try {
+      const { data: requests } = await supabase
+        .from("booking_requests")
+        .select("id, booking_id, timeout_at, status")
+        .eq("worker_id", workerId)
+        .eq("status", "pending")
+        .gt("timeout_at", new Date().toISOString())
+        .limit(5);
+
+      if (!requests?.length) return;
+
+      for (const req of requests) {
+        const { data: booking } = await supabase
+          .from("bookings")
+          .select("id, cust_name, community, service_type, flat_no, price_inr, status, booking_type, scheduled_date, scheduled_time, prealert_sent")
+          .eq("id", req.booking_id)
+          .maybeSingle();
+
+        if (booking?.status === "pending") {
+          const offerLogInput = { ...booking, request_status: req.status };
+          if (!canShowWorkerBookingOffer(offerLogInput)) {
+            logScheduledOfferDecision(offerLogInput, "recovery", false);
+            continue;
+          }
+
+          await processIncomingBooking({
+            bookingId: booking.id,
+            bookingRequestId: req.id,
+            custName: booking.cust_name || "Customer",
+            community: booking.community || "",
+            serviceType: booking.service_type || "",
+            flatNo: booking.flat_no || "",
+            priceInr: booking.price_inr ?? 0,
+            bookingType: booking.booking_type,
+            scheduledDate: booking.scheduled_date ?? undefined,
+            scheduledTime: booking.scheduled_time ?? undefined,
+            prealertSent: booking.prealert_sent ?? undefined,
+            requestStatus: req.status ?? undefined,
+            timeoutAt: req.timeout_at,
+            source: "recovery",
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("📱 [UnifiedAlerts] Offer recovery failed:", e);
+    }
+  }, [workerId, isOnline]);
+
   useEffect(() => {
     if (!workerId || !isOnline) return;
 
-    const handleResume = async () => {
-      if (document.visibilityState !== "visible") return;
-      console.log("📱 [UnifiedAlerts] App resumed, checking pending requests");
-
-      try {
-        const { data: requests } = await supabase
-          .from("booking_requests")
-          .select("id, booking_id, timeout_at, status")
-          .eq("worker_id", workerId)
-          .eq("status", "pending")
-          .gt("timeout_at", new Date().toISOString())
-          .limit(3);
-
-        if (!requests?.length) return;
-
-        for (const req of requests) {
-          const { data: booking } = await supabase
-            .from("bookings")
-            .select("id, cust_name, community, service_type, flat_no, price_inr, status, booking_type, scheduled_date, scheduled_time, prealert_sent")
-            .eq("id", req.booking_id)
-            .maybeSingle();
-
-          if (booking?.status === "pending") {
-            const offerLogInput = { ...booking, request_status: req.status };
-            if (!canShowWorkerBookingOffer(offerLogInput)) {
-              logScheduledOfferDecision(offerLogInput, "resume", false);
-              console.log("📱 [UnifiedAlerts] Scheduled request hidden until prealert_sent=true", booking.id);
-              continue;
-            }
-
-            await processIncomingBooking({
-              bookingId: booking.id,
-              bookingRequestId: req.id,
-              custName: booking.cust_name || "Customer",
-              community: booking.community || "",
-              serviceType: booking.service_type || "",
-              flatNo: booking.flat_no || "",
-              priceInr: booking.price_inr ?? 0,
-              bookingType: booking.booking_type,
-              scheduledDate: booking.scheduled_date ?? undefined,
-              scheduledTime: booking.scheduled_time ?? undefined,
-              prealertSent: booking.prealert_sent ?? undefined,
-              requestStatus: req.status ?? undefined,
-              timeoutAt: req.timeout_at,
-              source: "resume",
-            });
-          }
-        }
-      } catch (e) {
-        console.warn("📱 [UnifiedAlerts] Resume check failed:", e);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchValidOffers();
       }
     };
 
-    document.addEventListener("visibilitychange", handleResume);
-    return () => document.removeEventListener("visibilitychange", handleResume);
-  }, [workerId, isOnline]);
+    const handleOnline = () => {
+      fetchValidOffers();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("online", handleOnline);
+    
+    // Recovery interval while app is open
+    const recoveryInterval = setInterval(fetchValidOffers, 30000);
+    
+    // Initial fetch
+    fetchValidOffers();
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("online", handleOnline);
+      clearInterval(recoveryInterval);
+    };
+  }, [workerId, isOnline, fetchValidOffers]);
 
   const clearAlert = useCallback(() => {
     if (pending) dismissAlert(pending.bookingId);

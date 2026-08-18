@@ -16,7 +16,7 @@ type ScheduleInput = {
   scheduledTime?: string | null;
 };
 
-export type ScheduledOfferLogSource = "fcm" | "poll" | "realtime" | "query" | "heartbeat" | "resume";
+export type ScheduledOfferLogSource = "fcm" | "poll" | "realtime" | "query" | "heartbeat" | "resume" | "recovery";
 
 export function getScheduledAt(input: ScheduleInput): Date | null {
   const date = input.scheduled_date ?? input.scheduledDate;
