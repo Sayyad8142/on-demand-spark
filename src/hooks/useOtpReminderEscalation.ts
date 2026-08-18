@@ -25,7 +25,7 @@ export async function logOtpReminderEvent(
   metadata: any = {}
 ) {
   try {
-    const { error } = await supabase.rpc("log_otp_reminder_event", {
+    const { error } = await supabase.rpc("log_otp_reminder_event" as any, {
       p_booking_id: bookingId,
       p_event_type: eventType,
       p_metadata: metadata
@@ -63,10 +63,10 @@ export function useOtpReminderEscalation(
 
       const { data: bookings, error } = await supabase
         .from("bookings")
-        .select("id, flat_no, accepted_at, status, otp_verified")
+        .select("id, flat_no, accepted_at, status, otp_verified_at")
         .eq("worker_id", worker.id)
         .in("status", ["accepted", "confirmed", "on_the_way", "started", "in_progress"])
-        .eq("otp_verified", false)
+        .is("otp_verified_at", null)
         .not("accepted_at", "is", null);
 
       if (error || !bookings) {
