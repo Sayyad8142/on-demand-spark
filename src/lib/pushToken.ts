@@ -138,9 +138,17 @@ export async function waitForNativeFcmToken({
 
 export async function syncTokenToBackend(token: string, userId: string, reason: string): Promise<boolean> {
   try {
+    const { getWorkerId } = await import("@/lib/workerId");
+    const workerId = await getWorkerId(userId);
+    
+    if (!workerId) {
+      console.warn(`⚠️ [PushToken] ${reason}: no worker row found for user_id=${userId}`);
+      return false;
+    }
+
     const now = new Date().toISOString();
 
-    const { error: workerError, data: workerData } = await supabase
+    const { error: workerError } = await supabase
       .from('workers')
       .update({
         fcm_token: token,
@@ -158,16 +166,10 @@ export async function syncTokenToBackend(token: string, userId: string, reason: 
         app_version: CURRENT_VERSION_NAME,
         updated_at: now,
       })
-      .eq('user_id', userId)
-      .select('id');
+      .eq('id', workerId);
 
     if (workerError) {
       console.error(`❌ [PushToken] ${reason}: workers sync failed`, workerError);
-      return false;
-    }
-
-    if (!workerData || workerData.length === 0) {
-      console.warn(`⚠️ [PushToken] ${reason}: no worker row matched user_id=${userId}`);
       return false;
     }
 
@@ -180,7 +182,7 @@ export async function syncTokenToBackend(token: string, userId: string, reason: 
       console.warn(`⚠️ [PushToken] ${reason}: fcm_tokens fallback sync failed`, fallbackError);
     }
 
-    console.log(`✅ [PushToken] ${reason}: backend sync successful`);
+    console.log(`✅ [PushToken] ${reason}: backend sync successful for worker ${workerId}`);
     return true;
   } catch (error) {
     console.error(`❌ [PushToken] ${reason}: backend sync exception`, error);
@@ -192,10 +194,26 @@ export async function getPushHealthSnapshot(userId: string): Promise<PushHealthS
   const permissionGranted = await ensurePushPermission('health-check', { requestIfMissing: false });
   const localToken = await getPendingNativeFcmToken();
 
+  const { getWorkerId } = await import("@/lib/workerId");
+  const workerId = await getWorkerId(userId);
+
+  if (!workerId) {
+    return {
+      permissionGranted,
+      localToken,
+      backendToken: null,
+      backendStatus: null,
+      tokenExists: !!localToken,
+      tokenSyncedToBackend: false,
+      tokenHealthy: false,
+      isHealthy: false
+    };
+  }
+
   const { data: worker } = await supabase
     .from('workers')
     .select('fcm_token, fcm_token_status')
-    .eq('user_id', userId)
+    .eq('id', workerId)
     .maybeSingle();
 
   const backendToken = worker?.fcm_token ?? null;
