@@ -351,52 +351,54 @@ function AppInner() {
   }, [checkAndroidSettingsPermissions, session?.user?.id]);
 
   // ── Passive movement tracking DISABLED ──
-  // Step/movement tracking now runs ONLY after a booking is accepted.
-  // The active-job effect below owns the lifecycle globally so it survives
-  // navigation between Home / Profile / Bookings / Availability.
   useEffect(() => {
     void stopPassiveMovementMonitoring();
   }, [worker?.id]);
-
-  // ── Booking-driven movement tracking (global, survives navigation) ──
-  // Single source of truth for start/stop. Runs whenever the worker has an
-  // active booking in [accepted, on_the_way, started]. Stops as soon as the
-  // booking transitions to a terminal state (completed/cancelled/none).
-  const { activeJob: trackedJob } = useActiveJob(session?.user?.id);
-  useEffect(() => {
-    if (!worker?.id) return;
-    const status = trackedJob?.status;
-    const shouldTrack = !!trackedJob?.id && ["assigned", "accepted", "on_the_way", "started"].includes(status ?? "");
-    if (!shouldTrack) {
-      console.log(`[Movement] stopped because booking ended (status=${status ?? "none"})`);
-      void stopMovementMonitoring();
-      return;
-    }
-    console.log("[Movement] booking accepted");
-    startMovementMonitoring(trackedJob!.id, worker.id).catch((error) => {
-      console.error("[Movement] active-job start failed", error);
-    });
-  }, [worker?.id, trackedJob?.id, trackedJob?.status]);
-
 
   // Initialize native push notifications when we have a session.
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId) return;
     if (!Capacitor.isNativePlatform()) return;
-    console.log("🔔 Initializing native push for user:", userId);
+    
+    console.log("🔔 [App] Initializing native push for user:", userId);
     initNativePush(userId);
+
     // Foreground booking-alert routing + push_received ACK.
-    // (Previously never initialized, so foreground FCM booking payloads were dropped.)
     import("@/lib/fcm")
       .then(({ initFCM }) => initFCM())
       .catch((e) => console.warn("initFCM failed", e));
   }, [session?.user?.id]);
 
+  // Unified Alert Coordinator — Global hoisting.
+  const { worker: globalWorker } = useWorkerProfile(session?.user?.id);
+  const matches = (b: any) => {
+    const inService = globalWorker?.service_types?.includes?.(b.service_type);
+    const inCommunity = (globalWorker?.communities || [globalWorker?.community]).includes?.(b.community);
+    return !!(inService && inCommunity);
+  };
+  
+  useUnifiedBookingAlerts(
+    session?.user?.id, 
+    !!globalWorker?.is_available, 
+    matches, 
+    globalWorker?.id
+  );
 
-  // Movement tracking is owned exclusively by the global active-job effect above.
-  // No additional listeners — they previously caused redundant start/stop races
-  // that tore down the native step-event listener mid-session.
+  // ── Booking-driven movement tracking (global, survives navigation) ──
+  const { activeJob: trackedJob } = useActiveJob(session?.user?.id);
+  useEffect(() => {
+    if (!globalWorker?.id) return;
+    const status = trackedJob?.status;
+    const shouldTrack = !!trackedJob?.id && ["assigned", "accepted", "on_the_way", "started"].includes(status ?? "");
+    if (!shouldTrack) {
+      void stopMovementMonitoring();
+      return;
+    }
+    startMovementMonitoring(trackedJob!.id, globalWorker.id).catch((error) => {
+      console.error("[Movement] active-job start failed", error);
+    });
+  }, [globalWorker?.id, trackedJob?.id, trackedJob?.status]);
 
   // Handle deep links for booking acceptance
   useEffect(() => {
