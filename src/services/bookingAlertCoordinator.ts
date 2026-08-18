@@ -45,31 +45,63 @@ type AlertListener = (alert: BookingAlert) => void;
 type DismissListener = (bookingId: string) => void;
 
 // Singleton state
-// Durable state: key is bookingId, value is timestamp
+// Durable state: key is authUid::bookingRequestId, value is timestamp
 const STORAGE_KEY = "didi_shown_bookings";
-const shownBookingIds = new Set<string>();
+const shownBookingRequestIds = new Set<string>();
 const ackedReceived = new Set<string>();
 const ackedOpened = new Set<string>();
 
 // Initialize from storage for durability across process restarts
-try {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    const parsed = JSON.parse(stored);
-    // Keep only last 48h to prevent unbounded growth
-    const threshold = Date.now() - 48 * 3600 * 1000;
-    Object.entries(parsed).forEach(([id, ts]) => {
-      if ((ts as number) > threshold) shownBookingIds.add(id);
-    });
+async function initStorage() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Keep only last 48h to prevent unbounded growth
+      const threshold = Date.now() - 48 * 3600 * 1000;
+      const prefix = `${user.id}::`;
+      
+      Object.entries(parsed).forEach(([key, ts]) => {
+        // Only load entries for the current user
+        if (key.startsWith(prefix) && (ts as number) > threshold) {
+          shownBookingRequestIds.add(key);
+        }
+      });
+    }
+  } catch (e) {
+    console.warn("[Coordinator] Storage restore failed", e);
   }
-} catch (e) {
-  console.warn("[Coordinator] Storage restore failed", e);
 }
 
-function persistShown() {
+// Trigger initial load
+initStorage();
+
+async function persistShown() {
   try {
-    const data: Record<string, number> = {};
-    shownBookingIds.forEach(id => { data[id] = Date.now(); });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const stored = localStorage.getItem(STORAGE_KEY);
+    let data: Record<string, number> = {};
+    if (stored) {
+      try {
+        data = JSON.parse(stored);
+      } catch {}
+    }
+
+    shownBookingRequestIds.forEach(key => {
+      data[key] = Date.now();
+    });
+
+    // Prune old entries from other users too if we are here
+    const threshold = Date.now() - 48 * 3600 * 1000;
+    Object.keys(data).forEach(k => {
+      if (data[k] < threshold) delete data[k];
+    });
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (e) {
     console.error("[Coordinator] Persist failed", e);
@@ -113,30 +145,33 @@ export function clearAlertState() {
  * Returns true if the alert was shown (new), false if deduplicated/stale.
  */
 export async function processIncomingBooking(alert: BookingAlert): Promise<boolean> {
-  const { bookingId } = alert;
+  const { bookingId, bookingRequestId } = alert;
 
   const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    const { data: worker } = await supabase
-      .from("workers")
-      .select("id, payout_ready")
-      .or(`user_id.eq.${user.id},id.eq.${user.id}`)
-      .maybeSingle();
+  if (!user) return false;
 
-    if (worker?.payout_ready !== true) {
-      console.log(`🔕 [Coordinator] Booking hidden because payout_not_ready: ${bookingId}`);
-      return false;
-    }
-  }
+  // Deduplication key: authUid::bookingRequestId (fall back to bookingId if request id missing)
+  const dedupeKey = `${user.id}::${bookingRequestId || bookingId}`;
 
-  // Dedup: already shown or currently showing
-  if (shownBookingIds.has(bookingId)) {
-    console.log(`🔕 [Coordinator] Dedup: ${bookingId} already shown (source: ${alert.source})`);
+  const { data: worker } = await supabase
+    .from("workers")
+    .select("id, payout_ready")
+    .or(`user_id.eq.${user.id},id.eq.${user.id}`)
+    .maybeSingle();
+
+  if (worker?.payout_ready !== true) {
+    console.log(`🔕 [Coordinator] Booking hidden because payout_not_ready: ${bookingId}`);
     return false;
   }
 
-  if (currentAlert?.bookingId === bookingId) {
-    console.log(`🔕 [Coordinator] Dedup: ${bookingId} currently showing`);
+  // Dedup: already shown or currently showing
+  if (shownBookingRequestIds.has(dedupeKey)) {
+    console.log(`🔕 [Coordinator] Dedup: ${dedupeKey} already shown (source: ${alert.source})`);
+    return false;
+  }
+
+  if (currentAlert?.bookingId === bookingId && currentAlert?.bookingRequestId === bookingRequestId) {
+    console.log(`🔕 [Coordinator] Dedup: ${dedupeKey} currently showing`);
     return false;
   }
 
@@ -179,13 +214,13 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
 
     if (booking && booking.status !== "pending") {
       console.log(`🔕 [Coordinator] Stale: ${bookingId} status=${booking.status}`);
-      shownBookingIds.add(bookingId);
+      shownBookingRequestIds.add(dedupeKey);
       return false;
     }
 
     if (booking?.worker_id) {
       console.log(`🔕 [Coordinator] Already assigned: ${bookingId}`);
-      shownBookingIds.add(bookingId);
+      shownBookingRequestIds.add(dedupeKey);
       return false;
     }
   } catch (e) {
@@ -194,7 +229,7 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
   }
 
   // Mark as shown and persist
-  shownBookingIds.add(bookingId);
+  shownBookingRequestIds.add(dedupeKey);
   persistShown();
   currentAlert = alert;
 
@@ -294,10 +329,10 @@ export function markAlertOpened(bookingId: string, bookingRequestId?: string) {
  */
 export function pruneShownBookings(maxSize = 200) {
   let changed = false;
-  if (shownBookingIds.size > maxSize) {
-    const arr = Array.from(shownBookingIds);
+  if (shownBookingRequestIds.size > maxSize) {
+    const arr = Array.from(shownBookingRequestIds);
     const toRemove = arr.slice(0, arr.length - maxSize);
-    toRemove.forEach((id) => shownBookingIds.delete(id));
+    toRemove.forEach((id) => shownBookingRequestIds.delete(id));
     changed = true;
   }
   if (changed) persistShown();
