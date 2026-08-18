@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
@@ -147,11 +147,11 @@ export default function Home() {
       }
     }
   }, []);
-  const matches = (b: any) => {
+  const matches = useCallback((b: any) => {
     const inService = worker?.service_types?.includes?.(b.service_type);
     const inCommunity = (worker?.communities || [worker?.community]).includes?.(b.community);
     return !!(inService && inCommunity);
-  };
+  }, [worker?.service_types, worker?.communities, worker?.community]);
 
   // UI state for the Home screen (the background coordinator logic is already mounted in App.tsx)
   const {
