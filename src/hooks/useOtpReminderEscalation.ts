@@ -43,6 +43,7 @@ export function useOtpReminderEscalation(
     bookingId: string;
     flatNo: string;
     count: number;
+    overdueMinutes: number;
   } | null>(null);
   
   const [pendingBookings, setPendingBookings] = useState<OtpPendingBooking[]>([]);
