@@ -492,8 +492,9 @@ function AppInner() {
       const detail = (event as CustomEvent)?.detail || {};
       const bookingId = detail.bookingId as string | undefined;
       const count = (detail.count as number | undefined) ?? 1;
+      const overdueMinutes = (detail.overdueMinutes as number | undefined) ?? 60;
       if (!bookingId) return;
-      setOtpReminderAlert({ bookingId, count });
+      setOtpReminderAlert({ bookingId, count, overdueMinutes });
       playOtpReminderVoice();
     };
     window.addEventListener("otpReminderAlert", onOtpReminder);
