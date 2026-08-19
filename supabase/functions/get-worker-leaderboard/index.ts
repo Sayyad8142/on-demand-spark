@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
     });
 
     // 5. Build enriched leaderboard
-    const leaderboard = topWorkers.map((w, index) => {
+    const leaderboard = (topWorkers ?? []).map((w, index) => {
       const jobsToday = bookingCounts.get(w.id) || 0;
       const earningsToday = earningsMap.get(w.id) || 0;
       
@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
     }
 
     return json({
-      community: me.community,
+      community: me.community ?? null,
       leaderboard,
       updatedAt: new Date().toISOString()
     });
