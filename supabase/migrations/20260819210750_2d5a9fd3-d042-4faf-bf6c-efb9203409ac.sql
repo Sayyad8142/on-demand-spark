@@ -1,0 +1,1 @@
+GRANT UPDATE (is_available, updated_at) ON public.workers TO service_role;

@@ -105,12 +105,11 @@ export function useWorkerProfile(userId: string | undefined) {
 
   const updateAvailability = useCallback(async (isAvailable: boolean) => {
     if (!userId) return;
-    const { data, error } = await supabase.rpc('update_worker_availability', {
-      p_is_available: isAvailable
+    const { data, error } = await supabase.functions.invoke("update-availability", {
+      body: { is_available: isAvailable },
     });
     if (error) throw error;
-    const result = data as { success: boolean; error?: string } | null;
-    if (result && !result.success) throw new Error(result.error || 'Failed to update availability');
+    if (!data.ok) throw new Error(data.error || 'Failed to update availability');
     refetch();
   }, [userId, refetch]);
 

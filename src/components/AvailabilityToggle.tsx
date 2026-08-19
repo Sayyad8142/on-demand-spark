@@ -165,12 +165,14 @@ export function AvailabilityToggle({
     setIsAvailable(newValue);
 
     try {
-      const { data, error } = await supabase.rpc("update_worker_availability", {
-        worker_id_param: workerId,
-        is_available_param: newValue,
+      // Secure path: call the authenticated Edge Function
+      const { data, error } = await supabase.functions.invoke("update-availability", {
+        body: { is_available: newValue },
       });
+      
       if (error) throw error;
-      if (data === false) throw new Error("Worker not found");
+      if (!data.ok) throw new Error(data.error || "Failed to update availability");
+      
       toast({
         title: newValue ? t("home.nowAvailable") : t("home.nowUnavailable"),
         description: newValue
