@@ -35,6 +35,20 @@ export default function Bookings() {
   const [refreshKey, setRefreshKey] = useState(0);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
+  const handleRefresh = useCallback(() => {
+    setRefreshKey(prev => prev + 1);
+    if (workerId) {
+      setLoading(true);
+      // The useEffect triggered by workerId/loadPage will re-run if we clear state
+      setPage(0);
+      setBookings([]);
+      setHasMore(true);
+      // Trigger a re-fetch by simulating a workerId change or just calling the logic
+      // But simpler: just reload the page since it's a small app
+    }
+  }, [workerId]);
+
+
 
   // Resolve worker id once
   useEffect(() => {
