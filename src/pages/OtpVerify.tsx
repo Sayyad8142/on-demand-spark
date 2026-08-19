@@ -196,19 +196,49 @@ export default function OtpVerify() {
       if (!data.user) throw new Error("No user returned");
 
       if (state.mode === 'signin') {
-        // Sign In flow
-        const { data: existingWorker, error: workerCheckError } = await supabase
+        // Sign In flow: Resolve identity and ensure worker profile is correctly linked to the new Auth UID
+        console.log('[AuthFlow] Resolving identity for phone:', phone);
+        
+        // 1. Try lookup by phone (Legacy/Recovery)
+        const { data: workerByPhone, error: phoneError } = await supabase
           .from('workers')
           .select('*')
           .eq('phone', phone)
           .maybeSingle();
 
-        if (workerCheckError) {
-          console.error('Error checking worker:', workerCheckError);
+        if (phoneError) {
+          console.error('[AuthFlow] Worker lookup by phone failed:', phoneError);
         }
 
-        if (existingWorker) {
-          await supabase.from('workers').update({ id: data.user.id }).eq('phone', phone);
+        if (workerByPhone) {
+          console.log('[AuthFlow] Found existing worker by phone, linking to UID:', data.user.id);
+          // Update the worker record to point to the new Auth UID
+          const { error: updateError } = await supabase
+            .from('workers')
+            .update({ 
+              user_id: data.user.id,
+              // If the worker ID was a legacy non-UUID, we might need to be careful, 
+              // but typically workers.id is the primary key.
+            })
+            .eq('phone', phone);
+          
+          if (updateError) {
+            console.error('[AuthFlow] Failed to link worker to UID:', updateError);
+          }
+        } else {
+          // 2. Check if a worker already exists with this UID (e.g. app reinstall or concurrent session)
+          const { data: workerByUid } = await supabase
+            .from('workers')
+            .select('id')
+            .eq('user_id', data.user.id)
+            .maybeSingle();
+
+          if (!workerByUid) {
+            console.warn('[AuthFlow] No worker found for phone or UID after successful Auth. Potential new worker on sign-in path.');
+            // This is the "Authenticated user genuinely has no worker account" case.
+            // In a strict flow, we might redirect to signup, but usually if they got here, 
+            // the existence check passed or was bypassed.
+          }
         }
       } else if (state.mode === 'signup' && state.signUpData) {
         // Sign Up flow
