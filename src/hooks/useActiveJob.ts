@@ -14,29 +14,51 @@ export function useActiveJob(userId: string | undefined) {
   const [loading, setLoading] = useState(true);
   const [workerId, setWorkerId] = useState<string | null>(null);
 
-  // Resolve the worker's id using the shared utility
+  // Resolve the worker's id from their user_id (or legacy id match)
   useEffect(() => {
     let cancelled = false;
 
-    const resolve = async () => {
+    const resolveWorkerId = async () => {
       if (!userId) {
         setWorkerId(null);
         setLoading(false);
         return;
       }
 
-      const { getWorkerId } = await import("@/lib/workerId");
-      const resolved = await getWorkerId(userId);
+      try {
+        // Try by user_id first
+        let { data } = await supabase
+          .from("workers")
+          .select("id")
+          .eq("user_id", userId)
+          .maybeSingle();
 
-      if (!cancelled) {
-        console.log("🔍 useActiveJob resolved worker_id:", resolved);
-        setWorkerId(resolved);
-        if (!resolved) setLoading(false);
+        // Fallback: id match (legacy workers where id === userId)
+        if (!data) {
+          const { data: legacyData } = await supabase
+            .from("workers")
+            .select("id")
+            .eq("id", userId)
+            .maybeSingle();
+          data = legacyData;
+        }
+
+        if (!cancelled) {
+          const resolvedId = data?.id ?? null;
+          console.log("🔍 useActiveJob resolved worker_id:", resolvedId);
+          setWorkerId(resolvedId);
+        }
+      } catch (err) {
+        console.error("❌ Failed to resolve worker id:", err);
+        if (!cancelled) setWorkerId(null);
       }
     };
 
-    resolve();
-    return () => { cancelled = true; };
+    resolveWorkerId();
+
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
 
   // Fetch the active booking for this worker

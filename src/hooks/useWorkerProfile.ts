@@ -10,26 +10,35 @@ let ensuredForUser: string | null = null;
 async function fetchWorkerData(userId: string): Promise<Worker | null> {
   console.log('🔍 Fetching worker for user_id:', userId);
 
-  const { getWorkerId } = await import("@/lib/workerId");
-  const workerId = await getWorkerId(userId);
-
-  if (!workerId) return null;
-
+  // First, try by user_id
   let { data, error } = await supabase
     .from('workers')
     .select('*')
-    .eq('id', workerId)
+    .eq('user_id', userId)
     .maybeSingle();
 
-  if (data && !data.user_id) {
-    console.log('🔗 Linking worker to auth user:', userId);
-    await supabase.from('workers').update({ user_id: userId }).eq('id', data.id);
-    const { data: updatedData } = await supabase
+  // Fallback: try by id (legacy)
+  if (!data && !error) {
+    console.log('⚠️ No worker found by user_id, trying by id');
+    const legacyResult = await supabase
       .from('workers')
       .select('*')
-      .eq('id', data.id)
-      .single();
-    data = updatedData;
+      .eq('id', userId)
+      .maybeSingle();
+
+    data = legacyResult.data;
+    error = legacyResult.error;
+
+    if (data && !data.user_id) {
+      console.log('🔗 Linking worker to auth user:', userId);
+      await supabase.from('workers').update({ user_id: userId }).eq('id', data.id);
+      const { data: updatedData } = await supabase
+        .from('workers')
+        .select('*')
+        .eq('id', data.id)
+        .single();
+      data = updatedData;
+    }
   }
 
   // Auto-create via RPC (one-time per userId)

@@ -68,8 +68,6 @@ export default function AdminDispatchTelemetry() {
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
 
-  const since3m = new Date(Date.now() - 3 * 60 * 1000).toISOString();
-
   useEffect(() => {
     const t = setInterval(() => setTick((x) => x + 1), 5000);
     return () => clearInterval(t);
@@ -136,12 +134,8 @@ export default function AdminDispatchTelemetry() {
       <section>
         <h2 className="text-lg font-semibold mb-2">
           Active Telemetry Workers <Badge variant="secondary">{workers.length}</Badge>
-          {" · "}
-          <Badge variant={workers.filter(w => w.last_heartbeat_at && w.last_heartbeat_at > since3m).length > 0 ? "default" : "destructive"}>
-            Fresh (3m): {workers.filter(w => w.last_heartbeat_at && w.last_heartbeat_at > since3m).length}
-          </Badge>
         </h2>
-        <p className="text-xs text-muted-foreground mb-2">Workers who sent a heartbeat in the last 24h. "Fresh" workers heartbeated in the last 3m.</p>
+        <p className="text-xs text-muted-foreground mb-2">Workers who sent a heartbeat in the last 24h (i.e. running the new APK).</p>
         <Card className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted text-xs">
@@ -162,11 +156,7 @@ export default function AdminDispatchTelemetry() {
                 <tr key={w.id} className="border-t">
                   <td className="p-2 font-medium">{w.full_name || "—"}</td>
                   <td className="p-2">{w.phone || "—"}</td>
-                  <td className="p-2">
-                    <Badge variant={w.last_heartbeat_at && w.last_heartbeat_at > since3m ? "default" : "secondary"}>
-                      {ageStr(w.last_heartbeat_at)}
-                    </Badge>
-                  </td>
+                  <td className="p-2">{ageStr(w.last_heartbeat_at)}</td>
                   <td className="p-2">{ageStr(w.last_device_ack_at)}</td>
                   <td className="p-2">{w.app_version || "—"}</td>
                   <td className="p-2">{w.app_platform || "—"}</td>

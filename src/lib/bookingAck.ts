@@ -24,9 +24,30 @@ const acked = new Set<string>();
 const key = (id: string, ev: AckEvent) => `${id}::${ev}`;
 let cachedWorkerId: string | null | undefined;
 
-async function getWorkerIdFromAuth(authUid: string | undefined): Promise<string | null> {
-  const { getWorkerId } = await import("@/lib/workerId");
-  return getWorkerId(authUid);
+async function getWorkerId(): Promise<string | null> {
+  if (cachedWorkerId !== undefined && cachedWorkerId !== null) return cachedWorkerId;
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    cachedWorkerId = null;
+    return null;
+  }
+
+  // Worker ID resolution pattern: user_id = uid OR id = uid
+  const { data: worker, error: workerError } = await supabase
+    .from("workers")
+    .select("id")
+    .or(`user_id.eq.${user.id},id.eq.${user.id}`)
+    .maybeSingle();
+
+  if (workerError || !worker?.id) {
+    console.warn("[ACK] worker_id lookup failed", workerError?.message);
+    cachedWorkerId = null;
+    return null;
+  }
+
+  cachedWorkerId = worker.id;
+  return cachedWorkerId;
 }
 
 
@@ -34,10 +55,9 @@ interface AckArgs {
   bookingId?: string;
   bookingRequestId?: string;
   event: AckEvent;
-  appVersion?: string; // Enhanced telemetry
 }
 
-export async function ackBookingDelivery({ bookingId, bookingRequestId, event, appVersion }: AckArgs): Promise<void> {
+export async function ackBookingDelivery({ bookingId, bookingRequestId, event }: AckArgs): Promise<void> {
   const cacheKey = key(bookingRequestId ?? bookingId ?? "?", event);
   if (acked.has(cacheKey)) return;
   acked.add(cacheKey);
@@ -45,8 +65,7 @@ export async function ackBookingDelivery({ bookingId, bookingRequestId, event, a
   if (!bookingId && !bookingRequestId) return;
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    const workerId = await getWorkerIdFromAuth(user?.id);
+    const workerId = await getWorkerId();
     if (!workerId) {
       console.warn(`[ACK] ${event} skipped: worker_id unavailable`);
       acked.delete(cacheKey);
@@ -59,7 +78,7 @@ export async function ackBookingDelivery({ bookingId, bookingRequestId, event, a
         booking_request_id: bookingRequestId,
         worker_id: workerId,
         event_type: event,
-        app_version: appVersion || CURRENT_VERSION_NAME,
+        app_version: CURRENT_VERSION_NAME,
         device_info: {
           platform: Capacitor.getPlatform(),
           native: Capacitor.isNativePlatform(),

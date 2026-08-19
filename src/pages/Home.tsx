@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
@@ -147,28 +147,17 @@ export default function Home() {
       }
     }
   }, []);
-  const matches = useCallback((b: any) => {
+  const matches = (b: any) => {
     const inService = worker?.service_types?.includes?.(b.service_type);
     const inCommunity = (worker?.communities || [worker?.community]).includes?.(b.community);
     return !!(inService && inCommunity);
-  }, [worker?.service_types, worker?.communities, worker?.community]);
-
-  // UI state for the Home screen (the background coordinator logic is already mounted in App.tsx)
+  };
   const {
     pending,
     accept,
     reject,
     clearAlert
   } = useUnifiedBookingAlerts(user?.id, isOnline && payoutReady, matches, worker?.id);
-
-  // Auto-accept Logic for Sid (Testing Delivery Durability)
-  // If Sid (+91 78948 96396) receives an offer, we auto-accept to verify reliability.
-  useEffect(() => {
-    if (pending && worker?.phone === "7894896396") {
-      console.log("🚀 [Sid] Auto-accepting test booking:", pending.id);
-      accept();
-    }
-  }, [pending, worker?.phone, accept]);
 
   // Movement tracking lifecycle is owned globally by App.tsx (useActiveJob-driven)
   // so it keeps running when the worker navigates to Profile/Bookings/Availability.

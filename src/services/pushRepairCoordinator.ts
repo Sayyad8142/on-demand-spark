@@ -3,22 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 
 async function recordRepairFailure(userId: string) {
   try {
-    const { getWorkerId } = await import("@/lib/workerId");
-    const workerId = await getWorkerId(userId);
-    if (!workerId) return;
-
     const { data } = await supabase
       .from('workers')
       .select('notification_repair_failures')
-      .eq('id', workerId)
+      .or(`user_id.eq.${userId},id.eq.${userId}`)
       .maybeSingle();
-      
     const next = (data?.notification_repair_failures ?? 0) + 1;
     await supabase
       .from('workers')
       .update({ notification_repair_failures: next })
-      .eq('id', workerId);
-    console.warn(`📈 [PushRepair] notification_repair_failures incremented to ${next} for ${workerId}`);
+      .or(`user_id.eq.${userId},id.eq.${userId}`);
+    console.warn(`📈 [PushRepair] notification_repair_failures incremented to ${next}`);
   } catch (e) {
     console.warn('[PushRepair] failed to record repair failure', e);
   }

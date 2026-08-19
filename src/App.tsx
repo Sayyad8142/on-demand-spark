@@ -13,7 +13,6 @@ import { useAutoPushRepair } from "@/hooks/useAutoPushRepair";
 import { usePostBootVerification } from "@/hooks/usePostBootVerification";
 import { usePermissionRegressionWatch } from "@/hooks/usePermissionRegressionWatch";
 import { useFCMTokenSync } from "@/hooks/useFCMTokenSync";
-import { useUnifiedBookingAlerts } from "@/hooks/useUnifiedBookingAlerts";
 import { useAppState } from "@/hooks/useAppState";
 import { useWorkerHeartbeat } from "@/hooks/useWorkerHeartbeat";
 import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
@@ -31,10 +30,9 @@ import {
 // requestLocationPermissions intentionally not imported — see startup effect note below.
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
 import { startCancellationVoice, stopCancellationVoice } from "@/lib/cancellationVoice";
-import { playOtpReminderVoice, stopOtpReminderVoice } from "@/lib/otpReminderVoice";
+import { startOtpReminderVoice, stopOtpReminderVoice } from "@/lib/otpReminderVoice";
 import { useOtpReminderEscalation, logOtpReminderEvent } from "@/hooks/useOtpReminderEscalation";
 import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
-import { ShieldAlert } from "lucide-react";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import Auth from "./pages/Auth";
 import OtpVerify from "./pages/OtpVerify";
@@ -196,7 +194,7 @@ function AppInner() {
   const [showBatteryWarning, setShowBatteryWarning] = useState(false);
   const [permissionCheckLoading, setPermissionCheckLoading] = useState(false);
   const [cancellationAlert, setCancellationAlert] = useState<{ bookingId?: string } | null>(null);
-  const [otpReminderAlert, setOtpReminderAlert] = useState<{ bookingId: string; count: number; overdueMinutes: number } | null>(null);
+  const [otpReminderAlert, setOtpReminderAlert] = useState<{ bookingId: string; count: number } | null>(null);
   const cancellationAudioRef = useRef<HTMLAudioElement | null>(null);
   const cancellationTimeoutRef = useRef<number | null>(null);
   const notificationWarningShownRef = useRef(false);
@@ -352,54 +350,52 @@ function AppInner() {
   }, [checkAndroidSettingsPermissions, session?.user?.id]);
 
   // ── Passive movement tracking DISABLED ──
+  // Step/movement tracking now runs ONLY after a booking is accepted.
+  // The active-job effect below owns the lifecycle globally so it survives
+  // navigation between Home / Profile / Bookings / Availability.
   useEffect(() => {
     void stopPassiveMovementMonitoring();
   }, [worker?.id]);
+
+  // ── Booking-driven movement tracking (global, survives navigation) ──
+  // Single source of truth for start/stop. Runs whenever the worker has an
+  // active booking in [accepted, on_the_way, started]. Stops as soon as the
+  // booking transitions to a terminal state (completed/cancelled/none).
+  const { activeJob: trackedJob } = useActiveJob(session?.user?.id);
+  useEffect(() => {
+    if (!worker?.id) return;
+    const status = trackedJob?.status;
+    const shouldTrack = !!trackedJob?.id && ["assigned", "accepted", "on_the_way", "started"].includes(status ?? "");
+    if (!shouldTrack) {
+      console.log(`[Movement] stopped because booking ended (status=${status ?? "none"})`);
+      void stopMovementMonitoring();
+      return;
+    }
+    console.log("[Movement] booking accepted");
+    startMovementMonitoring(trackedJob!.id, worker.id).catch((error) => {
+      console.error("[Movement] active-job start failed", error);
+    });
+  }, [worker?.id, trackedJob?.id, trackedJob?.status]);
+
 
   // Initialize native push notifications when we have a session.
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId) return;
     if (!Capacitor.isNativePlatform()) return;
-    
-    console.log("🔔 [App] Initializing native push for user:", userId);
+    console.log("🔔 Initializing native push for user:", userId);
     initNativePush(userId);
-
     // Foreground booking-alert routing + push_received ACK.
+    // (Previously never initialized, so foreground FCM booking payloads were dropped.)
     import("@/lib/fcm")
       .then(({ initFCM }) => initFCM())
       .catch((e) => console.warn("initFCM failed", e));
   }, [session?.user?.id]);
 
-  // Unified Alert Coordinator — Global hoisting.
-  const { worker: globalWorker } = useWorkerProfile(session?.user?.id);
-  const matches = (b: any) => {
-    const inService = globalWorker?.service_types?.includes?.(b.service_type);
-    const inCommunity = (globalWorker?.communities || [globalWorker?.community]).includes?.(b.community);
-    return !!(inService && inCommunity);
-  };
-  
-  useUnifiedBookingAlerts(
-    session?.user?.id, 
-    !!globalWorker?.is_available, 
-    matches, 
-    globalWorker?.id
-  );
 
-  // ── Booking-driven movement tracking (global, survives navigation) ──
-  const { activeJob: trackedJob } = useActiveJob(session?.user?.id);
-  useEffect(() => {
-    if (!globalWorker?.id) return;
-    const status = trackedJob?.status;
-    const shouldTrack = !!trackedJob?.id && ["assigned", "accepted", "on_the_way", "started"].includes(status ?? "");
-    if (!shouldTrack) {
-      void stopMovementMonitoring();
-      return;
-    }
-    startMovementMonitoring(trackedJob!.id, globalWorker.id).catch((error) => {
-      console.error("[Movement] active-job start failed", error);
-    });
-  }, [globalWorker?.id, trackedJob?.id, trackedJob?.status]);
+  // Movement tracking is owned exclusively by the global active-job effect above.
+  // No additional listeners — they previously caused redundant start/stop races
+  // that tore down the native step-event listener mid-session.
 
   // Handle deep links for booking acceptance
   useEffect(() => {
@@ -492,10 +488,9 @@ function AppInner() {
       const detail = (event as CustomEvent)?.detail || {};
       const bookingId = detail.bookingId as string | undefined;
       const count = (detail.count as number | undefined) ?? 1;
-      const overdueMinutes = (detail.overdueMinutes as number | undefined) ?? 60;
       if (!bookingId) return;
-      setOtpReminderAlert({ bookingId, count, overdueMinutes });
-      playOtpReminderVoice();
+      setOtpReminderAlert({ bookingId, count });
+      startOtpReminderVoice();
     };
     window.addEventListener("otpReminderAlert", onOtpReminder);
     return () => {
@@ -646,43 +641,34 @@ function AppInner() {
         </div>
       )}
       {otpReminderAlert && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6 animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 border border-amber-500/20">
-            <div className="bg-amber-500 p-8 flex flex-col items-center text-center">
-              <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-4 shadow-inner">
-                <ShieldAlert className="w-10 h-10 text-white" />
-              </div>
-              <h2 className="text-3xl font-extrabold text-white tracking-tight">⚠ OTP Pending</h2>
-              <div className="mt-1 px-3 py-1 bg-white/20 rounded-full text-xs font-bold text-white uppercase tracking-wider">
-                Action Required
-              </div>
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-background/95 p-5 animate-fade-in">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-7 text-center shadow-2xl">
+            <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
             </div>
-            <div className="p-8 space-y-6">
-              <div className="space-y-3">
-                <p className="text-zinc-600 dark:text-zinc-400 text-center leading-relaxed font-medium text-lg">
-                  Overdue by <span className="text-amber-600 font-bold">{otpReminderAlert.overdueMinutes} mins</span>.
-                </p>
-                <p className="text-zinc-500 dark:text-zinc-500 text-center text-sm">
-                  Please collect the customer OTP to complete the booking and get paid.
-                </p>
-              </div>
-              
-              <div className="space-y-3 pt-2">
-                <Button 
-                  className="w-full h-16 text-xl font-bold bg-pink-600 hover:bg-pink-700 text-white rounded-2xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                  onClick={() => closeOtpReminder("enter_otp")}
-                >
-                  Enter OTP Now
-                </Button>
-                <Button 
-                  variant="ghost"
-                  className="w-full h-12 text-zinc-400 font-semibold hover:text-zinc-600 dark:hover:text-zinc-200"
-                  onClick={() => closeOtpReminder("ok")}
-                >
-                  Maybe Later
-                </Button>
-              </div>
-            </div>
+            <h2 className="text-2xl font-bold text-foreground">⚠ OTP Pending</h2>
+            <p className="mt-3 text-base text-foreground">
+              This booking was accepted more than 60 minutes ago and the customer OTP has not been entered.
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Please collect the OTP from the customer and complete the booking.
+            </p>
+            <button
+              className="mt-7 w-full rounded-xl bg-primary py-4 text-lg font-bold text-primary-foreground active:scale-[0.98] transition-transform"
+              onClick={() => closeOtpReminder("enter_otp")}
+            >
+              Enter OTP Now
+            </button>
+            <button
+              className="mt-3 w-full rounded-xl border border-border bg-card py-3 text-base font-semibold text-foreground active:scale-[0.98] transition-transform"
+              onClick={() => closeOtpReminder("ok")}
+            >
+              OK
+            </button>
           </div>
         </div>
       )}

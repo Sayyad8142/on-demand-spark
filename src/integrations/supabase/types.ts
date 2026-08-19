@@ -914,7 +914,6 @@ export type Database = {
           fallback_sms_sent_at: string | null
           id: string
           last_alert_channel: string | null
-          last_reoffered_at: string | null
           notification_status: string
           notified_at: string | null
           offered_at: string | null
@@ -924,13 +923,11 @@ export type Database = {
           push_provider_message_id: string | null
           push_requested_at: string | null
           push_sent_at: string | null
-          redelivery_count: number
           responded_at: string | null
           selected_at: string | null
           status: string | null
           timeout_at: string
           visible_at: string | null
-          wave_number: number | null
           worker_id: string
           worker_seen_at: string | null
         }
@@ -952,7 +949,6 @@ export type Database = {
           fallback_sms_sent_at?: string | null
           id?: string
           last_alert_channel?: string | null
-          last_reoffered_at?: string | null
           notification_status?: string
           notified_at?: string | null
           offered_at?: string | null
@@ -962,13 +958,11 @@ export type Database = {
           push_provider_message_id?: string | null
           push_requested_at?: string | null
           push_sent_at?: string | null
-          redelivery_count?: number
           responded_at?: string | null
           selected_at?: string | null
           status?: string | null
           timeout_at?: string
           visible_at?: string | null
-          wave_number?: number | null
           worker_id: string
           worker_seen_at?: string | null
         }
@@ -990,7 +984,6 @@ export type Database = {
           fallback_sms_sent_at?: string | null
           id?: string
           last_alert_channel?: string | null
-          last_reoffered_at?: string | null
           notification_status?: string
           notified_at?: string | null
           offered_at?: string | null
@@ -1000,13 +993,11 @@ export type Database = {
           push_provider_message_id?: string | null
           push_requested_at?: string | null
           push_sent_at?: string | null
-          redelivery_count?: number
           responded_at?: string | null
           selected_at?: string | null
           status?: string | null
           timeout_at?: string
           visible_at?: string | null
-          wave_number?: number | null
           worker_id?: string
           worker_seen_at?: string | null
         }
@@ -1232,9 +1223,6 @@ export type Database = {
           loyalty_surge_amount: number
           loyalty_tier_id: string | null
           maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
-          manual_assignment_reason: string | null
-          manual_assignment_required: boolean
-          manual_assignment_required_at: string | null
           notes: string | null
           on_the_way_at: string | null
           otp_verified_at: string | null
@@ -1334,9 +1322,6 @@ export type Database = {
           loyalty_surge_amount?: number
           loyalty_tier_id?: string | null
           maid_tasks?: Database["public"]["Enums"]["maid_task"][] | null
-          manual_assignment_reason?: string | null
-          manual_assignment_required?: boolean
-          manual_assignment_required_at?: string | null
           notes?: string | null
           on_the_way_at?: string | null
           otp_verified_at?: string | null
@@ -1436,9 +1421,6 @@ export type Database = {
           loyalty_surge_amount?: number
           loyalty_tier_id?: string | null
           maid_tasks?: Database["public"]["Enums"]["maid_task"][] | null
-          manual_assignment_reason?: string | null
-          manual_assignment_required?: boolean
-          manual_assignment_required_at?: string | null
           notes?: string | null
           on_the_way_at?: string | null
           otp_verified_at?: string | null
@@ -4736,27 +4718,6 @@ export type Database = {
           },
         ]
       }
-      vr_results: {
-        Row: {
-          created_at: string
-          data: Json
-          id: number
-          label: string
-        }
-        Insert: {
-          created_at?: string
-          data: Json
-          id?: number
-          label: string
-        }
-        Update: {
-          created_at?: string
-          data?: Json
-          id?: number
-          label?: string
-        }
-        Relationships: []
-      }
       wallet_transactions: {
         Row: {
           amount_inr: number
@@ -7092,7 +7053,6 @@ export type Database = {
         Returns: undefined
       }
       admin_dispatch_health_snapshot: { Args: never; Returns: Json }
-      admin_dispatch_speed_metrics: { Args: { p_days?: number }; Returns: Json }
       admin_emergency_manual_assign: {
         Args: { p_admin_id?: string; p_booking_id: string; p_worker_id: string }
         Returns: Json
@@ -7124,10 +7084,6 @@ export type Database = {
           force: boolean
           web_version: string
         }[]
-      }
-      admin_instant_dispatch_funnel: {
-        Args: { p_booking_id: string }
-        Returns: Json
       }
       admin_list_admins_for_assignment: {
         Args: never
@@ -7777,31 +7733,6 @@ export type Database = {
         }[]
       }
       admin_worker_reach_audit_counts: { Args: never; Returns: Json }
-      admin_worker_rollout_status: {
-        Args: { p_target_version?: string }
-        Returns: {
-          ack_rate_7d: number
-          acks_7d: number
-          app_version: string
-          build_number: string
-          fcm_token_status: string
-          fcm_token_updated_at: string
-          full_name: string
-          has_fcm_token: boolean
-          is_active: boolean
-          is_available: boolean
-          last_accepted_booking_at: string
-          last_device_ack_at: string
-          last_heartbeat_at: string
-          last_push_sent_at: string
-          last_visible_booking_at: string
-          offers_7d: number
-          phone: string
-          target_version: string
-          update_required: boolean
-          worker_id: string
-        }[]
-      }
       admin_worker_status_bulk: {
         Args: never
         Returns: {
@@ -7917,9 +7848,6 @@ export type Database = {
               loyalty_surge_amount: number
               loyalty_tier_id: string | null
               maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
-              manual_assignment_reason: string | null
-              manual_assignment_required: boolean
-              manual_assignment_required_at: string | null
               notes: string | null
               on_the_way_at: string | null
               otp_verified_at: string | null
@@ -8084,10 +8012,6 @@ export type Database = {
       dispatch_booking: { Args: { p_booking_id: string }; Returns: undefined }
       dispatch_health_probe: { Args: never; Returns: undefined }
       ensure_worker_profile: { Args: never; Returns: Json }
-      escalate_booking_manual_assignment: {
-        Args: { p_booking_id: string; p_reason?: string }
-        Returns: Json
-      }
       escalate_overdue_bookings: { Args: never; Returns: undefined }
       export_my_data: { Args: never; Returns: Json }
       filter_reachable_workers: {
@@ -8324,7 +8248,6 @@ export type Database = {
         Returns: {
           completed_bookings_count: number
           full_name: string
-          is_fresh: boolean
           last_seen_at: string
           photo_url: string
           rating_avg: number
@@ -8457,10 +8380,8 @@ export type Database = {
       get_online_workers_count: {
         Args: { p_community: string }
         Returns: {
-          fresh_count: number
+          online_count: number
           service: string
-          stale_count: number
-          total_count: number
         }[]
       }
       get_ops_hourly_metrics: {
@@ -9469,9 +9390,6 @@ export type Database = {
           loyalty_surge_amount: number
           loyalty_tier_id: string | null
           maid_tasks: Database["public"]["Enums"]["maid_task"][] | null
-          manual_assignment_reason: string | null
-          manual_assignment_required: boolean
-          manual_assignment_required_at: string | null
           notes: string | null
           on_the_way_at: string | null
           otp_verified_at: string | null
@@ -9590,24 +9508,6 @@ export type Database = {
         Args: { p_booking_id: string; p_reason: string }
         Returns: undefined
       }
-      vr_boundary_math: { Args: never; Returns: Json }
-      vr_cleanup: { Args: never; Returns: Json }
-      vr_dup_guard: {
-        Args: { p_booking: string; p_worker: string }
-        Returns: string
-      }
-      vr_make_cancelled: {
-        Args: {
-          p_community: string
-          p_sched_date?: string
-          p_sched_time?: string
-          p_type: string
-        }
-        Returns: string
-      }
-      vr_recreate_as_admin: { Args: { p_booking_id: string }; Returns: Json }
-      vr_run_all: { Args: never; Returns: Json }
-      vr_setup: { Args: never; Returns: Json }
       worker_collect_payment: {
         Args: { p_booking_id: string; p_method: string }
         Returns: Json

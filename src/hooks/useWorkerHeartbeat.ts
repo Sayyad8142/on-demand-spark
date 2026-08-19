@@ -3,7 +3,7 @@ import { App as CapApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { sendWorkerHeartbeat } from "@/lib/workerHeartbeat";
 
-const INTERVAL_MS = 2 * 60 * 1000; // 2 minutes - was 30 mins (analytics-only), now dispatch-critical
+const INTERVAL_MS = 30 * 60 * 1000; // 30 minutes — analytics-only ping
 
 /**
  * Global worker heartbeat — runs whenever the worker is logged in,
@@ -22,25 +22,14 @@ export function useWorkerHeartbeat(workerIdOrUserId: string | undefined | null) 
   useEffect(() => {
     if (!workerIdOrUserId) return;
 
-    const run = async () => {
-      const { getWorkerId } = await import("@/lib/workerId");
-      const workerId = await getWorkerId(workerIdOrUserId);
-      if (!workerId) {
-        console.warn("[Heartbeat] Skipping: workerId not resolved for", workerIdOrUserId);
-        return;
-      }
+    // First beat — treated as "open" on cold start, "login" if mounted later.
+    const reason = firedOnceRef.current ? "login" : "open";
+    firedOnceRef.current = true;
+    sendWorkerHeartbeat(workerIdOrUserId, reason);
 
-      const reason = firedOnceRef.current ? "interval" : "open";
-      firedOnceRef.current = true;
-      sendWorkerHeartbeat(workerId, reason);
-
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      intervalRef.current = setInterval(() => {
-        sendWorkerHeartbeat(workerId, "interval");
-      }, INTERVAL_MS);
-    };
-
-    run();
+    intervalRef.current = setInterval(() => {
+      sendWorkerHeartbeat(workerIdOrUserId, "interval");
+    }, INTERVAL_MS);
 
     // Web visibility resume
     const onVisible = () => {
