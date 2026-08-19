@@ -199,28 +199,30 @@ export default function Bookings() {
 
 
 
-        {bookings.length === 0 ? (
-          <div className="text-center py-12">
-            <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-semibold mb-2">No jobs yet</h3>
-            <p className="text-sm text-muted-foreground">Your completed jobs will appear here</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {bookings.map(b => <BookingCard key={b.id} booking={b} />)}
+          {bookings.length === 0 ? (
+            <div className="text-center py-12">
+              <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="font-semibold mb-2">No jobs yet</h3>
+              <p className="text-sm text-muted-foreground">Your completed jobs will appear here</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {bookings.map(b => <BookingCard key={b.id} booking={b} />)}
 
-            {/* Infinite scroll sentinel */}
-            {hasMore && (
-              <div ref={sentinelRef} className="flex items-center justify-center py-6">
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-              </div>
-            )}
-            {!hasMore && bookings.length > PAGE_SIZE && (
-              <p className="text-center text-xs text-muted-foreground py-4">No more bookings</p>
-            )}
-          </div>
-        )}
+              {/* Infinite scroll sentinel */}
+              {hasMore && (
+                <div ref={sentinelRef} className="flex items-center justify-center py-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                </div>
+              )}
+              {!hasMore && bookings.length > PAGE_SIZE && (
+                <p className="text-center text-xs text-muted-foreground py-4">No more bookings</p>
+              )}
+            </div>
+          )}
+        </div>
       </main>
+
     </div>
   );
 }
