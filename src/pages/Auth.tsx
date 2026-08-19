@@ -482,6 +482,8 @@ export default function Auth() {
       const isRecoveryPhone = signInPhone === "8367561667";
       
       let phoneExists = false;
+      let checkError = null;
+
       if (isRecoveryPhone) {
         console.log("🛠️ Recovery phone detected, bypassing existence check");
         phoneExists = true;
@@ -491,10 +493,17 @@ export default function Auth() {
           error: workerCheckError
         } = await supabase.rpc('worker_phone_exists', { _phone: phone });
         
-        if (workerCheckError) {
-          console.error('Error checking worker:', workerCheckError);
-        }
         phoneExists = !!data;
+        checkError = workerCheckError;
+      }
+
+      if (checkError) {
+        console.error('Error checking worker existence:', checkError);
+        // If the RPC fails (e.g. RLS change, network, or server error), 
+        // we shouldn't immediately block the user with "Account not registered".
+        // Instead, we allow the OTP attempt. The subsequent verifyOtp + profile lookup
+        // will be the final authority.
+        phoneExists = true; 
       }
 
       if (!phoneExists) {
