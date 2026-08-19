@@ -4,7 +4,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Calendar, Loader2, CheckCircle2, Clock, XCircle, MapPin, Star, IndianRupee } from "lucide-react";
+import { ArrowLeft, Calendar, Loader2, CheckCircle2, Clock, XCircle, MapPin, Star, IndianRupee, RefreshCw } from "lucide-react";
+import BookingLeaderboard from "@/components/BookingLeaderboard";
+
 import { DEMO_BOOKINGS } from "@/config/demoData";
 import { formatBookingAddress, BookingWithAddress } from "@/lib/address";
 import { useCommunityFee } from "@/hooks/useCommunityFee";
@@ -30,7 +32,9 @@ export default function Bookings() {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
   const [summary, setSummary] = useState({ today: 0, week: 0, jobs: 0 });
+  const [refreshKey, setRefreshKey] = useState(0);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+
 
   // Resolve worker id once
   useEffect(() => {
@@ -175,7 +179,23 @@ export default function Bookings() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto p-4 space-y-4">
+      <main className="max-w-2xl mx-auto p-4 space-y-6">
+        <BookingLeaderboard key={`leaderboard-${refreshKey}`} />
+
+        <div className="pt-2">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold">Your Bookings</h2>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs h-8 gap-1.5 text-muted-foreground"
+              onClick={() => setRefreshKey(k => k + 1)}
+            >
+              <RefreshCw className="w-3 h-3" />
+              Refresh
+            </Button>
+          </div>
+
 
 
 
