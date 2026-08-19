@@ -31,27 +31,32 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await userClient.auth.getUser();
     if (authError || !user) return json({ error: "Unauthorized" }, 401);
 
-    // 2. Resolve requesting worker and their community
-    const { data: me, error: meError } = await admin
-      .from("workers")
-      .select("id, community, full_name, photo_url, rating, priority_score, total_bookings_completed")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    // 2. Resolve requesting worker (user_id = uid OR id = uid)
+    const cols = "id, community, full_name, photo_url, rating, priority_score, total_bookings_completed";
+    let me: any = null;
+    const { data: byUserId } = await admin.from("workers").select(cols).eq("user_id", user.id).maybeSingle();
+    me = byUserId;
+    if (!me) {
+      const { data: byId } = await admin.from("workers").select(cols).eq("id", user.id).maybeSingle();
+      me = byId;
+    }
 
-    if (meError || !me) return json({ error: "Worker profile not found" }, 404);
-    if (!me.community) return json({ error: "Community not set" }, 400);
+    if (!me) return json({ error: "Worker profile not found" }, 404);
 
-    // 3. Fetch Top Workers in the same community
-    // We order by Priority Score DESC, Rating DESC, Completed Bookings DESC
-    const { data: topWorkers, error: rankError } = await admin
+    // 3. Fetch Top Workers — scoped to community when set, otherwise global
+    let query = admin
       .from("workers")
       .select("id, first_name, photo_url, rating, priority_score, total_bookings_completed, is_blocked")
-      .eq("community", me.community)
-      .eq("is_blocked", false)
+      .eq("is_blocked", false);
+
+    if (me.community) query = query.eq("community", me.community);
+
+    const { data: topWorkers, error: rankError } = await query
       .order("priority_score", { ascending: false })
       .order("rating", { ascending: false })
       .order("total_bookings_completed", { ascending: false })
       .limit(50);
+
 
     if (rankError) throw rankError;
 
@@ -61,7 +66,11 @@ Deno.serve(async (req) => {
     todayStart.setHours(0, 0, 0, 0);
     const todayIso = todayStart.toISOString();
 
-    const workerIds = topWorkers.map(w => w.id);
+    const workerIds = (topWorkers ?? []).map(w => w.id);
+    if (workerIds.length === 0) {
+      return json({ community: me.community ?? null, leaderboard: [], updatedAt: new Date().toISOString() });
+    }
+
     
     // Get completed booking counts for today
     const { data: todayBookings } = await admin
@@ -90,7 +99,7 @@ Deno.serve(async (req) => {
     });
 
     // 5. Build enriched leaderboard
-    const leaderboard = topWorkers.map((w, index) => {
+    const leaderboard = (topWorkers ?? []).map((w, index) => {
       const jobsToday = bookingCounts.get(w.id) || 0;
       const earningsToday = earningsMap.get(w.id) || 0;
       
@@ -122,7 +131,7 @@ Deno.serve(async (req) => {
     }
 
     return json({
-      community: me.community,
+      community: me.community ?? null,
       leaderboard,
       updatedAt: new Date().toISOString()
     });
