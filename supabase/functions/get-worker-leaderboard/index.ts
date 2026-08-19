@@ -1,0 +1,135 @@
+import { createClient } from "npm:@supabase/supabase-js@2";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) return json({ error: "Unauthorized" }, 401);
+
+    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // 1. Verify Firebase token
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    if (authError || !user) return json({ error: "Unauthorized" }, 401);
+
+    // 2. Resolve requesting worker and their community
+    const { data: me, error: meError } = await admin
+      .from("workers")
+      .select("id, community, full_name, photo_url, rating, priority_score, total_bookings_completed")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (meError || !me) return json({ error: "Worker profile not found" }, 404);
+    if (!me.community) return json({ error: "Community not set" }, 400);
+
+    // 3. Fetch Top Workers in the same community
+    // We order by Priority Score DESC, Rating DESC, Completed Bookings DESC
+    const { data: topWorkers, error: rankError } = await admin
+      .from("workers")
+      .select("id, first_name, photo_url, rating, priority_score, total_bookings_completed, is_blocked")
+      .eq("community", me.community)
+      .eq("is_blocked", false)
+      .order("priority_score", { ascending: false })
+      .order("rating", { ascending: false })
+      .order("total_bookings_completed", { ascending: false })
+      .limit(50);
+
+    if (rankError) throw rankError;
+
+    // 4. Calculate "Today's" stats for the top 50 workers
+    // (Note: This could be heavy, in a real prod env we'd use a materialized view or cached aggregate)
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayIso = todayStart.toISOString();
+
+    const workerIds = topWorkers.map(w => w.id);
+    
+    // Get completed booking counts for today
+    const { data: todayBookings } = await admin
+      .from("bookings")
+      .select("worker_id")
+      .in("worker_id", workerIds)
+      .eq("status", "completed")
+      .gte("completed_at", todayIso);
+
+    // Get earnings for today
+    const { data: todayPayouts } = await admin
+      .from("worker_payouts")
+      .select("worker_id, payout_amount")
+      .in("worker_id", workerIds)
+      .in("status", ["paid", "processing", "pending", "approved"])
+      .gte("created_at", todayIso);
+
+    const bookingCounts = new Map();
+    todayBookings?.forEach(b => {
+      bookingCounts.set(b.worker_id, (bookingCounts.get(b.worker_id) || 0) + 1);
+    });
+
+    const earningsMap = new Map();
+    todayPayouts?.forEach(p => {
+      earningsMap.set(p.worker_id, (earningsMap.get(p.worker_id) || 0) + Number(p.payout_amount));
+    });
+
+    // 5. Build enriched leaderboard
+    const leaderboard = topWorkers.map((w, index) => {
+      const jobsToday = bookingCounts.get(w.id) || 0;
+      const earningsToday = earningsMap.get(w.id) || 0;
+      
+      // Determine level
+      let level = "Standard";
+      if (w.priority_score >= 90) level = "Elite";
+      else if (w.priority_score >= 75) level = "Pro";
+      else if (w.priority_score >= 50) level = "Rising";
+
+      return {
+        id: w.id,
+        rank: index + 1,
+        first_name: w.first_name || "Worker",
+        photo_url: w.photo_url,
+        rating: w.rating || 5,
+        priority_score: w.priority_score || 50,
+        level,
+        jobsToday,
+        earningsToday,
+        isMe: w.id === me.id
+      };
+    });
+
+    // Find current user's full stats if they weren't in the top 50
+    let myRankInfo = leaderboard.find(l => l.isMe);
+    if (!myRankInfo) {
+      // For now we just return the leaderboard, the client can check if they are missing
+      // In a real app we'd query their specific rank index via a window function
+    }
+
+    return json({
+      community: me.community,
+      leaderboard,
+      updatedAt: new Date().toISOString()
+    });
+
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "unknown";
+    console.error("[get-worker-leaderboard] fatal", msg);
+    return json({ error: "fatal", detail: msg }, 500);
+  }
+});

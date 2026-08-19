@@ -4,7 +4,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Calendar, Loader2, CheckCircle2, Clock, XCircle, MapPin, Star, IndianRupee } from "lucide-react";
+import { ArrowLeft, Calendar, Loader2, CheckCircle2, Clock, XCircle, MapPin, Star, IndianRupee, RefreshCw } from "lucide-react";
+import BookingLeaderboard from "@/components/BookingLeaderboard";
+
 import { DEMO_BOOKINGS } from "@/config/demoData";
 import { formatBookingAddress, BookingWithAddress } from "@/lib/address";
 import { useCommunityFee } from "@/hooks/useCommunityFee";
@@ -30,7 +32,23 @@ export default function Bookings() {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
   const [summary, setSummary] = useState({ today: 0, week: 0, jobs: 0 });
+  const [refreshKey, setRefreshKey] = useState(0);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const handleRefresh = useCallback(() => {
+    setRefreshKey(prev => prev + 1);
+    if (workerId) {
+      setLoading(true);
+      // The useEffect triggered by workerId/loadPage will re-run if we clear state
+      setPage(0);
+      setBookings([]);
+      setHasMore(true);
+      // Trigger a re-fetch by simulating a workerId change or just calling the logic
+      // But simpler: just reload the page since it's a small app
+    }
+  }, [workerId]);
+
+
 
   // Resolve worker id once
   useEffect(() => {
@@ -126,7 +144,7 @@ export default function Bookings() {
       }
     })();
     return () => { cancelled = true; };
-  }, [workerId, loadPage]);
+  }, [workerId, loadPage, refreshKey]);
 
   // Load more
   const loadMore = useCallback(async () => {
@@ -175,32 +193,61 @@ export default function Bookings() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto p-4 space-y-4">
+      <main className="max-w-2xl mx-auto p-4 space-y-6">
+        <BookingLeaderboard key={`leaderboard-${refreshKey}`} />
 
+        <div className="pt-2">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold">Your Bookings</h2>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs h-8 gap-1.5 text-muted-foreground"
+              onClick={() => {
+                setRefreshKey(k => k + 1);
+                if (workerId) {
+                  setLoading(true);
+                  setPage(0);
+                  setHasMore(true);
+                  // The existing useEffect will re-run if we force it, 
+                  // but for simplicity we can just trigger the load manually or rely on the query key if we used react-query
+                  // Since we use raw useEffect, we'll just increment a state that the effect depends on
+                }
+              }}
 
-
-        {bookings.length === 0 ? (
-          <div className="text-center py-12">
-            <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-semibold mb-2">No jobs yet</h3>
-            <p className="text-sm text-muted-foreground">Your completed jobs will appear here</p>
+            >
+              <RefreshCw className="w-3 h-3" />
+              Refresh
+            </Button>
           </div>
-        ) : (
-          <div className="space-y-3">
-            {bookings.map(b => <BookingCard key={b.id} booking={b} />)}
 
-            {/* Infinite scroll sentinel */}
-            {hasMore && (
-              <div ref={sentinelRef} className="flex items-center justify-center py-6">
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-              </div>
-            )}
-            {!hasMore && bookings.length > PAGE_SIZE && (
-              <p className="text-center text-xs text-muted-foreground py-4">No more bookings</p>
-            )}
-          </div>
-        )}
+
+
+
+          {bookings.length === 0 ? (
+            <div className="text-center py-12">
+              <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="font-semibold mb-2">No jobs yet</h3>
+              <p className="text-sm text-muted-foreground">Your completed jobs will appear here</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {bookings.map(b => <BookingCard key={b.id} booking={b} />)}
+
+              {/* Infinite scroll sentinel */}
+              {hasMore && (
+                <div ref={sentinelRef} className="flex items-center justify-center py-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                </div>
+              )}
+              {!hasMore && bookings.length > PAGE_SIZE && (
+                <p className="text-center text-xs text-muted-foreground py-4">No more bookings</p>
+              )}
+            </div>
+          )}
+        </div>
       </main>
+
     </div>
   );
 }
