@@ -144,7 +144,7 @@ export default function Bookings() {
       }
     })();
     return () => { cancelled = true; };
-  }, [workerId, loadPage]);
+  }, [workerId, loadPage, refreshKey]);
 
   // Load more
   const loadMore = useCallback(async () => {
@@ -203,7 +203,18 @@ export default function Bookings() {
               variant="ghost" 
               size="sm" 
               className="text-xs h-8 gap-1.5 text-muted-foreground"
-              onClick={() => setRefreshKey(k => k + 1)}
+              onClick={() => {
+                setRefreshKey(k => k + 1);
+                if (workerId) {
+                  setLoading(true);
+                  setPage(0);
+                  setHasMore(true);
+                  // The existing useEffect will re-run if we force it, 
+                  // but for simplicity we can just trigger the load manually or rely on the query key if we used react-query
+                  // Since we use raw useEffect, we'll just increment a state that the effect depends on
+                }
+              }}
+
             >
               <RefreshCw className="w-3 h-3" />
               Refresh
