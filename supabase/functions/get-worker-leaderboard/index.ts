@@ -66,7 +66,11 @@ Deno.serve(async (req) => {
     todayStart.setHours(0, 0, 0, 0);
     const todayIso = todayStart.toISOString();
 
-    const workerIds = topWorkers.map(w => w.id);
+    const workerIds = (topWorkers ?? []).map(w => w.id);
+    if (workerIds.length === 0) {
+      return json({ community: me.community ?? null, leaderboard: [], updatedAt: new Date().toISOString() });
+    }
+
     
     // Get completed booking counts for today
     const { data: todayBookings } = await admin
