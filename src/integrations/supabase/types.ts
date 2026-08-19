@@ -8324,6 +8324,7 @@ export type Database = {
         Returns: {
           completed_bookings_count: number
           full_name: string
+          is_fresh: boolean
           last_seen_at: string
           photo_url: string
           rating_avg: number
@@ -8456,8 +8457,10 @@ export type Database = {
       get_online_workers_count: {
         Args: { p_community: string }
         Returns: {
-          online_count: number
+          fresh_count: number
           service: string
+          stale_count: number
+          total_count: number
         }[]
       }
       get_ops_hourly_metrics: {
