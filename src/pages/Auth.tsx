@@ -478,23 +478,26 @@ export default function Auth() {
 
       // Check if worker with this phone exists via SECURITY DEFINER RPC
       // (anon role cannot SELECT workers directly due to RLS).
-      const {
-        data,
-        error: workerCheckError
-      } = await supabase.rpc('worker_phone_exists', { _phone: phone });
-      
-      let phoneExists = !!data;
-      let checkError = workerCheckError;
-
       // URGENT RECOVERY: Bypass check for specific worker phone reported by user
-      // or if there's a technical error but we want to allow the OTP attempt anyway
-      // to distinguish between "missing record" and "permission/API failure".
       const isRecoveryPhone = signInPhone === "8367561667";
       
+      let phoneExists = false;
+      let checkError = null;
+
       if (isRecoveryPhone) {
         console.log("🛠️ Recovery phone detected, bypassing existence check");
         phoneExists = true;
-      } else if (checkError) {
+      } else {
+        const {
+          data,
+          error: workerCheckError
+        } = await supabase.rpc('worker_phone_exists', { _phone: phone });
+        
+        phoneExists = !!data;
+        checkError = workerCheckError;
+      }
+
+      if (checkError) {
         console.error('Error checking worker existence:', checkError);
         // If the RPC fails (e.g. RLS change, network, or server error), 
         // we shouldn't immediately block the user with "Account not registered".
