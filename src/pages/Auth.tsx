@@ -290,6 +290,15 @@ export default function Auth() {
 
   const normalizePhone = (phone: string) => {
     const cleaned = phone.replace(/\D/g, '');
+    // If it's already 12 digits starting with 91, just add the +
+    if (cleaned.length === 12 && cleaned.startsWith('91')) {
+      return `+${cleaned}`;
+    }
+    // If it's 10 digits, add +91
+    if (cleaned.length === 10) {
+      return `+91${cleaned}`;
+    }
+    // Fallback: if it starts with 91 but isn't 12 digits, or other cases
     return cleaned.startsWith('91') ? `+${cleaned}` : `+91${cleaned}`;
   };
 
