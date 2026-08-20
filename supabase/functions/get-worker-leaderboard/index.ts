@@ -27,6 +27,7 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
+    console.log("[get-worker-leaderboard] request received. Auth header present:", !!authHeader);
     if (!authHeader) return json({ error: "Unauthorized" }, 401);
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
