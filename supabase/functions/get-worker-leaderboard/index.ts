@@ -48,8 +48,8 @@ Deno.serve(async (req) => {
       return json({ error: "Invalid token payload" }, 401);
     }
 
-    const phone = payload.phone_number;
-    console.log("[get-worker-leaderboard] Phone from token:", phone ? "Present" : "Missing");
+    const phone = payload.phone_number || payload.phone;
+    console.log("[get-worker-leaderboard] Phone from token:", phone ? "Present" : "Missing", "Payload keys:", Object.keys(payload));
     if (!phone) return json({ error: "Phone number not found in token" }, 401);
 
     // Resolve worker by phone (normalized last 10 digits match)
