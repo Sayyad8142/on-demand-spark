@@ -38,7 +38,10 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: { user }, error: authError } = await userClient.auth.getUser();
-    if (authError || !user) return json({ error: "Unauthorized" }, 401);
+    if (authError || !user) {
+      console.error("[get-worker-leaderboard] auth error:", authError?.message || "No user found");
+      return json({ error: "Unauthorized", detail: authError?.message }, 401);
+    }
 
     // 2. Resolve requesting worker (user_id = uid OR id = uid)
     const cols = "id, community, full_name, photo_url, rating, priority_score, total_bookings_completed";
@@ -72,7 +75,8 @@ Deno.serve(async (req) => {
     }
 
     // 4. Calculate "Today's" stats for the top 50 workers
-    const todayStart = new Date();
+    // IMPORTANT: Ensure todayStart is in IST (UTC+5:30) for consistency with Indian operations
+    const todayStart = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
     todayStart.setHours(0, 0, 0, 0);
     const todayIso = todayStart.toISOString();
 
