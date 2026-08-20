@@ -48,27 +48,37 @@ Deno.serve(async (req) => {
       return json({ error: "Invalid token payload" }, 401);
     }
 
-    const phone = payload.phone_number || payload.phone;
-    console.log("[get-worker-leaderboard] Phone from token:", phone ? "Present" : "Missing", "Payload keys:", Object.keys(payload));
-    if (!phone) return json({ error: "Phone number not found in token" }, 401);
+    const phone = payload.phone_number || payload.phone || payload.sub;
+    console.log("[get-worker-leaderboard] Payload keys:", Object.keys(payload));
+    if (!phone) return json({ error: "Identifier not found in token" }, 401);
 
-    // Resolve worker by phone (normalized last 10 digits match)
-    const last10 = phone.slice(-10);
+    // Resolve worker by phone (normalized last 10 digits match) or by id/user_id
+    const last10 = phone.length >= 10 ? phone.slice(-10) : null;
     const cols = "id, community, full_name, first_name, photo_url, rating, priority_score, total_bookings_completed";
     
-    const { data: me, error: meError } = await admin
+    let me: any = null;
+    
+    // 1. Try resolving by user_id/id (for workers already linked to this auth provider)
+    const { data: byId } = await admin
       .from("workers")
       .select(cols)
-      .like("phone", `%${last10}`)
+      .or(`id.eq.${phone},user_id.eq.${phone}`)
       .maybeSingle();
+    
+    me = byId;
 
-    if (meError) {
-      console.error("[get-worker-leaderboard] me resolve error:", meError);
-      throw meError;
+    // 2. Fallback: Resolve by phone (for legacy workers not yet linked)
+    if (!me && last10) {
+      const { data: byPhone } = await admin
+        .from("workers")
+        .select(cols)
+        .like("phone", `%${last10}`)
+        .maybeSingle();
+      me = byPhone;
     }
 
     if (!me) {
-      console.log("[get-worker-leaderboard] Worker profile not found for phone ending in", last10);
+      console.log("[get-worker-leaderboard] Worker profile not found for identifier", phone);
       return json({ error: "Worker profile not found" }, 404);
     }
 
