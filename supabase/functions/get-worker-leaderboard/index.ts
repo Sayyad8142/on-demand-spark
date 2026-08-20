@@ -40,17 +40,21 @@ Deno.serve(async (req) => {
 
     let payload;
     try {
-      payload = JSON.parse(atob(parts[1]));
+      // Use standard b64 decoding for Deno
+      const decoded = atob(parts[1]);
+      payload = JSON.parse(decoded);
     } catch (e) {
+      console.error("[get-worker-leaderboard] JWT parse error:", e);
       return json({ error: "Invalid token payload" }, 401);
     }
 
     const phone = payload.phone_number;
+    console.log("[get-worker-leaderboard] Phone from token:", phone ? "Present" : "Missing");
     if (!phone) return json({ error: "Phone number not found in token" }, 401);
 
     // Resolve worker by phone (normalized last 10 digits match)
     const last10 = phone.slice(-10);
-    const cols = "id, community, full_name, photo_url, rating, priority_score, total_bookings_completed";
+    const cols = "id, community, full_name, first_name, photo_url, rating, priority_score, total_bookings_completed";
     
     const { data: me, error: meError } = await admin
       .from("workers")
@@ -63,7 +67,10 @@ Deno.serve(async (req) => {
       throw meError;
     }
 
-    if (!me) return json({ error: "Worker profile not found" }, 404);
+    if (!me) {
+      console.log("[get-worker-leaderboard] Worker profile not found for phone ending in", last10);
+      return json({ error: "Worker profile not found" }, 404);
+    }
 
     // 3. Fetch Top Workers — scoped to community when set, otherwise global
     let query = admin
