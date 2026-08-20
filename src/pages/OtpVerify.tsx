@@ -176,6 +176,12 @@ export default function OtpVerify() {
 
   const normalizePhone = (phone: string) => {
     const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 12 && cleaned.startsWith('91')) {
+      return `+${cleaned}`;
+    }
+    if (cleaned.length === 10) {
+      return `+91${cleaned}`;
+    }
     return cleaned.startsWith('91') ? `+${cleaned}` : `+91${cleaned}`;
   };
 
