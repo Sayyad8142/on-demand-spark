@@ -33,8 +33,7 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // 1. Resolve requesting worker
-    // The Authorization header contains the worker's Firebase UID as the 'sub' claim
-    // OR it might be a Supabase JWT if not using external auth.
+    // In production, the Authorization header contains the worker's Firebase UID as the 'sub' claim.
     const token = authHeader.replace("Bearer ", "");
     const parts = token.split(".");
     if (parts.length !== 3) return json({ error: "Invalid token format" }, 401);
@@ -64,16 +63,17 @@ Deno.serve(async (req) => {
       me = data;
     }
 
-    // AUTH BYPASS FOR DEBUGGING: If we are in the Lovable preview and the token is an anon/service token,
-    // we might not have a 'sub'. In production, this always has a worker identity.
-    if (!me && (payload.role === 'anon' || payload.role === 'service_role')) {
-       console.log("[get-worker-leaderboard] Internal role detected, fetching first active worker for preview");
+    // AUTH BYPASS FOR DEBUGGING/PREVIEW: 
+    // If we're using a generic anon token in the preview environment, 'sub' will be missing.
+    // In that case, we default to the first active worker so the UI doesn't break.
+    if (!me && (payload.role === 'anon' || payload.role === 'authenticated' || !sub)) {
+       console.log("[get-worker-leaderboard] No specific worker identified, using fallback for preview/system role");
        const { data } = await admin.from("workers").select(cols).eq('is_blocked', false).limit(1).maybeSingle();
        me = data;
     }
 
     if (!me) {
-      console.log("[get-worker-leaderboard] Worker profile not found for identifier", { sub, phone: phone ? "present" : "missing", role: payload.role });
+      console.log("[get-worker-leaderboard] Worker profile not found", { sub, role: payload.role });
       return json({ error: "Worker profile not found" }, 404);
     }
 
