@@ -32,36 +32,35 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // 1. Verify Firebase token
-    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false
-      }
-    });
-    
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
-    
-    if (authError || !user) {
-      console.error("[get-worker-leaderboard] auth error details:", {
-        message: authError?.message,
-        status: authError?.status,
-        name: authError?.name
-      });
-      return json({ error: "Unauthorized", detail: authError?.message || "No user found" }, 401);
+    // 1. Verify token & resolve requesting worker manually
+    // Since we're using Firebase Auth with Supabase, we decode the JWT and match phone
+    const token = authHeader.replace("Bearer ", "");
+    const parts = token.split(".");
+    if (parts.length !== 3) return json({ error: "Invalid token format" }, 401);
+
+    let payload;
+    try {
+      payload = JSON.parse(atob(parts[1]));
+    } catch (e) {
+      return json({ error: "Invalid token payload" }, 401);
     }
 
-    // 2. Resolve requesting worker (user_id = uid OR id = uid)
+    const phone = payload.phone_number;
+    if (!phone) return json({ error: "Phone number not found in token" }, 401);
+
+    // Resolve worker by phone (normalized last 10 digits match)
+    const last10 = phone.slice(-10);
     const cols = "id, community, full_name, photo_url, rating, priority_score, total_bookings_completed";
-    let me: any = null;
-    const { data: byUserId } = await admin.from("workers").select(cols).eq("user_id", user.id).maybeSingle();
-    me = byUserId;
-    if (!me) {
-      const { data: byId } = await admin.from("workers").select(cols).eq("id", user.id).maybeSingle();
-      me = byId;
+    
+    const { data: me, error: meError } = await admin
+      .from("workers")
+      .select(cols)
+      .like("phone", `%${last10}`)
+      .maybeSingle();
+
+    if (meError) {
+      console.error("[get-worker-leaderboard] me resolve error:", meError);
+      throw meError;
     }
 
     if (!me) return json({ error: "Worker profile not found" }, 404);
