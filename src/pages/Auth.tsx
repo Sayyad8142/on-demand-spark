@@ -785,22 +785,40 @@ export default function Auth() {
                     <Input id="signup-phone" type="tel" placeholder={t('auth.phonePlaceholder')} value={signUpPhone} onChange={e => setSignUpPhone(e.target.value)} maxLength={10} disabled={loading} className="h-12 rounded-2xl text-base" />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-community" className="text-base">{t('auth.communityLabel')}</Label>
-                    <select
-                      id="signup-community"
-                      value={signUpCommunity}
-                      onChange={(e) => setSignUpCommunity(e.target.value)}
-                      disabled={loading}
-                      className="flex h-12 w-full items-center justify-between rounded-2xl border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat pr-10"
-                    >
-                      <option value="" disabled>{t('auth.selectCommunity')}</option>
-                      {communities.map((community) => (
-                        <option key={community.value} value={community.value}>
-                          {community.name}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="space-y-3">
+                    <Label className="text-base">{t('auth.communityLabel')}</Label>
+                    <div className="flex flex-col gap-2">
+                      {communities.map((community) => {
+                        const isSelected = signUpCommunity === community.value;
+                        return (
+                          <button
+                            key={community.value}
+                            type="button"
+                            onClick={() => setSignUpCommunity(community.value)}
+                            disabled={loading}
+                            className={`flex min-h-[56px] w-full items-center justify-between gap-3 rounded-2xl border-2 px-4 py-3 text-left transition-all duration-200 ${
+                              isSelected
+                                ? 'border-[#ff007a] bg-[#ff007a]/[0.06] shadow-[0_4px_12px_-4px_rgba(255,0,122,0.15)]'
+                                : 'border-gray-100 bg-white hover:border-gray-200'
+                            }`}
+                          >
+                            <span className={`text-base font-semibold ${isSelected ? 'text-[#ff007a]' : 'text-gray-900'}`}>
+                              {community.name}
+                            </span>
+                            {isSelected && (
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#ff007a] text-white">
+                                <Check className="h-4 w-4" strokeWidth={3} />
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                      {communities.length === 0 && !loading && (
+                        <p className="text-center text-sm text-muted-foreground py-4">
+                          No communities available
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-3">
