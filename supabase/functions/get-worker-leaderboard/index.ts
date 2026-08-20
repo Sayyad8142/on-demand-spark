@@ -49,8 +49,6 @@ Deno.serve(async (req) => {
     const sub = payload.sub;
     const phone = payload.phone_number || payload.phone;
     
-    if (!sub && !phone) return json({ error: "No user identifier found in token" }, 401);
-
     // Resolve worker by UID (sub) or Phone
     const cols = "id, community, full_name, first_name, photo_url, rating, priority_score, total_bookings_completed";
     let me: any = null;
@@ -70,8 +68,13 @@ Deno.serve(async (req) => {
     // we might not have a 'sub'. In production, this always has a worker identity.
     if (!me && (payload.role === 'anon' || payload.role === 'service_role')) {
        console.log("[get-worker-leaderboard] Internal role detected, fetching first active worker for preview");
-       const { data } = await admin.from("workers").select(cols).limit(1).maybeSingle();
+       const { data } = await admin.from("workers").select(cols).eq('is_blocked', false).limit(1).maybeSingle();
        me = data;
+    }
+
+    if (!me) {
+      console.log("[get-worker-leaderboard] Worker profile not found for identifier", { sub, phone: phone ? "present" : "missing", role: payload.role });
+      return json({ error: "Worker profile not found" }, 404);
     }
 
     if (!me) return json({ error: "Worker profile not found" }, 404);
