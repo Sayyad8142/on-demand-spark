@@ -148,7 +148,8 @@ Deno.serve(async (req) => {
 
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown";
-    console.error("[get-worker-leaderboard] fatal", msg);
-    return json({ error: "fatal", detail: msg }, 500);
+    const stack = e instanceof Error ? e.stack : "no stack";
+    console.error(`[get-worker-leaderboard] fatal: ${msg}\nStack: ${stack}`);
+    return json({ error: "fatal", detail: msg, stack: stack }, 500);
   }
 });
