@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
       return {
         id: w.id,
         rank: index + 1,
-        first_name: w.first_name || "Worker",
+        first_name: (w as any).first_name || "Worker",
         photo_url: w.photo_url,
         rating: w.rating || 5,
         priority_score: w.priority_score || 50,
