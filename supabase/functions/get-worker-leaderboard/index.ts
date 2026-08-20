@@ -36,11 +36,22 @@ Deno.serve(async (req) => {
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      }
     });
+    
     const { data: { user }, error: authError } = await userClient.auth.getUser();
+    
     if (authError || !user) {
-      console.error("[get-worker-leaderboard] auth error:", authError?.message || "No user found");
-      return json({ error: "Unauthorized", detail: authError?.message }, 401);
+      console.error("[get-worker-leaderboard] auth error details:", {
+        message: authError?.message,
+        status: authError?.status,
+        name: authError?.name
+      });
+      return json({ error: "Unauthorized", detail: authError?.message || "No user found" }, 401);
     }
 
     // 2. Resolve requesting worker (user_id = uid OR id = uid)
