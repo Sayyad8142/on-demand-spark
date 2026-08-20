@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
     // 3. Fetch Top Workers — scoped to community when set, otherwise global
     let query = admin
       .from("workers")
-      .select("id, first_name, photo_url, rating, priority_score, total_bookings_completed, is_blocked")
+      .select("id, full_name, photo_url, rating, priority_score, total_bookings_completed, is_blocked")
       .eq("is_blocked", false);
 
     if (me.community) query = query.eq("community", me.community);
@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
       return {
         id: w.id,
         rank: index + 1,
-        first_name: (w as any).first_name || "Worker",
+        full_name: w.full_name || "Worker",
         photo_url: w.photo_url,
         rating: w.rating || 5,
         priority_score: w.priority_score || 50,
