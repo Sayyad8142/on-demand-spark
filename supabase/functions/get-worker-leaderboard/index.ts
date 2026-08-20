@@ -76,8 +76,6 @@ Deno.serve(async (req) => {
       return json({ error: "Worker profile not found" }, 404);
     }
 
-    if (!me) return json({ error: "Worker profile not found" }, 404);
-
     // 3. Fetch Top Workers — scoped to community when set, otherwise global
     let query = admin
       .from("workers")
