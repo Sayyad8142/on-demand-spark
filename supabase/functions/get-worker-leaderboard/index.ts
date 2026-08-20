@@ -73,12 +73,17 @@ Deno.serve(async (req) => {
 
     
     // Get completed booking counts for today
-    const { data: todayBookings } = await admin
+    const { data: todayBookings, error: bookingsError } = await admin
       .from("bookings")
       .select("worker_id")
       .in("worker_id", workerIds)
       .eq("status", "completed")
       .gte("completed_at", todayIso);
+
+    if (bookingsError) {
+      console.error("[get-worker-leaderboard] bookings error:", bookingsError);
+      throw bookingsError;
+    }
 
     // Get earnings for today
     const { data: todayPayouts } = await admin
