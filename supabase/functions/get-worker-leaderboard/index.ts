@@ -86,12 +86,17 @@ Deno.serve(async (req) => {
     }
 
     // Get earnings for today
-    const { data: todayPayouts } = await admin
+    const { data: todayPayouts, error: payoutsError } = await admin
       .from("worker_payouts")
       .select("worker_id, payout_amount")
       .in("worker_id", workerIds)
       .in("status", ["paid", "processing", "pending", "approved"])
       .gte("created_at", todayIso);
+
+    if (payoutsError) {
+      console.error("[get-worker-leaderboard] payouts error:", payoutsError);
+      throw payoutsError;
+    }
 
     const bookingCounts = new Map();
     todayBookings?.forEach(b => {
