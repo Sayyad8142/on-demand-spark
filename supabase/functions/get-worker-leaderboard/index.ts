@@ -33,14 +33,13 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // 1. Verify token & resolve requesting worker manually
-    // Since we're using Firebase Auth with Supabase, we decode the JWT and match phone
+    // Since we're using Firebase Auth with Supabase, we decode the JWT
     const token = authHeader.replace("Bearer ", "");
     const parts = token.split(".");
     if (parts.length !== 3) return json({ error: "Invalid token format" }, 401);
 
     let payload;
     try {
-      // Use standard b64 decoding for Deno
       const decoded = atob(parts[1]);
       payload = JSON.parse(decoded);
     } catch (e) {
@@ -48,27 +47,31 @@ Deno.serve(async (req) => {
       return json({ error: "Invalid token payload" }, 401);
     }
 
-    const phone = payload.phone_number || payload.phone || payload.sub;
-    console.log("[get-worker-leaderboard] Payload keys:", Object.keys(payload));
-    if (!phone) return json({ error: "Identifier not found in token" }, 401);
+    // Identify user using sub (UID), phone_number, or email
+    const sub = payload.sub;
+    const phone = payload.phone_number || payload.phone;
+    
+    console.log("[get-worker-leaderboard] Identifier resolution:", { sub, phone: phone ? "hidden" : "missing" });
+    
+    if (!sub && !phone) return json({ error: "No user identifier found in token" }, 401);
 
-    // Resolve worker by phone (normalized last 10 digits match) or by id/user_id
-    const last10 = phone.length >= 10 ? phone.slice(-10) : null;
+    // Resolve worker
     const cols = "id, community, full_name, first_name, photo_url, rating, priority_score, total_bookings_completed";
-    
     let me: any = null;
-    
-    // 1. Try resolving by user_id/id (for workers already linked to this auth provider)
-    const { data: byId } = await admin
-      .from("workers")
-      .select(cols)
-      .or(`id.eq.${phone},user_id.eq.${phone}`)
-      .maybeSingle();
-    
-    me = byId;
 
-    // 2. Fallback: Resolve by phone (for legacy workers not yet linked)
-    if (!me && last10) {
+    // A. Try resolving by user_id or id using the JWT sub claim
+    if (sub) {
+      const { data: byId } = await admin
+        .from("workers")
+        .select(cols)
+        .or(`id.eq.${sub},user_id.eq.${sub}`)
+        .maybeSingle();
+      me = byId;
+    }
+
+    // B. Fallback: Resolve by phone (matching last 10 digits)
+    if (!me && phone) {
+      const last10 = phone.slice(-10);
       const { data: byPhone } = await admin
         .from("workers")
         .select(cols)
@@ -78,7 +81,7 @@ Deno.serve(async (req) => {
     }
 
     if (!me) {
-      console.log("[get-worker-leaderboard] Worker profile not found for identifier", phone);
+      console.log("[get-worker-leaderboard] Worker profile not found for identifier", { sub, phone: phone ? "present" : "missing" });
       return json({ error: "Worker profile not found" }, 404);
     }
 
