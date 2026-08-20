@@ -64,16 +64,15 @@ Deno.serve(async (req) => {
       me = data;
     }
 
-    // AUTH BYPASS FOR DEBUGGING: In the preview environment, tokens may be generic.
-    // If we can't identify the worker from the token, we default to the first active worker.
+    // AUTH BYPASS FOR PREVIEW: Default to first active worker if no specific user identified.
     if (!me) {
-       console.log("[get-worker-leaderboard] No specific worker identified, using first active worker as fallback");
-       const { data } = await admin.from("workers").select(cols).eq('is_blocked', false).limit(1).maybeSingle();
+       console.log("[get-worker-leaderboard] Identifier not resolved from token, using fallback.");
+       const { data, error } = await admin.from("workers").select(cols).eq('is_blocked', false).limit(1).maybeSingle();
+       if (error) console.error("[get-worker-leaderboard] Fallback error:", error);
        me = data;
     }
 
     if (!me) {
-      console.log("[get-worker-leaderboard] No workers found in database");
       return json({ error: "Worker profile not found" }, 404);
     }
 
