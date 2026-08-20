@@ -20,7 +20,10 @@ const json = (body: unknown, status = 200) => {
 };
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    console.log("[get-worker-leaderboard] handled OPTIONS");
+    return new Response("ok", { headers: corsHeaders });
+  }
 
   try {
     const authHeader = req.headers.get("Authorization");
