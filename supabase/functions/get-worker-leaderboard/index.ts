@@ -57,11 +57,12 @@ Deno.serve(async (req) => {
       .order("total_bookings_completed", { ascending: false })
       .limit(50);
 
-
-    if (rankError) throw rankError;
+    if (rankError) {
+      console.error("[get-worker-leaderboard] rank error:", rankError);
+      throw rankError;
+    }
 
     // 4. Calculate "Today's" stats for the top 50 workers
-    // (Note: This could be heavy, in a real prod env we'd use a materialized view or cached aggregate)
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const todayIso = todayStart.toISOString();
@@ -71,7 +72,6 @@ Deno.serve(async (req) => {
       return json({ community: me.community ?? null, leaderboard: [], updatedAt: new Date().toISOString() });
     }
 
-    
     // Get completed booking counts for today
     const { data: todayBookings, error: bookingsError } = await admin
       .from("bookings")
@@ -113,7 +113,6 @@ Deno.serve(async (req) => {
       const jobsToday = bookingCounts.get(w.id) || 0;
       const earningsToday = earningsMap.get(w.id) || 0;
       
-      // Determine level
       let level = "Standard";
       if (w.priority_score >= 90) level = "Elite";
       else if (w.priority_score >= 75) level = "Pro";
@@ -132,13 +131,6 @@ Deno.serve(async (req) => {
         isMe: w.id === me.id
       };
     });
-
-    // Find current user's full stats if they weren't in the top 50
-    let myRankInfo = leaderboard.find(l => l.isMe);
-    if (!myRankInfo) {
-      // For now we just return the leaderboard, the client can check if they are missing
-      // In a real app we'd query their specific rank index via a window function
-    }
 
     return json({
       community: me.community ?? null,
