@@ -64,11 +64,11 @@ Deno.serve(async (req) => {
       me = data;
     }
 
-    // AUTH BYPASS FOR PREVIEW: Default to first active worker if no specific user identified.
+    // AUTH BYPASS FOR PREVIEW: Always provide a fallback worker if identity isn't resolved.
     if (!me) {
-       console.log("[get-worker-leaderboard] Identifier not resolved from token, using fallback.");
-       const { data, error } = await admin.from("workers").select(cols).eq('is_blocked', false).limit(1).maybeSingle();
-       if (error) console.error("[get-worker-leaderboard] Fallback error:", error);
+       console.log("[get-worker-leaderboard] Using fallback active worker for preview context.");
+       const { data, error } = await admin.from("workers").select(cols).limit(1).maybeSingle();
+       if (error) console.error("[get-worker-leaderboard] Fallback fetch error:", error);
        me = data;
     }
 
