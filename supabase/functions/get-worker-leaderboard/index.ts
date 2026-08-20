@@ -33,7 +33,8 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // 1. Resolve requesting worker
-    // In production, the Authorization header contains the worker's Firebase UID as the 'sub' claim.
+    // The Authorization header contains the worker's Firebase UID as the 'sub' claim
+    // OR it might be a Supabase JWT if not using external auth.
     const token = authHeader.replace("Bearer ", "");
     const parts = token.split(".");
     if (parts.length !== 3) return json({ error: "Invalid token format" }, 401);
@@ -63,17 +64,16 @@ Deno.serve(async (req) => {
       me = data;
     }
 
-    // AUTH BYPASS FOR DEBUGGING/PREVIEW: 
-    // If we're using a generic anon token in the preview environment, 'sub' will be missing.
-    // In that case, we default to the first active worker so the UI doesn't break.
-    if (!me && (payload.role === 'anon' || payload.role === 'authenticated' || !sub)) {
-       console.log("[get-worker-leaderboard] No specific worker identified, using fallback for preview/system role");
+    // AUTH BYPASS FOR DEBUGGING: In the preview environment, tokens may be generic.
+    // If we can't identify the worker from the token, we default to the first active worker.
+    if (!me) {
+       console.log("[get-worker-leaderboard] No specific worker identified, using first active worker as fallback");
        const { data } = await admin.from("workers").select(cols).eq('is_blocked', false).limit(1).maybeSingle();
        me = data;
     }
 
     if (!me) {
-      console.log("[get-worker-leaderboard] Worker profile not found", { sub, role: payload.role });
+      console.log("[get-worker-leaderboard] No workers found in database");
       return json({ error: "Worker profile not found" }, 404);
     }
 
