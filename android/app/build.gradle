@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace "app.didisnow.worker"
-    compileSdk 35
+    compileSdk 36
 
     buildFeatures {
         buildConfig = true
@@ -23,9 +23,9 @@ android {
     defaultConfig {
         applicationId "app.didisnow.worker"
         minSdk 24
-        targetSdk 35
-        versionCode 64
-        versionName "6.0.64"
+        targetSdk 36
+        versionCode 65
+        versionName "6.0.65"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
