@@ -787,38 +787,27 @@ export default function Auth() {
 
                   <div className="space-y-3">
                     <Label className="text-base">{t('auth.communityLabel')}</Label>
-                    <div className="flex flex-col gap-2">
-                      {communities.map((community) => {
-                        const isSelected = signUpCommunity === community.value;
-                        return (
-                          <button
+                    <Select value={signUpCommunity} onValueChange={setSignUpCommunity} disabled={loading}>
+                      <SelectTrigger className="h-12 rounded-2xl text-base font-semibold border-2 data-[state=open]:border-[#ff007a] focus:ring-[#ff007a]/20">
+                        <SelectValue placeholder="Select your community" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-2xl">
+                        {communities.map((community) => (
+                          <SelectItem
                             key={community.value}
-                            type="button"
-                            onClick={() => setSignUpCommunity(community.value)}
-                            disabled={loading}
-                            className={`flex min-h-[56px] w-full items-center justify-between gap-3 rounded-2xl border-2 px-4 py-3 text-left transition-all duration-200 ${
-                              isSelected
-                                ? 'border-[#ff007a] bg-[#ff007a]/[0.06] shadow-[0_4px_12px_-4px_rgba(255,0,122,0.15)]'
-                                : 'border-gray-100 bg-white hover:border-gray-200'
-                            }`}
+                            value={community.value}
+                            className="rounded-xl text-base py-3 cursor-pointer data-[state=checked]:text-[#ff007a] data-[state=checked]:font-bold"
                           >
-                            <span className={`text-base font-semibold ${isSelected ? 'text-[#ff007a]' : 'text-gray-900'}`}>
-                              {community.name}
-                            </span>
-                            {isSelected && (
-                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#ff007a] text-white">
-                                <Check className="h-4 w-4" strokeWidth={3} />
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                      {communities.length === 0 && !loading && (
-                        <p className="text-center text-sm text-muted-foreground py-4">
-                          No communities available
-                        </p>
-                      )}
-                    </div>
+                            {community.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {communities.length === 0 && !loading && (
+                      <p className="text-center text-sm text-muted-foreground py-2">
+                        No communities available
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-3">
