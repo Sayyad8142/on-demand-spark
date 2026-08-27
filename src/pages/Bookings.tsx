@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Calendar, Loader2, CheckCircle2, Clock, XCircle, MapPin, Star, IndianRupee, RefreshCw } from "lucide-react";
-import BookingLeaderboard from "@/components/BookingLeaderboard";
+import WorkerRankCard from "@/components/WorkerRankCard";
 
 import { DEMO_BOOKINGS } from "@/config/demoData";
 import { formatBookingAddress, BookingWithAddress } from "@/lib/address";
@@ -194,7 +194,7 @@ export default function Bookings() {
       </header>
 
       <main className="max-w-2xl mx-auto p-4 space-y-6">
-        <BookingLeaderboard key={`leaderboard-${refreshKey}`} />
+        <WorkerRankCard key={`rank-${refreshKey}`} />
 
         <div className="pt-2">
           <div className="flex items-center justify-between mb-4">

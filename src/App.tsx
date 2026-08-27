@@ -38,6 +38,7 @@ import Auth from "./pages/Auth";
 import OtpVerify from "./pages/OtpVerify";
 import Home from "./pages/Home";
 import Bookings from "./pages/Bookings";
+import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import Troubleshoot from "./pages/Troubleshoot";
@@ -680,6 +681,7 @@ function AppInner() {
           <Route path="/otp-verify" element={<OtpVerify />} />
           <Route path="/home" element={<ProtectedRoute showNav={true}><Home /></ProtectedRoute>} />
           <Route path="/bookings" element={<ProtectedRoute showNav={true}><Bookings /></ProtectedRoute>} />
+          <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute showNav={true}><Profile /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/troubleshoot" element={<ProtectedRoute><Troubleshoot /></ProtectedRoute>} />
