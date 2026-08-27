@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.4"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -8209,6 +8209,17 @@ export type Database = {
           total_ratings: number
         }[]
       }
+      get_blocked_auto_cancels: {
+        Args: { p_hours?: number }
+        Returns: {
+          attempted_reason: string
+          attempted_source: string
+          attempted_status: string
+          blocked_at: string
+          booking_id: string
+          dispatch_attempts: number
+        }[]
+      }
       get_booking_assignment_status: {
         Args: { p_booking_id: string }
         Returns: Json
@@ -8455,6 +8466,16 @@ export type Database = {
         }[]
       }
       get_online_workers_count: {
+        Args: { p_community: string }
+        Returns: {
+          fresh_count: number
+          online_count: number
+          service: string
+          stale_count: number
+          total_count: number
+        }[]
+      }
+      get_online_workers_count_core: {
         Args: { p_community: string }
         Returns: {
           fresh_count: number
