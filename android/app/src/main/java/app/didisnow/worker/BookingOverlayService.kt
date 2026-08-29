@@ -159,6 +159,7 @@ class BookingOverlayService : Service() {
 
                     if (bookingType == "scheduled" && !prealertSent) {
                         android.util.Log.w("BookingOverlay", "🔕 Scheduled offer hidden until prealert_sent=true booking_id=$bookingId booking_type=$bookingType scheduled_at=$scheduledTime prealert_sent=$prealertSent request_status=null shown_to_worker=false")
+                        BackendSync.ackFailureAsync(applicationContext, bookingId, "prealert_suppressed", currentBookingRequestId)
                         stopSelf()
                         return START_NOT_STICKY
                     }
