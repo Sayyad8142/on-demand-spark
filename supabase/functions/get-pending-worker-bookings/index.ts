@@ -78,7 +78,43 @@ Deno.serve(async (req) => {
       .limit(5);
 
     if (reqErr) return json({ error: "lookup_failed", detail: reqErr.message }, 500);
-    if (!requests || requests.length === 0) return json({ pending: [] });
+
+    // ── Emergency recovery window ──────────────────────────────────────
+    // The native popup can fail (OEM / overlay / background-start), and offers
+    // expire after ~45s. Without this, a worker who opens the app 60s later
+    // sees nothing even though the booking is still unassigned.
+    // So we also return recently-offered-but-expired requests, as long as the
+    // parent booking is STILL pending and unassigned. Acceptance stays safe:
+    // atomic_accept_booking only succeeds while worker_id IS NULL and
+    // status = 'pending', so a stale offer can never double-assign a booking.
+    const RECOVERY_WINDOW_MS = 30 * 60_000;
+    const recoverySince = new Date(Date.now() - RECOVERY_WINDOW_MS).toISOString();
+
+    const { data: recovered } = await admin
+      .from("booking_requests")
+      .select("id, booking_id, status, timeout_at, offered_at, popup_shown_at, worker_seen_at")
+      .eq("worker_id", worker.id)
+      .in("status", ["timed_out", "not_delivered"])
+      .gte("offered_at", recoverySince)
+      .order("offered_at", { ascending: false })
+      .limit(10);
+
+    const seen = new Set((requests ?? []).map((r) => r.booking_id));
+    const merged = [...(requests ?? [])];
+    for (const r of recovered ?? []) {
+      if (seen.has(r.booking_id)) continue;
+      seen.add(r.booking_id);
+      merged.push({ ...r, status: "pending", recovered: true } as typeof r);
+    }
+    if (merged.length > 0) {
+      console.log("[get-pending-worker-bookings] offers", {
+        worker_id: worker.id,
+        active: requests?.length ?? 0,
+        recovered: merged.length - (requests?.length ?? 0),
+      });
+    }
+    if (merged.length === 0) return json({ pending: [] });
+    const requestRows = merged;
 
     // Hydrate booking details and filter out any whose parent booking is no longer pending
     const bookingIds = Array.from(new Set(requests.map(r => r.booking_id)));
