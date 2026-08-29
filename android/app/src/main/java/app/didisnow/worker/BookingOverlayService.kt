@@ -174,6 +174,8 @@ class BookingOverlayService : Service() {
                         
                         if (sessionJson.isNullOrEmpty()) {
                             android.util.Log.e("BookingOverlay", "❌ No session found in SharedPreferences either!")
+BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", currentBookingRequestId)
+
                             Toast.makeText(
                                 this,
                                 "⚠️ Please log in to accept bookings",
@@ -189,6 +191,8 @@ class BookingOverlayService : Service() {
                             accessToken = session.optString("accessToken", "")
                             if (accessToken.isNullOrEmpty()) {
                                 android.util.Log.e("BookingOverlay", "❌ No accessToken in session!")
+BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", currentBookingRequestId)
+
                                 Toast.makeText(
                                     this,
                                     "⚠️ Invalid session - Please log in again",
@@ -200,6 +204,8 @@ class BookingOverlayService : Service() {
                             android.util.Log.d("BookingOverlay", "✅ Access token from SharedPreferences: ${accessToken?.take(12)}...")
                         } catch (e: Exception) {
                             android.util.Log.e("BookingOverlay", "❌ Failed to parse session JSON", e)
+BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", currentBookingRequestId)
+
                             Toast.makeText(
                                 this,
                                 "⚠️ Session error - Please log in again",
