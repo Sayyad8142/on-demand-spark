@@ -305,6 +305,34 @@ public class MyFirebaseService extends FirebaseMessagingService {
       Log.e(TAG, "❌ BOOKING_ALERT handling failed", e);
     }
   }
+
+  /**
+   * True only when the scheduled start is still more than 10 minutes away.
+   * Unparseable/missing values return false so the offer is shown (fail-open).
+   * IST (Asia/Kolkata) — scheduled bookings are stored in IST.
+   */
+  private boolean isBeforeScheduledDispatchWindow(String scheduledDate, String scheduledTimeRaw) {
+    if (scheduledDate == null || scheduledDate.isEmpty()
+        || scheduledTimeRaw == null || scheduledTimeRaw.isEmpty()) {
+      return false;
+    }
+    try {
+      String time = scheduledTimeRaw.length() >= 8 ? scheduledTimeRaw.substring(0, 8)
+          : (scheduledTimeRaw.length() == 5 ? scheduledTimeRaw + ":00" : scheduledTimeRaw);
+      java.text.SimpleDateFormat fmt =
+          new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US);
+      fmt.setTimeZone(java.util.TimeZone.getTimeZone("Asia/Kolkata"));
+      java.util.Date start = fmt.parse(scheduledDate + " " + time);
+      if (start == null) return false;
+      long minutesUntilStart = (start.getTime() - System.currentTimeMillis()) / 60000L;
+      return minutesUntilStart > 10;
+    } catch (Exception e) {
+      Log.w(TAG, "⚠️ scheduled window parse failed: " + scheduledDate + " " + scheduledTimeRaw, e);
+      return false;
+    }
+  }
+
+
   
   /**
    * Launch BookingAlertActivity as fallback when overlay permission is not granted
