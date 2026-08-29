@@ -104,7 +104,14 @@ Deno.serve(async (req) => {
     for (const r of recovered ?? []) {
       if (seen.has(r.booking_id)) continue;
       seen.add(r.booking_id);
-      merged.push({ ...r, status: "pending", recovered: true } as typeof r);
+      // Recovered offers carry a past timeout_at; give the app a fresh window
+      // so the client-side coordinator does not instantly discard them.
+      merged.push({
+        ...r,
+        status: "pending",
+        timeout_at: new Date(Date.now() + 60_000).toISOString(),
+        recovered: true,
+      } as typeof r);
     }
     if (merged.length > 0) {
       console.log("[get-pending-worker-bookings] offers", {
