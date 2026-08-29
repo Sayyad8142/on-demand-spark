@@ -217,8 +217,13 @@ public class MyFirebaseService extends FirebaseMessagingService {
         }
 
 
-        if ("scheduled".equals(bookingType) && !prealertSent) {
-          Log.w(TAG, "🔕 Scheduled booking hidden until prealert_sent=true. booking_id=" + bookingId
+        // Scheduled offers must only be hidden when they are TOO EARLY (more than
+        // 10 minutes before the scheduled start). Once the dispatch window has
+        // arrived — or the booking is already overdue — the offer is always shown,
+        // with or without prealert_sent. This mirrors src/lib/scheduledBookingGuards.ts.
+        if ("scheduled".equals(bookingType) && !prealertSent
+            && isBeforeScheduledDispatchWindow(scheduledDate, scheduledTimeRaw)) {
+          Log.w(TAG, "🔕 Scheduled booking hidden — too early. booking_id=" + bookingId
               + ", scheduled_at=" + scheduledDate + "T" + scheduledTimeRaw
               + ", request_status=" + data.get("request_status")
               + ", shown_to_worker=false");
@@ -226,6 +231,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
           BackendSync.INSTANCE.ackFailureAsync(getApplicationContext(), bookingId, "prealert_suppressed", bookingRequestId);
           return;
         }
+
 
         showBookingNotification(bookingId, bookingType);
 
