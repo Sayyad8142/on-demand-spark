@@ -43,8 +43,12 @@ export function isBeforeScheduledDispatchWindow(input: ScheduleInput, now = new 
   return minutesUntilScheduled !== null && minutesUntilScheduled > DISPATCH_WINDOW_MINUTES;
 }
 
-export function canShowWorkerBookingOffer(input: ScheduleInput): boolean {
+export function canShowWorkerBookingOffer(input: ScheduleInput, now = new Date()): boolean {
   if (!isScheduledBooking(input)) return true;
+  // Once the booking is inside the dispatch window (or overdue), the worker
+  // MUST see the offer even if the pre-alert never fired — hiding it here is
+  // what made in-progress scheduled bookings invisible on the Home screen.
+  if (!isBeforeScheduledDispatchWindow(input, now)) return true;
   return (input.prealert_sent ?? input.prealertSent) === true;
 }
 
