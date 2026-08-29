@@ -221,6 +221,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                     // Final validation
                     if (accessToken.isNullOrEmpty()) {
                         android.util.Log.e("BookingOverlay", "❌ No valid access token found!")
+                        BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", currentBookingRequestId)
                         Toast.makeText(
                             this,
                             "⚠️ Please log in to accept bookings",
