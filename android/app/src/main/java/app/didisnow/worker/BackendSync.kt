@@ -306,10 +306,39 @@ object BackendSync {
         Thread({ reportMissedBooking(ctx, bookingId, bookingRequestId, reason, extra) }, "missed-$reason").start()
     }
 
-    /** Fire-and-forget ack on a background thread. */
+    /**
+     * Durable ack. The raw background thread used previously was frequently
+     * killed/frozen by the OS as soon as onMessageReceived() returned while the
+     * app was backgrounded, so push_received ACKs never reached the backend.
+     *
+     * We now persist the ACK first (AckQueue) and schedule AckRetryWorker —
+     * WorkManager survives process freeze/kill — while still attempting the
+     * inline send for the fast path. The entry is removed on inline success.
+     */
     fun ackDeliveryAsync(ctx: Context, bookingId: String?, event: String, bookingRequestId: String? = null) {
-        Thread({ ackDelivery(ctx, bookingId, event, bookingRequestId) }, "ack-$event").start()
+        if (bookingId.isNullOrBlank() && bookingRequestId.isNullOrBlank()) return
+        val app = ctx.applicationContext
+        try {
+            AckQueue.enqueue(app, bookingId, bookingRequestId, event, appVersion(app), "durable")
+            AckRetryWorker.enqueue(app, "ack:$event")
+        } catch (e: Exception) {
+            WorkerLog.add(app, "ACK", "durable enqueue failed: ${e.message}")
+        }
+        Thread({
+            val ok = try {
+                sendAckDirect(app, bookingId, bookingRequestId, event, attempt = 1)
+            } catch (_: Exception) { false }
+            if (ok) {
+                try {
+                    AckQueue.remove(
+                        app,
+                        AckQueue.Entry(bookingId, bookingRequestId, event, System.currentTimeMillis(), 0, null, null),
+                    )
+                } catch (_: Exception) {}
+            }
+        }, "ack-$event").start()
     }
+
 
     /** Convenience for failure events (popup_failed, overlay_blocked, etc). */
     fun ackFailureAsync(ctx: Context, bookingId: String?, reason: String, bookingRequestId: String? = null) {
