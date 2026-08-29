@@ -140,12 +140,24 @@ Deno.serve(async (req) => {
         // Only ever surface offers whose booking is still pending & unassigned.
         if (!b || b.status !== "pending" || (b as any).worker_id) return null;
         const isScheduled = b.booking_type === "scheduled" || !!(b.scheduled_date && b.scheduled_time);
-        if (isScheduled && b.prealert_sent !== true) {
+        // Hide only EARLY scheduled offers (>10 min before start) that never
+        // got a pre-alert. Once the booking is inside the dispatch window or
+        // overdue, the worker must see it even if prealert_sent never fired.
+        let withinWindow = true;
+        if (isScheduled && b.scheduled_date && b.scheduled_time) {
+          const t = String(b.scheduled_time).length === 5 ? `${b.scheduled_time}:00` : b.scheduled_time;
+          const schedAt = new Date(`${b.scheduled_date}T${t}`);
+          if (!Number.isNaN(schedAt.getTime())) {
+            withinWindow = (schedAt.getTime() - Date.now()) <= 10 * 60_000;
+          }
+        }
+        if (isScheduled && b.prealert_sent !== true && !withinWindow) {
           console.log("[get-pending-worker-bookings] scheduled request hidden", {
             booking_id: b.id,
             booking_type: b.booking_type,
             scheduled_at: b.scheduled_date && b.scheduled_time ? `${b.scheduled_date}T${b.scheduled_time}` : null,
             prealert_sent: b.prealert_sent,
+            within_dispatch_window: withinWindow,
             request_status: r.status,
             shown_to_worker: false,
           });
