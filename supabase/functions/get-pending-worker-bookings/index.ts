@@ -117,20 +117,21 @@ Deno.serve(async (req) => {
     const requestRows = merged;
 
     // Hydrate booking details and filter out any whose parent booking is no longer pending
-    const bookingIds = Array.from(new Set(requests.map(r => r.booking_id)));
+    const bookingIds = Array.from(new Set(requestRows.map(r => r.booking_id)));
     const { data: bookings, error: bErr } = await admin
       .from("bookings")
-      .select("id, status, service_type, community, cust_name, flat_no, price_inr, scheduled_date, scheduled_time, booking_type, prealert_sent, address_line1")
+      .select("id, status, worker_id, service_type, community, cust_name, flat_no, price_inr, scheduled_date, scheduled_time, booking_type, prealert_sent, address_line1")
       .in("id", bookingIds);
 
     if (bErr) return json({ error: "booking_lookup_failed", detail: bErr.message }, 500);
 
     const bookingMap = new Map((bookings ?? []).map(b => [b.id, b]));
 
-    const pending = requests
+    const pending = requestRows
       .map(r => {
         const b = bookingMap.get(r.booking_id);
-        if (!b || b.status !== "pending") return null;
+        // Only ever surface offers whose booking is still pending & unassigned.
+        if (!b || b.status !== "pending" || (b as any).worker_id) return null;
         const isScheduled = b.booking_type === "scheduled" || !!(b.scheduled_date && b.scheduled_time);
         if (isScheduled && b.prealert_sent !== true) {
           console.log("[get-pending-worker-bookings] scheduled request hidden", {
@@ -151,6 +152,7 @@ Deno.serve(async (req) => {
           offered_at: r.offered_at,
           popup_shown_at: r.popup_shown_at,
           worker_seen_at: r.worker_seen_at,
+          recovered: (r as any).recovered === true,
           booking: {
             id: b.id,
             service_type: b.service_type,
