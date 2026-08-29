@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { CalendarClock, Clock, IndianRupee } from "lucide-react";
+import { Clock, IndianRupee } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
 
 type UpcomingBooking = {
