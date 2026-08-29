@@ -153,7 +153,7 @@ export default function BookingLeaderboard() {
 
 function WorkerRow({ worker, medal }: { worker: LeaderboardEntry; medal?: string }) {
   return (
-    <div className={`flex items-center justify-between p-2.5 rounded-xl border ${worker.isMe ? 'bg-primary/10 border-primary/30' : 'bg-card border-border'} shadow-sm`}>
+    <div className={`flex items-center justify-between p-2.5 rounded-xl border ${worker.isMe ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800' : 'bg-card border-border'} shadow-sm`}>
       <div className="flex items-center gap-3">
         <span className="text-base w-6 text-center font-bold">
           {medal || `#${worker.rank}`}
