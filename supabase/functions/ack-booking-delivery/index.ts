@@ -37,7 +37,11 @@ type FailureEvent =
   | "permission_missing"
   | "overlay_blocked"
   | "app_killed"
-  | "token_invalid";
+  | "token_invalid"
+  // New (v6.0.67+): previously-silent abort paths between push_received and popup_shown
+  | "prealert_suppressed"   // scheduled offer hidden by the client-side prealert guard
+  | "session_missing"       // overlay/activity aborted: no usable session on device
+  | "service_start_blocked"; // OS refused the background service/activity start
 type EventType = TimestampEvent | FailureEvent;
 
 const TS_COL: Record<TimestampEvent, "push_delivered_at" | "popup_shown_at" | "worker_seen_at"> = {
