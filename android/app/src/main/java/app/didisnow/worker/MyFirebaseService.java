@@ -222,6 +222,8 @@ public class MyFirebaseService extends FirebaseMessagingService {
               + ", scheduled_at=" + scheduledDate + "T" + scheduledTimeRaw
               + ", request_status=" + data.get("request_status")
               + ", shown_to_worker=false");
+          // Make this suppression visible server-side instead of failing silently.
+          BackendSync.INSTANCE.ackFailureAsync(getApplicationContext(), bookingId, "prealert_suppressed", bookingRequestId);
           return;
         }
 
