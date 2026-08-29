@@ -56,6 +56,7 @@ const TS_CHANNEL: Record<TimestampEvent, string> = {
 };
 const FAILURE_EVENTS = new Set<FailureEvent>([
   "popup_failed", "permission_missing", "overlay_blocked", "app_killed", "token_invalid",
+  "prealert_suppressed", "session_missing", "service_start_blocked",
 ]);
 
 const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
