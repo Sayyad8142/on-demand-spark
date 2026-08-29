@@ -32,6 +32,9 @@ type DispatchRow = {
   notified_at: string | null;
   offered_at: string | null;
   device_app_version: string | null;
+  notification_status: string | null;
+  delivery_stage: string | null;
+  failure_reason: string | null;
   worker_name?: string | null;
 };
 
@@ -91,7 +94,7 @@ export default function AdminDispatchTelemetry() {
       const { data: br } = await supabase
         .from("booking_requests")
         .select(
-          "id, booking_id, worker_id, status, push_sent_at, device_received_at, popup_shown_at, worker_seen_at, device_opened_at, responded_at, notified_at, offered_at, device_app_version"
+          "id, booking_id, worker_id, status, push_sent_at, device_received_at, popup_shown_at, worker_seen_at, device_opened_at, responded_at, notified_at, offered_at, device_app_version, notification_status, delivery_stage, failure_reason"
         )
         .gte("offered_at", since24h)
         .order("offered_at", { ascending: false })
@@ -119,6 +122,24 @@ export default function AdminDispatchTelemetry() {
     };
   }, [tick]);
 
+  const stages = [
+    { label: "Offers created", value: rows.length, warnOnZero: false },
+    { label: "FCM accepted", value: rows.filter((r) => !!r.push_sent_at || r.notification_status === "sent").length, warnOnZero: false },
+    { label: "Device received", value: rows.filter((r) => !!r.device_received_at).length, warnOnZero: true },
+    { label: "App ACKed", value: rows.filter((r) => !!r.device_received_at || !!r.popup_shown_at || !!r.failure_reason).length, warnOnZero: true },
+    { label: "Popup shown", value: rows.filter((r) => !!r.popup_shown_at).length, warnOnZero: true },
+    { label: "Worker accepted", value: rows.filter((r) => r.status === "accepted").length, warnOnZero: false },
+  ];
+
+  const failureBreakdown = Object.entries(
+    rows.reduce<Record<string, number>>((acc, r) => {
+      if (r.failure_reason) acc[r.failure_reason] = (acc[r.failure_reason] ?? 0) + 1;
+      else if (r.device_received_at && !r.popup_shown_at) acc["received_no_popup"] = (acc["received_no_popup"] ?? 0) + 1;
+      else if (!r.device_received_at) acc["no_device_ack"] = (acc["no_device_ack"] ?? 0) + 1;
+      return acc;
+    }, {})
+  ).sort((a, b) => b[1] - a[1]);
+
   return (
     <div className="min-h-screen bg-background p-4 space-y-6">
       <div className="flex items-center justify-between">
@@ -131,6 +152,28 @@ export default function AdminDispatchTelemetry() {
         </Button>
       </div>
 
+
+      <section>
+        <h2 className="text-lg font-semibold mb-2">Delivery Funnel (last 24h)</h2>
+        <p className="text-xs text-muted-foreground mb-2">
+          "FCM accepted" only means Firebase queued the message. Real delivery is proven by DEVICE_RECEIVED and POPUP_SHOWN.
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+          {stages.map((s) => (
+            <Card key={s.label} className="p-3">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.label}</div>
+              <div className={`text-2xl font-bold ${s.value === 0 && s.warnOnZero ? "text-red-600" : ""}`}>{s.value}</div>
+            </Card>
+          ))}
+        </div>
+        {failureBreakdown.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {failureBreakdown.map(([reason, count]) => (
+              <Badge key={reason} variant="destructive">{reason}: {count}</Badge>
+            ))}
+          </div>
+        )}
+      </section>
       <section>
         <h2 className="text-lg font-semibold mb-2">
           Active Telemetry Workers <Badge variant="secondary">{workers.length}</Badge>

@@ -37,7 +37,11 @@ type FailureEvent =
   | "permission_missing"
   | "overlay_blocked"
   | "app_killed"
-  | "token_invalid";
+  | "token_invalid"
+  // New (v6.0.67+): previously-silent abort paths between push_received and popup_shown
+  | "prealert_suppressed"   // scheduled offer hidden by the client-side prealert guard
+  | "session_missing"       // overlay/activity aborted: no usable session on device
+  | "service_start_blocked"; // OS refused the background service/activity start
 type EventType = TimestampEvent | FailureEvent;
 
 const TS_COL: Record<TimestampEvent, "push_delivered_at" | "popup_shown_at" | "worker_seen_at"> = {
@@ -52,6 +56,7 @@ const TS_CHANNEL: Record<TimestampEvent, string> = {
 };
 const FAILURE_EVENTS = new Set<FailureEvent>([
   "popup_failed", "permission_missing", "overlay_blocked", "app_killed", "token_invalid",
+  "prealert_suppressed", "session_missing", "service_start_blocked",
 ]);
 
 const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

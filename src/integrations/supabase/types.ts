@@ -9278,6 +9278,7 @@ export type Database = {
         Args: { p_admin_notes?: string; p_payout_id: string }
         Returns: Json
       }
+      repair_scheduled_dispatch_windows: { Args: never; Returns: Json }
       repair_worker_push_health: {
         Args: { p_new_token: string; p_worker_id: string }
         Returns: undefined

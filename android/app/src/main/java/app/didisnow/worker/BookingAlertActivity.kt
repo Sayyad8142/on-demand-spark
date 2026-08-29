@@ -54,6 +54,8 @@ class BookingAlertActivity : AppCompatActivity() {
         val scheduledTime = intent.getStringExtra("scheduled_time") ?: ""
         if (bookingType == "scheduled" && !prealertSent) {
             Log.w("BookingAlert", "🔕 Scheduled offer hidden until prealert_sent=true booking_id=$bookingId booking_type=$bookingType scheduled_at=$scheduledTime prealert_sent=$prealertSent request_status=null shown_to_worker=false")
+            BackendSync.ackFailureAsync(applicationContext, bookingId, "prealert_suppressed",
+                intent.getStringExtra("booking_request_id"))
             finish()
             return
         }
