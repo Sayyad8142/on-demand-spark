@@ -1,14 +1,8 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { Trophy, Star, Zap, IndianRupee, TrendingUp, HelpCircle } from "lucide-react";
+import { Trophy, IndianRupee, Briefcase } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 interface LeaderboardEntry {
   id: string;
@@ -56,94 +50,69 @@ export default function BookingLeaderboard() {
   if (error || !data) return null;
 
   const me = data.leaderboard.find(l => l.isMe);
-  const top3 = data.leaderboard.slice(0, 3);
-  const others = data.leaderboard.slice(3, 10); // Show top 10 total
+  const topWorkers = data.leaderboard.slice(0, 10);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Your Rank Card */}
       {me && (
         <Card className="overflow-hidden border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-background shadow-md">
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-primary" />
-                <h3 className="font-bold text-sm">Your Rank — #{me.rank}</h3>
-              </div>
-              <LevelBadge level={me.level} />
+          <div className="p-5 text-center">
+            <div className="inline-flex items-center gap-2 mb-3 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
+              <Trophy className="w-4 h-4" />
+              <span>Your Rank</span>
             </div>
 
-            <div className="flex items-center gap-3 mb-4">
-<div className="w-12 h-12 rounded-full bg-muted overflow-hidden border-2 border-white shadow-sm">
+            <div className="relative inline-block mb-3">
+              <div className="w-24 h-24 rounded-full bg-muted overflow-hidden border-4 border-white shadow-lg mx-auto">
                 {me.photo_url ? (
                   <img src={me.photo_url} alt={me.full_name} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-lg font-bold text-muted-foreground bg-primary/10">
+                  <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-muted-foreground bg-primary/10">
                     {me.full_name?.[0]}
                   </div>
                 )}
               </div>
-              <div>
-                <p className="font-bold text-base leading-none mb-1">{me.full_name}</p>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    <span className="text-xs font-bold">{me.rating.toFixed(1)}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Zap className="w-3 h-3 fill-primary text-primary" />
-                    <span className="text-xs font-bold">{me.priority_score}</span>
-                  </div>
-                </div>
+              <div className="absolute -bottom-1 -right-1 w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-extrabold shadow-md border-2 border-white">
+                #{me.rank}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <div className="bg-white/50 dark:bg-black/20 p-2 rounded-xl text-center">
-                <p className="text-[10px] text-muted-foreground font-semibold uppercase">Jobs Today</p>
-                <p className="text-sm font-bold">{me.jobsToday}</p>
+            <p className="font-bold text-lg leading-tight mb-4">{me.full_name}</p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white/60 dark:bg-black/20 p-3 rounded-2xl text-center">
+                <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
+                  <Briefcase className="w-4 h-4" />
+                  <span className="text-[11px] font-semibold">Jobs Today</span>
+                </div>
+                <p className="text-xl font-extrabold">{me.jobsToday}</p>
               </div>
-              <div className="bg-white/50 dark:bg-black/20 p-2 rounded-xl text-center">
-                <p className="text-[10px] text-muted-foreground font-semibold uppercase">Earned Today</p>
-                <p className="text-sm font-bold text-green-600 flex items-center justify-center">
-                  <IndianRupee className="w-3 h-3" />
+              <div className="bg-white/60 dark:bg-black/20 p-3 rounded-2xl text-center">
+                <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
+                  <IndianRupee className="w-4 h-4" />
+                  <span className="text-[11px] font-semibold">Money Today</span>
+                </div>
+                <p className="text-xl font-extrabold text-green-600 flex items-center justify-center">
+                  <IndianRupee className="w-4 h-4" />
                   {me.earningsToday}
                 </p>
               </div>
             </div>
-
-            <p className="text-[10px] text-muted-foreground italic text-center">
-              "Higher performance can improve your booking priority."
-            </p>
           </div>
         </Card>
       )}
 
       {/* Today's Top Workers */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between px-1">
-          <h2 className="text-sm font-bold flex items-center gap-1.5">
-            🏆 Today's Top Workers
-          </h2>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <HelpCircle className="w-3.5 h-3.5 text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent className="text-[10px] max-w-[200px]">
-                Workers in your community ranked by Priority Score, Rating, and Performance.
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+      <div className="space-y-3">
+        <h2 className="text-base font-bold px-1 flex items-center gap-2">
+          <Trophy className="w-5 h-5 text-amber-500" />
+          Top Workers Today
+        </h2>
 
-        <div className="space-y-2">
-          {top3.map((w, i) => (
-            <WorkerRow key={w.id} worker={w} medal={i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"} />
-          ))}
-          
-          {others.map((w) => (
-            <WorkerRow key={w.id} worker={w} />
+        <div className="grid grid-cols-2 gap-3">
+          {topWorkers.map((w, i) => (
+            <WorkerCard key={w.id} worker={w} rank={i + 1} />
           ))}
         </div>
       </div>
@@ -151,83 +120,59 @@ export default function BookingLeaderboard() {
   );
 }
 
-function WorkerRow({ worker, medal }: { worker: LeaderboardEntry; medal?: string }) {
-  return (
-    <div className={`flex items-center justify-between p-2.5 rounded-xl border ${worker.isMe ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800' : 'bg-card border-border'} shadow-sm`}>
-      <div className="flex items-center gap-3">
-        <span className="text-base w-6 text-center font-bold">
-          {medal || `#${worker.rank}`}
-        </span>
-<div className="w-9 h-9 rounded-full bg-muted overflow-hidden shrink-0">
-          {worker.photo_url ? (
-            <img src={worker.photo_url} alt={worker.full_name} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-sm font-bold text-muted-foreground bg-primary/5">
-              {worker.full_name?.[0]}
-            </div>
-          )}
-        </div>
-        <div>
-          <div className="flex items-center gap-1.5">
-            <p className={`text-xs font-bold ${worker.isMe ? 'text-emerald-700 dark:text-emerald-400' : ''}`}>
-              {worker.isMe ? 'YOU' : worker.full_name}
-            </p>
-            <LevelBadge level={worker.level} size="xs" />
-          </div>
-          <div className="flex items-center gap-2 mt-0.5 opacity-80">
-            <div className="flex items-center gap-0.5">
-              <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-              <span className="text-[10px] font-bold">{worker.rating.toFixed(1)}</span>
-            </div>
-            <div className="flex items-center gap-0.5">
-              <Zap className="w-2.5 h-2.5 fill-primary text-primary" />
-              <span className="text-[10px] font-bold">Prio {worker.priority_score}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="text-right">
-        <p className="text-[10px] font-bold text-foreground leading-none">{worker.jobsToday} Jobs</p>
-        <p className="text-[11px] font-extrabold text-green-600 flex items-center justify-end mt-0.5">
-          <IndianRupee className="w-2.5 h-2.5" />
-          {worker.earningsToday}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function LevelBadge({ level, size = "sm" }: { level: string; size?: "sm" | "xs" }) {
-  const colors: Record<string, string> = {
-    Elite: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 border-emerald-200",
-    Pro: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 border-blue-200",
-    Rising: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400 border-orange-200",
-    Standard: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border-slate-200"
-  };
-
-  const icons: Record<string, string> = {
-    Elite: "🏆",
-    Pro: "⭐",
-    Rising: "🔥",
-    Standard: "⚡"
-  };
+function WorkerCard({ worker, rank }: { worker: LeaderboardEntry; rank: number }) {
+  const isTop3 = rank <= 3;
 
   return (
-    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[9px] font-extrabold uppercase tracking-tight ${colors[level] || colors.Standard}`}>
-      <span>{icons[level] || icons.Standard}</span>
-      {level}
-    </span>
+    <Card className={`p-3 text-center relative overflow-hidden ${
+      worker.isMe
+        ? 'border-2 border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20'
+        : 'border border-border bg-card'
+    }`}>
+      {isTop3 && (
+        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500" />
+      )}
+
+      <div className="absolute top-2 right-2 w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-extrabold">
+        #{rank}
+      </div>
+
+      <div className="w-16 h-16 rounded-full bg-muted overflow-hidden border-2 border-white shadow-sm mx-auto mb-2">
+        {worker.photo_url ? (
+          <img src={worker.photo_url} alt={worker.full_name} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-lg font-bold text-muted-foreground bg-primary/10">
+            {worker.full_name?.[0]}
+          </div>
+        )}
+      </div>
+
+      <p className="font-bold text-sm leading-tight mb-1 truncate px-1">
+        {worker.isMe ? 'You' : worker.full_name}
+      </p>
+
+      <div className="space-y-1 mt-2">
+        <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+          <Briefcase className="w-3 h-3" />
+          <span>{worker.jobsToday} jobs</span>
+        </div>
+        <div className="flex items-center justify-center gap-1 text-sm font-extrabold text-green-600">
+          <IndianRupee className="w-3 h-3" />
+          <span>{worker.earningsToday}</span>
+        </div>
+      </div>
+    </Card>
   );
 }
 
 function LeaderboardSkeleton() {
   return (
-    <div className="space-y-4">
-      <Skeleton className="h-40 w-full rounded-2xl" />
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-32 ml-1" />
-        {[1, 2, 3].map(i => (
-          <Skeleton key={i} className="h-14 w-full rounded-xl" />
+    <div className="space-y-5">
+      <Skeleton className="h-72 w-full rounded-2xl" />
+      <Skeleton className="h-5 w-40 ml-1" />
+      <div className="grid grid-cols-2 gap-3">
+        {[1, 2, 3, 4].map(i => (
+          <Skeleton key={i} className="h-44 w-full rounded-2xl" />
         ))}
       </div>
     </div>
