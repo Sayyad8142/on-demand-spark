@@ -13,7 +13,7 @@ import {
 interface LeaderboardEntry {
   id: string;
   rank: number;
-  first_name: string;
+  full_name: string;
   photo_url: string | null;
   rating: number;
   priority_score: number;
@@ -74,17 +74,17 @@ export default function BookingLeaderboard() {
             </div>
 
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-muted overflow-hidden border-2 border-white shadow-sm">
+<div className="w-12 h-12 rounded-full bg-muted overflow-hidden border-2 border-white shadow-sm">
                 {me.photo_url ? (
-                  <img src={me.photo_url} alt={me.first_name} className="w-full h-full object-cover" />
+                  <img src={me.photo_url} alt={me.full_name} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-lg font-bold text-muted-foreground bg-primary/10">
-                    {me.first_name?.[0]}
+                    {me.full_name?.[0]}
                   </div>
                 )}
               </div>
               <div>
-                <p className="font-bold text-base leading-none mb-1">{me.first_name}</p>
+                <p className="font-bold text-base leading-none mb-1">{me.full_name}</p>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1">
                     <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
@@ -158,19 +158,19 @@ function WorkerRow({ worker, medal }: { worker: LeaderboardEntry; medal?: string
         <span className="text-base w-6 text-center font-bold">
           {medal || `#${worker.rank}`}
         </span>
-        <div className="w-9 h-9 rounded-full bg-muted overflow-hidden shrink-0">
+<div className="w-9 h-9 rounded-full bg-muted overflow-hidden shrink-0">
           {worker.photo_url ? (
-            <img src={worker.photo_url} alt={worker.first_name} className="w-full h-full object-cover" />
+            <img src={worker.photo_url} alt={worker.full_name} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-sm font-bold text-muted-foreground bg-primary/5">
-              {worker.first_name?.[0]}
+              {worker.full_name?.[0]}
             </div>
           )}
         </div>
         <div>
           <div className="flex items-center gap-1.5">
             <p className={`text-xs font-bold ${worker.isMe ? 'text-primary' : ''}`}>
-              {worker.isMe ? 'YOU' : worker.first_name}
+              {worker.isMe ? 'YOU' : worker.full_name}
             </p>
             <LevelBadge level={worker.level} size="xs" />
           </div>

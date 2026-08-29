@@ -11,7 +11,7 @@ import {
 
 interface LeaderboardWorker {
   id: string;
-  first_name: string;
+  full_name: string;
   photo_url: string | null;
   rating: number;
   priority_score: number;
@@ -130,18 +130,18 @@ export default function WorkerLeaderboardCard({
           <div key={w.id} className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-base w-6 grayscale-[0.5] opacity-80">{getMedal(i)}</span>
-              <div className="w-8 h-8 rounded-full bg-muted overflow-hidden">
+<div className="w-8 h-8 rounded-full bg-muted overflow-hidden">
                 {w.photo_url ? (
-                  <img src={w.photo_url} alt={w.first_name} className="w-full h-full object-cover" />
+                  <img src={w.photo_url} alt={w.full_name} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground">
-                    {w.first_name?.[0]}
+                    {w.full_name?.[0]}
                   </div>
                 )}
               </div>
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
-                  <p className="text-xs font-bold leading-none">{w.first_name}</p>
+                  <p className="text-xs font-bold leading-none">{w.full_name}</p>
                   {!(w as any).is_available && (
                     <span className="text-[8px] bg-red-100 text-red-700 px-1 py-0 rounded font-medium">OFF</span>
                   )}
