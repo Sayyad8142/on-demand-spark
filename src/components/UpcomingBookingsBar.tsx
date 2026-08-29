@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Clock, IndianRupee } from "lucide-react";
+import { CalendarClock, Clock, IndianRupee } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
 
 type UpcomingBooking = {
@@ -23,24 +23,40 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
   const [bookings, setBookings] = useState<UpcomingBooking[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchUpcoming = useCallback(async () => {
+    const { data, error } = await supabase.rpc(
+      "get_worker_upcoming_scheduled_bookings",
+      { p_limit: limit }
+    );
+
+    if (error) {
+      console.error("[UpcomingBookings] fetch_failed", {
+        code: error.code,
+        message: error.message,
+      });
+    } else {
+      const nextBookings = (data ?? []) as UpcomingBooking[];
+      console.log("[UpcomingBookings] fetched", { count: nextBookings.length });
+      setBookings(nextBookings);
+    }
+
+    setLoading(false);
+  }, [limit]);
+
   useEffect(() => {
-    const fetchUpcoming = async () => {
-      const { data, error } = await supabase.rpc(
-        "get_worker_upcoming_scheduled_bookings",
-        { p_limit: limit }
-      );
+    void fetchUpcoming();
 
-      if (!error && data) {
-        console.log("📅 Upcoming scheduled bookings fetched:", data.length);
-        setBookings(data as UpcomingBooking[]);
-      } else if (error) {
-        console.error("❌ Error fetching upcoming scheduled bookings:", error);
-      }
-
-      setLoading(false);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void fetchUpcoming();
     };
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    window.addEventListener("focus", refreshWhenVisible);
 
-    fetchUpcoming();
+    // Realtime can be unavailable on older app sessions. This lightweight
+    // refresh keeps the Home bar current when a scheduled booking is created.
+    const refreshInterval = window.setInterval(() => {
+      if (document.visibilityState === "visible") void fetchUpcoming();
+    }, 30_000);
 
     const channel = supabase
       .channel("upcoming-scheduled-bookings")
@@ -52,15 +68,18 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
           table: "bookings",
         },
         () => {
-          fetchUpcoming();
+          void fetchUpcoming();
         }
       )
       .subscribe();
 
     return () => {
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.removeEventListener("focus", refreshWhenVisible);
+      window.clearInterval(refreshInterval);
       supabase.removeChannel(channel);
     };
-  }, [limit]);
+  }, [fetchUpcoming]);
 
   if (loading || bookings.length === 0) return null;
 
@@ -82,14 +101,19 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
   };
 
   return (
-    <div 
-      className="fixed left-0 right-0 z-40 bg-gradient-to-t from-background via-background to-background/95 backdrop-blur-sm border-t border-border shadow-lg"
+    <section
+      aria-label="Upcoming scheduled bookings"
+      className="fixed left-0 right-0 z-40 border-t border-border bg-background/95 shadow-lg backdrop-blur-sm"
       style={{ 
         bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))'
       }}
     >
-      <div className="px-3 py-2.5">
-        {/* Scrollable Cards - No Header */}
+      <div className="mx-auto max-w-md px-3 py-2.5">
+        <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+          <CalendarClock className="h-4 w-4 text-primary" />
+          <span>Scheduled bookings</span>
+          <span className="text-muted-foreground">({bookings.length})</span>
+        </div>
         <div 
           className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1" 
           style={{ 
@@ -137,6 +161,6 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
           })}
         </div>
       </div>
-    </div>
+    </section>
   );
 }
