@@ -453,6 +453,13 @@ function AppInner() {
   }, []);
 
   const showCancellationAlert = useCallback((bookingId?: string) => {
+    // On native Android, the red full-screen BookingCancellationActivity already
+    // handles the cancellation UI (and its own alarm/vibration) — skip the web
+    // popup + voice to avoid showing two different screens one after another.
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
+      console.log("[CancellationAlert] native platform — red native screen handles UI, skipping web popup", bookingId);
+      return;
+    }
     setCancellationAlert((prev) => {
       // Dedupe: same booking already showing → ignore.
       if (prev && prev.bookingId === bookingId) return prev;
