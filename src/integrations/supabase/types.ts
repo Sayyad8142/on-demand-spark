@@ -7258,6 +7258,16 @@ export type Database = {
         Returns: Json
       }
       admin_quick_stats: { Args: never; Returns: Json }
+      admin_reassign_booking_worker: {
+        Args: {
+          p_booking_id: string
+          p_fault_party?: string
+          p_reason?: string
+          p_reason_code?: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
       admin_recreate_cancelled_booking: {
         Args: { p_booking_id: string }
         Returns: Json
