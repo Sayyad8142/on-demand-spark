@@ -59,6 +59,16 @@ const FAILURE_EVENTS = new Set<FailureEvent>([
   "prealert_suppressed", "session_missing", "service_start_blocked",
 ]);
 
+// Legacy aliases used by older Worker App builds (<= 6.0.64) and the very
+// first ACK contract. Kept so no installed client is rejected with a 400.
+const EVENT_ALIASES: Record<string, EventType> = {
+  received: "push_received",
+  push_delivered: "push_received",
+  opened: "worker_seen",
+  seen: "worker_seen",
+  popup: "popup_shown",
+};
+
 const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 Deno.serve(async (req) => {
