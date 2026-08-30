@@ -86,13 +86,15 @@ Deno.serve(async (req) => {
       app_version?: string;
       device_info?: Record<string, unknown>;
     };
-    const { booking_id, booking_request_id, worker_id, event_type, app_version, device_info } = body;
+    const { booking_id, booking_request_id, worker_id, app_version, device_info } = body;
+    const rawEvent = body.event_type ?? (body as any).event;
 
-    if (!event_type) return json({ error: "missing_event_type" }, 400);
+    if (!rawEvent) return json({ error: "missing_event_type" }, 400);
+    const event_type = (EVENT_ALIASES[rawEvent as string] ?? rawEvent) as EventType;
     const isFailure = FAILURE_EVENTS.has(event_type as FailureEvent);
     const isTimestamp = (event_type as TimestampEvent) in TS_COL;
     if (!isFailure && !isTimestamp) {
-      return json({ error: "invalid_event_type", got: event_type }, 400);
+      return json({ error: "invalid_event_type", got: rawEvent }, 400);
     }
     if (booking_id && !uuidRe.test(booking_id)) return json({ error: "bad booking_id" }, 400);
     if (booking_request_id && !uuidRe.test(booking_request_id)) return json({ error: "bad booking_request_id" }, 400);
