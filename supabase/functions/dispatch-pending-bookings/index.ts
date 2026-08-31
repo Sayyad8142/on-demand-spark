@@ -92,21 +92,55 @@ Deno.serve(async (req) => {
     }
 
     // ── 2. Find bookings still pending with no active request ───────────
-    // Bookings created in last 30 minutes only — we don't want to retry
-    // stale bookings indefinitely.
+    // Instant bookings: retry only while fresh (created in last 30 minutes).
+    // Scheduled bookings are created HOURS in advance, so created_at is the
+    // wrong clock for them — they must be retried around their dispatch
+    // window (10 min before start until 60 min after start). Without this,
+    // a scheduled booking only ever got its single pre-alert wave and was
+    // never re-offered when workers failed to ACK.
     const cutoff = new Date(startedAt.getTime() - 30 * 60_000).toISOString();
 
-    const { data: pendingBookings, error: pbErr } = await admin
+    const { data: freshBookings, error: pbErr } = await admin
       .from("bookings")
-      .select("id, status, created_at, service_type")
+      .select("id, status, created_at, service_type, booking_type, scheduled_date, scheduled_time, prealert_sent")
       .eq("status", "pending")
       .gte("created_at", cutoff)
       .limit(50);
+
+    // Scheduled bookings inside their dispatch window (IST date/time columns).
+    const istNow = new Date(startedAt.getTime() + 5.5 * 60 * 60_000);
+    const istToday = istNow.toISOString().slice(0, 10);
+    const istYesterday = new Date(istNow.getTime() - 24 * 60 * 60_000).toISOString().slice(0, 10);
+
+    const { data: scheduledCandidates } = await admin
+      .from("bookings")
+      .select("id, status, created_at, service_type, booking_type, scheduled_date, scheduled_time, prealert_sent")
+      .eq("status", "pending")
+      .eq("prealert_sent", true)
+      .in("scheduled_date", [istYesterday, istToday])
+      .limit(100);
+
+    const inDispatchWindow = (b: any) => {
+      if (!b.scheduled_date || !b.scheduled_time) return false;
+      const [y, m, d] = String(b.scheduled_date).split("-").map(Number);
+      const [hh, mm, ss] = String(b.scheduled_time).split(":").map(Number);
+      const startUtcMs = Date.UTC(y, m - 1, d, hh, mm, ss || 0) - 5.5 * 60 * 60_000;
+      const minutesFromStart = (startedAt.getTime() - startUtcMs) / 60_000;
+      return minutesFromStart >= -10 && minutesFromStart <= 60;
+    };
+
+    const byId = new Map<string, any>();
+    for (const b of freshBookings ?? []) byId.set(b.id, b);
+    for (const b of scheduledCandidates ?? []) {
+      if (inDispatchWindow(b)) byId.set(b.id, b);
+    }
+    const pendingBookings = Array.from(byId.values());
 
     if (pbErr) {
       console.error("[dispatch] pending bookings lookup failed:", pbErr.message);
       return json({ error: "lookup_failed", detail: pbErr.message }, 500);
     }
+
 
     let retried = 0;
     let skippedActive = 0;
