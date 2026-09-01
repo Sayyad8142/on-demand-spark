@@ -163,7 +163,21 @@ export default function ActiveJobCard({
     let text: string;
     let utteranceLang: string;
 
-    if (lang === 'te') {
+    if (isVilla) {
+      // Villas: speak the whole villa number, never tower/floor/door
+      const villaNo = booking.flat_no ?? '';
+      if (lang === 'te') {
+        text = `విల్లా నంబర్ ${villaNo}`;
+        utteranceLang = voices.some((v) => v.lang.startsWith('te')) ? 'te-IN' : 'hi-IN';
+        if (utteranceLang === 'hi-IN') text = `विला नंबर ${villaNo}`;
+      } else if (lang === 'hi') {
+        text = `विला नंबर ${villaNo}`;
+        utteranceLang = 'hi-IN';
+      } else {
+        text = `Villa number ${villaNo}`;
+        utteranceLang = 'en-IN';
+      }
+    } else if (lang === 'te') {
       const teVoice = voices.find((v) => v.lang.startsWith('te'));
       if (teVoice) {
         text = `ఫ్లాట్ నంబర్ ${booking.flat_no}`;
