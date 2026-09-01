@@ -57,7 +57,7 @@ export default function BookingLeaderboard() {
 
   const me = data.leaderboard.find(l => l.isMe);
   const top3 = data.leaderboard.slice(0, 3);
-  const others = data.leaderboard.slice(3, 10); // Show top 10 total
+  const others = data.leaderboard.slice(3); // Continue showing all workers
 
   return (
     <div className="space-y-4">
