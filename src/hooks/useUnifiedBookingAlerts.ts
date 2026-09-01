@@ -12,6 +12,8 @@ import {
   pruneShownBookings,
 } from "@/services/bookingAlertCoordinator";
 import { canShowWorkerBookingOffer, isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
+import { isVillaCommunity } from "@/lib/communityTypes";
+import { formatVillaLabel } from "@/lib/address";
 
 /**
  * Unified booking alert hook that:
@@ -51,6 +53,11 @@ export function useUnifiedBookingAlerts(
               community: alert.community,
               service_type: alert.serviceType,
               flat_no: alert.flatNo,
+              // Villa-aware display info (presentation only)
+              is_villa: isVillaCommunity(alert.community),
+              unit_label: isVillaCommunity(alert.community)
+                ? formatVillaLabel(alert.flatNo)
+                : `Flat #${alert.flatNo}`,
               price_inr: alert.priceInr,
               booking_type: alert.bookingType,
               scheduled_date: alert.scheduledDate,

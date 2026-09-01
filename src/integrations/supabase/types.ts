@@ -1603,6 +1603,7 @@ export type Database = {
           center_lat: number | null
           center_lng: number | null
           city: string | null
+          community_type: string
           created_at: string
           flat_format: string | null
           id: string
@@ -1617,6 +1618,7 @@ export type Database = {
           center_lat?: number | null
           center_lng?: number | null
           city?: string | null
+          community_type?: string
           created_at?: string
           flat_format?: string | null
           id?: string
@@ -1631,6 +1633,7 @@ export type Database = {
           center_lat?: number | null
           center_lng?: number | null
           city?: string | null
+          community_type?: string
           created_at?: string
           flat_format?: string | null
           id?: string
@@ -8294,6 +8297,15 @@ export type Database = {
       get_community_platform_fee_percent: {
         Args: { _community: string }
         Returns: number
+      }
+      get_community_types: {
+        Args: never
+        Returns: {
+          community_type: string
+          id: string
+          name: string
+          value: string
+        }[]
       }
       get_dispatch_config:
         | {

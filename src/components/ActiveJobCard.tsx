@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, Phone, Volume2, Utensils, Zap, PlusCircle, Sparkles, CookingPot, KeyRound, Banknote, CreditCard, AlertTriangle } from "lucide-react";
 import { BookingWithAddress } from "@/lib/address";
-import { parsePHFCode } from "@/lib/address";
+import { getUnitDisplay } from "@/lib/address";
 import { useCommunityFee } from "@/hooks/useCommunityFee";
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
@@ -146,7 +146,9 @@ export default function ActiveJobCard({
   }
   console.log('✅ ActiveJobCard: Showing card, status is:', booking.status);
 
-  const phfParsed = parsePHFCode(booking.flat_no);
+  const unit = getUnitDisplay(booking as any);
+  const isVilla = unit.isVilla;
+  const phfParsed = unit.phf;
 
   const handleCallManager = () => {
     window.location.href = `tel:${MANAGER_PHONE}`;
@@ -161,7 +163,21 @@ export default function ActiveJobCard({
     let text: string;
     let utteranceLang: string;
 
-    if (lang === 'te') {
+    if (isVilla) {
+      // Villas: speak the whole villa number, never tower/floor/door
+      const villaNo = booking.flat_no ?? '';
+      if (lang === 'te') {
+        text = `విల్లా నంబర్ ${villaNo}`;
+        utteranceLang = voices.some((v) => v.lang.startsWith('te')) ? 'te-IN' : 'hi-IN';
+        if (utteranceLang === 'hi-IN') text = `विला नंबर ${villaNo}`;
+      } else if (lang === 'hi') {
+        text = `विला नंबर ${villaNo}`;
+        utteranceLang = 'hi-IN';
+      } else {
+        text = `Villa number ${villaNo}`;
+        utteranceLang = 'en-IN';
+      }
+    } else if (lang === 'te') {
       const teVoice = voices.find((v) => v.lang.startsWith('te'));
       if (teVoice) {
         text = `ఫ్లాట్ నంబర్ ${booking.flat_no}`;
@@ -212,11 +228,14 @@ export default function ActiveJobCard({
 
   return <Card className="shadow-lg overflow-hidden border-0">
       <div className="space-y-3 py-0 px-0 my-0 mx-0">
-        {/* 1. Flat Number Display - Wooden Door Style */}
+        {/* 1. Unit Display - Wooden Door Style (villa-aware) */}
         <div className="flat-door-style p-5">
-          <div className="text-center mb-4 relative z-10 flex items-center justify-center gap-2">
+          {isVilla && booking.community &&
+            <p className="text-center text-sm font-bold text-[#D6B88A] mb-1 relative z-10">{booking.community}</p>
+          }
+          <div className={`text-center relative z-10 flex items-center justify-center gap-2 ${isVilla ? '' : 'mb-4'}`}>
             <p className="flat-number-text font-extrabold text-3xl tracking-wide uppercase">
-              Flat {booking.flat_no}
+              {isVilla ? unit.label : `Flat ${booking.flat_no}`}
             </p>
             <button
               onClick={speakFlatNo}

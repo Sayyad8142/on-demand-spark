@@ -76,6 +76,8 @@ class BookingAlertActivity : AppCompatActivity() {
 
         val serviceType = intent.getStringExtra("service_type") ?: ""
         val flatNo = intent.getStringExtra("flat_no") ?: ""
+        val communityName = intent.getStringExtra("community") ?: ""
+        val isVilla = communityName.contains("villa", ignoreCase = true)
         val priceInr = intent.getIntExtra("price_inr", 0)
 
         // Set service details
@@ -106,14 +108,17 @@ class BookingAlertActivity : AppCompatActivity() {
 
         priceText.text = "₹$priceInr"
         
-        // Derive Tower No from first digit of flat number
-        val towerNo = if (flatNo.isNotBlank()) {
+        // Derive Tower No from first digit of flat number (apartments only)
+        val towerNo = if (!isVilla && flatNo.isNotBlank()) {
             flatNo.firstOrNull { it.isDigit() }?.toString() ?: "—"
         } else {
             "—"
         }
         towerText.text = towerNo
-        communityText.text = "Prestige High Fields"
+        if (isVilla) {
+            towerText.visibility = android.view.View.GONE
+        }
+        communityText.text = if (communityName.isNotBlank()) communityName else "Prestige High Fields"
 
         val countdownText = findViewById<TextView>(R.id.countdown)
         val countdownCircle = findViewById<ProgressBar>(R.id.countdownCircle)

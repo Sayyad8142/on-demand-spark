@@ -329,16 +329,26 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
         overlayView?.findViewById<TextView>(R.id.subtitle)?.text = serviceType
         overlayView?.findViewById<TextView>(R.id.customerName)?.text = customer
         overlayView?.findViewById<TextView>(R.id.community)?.text = community
-        overlayView?.findViewById<TextView>(R.id.flatNo)?.text = "Flat #$flatNo"
+        // Villa communities: show the villa number as a whole unit, never parsed
+        val isVilla = community.contains("villa", ignoreCase = true)
+        val unitLabel = if (isVilla) {
+            if (flatNo.startsWith("Villa", ignoreCase = true)) flatNo else "Villa $flatNo"
+        } else {
+            "Flat #$flatNo"
+        }
+        overlayView?.findViewById<TextView>(R.id.flatNo)?.text = unitLabel
         overlayView?.findViewById<TextView>(R.id.price)?.text = "₹$price"
         
-        // Derive Tower No from first digit of flat number
-        val towerNo = if (flatNo.isNotBlank()) {
+        // Derive Tower No from first digit of flat number (apartments only)
+        val towerNo = if (!isVilla && flatNo.isNotBlank()) {
             flatNo.firstOrNull { it.isDigit() }?.toString() ?: "—"
         } else {
             "—"
         }
         overlayView?.findViewById<TextView>(R.id.towerNo)?.text = towerNo
+        if (isVilla) {
+            overlayView?.findViewById<TextView>(R.id.towerNo)?.visibility = android.view.View.GONE
+        }
         
         // Set service-specific image
         val serviceImageView = overlayView?.findViewById<ImageView>(R.id.serviceImage)

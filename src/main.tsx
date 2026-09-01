@@ -50,6 +50,12 @@ const bootstrap = async () => {
   console.log('🔗 RESOLVED_SUPABASE_URL:', getSupabaseUrl());
   debugConnectionCheck();
 
+  // Warm the community-type registry (apartment vs villa) in the background.
+  // Cached in localStorage so booking popups can resolve villas synchronously.
+  import("./lib/communityTypes").then(({ loadCommunityTypes }) => {
+    loadCommunityTypes().catch(() => {});
+  });
+
   createRoot(document.getElementById("root")!).render(<App />);
 };
 
