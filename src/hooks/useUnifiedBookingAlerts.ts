@@ -51,6 +51,11 @@ export function useUnifiedBookingAlerts(
               community: alert.community,
               service_type: alert.serviceType,
               flat_no: alert.flatNo,
+              // Villa-aware display info (presentation only)
+              is_villa: isVillaCommunity(alert.community),
+              unit_label: isVillaCommunity(alert.community)
+                ? formatVillaLabel(alert.flatNo)
+                : `Flat #${alert.flatNo}`,
               price_inr: alert.priceInr,
               booking_type: alert.bookingType,
               scheduled_date: alert.scheduledDate,
