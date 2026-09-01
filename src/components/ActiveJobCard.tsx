@@ -228,11 +228,14 @@ export default function ActiveJobCard({
 
   return <Card className="shadow-lg overflow-hidden border-0">
       <div className="space-y-3 py-0 px-0 my-0 mx-0">
-        {/* 1. Flat Number Display - Wooden Door Style */}
+        {/* 1. Unit Display - Wooden Door Style (villa-aware) */}
         <div className="flat-door-style p-5">
-          <div className="text-center mb-4 relative z-10 flex items-center justify-center gap-2">
+          {isVilla && booking.community &&
+            <p className="text-center text-sm font-bold text-[#D6B88A] mb-1 relative z-10">{booking.community}</p>
+          }
+          <div className={`text-center relative z-10 flex items-center justify-center gap-2 ${isVilla ? '' : 'mb-4'}`}>
             <p className="flat-number-text font-extrabold text-3xl tracking-wide uppercase">
-              Flat {booking.flat_no}
+              {isVilla ? unit.label : `Flat ${booking.flat_no}`}
             </p>
             <button
               onClick={speakFlatNo}
