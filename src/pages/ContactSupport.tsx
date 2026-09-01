@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Phone, Mail, MessageCircle, HelpCircle, Send, CheckCircle, Clock } from "lucide-react";
+import { ArrowLeft, Phone, Mail, MessageCircle, HelpCircle, Send, CheckCircle, Clock, FlaskConical, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
