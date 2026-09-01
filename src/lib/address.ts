@@ -1,4 +1,5 @@
 import { Database } from "@/integrations/supabase/types";
+import { isVillaCommunity } from "@/lib/communityTypes";
 
 type Booking = Database["public"]["Tables"]["bookings"]["Row"];
 
@@ -22,6 +23,12 @@ export type BookingWithAddress = Booking;
  */
 export function formatBookingAddress(booking: BookingWithAddress): string {
   const flatNo = booking.flat_no;
+
+  // Villa communities: never parse the number as an apartment code
+  if (isVillaBooking(booking)) {
+    return formatVillaLabel(flatNo);
+  }
+
 
   // Check if it's a 5-digit PHF code (2-2-1 format: TT-FF-D)
   if (flatNo && /^\d{5}$/.test(flatNo.toString())) {
