@@ -165,6 +165,20 @@ class BookingAlertActivity : AppCompatActivity() {
         }
         countdownHandler?.post(countdownRunnable)
 
+        // 📨 ACK popup_shown — the full-screen booking alert is now on screen.
+        // (Previously only BookingOverlayService acked, so every fallback
+        //  alert produced popup_shown_at = NULL.) Idempotent server-side.
+        if (bookingId.isNotBlank()) {
+            Log.d("BookingAlert", "📨 [ACK] Sending popup_shown for booking_id=$bookingId")
+            BackendSync.ackDeliveryAsync(
+                applicationContext,
+                bookingId,
+                "popup_shown",
+                intent.getStringExtra("booking_request_id")
+            )
+        }
+
+
         btnAccept.setOnClickListener {
             Log.d("BookingAlert", "✅ Accept button clicked")
             stopAlertSound()
