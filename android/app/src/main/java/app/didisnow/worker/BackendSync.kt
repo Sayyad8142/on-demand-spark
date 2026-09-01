@@ -189,6 +189,8 @@ object BackendSync {
             put("worker_id", workerId)
             put("event_type", event)
             put("app_version", appVersion(ctx))
+            put("native_app_version", appVersion(ctx))
+            put("native_version_code", nativeVersionCode(ctx))
             put("attempt", attempt)
             put("device_info", JSONObject().apply {
                 put("oem", "${Build.MANUFACTURER}/${Build.MODEL}")
@@ -386,6 +388,15 @@ object BackendSync {
         return try { NotificationManagerCompat.from(ctx).areNotificationsEnabled() } catch (_: Exception) { false }
     }
 
+    /** Native APK versionCode — proves which APK is actually installed (OTA cannot change it). */
+    private fun nativeVersionCode(ctx: Context): Long {
+        return try {
+            val pi = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pi.longVersionCode
+            else @Suppress("DEPRECATION") pi.versionCode.toLong()
+        } catch (_: Exception) { -1L }
+    }
+
     private fun appVersion(ctx: Context): String {
         return try {
             val pi = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
@@ -414,6 +425,8 @@ object BackendSync {
             put("battery_level", batteryLevel(ctx))
             put("network_type", networkType(ctx))
             put("app_version", appVersion(ctx))
+            put("native_app_version", appVersion(ctx))
+            put("native_version_code", nativeVersionCode(ctx))
             put("notification_permission_granted", notificationsEnabled(ctx))
             put("battery_optimization_disabled", batteryOptimizationDisabled(ctx))
             put("device_manufacturer", Build.MANUFACTURER.lowercase())
