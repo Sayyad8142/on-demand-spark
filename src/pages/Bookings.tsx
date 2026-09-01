@@ -8,7 +8,7 @@ import { ArrowLeft, Calendar, Loader2, CheckCircle2, Clock, XCircle, MapPin, Sta
 import WorkerRankCard from "@/components/WorkerRankCard";
 
 import { DEMO_BOOKINGS } from "@/config/demoData";
-import { formatBookingAddress, BookingWithAddress } from "@/lib/address";
+import { formatBookingAddress, getUnitDisplay, BookingWithAddress } from "@/lib/address";
 import { useCommunityFee } from "@/hooks/useCommunityFee";
 
 type Booking = BookingWithAddress & {
@@ -320,7 +320,7 @@ function BookingCard({ booking }: { booking: Booking }) {
         <div className="flex items-start gap-2 mb-3">
           <MapPin className={`w-4 h-4 mt-0.5 shrink-0 ${isCancelled ? 'text-red-500' : 'text-green-600'}`} />
           <p className="text-sm font-bold text-foreground leading-snug">
-            {booking.flat_no ? `Flat ${booking.flat_no}` : 'Flat not set'}
+            {getUnitDisplay(booking as any).label}
           </p>
         </div>
 
