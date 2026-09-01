@@ -199,6 +199,15 @@ public class MyFirebaseService extends FirebaseMessagingService {
           return;
         }
 
+        // Authoritative offer expiry (epoch seconds) — relayed by send-fcm.
+        long expiresAtSec = parseEpoch(data.get("expires_at"));
+        long sentAtSec = parseEpoch(data.get("sent_at"));
+        int ttlSeconds = 60;
+        try {
+          String ttlRaw = data.get("ttl_seconds");
+          if (ttlRaw != null && !ttlRaw.isEmpty()) ttlSeconds = Integer.parseInt(ttlRaw.trim());
+        } catch (Exception ignored) {}
+
         // booking_request_id may be supplied per-worker by backend for unambiguous ACK
         String bookingRequestId = data.get("booking_request_id");
         if (bookingRequestId != null && bookingRequestId.isEmpty()) bookingRequestId = null;
@@ -265,6 +274,9 @@ public class MyFirebaseService extends FirebaseMessagingService {
         serviceIntent.putExtra("flat_no", flatNo != null ? flatNo : "");
         serviceIntent.putExtra("price_inr", price);
         serviceIntent.putExtra("scheduled_time", scheduledTime != null ? scheduledTime : "");
+        serviceIntent.putExtra("expires_at", expiresAtSec);
+        serviceIntent.putExtra("sent_at", sentAtSec);
+        serviceIntent.putExtra("ttl_seconds", ttlSeconds);
 
         // Try to get access token from SharedPreferences to pass via Intent
         try {
@@ -358,6 +370,9 @@ public class MyFirebaseService extends FirebaseMessagingService {
       activityIntent.putExtra("flat_no", location != null ? location : "");
       activityIntent.putExtra("price_inr", price);
       activityIntent.putExtra("scheduled_time", scheduledTime != null ? scheduledTime : "");
+      activityIntent.putExtra("expires_at", expiresAtSec);
+      activityIntent.putExtra("sent_at", sentAtSec);
+      activityIntent.putExtra("ttl_seconds", ttlSeconds);
 
       // Pass access token
       try {
