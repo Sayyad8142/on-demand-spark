@@ -58,6 +58,8 @@ class BookingOverlayService : Service() {
     private var statusCheckRunnable: Runnable? = null
     private var currentBookingId: String? = null
     private var currentBookingRequestId: String? = null
+    // Authoritative offer countdown (seconds) resolved from the FCM payload.
+    private var offerSecondsLeft: Int = OfferTimer.DEFAULT_TTL_SECONDS
     
     // Track the startId so we can call stopSelfResult() with it
     private var startIdForStop: Int = 0
@@ -144,6 +146,7 @@ class BookingOverlayService : Service() {
                     val serviceType = intent?.getStringExtra("service_type") ?: ""
                     val flatNo = intent?.getStringExtra("flat_no") ?: ""
                     val price = intent?.getIntExtra("price_inr", 0) ?: 0
+                    offerSecondsLeft = OfferTimer.remainingSecondsFrom(intent)
                     
                     // Try to get access token from Intent first (passed from web)
                     var accessToken = intent?.getStringExtra("ACCESS_TOKEN")
@@ -369,7 +372,9 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
         // Prepare countdown handler (will start after view is added)
         val countdownText = overlayView?.findViewById<TextView>(R.id.countdown)
         val countdownCircle = overlayView?.findViewById<android.widget.ProgressBar>(R.id.countdownCircle)
-        var secondsLeft = 30
+        var secondsLeft = offerSecondsLeft
+        val totalSeconds = maxOf(secondsLeft, OfferTimer.DEFAULT_TTL_SECONDS)
+        countdownCircle?.max = totalSeconds
         countdownHandler = Handler(mainLooper)
         countdownRunnable = object : Runnable {
             override fun run() {
@@ -384,7 +389,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                         
                         // Change countdown text color based on time remaining
                         val textColor = when {
-                            secondsLeft > 15 -> android.graphics.Color.parseColor("#22C55E") // Green
+                            secondsLeft > totalSeconds / 2 -> android.graphics.Color.parseColor("#22C55E") // Green
                             secondsLeft > 10 -> android.graphics.Color.parseColor("#F59E0B") // Orange
                             else -> android.graphics.Color.parseColor("#DC2626") // Red
                         }
