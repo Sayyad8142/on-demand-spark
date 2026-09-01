@@ -712,6 +712,7 @@ function AppInner() {
           <Route path="/diagnostics" element={<ProtectedRoute><BookingDiagnostics /></ProtectedRoute>} />
           <Route path="/complete-booking/:bookingId" element={<ProtectedRoute><CompleteBooking /></ProtectedRoute>} />
           <Route path="/account-details" element={<ProtectedRoute><AccountDetails /></ProtectedRoute>} />
+          <Route path="/test-booking" element={<ProtectedRoute><TestBooking /></ProtectedRoute>} />
           <Route path="/" element={<RootRedirect />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
