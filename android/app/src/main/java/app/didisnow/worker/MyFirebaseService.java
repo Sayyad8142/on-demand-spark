@@ -368,7 +368,8 @@ public class MyFirebaseService extends FirebaseMessagingService {
   private void launchBookingAlertActivity(String bookingId, String customer, String community,
                                            String serviceType, String location, int price,
                                             String bookingType, String scheduledTime, boolean prealertSent,
-                                            String bookingRequestId) {
+                                            String bookingRequestId,
+                                            long expiresAtSec, long sentAtSec, int ttlSeconds) {
     Log.d(TAG, "🚀 Launching BookingAlertActivity as fallback for " + bookingType + " booking");
 
     try {
