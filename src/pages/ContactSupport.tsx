@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Phone, Mail, MessageCircle, HelpCircle, Send, CheckCircle, Clock } from "lucide-react";
+import { ArrowLeft, Phone, Mail, MessageCircle, HelpCircle, Send, CheckCircle, Clock, FlaskConical, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -181,6 +181,34 @@ export default function ContactSupport() {
                 <strong>Emergency:</strong> {CONTACT_INFO.emergencyNote}
               </p>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Training / Test Booking */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FlaskConical className="w-5 h-5 text-primary" />
+              Practice Bookings
+            </CardTitle>
+            <CardDescription>
+              Learn how bookings work without creating a real request
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <button
+              onClick={() => navigate("/test-booking")}
+              className="w-full text-left rounded-2xl border border-primary/30 bg-primary/5 p-4 flex items-center gap-3 active:bg-primary/10 transition-colors"
+            >
+              <span className="text-2xl">🧪</span>
+              <span className="flex-1">
+                <span className="block font-semibold text-sm">Try Test Booking</span>
+                <span className="block text-xs text-muted-foreground">
+                  Practice how bookings work — no real booking created
+                </span>
+              </span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </button>
           </CardContent>
         </Card>
 
