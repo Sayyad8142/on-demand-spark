@@ -1603,6 +1603,7 @@ export type Database = {
           center_lat: number | null
           center_lng: number | null
           city: string | null
+          community_type: string
           created_at: string
           flat_format: string | null
           id: string
@@ -1617,6 +1618,7 @@ export type Database = {
           center_lat?: number | null
           center_lng?: number | null
           city?: string | null
+          community_type?: string
           created_at?: string
           flat_format?: string | null
           id?: string
@@ -1631,6 +1633,7 @@ export type Database = {
           center_lat?: number | null
           center_lng?: number | null
           city?: string | null
+          community_type?: string
           created_at?: string
           flat_format?: string | null
           id?: string
