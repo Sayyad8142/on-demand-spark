@@ -26,18 +26,18 @@ export function formatBookingAddress(booking: BookingWithAddress): string {
   // Check if it's a 5-digit PHF code (2-2-1 format: TT-FF-D)
   if (flatNo && /^\d{5}$/.test(flatNo.toString())) {
     const code = flatNo.toString();
-    const tower = Number(code.slice(0, 2));
-    const floor = Number(code.slice(2, 4));
-    const door = Number(code[4]);
+    const tower = code.slice(0, 2);
+    const floor = code.slice(2, 4);
+    const door = code[4];
     return `Tower ${tower} • Floor ${floor} • Door ${door}`;
   }
 
   // Check if it's a 4-digit PHF code (1-2-1 format: T-FF-D)
   if (flatNo && /^\d{4}$/.test(flatNo.toString())) {
     const code = flatNo.toString();
-    const tower = Number(code[0]);
-    const floor = Number(code.slice(1, 3));
-    const door = Number(code[3]);
+    const tower = code[0];
+    const floor = code.slice(1, 3);
+    const door = code[3];
     return `Tower ${tower} • Floor ${floor} • Door ${door}`;
   }
 
