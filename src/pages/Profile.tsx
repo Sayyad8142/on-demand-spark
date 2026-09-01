@@ -852,6 +852,23 @@ export default function Profile() {
           <PriorityScoreCard worker={worker} />
         </div>
 
+        {/* Training / Test Booking */}
+        <div className="px-4 mt-4">
+          <button
+            onClick={() => navigate("/test-booking")}
+            className="w-full text-left rounded-2xl border border-primary/30 bg-primary/5 p-4 flex items-center gap-3 active:bg-primary/10 transition-colors"
+          >
+            <span className="text-2xl">🧪</span>
+            <span className="flex-1">
+              <span className="block font-semibold text-sm">Try Test Booking</span>
+              <span className="block text-xs text-muted-foreground">
+                Practice how bookings work — no real booking created
+              </span>
+            </span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
+
         {/* Language Selection */}
         <div className="px-4 mt-4">
           <Card className="border-0 shadow-lg">
