@@ -93,3 +93,56 @@ export function parsePHFCode(flatNo: string | null | undefined): {
 export function isPHFCode(flatNo: string | null | undefined): boolean {
   return !!(flatNo && /^\d{4,5}$/.test(flatNo.toString()));
 }
+
+/**
+ * Villa support (Phase 2B)
+ * -------------------------------------------------------------
+ * Villa communities store the villa number in `flat_no`. It is a whole
+ * number (e.g. 425) and must NEVER be split into Tower / Floor / Door.
+ */
+
+export function isVillaBooking(
+  booking: { community?: string | null; community_type?: string | null; display_name?: string | null } | null | undefined
+): boolean {
+  if (!booking) return false;
+  const explicit = (booking as any).community_type;
+  if (explicit) return explicit === 'villa';
+  return isVillaCommunity(booking.community);
+}
+
+/**
+ * "Villa 425" — prefers flats.display_name when it is available on the payload.
+ */
+export function formatVillaLabel(
+  flatNo: string | number | null | undefined,
+  displayName?: string | null
+): string {
+  if (displayName && displayName.trim()) return displayName.trim();
+  const v = flatNo != null ? flatNo.toString().trim() : '';
+  if (!v) return 'Villa not set';
+  return /^villa/i.test(v) ? v : `Villa ${v}`;
+}
+
+/**
+ * Single entry point used by booking UI: returns the unit label plus whether
+ * apartment-specific Tower/Floor/Door blocks should be rendered.
+ */
+export function getUnitDisplay(booking: {
+  community?: string | null;
+  flat_no?: string | null;
+  community_type?: string | null;
+  display_name?: string | null;
+}): { isVilla: boolean; label: string; phf: { tower: string; floor: string; door: string } | null } {
+  if (isVillaBooking(booking)) {
+    return {
+      isVilla: true,
+      label: formatVillaLabel(booking.flat_no, (booking as any).display_name),
+      phf: null,
+    };
+  }
+  return {
+    isVilla: false,
+    label: booking.flat_no ? `Flat ${booking.flat_no}` : 'Flat not set',
+    phf: parsePHFCode(booking.flat_no),
+  };
+}
