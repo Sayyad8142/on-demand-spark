@@ -251,7 +251,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
             // Tell backend exactly why the popup will not appear via overlay
             BackendSync.INSTANCE.ackFailureAsync(getApplicationContext(), bookingId, "overlay_blocked", bookingRequestId);
             // Try to show BookingAlertActivity as fallback
-            launchBookingAlertActivity(bookingId, customer, community, serviceType, flatNo, price, bookingType, scheduledTime, prealertSent, bookingRequestId);
+            launchBookingAlertActivity(bookingId, customer, community, serviceType, flatNo, price, bookingType, scheduledTime, prealertSent, bookingRequestId, expiresAtSec, sentAtSec, ttlSeconds);
             return;
           } else {
             Log.d(TAG, "✅ Overlay permission granted");
@@ -307,7 +307,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
         } catch (Exception se) {
           Log.e(TAG, "❌ startService failed, falling back to BookingAlertActivity", se);
           BackendSync.INSTANCE.ackFailureAsync(getApplicationContext(), bookingId, "popup_failed", bookingRequestId);
-          launchBookingAlertActivity(bookingId, customer, community, serviceType, location, price, bookingType, scheduledTime, prealertSent, bookingRequestId);
+          launchBookingAlertActivity(bookingId, customer, community, serviceType, location, price, bookingType, scheduledTime, prealertSent, bookingRequestId, expiresAtSec, sentAtSec, ttlSeconds);
         }
 
       } else {
@@ -351,6 +351,20 @@ public class MyFirebaseService extends FirebaseMessagingService {
    * or when starting the overlay service fails.
    * Works for BOTH instant AND scheduled bookings.
    */
+  private static long parseEpoch(String raw) {
+    if (raw == null || raw.trim().isEmpty()) return 0L;
+    try {
+      String v = raw.trim();
+      if (v.matches("\\d+")) {
+        long n = Long.parseLong(v);
+        return n > 100000000000L ? n / 1000L : n; // millis → seconds
+      }
+      return java.time.Instant.parse(v).getEpochSecond();
+    } catch (Exception e) {
+      return 0L;
+    }
+  }
+
   private void launchBookingAlertActivity(String bookingId, String customer, String community,
                                            String serviceType, String location, int price,
                                             String bookingType, String scheduledTime, boolean prealertSent,
