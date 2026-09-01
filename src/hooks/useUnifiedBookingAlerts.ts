@@ -12,6 +12,8 @@ import {
   pruneShownBookings,
 } from "@/services/bookingAlertCoordinator";
 import { canShowWorkerBookingOffer, isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
+import { isVillaCommunity } from "@/lib/communityTypes";
+import { formatVillaLabel } from "@/lib/address";
 
 /**
  * Unified booking alert hook that:
