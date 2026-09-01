@@ -184,6 +184,34 @@ export default function ContactSupport() {
           </CardContent>
         </Card>
 
+        {/* Training / Test Booking */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FlaskConical className="w-5 h-5 text-primary" />
+              Practice Bookings
+            </CardTitle>
+            <CardDescription>
+              Learn how bookings work without creating a real request
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <button
+              onClick={() => navigate("/test-booking")}
+              className="w-full text-left rounded-2xl border border-primary/30 bg-primary/5 p-4 flex items-center gap-3 active:bg-primary/10 transition-colors"
+            >
+              <span className="text-2xl">🧪</span>
+              <span className="flex-1">
+                <span className="block font-semibold text-sm">Try Test Booking</span>
+                <span className="block text-xs text-muted-foreground">
+                  Practice how bookings work — no real booking created
+                </span>
+              </span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </CardContent>
+        </Card>
+
         {/* Frequently Asked Questions */}
         <Card>
           <CardHeader>
