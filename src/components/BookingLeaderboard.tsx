@@ -170,8 +170,13 @@ function WorkerRow({ worker, medal }: { worker: LeaderboardEntry; medal?: string
         <div>
           <div className="flex items-center gap-1.5">
             <p className={`text-xs font-bold ${worker.isMe ? 'text-emerald-700 dark:text-emerald-400' : ''}`}>
-              {worker.isMe ? 'YOU' : worker.full_name}
+              {worker.full_name}
             </p>
+            {worker.isMe && (
+              <span className="px-1 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 text-[9px] font-extrabold uppercase">
+                YOU
+              </span>
+            )}
             <LevelBadge level={worker.level} size="xs" />
           </div>
           <div className="flex items-center gap-2 mt-0.5 opacity-80">
