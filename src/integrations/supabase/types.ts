@@ -6900,6 +6900,10 @@ export type Database = {
       _woc_sla_minutes: { Args: { p_esc: string }; Returns: number }
       academy_dashboard_stats: { Args: never; Returns: Json }
       accept_booking: { Args: { p_booking_id: string }; Returns: Json }
+      accept_booking_authoritative: {
+        Args: { p_booking_id: string; p_worker_id?: string }
+        Returns: Json
+      }
       admin_ack_chain_for_booking: {
         Args: { p_booking_id: string }
         Returns: {
