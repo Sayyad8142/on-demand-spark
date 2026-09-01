@@ -51,9 +51,9 @@ export function formatBookingAddress(booking: BookingWithAddress): string {
  * Used for legacy bookings without joined data
  */
 export function parsePHFCode(flatNo: string | null | undefined): {
-  tower: number;
-  floor: number;
-  door: number;
+  tower: string;
+  floor: string;
+  door: string;
 } | null {
   if (!flatNo) return null;
   
@@ -62,18 +62,18 @@ export function parsePHFCode(flatNo: string | null | undefined): {
   // 5-digit format: TT-FF-D (e.g., 10116 = Tower 10, Floor 11, Door 6)
   if (/^\d{5}$/.test(code)) {
     return {
-      tower: Number(code.slice(0, 2)),
-      floor: Number(code.slice(2, 4)),
-      door: Number(code[4])
+      tower: code.slice(0, 2),
+      floor: code.slice(2, 4),
+      door: code[4]
     };
   }
   
   // 4-digit format: T-FF-D (e.g., 9116 = Tower 9, Floor 11, Door 6)
   if (/^\d{4}$/.test(code)) {
     return {
-      tower: Number(code[0]),
-      floor: Number(code.slice(1, 3)),
-      door: Number(code[3])
+      tower: code[0],
+      floor: code.slice(1, 3),
+      door: code[3]
     };
   }
   
