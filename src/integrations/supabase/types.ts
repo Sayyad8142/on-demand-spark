@@ -8298,6 +8298,15 @@ export type Database = {
         Args: { _community: string }
         Returns: number
       }
+      get_community_types: {
+        Args: never
+        Returns: {
+          community_type: string
+          id: string
+          name: string
+          value: string
+        }[]
+      }
       get_dispatch_config:
         | {
             Args: { p_community: string; p_service_type: string }
