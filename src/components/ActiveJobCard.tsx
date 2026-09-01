@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, Phone, Volume2, Utensils, Zap, PlusCircle, Sparkles, CookingPot, KeyRound, Banknote, CreditCard, AlertTriangle } from "lucide-react";
 import { BookingWithAddress } from "@/lib/address";
-import { parsePHFCode } from "@/lib/address";
+import { getUnitDisplay } from "@/lib/address";
 import { useCommunityFee } from "@/hooks/useCommunityFee";
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
@@ -146,7 +146,9 @@ export default function ActiveJobCard({
   }
   console.log('✅ ActiveJobCard: Showing card, status is:', booking.status);
 
-  const phfParsed = parsePHFCode(booking.flat_no);
+  const unit = getUnitDisplay(booking as any);
+  const isVilla = unit.isVilla;
+  const phfParsed = unit.phf;
 
   const handleCallManager = () => {
     window.location.href = `tel:${MANAGER_PHONE}`;
