@@ -39,6 +39,7 @@ import OtpVerify from "./pages/OtpVerify";
 import Home from "./pages/Home";
 import Bookings from "./pages/Bookings";
 import Leaderboard from "./pages/Leaderboard";
+import TestBooking from "./pages/TestBooking";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import Troubleshoot from "./pages/Troubleshoot";
