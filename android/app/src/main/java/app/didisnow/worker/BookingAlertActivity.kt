@@ -32,7 +32,8 @@ import java.net.URL
 class BookingAlertActivity : AppCompatActivity() {
     private var countdownHandler: Handler? = null
     private lateinit var countdownRunnable: Runnable
-    private var secondsLeft = 30
+    private var secondsLeft = OfferTimer.DEFAULT_TTL_SECONDS
+    private var totalSeconds = OfferTimer.DEFAULT_TTL_SECONDS
     private var mediaPlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
     
@@ -125,7 +126,11 @@ class BookingAlertActivity : AppCompatActivity() {
         val btnAccept = findViewById<Button>(R.id.btnAccept)
         val btnReject = findViewById<Button>(R.id.btnReject)
 
-        // Start 30-second countdown timer
+        // Countdown derived from the authoritative backend offer expiry
+        // (expires_at / sent_at + ttl_seconds), fallback 60s = worker_ttl_seconds.
+        secondsLeft = OfferTimer.remainingSecondsFrom(intent)
+        totalSeconds = maxOf(secondsLeft, OfferTimer.DEFAULT_TTL_SECONDS)
+        countdownCircle.max = totalSeconds
         countdownHandler = Handler(Looper.getMainLooper())
         countdownRunnable = object : Runnable {
             override fun run() {
@@ -135,7 +140,7 @@ class BookingAlertActivity : AppCompatActivity() {
                     
                     // Change countdown text and circle color based on time remaining
                     val textColor = when {
-                        secondsLeft > 15 -> "#22C55E" // Green
+                        secondsLeft > totalSeconds / 2 -> "#22C55E" // Green
                         secondsLeft > 10 -> "#F59E0B" // Orange
                         else -> "#DC2626" // Red
                     }

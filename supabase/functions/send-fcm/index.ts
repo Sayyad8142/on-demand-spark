@@ -219,6 +219,15 @@ Deno.serve(async (req) => {
             scheduled_time_raw: String(data?.scheduled_time_raw || ""),
             prealert_sent: String(data?.prealert_sent || "false"),
             request_status: String(data?.request_status || ""),
+            // Authoritative offer lifetime — the native countdown derives
+            // remaining = expires_at - now (fallback: sent_at + ttl_seconds).
+            expires_at: String(
+              data?.expires_at ??
+              data?.offer_expires_at ??
+              Math.floor(Date.now() / 1000) + Number(data?.ttl_seconds || 60)
+            ),
+            sent_at: String(Math.floor(Date.now() / 1000)),
+            ttl_seconds: String(data?.ttl_seconds || 60),
             title: String(title),
             body: String(body),
           };
