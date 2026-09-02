@@ -226,20 +226,20 @@ public class MyFirebaseService extends FirebaseMessagingService {
         }
 
 
-        // Scheduled offers must only be hidden when they are TOO EARLY (more than
-        // 10 minutes before the scheduled start). Once the dispatch window has
-        // arrived — or the booking is already overdue — the offer is always shown,
-        // with or without prealert_sent. This mirrors src/lib/scheduledBookingGuards.ts.
-        if ("scheduled".equals(bookingType) && !prealertSent
-            && isBeforeScheduledDispatchWindow(scheduledDate, scheduledTimeRaw)) {
-          Log.w(TAG, "🔕 Scheduled booking hidden — too early. booking_id=" + bookingId
+        // The BACKEND decides what is an actionable worker offer. Instant and
+        // scheduled offers share one contract: a BOOKING_ALERT with
+        // actionable != "false" always opens the native offer UI. Informational
+        // pushes must set actionable=false explicitly.
+        String actionable = data.get("actionable");
+        if ("false".equalsIgnoreCase(actionable)) {
+          Log.w(TAG, "🔕 Informational booking notification (actionable=false) — tray only. booking_id=" + bookingId
+              + ", booking_type=" + bookingType
               + ", scheduled_at=" + scheduledDate + "T" + scheduledTimeRaw
-              + ", request_status=" + data.get("request_status")
               + ", shown_to_worker=false");
-          // Make this suppression visible server-side instead of failing silently.
-          BackendSync.INSTANCE.ackFailureAsync(getApplicationContext(), bookingId, "prealert_suppressed", bookingRequestId);
+          showBookingNotification(bookingId, bookingType);
           return;
         }
+
 
 
         showBookingNotification(bookingId, bookingType);
