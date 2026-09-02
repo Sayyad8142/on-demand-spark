@@ -234,7 +234,7 @@ Deno.serve(async (req) => {
     // permission-aware heartbeat.
     let workersQuery = supabase
       .from("workers")
-      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng, fcm_token, fcm_token_status, availability_state, last_offer_at, priority_score, priority_score_v3, notification_permission_granted, overlay_permission_granted")
+      .select("id, full_name, user_id, rating, total_ratings, selected_community_id, location_enabled, in_geofence, last_seen_at, last_lat, last_lng, fcm_token, fcm_token_status, availability_state, last_offer_at, priority_score, notification_permission_granted, overlay_permission_granted")
       .eq("is_active", true)
       .eq("is_available", true)
       .eq("is_busy", false)
