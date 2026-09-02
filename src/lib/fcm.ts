@@ -56,10 +56,8 @@ export async function initFCM() {
         console.log('🔕 FCM informational booking notification ignored (actionable=false):', bookingId);
         return;
       }
-      if (!isActionableOffer && !canShowWorkerBookingOffer(scheduleInfo)) {
-        logScheduledOfferDecision(scheduleInfo, 'fcm', false);
-        return;
-      }
+      logScheduledOfferDecision(scheduleInfo, 'fcm', true);
+
 
 
       console.log('📬 Foreground booking alert via FCM:', bookingId);
