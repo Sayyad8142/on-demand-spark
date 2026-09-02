@@ -19,8 +19,8 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-
 public class BookingCancellationActivity extends Activity {
+
   private MediaPlayer mediaPlayer;
   private Vibrator vibrator;
   private final Handler handler = new Handler(Looper.getMainLooper());
