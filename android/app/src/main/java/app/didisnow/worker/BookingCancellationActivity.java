@@ -47,16 +47,16 @@ public class BookingCancellationActivity extends Activity {
     iconContainer.setGravity(Gravity.CENTER);
     iconContainer.setBackgroundResource(R.drawable.circle_white_bg);
     int iconSize = (int) (96 * getResources().getDisplayMetrics().density);
-    TextView icon = new TextView(this);
-    icon.setText("\u2717");
-    icon.setGravity(Gravity.CENTER);
-    icon.setTextColor(Color.rgb(244, 67, 54));
-    icon.setTextSize(56);
-    icon.setTypeface(Typeface.DEFAULT_BOLD);
+    int iconPadding = (int) (20 * getResources().getDisplayMetrics().density);
+    ImageView icon = new ImageView(this);
+    icon.setImageResource(R.drawable.ic_cancel_white);
+    icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+    icon.setPadding(iconPadding, iconPadding, iconPadding, iconPadding);
     iconContainer.addView(icon, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
     LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(iconSize, iconSize);
     iconParams.setMargins(0, 0, 0, 32);
     root.addView(iconContainer, iconParams);
+
 
     TextView title = new TextView(this);
     title.setText("Booking Cancelled");
