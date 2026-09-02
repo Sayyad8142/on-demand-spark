@@ -320,6 +320,16 @@ object BackendSync {
     fun ackDeliveryAsync(ctx: Context, bookingId: String?, event: String, bookingRequestId: String? = null) {
         if (bookingId.isNullOrBlank() && bookingRequestId.isNullOrBlank()) return
         val app = ctx.applicationContext
+        // Duplicate protection: Activity + Overlay can both present the same
+        // offer (fallback races). Presentation events are emitted exactly once
+        // per offer per device within DEDUP_TTL_MS.
+        if (event == "popup_shown" || event == "worker_seen") {
+            if (!markAckOnce(app, event, bookingRequestId ?: bookingId!!)) {
+                WorkerLog.add(app, "ACK", "skip duplicate $event booking=${bookingId ?: bookingRequestId}")
+                return
+            }
+        }
+
         try {
             AckQueue.enqueue(app, bookingId, bookingRequestId, event, appVersion(app), "durable")
             AckRetryWorker.enqueue(app, "ack:$event")
