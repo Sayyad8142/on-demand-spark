@@ -336,7 +336,7 @@ Deno.serve(async (req) => {
     // picked. Outcome is filled in later by triggers. Failures here MUST
     // NEVER affect dispatch — wrapped in try/catch.
     try {
-      const pickTop = (key: 'priority_score' | 'priority_score_v3') => {
+      const pickTop = (key: 'priority_score') => {
         let best: any = null;
         let bestScore = -Infinity;
         for (const w of pushReady) {
@@ -347,7 +347,7 @@ Deno.serve(async (req) => {
         return best ? { id: best.id as string, score: bestScore } : null;
       };
       const topV2 = pickTop('priority_score');
-      const topV3 = pickTop('priority_score_v3');
+      const topV3 = topV2;
       const { error: simErr } = await supabase
         .from('dispatch_simulation_logs')
         .upsert({
