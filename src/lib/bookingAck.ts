@@ -22,33 +22,51 @@ export type AckEvent = "push_received" | "popup_shown" | "worker_seen";
 
 const acked = new Set<string>();
 const key = (id: string, ev: AckEvent) => `${id}::${ev}`;
-let cachedWorkerId: string | null | undefined;
+const WORKER_ID_CACHE_KEY = "didi_worker_id";
+let cachedWorkerId: string | null = null;
 
 async function getWorkerId(): Promise<string | null> {
-  if (cachedWorkerId !== undefined && cachedWorkerId !== null) return cachedWorkerId;
+  if (cachedWorkerId) return cachedWorkerId;
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
-    cachedWorkerId = null;
-    return null;
-  }
+  try {
+    const stored = localStorage.getItem(WORKER_ID_CACHE_KEY);
+    if (stored) {
+      cachedWorkerId = stored;
+      return stored;
+    }
+  } catch { /* storage unavailable */ }
+
+  // getSession() reads local storage (works offline / expired-network paths);
+  // getUser() is only a fallback because it needs a live network call.
+  let uid: string | undefined;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    uid = session?.user?.id;
+    if (!uid) {
+      const { data: { user } } = await supabase.auth.getUser();
+      uid = user?.id;
+    }
+  } catch { /* ignore */ }
+
+  if (!uid) return null;
 
   // Worker ID resolution pattern: user_id = uid OR id = uid
   const { data: worker, error: workerError } = await supabase
     .from("workers")
     .select("id")
-    .or(`user_id.eq.${user.id},id.eq.${user.id}`)
+    .or(`user_id.eq.${uid},id.eq.${uid}`)
     .maybeSingle();
 
   if (workerError || !worker?.id) {
     console.warn("[ACK] worker_id lookup failed", workerError?.message);
-    cachedWorkerId = null;
     return null;
   }
 
   cachedWorkerId = worker.id;
+  try { localStorage.setItem(WORKER_ID_CACHE_KEY, worker.id); } catch { /* ignore */ }
   return cachedWorkerId;
 }
+
 
 
 interface AckArgs {
