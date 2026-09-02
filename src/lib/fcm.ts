@@ -9,7 +9,7 @@
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import { processIncomingBooking } from '@/services/bookingAlertCoordinator';
-import { canShowWorkerBookingOffer, isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from '@/lib/scheduledBookingGuards';
+import { logScheduledOfferDecision } from '@/lib/scheduledBookingGuards';
 
 let fcmInitialized = false;
 
@@ -48,16 +48,17 @@ export async function initFCM() {
         scheduledTime: data.scheduled_time || data.scheduledTime,
         prealertSent: data.prealert_sent === true || data.prealert_sent === 'true' || data.prealertSent === true || data.prealertSent === 'true',
       };
-      if (!canShowWorkerBookingOffer(scheduleInfo)) {
+      // Backend is authoritative: a BOOKING_ALERT push is an actionable offer
+      // (instant or scheduled) unless it explicitly says actionable=false.
+      const isActionableOffer = String(data.actionable ?? 'true') !== 'false';
+      if (!isActionableOffer) {
         logScheduledOfferDecision(scheduleInfo, 'fcm', false);
-        console.log('🔕 FCM scheduled booking ignored until prealert_sent=true:', bookingId);
+        console.log('🔕 FCM informational booking notification ignored (actionable=false):', bookingId);
         return;
       }
-      if (!bookingRequestId && isBeforeScheduledDispatchWindow(scheduleInfo)) {
-        logScheduledOfferDecision(scheduleInfo, 'fcm', false);
-        console.log('🔕 FCM scheduled booking ignored before dispatch window:', bookingId);
-        return;
-      }
+      logScheduledOfferDecision(scheduleInfo, 'fcm', true);
+
+
 
       console.log('📬 Foreground booking alert via FCM:', bookingId);
 
@@ -109,16 +110,13 @@ export async function initFCM() {
         scheduledTime: data.scheduled_time || data.scheduledTime,
         prealertSent: data.prealert_sent === true || data.prealert_sent === 'true' || data.prealertSent === true || data.prealertSent === 'true',
       };
-      if (!canShowWorkerBookingOffer(scheduleInfo)) {
+      if (String(data.actionable ?? 'true') === 'false') {
         logScheduledOfferDecision(scheduleInfo, 'fcm', false);
-        console.log('🔕 FCM scheduled booking tap ignored until prealert_sent=true:', bookingId);
+        console.log('🔕 FCM informational booking notification tap ignored (actionable=false):', bookingId);
         return;
       }
-      if (!bookingRequestId && isBeforeScheduledDispatchWindow(scheduleInfo)) {
-        logScheduledOfferDecision(scheduleInfo, 'fcm', false);
-        console.log('🔕 FCM scheduled booking tap ignored before dispatch window:', bookingId);
-        return;
-      }
+      logScheduledOfferDecision(scheduleInfo, 'fcm', true);
+
 
       console.log('📬 Booking alert clicked:', bookingId);
       await processIncomingBooking({
