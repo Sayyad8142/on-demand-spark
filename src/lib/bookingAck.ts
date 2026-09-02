@@ -83,19 +83,20 @@ export async function ackBookingDelivery({ bookingId, bookingRequestId, event }:
   if (!bookingId && !bookingRequestId) return;
 
   try {
+    // worker_id is best-effort: if it cannot be resolved locally we still send
+    // the ACK, and the edge function falls back to JWT-based resolution.
     const workerId = await getWorkerId();
     if (!workerId) {
-      console.warn(`[ACK] ${event} skipped: worker_id unavailable`);
-      acked.delete(cacheKey);
-      return;
+      console.warn(`[ACK] ${event}: worker_id unresolved locally, sending JWT-only ACK`);
     }
 
     const { data, error } = await supabase.functions.invoke("ack-booking-delivery", {
       body: {
         booking_id: bookingId,
         booking_request_id: bookingRequestId,
-        worker_id: workerId,
+        ...(workerId ? { worker_id: workerId } : {}),
         event_type: event,
+
         app_version: CURRENT_VERSION_NAME,
         device_info: {
           platform: Capacitor.getPlatform(),
