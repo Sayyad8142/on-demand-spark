@@ -48,16 +48,19 @@ export async function initFCM() {
         scheduledTime: data.scheduled_time || data.scheduledTime,
         prealertSent: data.prealert_sent === true || data.prealert_sent === 'true' || data.prealertSent === true || data.prealertSent === 'true',
       };
-      if (!canShowWorkerBookingOffer(scheduleInfo)) {
+      // Backend is authoritative: a BOOKING_ALERT push is an actionable offer
+      // (instant or scheduled) unless it explicitly says actionable=false.
+      const isActionableOffer = String(data.actionable ?? 'true') !== 'false';
+      if (!isActionableOffer) {
         logScheduledOfferDecision(scheduleInfo, 'fcm', false);
-        console.log('🔕 FCM scheduled booking ignored until prealert_sent=true:', bookingId);
+        console.log('🔕 FCM informational booking notification ignored (actionable=false):', bookingId);
         return;
       }
-      if (!bookingRequestId && isBeforeScheduledDispatchWindow(scheduleInfo)) {
+      if (!isActionableOffer && !canShowWorkerBookingOffer(scheduleInfo)) {
         logScheduledOfferDecision(scheduleInfo, 'fcm', false);
-        console.log('🔕 FCM scheduled booking ignored before dispatch window:', bookingId);
         return;
       }
+
 
       console.log('📬 Foreground booking alert via FCM:', bookingId);
 
