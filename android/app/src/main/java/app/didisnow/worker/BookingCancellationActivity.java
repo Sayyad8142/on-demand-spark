@@ -15,8 +15,10 @@ import android.view.Gravity;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
 
 public class BookingCancellationActivity extends Activity {
   private MediaPlayer mediaPlayer;
