@@ -201,12 +201,23 @@ Deno.serve(async (req) => {
         try {
           const isBookingAlert = data?.type === "BOOKING_ALERT";
           const isCancellationAlert = data?.type === "BOOKING_CANCELLED";
-          
+
+          // Legacy-client compatibility (apps <= 7.0.2):
+          // Those builds suppress the native offer UI for booking_type="scheduled"
+          // (failure_reason=prealert_suppressed). The backend only ever pushes a
+          // BOOKING_ALERT when the offer is actionable NOW, so present actionable
+          // scheduled offers on the legacy "instant" wire field and keep the true
+          // type in offer_booking_type for 7.0.3+ clients.
+          const trueBookingType = String(data?.booking_type || "instant");
+          const isActionableOffer = String(data?.actionable ?? "true") !== "false";
+          const wireBookingType = isBookingAlert && isActionableOffer ? "instant" : trueBookingType;
+
           const baseData: Record<string, string> = {
             type: String(data?.type || ""),
             bookingId: String(data?.bookingId || data?.booking_id || ""),
             booking_id: String(data?.bookingId || data?.booking_id || ""),
-            booking_type: String(data?.booking_type || "instant"),
+            booking_type: wireBookingType,
+            offer_booking_type: trueBookingType,
             customer: String(data?.customer || ""),
             community: String(data?.community || ""),
             serviceType: String(data?.serviceType || data?.service_type || ""),
@@ -217,8 +228,13 @@ Deno.serve(async (req) => {
             scheduled_time: String(data?.scheduled_time || ""),
             scheduled_date: String(data?.scheduled_date || ""),
             scheduled_time_raw: String(data?.scheduled_time_raw || ""),
-            prealert_sent: String(data?.prealert_sent || "false"),
+            // Legacy builds also gate on prealert_sent — an actionable offer is
+            // always pre-alerted by definition at this point.
+            prealert_sent: isBookingAlert && isActionableOffer
+              ? "true"
+              : String(data?.prealert_sent || "false"),
             request_status: String(data?.request_status || ""),
+
             // Canonical offer contract — clients open the native Accept/Reject UI
             // for any actionable offer (instant OR scheduled). Informational
             // notifications must set actionable:"false" explicitly.
