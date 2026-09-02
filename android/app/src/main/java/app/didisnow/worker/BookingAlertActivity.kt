@@ -36,6 +36,10 @@ class BookingAlertActivity : AppCompatActivity() {
     private var totalSeconds = OfferTimer.DEFAULT_TTL_SECONDS
     private var mediaPlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
+    private var ackBookingId: String? = null
+    private var ackRequestId: String? = null
+    private var popupAcked = false
+
     
     // Token refresh throttling
     private var lastRefreshTime: Long = 0
