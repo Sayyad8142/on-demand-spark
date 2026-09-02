@@ -213,9 +213,21 @@ class BookingAlertActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // 📨 ACK popup_shown — the alert is genuinely visible to the worker now.
+        // Guarded locally + in BackendSync so it is sent exactly once per offer.
+        if (!popupAcked && !ackBookingId.isNullOrBlank()) {
+            popupAcked = true
+            Log.d("BookingAlert", "📨 [ACK] popup_shown (activity visible) booking_id=$ackBookingId")
+            BackendSync.ackDeliveryAsync(applicationContext, ackBookingId, "popup_shown", ackRequestId)
+        }
+    }
+
     override fun onDestroy() {
         countdownHandler?.removeCallbacks(countdownRunnable)
         stopAlertSound()
+
         stopVibration()
         super.onDestroy()
     }
