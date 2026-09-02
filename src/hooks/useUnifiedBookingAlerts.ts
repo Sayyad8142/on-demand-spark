@@ -9,6 +9,8 @@ import {
   onNewAlert,
   dismissAlert,
   markAlertOpened,
+  markAlertRendered,
+
   pruneShownBookings,
 } from "@/services/bookingAlertCoordinator";
 import { canShowWorkerBookingOffer, isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
@@ -40,15 +42,20 @@ export function useUnifiedBookingAlerts(
     const unsub = onNewAlert((alert) => {
       console.log("🔔 [UnifiedAlerts] New alert from coordinator:", alert.bookingId);
       setPending(alert);
-      markAlertOpened(alert.bookingId);
+      markAlertOpened(alert.bookingId, alert.bookingRequestId);
 
-      // Trigger native Android overlay if available
+      // Trigger native Android overlay if available.
+      // When the native overlay/activity actually renders it sends its own
+      // popup_shown ACK, so we only ack from JS when the native path is not
+      // used (web / plugin missing / trigger failed) and the in-app UI renders.
+      let nativeHandled = false;
       if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
         try {
           const plugin = (window as any)?.Capacitor?.Plugins?.OverlayPlugin;
           if (plugin?.showBookingOverlay) {
             const bookingJson = JSON.stringify({
               id: alert.bookingId,
+              booking_request_id: alert.bookingRequestId,
               cust_name: alert.custName,
               community: alert.community,
               service_type: alert.serviceType,
@@ -66,14 +73,21 @@ export function useUnifiedBookingAlerts(
             });
             console.log("🚀 Triggering native overlay from coordinator");
             plugin.showBookingOverlay({ booking: bookingJson });
+            nativeHandled = true;
           }
         } catch (err) {
           console.error("❌ Native overlay trigger failed:", err);
+          nativeHandled = false;
         }
+      }
+
+      if (!nativeHandled) {
+        markAlertRendered(alert.bookingId, alert.bookingRequestId);
       }
 
       toast({ title: "New booking available" });
     });
+
 
     return unsub;
   }, []);

@@ -22,33 +22,51 @@ export type AckEvent = "push_received" | "popup_shown" | "worker_seen";
 
 const acked = new Set<string>();
 const key = (id: string, ev: AckEvent) => `${id}::${ev}`;
-let cachedWorkerId: string | null | undefined;
+const WORKER_ID_CACHE_KEY = "didi_worker_id";
+let cachedWorkerId: string | null = null;
 
 async function getWorkerId(): Promise<string | null> {
-  if (cachedWorkerId !== undefined && cachedWorkerId !== null) return cachedWorkerId;
+  if (cachedWorkerId) return cachedWorkerId;
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
-    cachedWorkerId = null;
-    return null;
-  }
+  try {
+    const stored = localStorage.getItem(WORKER_ID_CACHE_KEY);
+    if (stored) {
+      cachedWorkerId = stored;
+      return stored;
+    }
+  } catch { /* storage unavailable */ }
+
+  // getSession() reads local storage (works offline / expired-network paths);
+  // getUser() is only a fallback because it needs a live network call.
+  let uid: string | undefined;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    uid = session?.user?.id;
+    if (!uid) {
+      const { data: { user } } = await supabase.auth.getUser();
+      uid = user?.id;
+    }
+  } catch { /* ignore */ }
+
+  if (!uid) return null;
 
   // Worker ID resolution pattern: user_id = uid OR id = uid
   const { data: worker, error: workerError } = await supabase
     .from("workers")
     .select("id")
-    .or(`user_id.eq.${user.id},id.eq.${user.id}`)
+    .or(`user_id.eq.${uid},id.eq.${uid}`)
     .maybeSingle();
 
   if (workerError || !worker?.id) {
     console.warn("[ACK] worker_id lookup failed", workerError?.message);
-    cachedWorkerId = null;
     return null;
   }
 
   cachedWorkerId = worker.id;
+  try { localStorage.setItem(WORKER_ID_CACHE_KEY, worker.id); } catch { /* ignore */ }
   return cachedWorkerId;
 }
+
 
 
 interface AckArgs {
@@ -65,19 +83,20 @@ export async function ackBookingDelivery({ bookingId, bookingRequestId, event }:
   if (!bookingId && !bookingRequestId) return;
 
   try {
+    // worker_id is best-effort: if it cannot be resolved locally we still send
+    // the ACK, and the edge function falls back to JWT-based resolution.
     const workerId = await getWorkerId();
     if (!workerId) {
-      console.warn(`[ACK] ${event} skipped: worker_id unavailable`);
-      acked.delete(cacheKey);
-      return;
+      console.warn(`[ACK] ${event}: worker_id unresolved locally, sending JWT-only ACK`);
     }
 
     const { data, error } = await supabase.functions.invoke("ack-booking-delivery", {
       body: {
         booking_id: bookingId,
         booking_request_id: bookingRequestId,
-        worker_id: workerId,
+        ...(workerId ? { worker_id: workerId } : {}),
         event_type: event,
+
         app_version: CURRENT_VERSION_NAME,
         device_info: {
           platform: Capacitor.getPlatform(),
@@ -103,5 +122,7 @@ export async function ackBookingDelivery({ bookingId, bookingRequestId, event }:
 /** Reset the in-memory cache (e.g. on logout or test) */
 export function resetAckCache() {
   acked.clear();
-  cachedWorkerId = undefined;
+  cachedWorkerId = null;
+  try { localStorage.removeItem(WORKER_ID_CACHE_KEY); } catch { /* ignore */ }
 }
+

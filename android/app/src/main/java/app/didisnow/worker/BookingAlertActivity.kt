@@ -36,6 +36,10 @@ class BookingAlertActivity : AppCompatActivity() {
     private var totalSeconds = OfferTimer.DEFAULT_TTL_SECONDS
     private var mediaPlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
+    private var ackBookingId: String? = null
+    private var ackRequestId: String? = null
+    private var popupAcked = false
+
     
     // Token refresh throttling
     private var lastRefreshTime: Long = 0
@@ -170,18 +174,12 @@ class BookingAlertActivity : AppCompatActivity() {
         }
         countdownHandler?.post(countdownRunnable)
 
-        // 📨 ACK popup_shown — the full-screen booking alert is now on screen.
-        // (Previously only BookingOverlayService acked, so every fallback
-        //  alert produced popup_shown_at = NULL.) Idempotent server-side.
-        if (bookingId.isNotBlank()) {
-            Log.d("BookingAlert", "📨 [ACK] Sending popup_shown for booking_id=$bookingId")
-            BackendSync.ackDeliveryAsync(
-                applicationContext,
-                bookingId,
-                "popup_shown",
-                intent.getStringExtra("booking_request_id")
-            )
-        }
+        // popup_shown is acked in onResume() — onCreate can run for an alert the
+        // OS never actually renders (immediate finish, launch race, killed task).
+        ackBookingId = bookingId
+        ackRequestId = intent.getStringExtra("booking_request_id")
+
+
 
 
         btnAccept.setOnClickListener {
@@ -219,9 +217,21 @@ class BookingAlertActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // 📨 ACK popup_shown — the alert is genuinely visible to the worker now.
+        // Guarded locally + in BackendSync so it is sent exactly once per offer.
+        if (!popupAcked && !ackBookingId.isNullOrBlank()) {
+            popupAcked = true
+            Log.d("BookingAlert", "📨 [ACK] popup_shown (activity visible) booking_id=$ackBookingId")
+            BackendSync.ackDeliveryAsync(applicationContext, ackBookingId, "popup_shown", ackRequestId)
+        }
+    }
+
     override fun onDestroy() {
         countdownHandler?.removeCallbacks(countdownRunnable)
         stopAlertSound()
+
         stopVibration()
         super.onDestroy()
     }

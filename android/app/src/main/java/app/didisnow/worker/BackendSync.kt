@@ -308,6 +308,30 @@ object BackendSync {
         Thread({ reportMissedBooking(ctx, bookingId, bookingRequestId, reason, extra) }, "missed-$reason").start()
     }
 
+    // ── Presentation ACK dedup (survives process death; Activity+Overlay race) ──
+    private const val DEDUP_PREFS = "ack_dedup"
+    private const val DEDUP_TTL_MS = 15 * 60 * 1000L
+
+    /** Returns true if this (event, offer) has not been acked recently. */
+    private fun markAckOnce(ctx: Context, event: String, offerKey: String): Boolean {
+        return try {
+            val prefs = ctx.getSharedPreferences(DEDUP_PREFS, Context.MODE_PRIVATE)
+            val key = "$event:$offerKey"
+            val now = System.currentTimeMillis()
+            val last = prefs.getLong(key, 0L)
+            if (last > 0L && now - last < DEDUP_TTL_MS) return false
+            val editor = prefs.edit().putLong(key, now)
+            // Cheap GC of stale entries.
+            prefs.all.forEach { (k, v) ->
+                if (v is Long && now - v > DEDUP_TTL_MS) editor.remove(k)
+            }
+            editor.apply()
+            true
+        } catch (_: Exception) {
+            true // never block a real ACK because dedup failed
+        }
+    }
+
     /**
      * Durable ack. The raw background thread used previously was frequently
      * killed/frozen by the OS as soon as onMessageReceived() returned while the
@@ -320,6 +344,16 @@ object BackendSync {
     fun ackDeliveryAsync(ctx: Context, bookingId: String?, event: String, bookingRequestId: String? = null) {
         if (bookingId.isNullOrBlank() && bookingRequestId.isNullOrBlank()) return
         val app = ctx.applicationContext
+        // Duplicate protection: Activity + Overlay can both present the same
+        // offer (fallback races). Presentation events are emitted exactly once
+        // per offer per device within DEDUP_TTL_MS.
+        if (event == "popup_shown" || event == "worker_seen") {
+            if (!markAckOnce(app, event, bookingRequestId ?: bookingId!!)) {
+                WorkerLog.add(app, "ACK", "skip duplicate $event booking=${bookingId ?: bookingRequestId}")
+                return
+            }
+        }
+
         try {
             AckQueue.enqueue(app, bookingId, bookingRequestId, event, appVersion(app), "durable")
             AckRetryWorker.enqueue(app, "ack:$event")

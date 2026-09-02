@@ -177,14 +177,10 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
   // Send delivery "received" acknowledgment (legacy table)
   sendDeliveryAck(alert, "received");
 
-  // NEW: also stamp booking_requests.popup_shown_at via the new ACK function
-  import("@/lib/bookingAck").then(({ ackBookingDelivery }) =>
-    ackBookingDelivery({
-      bookingId: alert.bookingId,
-      bookingRequestId: alert.bookingRequestId,
-      event: "popup_shown",
-    })
-  ).catch(() => {});
+  // NOTE: popup_shown is NOT sent here — dispatching an alert is not proof the
+  // worker saw it. Presentation paths call markAlertRendered() when the alert
+  // is actually on screen (native overlay/activity ack themselves).
+
 
   // Resolve any pending FCM ack-timeout tracker for this booking.
   import("@/lib/fcmAckTracker").then(({ resolveFcmOffer }) =>
@@ -256,6 +252,27 @@ export function markAlertOpened(bookingId: string, bookingRequestId?: string) {
     ackBookingDelivery({ bookingId, bookingRequestId, event: "worker_seen" })
   ).catch(() => {});
 }
+
+const renderedAcked = new Set<string>();
+
+/**
+ * Mark that a booking alert was ACTUALLY rendered to the worker (web modal /
+ * in-app fallback UI). Sends popup_shown exactly once per offer.
+ * Native overlay + BookingAlertActivity ack themselves — do not call for those.
+ */
+export function markAlertRendered(bookingId: string, bookingRequestId?: string) {
+  const key = bookingRequestId ?? bookingId;
+  if (!key || renderedAcked.has(key)) return;
+  renderedAcked.add(key);
+  console.log(`📨 [Coordinator] popup_shown (rendered) ${bookingId}`);
+  import("@/lib/bookingAck").then(({ ackBookingDelivery }) =>
+    ackBookingDelivery({ bookingId, bookingRequestId, event: "popup_shown" })
+  ).catch(() => {});
+  import("@/lib/fcmAckTracker").then(({ resolveFcmOffer }) =>
+    resolveFcmOffer(bookingId, "popup_shown")
+  ).catch(() => {});
+}
+
 
 /**
  * Cleanup old entries from shownBookingIds to prevent memory leak.
