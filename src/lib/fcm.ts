@@ -9,7 +9,7 @@
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import { processIncomingBooking } from '@/services/bookingAlertCoordinator';
-import { canShowWorkerBookingOffer, isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from '@/lib/scheduledBookingGuards';
+import { logScheduledOfferDecision } from '@/lib/scheduledBookingGuards';
 
 let fcmInitialized = false;
 
