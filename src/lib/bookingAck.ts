@@ -122,5 +122,7 @@ export async function ackBookingDelivery({ bookingId, bookingRequestId, event }:
 /** Reset the in-memory cache (e.g. on logout or test) */
 export function resetAckCache() {
   acked.clear();
-  cachedWorkerId = undefined;
+  cachedWorkerId = null;
+  try { localStorage.removeItem(WORKER_ID_CACHE_KEY); } catch { /* ignore */ }
 }
+
