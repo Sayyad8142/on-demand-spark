@@ -177,14 +177,10 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
   // Send delivery "received" acknowledgment (legacy table)
   sendDeliveryAck(alert, "received");
 
-  // NEW: also stamp booking_requests.popup_shown_at via the new ACK function
-  import("@/lib/bookingAck").then(({ ackBookingDelivery }) =>
-    ackBookingDelivery({
-      bookingId: alert.bookingId,
-      bookingRequestId: alert.bookingRequestId,
-      event: "popup_shown",
-    })
-  ).catch(() => {});
+  // NOTE: popup_shown is NOT sent here — dispatching an alert is not proof the
+  // worker saw it. Presentation paths call markAlertRendered() when the alert
+  // is actually on screen (native overlay/activity ack themselves).
+
 
   // Resolve any pending FCM ack-timeout tracker for this booking.
   import("@/lib/fcmAckTracker").then(({ resolveFcmOffer }) =>
