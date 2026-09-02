@@ -57,8 +57,8 @@ public class BookingCancellationActivity extends Activity {
     iconParams.setMargins(0, 0, 0, 32);
     root.addView(iconContainer, iconParams);
 
-
     TextView title = new TextView(this);
+
     title.setText("Booking Cancelled");
     title.setGravity(Gravity.CENTER);
     title.setTextColor(Color.WHITE);
