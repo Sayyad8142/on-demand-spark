@@ -3,6 +3,7 @@ package app.didisnow.worker;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.os.Bundle;
@@ -35,41 +36,58 @@ public class BookingCancellationActivity extends Activity {
     LinearLayout root = new LinearLayout(this);
     root.setOrientation(LinearLayout.VERTICAL);
     root.setGravity(Gravity.CENTER);
-    root.setPadding(40, 40, 40, 40);
-    root.setBackgroundColor(Color.rgb(127, 29, 29));
+    root.setPadding(48, 48, 48, 48);
+    root.setBackgroundColor(Color.rgb(244, 67, 54));
 
+    // White circle with red cancellation symbol
+    LinearLayout iconContainer = new LinearLayout(this);
+    iconContainer.setOrientation(LinearLayout.VERTICAL);
+    iconContainer.setGravity(Gravity.CENTER);
+    iconContainer.setBackgroundResource(R.drawable.circle_white_bg);
+    int iconSize = (int) (96 * getResources().getDisplayMetrics().density);
     TextView icon = new TextView(this);
-    icon.setText("!");
+    icon.setText("\u2717");
     icon.setGravity(Gravity.CENTER);
-    icon.setTextColor(Color.WHITE);
-    icon.setTextSize(44);
-    icon.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-    root.addView(icon, new LinearLayout.LayoutParams(120, 120));
+    icon.setTextColor(Color.rgb(244, 67, 54));
+    icon.setTextSize(56);
+    icon.setTypeface(Typeface.DEFAULT_BOLD);
+    iconContainer.addView(icon, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+    LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(iconSize, iconSize);
+    iconParams.setMargins(0, 0, 0, 32);
+    root.addView(iconContainer, iconParams);
 
     TextView title = new TextView(this);
     title.setText("Booking Cancelled");
     title.setGravity(Gravity.CENTER);
     title.setTextColor(Color.WHITE);
-    title.setTextSize(30);
-    title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-    title.setPadding(0, 24, 0, 10);
+    title.setTextSize(32);
+    title.setTypeface(Typeface.DEFAULT_BOLD);
+    title.setPadding(0, 0, 0, 12);
     root.addView(title, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
     TextView body = new TextView(this);
     body.setText("Do not go to the flat");
     body.setGravity(Gravity.CENTER);
     body.setTextColor(Color.WHITE);
-    body.setTextSize(22);
-    body.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-    body.setPadding(0, 0, 0, 34);
+    body.setTextSize(24);
+    body.setTypeface(Typeface.DEFAULT_BOLD);
+    body.setPadding(0, 0, 0, 48);
     root.addView(body, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
+    // Big OK button with icon and text
     Button ok = new Button(this);
-    ok.setText("OK");
-    ok.setTextSize(18);
+    ok.setText("  OK  ");
+    ok.setTextSize(22);
+    ok.setTextColor(Color.rgb(244, 67, 54));
+    ok.setTypeface(Typeface.DEFAULT_BOLD);
     ok.setAllCaps(false);
+    ok.setBackgroundResource(R.drawable.btn_cancel_ok);
+    ok.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_service_default, 0, 0, 0);
+    ok.setPadding(32, 28, 32, 28);
     ok.setOnClickListener(v -> finish());
-    root.addView(ok, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 120));
+    LinearLayout.LayoutParams okParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+    okParams.setMargins(0, 16, 0, 0);
+    root.addView(ok, okParams);
 
     setContentView(root);
     startSoundAndVibration();
@@ -122,3 +140,4 @@ public class BookingCancellationActivity extends Activity {
     super.onDestroy();
   }
 }
+
