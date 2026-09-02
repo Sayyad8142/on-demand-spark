@@ -127,9 +127,11 @@ Deno.serve(async (req) => {
         body: "New Booking",
         data: {
           type: "BOOKING_ALERT",
+          actionable: "true",
+          offer_kind: "worker_offer",
           bookingId: booking_id,
           booking_id: booking_id,
-          booking_type: booking.booking_type || "instant",
+          booking_type: (booking.scheduled_date && booking.scheduled_time) ? "scheduled" : (booking.booking_type || "instant"),
           customer: booking.cust_name || "New Customer",
           community: booking.community,
           serviceType: booking.service_type,

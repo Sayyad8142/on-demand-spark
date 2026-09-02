@@ -474,6 +474,8 @@ async function sendNotifications(userIds: string[], booking: any, bookingId: str
     body: "New Booking",
     data: { 
       type: "BOOKING_ALERT",
+      actionable: "true",
+      offer_kind: "worker_offer",
       bookingId: bookingId, 
       booking_id: bookingId,
       booking_type: bookingType,
