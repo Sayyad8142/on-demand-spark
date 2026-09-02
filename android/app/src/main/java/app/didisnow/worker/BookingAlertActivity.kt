@@ -57,13 +57,17 @@ class BookingAlertActivity : AppCompatActivity() {
         val bookingType = intent.getStringExtra("booking_type") ?: "instant"
         val prealertSent = intent.getBooleanExtra("prealert_sent", false)
         val scheduledTime = intent.getStringExtra("scheduled_time") ?: ""
-        if (bookingType == "scheduled" && !prealertSent) {
-            Log.w("BookingAlert", "🔕 Scheduled offer hidden until prealert_sent=true booking_id=$bookingId booking_type=$bookingType scheduled_at=$scheduledTime prealert_sent=$prealertSent request_status=null shown_to_worker=false")
-            BackendSync.ackFailureAsync(applicationContext, bookingId, "prealert_suppressed",
-                intent.getStringExtra("booking_request_id"))
+        // The BACKEND is authoritative about whether an offer is actionable.
+        // Scheduled offers are only dispatched inside their window, so the old
+        // client-side `scheduled && !prealert_sent` gate merely suppressed valid
+        // offers whenever the flag was missing from the launch intent.
+        val actionable = intent.getStringExtra("actionable") != "false"
+        if (!actionable) {
+            Log.w("BookingAlert", "🔕 Non-actionable notification — no offer UI. booking_id=$bookingId booking_type=$bookingType scheduled_at=$scheduledTime prealert_sent=$prealertSent shown_to_worker=false")
             finish()
             return
         }
+
 
         // Keep screen on & show over lock screen
         window.addFlags(
