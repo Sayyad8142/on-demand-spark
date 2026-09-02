@@ -85,8 +85,8 @@ public class BookingCancellationActivity extends Activity {
     ok.setAllCaps(false);
     ok.setBackgroundResource(R.drawable.btn_cancel_ok);
     ok.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_check_red, 0, 0, 0);
-
     ok.setPadding(32, 28, 32, 28);
+
     ok.setOnClickListener(v -> finish());
     LinearLayout.LayoutParams okParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
     okParams.setMargins(0, 16, 0, 0);
