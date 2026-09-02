@@ -9,6 +9,8 @@ import {
   onNewAlert,
   dismissAlert,
   markAlertOpened,
+  markAlertRendered,
+
   pruneShownBookings,
 } from "@/services/bookingAlertCoordinator";
 import { canShowWorkerBookingOffer, isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
