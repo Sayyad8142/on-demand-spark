@@ -160,12 +160,16 @@ class BookingOverlayService : Service() {
                         return START_NOT_STICKY
                     }
 
-                    if (bookingType == "scheduled" && !prealertSent) {
-                        android.util.Log.w("BookingOverlay", "🔕 Scheduled offer hidden until prealert_sent=true booking_id=$bookingId booking_type=$bookingType scheduled_at=$scheduledTime prealert_sent=$prealertSent request_status=null shown_to_worker=false")
-                        BackendSync.ackFailureAsync(applicationContext, bookingId, "prealert_suppressed", currentBookingRequestId)
+                    // Backend is authoritative: any BOOKING_ALERT reaching this
+                    // service is a real actionable offer (scheduled offers are
+                    // only dispatched inside their window). Only an explicit
+                    // actionable=false marks an informational notification.
+                    if (intent?.getStringExtra("actionable") == "false") {
+                        android.util.Log.w("BookingOverlay", "🔕 Non-actionable notification — no offer UI. booking_id=$bookingId booking_type=$bookingType scheduled_at=$scheduledTime prealert_sent=$prealertSent shown_to_worker=false")
                         stopSelf()
                         return START_NOT_STICKY
                     }
+
 
                     // If no token in Intent, try to read from SharedPreferences (fallback)
                     if (accessToken.isNullOrEmpty()) {
