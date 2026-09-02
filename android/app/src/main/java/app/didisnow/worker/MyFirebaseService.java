@@ -267,6 +267,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
         serviceIntent.putExtra("booking_id", bookingId);
         if (bookingRequestId != null) serviceIntent.putExtra("booking_request_id", bookingRequestId);
         serviceIntent.putExtra("booking_type", bookingType != null ? bookingType : "instant");
+        serviceIntent.putExtra("actionable", "true");
         serviceIntent.putExtra("prealert_sent", prealertSent);
         serviceIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
         serviceIntent.putExtra("community", community != null ? community : "");
@@ -378,6 +379,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
       activityIntent.putExtra("booking_id", bookingId);
       if (bookingRequestId != null) activityIntent.putExtra("booking_request_id", bookingRequestId);
       activityIntent.putExtra("booking_type", bookingType != null ? bookingType : "instant");
+      activityIntent.putExtra("actionable", "true");
       activityIntent.putExtra("prealert_sent", prealertSent);
       activityIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
       activityIntent.putExtra("community", community != null ? community : "");
