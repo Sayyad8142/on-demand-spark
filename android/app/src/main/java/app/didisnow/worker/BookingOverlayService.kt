@@ -247,7 +247,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                     currentBookingId = bookingId
                     
                     try {
-                        showOverlay(bookingId, customer, community, serviceType, flatNo, price)
+                        showOverlay(bookingId, customer, community, serviceType, flatNo, price, buildingName)
                     } catch (e: Exception) {
                         android.util.Log.e("BookingOverlay", "❌ showOverlay failed, falling back to activity", e)
                         fallbackToActivity(intent)
@@ -284,7 +284,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
         android.util.Log.d("BookingOverlay", "✅ Overlay service starting (no foreground required)")
     }
 
-    private fun showOverlay(bookingId: String, customer: String, community: String, serviceType: String, flatNo: String, price: Int) {
+    private fun showOverlay(bookingId: String, customer: String, community: String, serviceType: String, flatNo: String, price: Int, buildingName: String = "") {
         android.util.Log.d("BookingOverlay", "🖼️ showOverlay called")
         
         // Play loud siren sound and start vibration
