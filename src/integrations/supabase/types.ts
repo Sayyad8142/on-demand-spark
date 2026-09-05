@@ -1190,6 +1190,7 @@ export type Database = {
           base_price_inr: number | null
           bathroom_count: number | null
           booking_type: string
+          building_name: string | null
           can_cancel_until: string | null
           cancel_fault_party: string | null
           cancel_reason: string | null
@@ -1292,6 +1293,7 @@ export type Database = {
           base_price_inr?: number | null
           bathroom_count?: number | null
           booking_type: string
+          building_name?: string | null
           can_cancel_until?: string | null
           cancel_fault_party?: string | null
           cancel_reason?: string | null
@@ -1394,6 +1396,7 @@ export type Database = {
           base_price_inr?: number | null
           bathroom_count?: number | null
           booking_type?: string
+          building_name?: string | null
           can_cancel_until?: string | null
           cancel_fault_party?: string | null
           cancel_reason?: string | null
@@ -7892,6 +7895,7 @@ export type Database = {
               base_price_inr: number | null
               bathroom_count: number | null
               booking_type: string
+              building_name: string | null
               can_cancel_until: string | null
               cancel_fault_party: string | null
               cancel_reason: string | null
@@ -8306,6 +8310,7 @@ export type Database = {
         Args: never
         Returns: {
           community_type: string
+          flat_format: string
           id: string
           name: string
           value: string
@@ -9475,6 +9480,7 @@ export type Database = {
           base_price_inr: number | null
           bathroom_count: number | null
           booking_type: string
+          building_name: string | null
           can_cancel_until: string | null
           cancel_fault_party: string | null
           cancel_reason: string | null

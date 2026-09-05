@@ -143,6 +143,7 @@
                         android:layout_height="match_parent">
 
                         <TextView
+                            android:id="@+id/towerNoLabel"
                             android:text="🏢 Tower: "
                             android:textColor="#64748B"
                             android:textSize="16sp"

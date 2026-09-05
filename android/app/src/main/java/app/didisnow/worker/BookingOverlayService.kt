@@ -145,6 +145,7 @@ class BookingOverlayService : Service() {
                     val community = intent?.getStringExtra("community") ?: ""
                     val serviceType = intent?.getStringExtra("service_type") ?: ""
                     val flatNo = intent?.getStringExtra("flat_no") ?: ""
+                    val buildingName = (intent?.getStringExtra("building_name") ?: "").trim()
                     val price = intent?.getIntExtra("price_inr", 0) ?: 0
                     offerSecondsLeft = OfferTimer.remainingSecondsFrom(intent)
                     
@@ -346,13 +347,17 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
         overlayView?.findViewById<TextView>(R.id.flatNo)?.text = unitLabel
         overlayView?.findViewById<TextView>(R.id.price)?.text = "₹$price"
         
-        // Derive Tower No from first digit of flat number (apartments only)
-        val towerNo = if (!isVilla && flatNo.isNotBlank()) {
-            flatNo.firstOrNull { it.isDigit() }?.toString() ?: "—"
-        } else {
-            "—"
+        // Block/Building communities: block comes from the booking payload.
+        val block = AddressFormat.blockLabel(buildingName)
+        val towerNo = when {
+            isVilla -> "—"
+            block != null -> block
+            flatNo.isNotBlank() -> flatNo.firstOrNull { it.isDigit() }?.toString() ?: "—"
+            else -> "—"
         }
         overlayView?.findViewById<TextView>(R.id.towerNo)?.text = towerNo
+        overlayView?.findViewById<TextView>(R.id.towerNoLabel)?.text =
+            if (block != null) "🏢 Block: " else "🏢 Tower: "
         if (isVilla) {
             overlayView?.findViewById<TextView>(R.id.towerNo)?.visibility = android.view.View.GONE
         }
