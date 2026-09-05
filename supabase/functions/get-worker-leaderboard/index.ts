@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     const phone = payload.phone_number || payload.phone;
     
     // Resolve worker by UID (sub) or Phone
-    const cols = "id, community, full_name, photo_url, rating, priority_score, total_bookings_completed";
+    const cols = "id, community, communities, selected_community_id, full_name, photo_url, rating, priority_score, total_bookings_completed";
     let me: any = null;
 
     if (sub) {
@@ -76,13 +76,24 @@ Deno.serve(async (req) => {
       return json({ error: "Worker profile not found" }, 404);
     }
 
-    // 3. Fetch Top Workers — scoped to community when set, otherwise global
+    // 3. Fetch Top Workers — ALWAYS scoped to the worker's own society.
+    // workers.community text is often NULL; the reliable links are
+    // selected_community_id (uuid -> communities) and communities (slug array).
     let query = admin
       .from("workers")
       .select("id, full_name, photo_url, rating, priority_score, total_bookings_completed, is_blocked")
       .eq("is_blocked", false);
 
-    if (me.community) query = query.eq("community", me.community);
+    if (me.selected_community_id) {
+      query = query.eq("selected_community_id", me.selected_community_id);
+    } else if (Array.isArray(me.communities) && me.communities.length > 0) {
+      query = query.overlaps("communities", me.communities);
+    } else if (me.community) {
+      query = query.ilike("community", me.community);
+    } else {
+      // No society link known — never leak other societies' workers.
+      return json({ community: null, leaderboard: [], updatedAt: new Date().toISOString() });
+    }
 
     const { data: topWorkers, error: rankError } = await query
       .order("priority_score", { ascending: false })
