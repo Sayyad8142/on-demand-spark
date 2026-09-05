@@ -95,6 +95,8 @@ class BookingAlertActivity : AppCompatActivity() {
         val serviceImage = findViewById<ImageView>(R.id.alertServiceImage)
         val priceText = findViewById<TextView>(R.id.alertPrice)
         val towerText = findViewById<TextView>(R.id.alertTower)
+        val towerLabel = findViewById<TextView>(R.id.alertTowerLabel)
+        val buildingName = (intent.getStringExtra("building_name") ?: "").trim()
         val communityText = findViewById<TextView>(R.id.alertCommunity)
 
         when (serviceType.lowercase()) {
@@ -117,13 +119,17 @@ class BookingAlertActivity : AppCompatActivity() {
 
         priceText.text = "₹$priceInr"
         
-        // Derive Tower No from first digit of flat number (apartments only)
-        val towerNo = if (!isVilla && flatNo.isNotBlank()) {
-            flatNo.firstOrNull { it.isDigit() }?.toString() ?: "—"
-        } else {
-            "—"
+        // Block/Building communities: the block comes from the booking, never
+        // from flat_no digits. Tower-encoded communities keep the old behaviour.
+        val block = AddressFormat.blockLabel(buildingName)
+        val towerNo = when {
+            isVilla -> "—"
+            block != null -> block
+            flatNo.isNotBlank() -> flatNo.firstOrNull { it.isDigit() }?.toString() ?: "—"
+            else -> "—"
         }
         towerText.text = towerNo
+        towerLabel.text = if (block != null) "Block" else "Tower No."
         if (isVilla) {
             towerText.visibility = android.view.View.GONE
         }

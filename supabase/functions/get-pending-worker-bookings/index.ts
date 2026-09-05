@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
     const bookingIds = Array.from(new Set(requestRows.map(r => r.booking_id)));
     const { data: bookings, error: bErr } = await admin
       .from("bookings")
-      .select("id, status, worker_id, service_type, community, cust_name, flat_no, price_inr, scheduled_date, scheduled_time, booking_type, prealert_sent, address_line1")
+      .select("id, status, worker_id, service_type, community, cust_name, flat_no, building_name, price_inr, scheduled_date, scheduled_time, booking_type, prealert_sent, address_line1")
       .in("id", bookingIds);
 
     if (bErr) return json({ error: "booking_lookup_failed", detail: bErr.message }, 500);
@@ -178,6 +178,7 @@ Deno.serve(async (req) => {
             community: b.community,
             cust_name: b.cust_name,
             flat_no: b.flat_no,
+            building_name: b.building_name || null,
             address_line1: (b as any).address_line1 ?? null,
             price_inr: b.price_inr,
             scheduled_date: b.scheduled_date,

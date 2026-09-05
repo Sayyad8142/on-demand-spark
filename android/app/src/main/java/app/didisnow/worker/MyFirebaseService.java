@@ -143,6 +143,8 @@ public class MyFirebaseService extends FirebaseMessagingService {
         if (flatNo == null || flatNo.isEmpty()) {
           flatNo = data.get("flatNo"); // legacy
         }
+        String buildingName = data.get("building_name");
+        if (buildingName == null) buildingName = "";
         String location = data.get("location"); // legacy/compat
         if ((flatNo == null || flatNo.isEmpty()) && location != null && !location.isEmpty()) {
           flatNo = location;
@@ -251,7 +253,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
             // Tell backend exactly why the popup will not appear via overlay
             BackendSync.INSTANCE.ackFailureAsync(getApplicationContext(), bookingId, "overlay_blocked", bookingRequestId);
             // Try to show BookingAlertActivity as fallback
-            launchBookingAlertActivity(bookingId, customer, community, serviceType, flatNo, price, bookingType, scheduledTime, prealertSent, bookingRequestId, expiresAtSec, sentAtSec, ttlSeconds);
+            launchBookingAlertActivity(bookingId, customer, community, serviceType, flatNo, price, bookingType, scheduledTime, prealertSent, bookingRequestId, expiresAtSec, sentAtSec, ttlSeconds, buildingName);
             return;
           } else {
             Log.d(TAG, "✅ Overlay permission granted");
@@ -273,6 +275,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
         serviceIntent.putExtra("community", community != null ? community : "");
         serviceIntent.putExtra("service_type", serviceType != null ? serviceType : "Service");
         serviceIntent.putExtra("flat_no", flatNo != null ? flatNo : "");
+        serviceIntent.putExtra("building_name", buildingName);
         serviceIntent.putExtra("price_inr", price);
         serviceIntent.putExtra("scheduled_time", scheduledTime != null ? scheduledTime : "");
         serviceIntent.putExtra("expires_at", expiresAtSec);
@@ -308,7 +311,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
         } catch (Exception se) {
           Log.e(TAG, "❌ startService failed, falling back to BookingAlertActivity", se);
           BackendSync.INSTANCE.ackFailureAsync(getApplicationContext(), bookingId, "popup_failed", bookingRequestId);
-          launchBookingAlertActivity(bookingId, customer, community, serviceType, location, price, bookingType, scheduledTime, prealertSent, bookingRequestId, expiresAtSec, sentAtSec, ttlSeconds);
+          launchBookingAlertActivity(bookingId, customer, community, serviceType, location, price, bookingType, scheduledTime, prealertSent, bookingRequestId, expiresAtSec, sentAtSec, ttlSeconds, buildingName);
         }
 
       } else {
@@ -370,7 +373,8 @@ public class MyFirebaseService extends FirebaseMessagingService {
                                            String serviceType, String location, int price,
                                             String bookingType, String scheduledTime, boolean prealertSent,
                                             String bookingRequestId,
-                                            long expiresAtSec, long sentAtSec, int ttlSeconds) {
+                                            long expiresAtSec, long sentAtSec, int ttlSeconds,
+                                            String buildingName) {
     Log.d(TAG, "🚀 Launching BookingAlertActivity as fallback for " + bookingType + " booking");
 
     try {
@@ -385,6 +389,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
       activityIntent.putExtra("community", community != null ? community : "");
       activityIntent.putExtra("service_type", serviceType != null ? serviceType : "Service");
       activityIntent.putExtra("flat_no", location != null ? location : "");
+      activityIntent.putExtra("building_name", buildingName != null ? buildingName : "");
       activityIntent.putExtra("price_inr", price);
       activityIntent.putExtra("scheduled_time", scheduledTime != null ? scheduledTime : "");
       activityIntent.putExtra("expires_at", expiresAtSec);

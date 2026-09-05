@@ -1,5 +1,6 @@
 import { Database } from "@/integrations/supabase/types";
-import { isVillaCommunity } from "@/lib/communityTypes";
+import { isVillaCommunity, isBlockBasedCommunity } from "@/lib/communityTypes";
+
 
 type Booking = Database["public"]["Tables"]["bookings"]["Row"];
 
@@ -28,6 +29,18 @@ export function formatBookingAddress(booking: BookingWithAddress): string {
   if (isVillaBooking(booking)) {
     return formatVillaLabel(flatNo);
   }
+
+  // Block/Building communities (e.g. My Home Bhooja): the block is a real
+  // stored value on the booking — never derive it from flat_no digits.
+  const block = getBookingBlock(booking);
+  if (block) {
+    const parts = parseBlockFlat(flatNo);
+    return parts
+      ? `Block ${block} • Floor ${parts.floor} • Door ${parts.door}`
+      : `Block ${block} • Flat ${flatNo ?? ''}`.trim();
+  }
+
+
 
 
   // Check if it's a 5-digit PHF code (2-2-1 format: TT-FF-D)
@@ -124,6 +137,41 @@ export function formatVillaLabel(
 }
 
 /**
+ * Block / Building support
+ * -------------------------------------------------------------
+ * Communities such as My Home Bhooja have real Block/Building records
+ * (Tower A / B / C ...). The customer's selected block is stored on the
+ * booking (`building_name`) and is the ONLY source of truth for those
+ * communities — the block must never be inferred from flat_no digits.
+ */
+export function getBookingBlock(
+  booking: { community?: string | null; building_name?: string | null } | null | undefined
+): string | null {
+  if (!booking) return null;
+  const raw = (booking as any).building_name;
+  const name = raw != null ? raw.toString().trim() : '';
+  if (!name) return null;
+  // Only block-based communities use it; tower-encoded ones (PHF) keep parsing flat_no.
+  if (!isBlockBasedCommunity(booking.community)) return null;
+  // "Tower B" / "Block B" / "B" -> "B"
+  const stripped = name.replace(/^(tower|block|building|blk)\s*[-:]?\s*/i, '').trim();
+  return stripped || name;
+}
+
+/**
+ * Floor / Door split for block-based communities: the last two digits are the
+ * door, everything before it is the floor (leading zeros preserved).
+ * 1004 -> Floor 10, Door 04
+ */
+export function parseBlockFlat(
+  flatNo: string | number | null | undefined
+): { floor: string; door: string } | null {
+  const code = flatNo != null ? flatNo.toString().trim() : '';
+  if (!/^\d{3,}$/.test(code)) return null;
+  return { floor: code.slice(0, code.length - 2), door: code.slice(-2) };
+}
+
+/**
  * Single entry point used by booking UI: returns the unit label plus whether
  * apartment-specific Tower/Floor/Door blocks should be rendered.
  */
@@ -132,17 +180,42 @@ export function getUnitDisplay(booking: {
   flat_no?: string | null;
   community_type?: string | null;
   display_name?: string | null;
-}): { isVilla: boolean; label: string; phf: { tower: string; floor: string; door: string } | null } {
+  building_name?: string | null;
+}): {
+  isVilla: boolean;
+  label: string;
+  phf: { tower: string; floor: string; door: string } | null;
+  towerLabel: 'TOWER' | 'BLOCK';
+  block: string | null;
+} {
   if (isVillaBooking(booking)) {
     return {
       isVilla: true,
       label: formatVillaLabel(booking.flat_no, (booking as any).display_name),
       phf: null,
+      towerLabel: 'TOWER',
+      block: null,
     };
   }
+
+  const block = getBookingBlock(booking);
+  if (block) {
+    const parts = parseBlockFlat(booking.flat_no);
+    return {
+      isVilla: false,
+      label: booking.flat_no ? `Flat ${booking.flat_no}` : 'Flat not set',
+      phf: parts ? { tower: block, floor: parts.floor, door: parts.door } : null,
+      towerLabel: 'BLOCK',
+      block,
+    };
+  }
+
   return {
     isVilla: false,
     label: booking.flat_no ? `Flat ${booking.flat_no}` : 'Flat not set',
     phf: parsePHFCode(booking.flat_no),
+    towerLabel: 'TOWER',
+    block: null,
   };
 }
+

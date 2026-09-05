@@ -149,6 +149,7 @@ export default function ActiveJobCard({
   const unit = getUnitDisplay(booking as any);
   const isVilla = unit.isVilla;
   const phfParsed = unit.phf;
+  const isBlock = unit.towerLabel === 'BLOCK';
 
   const handleCallManager = () => {
     window.location.href = `tel:${MANAGER_PHONE}`;
@@ -181,20 +182,20 @@ export default function ActiveJobCard({
       const teVoice = voices.find((v) => v.lang.startsWith('te'));
       if (teVoice) {
         text = `ఫ్లాట్ నంబర్ ${booking.flat_no}`;
-        if (phfParsed) text += `. టవర్ ${phfParsed.tower}. ఫ్లోర్ ${phfParsed.floor}. డోర్ నంబర్ ${phfParsed.door}.`;
+        if (phfParsed) text += `. ${isBlock ? 'బ్లాక్' : 'టవర్'} ${phfParsed.tower}. ఫ్లోర్ ${phfParsed.floor}. డోర్ నంబర్ ${phfParsed.door}.`;
         utteranceLang = 'te-IN';
       } else {
         text = `फ्लैट नंबर ${booking.flat_no}`;
-        if (phfParsed) text += `. टावर ${phfParsed.tower}. फ्लोर ${phfParsed.floor}. डोर नंबर ${phfParsed.door}.`;
+        if (phfParsed) text += `. ${isBlock ? 'ब्लॉक' : 'टावर'} ${phfParsed.tower}. फ्लोर ${phfParsed.floor}. डोर नंबर ${phfParsed.door}.`;
         utteranceLang = 'hi-IN';
       }
     } else if (lang === 'hi') {
       text = `फ्लैट नंबर ${booking.flat_no}`;
-      if (phfParsed) text += `. टावर ${phfParsed.tower}. फ्लोर ${phfParsed.floor}. डोर नंबर ${phfParsed.door}.`;
+      if (phfParsed) text += `. ${isBlock ? 'ब्लॉक' : 'टावर'} ${phfParsed.tower}. फ्लोर ${phfParsed.floor}. डोर नंबर ${phfParsed.door}.`;
       utteranceLang = 'hi-IN';
     } else {
       text = `Flat number ${booking.flat_no}`;
-      if (phfParsed) text += `. Tower ${phfParsed.tower}. Floor ${phfParsed.floor}. Door number ${phfParsed.door}.`;
+      if (phfParsed) text += `. ${isBlock ? 'Block' : 'Tower'} ${phfParsed.tower}. Floor ${phfParsed.floor}. Door number ${phfParsed.door}.`;
       utteranceLang = 'en-IN';
     }
 
@@ -247,7 +248,7 @@ export default function ActiveJobCard({
           {phfParsed &&
             <div className="grid grid-cols-3 gap-3 relative z-10">
               <div className="text-center">
-                <p className="text-[10px] font-bold text-[#D6B88A] mb-2 tracking-wider">TOWER</p>
+                <p className="text-[10px] font-bold text-[#D6B88A] mb-2 tracking-wider">{unit.towerLabel}</p>
                 <div className="bg-[#5A3423] rounded-xl py-4 shadow-inner border-2 border-[#D6B88A]/50">
                   <p className="text-3xl font-extrabold flat-number-text">{phfParsed.tower}</p>
                 </div>

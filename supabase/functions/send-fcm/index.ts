@@ -224,6 +224,7 @@ Deno.serve(async (req) => {
             service_type: String(data?.serviceType || data?.service_type || ""),
             location: String(data?.location || ""),
             flat_no: String(data?.flat_no || ""),
+            building_name: String(data?.building_name || ""),
             price: String(data?.price || "0"),
             scheduled_time: String(data?.scheduled_time || ""),
             scheduled_date: String(data?.scheduled_date || ""),

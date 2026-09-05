@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     
     const { data: b, error: be } = await supabase
       .from("bookings")
-      .select("id, status, service_type, community, cust_name, cust_phone, flat_no, price_inr, scheduled_date, scheduled_time, booking_type, prealert_sent")
+      .select("id, status, service_type, community, cust_name, cust_phone, flat_no, building_name, price_inr, scheduled_date, scheduled_time, booking_type, prealert_sent")
       .eq("id", booking_id)
       .single();
       
@@ -486,6 +486,7 @@ async function sendNotifications(userIds: string[], booking: any, bookingId: str
       service_type: booking.service_type,
       location: "",
       flat_no: booking.flat_no || "",
+      building_name: booking.building_name || "",
       price: String(booking.price_inr || 0),
       scheduled_time: scheduledTimeDisplay,
       scheduled_date: booking.scheduled_date || "",
