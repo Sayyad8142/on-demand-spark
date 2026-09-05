@@ -148,16 +148,6 @@ Deno.serve(async (req) => {
       .slice(0, 50);
 
 
-    const { data: topWorkers, error: rankError } = await query
-      .order("priority_score", { ascending: false })
-      .order("rating", { ascending: false })
-      .order("total_bookings_completed", { ascending: false })
-      .limit(50);
-
-    if (rankError) {
-      console.error("[get-worker-leaderboard] rank error:", rankError);
-      throw rankError;
-    }
 
     // 4. Calculate "Today's" stats for the top 50 workers
     // IMPORTANT: Ensure todayStart is in IST (UTC+5:30) for consistency with Indian operations
