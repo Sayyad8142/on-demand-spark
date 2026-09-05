@@ -79,21 +79,74 @@ Deno.serve(async (req) => {
     // 3. Fetch Top Workers — ALWAYS scoped to the worker's own society.
     // workers.community text is often NULL; the reliable links are
     // selected_community_id (uuid -> communities) and communities (slug array).
-    let query = admin
-      .from("workers")
-      .select("id, full_name, photo_url, rating, priority_score, total_bookings_completed, is_blocked")
-      .eq("is_blocked", false);
+    // Source of truth for a worker's society is the assigned `communities` slug
+    // array. `selected_community_id` is only a UI selection and can be stale, so
+    // it is used ONLY as a fallback when no slugs are assigned.
+    let mySlugs: string[] = Array.isArray(me.communities)
+      ? me.communities.filter((s: unknown) => typeof s === "string" && s.length > 0)
+      : [];
 
-    if (me.selected_community_id) {
-      query = query.eq("selected_community_id", me.selected_community_id);
-    } else if (Array.isArray(me.communities) && me.communities.length > 0) {
-      query = query.overlaps("communities", me.communities);
-    } else if (me.community) {
-      query = query.ilike("community", me.community);
-    } else {
+    if (mySlugs.length === 0 && me.selected_community_id) {
+      const { data: c } = await admin
+        .from("communities")
+        .select("value, name")
+        .eq("id", me.selected_community_id)
+        .maybeSingle();
+      if (c?.value) mySlugs = [c.value];
+      else if (c?.name) mySlugs = [c.name];
+    }
+
+    if (mySlugs.length === 0 && me.community) mySlugs = [me.community];
+
+    if (mySlugs.length === 0) {
       // No society link known — never leak other societies' workers.
       return json({ community: null, leaderboard: [], updatedAt: new Date().toISOString() });
     }
+
+    console.log("[get-worker-leaderboard] society slugs:", mySlugs.join(","));
+
+    // Matching community ids for workers that only have selected_community_id set.
+    const { data: matchCommunities } = await admin
+      .from("communities")
+      .select("id, value, name")
+      .or(mySlugs.map((s) => `value.eq.${s},name.eq.${s}`).join(","));
+    const matchIds = (matchCommunities ?? []).map((c: any) => c.id);
+
+    let query = admin
+      .from("workers")
+      .select("id, full_name, photo_url, rating, priority_score, total_bookings_completed, is_blocked, communities, selected_community_id")
+      .eq("is_blocked", false)
+      .overlaps("communities", mySlugs);
+
+    const { data: slugWorkers, error: rankError0 } = await query;
+    if (rankError0) {
+      console.error("[get-worker-leaderboard] rank error:", rankError0);
+      throw rankError0;
+    }
+
+    let idWorkers: any[] = [];
+    if (matchIds.length > 0) {
+      const { data } = await admin
+        .from("workers")
+        .select("id, full_name, photo_url, rating, priority_score, total_bookings_completed, is_blocked, communities, selected_community_id")
+        .eq("is_blocked", false)
+        .in("selected_community_id", matchIds)
+        .or("communities.is.null,communities.eq.{}");
+      idWorkers = data ?? [];
+    }
+
+    const byId = new Map<string, any>();
+    [...(slugWorkers ?? []), ...idWorkers].forEach((w) => byId.set(w.id, w));
+    if (!byId.has(me.id)) byId.set(me.id, me);
+
+    const topWorkers = Array.from(byId.values())
+      .sort((a, b) =>
+        (Number(b.priority_score) || 0) - (Number(a.priority_score) || 0) ||
+        (Number(b.rating) || 0) - (Number(a.rating) || 0) ||
+        (Number(b.total_bookings_completed) || 0) - (Number(a.total_bookings_completed) || 0)
+      )
+      .slice(0, 50);
+
 
     const { data: topWorkers, error: rankError } = await query
       .order("priority_score", { ascending: false })
