@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     const phone = payload.phone_number || payload.phone;
     
     // Resolve worker by UID (sub) or Phone
-    const cols = "id, community, full_name, photo_url, rating, priority_score, total_bookings_completed";
+    const cols = "id, community, communities, selected_community_id, full_name, photo_url, rating, priority_score, total_bookings_completed";
     let me: any = null;
 
     if (sub) {
