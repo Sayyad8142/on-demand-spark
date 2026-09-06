@@ -244,7 +244,48 @@ public class MyFirebaseService extends FirebaseMessagingService {
 
 
 
-        showBookingNotification(bookingId, bookingType);
+        // Build the canonical offer intent ONCE — it is the source of truth for
+        // the FIFO queue, the overlay service, the fallback activity and the
+        // actionable tray notification.
+        Intent serviceIntent = new Intent(this, BookingOverlayService.class);
+        serviceIntent.putExtra("mode", "show");
+        serviceIntent.putExtra("booking_id", bookingId);
+        if (bookingRequestId != null) serviceIntent.putExtra("booking_request_id", bookingRequestId);
+        serviceIntent.putExtra("booking_type", bookingType != null ? bookingType : "instant");
+        serviceIntent.putExtra("actionable", "true");
+        serviceIntent.putExtra("prealert_sent", prealertSent);
+        serviceIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
+        serviceIntent.putExtra("community", community != null ? community : "");
+        serviceIntent.putExtra("service_type", serviceType != null ? serviceType : "Service");
+        serviceIntent.putExtra("flat_no", flatNo != null ? flatNo : "");
+        serviceIntent.putExtra("building_name", buildingName);
+        serviceIntent.putExtra("price_inr", price);
+        serviceIntent.putExtra("scheduled_time", scheduledTime != null ? scheduledTime : "");
+        serviceIntent.putExtra("expires_at", expiresAtSec);
+        serviceIntent.putExtra("sent_at", sentAtSec);
+        serviceIntent.putExtra("ttl_seconds", ttlSeconds);
+
+        // FIFO queue: persist + deduplicate the offer before any UI attempt.
+        boolean alreadyQueued = false;
+        try {
+          org.json.JSONObject offer = OfferQueue.INSTANCE.offerFromIntent(serviceIntent);
+          if (offer != null) {
+            if (OfferQueue.INSTANCE.isLocallyBusy(getApplicationContext())) {
+              Log.w(TAG, "🔒 Worker locally busy — offer not queued: " + bookingId);
+              return;
+            }
+            alreadyQueued = !OfferQueue.INSTANCE.enqueue(getApplicationContext(), offer);
+          }
+        } catch (Exception e) {
+          Log.e(TAG, "OfferQueue enqueue failed", e);
+        }
+
+        showBookingNotification(bookingId, bookingType, serviceIntent);
+
+        if (alreadyQueued) {
+          Log.d(TAG, "↩️ Duplicate BOOKING_ALERT for " + bookingId + " — already queued, no second popup");
+          return;
+        }
 
         // Check overlay permission
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -263,24 +304,6 @@ public class MyFirebaseService extends FirebaseMessagingService {
         // Start BookingOverlayService to show system overlay
         // This works for BOTH instant AND scheduled bookings!
         Log.d(TAG, "🚀 Starting BookingOverlayService for " + bookingType + " booking...");
-
-        Intent serviceIntent = new Intent(this, BookingOverlayService.class);
-        serviceIntent.putExtra("mode", "show");
-        serviceIntent.putExtra("booking_id", bookingId);
-        if (bookingRequestId != null) serviceIntent.putExtra("booking_request_id", bookingRequestId);
-        serviceIntent.putExtra("booking_type", bookingType != null ? bookingType : "instant");
-        serviceIntent.putExtra("actionable", "true");
-        serviceIntent.putExtra("prealert_sent", prealertSent);
-        serviceIntent.putExtra("customer_name", customer != null ? customer : "New Customer");
-        serviceIntent.putExtra("community", community != null ? community : "");
-        serviceIntent.putExtra("service_type", serviceType != null ? serviceType : "Service");
-        serviceIntent.putExtra("flat_no", flatNo != null ? flatNo : "");
-        serviceIntent.putExtra("building_name", buildingName);
-        serviceIntent.putExtra("price_inr", price);
-        serviceIntent.putExtra("scheduled_time", scheduledTime != null ? scheduledTime : "");
-        serviceIntent.putExtra("expires_at", expiresAtSec);
-        serviceIntent.putExtra("sent_at", sentAtSec);
-        serviceIntent.putExtra("ttl_seconds", ttlSeconds);
 
         // Try to get access token from SharedPreferences to pass via Intent
         try {
@@ -554,6 +577,10 @@ public class MyFirebaseService extends FirebaseMessagingService {
   }
 
   private void showBookingNotification(String bookingId, String bookingType) {
+    showBookingNotification(bookingId, bookingType, null);
+  }
+
+  private void showBookingNotification(String bookingId, String bookingType, Intent offerSource) {
     createNotificationChannel();
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -562,10 +589,20 @@ public class MyFirebaseService extends FirebaseMessagingService {
       return;
     }
 
-    Intent intent = new Intent(this, MainActivity.class);
+    // Actionable offers deep-link back into the offer UI for THAT booking
+    // (validated for expiry/assignment before anything is shown). Purely
+    // informational notifications keep opening the Bookings tab.
+    Intent intent;
+    if (offerSource != null) {
+      intent = new Intent(this, BookingAlertActivity.class);
+      intent.putExtras(offerSource);
+      intent.putExtra("from_notification", true);
+    } else {
+      intent = new Intent(this, MainActivity.class);
+      intent.putExtra("navigate_to", "bookings");
+      intent.putExtra("booking_id", bookingId);
+    }
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-    intent.putExtra("navigate_to", "bookings");
-    intent.putExtra("booking_id", bookingId);
 
     PendingIntent pendingIntent = PendingIntent.getActivity(
       this,
