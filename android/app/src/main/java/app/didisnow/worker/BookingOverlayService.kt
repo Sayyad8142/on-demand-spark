@@ -110,10 +110,27 @@ class BookingOverlayService : Service() {
         
         // Save startId for proper cleanup
         startIdForStop = startId
-        
-        // Single-instance guard: only one overlay can be showing at a time
+
+        val mode = intent?.getStringExtra("mode") ?: "show"
+
+        // ── FIFO offer queue ──────────────────────────────────────────────
+        // Every actionable offer is persisted first (deduplicated by
+        // booking_request_id / booking_id) so nothing is ever dropped when an
+        // overlay is already on screen.
+        if (mode == "show" && intent?.getStringExtra("actionable") != "false") {
+            OfferQueue.offerFromIntent(intent)?.let { incoming ->
+                if (OfferQueue.isLocallyBusy(applicationContext)) {
+                    android.util.Log.w("BookingOverlay", "🔒 Worker locally busy — offer not queued: ${OfferQueue.bookingIdOf(incoming)}")
+                } else {
+                    OfferQueue.enqueue(applicationContext, incoming)
+                }
+            }
+        }
+
+        // Single-visible-offer guard: additional offers stay in the FIFO queue
+        // and are drained when the current one is resolved.
         if (OverlaySingleton.isShowing) {
-            android.util.Log.w("BookingOverlay", "⚠️ Overlay already showing; ignoring duplicate start")
+            android.util.Log.w("BookingOverlay", "⚠️ Overlay already showing; incoming offer left in FIFO queue")
             return START_NOT_STICKY
         }
         OverlaySingleton.isShowing = true
@@ -122,7 +139,6 @@ class BookingOverlayService : Service() {
             // No foreground service needed for overlay
             android.util.Log.d("BookingOverlay", "✅ Service starting without foreground mode")
             
-            val mode = intent?.getStringExtra("mode") ?: "show"
             android.util.Log.d("BookingOverlay", "🎯 Mode: $mode")
             
             when (mode) {
