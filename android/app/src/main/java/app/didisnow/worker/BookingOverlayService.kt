@@ -173,9 +173,39 @@ class BookingOverlayService : Service() {
                     
                     if (bookingId.isEmpty()) {
                         android.util.Log.e("BookingOverlay", "❌ No booking ID provided, cannot show overlay")
+                        OverlaySingleton.isShowing = false
                         stopSelf()
                         return START_NOT_STICKY
                     }
+
+                    // Worker just accepted a booking — never open another offer.
+                    if (OfferQueue.isLocallyBusy(applicationContext)) {
+                        android.util.Log.w("BookingOverlay", "🔒 Worker locally busy — suppressing offer $bookingId")
+                        OfferQueue.remove(applicationContext, bookingId, currentBookingRequestId)
+                        OfferQueue.cancelNotification(applicationContext, bookingId)
+                        OverlaySingleton.isShowing = false
+                        stopSelf()
+                        return START_NOT_STICKY
+                    }
+
+                    // Never show an offer whose original backend TTL already ran out.
+                    val incomingOffer = OfferQueue.offerFromIntent(intent)
+                    if (incomingOffer != null && OfferQueue.isExpired(incomingOffer)) {
+                        android.util.Log.w("BookingOverlay", "⏱️ Offer already expired on arrival: $bookingId")
+                        OfferQueue.remove(applicationContext, bookingId, currentBookingRequestId)
+                        OfferQueue.cancelNotification(applicationContext, bookingId)
+                        OverlaySingleton.isShowing = false
+                        val next = OfferQueue.nextValid(applicationContext)
+                        if (next != null) {
+                            startService(OfferQueue.toServiceIntent(applicationContext, next))
+                        } else {
+                            stopSelf()
+                        }
+                        return START_NOT_STICKY
+                    }
+                    // Mark this offer as the one currently on screen (kept in the
+                    // queue so a recreated process can recover it).
+                    incomingOffer?.let { OfferQueue.setActive(applicationContext, it) }
 
                     // Backend is authoritative: any BOOKING_ALERT reaching this
                     // service is a real actionable offer (scheduled offers are
