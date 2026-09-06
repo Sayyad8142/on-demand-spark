@@ -41,7 +41,8 @@ type FailureEvent =
   // New (v6.0.67+): previously-silent abort paths between push_received and popup_shown
   | "prealert_suppressed"   // scheduled offer hidden by the client-side prealert guard
   | "session_missing"       // overlay/activity aborted: no usable session on device
-  | "service_start_blocked"; // OS refused the background service/activity start
+  | "service_start_blocked"  // OS refused the background service/activity start
+  | "offer_queued_expired";  // offer waited in the device FIFO queue and expired before it could be shown
 type EventType = TimestampEvent | FailureEvent;
 
 const TS_COL: Record<TimestampEvent, "push_delivered_at" | "popup_shown_at" | "worker_seen_at"> = {
@@ -57,6 +58,7 @@ const TS_CHANNEL: Record<TimestampEvent, string> = {
 const FAILURE_EVENTS = new Set<FailureEvent>([
   "popup_failed", "permission_missing", "overlay_blocked", "app_killed", "token_invalid",
   "prealert_suppressed", "session_missing", "service_start_blocked",
+  "offer_queued_expired",
 ]);
 
 // Legacy aliases used by older Worker App builds (<= 6.0.64) and the very
