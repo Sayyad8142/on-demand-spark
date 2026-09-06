@@ -39,6 +39,7 @@ class BookingAlertActivity : AppCompatActivity() {
     private var ackBookingId: String? = null
     private var ackRequestId: String? = null
     private var popupAcked = false
+    private var offerRetired = false
 
     
     // Token refresh throttling
@@ -201,6 +202,7 @@ class BookingAlertActivity : AppCompatActivity() {
                 } else {
                     Log.d("BookingAlert", "⏱️ Countdown finished - auto closing")
                     Toast.makeText(this@BookingAlertActivity, "Booking timed out", Toast.LENGTH_SHORT).show()
+                    retireOffer(accepted = false)
                     finish()
                 }
             }
@@ -261,7 +263,41 @@ class BookingAlertActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Retires the offer shown by this screen and drains the FIFO queue.
+     * Accepted -> worker is locally busy, every queued offer is dropped.
+     * Rejected/expired/dismissed -> the next STILL-VALID offer opens at once.
+     */
+    private fun retireOffer(accepted: Boolean) {
+        if (offerRetired) return
+        offerRetired = true
+        val ctx = applicationContext
+        try {
+            OfferQueue.remove(ctx, ackBookingId, ackRequestId)
+            OfferQueue.setActive(ctx, null)
+            OfferQueue.cancelNotification(ctx, ackBookingId)
+            if (accepted) {
+                OfferQueue.markLocallyBusy(ctx)
+                OfferQueue.clearAll(ctx, "worker_accepted")
+                return
+            }
+            if (OfferQueue.isLocallyBusy(ctx)) return
+            val next = OfferQueue.nextValid(ctx) ?: return
+            val canOverlay = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M ||
+                android.provider.Settings.canDrawOverlays(this)
+            if (canOverlay) {
+                startService(OfferQueue.toServiceIntent(ctx, next))
+            } else {
+                startActivity(OfferQueue.toActivityIntent(ctx, next))
+            }
+        } catch (e: Exception) {
+            Log.e("BookingAlert", "❌ Offer queue drain failed", e)
+        }
+    }
+
     override fun onDestroy() {
+        // Dismissed/closed legitimately — still drain the queue.
+        retireOffer(accepted = false)
         countdownHandler?.removeCallbacks(countdownRunnable)
         stopAlertSound()
 
@@ -569,6 +605,8 @@ class BookingAlertActivity : AppCompatActivity() {
                                         Toast.LENGTH_SHORT
                                     ).show()
                                     Log.d("BookingAlert", "✅ Booking accepted successfully")
+                                    // Backend confirmed — worker is busy: drop every queued offer.
+                                    retireOffer(accepted = true)
                                 } else {
                                     // RPC returns { success:false, error:"..." } — read `error` first,
                                     // fall back to `message` for older payloads.
