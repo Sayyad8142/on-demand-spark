@@ -1214,7 +1214,8 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
         // Reset singleton flag BEFORE any queue drain so the next offer can show.
         OverlaySingleton.isShowing = false
 
-        val nextOffer = if (reason == "accept_success" || OfferQueue.isLocallyBusy(ctx)) {
+        val terminalShutdown = reason == "onDestroy" || reason == "onTaskRemoved" || reason == "hide_mode"
+        val nextOffer = if (terminalShutdown || reason == "accept_success" || OfferQueue.isLocallyBusy(ctx)) {
             null
         } else {
             try { OfferQueue.nextValid(ctx) } catch (e: Throwable) { null }
