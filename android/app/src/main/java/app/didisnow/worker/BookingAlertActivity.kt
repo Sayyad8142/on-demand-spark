@@ -68,6 +68,29 @@ class BookingAlertActivity : AppCompatActivity() {
             return
         }
 
+        // Validity gate — a tray tap must never open a dead offer.
+        val offerRecord = OfferQueue.offerFromIntent(intent)
+        if (OfferQueue.isLocallyBusy(applicationContext)) {
+            Log.w("BookingAlert", "🔒 Worker locally busy — offer not shown: $bookingId")
+            OfferQueue.remove(applicationContext, bookingId, intent.getStringExtra("booking_request_id"))
+            OfferQueue.cancelNotification(applicationContext, bookingId)
+            Toast.makeText(this, "You already have an active booking", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+        if (offerRecord != null && OfferQueue.isExpired(offerRecord)) {
+            Log.w("BookingAlert", "⏱️ Offer expired — not showing: $bookingId")
+            OfferQueue.remove(applicationContext, bookingId, intent.getStringExtra("booking_request_id"))
+            OfferQueue.cancelNotification(applicationContext, bookingId)
+            Toast.makeText(this, "This booking offer has expired", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+        offerRecord?.let {
+            OfferQueue.enqueue(applicationContext, it)
+            OfferQueue.setActive(applicationContext, it)
+        }
+
 
         // Keep screen on & show over lock screen
         window.addFlags(
