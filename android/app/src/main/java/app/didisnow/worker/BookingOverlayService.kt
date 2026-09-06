@@ -1192,6 +1192,47 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
         overlayAdded = false
         overlayView = null
         windowManager = null
+
+        // ── Offer lifecycle: retire this offer, then drain the FIFO queue ──
+        val ctx = applicationContext
+        val finishedBookingId = currentBookingId
+        try {
+            OfferQueue.remove(ctx, finishedBookingId, currentBookingRequestId)
+            OfferQueue.setActive(ctx, null)
+            OfferQueue.cancelNotification(ctx, finishedBookingId)
+
+            if (reason == "accept_success") {
+                // Backend confirmed the acceptance — the worker is now busy.
+                // Suppress every remaining offer locally (backend stays final).
+                OfferQueue.markLocallyBusy(ctx)
+                OfferQueue.clearAll(ctx, "worker_accepted_$finishedBookingId")
+            }
+        } catch (e: Throwable) {
+            android.util.Log.e("BookingOverlay", "❌ Offer queue cleanup failed", e)
+        }
+
+        // Reset singleton flag BEFORE any queue drain so the next offer can show.
+        OverlaySingleton.isShowing = false
+
+        val nextOffer = if (reason == "accept_success" || OfferQueue.isLocallyBusy(ctx)) {
+            null
+        } else {
+            try { OfferQueue.nextValid(ctx) } catch (e: Throwable) { null }
+        }
+
+        if (nextOffer != null) {
+            android.util.Log.d("BookingOverlay", "⏭️ Draining queue → next offer ${OfferQueue.bookingIdOf(nextOffer)}")
+            resetForNextOffer()
+            Handler(mainLooper).postDelayed({
+                try {
+                    startService(OfferQueue.toServiceIntent(ctx, nextOffer))
+                } catch (e: Throwable) {
+                    android.util.Log.e("BookingOverlay", "❌ Failed to start next queued offer", e)
+                    stopSelf()
+                }
+            }, 350)
+            return
+        }
         
         // Stop foreground
         try {
@@ -1204,9 +1245,22 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
         // Use stopSelfResult to ensure we stop the correct started instance
         val stopped = stopSelfResult(startIdForStop)
         android.util.Log.d("BookingOverlay", "stopSelfResult($startIdForStop) -> $stopped")
-        
-        // Reset singleton flag
-        OverlaySingleton.isShowing = false
+    }
+
+    /**
+     * Recycles this service instance so the next queued offer can be shown
+     * with its own immutable data and its own original expiry.
+     */
+    private fun resetForNextOffer() {
+        isShuttingDown = false
+        acceptInFlight = false
+        overlayAdded = false
+        overlayView = null
+        windowManager = null
+        currentBookingId = null
+        currentBookingRequestId = null
+        offerSecondsLeft = OfferTimer.DEFAULT_TTL_SECONDS
+        addedWindows.clear()
     }
 
     @Deprecated("Use finishAndStop instead", ReplaceWith("finishAndStop(\"legacy\")"))
