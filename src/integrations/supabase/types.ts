@@ -853,6 +853,48 @@ export type Database = {
           },
         ]
       }
+      booking_prealert_sends: {
+        Row: {
+          attempts: number
+          booking_id: string
+          claimed_at: string
+          created_at: string
+          id: string
+          last_error: string | null
+          next_retry_at: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          attempts?: number
+          booking_id: string
+          claimed_at?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          next_retry_at?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          attempts?: number
+          booking_id?: string
+          claimed_at?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          next_retry_at?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: []
+      }
       booking_request_delivery_events: {
         Row: {
           app_state: string | null
