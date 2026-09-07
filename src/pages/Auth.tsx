@@ -760,27 +760,13 @@ export default function Auth() {
 
                   <div className="space-y-3">
                     <Label className="text-base">{t('auth.communityLabel')}</Label>
-                    <Select value={signUpCommunity} onValueChange={setSignUpCommunity} disabled={loading}>
-                      <SelectTrigger className="h-12 rounded-2xl text-base font-semibold border-2 data-[state=open]:border-[#ff007a] focus:ring-[#ff007a]/20">
-                        <SelectValue placeholder="Select your community" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-2xl">
-                        {communities.map((community) => (
-                          <SelectItem
-                            key={community.value}
-                            value={community.value}
-                            className="rounded-xl text-base py-3 cursor-pointer data-[state=checked]:text-[#ff007a] data-[state=checked]:font-bold"
-                          >
-                            {community.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {communities.length === 0 && !loading && (
-                      <p className="text-center text-sm text-muted-foreground py-2">
-                        No communities available
-                      </p>
-                    )}
+                    <CommunityPicker
+                      value={signUpCommunity}
+                      onChange={setSignUpCommunity}
+                      disabled={loading}
+                      onOptionsLoaded={setCommunities}
+                    />
+
                   </div>
 
                   <div className="space-y-3">
