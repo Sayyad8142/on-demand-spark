@@ -18,6 +18,7 @@ import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import maidServiceIcon from "@/assets/service-maid.png";
 import bathroomServiceIcon from "@/assets/service-bathroom.png";
 import { extractBankDetailsFromFile } from "@/lib/bankDetailsExtraction";
+import { CommunityPicker } from "@/components/CommunityPicker";
 
 
 // @ts-ignore - Capacitor bridge
@@ -194,37 +195,9 @@ export default function Auth() {
   
 
   // Auto OTP detection moved to OtpVerify page
-  useEffect(() => {
-    const fetchCommunities = async () => {
-      console.log('Fetching communities...');
-      const {
-        data,
-        error
-      } = await supabase.from('communities').select('name, value').eq('is_active', true).order('name');
-      
-      if (error) {
-        console.error('Error fetching communities:', error);
-        // Fallback for immediate UI showing if database is slow/blocked
-        setCommunities([
-          { name: "Prestige High Fields", value: "prestige-high-fields" },
-          { name: "My Home Bhooja", value: "my_home_bhooja" }
-        ]);
-        return;
-      }
-      
-      console.log('Fetched communities:', data?.length);
-      if (!data || data.length === 0) {
-        // Hardcoded safety fallback if table is empty or all inactive
-        setCommunities([
-          { name: "Prestige High Fields", value: "prestige-high-fields" },
-          { name: "My Home Bhooja", value: "my_home_bhooja" }
-        ]);
-      } else {
-        setCommunities(data);
-      }
-    };
-    fetchCommunities();
-  }, []);
+  // Community list is loaded and cached by <CommunityPicker/>; it reports
+  // the authoritative options back so the review step can show the name.
+
 
   useEffect(() => {
     try {
