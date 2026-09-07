@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
@@ -18,6 +18,7 @@ import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import maidServiceIcon from "@/assets/service-maid.png";
 import bathroomServiceIcon from "@/assets/service-bathroom.png";
 import { extractBankDetailsFromFile } from "@/lib/bankDetailsExtraction";
+import { CommunityPicker } from "@/components/CommunityPicker";
 
 
 // @ts-ignore - Capacitor bridge
@@ -194,37 +195,9 @@ export default function Auth() {
   
 
   // Auto OTP detection moved to OtpVerify page
-  useEffect(() => {
-    const fetchCommunities = async () => {
-      console.log('Fetching communities...');
-      const {
-        data,
-        error
-      } = await supabase.from('communities').select('name, value').eq('is_active', true).order('name');
-      
-      if (error) {
-        console.error('Error fetching communities:', error);
-        // Fallback for immediate UI showing if database is slow/blocked
-        setCommunities([
-          { name: "Prestige High Fields", value: "prestige-high-fields" },
-          { name: "My Home Bhooja", value: "my_home_bhooja" }
-        ]);
-        return;
-      }
-      
-      console.log('Fetched communities:', data?.length);
-      if (!data || data.length === 0) {
-        // Hardcoded safety fallback if table is empty or all inactive
-        setCommunities([
-          { name: "Prestige High Fields", value: "prestige-high-fields" },
-          { name: "My Home Bhooja", value: "my_home_bhooja" }
-        ]);
-      } else {
-        setCommunities(data);
-      }
-    };
-    fetchCommunities();
-  }, []);
+  // Community list is loaded and cached by <CommunityPicker/>; it reports
+  // the authoritative options back so the review step can show the name.
+
 
   useEffect(() => {
     try {
@@ -787,27 +760,13 @@ export default function Auth() {
 
                   <div className="space-y-3">
                     <Label className="text-base">{t('auth.communityLabel')}</Label>
-                    <Select value={signUpCommunity} onValueChange={setSignUpCommunity} disabled={loading}>
-                      <SelectTrigger className="h-12 rounded-2xl text-base font-semibold border-2 data-[state=open]:border-[#ff007a] focus:ring-[#ff007a]/20">
-                        <SelectValue placeholder="Select your community" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-2xl">
-                        {communities.map((community) => (
-                          <SelectItem
-                            key={community.value}
-                            value={community.value}
-                            className="rounded-xl text-base py-3 cursor-pointer data-[state=checked]:text-[#ff007a] data-[state=checked]:font-bold"
-                          >
-                            {community.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {communities.length === 0 && !loading && (
-                      <p className="text-center text-sm text-muted-foreground py-2">
-                        No communities available
-                      </p>
-                    )}
+                    <CommunityPicker
+                      value={signUpCommunity}
+                      onChange={setSignUpCommunity}
+                      disabled={loading}
+                      onOptionsLoaded={setCommunities}
+                    />
+
                   </div>
 
                   <div className="space-y-3">
