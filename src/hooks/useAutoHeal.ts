@@ -25,13 +25,21 @@ export function useAutoHeal(workerId: string | undefined, worker: any) {
       }
 
       // 2. Auto-fix missing availability slots
-      const { data: slots } = await supabase
+      const { data: slots, error: slotsError } = await supabase
         .from('worker_availability')
         .select('id')
         .eq('worker_id', workerId)
         .limit(1);
 
+      // If we couldn't read (permission/network), do NOT create defaults —
+      // that would silently overwrite hours the worker already chose.
+      if (slotsError) {
+        console.warn('⚠️ [AutoHeal] availability read failed, skipping heal:', slotsError.message);
+        return;
+      }
+
       if (!slots || slots.length === 0) {
+
         console.log('🩹 [AutoHeal] No availability slots, creating defaults');
         const defaultSlots = [
           '07:00:00', '07:30:00', '08:00:00', '08:30:00',
