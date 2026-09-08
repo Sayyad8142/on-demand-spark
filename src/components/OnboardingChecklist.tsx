@@ -29,12 +29,16 @@ export function useOnboardingStatus(workerId: string | undefined, worker: any): 
       .from("worker_availability")
       .select("slots")
       .eq("worker_id", workerId)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        // On a read failure keep the optimistic default so the worker isn't
+        // wrongly blocked from going online.
+        if (error) return;
         const anySelected = !!(data && data.some((row: any) =>
           Array.isArray(row.slots) && row.slots.length > 0
         ));
         setHasSlots(anySelected);
       });
+
   }, [workerId]);
 
   const hasServiceTypes = !!(worker?.service_types && worker.service_types.length > 0);
