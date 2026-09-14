@@ -9440,6 +9440,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_worker_availability_manual: {
+        Args: {
+          p_is_available: boolean
+          p_reason?: string
+          p_source?: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       simple_assign_to_next_worker: {
