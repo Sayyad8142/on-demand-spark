@@ -48,6 +48,22 @@ interface WorkerRow {
   notification_health: string | null;
   auto_paused_at: string | null;
   auto_paused_source: string | null;
+  availability_last_source: string | null;
+  availability_last_changed_at: string | null;
+}
+
+// A manual decision by the worker/admin always wins over a watchdog pause.
+// The watchdog may only restore a worker when its own pause is still the most
+// recent availability decision on record.
+const MANUAL_SOURCES = ["worker", "admin"];
+
+function watchdogOwnsPause(w: WorkerRow): boolean {
+  if (w.auto_paused_source !== "watchdog" || !w.auto_paused_at) return false;
+  const src = (w.availability_last_source ?? "").toLowerCase();
+  if (!MANUAL_SOURCES.includes(src)) return true;
+  // Manual source recorded — only safe if that decision predates our pause.
+  if (!w.availability_last_changed_at) return false;
+  return Date.parse(w.availability_last_changed_at) <= Date.parse(w.auto_paused_at);
 }
 
 function evaluate(worker: WorkerRow, recentMissCount: number): Reason | null {
@@ -131,7 +147,7 @@ Deno.serve(async (req) => {
     const { data: availableWorkers, error: availErr } = await supabase
       .from("workers")
       .select(
-        "id, user_id, is_available, last_seen_at, last_active_at, fcm_token, fcm_token_status, notification_health, auto_paused_at, auto_paused_source",
+        "id, user_id, is_available, last_seen_at, last_active_at, fcm_token, fcm_token_status, notification_health, auto_paused_at, auto_paused_source, availability_last_source, availability_last_changed_at",
       )
       .eq("is_available", true);
 
@@ -181,7 +197,7 @@ Deno.serve(async (req) => {
     const { data: pausedWorkers, error: pausedErr } = await supabase
       .from("workers")
       .select(
-        "id, user_id, is_available, last_seen_at, last_active_at, fcm_token, fcm_token_status, notification_health, auto_paused_at, auto_paused_source",
+        "id, user_id, is_available, last_seen_at, last_active_at, fcm_token, fcm_token_status, notification_health, auto_paused_at, auto_paused_source, availability_last_source, availability_last_changed_at",
       )
       .eq("auto_paused_source", "watchdog")
       .not("auto_paused_at", "is", null);
@@ -199,6 +215,12 @@ Deno.serve(async (req) => {
 
         const reason = evaluate(w, recentMissCount);
         if (reason) continue; // still unhealthy — leave paused
+
+        // Never override a newer manual OFF decision.
+        if (!watchdogOwnsPause(w)) {
+          console.log(`[watchdog] skip restore worker=${w.id} reason=manual_decision_newer src=${w.availability_last_source}`);
+          continue;
+        }
 
         const nowIso = new Date().toISOString();
         const { error: upErr } = await supabase

@@ -67,23 +67,27 @@ Deno.serve(async (req) => {
       return json({ error: "worker_not_found" }, 404);
     }
 
-    // 3. Update availability
-    // We reuse the existing logic: update is_available and timestamps
-    const now = new Date().toISOString();
-    const { error: updateError } = await admin
-      .from("workers")
-      .update({
-        is_available,
-        updated_at: now,
-        // Existing logic often sets availability_on/off or status
-        // The RPC 'update_worker_availability' in DB does more, so we call it via admin if possible
-        // or just perform the update here.
-      })
-      .eq("id", worker.id);
+    // 3. Update availability atomically as an explicit MANUAL (worker) decision.
+    // This stamps availability_last_source='worker' and clears any stale watchdog
+    // auto-pause, so background jobs can never turn a manual OFF back ON.
+    const { data: rpcData, error: updateError } = await admin.rpc(
+      "set_worker_availability_manual",
+      {
+        p_worker_id: worker.id,
+        p_is_available: is_available,
+        p_source: "worker",
+        p_reason: "manual_toggle",
+      },
+    );
 
     if (updateError) {
       console.error("[update-availability] update_failed", updateError.message);
       return json({ error: "update_failed" }, 500);
+    }
+
+    if (rpcData && (rpcData as any).success === false) {
+      console.error("[update-availability] rpc_rejected", (rpcData as any).error);
+      return json({ error: (rpcData as any).error || "update_failed" }, 400);
     }
 
     // Log the change
