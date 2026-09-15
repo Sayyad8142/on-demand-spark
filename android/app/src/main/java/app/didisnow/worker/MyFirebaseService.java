@@ -265,6 +265,14 @@ public class MyFirebaseService extends FirebaseMessagingService {
         serviceIntent.putExtra("sent_at", sentAtSec);
         serviceIntent.putExtra("ttl_seconds", ttlSeconds);
 
+        // Already assigned to another worker (delayed/duplicate alert):
+        // no tray notification, no popup, no countdown.
+        if (OfferQueue.INSTANCE.isTaken(getApplicationContext(), bookingId)) {
+          Log.w(TAG, "🚫 BOOKING_ALERT ignored — booking already assigned elsewhere: " + bookingId);
+          OfferQueue.INSTANCE.cancelNotification(getApplicationContext(), bookingId);
+          return;
+        }
+
         // FIFO queue: persist + deduplicate the offer before any UI attempt.
         boolean alreadyQueued = false;
         try {

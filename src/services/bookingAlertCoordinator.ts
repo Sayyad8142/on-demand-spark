@@ -79,6 +79,35 @@ export function clearAlertState() {
   currentAlert = null;
 }
 
+/** Offers already invalidated — keeps this idempotent (no repeated toasts). */
+const invalidatedBookingIds = new Set<string>();
+
+/**
+ * The backend assigned this booking to another worker.
+ *
+ * Closes the offer everywhere on THIS device: web alert state, the native
+ * overlay/full-screen alert (countdown + tray notification) and the native
+ * FIFO offer queue. Only the matching booking is touched. Backend acceptance
+ * remains the single source of truth — this is UX cleanup only.
+ */
+export function invalidateOffer(bookingId: string, bookingRequestId?: string) {
+  if (!bookingId || invalidatedBookingIds.has(bookingId)) return;
+  invalidatedBookingIds.add(bookingId);
+
+  // Block any later receive path from re-showing this booking.
+  shownBookingIds.add(bookingId);
+  console.log(`🚫 [Coordinator] Offer no longer available: ${bookingId}`);
+
+  dismissAlert(bookingId);
+
+  try {
+    const plugin = (window as any)?.Capacitor?.Plugins?.OverlayPlugin;
+    plugin?.cancelBookingOffer?.({ bookingId, bookingRequestId })?.catch?.(() => {});
+  } catch {
+    /* web / plugin unavailable — nothing native to close */
+  }
+}
+
 /**
  * Core entry point — called by every receive path.
  * Returns true if the alert was shown (new), false if deduplicated/stale.

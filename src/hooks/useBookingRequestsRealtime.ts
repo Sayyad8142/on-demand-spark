@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { processIncomingBooking, dismissAlert } from "@/services/bookingAlertCoordinator";
+import { processIncomingBooking, invalidateOffer } from "@/services/bookingAlertCoordinator";
 import { canShowWorkerBookingOffer, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 
 /**
@@ -93,8 +93,12 @@ export function useBookingRequestsRealtime(
         },
         (payload) => {
           const req = payload.new as any;
+          // Another worker won the booking (status becomes lost/expired/…),
+          // or this request was otherwise closed: kill the offer on this
+          // device immediately — popup, countdown, queue entry and tray.
           if (req.status !== "pending") {
-            dismissAlert(req.booking_id);
+            console.log("🚫 [BookingRequests] Request closed:", req.status, req.booking_id);
+            invalidateOffer(req.booking_id, req.id);
           }
         }
       )

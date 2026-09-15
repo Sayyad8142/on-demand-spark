@@ -30,6 +30,10 @@ object OfferQueue {
     private const val KEY_QUEUE = "queue_v1"
     private const val KEY_ACTIVE = "active_key"
     private const val KEY_BUSY_UNTIL = "local_busy_until_ms"
+    private const val KEY_TAKEN = "taken_bookings_v1"
+
+    /** How long a booking stays remembered as "taken by another worker". */
+    private const val TAKEN_TTL_MS = 30 * 60 * 1000L
 
     /** Local busy suppression window after a confirmed acceptance. */
     private const val BUSY_WINDOW_MS = 10 * 60 * 1000L
@@ -147,11 +151,59 @@ object OfferQueue {
         prefs(ctx).edit().putString(KEY_QUEUE, arr.toString()).apply()
     }
 
+    // ------------------------------------------------- taken (already assigned)
+
+    /**
+     * Bookings that the backend has already assigned to somebody else.
+     *
+     * Recorded so a delayed FCM/tray/queue replay can never reopen a fresh
+     * 60s popup for a booking that is gone. Purely local UX bookkeeping —
+     * backend acceptance remains the single source of truth.
+     */
+    @Synchronized
+    fun markTaken(ctx: Context, bookingId: String?) {
+        if (bookingId.isNullOrBlank()) return
+        val map = readTaken(ctx)
+        map.put(bookingId, System.currentTimeMillis())
+        writeTaken(ctx, map)
+        Log.d(TAG, "🚫 booking marked taken booking_id=$bookingId")
+    }
+
+    @Synchronized
+    fun isTaken(ctx: Context, bookingId: String?): Boolean {
+        if (bookingId.isNullOrBlank()) return false
+        val ts = readTaken(ctx).optLong(bookingId, 0L)
+        return ts > 0L && System.currentTimeMillis() - ts < TAKEN_TTL_MS
+    }
+
+    private fun readTaken(ctx: Context): JSONObject {
+        val raw = prefs(ctx).getString(KEY_TAKEN, "{}") ?: "{}"
+        return try { JSONObject(raw) } catch (e: Exception) { JSONObject() }
+    }
+
+    private fun writeTaken(ctx: Context, map: JSONObject) {
+        // Drop expired entries so prefs can never grow unbounded.
+        val now = System.currentTimeMillis()
+        val cleaned = JSONObject()
+        val keys = map.keys()
+        while (keys.hasNext()) {
+            val k = keys.next()
+            val ts = map.optLong(k, 0L)
+            if (now - ts < TAKEN_TTL_MS) cleaned.put(k, ts)
+        }
+        prefs(ctx).edit().putString(KEY_TAKEN, cleaned.toString()).apply()
+    }
+
     /** Adds an offer if not already queued. Returns true when newly added. */
     @Synchronized
     fun enqueue(ctx: Context, offer: JSONObject): Boolean {
         val key = keyOf(offer)
         val bookingId = bookingIdOf(offer)
+        if (isTaken(ctx, bookingId)) {
+            Log.d(TAG, "🚫 offer not queued — booking already assigned elsewhere: $bookingId")
+            cancelNotification(ctx, bookingId)
+            return false
+        }
         val items = read(ctx)
         val duplicate = items.any {
             keyOf(it) == key || (bookingId.isNotBlank() && bookingIdOf(it) == bookingId)
@@ -209,6 +261,11 @@ object OfferQueue {
         for (offer in items) {
             if (chosen != null) { kept.add(offer); continue }
             if (activeKey != null && keyOf(offer) == activeKey) continue // finished offer
+            if (isTaken(ctx, bookingIdOf(offer))) {
+                Log.d(TAG, "🚫 discarding queued offer assigned elsewhere booking_id=${bookingIdOf(offer)}")
+                cancelNotification(ctx, bookingIdOf(offer))
+                continue
+            }
             if (isExpired(offer)) {
                 Log.d(TAG, "🗑️ discarding expired queued offer booking_id=${bookingIdOf(offer)}")
                 BackendSync.ackFailureAsync(
