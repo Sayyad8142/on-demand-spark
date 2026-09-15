@@ -261,6 +261,11 @@ object OfferQueue {
         for (offer in items) {
             if (chosen != null) { kept.add(offer); continue }
             if (activeKey != null && keyOf(offer) == activeKey) continue // finished offer
+            if (isTaken(ctx, bookingIdOf(offer))) {
+                Log.d(TAG, "🚫 discarding queued offer assigned elsewhere booking_id=${bookingIdOf(offer)}")
+                cancelNotification(ctx, bookingIdOf(offer))
+                continue
+            }
             if (isExpired(offer)) {
                 Log.d(TAG, "🗑️ discarding expired queued offer booking_id=${bookingIdOf(offer)}")
                 BackendSync.ackFailureAsync(
