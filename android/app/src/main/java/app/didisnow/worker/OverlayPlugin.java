@@ -265,6 +265,36 @@ public class OverlayPlugin extends Plugin {
         }
     }
 
+    /**
+     * Invalidate ONE booking offer because the backend assigned it to another
+     * worker. Stops that offer's countdown, closes its popup, removes it from
+     * the FIFO queue and cancels its tray notification. Unrelated offers are
+     * untouched. Backend acceptance remains authoritative.
+     */
+    @PluginMethod
+    public void cancelBookingOffer(PluginCall call) {
+        try {
+            String bookingId = call.getString("bookingId", "");
+            String requestId = call.getString("bookingRequestId", null);
+            if (bookingId == null || bookingId.isEmpty()) {
+                call.reject("bookingId is required");
+                return;
+            }
+            Context ctx = getContext();
+            Intent intent = new Intent(ctx, BookingOverlayService.class);
+            intent.putExtra("mode", "cancel_offer");
+            intent.putExtra("booking_id", bookingId);
+            if (requestId != null && !requestId.isEmpty()) {
+                intent.putExtra("booking_request_id", requestId);
+            }
+            ctx.startService(intent);
+            Log.d(TAG, "🚫 cancelBookingOffer dispatched for " + bookingId);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Cancel offer error: " + e.getMessage());
+        }
+    }
+
     @PluginMethod
     public void openOverlaySettings(PluginCall call) {
         Log.d(TAG, "🟢 openOverlaySettings entered");

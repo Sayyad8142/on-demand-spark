@@ -113,6 +113,23 @@ class BookingOverlayService : Service() {
 
         val mode = intent?.getStringExtra("mode") ?: "show"
 
+        // ── Offer invalidation (another worker was assigned) ───────────────
+        // MUST run before the single-visible-offer guard, otherwise the
+        // cancel intent is swallowed while an overlay is on screen.
+        if (mode == "cancel_offer") {
+            val cancelBookingId = intent?.getStringExtra("booking_id") ?: ""
+            val cancelRequestId = intent?.getStringExtra("booking_request_id")
+            android.util.Log.d("BookingOverlay", "🚫 cancel_offer booking_id=$cancelBookingId req=$cancelRequestId")
+            handleCancelOffer(cancelBookingId, cancelRequestId)
+            return START_NOT_STICKY
+        }
+
+        // Explicit hide must also bypass the guard.
+        if (mode == "hide" && OverlaySingleton.isShowing) {
+            finishAndStop("hide_mode")
+            return START_NOT_STICKY
+        }
+
         // ── FIFO offer queue ──────────────────────────────────────────────
         // Every actionable offer is persisted first (deduplicated by
         // booking_request_id / booking_id) so nothing is ever dropped when an
@@ -185,6 +202,22 @@ class BookingOverlayService : Service() {
                         OfferQueue.cancelNotification(applicationContext, bookingId)
                         OverlaySingleton.isShowing = false
                         stopSelf()
+                        return START_NOT_STICKY
+                    }
+
+                    // Backend already assigned this booking to another worker —
+                    // a delayed/replayed alert must never open a fresh popup.
+                    if (OfferQueue.isTaken(applicationContext, bookingId)) {
+                        android.util.Log.w("BookingOverlay", "🚫 Offer already assigned elsewhere — not showing $bookingId")
+                        OfferQueue.remove(applicationContext, bookingId, currentBookingRequestId)
+                        OfferQueue.cancelNotification(applicationContext, bookingId)
+                        OverlaySingleton.isShowing = false
+                        val nextAfterTaken = OfferQueue.nextValid(applicationContext)
+                        if (nextAfterTaken != null) {
+                            startService(OfferQueue.toServiceIntent(applicationContext, nextAfterTaken))
+                        } else {
+                            stopSelf()
+                        }
                         return START_NOT_STICKY
                     }
 
@@ -661,6 +694,36 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
         }
     }
     
+    /**
+     * Invalidates ONE offer because the backend assigned it to another worker.
+     *
+     * - If it is the offer on screen: stop countdown + status polling, close
+     *   the popup and drain the FIFO queue to the next STILL-VALID offer.
+     * - If it is only queued: drop that entry and its tray notification.
+     * Unrelated offers are never touched.
+     */
+    private fun handleCancelOffer(bookingId: String, requestId: String?) {
+        if (bookingId.isBlank() && requestId.isNullOrBlank()) return
+        val ctx = applicationContext
+        OfferQueue.markTaken(ctx, bookingId)
+
+        val isOnScreen = OverlaySingleton.isShowing && !isShuttingDown &&
+            (currentBookingId == bookingId ||
+                (!requestId.isNullOrBlank() && currentBookingRequestId == requestId))
+
+        if (isOnScreen) {
+            android.util.Log.d("BookingOverlay", "🚫 Cancelling visible offer $bookingId (assigned elsewhere)")
+            // finishAndStop stops the countdown + polling, removes the offer,
+            // cancels its tray notification and drains the next valid offer.
+            finishAndStop("booking_taken_by_another_worker")
+            return
+        }
+
+        OfferQueue.remove(ctx, bookingId, requestId)
+        OfferQueue.cancelNotification(ctx, bookingId)
+        if (!OverlaySingleton.isShowing) stopSelf()
+    }
+
     private fun startBookingStatusPolling(bookingId: String) {
         statusCheckHandler = Handler(mainLooper)
         statusCheckRunnable = object : Runnable {
@@ -679,6 +742,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                         val isStillAvailable = checkBookingStatus(bookingId)
                         if (!isStillAvailable) {
                             android.util.Log.d("BookingOverlay", "📢 Booking $bookingId no longer available - another worker accepted it")
+                            OfferQueue.markTaken(applicationContext, bookingId)
                             ui {
                                 Toast.makeText(
                                     this@BookingOverlayService,
@@ -703,55 +767,40 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
         statusCheckRunnable?.let { r -> statusCheckHandler?.postDelayed(r, 2000) }
     }
     
+    /**
+     * Is this offer still open?
+     *
+     * Uses the SECURITY DEFINER RPC `booking_offer_open`, which needs only the
+     * anon key — the overlay runs outside the web session (Firebase auth), so
+     * a user JWT is not reliably available here. Returns false ONLY when the
+     * backend positively says the booking is no longer pending/unassigned;
+     * any network/parse failure keeps the offer open.
+     */
     private suspend fun checkBookingStatus(bookingId: String): Boolean = withContext(Dispatchers.IO) {
+        if (bookingId.isBlank()) return@withContext true
         try {
-            // Get access token
-            var jwt = currentAccessToken
-            if (jwt.isNullOrEmpty()) {
-                val sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
-                    .getString("didi_session", null)
-                if (!sessionJson.isNullOrEmpty()) {
-                    try {
-                        val session = JSONObject(sessionJson)
-                        jwt = session.optString("accessToken", "")
-                    } catch (e: Exception) {
-                        android.util.Log.e("BookingOverlay", "❌ Failed to parse session", e)
-                    }
-                }
-            }
-            
-            if (jwt.isNullOrEmpty()) {
-                android.util.Log.e("BookingOverlay", "❌ No access token for status check")
-                return@withContext true // Assume still available if we can't check
-            }
-            
-            // Query booking status
-            val url = URL("$SUPABASE_URL/rest/v1/bookings?id=eq.$bookingId&select=status")
+            val url = URL("$SUPABASE_URL/rest/v1/rpc/booking_offer_open")
             val connection = url.openConnection() as HttpURLConnection
-            
             try {
-                connection.requestMethod = "GET"
+                connection.requestMethod = "POST"
+                connection.doOutput = true
                 connection.connectTimeout = 5000
                 connection.readTimeout = 5000
                 connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                connection.setRequestProperty("Authorization", "Bearer $jwt")
+                connection.setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
                 connection.setRequestProperty("Content-Type", "application/json")
-                
-                val responseCode = connection.responseCode
-                
-                if (responseCode == 200) {
-                    val responseBody = connection.inputStream.bufferedReader().use { it.readText() }
-                    val json = JSONObject(responseBody.trim().removePrefix("[").removeSuffix("]"))
-                    val status = json.optString("status", "")
-                    
-                    android.util.Log.d("BookingOverlay", "📊 Booking $bookingId status: $status")
-                    
-                    // Booking is still available if status is "pending"
-                    return@withContext status == "pending"
-                } else {
-                    android.util.Log.e("BookingOverlay", "❌ Status check failed: $responseCode")
-                    return@withContext true // Assume still available on error
+                connection.outputStream.use {
+                    it.write("""{"p_booking_id":"$bookingId"}""".toByteArray())
                 }
+
+                val responseCode = connection.responseCode
+                if (responseCode == 200) {
+                    val body = connection.inputStream.bufferedReader().use { it.readText() }.trim()
+                    android.util.Log.d("BookingOverlay", "📊 booking_offer_open($bookingId) = $body")
+                    return@withContext body != "false"
+                }
+                android.util.Log.e("BookingOverlay", "❌ Offer status check failed: $responseCode")
+                return@withContext true // Assume still available on error
             } finally {
                 connection.disconnect()
             }

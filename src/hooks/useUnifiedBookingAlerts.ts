@@ -8,6 +8,7 @@ import {
   processIncomingBooking,
   onNewAlert,
   dismissAlert,
+  invalidateOffer,
   markAlertOpened,
   markAlertRendered,
 
@@ -139,9 +140,11 @@ export function useUnifiedBookingAlerts(
         },
         (payload) => {
           const b = payload.new as any;
+          // Assigned to someone — close this offer everywhere on this device
+          // (web state + native popup/countdown/queue/tray). Idempotent.
+          console.log("🔕 [UnifiedAlerts] Booking assigned, invalidating offer", b.id);
+          invalidateOffer(b.id, pending?.bookingId === b.id ? pending?.bookingRequestId : undefined);
           if (pending?.bookingId === b.id) {
-            console.log("🔕 [UnifiedAlerts] Booking assigned, dismissing alert");
-            dismissAlert(b.id);
             setPending(null);
           }
         }

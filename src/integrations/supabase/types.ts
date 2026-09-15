@@ -8072,6 +8072,7 @@ export type Database = {
         Args: { p_community?: string; p_count: number }
         Returns: number
       }
+      booking_offer_open: { Args: { p_booking_id: string }; Returns: boolean }
       bytea_to_text: { Args: { data: string }; Returns: string }
       check_dispatch_stuck_bookings: { Args: never; Returns: undefined }
       check_expired_assignments: { Args: never; Returns: Json }

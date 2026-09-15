@@ -20,6 +20,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -40,6 +41,10 @@ class BookingAlertActivity : AppCompatActivity() {
     private var ackRequestId: String? = null
     private var popupAcked = false
     private var offerRetired = false
+
+    // Poll that closes this alert as soon as the booking is assigned elsewhere.
+    private var statusCheckHandler: Handler? = null
+    private var statusCheckRunnable: Runnable? = null
 
     
     // Token refresh throttling
@@ -214,6 +219,20 @@ class BookingAlertActivity : AppCompatActivity() {
         ackBookingId = bookingId
         ackRequestId = intent.getStringExtra("booking_request_id")
 
+        // Another worker already got this booking (delayed/stale alert):
+        // never run a fresh countdown for it.
+        if (OfferQueue.isTaken(applicationContext, bookingId)) {
+            Log.w("BookingAlert", "🚫 Offer already assigned elsewhere — closing $bookingId")
+            countdownHandler?.removeCallbacks(countdownRunnable)
+            stopAlertSound()
+            stopVibration()
+            OfferQueue.cancelNotification(applicationContext, bookingId)
+            finish()
+            return
+        }
+
+        startBookingStatusPolling(bookingId)
+
 
 
 
@@ -295,9 +314,73 @@ class BookingAlertActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Every 2s asks the backend whether this offer is still open. The moment
+     * another worker is assigned, the countdown stops and the screen closes —
+     * the worker never has to press Accept to find out.
+     */
+    private fun startBookingStatusPolling(bookingId: String) {
+        if (bookingId.isBlank()) return
+        statusCheckHandler = Handler(Looper.getMainLooper())
+        statusCheckRunnable = object : Runnable {
+            override fun run() {
+                if (isFinishing || isDestroyed) return
+                val self = this
+                lifecycleScope.launch {
+                    val stillOpen = withContext(Dispatchers.IO) { isOfferStillOpen(bookingId) }
+                    if (isFinishing || isDestroyed) return@launch
+                    if (!stillOpen) {
+                        Log.d("BookingAlert", "📢 Booking $bookingId assigned to another worker — closing")
+                        OfferQueue.markTaken(applicationContext, bookingId)
+                        countdownHandler?.removeCallbacks(countdownRunnable)
+                        stopAlertSound()
+                        stopVibration()
+                        Toast.makeText(
+                            this@BookingAlertActivity,
+                            "Booking was accepted by another worker",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        retireOffer(accepted = false)
+                        finish()
+                    } else {
+                        statusCheckHandler?.postDelayed(self, 2000)
+                    }
+                }
+            }
+        }
+        statusCheckRunnable?.let { statusCheckHandler?.postDelayed(it, 2000) }
+    }
+
+    /** Anon-key RPC — the alert screen has no reliable user JWT. */
+    private fun isOfferStillOpen(bookingId: String): Boolean {
+        return try {
+            val connection = URL("$SUPABASE_URL/rest/v1/rpc/booking_offer_open")
+                .openConnection() as HttpURLConnection
+            try {
+                connection.requestMethod = "POST"
+                connection.doOutput = true
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+                connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+                connection.setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.outputStream.use { it.write("""{"p_booking_id":"$bookingId"}""".toByteArray()) }
+                if (connection.responseCode != 200) return true
+                val body = connection.inputStream.bufferedReader().use { it.readText() }.trim()
+                body != "false"
+            } finally {
+                connection.disconnect()
+            }
+        } catch (e: Exception) {
+            Log.e("BookingAlert", "offer status check failed", e)
+            true // never close on a network error
+        }
+    }
+
     override fun onDestroy() {
         // Dismissed/closed legitimately — still drain the queue.
         retireOffer(accepted = false)
+        statusCheckRunnable?.let { statusCheckHandler?.removeCallbacks(it) }
         countdownHandler?.removeCallbacks(countdownRunnable)
         stopAlertSound()
 
