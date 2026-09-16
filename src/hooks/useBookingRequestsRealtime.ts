@@ -97,6 +97,11 @@ export function useBookingRequestsRealtime(
           // or this request was otherwise closed: kill the offer on this
           // device immediately — popup, countdown, queue entry and tray.
           if (req.status !== "pending") {
+            // Our own accepted request also leaves 'pending' — never close it.
+            if (req.status === "accepted" || isOwnAcceptance(req.booking_id)) {
+              console.log("🛡️ [BookingRequests] Own acceptance, keeping offer state", req.booking_id);
+              return;
+            }
             console.log("🚫 [BookingRequests] Request closed:", req.status, req.booking_id);
             invalidateOffer(req.booking_id, req.id);
           }
