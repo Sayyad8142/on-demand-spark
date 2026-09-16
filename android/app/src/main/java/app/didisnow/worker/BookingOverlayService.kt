@@ -765,7 +765,21 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                 // Check booking status in background
                 serviceScope.launch {
                     try {
+                        // Our own acceptance is running/finished for this booking:
+                        // booking_offer_open will read false because WE won it.
+                        // Never interpret that as "another worker accepted".
+                        if (acceptInFlight ||
+                            OfferQueue.isAcceptInFlight(applicationContext, bookingId) ||
+                            OfferQueue.isAcceptedByMe(applicationContext, bookingId)
+                        ) {
+                            android.util.Log.d("BookingOverlay", "🛡️ Status poll paused — acceptance in progress for $bookingId")
+                            return@launch
+                        }
                         val isStillAvailable = checkBookingStatus(bookingId)
+                        if (acceptInFlight || OfferQueue.isAcceptInFlight(applicationContext, bookingId)) {
+                            android.util.Log.d("BookingOverlay", "🛡️ Status poll result discarded — acceptance started meanwhile")
+                            return@launch
+                        }
                         if (!isStillAvailable) {
                             android.util.Log.d("BookingOverlay", "📢 Booking $bookingId no longer available - another worker accepted it")
                             OfferQueue.markTaken(applicationContext, bookingId)
