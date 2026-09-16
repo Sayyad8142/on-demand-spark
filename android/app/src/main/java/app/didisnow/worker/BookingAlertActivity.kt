@@ -709,12 +709,15 @@ class BookingAlertActivity : AppCompatActivity() {
                     Log.d("BookingAlert", "📄 RPC Response Body: $responseBody")
 
                     withContext(Dispatchers.Main) {
+                        var keepScreenOpen = false
                         if (responseCode in 200..299) {
                             try {
                                 val jsonResponse = JSONObject(responseBody)
                                 val success = jsonResponse.optBoolean("success", false)
-                                
+
                                 if (success) {
+                                    // Backend confirmed WE won this booking.
+                                    OfferQueue.markAcceptedByMe(applicationContext, bookingId)
                                     Toast.makeText(
                                         this@BookingAlertActivity,
                                         "✅ Booking accepted successfully!",
@@ -724,12 +727,12 @@ class BookingAlertActivity : AppCompatActivity() {
                                     // Backend confirmed — worker is busy: drop every queued offer.
                                     retireOffer(accepted = true)
                                 } else {
-                                    // RPC returns { success:false, error:"..." } — read `error` first,
-                                    // fall back to `message` for older payloads.
+                                    // Explicit backend answer: somebody else won / no longer open.
                                     val errorMsg = jsonResponse.optString(
                                         "error",
                                         jsonResponse.optString("message", "Booking unavailable")
                                     )
+                                    OfferQueue.markTaken(applicationContext, bookingId)
                                     Toast.makeText(
                                         this@BookingAlertActivity,
                                         "⚠️ $errorMsg",
@@ -738,22 +741,35 @@ class BookingAlertActivity : AppCompatActivity() {
                                     Log.w("BookingAlert", "⚠️ Accept failed: $errorMsg | raw=$responseBody")
                                 }
                             } catch (e: Exception) {
+                                // Unknown/unparseable answer — do NOT guess a loss.
                                 Log.e("BookingAlert", "❌ Error parsing response", e)
                                 Toast.makeText(
                                     this@BookingAlertActivity,
-                                    "✅ Booking accepted",
+                                    "Couldn't confirm. Please check your bookings.",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
                         } else {
+                            // Network / server error — NOT a loss. Let her retry.
+                            keepScreenOpen = true
                             Toast.makeText(
                                 this@BookingAlertActivity,
-                                "❌ Failed to accept booking (Code: $responseCode)",
+                                "Network problem. Please try again.",
                                 Toast.LENGTH_LONG
                             ).show()
                             Log.e("BookingAlert", "❌ HTTP Error: $responseCode - $responseBody")
                         }
-                        finish()
+
+                        acceptInFlight = false
+                        OfferQueue.endAcceptance(applicationContext, bookingId)
+
+                        if (keepScreenOpen && !isFinishing && !isDestroyed) {
+                            findViewById<Button>(R.id.btnAccept)?.isEnabled = true
+                            findViewById<Button>(R.id.btnReject)?.isEnabled = true
+                            startBookingStatusPolling(bookingId)
+                        } else {
+                            finish()
+                        }
                     }
                 } else if (action == "rejected") {
                     // Extract user_id from JWT
