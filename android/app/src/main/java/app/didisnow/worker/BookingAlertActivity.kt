@@ -345,10 +345,23 @@ class BookingAlertActivity : AppCompatActivity() {
         statusCheckRunnable = object : Runnable {
             override fun run() {
                 if (isFinishing || isDestroyed) return
+                if (acceptInFlight || OfferQueue.isAcceptInFlight(applicationContext, bookingId)) {
+                    Log.d("BookingAlert", "🛡️ Status poll paused — acceptance in progress for $bookingId")
+                    return
+                }
                 val self = this
                 lifecycleScope.launch {
                     val stillOpen = withContext(Dispatchers.IO) { isOfferStillOpen(bookingId) }
                     if (isFinishing || isDestroyed) return@launch
+                    // Acceptance may have started while the request was in flight —
+                    // our own win must never be read as a loss.
+                    if (acceptInFlight ||
+                        OfferQueue.isAcceptInFlight(applicationContext, bookingId) ||
+                        OfferQueue.isAcceptedByMe(applicationContext, bookingId)
+                    ) {
+                        Log.d("BookingAlert", "🛡️ Status poll result discarded — acceptance in progress")
+                        return@launch
+                    }
                     if (!stillOpen) {
                         Log.d("BookingAlert", "📢 Booking $bookingId assigned to another worker — closing")
                         OfferQueue.markTaken(applicationContext, bookingId)
