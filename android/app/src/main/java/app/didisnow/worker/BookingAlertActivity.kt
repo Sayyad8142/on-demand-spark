@@ -242,16 +242,32 @@ class BookingAlertActivity : AppCompatActivity() {
 
         btnAccept.setOnClickListener {
             Log.d("BookingAlert", "✅ Accept button clicked")
-            stopAlertSound()
-            stopVibration()
-            countdownHandler?.removeCallbacks(countdownRunnable)
-            
+
             if (bookingId.isBlank()) {
                 Toast.makeText(this, "No booking ID", Toast.LENGTH_SHORT).show()
                 finish()
                 return@setOnClickListener
             }
-            
+
+            // Double tap / competing surface: exactly one acceptance attempt.
+            if (acceptInFlight) {
+                Log.d("BookingAlert", "⚠️ Accept ignored — already in flight")
+                return@setOnClickListener
+            }
+            if (!OfferQueue.beginAcceptance(applicationContext, bookingId)) {
+                Log.d("BookingAlert", "⚠️ Accept ignored — acceptance already claimed for $bookingId")
+                return@setOnClickListener
+            }
+            acceptInFlight = true
+
+            stopAlertSound()
+            stopVibration()
+            countdownHandler?.removeCallbacks(countdownRunnable)
+            // Stop the 2s offer-open poller: while OUR acceptance runs it would
+            // read booking_offer_open=false (because WE won) and falsely report
+            // "accepted by another worker".
+            statusCheckRunnable?.let { statusCheckHandler?.removeCallbacks(it) }
+
             // Disable buttons to prevent double-click
             btnAccept.isEnabled = false
             btnReject.isEnabled = false
