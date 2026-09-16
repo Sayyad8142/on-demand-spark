@@ -143,6 +143,11 @@ export function useUnifiedBookingAlerts(
         },
         (payload) => {
           const b = payload.new as any;
+          // Our own acceptance assigned it — do not close our own booking.
+          if (isOwnAcceptance(b.id)) {
+            console.log("🛡️ [UnifiedAlerts] Assigned to this worker, keeping state", b.id);
+            return;
+          }
           // Assigned to someone — close this offer everywhere on this device
           // (web state + native popup/countdown/queue/tray). Idempotent.
           console.log("🔕 [UnifiedAlerts] Booking assigned, invalidating offer", b.id);
