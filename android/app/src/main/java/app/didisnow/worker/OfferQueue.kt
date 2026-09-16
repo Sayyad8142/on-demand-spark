@@ -31,6 +31,13 @@ object OfferQueue {
     private const val KEY_ACTIVE = "active_key"
     private const val KEY_BUSY_UNTIL = "local_busy_until_ms"
     private const val KEY_TAKEN = "taken_bookings_v1"
+    private const val KEY_ACCEPTING_ID = "accepting_booking_id"
+    private const val KEY_ACCEPTING_AT = "accepting_started_at"
+    private const val KEY_ACCEPTED_ID = "accepted_booking_id"
+    private const val KEY_ACCEPTED_AT = "accepted_at"
+
+    /** How long one acceptance attempt may hold the single-flight claim. */
+    private const val ACCEPT_CLAIM_TTL_MS = 20_000L
 
     /** How long a booking stays remembered as "taken by another worker". */
     private const val TAKEN_TTL_MS = 30 * 60 * 1000L
