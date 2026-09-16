@@ -150,6 +150,14 @@ export function invalidateOffer(bookingId: string, bookingRequestId?: string) {
 export async function processIncomingBooking(alert: BookingAlert): Promise<boolean> {
   const { bookingId } = alert;
 
+  // An acceptance is being decided right now — never open a competing offer
+  // in that window (no second popup while the worker is being assigned).
+  if (acceptingBookingIds.size > 0 && !acceptingBookingIds.has(bookingId)) {
+    console.log(`🔒 [Coordinator] Acceptance in progress — offer suppressed: ${bookingId}`);
+    return false;
+  }
+
+
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
     const { data: worker } = await supabase
