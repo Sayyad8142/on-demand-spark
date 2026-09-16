@@ -200,6 +200,70 @@ object OfferQueue {
         prefs(ctx).edit().putString(KEY_TAKEN, cleaned.toString()).apply()
     }
 
+    // -------------------------------------------------- acceptance single-flight
+
+    /**
+     * Process-wide acceptance claim.
+     *
+     * Only ONE acceptance attempt per booking may run on this device, no matter
+     * which surface started it (overlay service, full-screen activity, web UI).
+     * Persisted so the claim survives a service/activity recreation.
+     * Backend acceptance remains the single source of truth — this only stops
+     * duplicate requests and stops competing callbacks (2s poller, realtime,
+     * countdown, queue drain) from treating our own accept as a loss.
+     */
+    @Synchronized
+    fun beginAcceptance(ctx: Context, bookingId: String?): Boolean {
+        if (bookingId.isNullOrBlank()) return false
+        if (isAcceptInFlight(ctx, bookingId)) {
+            Log.d(TAG, "↩️ acceptance already in flight booking_id=$bookingId")
+            return false
+        }
+        prefs(ctx).edit()
+            .putString(KEY_ACCEPTING_ID, bookingId)
+            .putLong(KEY_ACCEPTING_AT, System.currentTimeMillis())
+            .apply()
+        Log.d(TAG, "🔐 acceptance claimed booking_id=$bookingId")
+        return true
+    }
+
+    @Synchronized
+    fun isAcceptInFlight(ctx: Context, bookingId: String?): Boolean {
+        val id = prefs(ctx).getString(KEY_ACCEPTING_ID, null) ?: return false
+        val at = prefs(ctx).getLong(KEY_ACCEPTING_AT, 0L)
+        if (System.currentTimeMillis() - at > ACCEPT_CLAIM_TTL_MS) return false
+        return bookingId.isNullOrBlank() || id == bookingId
+    }
+
+    /** Releases the claim (failed accept, or after the result is handled). */
+    @Synchronized
+    fun endAcceptance(ctx: Context, bookingId: String?) {
+        val id = prefs(ctx).getString(KEY_ACCEPTING_ID, null)
+        if (id != null && (bookingId.isNullOrBlank() || id == bookingId)) {
+            prefs(ctx).edit().remove(KEY_ACCEPTING_ID).remove(KEY_ACCEPTING_AT).apply()
+            Log.d(TAG, "🔓 acceptance claim released booking_id=$id")
+        }
+    }
+
+    /** Backend confirmed WE won this booking. */
+    @Synchronized
+    fun markAcceptedByMe(ctx: Context, bookingId: String?) {
+        if (bookingId.isNullOrBlank()) return
+        prefs(ctx).edit()
+            .putString(KEY_ACCEPTED_ID, bookingId)
+            .putLong(KEY_ACCEPTED_AT, System.currentTimeMillis())
+            .apply()
+        Log.d(TAG, "🏆 acceptance confirmed for this device booking_id=$bookingId")
+    }
+
+    @Synchronized
+    fun isAcceptedByMe(ctx: Context, bookingId: String?): Boolean {
+        if (bookingId.isNullOrBlank()) return false
+        val id = prefs(ctx).getString(KEY_ACCEPTED_ID, null) ?: return false
+        val at = prefs(ctx).getLong(KEY_ACCEPTED_AT, 0L)
+        return id == bookingId && System.currentTimeMillis() - at < BUSY_WINDOW_MS
+    }
+
     /** Adds an offer if not already queued. Returns true when newly added. */
     @Synchronized
     fun enqueue(ctx: Context, offer: JSONObject): Boolean {
