@@ -719,6 +719,18 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
     private fun handleCancelOffer(bookingId: String, requestId: String?) {
         if (bookingId.isBlank() && requestId.isNullOrBlank()) return
         val ctx = applicationContext
+
+        // Our own acceptance (in flight or already won) must never be cancelled
+        // by a realtime/assignment callback for the SAME booking.
+        if (acceptInFlight && currentBookingId == bookingId) {
+            android.util.Log.d("BookingOverlay", "🛡️ cancel_offer ignored — own acceptance in flight $bookingId")
+            return
+        }
+        if (OfferQueue.isAcceptInFlight(ctx, bookingId) || OfferQueue.isAcceptedByMe(ctx, bookingId)) {
+            android.util.Log.d("BookingOverlay", "🛡️ cancel_offer ignored — booking accepted by this device $bookingId")
+            return
+        }
+
         OfferQueue.markTaken(ctx, bookingId)
 
         val isOnScreen = OverlaySingleton.isShowing && !isShuttingDown &&
