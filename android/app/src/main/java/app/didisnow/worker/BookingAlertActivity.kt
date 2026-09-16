@@ -732,6 +732,10 @@ class BookingAlertActivity : AppCompatActivity() {
                                         "error",
                                         jsonResponse.optString("message", "Booking unavailable")
                                     )
+                                    // Release the claim first, otherwise markTaken
+                                    // is (correctly) ignored as our own acceptance.
+                                    acceptInFlight = false
+                                    OfferQueue.endAcceptance(applicationContext, bookingId)
                                     OfferQueue.markTaken(applicationContext, bookingId)
                                     Toast.makeText(
                                         this@BookingAlertActivity,
