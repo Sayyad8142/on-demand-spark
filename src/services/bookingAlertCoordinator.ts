@@ -82,6 +82,36 @@ export function clearAlertState() {
 /** Offers already invalidated — keeps this idempotent (no repeated toasts). */
 const invalidatedBookingIds = new Set<string>();
 
+/** Bookings this device is currently accepting / has already won. */
+const acceptingBookingIds = new Set<string>();
+const acceptedByMeBookingIds = new Set<string>();
+
+/**
+ * Claims the single acceptance attempt for a booking on this device.
+ * Returns false when an attempt is already running (double tap, second surface).
+ */
+export function beginAcceptance(bookingId: string): boolean {
+  if (!bookingId || acceptingBookingIds.has(bookingId)) return false;
+  acceptingBookingIds.add(bookingId);
+  return true;
+}
+
+export function endAcceptance(bookingId: string) {
+  acceptingBookingIds.delete(bookingId);
+}
+
+/** Backend confirmed THIS worker won the booking. */
+export function markAcceptedByMe(bookingId: string) {
+  if (!bookingId) return;
+  acceptedByMeBookingIds.add(bookingId);
+  acceptingBookingIds.delete(bookingId);
+}
+
+/** True while our own acceptance is pending or confirmed for this booking. */
+export function isOwnAcceptance(bookingId: string): boolean {
+  return acceptingBookingIds.has(bookingId) || acceptedByMeBookingIds.has(bookingId);
+}
+
 /**
  * The backend assigned this booking to another worker.
  *
