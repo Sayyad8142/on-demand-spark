@@ -512,6 +512,12 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                 return@setOnClickListener
             }
             
+            // Device-wide single flight: only ONE acceptance attempt per booking,
+            // across overlay / full-screen activity / web UI.
+            if (!OfferQueue.beginAcceptance(applicationContext, bookingId)) {
+                android.util.Log.d("BookingOverlay", "⚠️ Accept ignored - acceptance already claimed for $bookingId")
+                return@setOnClickListener
+            }
             acceptInFlight = true
             android.util.Log.d("BookingOverlay", "✅ Accept button clicked")
             
@@ -563,6 +569,14 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                 } finally {
                     // Always close overlay and stop service
                     acceptInFlight = false
+                    if (outcome == "accept_success") {
+                        // Backend confirmed WE won — never treat this booking as
+                        // taken by somebody else afterwards.
+                        OfferQueue.markAcceptedByMe(applicationContext, bookingId)
+                    }
+                    // Release the device-wide claim in every case; a failed or
+                    // timed-out attempt must be retryable.
+                    OfferQueue.endAcceptance(applicationContext, bookingId)
                     // Tell React layer to refresh either way (it will fetch latest state)
                     LocalBroadcastManager.getInstance(applicationContext)
                         .sendBroadcast(Intent("DIDI_BOOKING_REFRESH").apply { putExtra("booking_id", bookingId) })
@@ -705,6 +719,18 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
     private fun handleCancelOffer(bookingId: String, requestId: String?) {
         if (bookingId.isBlank() && requestId.isNullOrBlank()) return
         val ctx = applicationContext
+
+        // Our own acceptance (in flight or already won) must never be cancelled
+        // by a realtime/assignment callback for the SAME booking.
+        if (acceptInFlight && currentBookingId == bookingId) {
+            android.util.Log.d("BookingOverlay", "🛡️ cancel_offer ignored — own acceptance in flight $bookingId")
+            return
+        }
+        if (OfferQueue.isAcceptInFlight(ctx, bookingId) || OfferQueue.isAcceptedByMe(ctx, bookingId)) {
+            android.util.Log.d("BookingOverlay", "🛡️ cancel_offer ignored — booking accepted by this device $bookingId")
+            return
+        }
+
         OfferQueue.markTaken(ctx, bookingId)
 
         val isOnScreen = OverlaySingleton.isShowing && !isShuttingDown &&
@@ -739,7 +765,21 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                 // Check booking status in background
                 serviceScope.launch {
                     try {
+                        // Our own acceptance is running/finished for this booking:
+                        // booking_offer_open will read false because WE won it.
+                        // Never interpret that as "another worker accepted".
+                        if (acceptInFlight ||
+                            OfferQueue.isAcceptInFlight(applicationContext, bookingId) ||
+                            OfferQueue.isAcceptedByMe(applicationContext, bookingId)
+                        ) {
+                            android.util.Log.d("BookingOverlay", "🛡️ Status poll paused — acceptance in progress for $bookingId")
+                            return@launch
+                        }
                         val isStillAvailable = checkBookingStatus(bookingId)
+                        if (acceptInFlight || OfferQueue.isAcceptInFlight(applicationContext, bookingId)) {
+                            android.util.Log.d("BookingOverlay", "🛡️ Status poll result discarded — acceptance started meanwhile")
+                            return@launch
+                        }
                         if (!isStillAvailable) {
                             android.util.Log.d("BookingOverlay", "📢 Booking $bookingId no longer available - another worker accepted it")
                             OfferQueue.markTaken(applicationContext, bookingId)

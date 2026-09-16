@@ -42,6 +42,10 @@ class BookingAlertActivity : AppCompatActivity() {
     private var popupAcked = false
     private var offerRetired = false
 
+    /** Single-flight guard: only ONE acceptance attempt per booking. */
+    @Volatile
+    private var acceptInFlight = false
+
     // Poll that closes this alert as soon as the booking is assigned elsewhere.
     private var statusCheckHandler: Handler? = null
     private var statusCheckRunnable: Runnable? = null
@@ -238,16 +242,32 @@ class BookingAlertActivity : AppCompatActivity() {
 
         btnAccept.setOnClickListener {
             Log.d("BookingAlert", "✅ Accept button clicked")
-            stopAlertSound()
-            stopVibration()
-            countdownHandler?.removeCallbacks(countdownRunnable)
-            
+
             if (bookingId.isBlank()) {
                 Toast.makeText(this, "No booking ID", Toast.LENGTH_SHORT).show()
                 finish()
                 return@setOnClickListener
             }
-            
+
+            // Double tap / competing surface: exactly one acceptance attempt.
+            if (acceptInFlight) {
+                Log.d("BookingAlert", "⚠️ Accept ignored — already in flight")
+                return@setOnClickListener
+            }
+            if (!OfferQueue.beginAcceptance(applicationContext, bookingId)) {
+                Log.d("BookingAlert", "⚠️ Accept ignored — acceptance already claimed for $bookingId")
+                return@setOnClickListener
+            }
+            acceptInFlight = true
+
+            stopAlertSound()
+            stopVibration()
+            countdownHandler?.removeCallbacks(countdownRunnable)
+            // Stop the 2s offer-open poller: while OUR acceptance runs it would
+            // read booking_offer_open=false (because WE won) and falsely report
+            // "accepted by another worker".
+            statusCheckRunnable?.let { statusCheckHandler?.removeCallbacks(it) }
+
             // Disable buttons to prevent double-click
             btnAccept.isEnabled = false
             btnReject.isEnabled = false
@@ -325,10 +345,23 @@ class BookingAlertActivity : AppCompatActivity() {
         statusCheckRunnable = object : Runnable {
             override fun run() {
                 if (isFinishing || isDestroyed) return
+                if (acceptInFlight || OfferQueue.isAcceptInFlight(applicationContext, bookingId)) {
+                    Log.d("BookingAlert", "🛡️ Status poll paused — acceptance in progress for $bookingId")
+                    return
+                }
                 val self = this
                 lifecycleScope.launch {
                     val stillOpen = withContext(Dispatchers.IO) { isOfferStillOpen(bookingId) }
                     if (isFinishing || isDestroyed) return@launch
+                    // Acceptance may have started while the request was in flight —
+                    // our own win must never be read as a loss.
+                    if (acceptInFlight ||
+                        OfferQueue.isAcceptInFlight(applicationContext, bookingId) ||
+                        OfferQueue.isAcceptedByMe(applicationContext, bookingId)
+                    ) {
+                        Log.d("BookingAlert", "🛡️ Status poll result discarded — acceptance in progress")
+                        return@launch
+                    }
                     if (!stillOpen) {
                         Log.d("BookingAlert", "📢 Booking $bookingId assigned to another worker — closing")
                         OfferQueue.markTaken(applicationContext, bookingId)
@@ -676,12 +709,15 @@ class BookingAlertActivity : AppCompatActivity() {
                     Log.d("BookingAlert", "📄 RPC Response Body: $responseBody")
 
                     withContext(Dispatchers.Main) {
+                        var keepScreenOpen = false
                         if (responseCode in 200..299) {
                             try {
                                 val jsonResponse = JSONObject(responseBody)
                                 val success = jsonResponse.optBoolean("success", false)
-                                
+
                                 if (success) {
+                                    // Backend confirmed WE won this booking.
+                                    OfferQueue.markAcceptedByMe(applicationContext, bookingId)
                                     Toast.makeText(
                                         this@BookingAlertActivity,
                                         "✅ Booking accepted successfully!",
@@ -691,12 +727,16 @@ class BookingAlertActivity : AppCompatActivity() {
                                     // Backend confirmed — worker is busy: drop every queued offer.
                                     retireOffer(accepted = true)
                                 } else {
-                                    // RPC returns { success:false, error:"..." } — read `error` first,
-                                    // fall back to `message` for older payloads.
+                                    // Explicit backend answer: somebody else won / no longer open.
                                     val errorMsg = jsonResponse.optString(
                                         "error",
                                         jsonResponse.optString("message", "Booking unavailable")
                                     )
+                                    // Release the claim first, otherwise markTaken
+                                    // is (correctly) ignored as our own acceptance.
+                                    acceptInFlight = false
+                                    OfferQueue.endAcceptance(applicationContext, bookingId)
+                                    OfferQueue.markTaken(applicationContext, bookingId)
                                     Toast.makeText(
                                         this@BookingAlertActivity,
                                         "⚠️ $errorMsg",
@@ -705,22 +745,35 @@ class BookingAlertActivity : AppCompatActivity() {
                                     Log.w("BookingAlert", "⚠️ Accept failed: $errorMsg | raw=$responseBody")
                                 }
                             } catch (e: Exception) {
+                                // Unknown/unparseable answer — do NOT guess a loss.
                                 Log.e("BookingAlert", "❌ Error parsing response", e)
                                 Toast.makeText(
                                     this@BookingAlertActivity,
-                                    "✅ Booking accepted",
+                                    "Couldn't confirm. Please check your bookings.",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
                         } else {
+                            // Network / server error — NOT a loss. Let her retry.
+                            keepScreenOpen = true
                             Toast.makeText(
                                 this@BookingAlertActivity,
-                                "❌ Failed to accept booking (Code: $responseCode)",
+                                "Network problem. Please try again.",
                                 Toast.LENGTH_LONG
                             ).show()
                             Log.e("BookingAlert", "❌ HTTP Error: $responseCode - $responseBody")
                         }
-                        finish()
+
+                        acceptInFlight = false
+                        OfferQueue.endAcceptance(applicationContext, bookingId)
+
+                        if (keepScreenOpen && !isFinishing && !isDestroyed) {
+                            findViewById<Button>(R.id.btnAccept)?.isEnabled = true
+                            findViewById<Button>(R.id.btnReject)?.isEnabled = true
+                            startBookingStatusPolling(bookingId)
+                        } else {
+                            finish()
+                        }
                     }
                 } else if (action == "rejected") {
                     // Extract user_id from JWT
@@ -828,13 +881,23 @@ class BookingAlertActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 Log.e("BookingAlert", "❌ Error updating booking", e)
+                // Network failure is NOT "another worker accepted" — release the
+                // claim so she can try again, and keep the offer open.
+                acceptInFlight = false
+                OfferQueue.endAcceptance(applicationContext, bookingId)
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         this@BookingAlertActivity,
-                        "❌ Network error: ${e.message}",
+                        "Network problem. Please try again.",
                         Toast.LENGTH_LONG
                     ).show()
-                    finish()
+                    if (action == "accepted" && !isFinishing && !isDestroyed) {
+                        findViewById<Button>(R.id.btnAccept)?.isEnabled = true
+                        findViewById<Button>(R.id.btnReject)?.isEnabled = true
+                        startBookingStatusPolling(bookingId)
+                    } else {
+                        finish()
+                    }
                 }
             }
         }
