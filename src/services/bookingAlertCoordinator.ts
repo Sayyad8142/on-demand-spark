@@ -122,6 +122,11 @@ export function isOwnAcceptance(bookingId: string): boolean {
  */
 export function invalidateOffer(bookingId: string, bookingRequestId?: string) {
   if (!bookingId || invalidatedBookingIds.has(bookingId)) return;
+  if (isOwnAcceptance(bookingId)) {
+    // This booking was assigned to US — never close it as "taken by another".
+    console.log(`🛡️ [Coordinator] Skipping invalidation of own acceptance: ${bookingId}`);
+    return;
+  }
   invalidatedBookingIds.add(bookingId);
 
   // Block any later receive path from re-showing this booking.
