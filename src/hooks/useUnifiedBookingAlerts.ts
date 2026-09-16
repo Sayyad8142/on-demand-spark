@@ -231,14 +231,31 @@ export function useUnifiedBookingAlerts(
   const accept = useCallback(async () => {
     if (!pending) return;
 
-    const result = await tryAccept(pending.bookingId, workerId || undefined);
-    if (!result.success) {
-      toast({ title: result.error || "Booking already taken", variant: "destructive" });
-    } else {
-      toast({ title: "Booking accepted" });
+    const bookingId = pending.bookingId;
+    // Single flight: a second tap must never start a parallel acceptance.
+    if (!beginAcceptance(bookingId)) {
+      console.log("⚠️ [UnifiedAlerts] Accept ignored — already in flight", bookingId);
+      return;
     }
 
-    dismissAlert(pending.bookingId);
+    try {
+      const result = await tryAccept(bookingId, workerId || undefined);
+      if (!result.success) {
+        endAcceptance(bookingId);
+        toast({ title: result.error || "Booking already taken", variant: "destructive" });
+      } else {
+        // Backend confirmed we won — protects against the assigned-listener
+        // and the native poller closing our own booking as "taken".
+        markAcceptedByMe(bookingId);
+        toast({ title: "Booking accepted" });
+      }
+    } catch (e) {
+      endAcceptance(bookingId);
+      toast({ title: "Network problem. Please try again.", variant: "destructive" });
+      return;
+    }
+
+    dismissAlert(bookingId);
     setPending(null);
   }, [pending, workerId]);
 
