@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { processIncomingBooking, invalidateOffer } from "@/services/bookingAlertCoordinator";
+import { processIncomingBooking, invalidateOffer, isOwnAcceptance } from "@/services/bookingAlertCoordinator";
 import { canShowWorkerBookingOffer, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 
 /**
