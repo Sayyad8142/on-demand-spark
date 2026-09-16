@@ -512,6 +512,12 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                 return@setOnClickListener
             }
             
+            // Device-wide single flight: only ONE acceptance attempt per booking,
+            // across overlay / full-screen activity / web UI.
+            if (!OfferQueue.beginAcceptance(applicationContext, bookingId)) {
+                android.util.Log.d("BookingOverlay", "⚠️ Accept ignored - acceptance already claimed for $bookingId")
+                return@setOnClickListener
+            }
             acceptInFlight = true
             android.util.Log.d("BookingOverlay", "✅ Accept button clicked")
             
