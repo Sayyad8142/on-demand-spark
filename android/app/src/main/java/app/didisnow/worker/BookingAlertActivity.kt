@@ -42,6 +42,10 @@ class BookingAlertActivity : AppCompatActivity() {
     private var popupAcked = false
     private var offerRetired = false
 
+    /** Single-flight guard: only ONE acceptance attempt per booking. */
+    @Volatile
+    private var acceptInFlight = false
+
     // Poll that closes this alert as soon as the booking is assigned elsewhere.
     private var statusCheckHandler: Handler? = null
     private var statusCheckRunnable: Runnable? = null
