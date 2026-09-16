@@ -569,6 +569,14 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                 } finally {
                     // Always close overlay and stop service
                     acceptInFlight = false
+                    if (outcome == "accept_success") {
+                        // Backend confirmed WE won — never treat this booking as
+                        // taken by somebody else afterwards.
+                        OfferQueue.markAcceptedByMe(applicationContext, bookingId)
+                    }
+                    // Release the device-wide claim in every case; a failed or
+                    // timed-out attempt must be retryable.
+                    OfferQueue.endAcceptance(applicationContext, bookingId)
                     // Tell React layer to refresh either way (it will fetch latest state)
                     LocalBroadcastManager.getInstance(applicationContext)
                         .sendBroadcast(Intent("DIDI_BOOKING_REFRESH").apply { putExtra("booking_id", bookingId) })
