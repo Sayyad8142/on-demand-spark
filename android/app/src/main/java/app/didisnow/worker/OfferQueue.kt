@@ -163,6 +163,12 @@ object OfferQueue {
     @Synchronized
     fun markTaken(ctx: Context, bookingId: String?) {
         if (bookingId.isNullOrBlank()) return
+        // NEVER mark a booking this device is accepting / has just accepted as
+        // "taken by another worker" — that is our own assignment.
+        if (isAcceptInFlight(ctx, bookingId) || isAcceptedByMe(ctx, bookingId)) {
+            Log.d(TAG, "🛡️ ignoring markTaken for own acceptance booking_id=$bookingId")
+            return
+        }
         val map = readTaken(ctx)
         map.put(bookingId, System.currentTimeMillis())
         writeTaken(ctx, map)
