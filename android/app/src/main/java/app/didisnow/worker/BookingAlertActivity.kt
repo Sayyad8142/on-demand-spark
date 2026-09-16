@@ -877,13 +877,23 @@ class BookingAlertActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 Log.e("BookingAlert", "❌ Error updating booking", e)
+                // Network failure is NOT "another worker accepted" — release the
+                // claim so she can try again, and keep the offer open.
+                acceptInFlight = false
+                OfferQueue.endAcceptance(applicationContext, bookingId)
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         this@BookingAlertActivity,
-                        "❌ Network error: ${e.message}",
+                        "Network problem. Please try again.",
                         Toast.LENGTH_LONG
                     ).show()
-                    finish()
+                    if (action == "accepted" && !isFinishing && !isDestroyed) {
+                        findViewById<Button>(R.id.btnAccept)?.isEnabled = true
+                        findViewById<Button>(R.id.btnReject)?.isEnabled = true
+                        startBookingStatusPolling(bookingId)
+                    } else {
+                        finish()
+                    }
                 }
             }
         }
