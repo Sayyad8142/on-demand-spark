@@ -78,8 +78,11 @@ export function useBookingAlerts(userId: string | undefined, isOnline: boolean, 
       } else {
         toast({ title: "Booking rejected" });
       }
+    } else if (!result.offerGone) {
+      toast({ title: "Couldn't reject. Please try again.", variant: "destructive" });
+      return; // not confirmed — keep the offer open
     }
-    
+
     setPending(null);
   }, [pending, userId]);
 
