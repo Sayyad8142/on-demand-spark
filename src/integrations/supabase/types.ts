@@ -7273,6 +7273,10 @@ export type Database = {
         Returns: undefined
       }
       _refund_booking_tip: { Args: { p_booking_id: string }; Returns: number }
+      _reject_booking_request_core: {
+        Args: { p_booking_id: string; p_worker_id: string }
+        Returns: Json
+      }
       _sla_core_work: { Args: never; Returns: undefined }
       _tip_booking_open: { Args: { p_booking_id: string }; Returns: boolean }
       _woc_sla_minutes: { Args: { p_esc: string }; Returns: number }
