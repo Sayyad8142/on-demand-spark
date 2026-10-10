@@ -270,15 +270,18 @@ export function useUnifiedBookingAlerts(
   const reject = useCallback(async () => {
     if (!pending || !userId) return;
 
-    // Use workerId for rejection, fall back to userId
-    const rejectId = workerId || userId;
-    const result = await rejectBooking(pending.bookingId, rejectId);
+    const result = await rejectBooking(pending.bookingId);
     if (result.success) {
-      if (result.shouldNotify) {
-        toast({ title: "Booking offered to next available workers" });
-      } else {
-        toast({ title: "Booking rejected" });
-      }
+      toast({ title: result.shouldNotify ? "Booking offered to next available workers" : "Booking rejected" });
+    } else if (result.offerGone) {
+      toast({ title: result.error === "offer-expired" ? "This offer has expired" : "This booking is no longer available" });
+    } else {
+      // Not confirmed — keep the offer open so she can try again.
+      toast({
+        title: result.error === "session-expired" ? "Please log in again to reject" : "Couldn't reject. Please try again.",
+        variant: "destructive",
+      });
+      return;
     }
 
     dismissAlert(pending.bookingId);
