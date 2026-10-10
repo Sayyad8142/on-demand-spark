@@ -637,6 +637,27 @@ class BookingAlertActivity : AppCompatActivity() {
         return null
     }
     
+    /** POST reject_booking_offer; returns (httpCode, body). */
+    private fun postRejectOffer(bookingId: String, jwt: String): Pair<Int, String> {
+        val conn = URL("$SUPABASE_URL/rest/v1/rpc/reject_booking_offer").openConnection() as HttpURLConnection
+        return try {
+            conn.requestMethod = "POST"
+            conn.connectTimeout = 8000
+            conn.readTimeout = 8000
+            conn.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+            conn.setRequestProperty("Authorization", "Bearer $jwt")
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.doOutput = true
+            conn.outputStream.use { it.write("""{"p_booking_id":"$bookingId"}""".toByteArray()) }
+            val code = conn.responseCode
+            val body = (if (code in 200..299) conn.inputStream else conn.errorStream)
+                ?.bufferedReader()?.use { it.readText() } ?: ""
+            code to body
+        } finally {
+            conn.disconnect()
+        }
+    }
+
     private fun updateBooking(bookingId: String, action: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -779,107 +800,47 @@ class BookingAlertActivity : AppCompatActivity() {
                         }
                     }
                 } else if (action == "rejected") {
-                    // Extract user_id from JWT
-                    val userId = try {
-                        val parts = jwt.split(".")
-                        if (parts.size >= 2) {
-                            val payload = String(android.util.Base64.decode(parts[1], android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING))
-                            val jsonObj = JSONObject(payload)
-                            jsonObj.optString("sub", "")
-                        } else {
-                            ""
+                    // reject_booking_offer: worker resolved from the session server-side;
+                    // expired / already-assigned offers are refused. Confirmed-only success.
+                    var (code, body) = postRejectOffer(bookingId, jwt!!)
+                    if (code == 401 || code == 403) {
+                        Log.w("BookingAlert", "🔐 Reject got $code — refreshing session and retrying once")
+                        val fresh = refreshAccessToken()
+                        if (!fresh.isNullOrEmpty()) {
+                            val retry = postRejectOffer(bookingId, fresh)
+                            code = retry.first; body = retry.second
                         }
-                    } catch (e: Exception) {
-                        Log.e("BookingAlert", "❌ Failed to extract user_id from JWT", e)
-                        ""
                     }
-                    
-                    if (userId.isEmpty()) {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(
-                                this@BookingAlertActivity,
-                                "⚠️ Could not identify worker",
-                                Toast.LENGTH_LONG
-                            ).show()
-                            finish()
-                        }
-                        return@launch
-                    }
-                    
-                    Log.d("BookingAlert", "👤 Worker ID: $userId")
-                    
-                    // Call reject_booking_request RPC
-                    val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/reject_booking_request")
-                    val connection = rpcUrl.openConnection() as HttpURLConnection
-                    
-                    connection.requestMethod = "POST"
-                    connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                    connection.setRequestProperty("Authorization", "Bearer $jwt")
-                    connection.setRequestProperty("Content-Type", "application/json")
-                    connection.doOutput = true
-
-                    val jsonPayload = """{"p_booking_id":"$bookingId","p_worker_id":"$userId"}"""
-                    connection.outputStream.use { os ->
-                        os.write(jsonPayload.toByteArray())
-                    }
-
-                    val responseCode = connection.responseCode
-                    Log.d("BookingAlert", "📡 RPC Response Code: $responseCode")
-                    
-                    val responseBody = if (responseCode in 200..299) {
-                        connection.inputStream.bufferedReader().use { it.readText() }
-                    } else {
-                        connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
-                    }
-                    connection.disconnect()
-                    
-                    Log.d("BookingAlert", "📄 RPC Response Body: $responseBody")
-
+                    val json = try { JSONObject(body.ifEmpty { "{}" }) } catch (_: Exception) { JSONObject() }
+                    val confirmed = code in 200..299 && json.optBoolean("success", false) && json.optBoolean("confirmed", false)
+                    val err = json.optString("error", if (code == 401 || code == 403) "session-expired" else "HTTP $code")
+                    val offerGone = err in setOf("offer-expired", "booking-already-accepted", "offer-closed", "request-not-found")
                     withContext(Dispatchers.Main) {
-                        if (responseCode in 200..299) {
-                            try {
-                                val jsonResponse = JSONObject(responseBody)
-                                val success = jsonResponse.optBoolean("success", false)
-                                val message = jsonResponse.optString("message", "")
-                                
-                                if (success) {
-                                    val toastMessage = when {
-                                        message.contains("next-tier-activated") -> "Booking offered to next available workers"
-                                        message.contains("no-more-tiers") -> "Booking rejected"
-                                        else -> "Booking rejected"
-                                    }
-                                    
-                                    Toast.makeText(
-                                        this@BookingAlertActivity,
-                                        toastMessage,
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    Log.d("BookingAlert", "✅ Booking rejected: $message")
-                                } else {
-                                    Toast.makeText(
-                                        this@BookingAlertActivity,
-                                        "⚠️ Failed to reject booking",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    Log.w("BookingAlert", "⚠️ Reject failed: ${jsonResponse.optString("error")}")
-                                }
-                            } catch (e: Exception) {
-                                Log.e("BookingAlert", "❌ Error parsing response", e)
-                                Toast.makeText(
-                                    this@BookingAlertActivity,
-                                    "Booking rejected",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                        when {
+                            confirmed -> {
+                                val msg = if (json.optBoolean("should_notify", false)) "Booking offered to next available workers" else "Booking rejected"
+                                Toast.makeText(this@BookingAlertActivity, msg, Toast.LENGTH_SHORT).show()
+                                Log.d("BookingAlert", "✅ Reject confirmed by backend")
+                                retireOffer(accepted = false)
+                                finish()
                             }
-                        } else {
-                            Toast.makeText(
-                                this@BookingAlertActivity,
-                                "⚠️ Failed to reject booking (Code: $responseCode)",
-                                Toast.LENGTH_LONG
-                            ).show()
-                            Log.e("BookingAlert", "❌ HTTP Error: $responseCode - $responseBody")
+                            offerGone -> {
+                                val msg = if (err == "offer-expired") "This offer has expired" else "This booking is no longer available"
+                                Toast.makeText(this@BookingAlertActivity, msg, Toast.LENGTH_SHORT).show()
+                                retireOffer(accepted = false)
+                                finish()
+                            }
+                            else -> {
+                                // Not confirmed (session / network / server) — keep the offer open.
+                                Log.w("BookingAlert", "⚠️ Reject not confirmed: $err")
+                                val msg = if (err == "session-expired") "Please open the app and log in to reject" else "Couldn't reject. Please try again."
+                                Toast.makeText(this@BookingAlertActivity, msg, Toast.LENGTH_LONG).show()
+                                if (!isFinishing && !isDestroyed) {
+                                    findViewById<Button>(R.id.btnAccept)?.isEnabled = true
+                                    findViewById<Button>(R.id.btnReject)?.isEnabled = true
+                                }
+                            }
                         }
-                        finish()
                     }
                 }
             } catch (e: Exception) {
