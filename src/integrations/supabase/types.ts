@@ -333,6 +333,42 @@ export type Database = {
           },
         ]
       }
+      admin_assignment_overrides: {
+        Row: {
+          admin_id: string | null
+          booking_id: string
+          created_at: string
+          failed_conditions: Json
+          id: string
+          manual_override: boolean
+          override_reason: string | null
+          source: string
+          worker_id: string
+        }
+        Insert: {
+          admin_id?: string | null
+          booking_id: string
+          created_at?: string
+          failed_conditions?: Json
+          id?: string
+          manual_override?: boolean
+          override_reason?: string | null
+          source: string
+          worker_id: string
+        }
+        Update: {
+          admin_id?: string | null
+          booking_id?: string
+          created_at?: string
+          failed_conditions?: Json
+          id?: string
+          manual_override?: boolean
+          override_reason?: string | null
+          source?: string
+          worker_id?: string
+        }
+        Relationships: []
+      }
       admin_fcm_tokens: {
         Row: {
           app_version: string | null
@@ -949,6 +985,7 @@ export type Database = {
           device_info: Json | null
           device_opened_at: string | null
           device_received_at: string | null
+          dispatch_route: string | null
           eligibility_reason: string | null
           failure_reason: string | null
           failure_reported_at: string | null
@@ -987,6 +1024,7 @@ export type Database = {
           device_info?: Json | null
           device_opened_at?: string | null
           device_received_at?: string | null
+          dispatch_route?: string | null
           eligibility_reason?: string | null
           failure_reason?: string | null
           failure_reported_at?: string | null
@@ -1025,6 +1063,7 @@ export type Database = {
           device_info?: Json | null
           device_opened_at?: string | null
           device_received_at?: string | null
+          dispatch_route?: string | null
           eligibility_reason?: string | null
           failure_reason?: string | null
           failure_reported_at?: string | null
@@ -1121,6 +1160,159 @@ export type Database = {
             foreignKeyName: "booking_status_history_booking_id_fkey"
             columns: ["booking_id"]
             isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_test_flags: {
+        Row: {
+          booking_id: string
+          created_at: string
+          flagged_by: string | null
+          reason: string
+          source: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          flagged_by?: string | null
+          reason: string
+          source?: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          flagged_by?: string | null
+          reason?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_test_flags_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_tip_payments: {
+        Row: {
+          booking_id: string
+          created_at: string
+          customer_id: string
+          id: string
+          idempotency_key: string
+          increment_inr: number
+          razorpay_amount_inr: number
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          status: string
+          updated_at: string
+          wallet_amount_inr: number
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          idempotency_key: string
+          increment_inr: number
+          razorpay_amount_inr?: number
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          status?: string
+          updated_at?: string
+          wallet_amount_inr?: number
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          idempotency_key?: string
+          increment_inr?: number
+          razorpay_amount_inr?: number
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          status?: string
+          updated_at?: string
+          wallet_amount_inr?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_tip_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_tips: {
+        Row: {
+          amount_inr: number
+          booking_id: string
+          created_at: string
+          customer_id: string
+          id: string
+          payment_status: string
+          payout_id: string | null
+          payout_status: string
+          pending_amount_inr: number
+          razorpay_amount_inr: number
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          refund_status: string
+          refunded_amount_inr: number
+          refunded_at: string | null
+          updated_at: string
+          wallet_amount_inr: number
+        }
+        Insert: {
+          amount_inr?: number
+          booking_id: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          payment_status?: string
+          payout_id?: string | null
+          payout_status?: string
+          pending_amount_inr?: number
+          razorpay_amount_inr?: number
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          refund_status?: string
+          refunded_amount_inr?: number
+          refunded_at?: string | null
+          updated_at?: string
+          wallet_amount_inr?: number
+        }
+        Update: {
+          amount_inr?: number
+          booking_id?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          payment_status?: string
+          payout_id?: string | null
+          payout_status?: string
+          pending_amount_inr?: number
+          razorpay_amount_inr?: number
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          refund_status?: string
+          refunded_amount_inr?: number
+          refunded_at?: string | null
+          updated_at?: string
+          wallet_amount_inr?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_tips_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
             referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
@@ -1907,6 +2099,39 @@ export type Database = {
           queue_length?: number | null
           requests_last_minute?: number | null
           stale_pending?: number | null
+        }
+        Relationships: []
+      }
+      dispatch_offer_ledger: {
+        Row: {
+          attempt_key: string
+          booking_id: string
+          id: number
+          offered_at: string
+          request_id: string
+          route: string
+          wave_number: number | null
+          worker_id: string | null
+        }
+        Insert: {
+          attempt_key: string
+          booking_id: string
+          id?: number
+          offered_at?: string
+          request_id: string
+          route?: string
+          wave_number?: number | null
+          worker_id?: string | null
+        }
+        Update: {
+          attempt_key?: string
+          booking_id?: string
+          id?: number
+          offered_at?: string
+          request_id?: string
+          route?: string
+          wave_number?: number | null
+          worker_id?: string | null
         }
         Relationships: []
       }
@@ -3806,6 +4031,56 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      service_area_requests: {
+        Row: {
+          created_at: string
+          id: string
+          normalized_area: string | null
+          notes: string | null
+          phone: string | null
+          pincode: string | null
+          profile_id: string | null
+          requested_area: string
+          search_text: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          normalized_area?: string | null
+          notes?: string | null
+          phone?: string | null
+          pincode?: string | null
+          profile_id?: string | null
+          requested_area: string
+          search_text?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          normalized_area?: string | null
+          notes?: string | null
+          phone?: string | null
+          pincode?: string | null
+          profile_id?: string | null
+          requested_area?: string
+          search_text?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_area_requests_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       services: {
         Row: {
@@ -5861,7 +6136,9 @@ export type Database = {
           retry_count: number
           retry_stage: string | null
           reversed_at: string | null
+          service_earning_inr: number | null
           status: string
+          tip_amount: number
           updated_at: string
           worker_id: string
         }
@@ -5899,7 +6176,9 @@ export type Database = {
           retry_count?: number
           retry_stage?: string | null
           reversed_at?: string | null
+          service_earning_inr?: number | null
           status?: string
+          tip_amount?: number
           updated_at?: string
           worker_id: string
         }
@@ -5937,7 +6216,9 @@ export type Database = {
           retry_count?: number
           retry_stage?: string | null
           reversed_at?: string | null
+          service_earning_inr?: number | null
           status?: string
+          tip_amount?: number
           updated_at?: string
           worker_id?: string
         }
@@ -6936,13 +7217,24 @@ export type Database = {
       }
     }
     Functions: {
+      _create_worker_payout_core: {
+        Args: { p_booking_id: string; p_note: string }
+        Returns: undefined
+      }
       _get_int_setting: {
         Args: { default_val: number; k: string }
         Returns: number
       }
       _is_admin_message: { Args: { rec: unknown }; Returns: boolean }
+      _log_slot_violation: {
+        Args: { p_booking_id: string; p_channel: string; p_worker_id: string }
+        Returns: undefined
+      }
+      _refund_booking_tip: { Args: { p_booking_id: string }; Returns: number }
       _sla_core_work: { Args: never; Returns: undefined }
+      _tip_booking_open: { Args: { p_booking_id: string }; Returns: boolean }
       _woc_sla_minutes: { Args: { p_esc: string }; Returns: number }
+      abandon_booking_tip: { Args: { p_tip_payment_id: string }; Returns: Json }
       academy_dashboard_stats: { Args: never; Returns: Json }
       accept_booking: { Args: { p_booking_id: string }; Returns: Json }
       accept_booking_authoritative: {
@@ -7081,9 +7373,28 @@ export type Database = {
         Args: { _day?: string }
         Returns: Json
       }
+      admin_bulk_set_test_flag_by_user: {
+        Args: {
+          p_confirm_count?: number
+          p_is_test: boolean
+          p_user_id: string
+        }
+        Returns: Json
+      }
       admin_cancel_booking: {
         Args: { p_booking_id: string; p_reason: string }
         Returns: undefined
+      }
+      admin_cancel_booking_structured: {
+        Args: {
+          p_booking_id: string
+          p_fault_party?: string
+          p_penalize_worker?: boolean
+          p_reason?: string
+          p_reason_code?: string
+          p_worker_id?: string
+        }
+        Returns: Json
       }
       admin_capacity_trends: {
         Args: { _days?: number }
@@ -7095,6 +7406,10 @@ export type Database = {
           recommended_workers: number
           slot_hour: number
         }[]
+      }
+      admin_check_assignment_eligibility: {
+        Args: { p_booking_id: string; p_worker_id: string }
+        Returns: Json
       }
       admin_classify_inactive_worker: {
         Args: { p_worker_id: string }
@@ -7108,6 +7423,10 @@ export type Database = {
       admin_clear_worker_rating: {
         Args: { p_worker_id: string }
         Returns: undefined
+      }
+      admin_community_delete_impact: {
+        Args: { p_community_id: string }
+        Returns: Json
       }
       admin_complete_booking_with_otp: {
         Args: { p_booking_id: string; p_otp: string }
@@ -7131,6 +7450,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_delete_community: {
+        Args: { p_community_id: string; p_detach_customer_addresses?: boolean }
+        Returns: Json
+      }
       admin_delete_inactive_worker: {
         Args: { p_worker_id: string }
         Returns: Json
@@ -7144,6 +7467,30 @@ export type Database = {
         Returns: undefined
       }
       admin_dispatch_health_snapshot: { Args: never; Returns: Json }
+      admin_dispatch_live_monitor: { Args: never; Returns: Json }
+      admin_dispatch_performance_dashboard: {
+        Args: {
+          p_community?: string
+          p_from: string
+          p_service?: string
+          p_to: string
+        }
+        Returns: Json
+      }
+      admin_dispatch_performance_metrics: {
+        Args: { p_days?: number }
+        Returns: Json
+      }
+      admin_dispatch_reporting_summary: {
+        Args: {
+          p_community?: string
+          p_from: string
+          p_include_tests?: boolean
+          p_service?: string
+          p_to: string
+        }
+        Returns: Json
+      }
       admin_dispatch_speed_metrics: { Args: { p_days?: number }; Returns: Json }
       admin_emergency_manual_assign: {
         Args: { p_admin_id?: string; p_booking_id: string; p_worker_id: string }
@@ -7241,6 +7588,16 @@ export type Database = {
           skip_reason: string
           status: string
         }[]
+      }
+      admin_log_assignment_override: {
+        Args: {
+          p_booking_id: string
+          p_failed: Json
+          p_reason: string
+          p_source: string
+          p_worker_id: string
+        }
+        Returns: string
       }
       admin_log_worker_fault: {
         Args: {
@@ -7365,6 +7722,10 @@ export type Database = {
         Args: { p_booking_id: string; p_new_status: string; p_note?: string }
         Returns: undefined
       }
+      admin_set_booking_test_flag: {
+        Args: { p_booking_id: string; p_is_test: boolean; p_reason?: string }
+        Returns: undefined
+      }
       admin_set_legal_pdf: {
         Args: { kind: string; url: string }
         Returns: undefined
@@ -7404,11 +7765,37 @@ export type Database = {
         Args: { p_reason?: string; p_worker_id: string }
         Returns: Json
       }
+      admin_suspected_test_accounts: {
+        Args: never
+        Returns: {
+          bookings: number
+          flagged: number
+          name: string
+          phone: string
+          user_id: string
+        }[]
+      }
       admin_sync_worker_cases: {
         Args: { p_rows: Json }
         Returns: {
           case_id: string
           created: boolean
+        }[]
+      }
+      admin_tip_ledger: {
+        Args: { p_only_unresolved?: boolean }
+        Returns: {
+          booking_id: string
+          booking_payment_status: string
+          booking_status: string
+          confirmed_tip_inr: number
+          customer_id: string
+          payout_id: string
+          pending_inr: number
+          refunded_amount_inr: number
+          tip_location: string
+          updated_at: string
+          worker_id: string
         }[]
       }
       admin_update_case_status: {
@@ -7752,6 +8139,10 @@ export type Database = {
               isSetofReturn: false
             }
           }
+      admin_worker_availability_diagnosis: {
+        Args: { p_community: string }
+        Returns: Json
+      }
       admin_worker_health_buckets: { Args: never; Returns: Json }
       admin_worker_issue_daily_analytics: { Args: never; Returns: Json }
       admin_worker_issue_impact: {
@@ -8048,6 +8439,10 @@ export type Database = {
           message: string
         }[]
       }
+      attach_tip_razorpay_order: {
+        Args: { p_razorpay_order_id: string; p_tip_payment_id: string }
+        Returns: Json
+      }
       auto_cancel_stale_instant_bookings: { Args: never; Returns: number }
       auto_complete_assigned: { Args: never; Returns: undefined }
       auto_enable_stale_offline_workers: {
@@ -8071,6 +8466,14 @@ export type Database = {
       bath_total_price: {
         Args: { p_community?: string; p_count: number }
         Returns: number
+      }
+      booking_effective_slot: {
+        Args: { p_booking_id: string }
+        Returns: {
+          eff_day: number
+          eff_slot: string
+          slot_source: string
+        }[]
       }
       booking_offer_open: { Args: { p_booking_id: string }; Returns: boolean }
       bytea_to_text: { Args: { data: string }; Returns: string }
@@ -8103,6 +8506,15 @@ export type Database = {
       compute_worker_reachability: {
         Args: { p_worker_id: string }
         Returns: string
+      }
+      confirm_tip_razorpay: {
+        Args: {
+          p_amount_inr: number
+          p_razorpay_order_id: string
+          p_razorpay_payment_id: string
+          p_tip_payment_id: string
+        }
+        Returns: Json
       }
       count_matching_busy_workers: {
         Args: { p_booking_id: string }
@@ -8390,6 +8802,30 @@ export type Database = {
               worker_ttl_seconds: number
             }[]
           }
+      get_dispatch_eligible_worker_count: {
+        Args: {
+          p_community: string
+          p_day?: number
+          p_service: string
+          p_slot?: string
+        }
+        Returns: number
+      }
+      get_dispatch_eligible_workers: {
+        Args: {
+          p_community: string
+          p_day?: number
+          p_service: string
+          p_slot?: string
+        }
+        Returns: {
+          full_name: string
+          last_heartbeat_at: string
+          last_seen_at: string
+          phone: string
+          worker_id: string
+        }[]
+      }
       get_dispatch_health: { Args: never; Returns: Json }
       get_dispatch_simulation_summary: {
         Args: { p_days?: number }
@@ -8522,6 +8958,17 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_most_requested_areas: {
+        Args: { p_limit?: number }
+        Returns: {
+          display_area: string
+          latest_request_at: string
+          new_count: number
+          normalized_area: string
+          request_count: number
+        }[]
+      }
+      get_my_payout_breakdown: { Args: { p_booking_id: string }; Returns: Json }
       get_my_wallet_balance: {
         Args: never
         Returns: {
@@ -9456,6 +9903,14 @@ export type Database = {
         Args: { p_booking_id: string }
         Returns: Json
       }
+      start_booking_tip: {
+        Args: {
+          p_booking_id: string
+          p_idempotency_key: string
+          p_increment_inr: number
+        }
+        Returns: Json
+      }
       start_daily_duty: {
         Args: { _worker_user_id: string }
         Returns: {
@@ -9714,9 +10169,25 @@ export type Database = {
       vr_recreate_as_admin: { Args: { p_booking_id: string }; Returns: Json }
       vr_run_all: { Args: never; Returns: Json }
       vr_setup: { Args: never; Returns: Json }
+      watchdog_restore_worker_if_unchanged: {
+        Args: { p_expected_source: string; p_worker_id: string }
+        Returns: boolean
+      }
       worker_collect_payment: {
         Args: { p_booking_id: string; p_method: string }
         Returns: Json
+      }
+      worker_connection_fresh: {
+        Args: { p_last_heartbeat: string; p_last_seen: string }
+        Returns: boolean
+      }
+      worker_connection_fresh_by_id: {
+        Args: { p_worker_id: string }
+        Returns: boolean
+      }
+      worker_has_booking_slot: {
+        Args: { p_booking_id: string; p_worker_id: string }
+        Returns: boolean
       }
       worker_has_valid_payout_details: {
         Args: {
