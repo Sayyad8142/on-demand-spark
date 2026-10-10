@@ -92,28 +92,48 @@ export async function tryAccept(bookingId: string, workerId?: string): Promise<{
   return { success: true };
 }
 
-export async function rejectBooking(bookingId: string, workerId: string) {
-  // Ensure valid session before rejecting
-  const sessionValid = await ensureValidSession();
-  if (!sessionValid) {
-    return { success: false, shouldNotify: false };
-  }
-  
-  // ACK that the worker tapped Reject (fire-and-forget, never blocks)
+export type RejectResult = {
+  success: boolean;
+  shouldNotify: boolean;
+  /** true when the offer is gone (expired / taken) — safe to close the popup */
+  offerGone?: boolean;
+  error?: string;
+};
+
+/**
+ * Reject an offer. Success is reported ONLY when the backend confirms it.
+ * The worker is resolved server-side from the signed-in session
+ * (reject_booking_offer), never from a client-supplied id.
+ */
+export async function rejectBooking(bookingId: string, _workerId?: string): Promise<RejectResult> {
+  // Record the tap first — independent of whether the rejection is confirmed.
   ackBookingDelivery({ bookingId, event: "worker_seen" }).catch(() => {});
   ackBookingDelivery({ bookingId, event: "reject_tapped" }).catch(() => {});
 
-  const { data, error } = await supabase.rpc("reject_booking_request", {
-    p_booking_id: bookingId,
-    p_worker_id: workerId,
-  });
+  const sessionValid = await ensureValidSession();
+  if (!sessionValid) {
+    return { success: false, shouldNotify: false, error: "session-expired" };
+  }
+
+  let { data, error } = await supabase.rpc("reject_booking_offer" as any, { p_booking_id: bookingId });
+  // Expired token race: refresh once and retry.
+  if (error && /jwt|401|expired/i.test(error.message)) {
+    const { error: refreshErr } = await supabase.auth.refreshSession();
+    if (refreshErr) return { success: false, shouldNotify: false, error: "session-expired" };
+    ({ data, error } = await supabase.rpc("reject_booking_offer" as any, { p_booking_id: bookingId }));
+  }
 
   if (error) {
     console.error("❌ Error rejecting booking:", error);
-    return { success: false, shouldNotify: false };
+    return { success: false, shouldNotify: false, error: "network" };
   }
 
-  const result = data as { success?: boolean; should_notify?: boolean; next_tier?: number };
+  const result = data as { success?: boolean; confirmed?: boolean; error?: string; should_notify?: boolean; next_tier?: number };
+  if (!result?.success || !result?.confirmed) {
+    const err = result?.error || "unknown";
+    const offerGone = ["offer-expired", "booking-already-accepted", "offer-closed", "request-not-found"].includes(err);
+    return { success: false, shouldNotify: false, offerGone, error: err };
+  }
 
   // If next tier should be notified, call the edge function
   if (result?.should_notify && result?.next_tier) {
