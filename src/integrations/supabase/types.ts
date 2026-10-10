@@ -9833,6 +9833,7 @@ export type Database = {
         }
         Returns: Json
       }
+      reject_booking_offer: { Args: { p_booking_id: string }; Returns: Json }
       reject_booking_request: {
         Args: { p_booking_id: string; p_worker_id: string }
         Returns: Json
