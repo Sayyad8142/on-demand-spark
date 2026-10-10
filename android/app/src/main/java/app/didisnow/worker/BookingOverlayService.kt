@@ -1120,97 +1120,36 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                     connection.disconnect()
                 }
             } else {
-                // For reject, call reject_booking_request RPC with user JWT
-                // First, extract user_id from JWT
-                val userId = try {
-                    val parts = jwt.split(".")
-                    if (parts.size >= 2) {
-                        val payload = String(android.util.Base64.decode(parts[1], android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING))
-                        val json = JSONObject(payload)
-                        json.optString("sub", "")
-                    } else {
-                        ""
+                // Reject via reject_booking_offer: the backend resolves the worker from
+                // the session (no client-supplied worker id) and refuses expired /
+                // already-assigned offers. Success only when the backend confirms.
+                var (code, body) = postRejectOffer(bookingId, jwt!!)
+                if (code == 401 || code == 403) {
+                    android.util.Log.w("BookingOverlay", "🔐 Reject got $code — refreshing session and retrying once")
+                    val fresh = refreshAccessToken()
+                    if (fresh.isNullOrEmpty()) {
+                        ui { Toast.makeText(this@BookingOverlayService, "Please open the app and log in to reject", Toast.LENGTH_LONG).show() }
+                        throw IllegalStateException("session_expired")
                     }
-                } catch (e: Exception) {
-                    android.util.Log.e("BookingOverlay", "❌ Failed to extract user_id from JWT", e)
-                    ""
+                    val retry = postRejectOffer(bookingId, fresh)
+                    code = retry.first; body = retry.second
                 }
-                
-                if (userId.isEmpty()) {
-                    android.util.Log.e("BookingOverlay", "❌ Could not extract user_id from JWT")
-                    throw IllegalStateException("Could not extract user_id from JWT")
-                }
-                
-                android.util.Log.d("BookingOverlay", "👤 Worker ID: $userId")
-                
-                val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/reject_booking_request")
-                val connection = rpcUrl.openConnection() as HttpURLConnection
-                
-                try {
-                    connection.requestMethod = "POST"
-                    connection.connectTimeout = 8000
-                    connection.readTimeout = 8000
-                    connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
-                    connection.setRequestProperty("Authorization", "Bearer $jwt")
-                    connection.setRequestProperty("Content-Type", "application/json")
-                    connection.doOutput = true
-
-                    val jsonPayload = """{"p_booking_id":"$bookingId","p_worker_id":"$userId"}"""
-                    connection.outputStream.use { os ->
-                        os.write(jsonPayload.toByteArray())
+                val json = try { JSONObject(body.ifEmpty { "{}" }) } catch (_: Exception) { JSONObject() }
+                val confirmed = code in 200..299 && json.optBoolean("success", false) && json.optBoolean("confirmed", false)
+                if (confirmed) {
+                    android.util.Log.d("BookingOverlay", "✅ Reject confirmed by backend")
+                    val msg = if (json.optBoolean("should_notify", false)) "Booking offered to next available workers" else "Booking rejected"
+                    withContext(Dispatchers.Main) { ui { Toast.makeText(this@BookingOverlayService, msg, Toast.LENGTH_SHORT).show() } }
+                } else {
+                    val err = json.optString("error", "HTTP $code")
+                    android.util.Log.d("BookingOverlay", "❌ Reject not confirmed: $err")
+                    val msg = when (err) {
+                        "offer-expired" -> "This offer has expired"
+                        "booking-already-accepted", "offer-closed" -> "This booking is no longer available"
+                        else -> "Couldn't reject. Please try again."
                     }
-
-                    val responseCode = connection.responseCode
-                    android.util.Log.d("BookingOverlay", "📡 RPC code: $responseCode")
-                    
-                    val responseBody = if (responseCode in 200..299) {
-                        connection.inputStream.bufferedReader().use { it.readText() }
-                    } else {
-                        connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
-                    }
-
-                    android.util.Log.d("BookingOverlay", "📄 RPC Response Body: $responseBody")
-                    
-                    if (responseCode in 200..299) {
-                        val json = JSONObject(responseBody.ifEmpty { "{}" })
-                        val success = json.optBoolean("success", false)
-                        val message = json.optString("message", "")
-                        
-                        if (success) {
-                            android.util.Log.d("BookingOverlay", "✅ Reject success: $message")
-                            
-                            val toastMessage = when {
-                                message.contains("next-tier-activated") -> "Booking offered to next available workers"
-                                message.contains("no-more-tiers") -> "Booking rejected"
-                                else -> "Booking rejected"
-                            }
-                            
-                            withContext(Dispatchers.Main) {
-                                ui {
-                                    Toast.makeText(
-                                        this@BookingOverlayService,
-                                        toastMessage,
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            }
-                        } else {
-                            val error = json.optString("error", "Unknown error")
-                            android.util.Log.d("BookingOverlay", "❌ Reject failed: $error")
-                            throw IllegalStateException("Server rejected: $error")
-                        }
-                    } else {
-                        val errorMsg = try {
-                            val json = JSONObject(responseBody)
-                            json.optString("message", json.optString("error", json.optString("msg", "HTTP $responseCode")))
-                        } catch (e: Exception) {
-                            "HTTP $responseCode: ${responseBody.take(200)}"
-                        }
-                        android.util.Log.d("BookingOverlay", "❌ Reject failed: $errorMsg")
-                        throw IllegalStateException(errorMsg)
-                    }
-                } finally {
-                    connection.disconnect()
+                    withContext(Dispatchers.Main) { ui { Toast.makeText(this@BookingOverlayService, msg, Toast.LENGTH_SHORT).show() } }
+                    throw IllegalStateException("reject_not_confirmed:$err")
                 }
             }
         }
@@ -1242,6 +1181,27 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
      * Final cleanup and service stop using stopSelfResult for deterministic shutdown
      * Guarantees singleton reset and all windows removed
      */
+    /** POST reject_booking_offer; returns (httpCode, body). Never throws on HTTP errors. */
+    private fun postRejectOffer(bookingId: String, jwt: String): Pair<Int, String> {
+        val conn = URL("$SUPABASE_URL/rest/v1/rpc/reject_booking_offer").openConnection() as HttpURLConnection
+        return try {
+            conn.requestMethod = "POST"
+            conn.connectTimeout = 8000
+            conn.readTimeout = 8000
+            conn.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+            conn.setRequestProperty("Authorization", "Bearer $jwt")
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.doOutput = true
+            conn.outputStream.use { it.write("""{"p_booking_id":"$bookingId"}""".toByteArray()) }
+            val code = conn.responseCode
+            val body = (if (code in 200..299) conn.inputStream else conn.errorStream)
+                ?.bufferedReader()?.use { it.readText() } ?: ""
+            code to body
+        } finally {
+            conn.disconnect()
+        }
+    }
+
     private fun finishAndStop(reason: String) {
         if (isShuttingDown) {
             android.util.Log.d("BookingOverlay", "⚠️ finishAndStop already called, skipping duplicate")
