@@ -211,6 +211,7 @@ class BookingAlertActivity : AppCompatActivity() {
                 } else {
                     Log.d("BookingAlert", "⏱️ Countdown finished - auto closing")
                     Toast.makeText(this@BookingAlertActivity, "Booking timed out", Toast.LENGTH_SHORT).show()
+                    BackendSync.ackDeliveryAsync(applicationContext, ackBookingId ?: bookingId, "offer_expired", ackRequestId)
                     retireOffer(accepted = false)
                     finish()
                 }
@@ -259,6 +260,7 @@ class BookingAlertActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
             acceptInFlight = true
+            BackendSync.ackDeliveryAsync(applicationContext, bookingId, "accept_tapped", ackRequestId)
 
             stopAlertSound()
             stopVibration()
@@ -278,6 +280,7 @@ class BookingAlertActivity : AppCompatActivity() {
 
         btnReject.setOnClickListener {
             Log.d("BookingAlert", "❌ Reject button clicked")
+            BackendSync.ackDeliveryAsync(applicationContext, bookingId, "reject_tapped", ackRequestId)
             stopAlertSound()
             stopVibration()
             countdownHandler?.removeCallbacks(countdownRunnable)
