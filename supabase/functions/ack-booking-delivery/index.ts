@@ -43,7 +43,11 @@ type FailureEvent =
   | "session_missing"       // overlay/activity aborted: no usable session on device
   | "service_start_blocked"  // OS refused the background service/activity start
   | "offer_queued_expired";  // offer waited in the device FIFO queue and expired before it could be shown
-type EventType = TimestampEvent | FailureEvent;
+// Worker interactions (v10.0.02+). Logged to booking_offer_events only —
+// they never change dispatch/assignment state (accept/reject RPCs stay authoritative).
+type InteractionEvent = "accept_tapped" | "reject_tapped" | "offer_expired" | "offer_dismissed";
+const INTERACTION_EVENTS = new Set<string>(["accept_tapped", "reject_tapped", "offer_expired", "offer_dismissed"]);
+type EventType = TimestampEvent | FailureEvent | InteractionEvent;
 
 const TS_COL: Record<TimestampEvent, "push_delivered_at" | "popup_shown_at" | "worker_seen_at"> = {
   push_received: "push_delivered_at",
@@ -87,15 +91,18 @@ Deno.serve(async (req) => {
       event_type?: EventType;
       app_version?: string;
       device_info?: Record<string, unknown>;
+      app_state?: string;
     };
     const { booking_id, booking_request_id, worker_id, app_version, device_info } = body;
+    const app_state = typeof body.app_state === "string" ? body.app_state.slice(0, 40) : null;
     const rawEvent = body.event_type ?? (body as any).event;
 
     if (!rawEvent) return json({ error: "missing_event_type" }, 400);
     const event_type = (EVENT_ALIASES[rawEvent as string] ?? rawEvent) as EventType;
     const isFailure = FAILURE_EVENTS.has(event_type as FailureEvent);
     const isTimestamp = (event_type as TimestampEvent) in TS_COL;
-    if (!isFailure && !isTimestamp) {
+    const isInteraction = INTERACTION_EVENTS.has(event_type);
+    if (!isFailure && !isTimestamp && !isInteraction) {
       return json({ error: "invalid_event_type", got: rawEvent }, 400);
     }
     if (booking_id && !uuidRe.test(booking_id)) return json({ error: "bad booking_id" }, 400);
@@ -157,6 +164,26 @@ Deno.serve(async (req) => {
     }
 
     const nowIso = new Date().toISOString();
+
+    // Append-only lifecycle log, deduped by (booking_request_id, event_type).
+    // Ownership: reqRow was looked up scoped to the resolved worker above.
+    const { error: evErr } = await admin.from("booking_offer_events").upsert({
+      booking_request_id: reqRow.id,
+      booking_id: reqRow.booking_id,
+      worker_id: resolvedWorkerRowId,
+      event_type,
+      source: "device",
+      app_state,
+      app_version: app_version ?? null,
+      device_info: device_info ?? null,
+      occurred_at: nowIso,
+    }, { onConflict: "booking_request_id,event_type", ignoreDuplicates: true });
+    if (evErr) console.warn("[ack] event_log_failed", evErr.message);
+
+    if (isInteraction) {
+      return json({ ok: !evErr, event_type, booking_request_id: reqRow.id, logged: !evErr }, evErr ? 500 : 200);
+    }
+
     const updates: Record<string, unknown> = {};
 
     if (isFailure) {

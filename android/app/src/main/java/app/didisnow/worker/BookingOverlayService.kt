@@ -488,6 +488,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                     countdownHandler?.postDelayed(this, 1000)
                 } else {
                     android.util.Log.d("BookingOverlay", "⏱️ Countdown expired - auto closing")
+                    BackendSync.ackDeliveryAsync(applicationContext, bookingId, "offer_expired", currentBookingRequestId)
                     finishAndStop("countdown_expired")
                 }
             }
@@ -520,6 +521,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
             }
             acceptInFlight = true
             android.util.Log.d("BookingOverlay", "✅ Accept button clicked")
+            BackendSync.ackDeliveryAsync(applicationContext, bookingId, "accept_tapped", currentBookingRequestId)
             
             // Disable buttons immediately to prevent double taps
             val acceptBtn = overlayView?.findViewById<Button>(R.id.btnAccept)
@@ -622,6 +624,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
             
             acceptInFlight = true
             android.util.Log.d("BookingOverlay", "❌ Reject button clicked")
+            BackendSync.ackDeliveryAsync(applicationContext, bookingId, "reject_tapped", currentBookingRequestId)
             
             // Disable buttons immediately
             val acceptBtn = overlayView?.findViewById<Button>(R.id.btnAccept)

@@ -65,8 +65,9 @@ export async function tryAccept(bookingId: string, workerId?: string): Promise<{
     }
   }
   
-  // ACK that the worker tapped Accept (fire-and-forget)
+  // ACK that the worker tapped Accept (fire-and-forget, never blocks)
   ackBookingDelivery({ bookingId, event: "worker_seen" }).catch(() => {});
+  ackBookingDelivery({ bookingId, event: "accept_tapped" }).catch(() => {});
 
   const { data, error } = await supabase.rpc("try_accept_booking", { p_booking_id: bookingId });
   
@@ -98,8 +99,9 @@ export async function rejectBooking(bookingId: string, workerId: string) {
     return { success: false, shouldNotify: false };
   }
   
-  // ACK that the worker tapped Reject (fire-and-forget)
+  // ACK that the worker tapped Reject (fire-and-forget, never blocks)
   ackBookingDelivery({ bookingId, event: "worker_seen" }).catch(() => {});
+  ackBookingDelivery({ bookingId, event: "reject_tapped" }).catch(() => {});
 
   const { data, error } = await supabase.rpc("reject_booking_request", {
     p_booking_id: bookingId,

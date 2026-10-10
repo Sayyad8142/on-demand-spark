@@ -889,6 +889,48 @@ export type Database = {
           },
         ]
       }
+      booking_offer_events: {
+        Row: {
+          app_state: string | null
+          app_version: string | null
+          booking_id: string
+          booking_request_id: string
+          created_at: string
+          device_info: Json | null
+          event_type: string
+          id: string
+          occurred_at: string
+          source: string
+          worker_id: string
+        }
+        Insert: {
+          app_state?: string | null
+          app_version?: string | null
+          booking_id: string
+          booking_request_id: string
+          created_at?: string
+          device_info?: Json | null
+          event_type: string
+          id?: string
+          occurred_at?: string
+          source?: string
+          worker_id: string
+        }
+        Update: {
+          app_state?: string | null
+          app_version?: string | null
+          booking_id?: string
+          booking_request_id?: string
+          created_at?: string
+          device_info?: Json | null
+          event_type?: string
+          id?: string
+          occurred_at?: string
+          source?: string
+          worker_id?: string
+        }
+        Relationships: []
+      }
       booking_prealert_sends: {
         Row: {
           attempts: number

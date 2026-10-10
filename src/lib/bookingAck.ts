@@ -18,7 +18,18 @@ import { Capacitor } from "@capacitor/core";
 import { CURRENT_VERSION_NAME } from "@/config/version";
 
 
-export type AckEvent = "push_received" | "popup_shown" | "worker_seen";
+export type AckEvent =
+  | "push_received"
+  | "popup_shown"
+  | "worker_seen"
+  // Worker interactions — logged only, never change dispatch/assignment.
+  | "accept_tapped"
+  | "reject_tapped"
+  | "offer_expired"
+  | "offer_dismissed";
+
+const appState = () =>
+  typeof document !== "undefined" ? (document.visibilityState === "visible" ? "foreground" : "background") : "unknown";
 
 const acked = new Set<string>();
 const key = (id: string, ev: AckEvent) => `${id}::${ev}`;
@@ -96,6 +107,7 @@ export async function ackBookingDelivery({ bookingId, bookingRequestId, event }:
         booking_request_id: bookingRequestId,
         ...(workerId ? { worker_id: workerId } : {}),
         event_type: event,
+        app_state: appState(),
 
         app_version: CURRENT_VERSION_NAME,
         device_info: {

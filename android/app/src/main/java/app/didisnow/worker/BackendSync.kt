@@ -341,13 +341,18 @@ object BackendSync {
      * WorkManager survives process freeze/kill — while still attempting the
      * inline send for the fast path. The entry is removed on inline success.
      */
+    /** Events emitted at most once per offer per device (duplicate protection). */
+    private val ONCE_PER_OFFER_EVENTS = setOf(
+        "popup_shown", "worker_seen", "accept_tapped", "reject_tapped", "offer_expired", "offer_dismissed",
+    )
+
     fun ackDeliveryAsync(ctx: Context, bookingId: String?, event: String, bookingRequestId: String? = null) {
         if (bookingId.isNullOrBlank() && bookingRequestId.isNullOrBlank()) return
         val app = ctx.applicationContext
         // Duplicate protection: Activity + Overlay can both present the same
         // offer (fallback races). Presentation events are emitted exactly once
         // per offer per device within DEDUP_TTL_MS.
-        if (event == "popup_shown" || event == "worker_seen") {
+        if (event in ONCE_PER_OFFER_EVENTS) {
             if (!markAckOnce(app, event, bookingRequestId ?: bookingId!!)) {
                 WorkerLog.add(app, "ACK", "skip duplicate $event booking=${bookingId ?: bookingRequestId}")
                 return
