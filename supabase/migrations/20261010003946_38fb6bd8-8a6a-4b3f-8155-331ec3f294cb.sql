@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.log_booking_offer_server_events() FROM PUBLIC, anon, authenticated;
