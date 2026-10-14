@@ -283,38 +283,38 @@ export default function CompleteBooking() {
           setResolvedOtpMode(bookingId, "legacy");
         } else {
           stopSlowTimer();
-          switch (v2.code) {
+          switch (v2Err.code) {
             case "INCORRECT_OTP":
-              handleWrongOtp(otpV2ErrorMessage(v2.code), enteredOtp);
+              handleWrongOtp(otpV2ErrorMessage(v2Err.code), enteredOtp);
               break;
             case "START_NOT_VERIFIED":
               haptic.error();
-              setError(otpV2ErrorMessage(v2.code));
+              setError(otpV2ErrorMessage(v2Err.code));
               setErrorKind("other");
               break;
             case "LOCKED":
             case "LIFETIME_LOCKED":
               haptic.error();
-              setError(otpV2ErrorMessage(v2.code));
+              setError(otpV2ErrorMessage(v2Err.code));
               setErrorKind("other");
               break;
             case "NOT_CURRENT_ASSIGNMENT":
             case "TERMINAL_BOOKING":
             case "BOOKING_NOT_FOUND":
               haptic.error();
-              setError(otpV2ErrorMessage(v2.code));
+              setError(otpV2ErrorMessage(v2Err.code));
               setErrorKind("other");
               setTimeout(() => navigate("/home", { replace: true }), 1800);
               break;
             case "NETWORK":
               haptic.error();
-              setError(otpV2ErrorMessage(v2.code));
+              setError(otpV2ErrorMessage(v2Err.code));
               setErrorKind("network");
               trackEvent("otp_network_error", bookingId, { gateway: "v2" });
               break;
             default:
               haptic.error();
-              setError(otpV2ErrorMessage(v2.code, v2.message));
+              setError(otpV2ErrorMessage(v2Err.code, v2.message));
               setErrorKind("other");
           }
           setLoading(false);

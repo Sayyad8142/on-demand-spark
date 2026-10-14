@@ -117,7 +117,8 @@ export default function StartBooking() {
         return;
       }
 
-      const code: OtpV2ErrorCode = result.code;
+      const v2Err = result as { ok: false; code: OtpV2ErrorCode; message: string };
+      const code: OtpV2ErrorCode = v2Err.code;
       switch (code) {
         case "LEGACY_BOOKING": {
           setResolvedOtpMode(bookingId, "legacy");
@@ -147,7 +148,7 @@ export default function StartBooking() {
           fail("network", otpV2ErrorMessage(code));
           break;
         default:
-          fail("other", otpV2ErrorMessage(code, result.message));
+          fail("other", otpV2ErrorMessage(code, v2Err.message));
       }
     } catch (err) {
       fail("network", "Network error. Please try again.");
