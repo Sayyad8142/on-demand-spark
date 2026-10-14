@@ -14,6 +14,12 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import {
+  verifyCompletionOtp,
+  getResolvedOtpMode,
+  setResolvedOtpMode,
+  otpV2ErrorMessage,
+} from "@/lib/otpV2";
 
 interface PayoutSummary {
   payout_amount: number;
@@ -226,14 +232,10 @@ export default function CompleteBooking() {
   const handleSubmit = async (isRetry = false, submittedOtp?: string) => {
     if (submitLockRef.current || loading) return;
     const enteredOtp = normalizeOtp(submittedOtp ?? otpRef.current ?? otp);
+    // Security: never log OTP values — lengths only.
     logOtpDebug("submit", {
       bookingId,
-      rawOtpState: `[${otp}]`,
-      rawRef: `[${otpRef.current}]`,
-      submittedOtp: submittedOtp === undefined ? undefined : `[${submittedOtp}]`,
-      cleanedOtp: `[${enteredOtp}]`,
       length: enteredOtp.length,
-      values: enteredOtp.split("").map((v) => `[${v}]`),
       isRetry,
     });
 
