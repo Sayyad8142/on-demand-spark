@@ -276,7 +276,8 @@ export default function CompleteBooking() {
           if (payoutRow) setPayout(payoutRow as PayoutSummary);
           return;
         }
-        if (v2.code === "LEGACY_BOOKING") {
+        const v2Err = v2 as { ok: false; code: import("@/lib/otpV2").OtpV2ErrorCode; message: string };
+        if (v2Err.code === "LEGACY_BOOKING") {
           // Legacy booking: fall through to the legacy completion flow below
           // (allowed only while V2 enforcement is disabled).
           setResolvedOtpMode(bookingId, "legacy");
