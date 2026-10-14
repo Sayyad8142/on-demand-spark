@@ -314,7 +314,7 @@ export default function CompleteBooking() {
               break;
             default:
               haptic.error();
-              setError(otpV2ErrorMessage(v2Err.code, v2.message));
+              setError(otpV2ErrorMessage(v2Err.code, v2Err.message));
               setErrorKind("other");
           }
           setLoading(false);
