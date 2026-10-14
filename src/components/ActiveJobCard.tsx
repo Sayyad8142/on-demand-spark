@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Phone, Volume2, Utensils, Zap, PlusCircle, Sparkles, CookingPot, KeyRound, Banknote, CreditCard, AlertTriangle } from "lucide-react";
+import { Check, Phone, Volume2, Utensils, Zap, PlusCircle, Sparkles, CookingPot, KeyRound, Banknote, CreditCard, AlertTriangle, Play } from "lucide-react";
 import { BookingWithAddress } from "@/lib/address";
 import { getUnitDisplay } from "@/lib/address";
 import { useCommunityFee } from "@/hooks/useCommunityFee";
@@ -328,24 +328,43 @@ export default function ActiveJobCard({
           }
         </div>
 
-        {/* Complete with OTP Button (above Call Manager) */}
+        {/* Two-stage OTP: Start Booking first, Complete with OTP only after started */}
         <div className="px-3">
-          <Button
-            size="lg"
-            className={`w-full h-14 text-lg font-bold shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98] ${
-              isWorkCompletedDisabled ?
-              "bg-gray-400 hover:bg-gray-400 cursor-not-allowed text-white/80" :
-              "bg-red-500 hover:bg-red-600 text-white"}`
-            }
-            onClick={() => navigate(`/complete-booking/${booking.id}`)}
-            disabled={isWorkCompletedDisabled}>
-            {updating ? "Updating..." :
-              <>
-                <KeyRound className="w-6 h-6 mr-2" />
-                Complete with OTP
-              </>
-            }
-          </Button>
+          {booking.status === "started" ? (
+            <Button
+              size="lg"
+              className={`w-full h-14 text-lg font-bold shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98] ${
+                isWorkCompletedDisabled ?
+                "bg-gray-400 hover:bg-gray-400 cursor-not-allowed text-white/80" :
+                "bg-red-500 hover:bg-red-600 text-white"}`
+              }
+              onClick={() => navigate(`/complete-booking/${booking.id}`)}
+              disabled={isWorkCompletedDisabled}>
+              {updating ? "Updating..." :
+                <>
+                  <KeyRound className="w-6 h-6 mr-2" />
+                  Complete with OTP
+                </>
+              }
+            </Button>
+          ) : (
+            <Button
+              size="lg"
+              className={`w-full h-14 text-lg font-bold shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98] ${
+                isWorkCompletedDisabled ?
+                "bg-gray-400 hover:bg-gray-400 cursor-not-allowed text-white/80" :
+                "bg-blue-600 hover:bg-blue-700 text-white"}`
+              }
+              onClick={() => navigate(`/start-booking/${booking.id}`)}
+              disabled={isWorkCompletedDisabled}>
+              {updating ? "Updating..." :
+                <>
+                  <Play className="w-6 h-6 mr-2" />
+                  Start Booking
+                </>
+              }
+            </Button>
+          )}
         </div>
 
         {/* Call Manager Button */}

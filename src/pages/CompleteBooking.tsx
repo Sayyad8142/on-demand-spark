@@ -14,6 +14,12 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import {
+  verifyCompletionOtp,
+  getResolvedOtpMode,
+  setResolvedOtpMode,
+  otpV2ErrorMessage,
+} from "@/lib/otpV2";
 
 interface PayoutSummary {
   payout_amount: number;
@@ -226,14 +232,10 @@ export default function CompleteBooking() {
   const handleSubmit = async (isRetry = false, submittedOtp?: string) => {
     if (submitLockRef.current || loading) return;
     const enteredOtp = normalizeOtp(submittedOtp ?? otpRef.current ?? otp);
+    // Security: never log OTP values — lengths only.
     logOtpDebug("submit", {
       bookingId,
-      rawOtpState: `[${otp}]`,
-      rawRef: `[${otpRef.current}]`,
-      submittedOtp: submittedOtp === undefined ? undefined : `[${submittedOtp}]`,
-      cleanedOtp: `[${enteredOtp}]`,
       length: enteredOtp.length,
-      values: enteredOtp.split("").map((v) => `[${v}]`),
       isRetry,
     });
 
@@ -254,6 +256,73 @@ export default function CompleteBooking() {
     startSlowTimer();
 
     try {
+      // ── OTP V2 gateway first (unless this booking is known legacy) ──
+      // Mode can only be resolved by the gateway itself (LEGACY_BOOKING error);
+      // the resolved mode is cached per booking.
+      if (getResolvedOtpMode(bookingId) !== "legacy") {
+        const v2 = await verifyCompletionOtp(bookingId, enteredOtp);
+        if (v2.ok) {
+          setResolvedOtpMode(bookingId, "v2");
+          haptic.success();
+          setSuccess(true);
+          trackEvent("otp_success", bookingId, { gateway: "v2", idempotent: v2.idempotent });
+          // V2 gateway does not return payout details — fetch the existing
+          // payout read-only for the earnings display. Never initiate one here.
+          const { data: payoutRow } = await supabase
+            .from("worker_payouts")
+            .select("payout_amount, platform_fee, gross_amount, status, payout_method, paid_at")
+            .eq("booking_id", bookingId)
+            .maybeSingle();
+          if (payoutRow) setPayout(payoutRow as PayoutSummary);
+          return;
+        }
+        const v2Err = v2 as { ok: false; code: import("@/lib/otpV2").OtpV2ErrorCode; message: string };
+        if (v2Err.code === "LEGACY_BOOKING") {
+          // Legacy booking: fall through to the legacy completion flow below
+          // (allowed only while V2 enforcement is disabled).
+          setResolvedOtpMode(bookingId, "legacy");
+        } else {
+          stopSlowTimer();
+          switch (v2Err.code) {
+            case "INCORRECT_OTP":
+              handleWrongOtp(otpV2ErrorMessage(v2Err.code), enteredOtp);
+              break;
+            case "START_NOT_VERIFIED":
+              haptic.error();
+              setError(otpV2ErrorMessage(v2Err.code));
+              setErrorKind("other");
+              break;
+            case "LOCKED":
+            case "LIFETIME_LOCKED":
+              haptic.error();
+              setError(otpV2ErrorMessage(v2Err.code));
+              setErrorKind("other");
+              break;
+            case "NOT_CURRENT_ASSIGNMENT":
+            case "TERMINAL_BOOKING":
+            case "BOOKING_NOT_FOUND":
+              haptic.error();
+              setError(otpV2ErrorMessage(v2Err.code));
+              setErrorKind("other");
+              setTimeout(() => navigate("/home", { replace: true }), 1800);
+              break;
+            case "NETWORK":
+              haptic.error();
+              setError(otpV2ErrorMessage(v2Err.code));
+              setErrorKind("network");
+              trackEvent("otp_network_error", bookingId, { gateway: "v2" });
+              break;
+            default:
+              haptic.error();
+              setError(otpV2ErrorMessage(v2Err.code, v2Err.message));
+              setErrorKind("other");
+          }
+          setLoading(false);
+          return;
+        }
+      }
+
+      // ── Legacy completion flow (pre-V2 bookings) ──
       const { data, error: fnError } = await supabase.functions.invoke("complete-booking-with-otp", {
         body: { booking_id: bookingId, otp: enteredOtp },
       });
@@ -408,11 +477,7 @@ export default function CompleteBooking() {
                   const cleaned = normalizeOtp(v);
                   otpRef.current = cleaned;
                   setOtp(cleaned);
-                  logOtpDebug("change", {
-                    rawValue: `[${v}]`,
-                    cleanedOtp: `[${cleaned}]`,
-                    length: cleaned.length,
-                  });
+                  logOtpDebug("change", { length: cleaned.length });
                   // Only clear validation error once user actually has < 4 digits
                   if (error && errorKind === "validation" && cleaned.length < 4) {
                     setError(null);
@@ -427,11 +492,7 @@ export default function CompleteBooking() {
                     autoVerifyTimerRef.current = null;
                   }
                   if (cleaned.length === 4 && !loading && !submitLockRef.current) {
-                    console.log("[OTP_AUTO_VERIFY]", {
-                      finalOtp: cleaned,
-                      length: cleaned.length,
-                      source: "auto",
-                    });
+                    console.log("[OTP_AUTO_VERIFY]", { length: cleaned.length, source: "auto" });
                     // Small debounce so React state + native IME settle on low-end Android
                     autoVerifyTimerRef.current = window.setTimeout(() => {
                       autoVerifyTimerRef.current = null;
@@ -486,7 +547,7 @@ export default function CompleteBooking() {
 
             {debugMode && (
               <div className="mt-4 rounded-xl border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
-                OTP: [{otpRef.current}] · length: {normalizeOtp(otpRef.current).length} · valid: {String(normalizeOtp(otpRef.current).length === 4)}
+                OTP length: {normalizeOtp(otpRef.current).length} · valid: {String(normalizeOtp(otpRef.current).length === 4)}
               </div>
             )}
           </div>
@@ -496,12 +557,7 @@ export default function CompleteBooking() {
             <Button
               onClick={() => {
                 const current = normalizeOtp(otpRef.current || otp);
-                console.log("[OTP_MANUAL_VERIFY]", {
-                  otpFromState: otp,
-                  otpFromRef: otpRef.current,
-                  cleanedOtp: current,
-                  source: "manual",
-                });
+                console.log("[OTP_MANUAL_VERIFY]", { length: current.length, source: "manual" });
                 handleSubmit(false, current);
               }}
               disabled={loading || normalizeOtp(otp).length !== 4}
