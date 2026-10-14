@@ -491,11 +491,7 @@ export default function CompleteBooking() {
                     autoVerifyTimerRef.current = null;
                   }
                   if (cleaned.length === 4 && !loading && !submitLockRef.current) {
-                    console.log("[OTP_AUTO_VERIFY]", {
-                      finalOtp: cleaned,
-                      length: cleaned.length,
-                      source: "auto",
-                    });
+                    console.log("[OTP_AUTO_VERIFY]", { length: cleaned.length, source: "auto" });
                     // Small debounce so React state + native IME settle on low-end Android
                     autoVerifyTimerRef.current = window.setTimeout(() => {
                       autoVerifyTimerRef.current = null;
