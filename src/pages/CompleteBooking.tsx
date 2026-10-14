@@ -256,6 +256,72 @@ export default function CompleteBooking() {
     startSlowTimer();
 
     try {
+      // ── OTP V2 gateway first (unless this booking is known legacy) ──
+      // Mode can only be resolved by the gateway itself (LEGACY_BOOKING error);
+      // the resolved mode is cached per booking.
+      if (getResolvedOtpMode(bookingId) !== "legacy") {
+        const v2 = await verifyCompletionOtp(bookingId, enteredOtp);
+        if (v2.ok) {
+          setResolvedOtpMode(bookingId, "v2");
+          haptic.success();
+          setSuccess(true);
+          trackEvent("otp_success", bookingId, { gateway: "v2", idempotent: v2.idempotent });
+          // V2 gateway does not return payout details — fetch the existing
+          // payout read-only for the earnings display. Never initiate one here.
+          const { data: payoutRow } = await supabase
+            .from("worker_payouts")
+            .select("payout_amount, platform_fee, gross_amount, status, payout_method, paid_at")
+            .eq("booking_id", bookingId)
+            .maybeSingle();
+          if (payoutRow) setPayout(payoutRow as PayoutSummary);
+          return;
+        }
+        if (v2.code === "LEGACY_BOOKING") {
+          // Legacy booking: fall through to the legacy completion flow below
+          // (allowed only while V2 enforcement is disabled).
+          setResolvedOtpMode(bookingId, "legacy");
+        } else {
+          stopSlowTimer();
+          switch (v2.code) {
+            case "INCORRECT_OTP":
+              handleWrongOtp(otpV2ErrorMessage(v2.code), enteredOtp);
+              break;
+            case "START_NOT_VERIFIED":
+              haptic.error();
+              setError(otpV2ErrorMessage(v2.code));
+              setErrorKind("other");
+              break;
+            case "LOCKED":
+            case "LIFETIME_LOCKED":
+              haptic.error();
+              setError(otpV2ErrorMessage(v2.code));
+              setErrorKind("other");
+              break;
+            case "NOT_CURRENT_ASSIGNMENT":
+            case "TERMINAL_BOOKING":
+            case "BOOKING_NOT_FOUND":
+              haptic.error();
+              setError(otpV2ErrorMessage(v2.code));
+              setErrorKind("other");
+              setTimeout(() => navigate("/home", { replace: true }), 1800);
+              break;
+            case "NETWORK":
+              haptic.error();
+              setError(otpV2ErrorMessage(v2.code));
+              setErrorKind("network");
+              trackEvent("otp_network_error", bookingId, { gateway: "v2" });
+              break;
+            default:
+              haptic.error();
+              setError(otpV2ErrorMessage(v2.code, v2.message));
+              setErrorKind("other");
+          }
+          setLoading(false);
+          return;
+        }
+      }
+
+      // ── Legacy completion flow (pre-V2 bookings) ──
       const { data, error: fnError } = await supabase.functions.invoke("complete-booking-with-otp", {
         body: { booking_id: bookingId, otp: enteredOtp },
       });
@@ -410,11 +476,7 @@ export default function CompleteBooking() {
                   const cleaned = normalizeOtp(v);
                   otpRef.current = cleaned;
                   setOtp(cleaned);
-                  logOtpDebug("change", {
-                    rawValue: `[${v}]`,
-                    cleanedOtp: `[${cleaned}]`,
-                    length: cleaned.length,
-                  });
+                  logOtpDebug("change", { length: cleaned.length });
                   // Only clear validation error once user actually has < 4 digits
                   if (error && errorKind === "validation" && cleaned.length < 4) {
                     setError(null);
