@@ -546,7 +546,7 @@ export default function CompleteBooking() {
 
             {debugMode && (
               <div className="mt-4 rounded-xl border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
-                OTP: [{otpRef.current}] · length: {normalizeOtp(otpRef.current).length} · valid: {String(normalizeOtp(otpRef.current).length === 4)}
+                OTP length: {normalizeOtp(otpRef.current).length} · valid: {String(normalizeOtp(otpRef.current).length === 4)}
               </div>
             )}
           </div>
@@ -556,12 +556,7 @@ export default function CompleteBooking() {
             <Button
               onClick={() => {
                 const current = normalizeOtp(otpRef.current || otp);
-                console.log("[OTP_MANUAL_VERIFY]", {
-                  otpFromState: otp,
-                  otpFromRef: otpRef.current,
-                  cleanedOtp: current,
-                  source: "manual",
-                });
+                console.log("[OTP_MANUAL_VERIFY]", { length: current.length, source: "manual" });
                 handleSubmit(false, current);
               }}
               disabled={loading || normalizeOtp(otp).length !== 4}
