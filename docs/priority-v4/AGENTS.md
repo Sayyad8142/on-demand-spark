@@ -7,3 +7,5 @@
 - Represent corrections as complete append-only per-parent revision chains and order projections by (as_of, calculation_revision). Why: deterministic replay must preserve decisions and reject stale publishing.
 - Require external protected control-plane target attestation before any future SQL transaction. Why: session settings and database names cannot prove nonproduction identity.
 - Keep synthetic canonical anchors separate from legacy tables and require verified source manifests at ingestion. Why: internal foreign keys enforce consistency, not real-world ownership.
+- Run reviewed pure tests from a temporary copied import graph with a minimal environment and positively verified kernel network denial. Why: project config/preloads and service transports must not enter the permitted offline test run.
+- Derive stored total by integer rational accumulation before half-up rounding, and publish by history-insert trigger within the adapter's outer transaction. Why: decimal rounding ties and partial publication must not depend on display components or caller sequencing.

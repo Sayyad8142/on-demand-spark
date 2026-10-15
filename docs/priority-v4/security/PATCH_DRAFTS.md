@@ -7,6 +7,8 @@ Backend target: `supabase/functions/ack-booking-delivery/index.ts`, shared Fireb
 
 Legacy ACKs must not contribute trusted evidence or update trusted health/request timestamps. A transitional diagnostic-only endpoint must quarantine legacy claims without declaring trusted success. Compatibility impact of ceasing old writes/watchdog behavior requires coordinated native testing and separate live approval. Do not switch the existing endpoint backend-only. Pure bindOffer tests use already verified mock actors; they DO NOT test cryptographic token validity or prove deployed security.
 
+**Phase 5 compatibility boundary:** The preceding paragraph describes the future versioned trust boundary, NOT permission to stop today's legacy ACK writes or alter its success/watchdog semantics. Current released ACK transport, aliases, lookup, response shape, seen/popup writes, queue retries and watchdog cancellation remain unchanged. Do not repurpose existing success to mean new cryptographic proof, or return new 401/403 responses to old clients. V4 consumes none of these unverified claims as trusted evidence. Prepare an isolated dual-wire adapter with separate `diagnostic_received` versus `trusted_evidence_accepted` results; only deploy after the supported-client/device matrix and an explicit joint backend/native approval. Telemetry outage/auth failure never gates Accept/Reject or changes worker availability/health operationally in this phase.
+
 Adjacent untrusted source candidates: `worker-heartbeat`, `worker-keepalive-ack`, `report-missed-booking`. Their future hardening needs own rollout approval; until then exclude these body-identity claims from V4 evidence. No operational reachability/dispatch change now.
 
 ## 3. Leaderboard authentication
