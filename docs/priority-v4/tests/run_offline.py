@@ -8,6 +8,7 @@ import platform
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -57,7 +58,7 @@ def main():
             dest = base/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_text(text)
         env = {'PATH':str(Path(bun).parent)+':/usr/bin:/bin','HOME':tmp,'TMPDIR':tmp}
         # Independent positive control proves sockets are blocked before any unit test is run.
-        probe = subprocess.run(['/usr/bin/python3','-c',"import socket;\ntry: socket.socket(); raise SystemExit(1)\nexcept PermissionError: print('NETWORK_DENIAL_VERIFIED')"],cwd=tmp,env=env,preexec_fn=deny_network,close_fds=True)
+        probe = subprocess.run([sys.executable,'-c',"import socket;\ntry: socket.socket(); raise SystemExit(1)\nexcept PermissionError: print('NETWORK_DENIAL_VERIFIED')"],cwd=tmp,env=env,preexec_fn=deny_network,close_fds=True)
         if probe.returncode: raise SystemExit('REFUSED: network denial probe failed')
         print('REVIEWED_GRAPH=7; ENVIRONMENT_SCRUBBED; NO_APP_CONFIG; NETWORK_DENIED',flush=True)
         result = subprocess.run([bun,'test','./tests/engine.test.ts','./tests/phase5.test.ts'],cwd=tmp,env=env,preexec_fn=deny_network,close_fds=True)
