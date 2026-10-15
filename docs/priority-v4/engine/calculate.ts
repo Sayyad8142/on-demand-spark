@@ -14,9 +14,9 @@ export type Opportunity = Base & { response: 'accept'|'reject'|'none'|'failed'; 
 export type Completion = Base;
 export type Input = { asOf: number; outcomes: Outcome[]; quality: Quality[]; opportunities: Opportunity[]; completions: Completion[]; reliabilityTrusted: boolean; qualityTrusted: boolean; opportunityCoverageTrusted: boolean; latePolicyApproved?: boolean };
 export type Result = { formula: string; total: string; components: Record<'R'|'Q'|'O'|'J'|'A',number>; exactComponents: Record<string,string>; validOpportunityCount: number; provisional: boolean; exclusions: string[]; neutralReasons: string[] };
-const decay = (asOf: number, at: number, window: number) => f(window-(asOf-at),window);
+const decay = (asOf: number, at: number, duration: number) => f(duration-(asOf-at),duration);
 /** Conflicting duplicates are all quarantined: input order cannot choose an adjudication. */
-function canonical<T extends Base>(rows: T[], asOf: number, window: number | undefined, exclusions: string[]): T[] {
+function canonical<T extends Base>(rows: T[], asOf: number, duration: number | undefined, exclusions: string[]): T[] {
   const groups = new Map<string,T[]>();
   for (const row of rows) {
     if (!row || typeof row!=='object' || typeof row.key!=='string' || !row.key || !Number.isSafeInteger(row.occurredAt) || row.occurredAt<0 || !Number.isSafeInteger(row.knownAt) || row.knownAt < row.occurredAt || row.occurredAt >= asOf) { exclusions.push('invalid-or-future-evidence'); continue; }
@@ -36,7 +36,7 @@ function canonical<T extends Base>(rows: T[], asOf: number, window: number | und
       selected=unique[unique.length-1]; if(!selected) continue;
     } else if(unique.length>1) { exclusions.push(`conflicting:${key}`); continue; }
     if(selected.verified!==true || selected.synthetic===true) { exclusions.push('unverified-or-test'); continue; }
-    if(window!==undefined && !inWindow(selected.occurredAt,asOf,window)) continue;
+    if(duration!==undefined && !inWindow(selected.occurredAt,asOf,duration)) continue;
     result.push(selected);
   }
   return result;
