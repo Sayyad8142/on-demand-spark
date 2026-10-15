@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { WORKER_BOOKING_COLUMNS } from "@/lib/workerBookingColumns";
 import { Database } from "@/integrations/supabase/types";
 import { isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 
-type Booking = Database["public"]["Tables"]["bookings"]["Row"];
+// Customer completion code is never loaded by the Worker App.
+type Booking = Omit<Database["public"]["Tables"]["bookings"]["Row"], "completion_otp">;
 
 /**
  * Fetches the active job for the authenticated worker.
@@ -75,7 +77,7 @@ export function useActiveJob(userId: string | undefined) {
 
       const { data, error } = await supabase
         .from("bookings")
-        .select("*")
+        .select(WORKER_BOOKING_COLUMNS)
         .eq("worker_id", workerId)
         .in("status", ["assigned", "accepted", "on_the_way", "started"])
         .order("created_at", { ascending: false })

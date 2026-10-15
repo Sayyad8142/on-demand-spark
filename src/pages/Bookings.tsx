@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { WORKER_BOOKING_COLUMNS } from "@/lib/workerBookingColumns";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Calendar, Loader2, CheckCircle2, Clock, XCircle, MapPin, Star, IndianRupee, RefreshCw } from "lucide-react";
@@ -74,7 +75,7 @@ export default function Bookings() {
     const to = from + PAGE_SIZE - 1;
     const { data, error } = await supabase
       .from('bookings')
-      .select('*')
+      .select(WORKER_BOOKING_COLUMNS)
       .eq('worker_id', wId)
       .in('status', HISTORY_STATUSES as unknown as string[])
       .order('created_at', { ascending: false })

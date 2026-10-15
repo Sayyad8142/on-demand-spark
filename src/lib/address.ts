@@ -2,7 +2,8 @@ import { Database } from "@/integrations/supabase/types";
 import { isVillaCommunity, isBlockBasedCommunity } from "@/lib/communityTypes";
 
 
-type Booking = Database["public"]["Tables"]["bookings"]["Row"];
+// Worker App never loads the customer's completion code.
+type Booking = Omit<Database["public"]["Tables"]["bookings"]["Row"], "completion_otp">;
 
 // For now, bookings table uses text fields (community, flat_no) rather than foreign keys
 // This type represents the current schema without joins

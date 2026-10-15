@@ -12,8 +12,9 @@ import { supabase } from "@/integrations/supabase/client";
  *     START_NOT_VERIFIED, INCORRECT_OTP, LOCKED, LIFETIME_LOCKED,
  *     OTP_V2_UNAVAILABLE, OTP_V2_OPERATION_FAILED
  *
- * Proposed (NOT in the contract yet — reported as a missing backend contract):
- *   { action: "resolve_mode", booking_id } → { success: true, mode: "v2" | "legacy" }
+ * Proposed (NOT in the contract yet — see docs/otp-v2-resolve-mode-contract.md):
+ *   { action: "resolve_mode", booking_id }
+ *   → { success: true, booking_id, otp_mode: "v2" | "legacy", assignment_generation, start_verified }
  *   Until the backend implements it, every booking resolves to "unavailable"
  *   and the job card shows a safe, non-actionable state (V2 client mode only).
  *
@@ -311,9 +312,16 @@ export function modeFromResult(result: OtpV2Result): OtpMode | null {
 }
 
 /**
- * Ask the backend which OTP mode a booking uses. Requires the proposed
- * `resolve_mode` gateway action; any other answer (404, unknown action,
- * network, timeout, malformed body) resolves to "unavailable" — never a guess.
+ * Ask the backend which OTP mode a booking uses (proposed `resolve_mode`
+ * action — see docs/otp-v2-resolve-mode-contract.md).
+ *
+ * Accepted success shape ONLY:
+ *   { success: true, booking_id: <same id>, otp_mode: "legacy" | "v2",
+ *     assignment_generation: number | null, start_verified?: boolean }
+ * Anything else (404, unknown action, network, timeout, malformed body,
+ * mismatched booking_id) resolves to "unavailable" — never a guess.
+ * NOT_CURRENT_ASSIGNMENT / TERMINAL_BOOKING / BOOKING_NOT_FOUND also clear the
+ * cached mode and ask the active-job screen to refetch.
  */
 export async function resolveOtpMode(bookingId: string): Promise<ResolvedOtpMode> {
   if (!bookingId) return "unavailable";
@@ -322,11 +330,32 @@ export async function resolveOtpMode(bookingId: string): Promise<ResolvedOtpMode
   if (!(await ensureWorkerSession())) return "unavailable";
 
   const raw = await invokeGateway({ action: "resolve_mode", booking_id: bookingId });
+  if (raw.kind === "http_error") {
+    const code = toErrorCode(raw.payload?.code ?? raw.payload?.error_code);
+    if (code === "NOT_CURRENT_ASSIGNMENT" || code === "TERMINAL_BOOKING" || code === "BOOKING_NOT_FOUND") {
+      forgetOtpMode(bookingId);
+      try {
+        window.dispatchEvent(new CustomEvent("bookingReassigned", { detail: { bookingId, source: "otp_resolve_mode" } }));
+      } catch {
+        // non-browser
+      }
+    }
+    return "unavailable";
+  }
   if (raw.kind !== "ok") return "unavailable";
   const body = (raw.data ?? {}) as Record<string, unknown>;
-  if (body.success === true && (body.mode === "v2" || body.mode === "legacy")) {
-    rememberOtpMode(bookingId, body.mode);
-    return body.mode;
+  const generationOk =
+    body.assignment_generation === null ||
+    body.assignment_generation === undefined ||
+    (typeof body.assignment_generation === "number" && Number.isInteger(body.assignment_generation));
+  if (
+    body.success === true &&
+    body.booking_id === bookingId &&
+    (body.otp_mode === "v2" || body.otp_mode === "legacy") &&
+    generationOk
+  ) {
+    rememberOtpMode(bookingId, body.otp_mode);
+    return body.otp_mode;
   }
   return "unavailable";
 }

@@ -360,15 +360,55 @@ describe("Mode resolution (unknown mode)", () => {
   it("resolver 404 / malformed / network → unavailable (no guess)", async () => {
     invoke.mockResolvedValueOnce(httpErr(404, {}));
     expect(await resolveOtpMode(B)).toBe("unavailable");
-    invoke.mockResolvedValueOnce(ok({ success: true, mode: "maybe" }));
+    invoke.mockResolvedValueOnce(ok({ success: true, booking_id: B, otp_mode: "maybe", assignment_generation: 1 }));
     expect(await resolveOtpMode(B)).toBe("unavailable");
     invoke.mockResolvedValueOnce(fetchErr());
     expect(await resolveOtpMode(B)).toBe("unavailable");
   });
 
-  it("explicit backend answer resolves the mode", async () => {
+  it("old draft shape { mode } is not accepted", async () => {
     invoke.mockResolvedValueOnce(ok({ success: true, mode: "legacy" }));
+    expect(await resolveOtpMode(B)).toBe("unavailable");
+  });
+
+  it("answer for a different booking_id is rejected", async () => {
+    invoke.mockResolvedValueOnce(ok({ success: true, booking_id: "other", otp_mode: "legacy", assignment_generation: 1 }));
+    expect(await resolveOtpMode(B)).toBe("unavailable");
+  });
+
+  it("non-integer assignment_generation is rejected", async () => {
+    invoke.mockResolvedValueOnce(ok({ success: true, booking_id: B, otp_mode: "v2", assignment_generation: "2" }));
+    expect(await resolveOtpMode(B)).toBe("unavailable");
+  });
+
+  it("explicit backend answer resolves the mode", async () => {
+    invoke.mockResolvedValueOnce(ok({ success: true, booking_id: B, otp_mode: "legacy", assignment_generation: 3, start_verified: false }));
     expect(await resolveOtpMode(B)).toBe("legacy");
     expect(invoke).toHaveBeenCalledWith("otp-v2-gateway", { body: { action: "resolve_mode", booking_id: B } });
+  });
+
+  it("stale worker (NOT_CURRENT_ASSIGNMENT) → unavailable, cache cleared, refetch requested", async () => {
+    rememberOtpMode(B, "v2");
+    __resetOtpV2State();
+    const seen: string[] = [];
+    const h = (e: Event) => seen.push((e as CustomEvent).detail.bookingId);
+    window.addEventListener("bookingReassigned", h);
+    invoke.mockResolvedValueOnce(httpErr(403, { success: false, code: "NOT_CURRENT_ASSIGNMENT" }));
+    expect(await resolveOtpMode(B)).toBe("unavailable");
+    window.removeEventListener("bookingReassigned", h);
+    expect(seen).toEqual([B]);
+    expect(getCachedOtpMode(B)).toBeNull();
+  });
+
+  it("cancelled/completed (TERMINAL_BOOKING) → unavailable", async () => {
+    invoke.mockResolvedValueOnce(httpErr(409, { success: false, code: "TERMINAL_BOOKING" }));
+    expect(await resolveOtpMode(B)).toBe("unavailable");
+  });
+
+  it("repeated calls are served from the short display cache", async () => {
+    invoke.mockResolvedValueOnce(ok({ success: true, booking_id: B, otp_mode: "v2", assignment_generation: 1 }));
+    expect(await resolveOtpMode(B)).toBe("v2");
+    expect(await resolveOtpMode(B)).toBe("v2");
+    expect(invoke).toHaveBeenCalledTimes(1);
   });
 });
