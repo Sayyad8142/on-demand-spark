@@ -78,20 +78,6 @@ export default function StartBooking() {
     }
   };
 
-  /** Legacy path: booking predates OTP V2 — use the existing status RPC. */
-  const startLegacy = async (): Promise<boolean> => {
-    const { error: rpcError } = await supabase.rpc("worker_set_booking_status", {
-      p_booking_id: bookingId,
-      p_new_status: "started",
-    });
-    if (rpcError) {
-      console.warn("[START_BOOKING] legacy start failed", { bookingId, message: rpcError.message });
-      fail("other", rpcError.message || "Could not start booking. Please try again.");
-      return false;
-    }
-    return true;
-  };
-
   const handleSubmit = async (submittedOtp?: string) => {
     if (submitLockRef.current || loading) return;
     const enteredOtp = normalizeOtp(submittedOtp ?? otpRef.current ?? otp);
@@ -109,46 +95,32 @@ export default function StartBooking() {
     try {
       const result = await verifyStartOtp(bookingId, enteredOtp);
 
-      if (result.ok) {
-        setResolvedOtpMode(bookingId, "v2");
+      if (!isOtpV2Failure(result)) {
         haptic.success();
         window.dispatchEvent(new CustomEvent("bookingStarted", { detail: { bookingId } }));
         navigate("/home", { replace: true });
         return;
       }
 
-      const v2Err = result as { ok: false; code: OtpV2ErrorCode; message: string };
-      const code: OtpV2ErrorCode = v2Err.code;
-      switch (code) {
-        case "LEGACY_BOOKING": {
-          setResolvedOtpMode(bookingId, "legacy");
-          const started = await startLegacy();
-          if (started) {
-            haptic.success();
-            window.dispatchEvent(new CustomEvent("bookingStarted", { detail: { bookingId } }));
-            navigate("/home", { replace: true });
-          }
-          break;
-        }
-        case "INCORRECT_OTP":
-          fail("wrong_otp", otpV2ErrorMessage(code), true);
-          break;
-        case "LOCKED":
-        case "LIFETIME_LOCKED":
-          fail("locked", otpV2ErrorMessage(code));
-          break;
-        case "NOT_CURRENT_ASSIGNMENT":
-        case "TERMINAL_BOOKING":
-        case "BOOKING_NOT_FOUND":
-          fail("terminal", otpV2ErrorMessage(code));
-          setTimeout(() => navigate("/home", { replace: true }), 1800);
-          break;
-        case "NETWORK":
-        case "OTP_V2_UNAVAILABLE":
-          fail("network", otpV2ErrorMessage(code));
-          break;
-        default:
-          fail("other", otpV2ErrorMessage(code, v2Err.message));
+      const code: OtpV2ErrorCode = result.code;
+      if (code === "LEGACY_BOOKING") {
+        // Legacy booking: original lifecycle has no Start step — go straight
+        // to the legacy completion screen. Nothing is marked started here.
+        navigate(`/complete-booking/${bookingId}`, { replace: true });
+        return;
+      }
+      if (code === "INCORRECT_OTP") {
+        fail("wrong_otp", otpV2ErrorMessage(code), true);
+      } else if (code === "LOCKED" || code === "LIFETIME_LOCKED") {
+        fail("locked", otpV2ErrorMessage(code));
+      } else if (TERMINAL_CODES.includes(code)) {
+        fail("terminal", otpV2ErrorMessage(code));
+        window.dispatchEvent(new CustomEvent("bookingReassigned", { detail: { bookingId } }));
+        setTimeout(() => navigate("/home", { replace: true }), 1800);
+      } else if (RETRYABLE_CODES.includes(code)) {
+        fail("network", otpV2ErrorMessage(code, result.message));
+      } else {
+        fail("other", otpV2ErrorMessage(code, result.message));
       }
     } catch (err) {
       fail("network", "Network error. Please try again.");
