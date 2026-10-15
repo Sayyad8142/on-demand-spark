@@ -3,9 +3,11 @@
  * This candidate deliberately LOCKS O=12 and A=6; future activation needs a new reviewed formula.
  */
 import { f, add, mul, div, clamp, sum, blend, maturity, approx, money, exact, type Fraction } from './rational';
-export const FORMULA = 'candidate-v4-phase3-neutral-oa';
-const DAY = 86400000;
-type Base = { key: string; occurredAt: number; knownAt: number; verified: boolean; synthetic?: boolean };
+export const FORMULA = 'candidate-v4-phase5-neutral-oa';
+export const DAY = 86400000;
+export const WINDOWS = { R:30*DAY, Q:90*DAY, J:7*DAY, A:14*DAY };
+export const inWindow = (at: number, asOf: number, duration: number) => Number.isSafeInteger(at) && Number.isSafeInteger(asOf) && Number.isSafeInteger(duration) && duration>0 && at>=asOf-duration && at<asOf;
+type Base = { key: string; occurredAt: number; knownAt: number; verified: boolean; synthetic?: boolean; revision?: number; supersedesRevision?: number | null };
 export type Outcome = Base & { kind: 'success'|'late'|'worker_cancel'|'no_show'|'excluded'; attributed: boolean };
 export type Quality = Base & { rating: number; source: 'genuine_rating'|'complaint'; reliabilityIncident?: boolean };
 export type Opportunity = Base & { response: 'accept'|'reject'|'none'|'failed'; confirmed: boolean; openAtResponse: boolean; actionableMs: number; trustedVisibility: boolean; eligible: boolean; online: boolean; technicalFailure: boolean; withdrawnEarly: boolean };
@@ -17,29 +19,38 @@ const decay = (asOf: number, at: number, window: number) => f(window-(asOf-at),w
 function canonical<T extends Base>(rows: T[], asOf: number, window: number | undefined, exclusions: string[]): T[] {
   const groups = new Map<string,T[]>();
   for (const row of rows) {
-    if (!row.key || !Number.isSafeInteger(row.occurredAt) || !Number.isSafeInteger(row.knownAt) || row.knownAt < row.occurredAt || row.occurredAt >= asOf || row.knownAt > asOf) { exclusions.push('invalid-or-future-evidence'); continue; }
-    if (!row.verified || row.synthetic) { exclusions.push('unverified-or-test'); continue; }
-    if (window !== undefined && row.occurredAt < asOf-window) continue;
+    if (!row || typeof row!=='object' || typeof row.key!=='string' || !row.key || !Number.isSafeInteger(row.occurredAt) || row.occurredAt<0 || !Number.isSafeInteger(row.knownAt) || row.knownAt < row.occurredAt || row.occurredAt >= asOf) { exclusions.push('invalid-or-future-evidence'); continue; }
+    if(row.knownAt>asOf) continue; // Replay sees only decisions already known at cutoff.
     groups.set(row.key,[...(groups.get(row.key) ?? []),row]);
   }
   const result: T[] = [];
   for (const [key, values] of [...groups.entries()].sort(([a],[b])=>a<b?-1:a>b?1:0)) {
-    const first = values[0]; if (!first) continue;
     const signature = (row: T) => JSON.stringify(Object.entries(row).sort(([a],[b])=>a<b?-1:a>b?1:0));
-    if (values.some(v=>signature(v)!==signature(first))) { exclusions.push(`conflicting:${key}`); continue; }
-    result.push(first); if (values.length>1) exclusions.push(`deduplicated:${key}`);
+    const unique = [...new Map(values.map(v=>[signature(v),v])).values()];
+    if(unique.length<values.length) exclusions.push(`deduplicated:${key}`);
+    let selected = unique[0]; if(!selected) continue;
+    if(unique.some(v=>v.revision!==undefined)) {
+      unique.sort((a,b)=>(a.revision ?? 0)-(b.revision ?? 0));
+      const initial=unique[0]; if(!initial) continue;
+      if(unique.some((v,i)=>v.revision!==i+1 || (i===0?v.supersedesRevision!=null:v.supersedesRevision!==i) || v.occurredAt!==initial.occurredAt || (i>0 && v.knownAt<(unique[i-1]?.knownAt ?? 0)))) { exclusions.push(`invalid-revision-chain:${key}`); continue; }
+      selected=unique[unique.length-1]; if(!selected) continue;
+    } else if(unique.length>1) { exclusions.push(`conflicting:${key}`); continue; }
+    if(selected.verified!==true || selected.synthetic===true) { exclusions.push('unverified-or-test'); continue; }
+    if(window!==undefined && !inWindow(selected.occurredAt,asOf,window)) continue;
+    result.push(selected);
   }
   return result;
 }
 function validOpportunity(o: Opportunity): boolean {
-  if (!o.eligible || !o.online || o.technicalFailure || o.withdrawnEarly || o.response==='failed' || !Number.isSafeInteger(o.actionableMs) || o.actionableMs<0) return false;
-  const confirmedResponse = o.confirmed && o.openAtResponse && (o.response==='accept'||o.response==='reject');
-  return confirmedResponse || (o.response==='none' && o.trustedVisibility && o.actionableMs>=15000);
+  if (o.eligible!==true || o.online!==true || o.technicalFailure!==false || o.withdrawnEarly!==false || o.response==='failed' || !Number.isSafeInteger(o.actionableMs) || o.actionableMs<0) return false;
+  const confirmedResponse = o.confirmed===true && o.openAtResponse===true && (o.response==='accept'||o.response==='reject');
+  return confirmedResponse || (o.response==='none' && o.trustedVisibility===true && o.actionableMs>=15000);
 }
 export function calculate(input: Input): Result {
-  if (!Number.isSafeInteger(input.asOf) || input.asOf<0) throw new Error('Fixed nonnegative asOf required');
+  if (!input || !Number.isSafeInteger(input.asOf) || input.asOf<0) throw new Error('Fixed nonnegative asOf required');
+  if(![input.outcomes,input.quality,input.opportunities,input.completions].every(Array.isArray) || ![input.reliabilityTrusted,input.qualityTrusted,input.opportunityCoverageTrusted].every(v=>typeof v==='boolean') || (input.latePolicyApproved!==undefined && typeof input.latePolicyApproved!=='boolean')) throw new Error('Malformed input envelope');
   const exclusions: string[] = [], neutralReasons = ['Responsiveness locked at 12: provenance approval pending','Availability locked at 6: duration/attribution approval pending'];
-  const assignments = canonical(input.outcomes,input.asOf,30*DAY,exclusions).filter(o=>o.kind==='success'||(o.kind==='late' && input.latePolicyApproved && o.attributed)||((o.kind==='worker_cancel'||o.kind==='no_show')&&o.attributed));
+  const assignments = canonical(input.outcomes,input.asOf,WINDOWS.R,exclusions).filter(o=>o.kind==='success'||(o.kind==='late' && input.latePolicyApproved===true && o.attributed===true)||((o.kind==='worker_cancel'||o.kind==='no_show')&&o.attributed===true));
   let R = f(18), Q = f(15), J = f(9);
   if (input.reliabilityTrusted) {
     const successful = assignments.filter(o=>o.kind==='success'), faults = assignments.filter(o=>o.kind!=='success');
@@ -57,7 +68,7 @@ export function calculate(input: Input): Result {
     Q=blend(15,mul(f(25),div(add(f(6),U),add(f(10),W))),maturity(ratings.length));
   } else neutralReasons.push('Quality provenance gate failed');
   const lifetime = canonical(input.opportunities,input.asOf,undefined,exclusions).filter(validOpportunity);
-  const weekly = lifetime.filter(o=>o.occurredAt>=input.asOf-7*DAY);
+  const weekly = lifetime.filter(o=>inWindow(o.occurredAt,input.asOf,WINDOWS.J));
   const completions=canonical(input.completions,input.asOf,7*DAY,exclusions);
   if(input.opportunityCoverageTrusted) {
     const c=sum(completions.map(c=>decay(input.asOf,c.occurredAt,7*DAY)));
@@ -66,5 +77,5 @@ export function calculate(input: Input): Result {
   } else neutralReasons.push('Recent jobs held neutral: opportunity coverage untrusted');
   const components={R,Q,O:f(12),J,A:f(6)};
   const total=money(clamp(sum(Object.values(components)),f(0),f(100)));
-  return {formula:FORMULA,total,components:{R:approx(R),Q:approx(Q),O:12,J:approx(J),A:6},exactComponents:Object.fromEntries(Object.entries(components).map(([k,v])=>[k,exact(v)])),validOpportunityCount:lifetime.length,provisional:lifetime.length<10,exclusions,neutralReasons};
+  return {formula:FORMULA,total,components:{R:approx(R),Q:approx(Q),O:12,J:approx(J),A:6},exactComponents:Object.fromEntries(Object.entries(components).map(([k,v])=>[k,exact(v)])),validOpportunityCount:lifetime.length,provisional:lifetime.length<10,exclusions:exclusions.sort(),neutralReasons};
 }
