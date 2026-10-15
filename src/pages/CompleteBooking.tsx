@@ -14,12 +14,8 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import {
-  verifyCompletionOtp,
-  getResolvedOtpMode,
-  setResolvedOtpMode,
-  otpV2ErrorMessage,
-} from "@/lib/otpV2";
+import { otpV2ErrorMessage } from "@/lib/otpV2";
+import { decideCompletion, TERMINAL_CODES, RETRYABLE_CODES } from "@/lib/otpCompletionFlow";
 
 interface PayoutSummary {
   payout_amount: number;
@@ -306,7 +302,7 @@ export default function CompleteBooking() {
         bookingId,
         cleanedOtpLength: enteredOtp.length,
         hasError: !!fnError,
-        data,
+        // Response body intentionally not logged (may carry booking secrets).
         errorMessage: fnError?.message,
       });
 
