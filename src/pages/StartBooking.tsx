@@ -31,8 +31,9 @@ type ErrorKind = "validation" | "wrong_otp" | "locked" | "network" | "terminal" 
  * after confirmed backend success — never locally before verification.
  *
  * Legacy compatibility: if the gateway answers LEGACY_BOOKING, the booking
- * predates OTP V2 and the legacy status path (worker_set_booking_status) is
- * used instead. If the gateway is unavailable, nothing is started.
+ * predates OTP V2; the original lifecycle has no Start step, so the worker is
+ * sent to the legacy completion screen. Nothing is marked started locally.
+ * If the gateway is unavailable, nothing is started.
  */
 export default function StartBooking() {
   const { bookingId = "" } = useParams<{ bookingId: string }>();
@@ -48,6 +49,12 @@ export default function StartBooking() {
   const otpRef = useRef("");
   const otpContainerRef = useRef<HTMLDivElement | null>(null);
   const autoVerifyTimerRef = useRef<number | null>(null);
+
+  // V2 client switched off → original lifecycle has no Start step.
+  useEffect(() => {
+    if (!isOtpV2ClientEnabled()) navigate(`/complete-booking/${bookingId}`, { replace: true });
+  }, [bookingId, navigate]);
+
 
   // Auto-focus first OTP slot so the numeric keyboard opens
   useEffect(() => {
