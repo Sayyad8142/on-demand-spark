@@ -9,6 +9,13 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
+import {
+  isOtpV2ClientEnabled,
+  getCachedOtpMode,
+  resolveOtpMode,
+  getOtpCardAction,
+  type ResolvedOtpMode,
+} from "@/lib/otpV2";
 
 import serviceDishWashing from "@/assets/service-dish-washing.webp";
 import serviceFloorCleaning from "@/assets/service-floor-cleaning.webp";
@@ -49,6 +56,22 @@ export default function ActiveJobCard({
   const { i18n } = useTranslation();
   const navigate = useNavigate();
   const { breakdown: payoutBreakdown } = useCommunityFee(booking.community, booking.price_inr);
+
+  // OTP mode (display only — never authorizes anything). Resolved by the
+  // backend; unknown mode shows a safe, non-actionable state.
+  const v2Enabled = isOtpV2ClientEnabled();
+  const [otpMode, setOtpMode] = useState<ResolvedOtpMode | "resolving">(
+    () => getCachedOtpMode(booking.id) ?? "resolving",
+  );
+  const [modeAttempt, setModeAttempt] = useState(0);
+  useEffect(() => {
+    if (!v2Enabled) return;
+    let cancelled = false;
+    setOtpMode(getCachedOtpMode(booking.id) ?? "resolving");
+    resolveOtpMode(booking.id).then((m) => { if (!cancelled) setOtpMode(m); });
+    return () => { cancelled = true; };
+  }, [v2Enabled, booking.id, booking.status, modeAttempt]);
+  const otpAction = getOtpCardAction({ v2Enabled, mode: otpMode, status: booking.status });
 
   // Fetch per-task prices
   useEffect(() => {
