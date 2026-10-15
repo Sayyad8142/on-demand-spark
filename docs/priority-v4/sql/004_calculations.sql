@@ -1,14 +1,32 @@
--- DRAFT ONLY. NOT EXECUTED. Run only after independent isolated-target approval.
+-- DRAFT ONLY: NOT EXECUTED. External independently verified target attestation REQUIRED.
 BEGIN;
 DO $guard$
+DECLARE a record; sid text; db_oid oid;
 BEGIN
-  IF current_setting('priority_v4.environment', true) IS DISTINCT FROM 'isolated-synthetic'
-     OR current_setting('priority_v4.approval_ref', true) IS NULL
-     OR length(coalesce(current_setting('priority_v4.approval_ref', true), '')) < 12
-     OR current_setting('priority_v4.expected_database', true) IS DISTINCT FROM current_database()
-     OR current_database() <> 'isolated_v4_fixture'
-  THEN RAISE EXCEPTION 'V4 draft refused: approved isolated fixture database required'; END IF;
+  IF to_regclass('v4_target_attestation.approved_targets') IS NULL THEN
+    RAISE EXCEPTION 'V4 refused: independently provisioned target attestation absent';
+  END IF;
+  -- Protected attestation is provisioned separately by the verification owner, never by these drafts.
+  IF has_table_privilege('service_role','v4_target_attestation.approved_targets','INSERT,UPDATE,DELETE,TRUNCATE')
+     OR has_table_privilege('authenticated','v4_target_attestation.approved_targets','INSERT,UPDATE,DELETE,TRUNCATE')
+     OR has_table_privilege('anon','v4_target_attestation.approved_targets','INSERT,UPDATE,DELETE,TRUNCATE') THEN
+    RAISE EXCEPTION 'V4 refused: attestation writable by runtime roles';
+  END IF;
+  SELECT system_identifier::text INTO sid FROM pg_catalog.pg_control_system();
+  SELECT oid INTO db_oid FROM pg_catalog.pg_database WHERE datname=current_database();
+  SELECT * INTO STRICT a FROM v4_target_attestation.approved_targets
+    WHERE database_oid=db_oid AND cluster_system_identifier=sid AND runner_role=current_user;
+  IF a.project_id='paywwbuqycovjopryele' OR a.project_id !~ '^[a-z]{20}$'
+     OR a.environment <> 'isolated-synthetic' OR NOT a.control_plane_verified
+     OR a.approval_ref IS NULL OR length(a.approval_ref)<12
+     OR a.control_plane_evidence_hash !~ '^[a-f0-9]{64}$'
+     OR a.expires_at<=clock_timestamp()
+     OR current_setting('priority_v4.approved_test_project',true) IS DISTINCT FROM a.project_id
+     OR current_setting('priority_v4.approval_ref',true) IS DISTINCT FROM a.approval_ref THEN
+    RAISE EXCEPTION 'V4 refused: explicit verified nonproduction approval required';
+  END IF;
 END $guard$;
+
 
 CREATE TABLE public.v4_onboarding_progress (
   worker_id uuid NOT NULL, formula_id uuid NOT NULL REFERENCES public.v4_formula_versions(id), lifetime_opportunities integer NOT NULL CHECK(lifetime_opportunities>=0), first_at timestamptz, fifth_at timestamptz, tenth_at timestamptz, revision integer NOT NULL CHECK(revision>0), watermark timestamptz NOT NULL, PRIMARY KEY(worker_id,formula_id)
