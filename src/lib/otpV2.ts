@@ -12,12 +12,41 @@ import { supabase } from "@/integrations/supabase/client";
  *     START_NOT_VERIFIED, INCORRECT_OTP, LOCKED, LIFETIME_LOCKED,
  *     OTP_V2_UNAVAILABLE, OTP_V2_OPERATION_FAILED
  *
+ * Proposed (NOT in the contract yet — reported as a missing backend contract):
+ *   { action: "resolve_mode", booking_id } → { success: true, mode: "v2" | "legacy" }
+ *   Until the backend implements it, every booking resolves to "unavailable"
+ *   and the job card shows a safe, non-actionable state (V2 client mode only).
+ *
  * Security rules honored here:
- * - OTP values are NEVER logged or persisted (only lengths).
- * - Worker identity comes from the current Supabase session; nothing client-supplied.
- * - Duplicate submissions are blocked with a single-flight guard.
- * - Idempotent responses are treated as success (safe retry).
+ * - OTP values are NEVER logged or persisted.
+ * - Only the worker's current Supabase session token is sent (supabase-js
+ *   attaches it as `Authorization: Bearer`). No Firebase token, no worker id.
+ * - Duplicate submissions share one in-flight request.
+ * - Only an explicit LEGACY_BOOKING answer from the gateway, in the same
+ *   submission, may lead to the legacy completion path. The mode cache below
+ *   is display-only and is never used to authorize anything.
  */
+
+// ── Rollout switch ───────────────────────────────────────────────────
+// OFF: the app behaves exactly like the pre-V2 release (legacy lifecycle,
+// legacy completion function, no gateway calls) — identical to older
+// installed app versions, so turning it off adds no new exposure.
+// ON: two-stage V2 flow with strict mode resolution.
+// Isolated integration testing can opt in per device with
+// localStorage.setItem("otp_v2_client", "1"). Enabling only makes the
+// client stricter; enforcement always belongs to the backend.
+export const OTP_V2_CLIENT_ENABLED_DEFAULT = false;
+
+export function isOtpV2ClientEnabled(): boolean {
+  try {
+    const override = localStorage.getItem("otp_v2_client");
+    if (override === "1") return true;
+    if (override === "0") return false;
+  } catch {
+    // storage unavailable
+  }
+  return OTP_V2_CLIENT_ENABLED_DEFAULT;
+}
 
 export type OtpV2Action = "verify_start" | "verify_completion";
 
@@ -36,11 +65,14 @@ export type OtpV2ErrorCode =
   | "LIFETIME_LOCKED"
   | "OTP_V2_UNAVAILABLE"
   | "OTP_V2_OPERATION_FAILED"
-  | "NETWORK";
+  | "NETWORK"
+  | "TIMEOUT";
 
-export type OtpV2Result =
-  | { ok: true; status: "started" | "completed"; idempotent: boolean }
-  | { ok: false; code: OtpV2ErrorCode; message: string };
+export type OtpV2Success = { ok: true; status: "started" | "completed"; idempotent: boolean };
+export type OtpV2Failure = { ok: false; code: OtpV2ErrorCode; message: string };
+export type OtpV2Result = OtpV2Success | OtpV2Failure;
+
+export const isOtpV2Failure = (r: OtpV2Result): r is OtpV2Failure => r.ok === false;
 
 const KNOWN_CODES: readonly OtpV2ErrorCode[] = [
   "INVALID_REQUEST",
@@ -59,8 +91,16 @@ const KNOWN_CODES: readonly OtpV2ErrorCode[] = [
   "OTP_V2_OPERATION_FAILED",
 ];
 
+export const GATEWAY_TIMEOUT_MS = 20_000;
+
 const normalizeOtp = (value: unknown) =>
   String(value ?? "").replace(/\D/g, "").trim().slice(0, 4);
+
+const failure = (code: OtpV2ErrorCode, message?: string): OtpV2Failure => ({
+  ok: false,
+  code,
+  message: message || otpV2ErrorMessage(code),
+});
 
 // Single-flight guard: one in-flight request per action+booking.
 const inFlight = new Map<string, Promise<OtpV2Result>>();
@@ -83,58 +123,133 @@ function toErrorCode(raw: unknown): OtpV2ErrorCode {
   return KNOWN_CODES.includes(code) ? code : "OTP_V2_OPERATION_FAILED";
 }
 
-async function callGateway(action: OtpV2Action, bookingId: string, otp: string): Promise<OtpV2Result> {
-  let fnError: unknown = null;
-  let data: unknown = null;
+/**
+ * Make sure a current worker Supabase session exists before calling the
+ * gateway; refresh it when it is about to expire. Returns false when the
+ * worker must sign in again.
+ */
+async function ensureWorkerSession(): Promise<boolean> {
   try {
-    const res = await supabase.functions.invoke("otp-v2-gateway", {
-      body: { action, booking_id: bookingId, otp },
-    });
-    fnError = res.error;
-    data = res.data;
-  } catch (err) {
-    console.warn("[OTP_V2] network failure", { action, bookingId, message: err instanceof Error ? err.message : "unknown" });
-    return { ok: false, code: "NETWORK", message: "Network error. Please try again." };
-  }
-
-  if (fnError) {
-    const payload = await extractErrorPayload(fnError);
-    // Function not deployed / unreachable → treat as unavailable, never fall back silently.
-    const status = (fnError as { context?: Response })?.context?.status;
-    if (status === 404) {
-      console.warn("[OTP_V2] gateway not deployed (404)", { action, bookingId });
-      return { ok: false, code: "OTP_V2_UNAVAILABLE", message: "Verification service is temporarily unavailable." };
+    const { data, error } = await supabase.auth.getSession();
+    const session = data?.session;
+    if (error || !session?.access_token) return false;
+    const expiresAtMs = session.expires_at ? session.expires_at * 1000 : 0;
+    if (expiresAtMs && Date.now() > expiresAtMs - 60_000) {
+      const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError || !refreshed?.session?.access_token) return false;
     }
-    const code = toErrorCode(payload?.code ?? payload?.error_code ?? payload?.error);
-    const message = String(payload?.message ?? payload?.error ?? (fnError as Error).message ?? "Verification failed");
-    console.warn("[OTP_V2] gateway error", { action, bookingId, code, httpStatus: status ?? null });
-    return { ok: false, code, message };
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function refreshWorkerSession(): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.auth.refreshSession();
+    return !error && !!data?.session?.access_token;
+  } catch {
+    return false;
+  }
+}
+
+type RawResponse =
+  | { kind: "ok"; data: unknown }
+  | { kind: "http_error"; status: number | null; payload: Record<string, unknown> | null; message: string }
+  | { kind: "network" }
+  | { kind: "timeout" };
+
+async function invokeGateway(body: Record<string, unknown>): Promise<RawResponse> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const timeout = new Promise<RawResponse>((resolve) => {
+    timer = setTimeout(() => resolve({ kind: "timeout" }), GATEWAY_TIMEOUT_MS);
+  });
+  const call = (async (): Promise<RawResponse> => {
+    try {
+      const res = await supabase.functions.invoke("otp-v2-gateway", { body });
+      if (res.error) {
+        const payload = await extractErrorPayload(res.error);
+        const status = (res.error as { context?: Response })?.context?.status ?? null;
+        // FunctionsFetchError (no HTTP response at all) → network failure.
+        if (status === null && (res.error as { name?: string })?.name === "FunctionsFetchError") {
+          return { kind: "network" };
+        }
+        return { kind: "http_error", status, payload, message: (res.error as Error)?.message ?? "" };
+      }
+      return { kind: "ok", data: res.data };
+    } catch {
+      return { kind: "network" };
+    }
+  })();
+  try {
+    return await Promise.race([call, timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function callGateway(action: OtpV2Action, bookingId: string, otp: string): Promise<OtpV2Result> {
+  if (!(await ensureWorkerSession())) return failure("UNAUTHORIZED");
+
+  let raw = await invokeGateway({ action, booking_id: bookingId, otp });
+
+  // 401 = request rejected before processing → refresh once and retry once.
+  if (raw.kind === "http_error" && raw.status === 401) {
+    if (!(await refreshWorkerSession())) return failure("UNAUTHORIZED");
+    raw = await invokeGateway({ action, booking_id: bookingId, otp });
+    if (raw.kind === "http_error" && raw.status === 401) return failure("UNAUTHORIZED");
   }
 
-  const body = (data ?? {}) as Record<string, unknown>;
-  if (body.success === true) {
-    const status = body.status === "started" ? "started" : "completed";
-    return { ok: true, status, idempotent: body.idempotent === true };
+  if (raw.kind === "network") {
+    console.warn("[OTP_V2] network failure", { action, bookingId });
+    return failure("NETWORK");
+  }
+  if (raw.kind === "timeout") {
+    console.warn("[OTP_V2] timeout", { action, bookingId });
+    return failure("TIMEOUT");
+  }
+  if (raw.kind === "http_error") {
+    // Gateway not deployed / unreachable. Never treated as legacy.
+    if (raw.status === 404 && !raw.payload?.code && !raw.payload?.error_code) {
+      console.warn("[OTP_V2] gateway not deployed (404)", { action, bookingId });
+      return failure("OTP_V2_UNAVAILABLE");
+    }
+    const code = toErrorCode(raw.payload?.code ?? raw.payload?.error_code ?? raw.payload?.error);
+    console.warn("[OTP_V2] gateway error", { action, bookingId, code, httpStatus: raw.status });
+    return failure(code, otpV2ErrorMessage(code));
+  }
+
+  const body = (raw.data ?? {}) as Record<string, unknown>;
+  if (body.success === true && (body.status === "started" || body.status === "completed")) {
+    return { ok: true, status: body.status, idempotent: body.idempotent === true };
   }
 
   const code = toErrorCode(body.code ?? body.error_code ?? body.error);
-  const message = String(body.message ?? body.error ?? "Verification failed");
   console.warn("[OTP_V2] verification refused", { action, bookingId, code });
-  return { ok: false, code, message };
+  return failure(code, otpV2ErrorMessage(code));
 }
 
 async function verify(action: OtpV2Action, bookingId: string, otpRaw: string): Promise<OtpV2Result> {
   const otp = normalizeOtp(otpRaw);
   if (!bookingId || otp.length !== 4) {
-    return { ok: false, code: "INVALID_REQUEST", message: "Please enter the complete 4-digit OTP" };
+    return failure("INVALID_REQUEST", "Please enter the complete 4-digit OTP");
   }
   const key = `${action}:${bookingId}`;
   const existing = inFlight.get(key);
-  if (existing) return existing; // duplicate submission → reuse the in-flight promise
+  if (existing) return existing; // duplicate submission → share the in-flight request
 
-  const promise = callGateway(action, bookingId, otp).finally(() => {
-    inFlight.delete(key);
-  });
+  const promise = callGateway(action, bookingId, otp)
+    .then((result) => {
+      const learned = modeFromResult(result);
+      if (learned) rememberOtpMode(bookingId, learned);
+      if (isOtpV2Failure(result) && (result.code === "NOT_CURRENT_ASSIGNMENT" || result.code === "TERMINAL_BOOKING" || result.code === "BOOKING_NOT_FOUND")) {
+        forgetOtpMode(bookingId);
+      }
+      return result;
+    })
+    .finally(() => {
+      inFlight.delete(key);
+    });
   inFlight.set(key, promise);
   return promise;
 }
@@ -142,32 +257,103 @@ async function verify(action: OtpV2Action, bookingId: string, otpRaw: string): P
 export const verifyStartOtp = (bookingId: string, otp: string) => verify("verify_start", bookingId, otp);
 export const verifyCompletionOtp = (bookingId: string, otp: string) => verify("verify_completion", bookingId, otp);
 
-// ── OTP mode resolution ──────────────────────────────────────────────
-// The backend contract has no pre-call mode signal: a booking's OTP mode can
-// only be learned from the gateway's LEGACY_BOOKING error. We cache the
-// resolved mode per booking (sessionStorage) so each booking pays the
-// resolution cost once. "unknown" means no gateway call has resolved it yet.
+// ── OTP mode (display only) ──────────────────────────────────────────
+// Used only to choose which button the job card shows. It is kept in memory
+// (never persisted), expires quickly, and is NEVER consulted to authorize
+// legacy completion — that requires a LEGACY_BOOKING answer in the same
+// submission (see decideCompletion in otpCompletionFlow.ts).
 
-export type OtpMode = "v2" | "legacy" | "unknown";
+export type OtpMode = "v2" | "legacy";
+export type ResolvedOtpMode = OtpMode | "unavailable";
 
-const modeKey = (bookingId: string) => `otp_mode:${bookingId}`;
+export const MODE_CACHE_TTL_MS = 2 * 60 * 1000;
+const modeCache = new Map<string, { mode: OtpMode; at: number }>();
 
-export function getResolvedOtpMode(bookingId: string): OtpMode {
-  try {
-    const v = sessionStorage.getItem(modeKey(bookingId));
-    if (v === "v2" || v === "legacy") return v;
-  } catch {
-    // storage unavailable
-  }
-  return "unknown";
+export function rememberOtpMode(bookingId: string, mode: OtpMode): void {
+  modeCache.set(bookingId, { mode, at: Date.now() });
 }
 
-export function setResolvedOtpMode(bookingId: string, mode: Exclude<OtpMode, "unknown">): void {
-  try {
-    sessionStorage.setItem(modeKey(bookingId), mode);
-  } catch {
-    // storage unavailable
+export function forgetOtpMode(bookingId: string): void {
+  modeCache.delete(bookingId);
+}
+
+export function getCachedOtpMode(bookingId: string): OtpMode | null {
+  const hit = modeCache.get(bookingId);
+  if (!hit) return null;
+  if (Date.now() - hit.at > MODE_CACHE_TTL_MS) {
+    modeCache.delete(bookingId);
+    return null;
   }
+  return hit.mode;
+}
+
+/** Test helper. */
+export function __resetOtpV2State(): void {
+  modeCache.clear();
+  inFlight.clear();
+}
+
+const V2_ONLY_CODES: readonly OtpV2ErrorCode[] = [
+  "START_NOT_VERIFIED",
+  "INCORRECT_OTP",
+  "LOCKED",
+  "LIFETIME_LOCKED",
+  "CREDENTIAL_INVALID",
+  "INVALID_STATUS",
+];
+
+/** What a gateway answer proves about the booking's mode (null = nothing). */
+export function modeFromResult(result: OtpV2Result): OtpMode | null {
+  if (result.ok) return "v2";
+  if (result.code === "LEGACY_BOOKING") return "legacy";
+  if (V2_ONLY_CODES.includes(result.code)) return "v2";
+  return null;
+}
+
+/**
+ * Ask the backend which OTP mode a booking uses. Requires the proposed
+ * `resolve_mode` gateway action; any other answer (404, unknown action,
+ * network, timeout, malformed body) resolves to "unavailable" — never a guess.
+ */
+export async function resolveOtpMode(bookingId: string): Promise<ResolvedOtpMode> {
+  if (!bookingId) return "unavailable";
+  const cached = getCachedOtpMode(bookingId);
+  if (cached) return cached;
+  if (!(await ensureWorkerSession())) return "unavailable";
+
+  const raw = await invokeGateway({ action: "resolve_mode", booking_id: bookingId });
+  if (raw.kind !== "ok") return "unavailable";
+  const body = (raw.data ?? {}) as Record<string, unknown>;
+  if (body.success === true && (body.mode === "v2" || body.mode === "legacy")) {
+    rememberOtpMode(bookingId, body.mode);
+    return body.mode;
+  }
+  return "unavailable";
+}
+
+// ── Job card action ──────────────────────────────────────────────────
+export type OtpCardAction = "start" | "complete" | "resolving" | "unavailable" | "none";
+
+const ACTIVE_STATUSES = ["assigned", "accepted", "on_the_way", "started"];
+
+/**
+ * Which OTP action the job card offers.
+ * - Client V2 off → original legacy lifecycle: Complete from every active status.
+ * - Legacy booking → same original lifecycle, no Start OTP.
+ * - V2 booking → Start before verified start, Complete only once started.
+ * - Mode unknown → resolving/unavailable; never a completion shortcut.
+ */
+export function getOtpCardAction(params: {
+  v2Enabled: boolean;
+  mode: ResolvedOtpMode | "resolving";
+  status: string;
+}): OtpCardAction {
+  const { v2Enabled, mode, status } = params;
+  if (!ACTIVE_STATUSES.includes(status)) return "none";
+  if (!v2Enabled) return "complete";
+  if (mode === "legacy") return "complete";
+  if (mode === "v2") return status === "started" ? "complete" : "start";
+  return mode === "resolving" ? "resolving" : "unavailable";
 }
 
 /** User-facing message for a V2 error code. */
@@ -191,10 +377,16 @@ export function otpV2ErrorMessage(code: OtpV2ErrorCode, fallback?: string): stri
       return "Booking not found.";
     case "UNAUTHORIZED":
       return "Session expired. Please log in again.";
+    case "CREDENTIAL_INVALID":
+      return "The customer's code is not ready yet. Please call the manager.";
+    case "INVALID_STATUS":
+      return "This booking can't be updated right now.";
     case "OTP_V2_UNAVAILABLE":
       return "Verification service is temporarily unavailable. Please try again shortly.";
     case "NETWORK":
       return "Network error. Please try again.";
+    case "TIMEOUT":
+      return "The server is taking too long. Please try again.";
     default:
       return fallback || "Verification failed. Please try again.";
   }
