@@ -9,18 +9,19 @@ BEGIN
   -- Protected attestation is provisioned separately by the verification owner, never by these drafts.
   IF has_table_privilege('service_role','v4_target_attestation.approved_targets','INSERT,UPDATE,DELETE,TRUNCATE')
      OR has_table_privilege('authenticated','v4_target_attestation.approved_targets','INSERT,UPDATE,DELETE,TRUNCATE')
-     OR has_table_privilege('anon','v4_target_attestation.approved_targets','INSERT,UPDATE,DELETE,TRUNCATE') THEN
+     OR has_table_privilege('anon','v4_target_attestation.approved_targets','INSERT,UPDATE,DELETE,TRUNCATE')
+     OR has_table_privilege(current_user,'v4_target_attestation.approved_targets','INSERT,UPDATE,DELETE,TRUNCATE') THEN
     RAISE EXCEPTION 'V4 refused: attestation writable by runtime roles';
   END IF;
   SELECT system_identifier::text INTO sid FROM pg_catalog.pg_control_system();
   SELECT oid INTO db_oid FROM pg_catalog.pg_database WHERE datname=current_database();
   SELECT * INTO STRICT a FROM v4_target_attestation.approved_targets
     WHERE database_oid=db_oid AND cluster_system_identifier=sid AND runner_role=current_user;
-  IF a.project_id='paywwbuqycovjopryele' OR a.project_id !~ '^[a-z]{20}$'
-     OR a.environment <> 'isolated-synthetic' OR NOT a.control_plane_verified
+  IF a.project_id IS NULL OR a.project_id='paywwbuqycovjopryele' OR a.project_id !~ '^[a-z]{20}$'
+     OR a.environment IS DISTINCT FROM 'isolated-synthetic' OR a.control_plane_verified IS DISTINCT FROM true
      OR a.approval_ref IS NULL OR length(a.approval_ref)<12
-     OR a.control_plane_evidence_hash !~ '^[a-f0-9]{64}$'
-     OR a.expires_at<=clock_timestamp()
+     OR a.control_plane_evidence_hash IS NULL OR a.control_plane_evidence_hash !~ '^[a-f0-9]{64}$'
+     OR a.expires_at IS NULL OR NOT isfinite(a.expires_at) OR a.expires_at<=clock_timestamp()
      OR current_setting('priority_v4.approved_test_project',true) IS DISTINCT FROM a.project_id
      OR current_setting('priority_v4.approval_ref',true) IS DISTINCT FROM a.approval_ref THEN
     RAISE EXCEPTION 'V4 refused: explicit verified nonproduction approval required';
@@ -29,7 +30,7 @@ END $guard$;
 
 
 CREATE TABLE public.v4_assignment_outcomes (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), worker_id uuid NOT NULL, booking_id uuid NOT NULL, generation integer NOT NULL CHECK(generation>=0), accepted_at timestamptz NOT NULL, occurred_at timestamptz NOT NULL CHECK(occurred_at>=accepted_at), batch_id uuid NOT NULL REFERENCES public.v4_evidence_batches(id), UNIQUE(worker_id,booking_id,generation), FOREIGN KEY(worker_id,booking_id,generation) REFERENCES public.v4_assignments(worker_id,booking_id,generation)
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), worker_id uuid NOT NULL, booking_id uuid NOT NULL, generation integer NOT NULL CHECK(generation>=0), accepted_at timestamptz NOT NULL, occurred_at timestamptz NOT NULL CHECK(occurred_at>=accepted_at), batch_id uuid NOT NULL REFERENCES public.v4_evidence_batches(id), UNIQUE(worker_id,booking_id,generation), FOREIGN KEY(worker_id,booking_id,generation,accepted_at) REFERENCES public.v4_assignments(worker_id,booking_id,generation,accepted_at)
 );
 GRANT SELECT, INSERT ON public.v4_assignment_outcomes TO service_role;
 REVOKE ALL ON public.v4_assignment_outcomes FROM PUBLIC, anon, authenticated;
@@ -61,7 +62,7 @@ ALTER TABLE public.v4_fault_revisions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY v4_fault_revisions_server ON public.v4_fault_revisions FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 CREATE TABLE public.v4_quality_observations (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), worker_id uuid NOT NULL, booking_id uuid NOT NULL, generation integer NOT NULL CHECK(generation>=0), occurred_at timestamptz NOT NULL, batch_id uuid NOT NULL REFERENCES public.v4_evidence_batches(id), UNIQUE(worker_id,booking_id,generation), FOREIGN KEY(worker_id,booking_id,generation) REFERENCES public.v4_assignments(worker_id,booking_id,generation)
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), worker_id uuid NOT NULL, booking_id uuid NOT NULL, generation integer NOT NULL CHECK(generation>=0), occurred_at timestamptz NOT NULL, batch_id uuid NOT NULL REFERENCES public.v4_evidence_batches(id), UNIQUE(worker_id,booking_id,generation), FOREIGN KEY(worker_id,booking_id,generation,accepted_at) REFERENCES public.v4_assignments(worker_id,booking_id,generation,accepted_at)
 );
 GRANT SELECT, INSERT ON public.v4_quality_observations TO service_role;
 REVOKE ALL ON public.v4_quality_observations FROM PUBLIC, anon, authenticated;
