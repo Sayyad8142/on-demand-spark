@@ -304,7 +304,7 @@ const V2_ONLY_CODES: readonly OtpV2ErrorCode[] = [
 
 /** What a gateway answer proves about the booking's mode (null = nothing). */
 export function modeFromResult(result: OtpV2Result): OtpMode | null {
-  if (result.ok) return "v2";
+  if (!isOtpV2Failure(result)) return "v2";
   if (result.code === "LEGACY_BOOKING") return "legacy";
   if (V2_ONLY_CODES.includes(result.code)) return "v2";
   return null;
