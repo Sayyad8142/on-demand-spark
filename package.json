@@ -12,7 +12,8 @@
     "android:build": "bun run build && npx cap sync android && bun run android:verify-permissions && cd android && ./gradlew assembleRelease",
     "android:build:win": "bun run build && npx cap sync android && bun run android:verify-permissions && cd android && gradlew.bat assembleRelease",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.3",
@@ -83,6 +84,8 @@
   "devDependencies": {
     "@eslint/js": "^9.32.0",
     "@tailwindcss/typography": "^0.5.16",
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16",
     "@types/node": "^22.16.5",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
@@ -92,11 +95,13 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
+    "jsdom": "^20.0.3",
     "lovable-tagger": "^1.1.10",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
-    "vite": "^5.4.19"
+    "vite": "^5.4.19",
+    "vitest": "^3.2.4"
   }
 }

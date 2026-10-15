@@ -14,12 +14,8 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import {
-  verifyCompletionOtp,
-  getResolvedOtpMode,
-  setResolvedOtpMode,
-  otpV2ErrorMessage,
-} from "@/lib/otpV2";
+import { otpV2ErrorMessage } from "@/lib/otpV2";
+import { decideCompletion, TERMINAL_CODES, RETRYABLE_CODES } from "@/lib/otpCompletionFlow";
 
 interface PayoutSummary {
   payout_amount: number;
@@ -256,70 +252,46 @@ export default function CompleteBooking() {
     startSlowTimer();
 
     try {
-      // ── OTP V2 gateway first (unless this booking is known legacy) ──
-      // Mode can only be resolved by the gateway itself (LEGACY_BOOKING error);
-      // the resolved mode is cached per booking.
-      if (getResolvedOtpMode(bookingId) !== "legacy") {
-        const v2 = await verifyCompletionOtp(bookingId, enteredOtp);
-        if (v2.ok) {
-          setResolvedOtpMode(bookingId, "v2");
-          haptic.success();
-          setSuccess(true);
-          trackEvent("otp_success", bookingId, { gateway: "v2", idempotent: v2.idempotent });
-          // V2 gateway does not return payout details — fetch the existing
-          // payout read-only for the earnings display. Never initiate one here.
-          const { data: payoutRow } = await supabase
-            .from("worker_payouts")
-            .select("payout_amount, platform_fee, gross_amount, status, payout_method, paid_at")
-            .eq("booking_id", bookingId)
-            .maybeSingle();
-          if (payoutRow) setPayout(payoutRow as PayoutSummary);
-          return;
-        }
-        const v2Err = v2 as { ok: false; code: import("@/lib/otpV2").OtpV2ErrorCode; message: string };
-        if (v2Err.code === "LEGACY_BOOKING") {
-          // Legacy booking: fall through to the legacy completion flow below
-          // (allowed only while V2 enforcement is disabled).
-          setResolvedOtpMode(bookingId, "legacy");
+      // ── OTP V2 gateway first (when the V2 client is enabled) ──
+      // Legacy completion is allowed only when THIS gateway answer is
+      // LEGACY_BOOKING (or when the V2 client is switched off entirely).
+      const decision = await decideCompletion(bookingId, enteredOtp);
+      if (decision.path === "v2_completed") {
+        haptic.success();
+        setSuccess(true);
+        trackEvent("otp_success", bookingId, { gateway: "v2", idempotent: decision.idempotent });
+        // V2 gateway does not return payout details — fetch the existing
+        // payout read-only for the earnings display. Never initiate one here.
+        const { data: payoutRow } = await supabase
+          .from("worker_payouts")
+          .select("payout_amount, platform_fee, gross_amount, status, payout_method, paid_at")
+          .eq("booking_id", bookingId)
+          .maybeSingle();
+        if (payoutRow) setPayout(payoutRow as PayoutSummary);
+        return;
+      }
+      if (decision.path === "v2_error") {
+        stopSlowTimer();
+        haptic.error();
+        if (decision.code === "INCORRECT_OTP") {
+          handleWrongOtp(otpV2ErrorMessage(decision.code), enteredOtp);
+        } else if (TERMINAL_CODES.includes(decision.code)) {
+          setError(otpV2ErrorMessage(decision.code));
+          setErrorKind("other");
+          window.dispatchEvent(new CustomEvent("bookingReassigned", { detail: { bookingId } }));
+          setTimeout(() => navigate("/home", { replace: true }), 1800);
+        } else if (RETRYABLE_CODES.includes(decision.code)) {
+          setError(otpV2ErrorMessage(decision.code, decision.message));
+          setErrorKind("network");
+          trackEvent("otp_network_error", bookingId, { gateway: "v2", code: decision.code });
         } else {
-          stopSlowTimer();
-          switch (v2Err.code) {
-            case "INCORRECT_OTP":
-              handleWrongOtp(otpV2ErrorMessage(v2Err.code), enteredOtp);
-              break;
-            case "START_NOT_VERIFIED":
-              haptic.error();
-              setError(otpV2ErrorMessage(v2Err.code));
-              setErrorKind("other");
-              break;
-            case "LOCKED":
-            case "LIFETIME_LOCKED":
-              haptic.error();
-              setError(otpV2ErrorMessage(v2Err.code));
-              setErrorKind("other");
-              break;
-            case "NOT_CURRENT_ASSIGNMENT":
-            case "TERMINAL_BOOKING":
-            case "BOOKING_NOT_FOUND":
-              haptic.error();
-              setError(otpV2ErrorMessage(v2Err.code));
-              setErrorKind("other");
-              setTimeout(() => navigate("/home", { replace: true }), 1800);
-              break;
-            case "NETWORK":
-              haptic.error();
-              setError(otpV2ErrorMessage(v2Err.code));
-              setErrorKind("network");
-              trackEvent("otp_network_error", bookingId, { gateway: "v2" });
-              break;
-            default:
-              haptic.error();
-              setError(otpV2ErrorMessage(v2Err.code, v2Err.message));
-              setErrorKind("other");
-          }
-          setLoading(false);
-          return;
+          // START_NOT_VERIFIED, LOCKED, LIFETIME_LOCKED, UNAUTHORIZED,
+          // CREDENTIAL_INVALID, INVALID_STATUS, … — shown, never retried as legacy.
+          setError(otpV2ErrorMessage(decision.code, decision.message));
+          setErrorKind("other");
         }
+        setLoading(false);
+        return;
       }
 
       // ── Legacy completion flow (pre-V2 bookings) ──
@@ -330,7 +302,7 @@ export default function CompleteBooking() {
         bookingId,
         cleanedOtpLength: enteredOtp.length,
         hasError: !!fnError,
-        data,
+        // Response body intentionally not logged (may carry booking secrets).
         errorMessage: fnError?.message,
       });
 
