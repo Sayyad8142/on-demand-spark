@@ -12,7 +12,8 @@
     "android:build": "bun run build && npx cap sync android && bun run android:verify-permissions && cd android && ./gradlew assembleRelease",
     "android:build:win": "bun run build && npx cap sync android && bun run android:verify-permissions && cd android && gradlew.bat assembleRelease",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.3",
