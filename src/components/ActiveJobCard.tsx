@@ -351,9 +351,9 @@ export default function ActiveJobCard({
           }
         </div>
 
-        {/* Two-stage OTP: Start Booking first, Complete with OTP only after started */}
+        {/* OTP action: legacy → Complete from any active status; V2 → Start, then Complete; unknown → safe state */}
         <div className="px-3">
-          {booking.status === "started" ? (
+          {otpAction === "complete" ? (
             <Button
               size="lg"
               className={`w-full h-14 text-lg font-bold shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98] ${
@@ -370,7 +370,7 @@ export default function ActiveJobCard({
                 </>
               }
             </Button>
-          ) : (
+          ) : otpAction === "start" ? (
             <Button
               size="lg"
               className={`w-full h-14 text-lg font-bold shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98] ${
@@ -387,7 +387,20 @@ export default function ActiveJobCard({
                 </>
               }
             </Button>
-          )}
+          ) : otpAction === "resolving" ? (
+            <Button size="lg" disabled className="w-full h-14 text-base font-semibold rounded-xl">
+              Checking booking…
+            </Button>
+          ) : otpAction === "unavailable" ? (
+            <Button
+              size="lg"
+              variant="outline"
+              className="w-full h-14 text-base font-semibold rounded-xl"
+              onClick={() => setModeAttempt((n) => n + 1)}>
+              <AlertTriangle className="w-5 h-5 mr-2" />
+              Booking code check unavailable — tap to retry
+            </Button>
+          ) : null}
         </div>
 
         {/* Call Manager Button */}
