@@ -3,14 +3,15 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Loader2, AlertCircle, KeyRound, RefreshCw, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import {
   verifyStartOtp,
-  setResolvedOtpMode,
+  isOtpV2Failure,
+  isOtpV2ClientEnabled,
   otpV2ErrorMessage,
   type OtpV2ErrorCode,
 } from "@/lib/otpV2";
+import { TERMINAL_CODES, RETRYABLE_CODES } from "@/lib/otpCompletionFlow";
 
 const normalizeOtp = (value: unknown) =>
   String(value ?? "").replace(/\D/g, "").trim().slice(0, 4);
