@@ -1,5 +1,9 @@
 # Worker language translation
 
+## Signup Step 2
+- [ ] Simplify payout selection into visual QR-upload and manual UPI choices; preserve existing validation and bank fallback.
+- [ ] Check reported utils error and verify both choices in the preview; do not publish.
+
 - [x] Audit worker screens and display-only language gaps.
 - [x] Centralize translated display text, service labels and persistent language handling.
 - [x] Translate worker forms, bookings, earnings, profile, settings and shared dialogs (web presentation).
