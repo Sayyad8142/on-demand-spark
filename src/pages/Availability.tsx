@@ -346,7 +346,7 @@ export default function Availability() {
           {t('availability.title')}
         </h1>
         <p className="text-[12px] text-muted-foreground mt-1 font-medium">
-          <span style={{ color: GREEN }} className="font-semibold">{selectedCount} {displayText("slots")}</span>
+          <span style={{ color: GREEN }} className="font-semibold">{displayText('{{count}} slots', { count: selectedCount })}</span>
           <span className="mx-1.5 text-muted-foreground/50">·</span>
           {getDayName(activeDay)}
         </p>
@@ -456,7 +456,7 @@ export default function Availability() {
                     }
               }
             >
-              {slot.label}
+              {slot.label.replace('AM', displayText('AM')).replace('PM', displayText('PM'))}
             </button>
           ))}
         </div>

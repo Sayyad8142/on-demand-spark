@@ -261,7 +261,7 @@ export default function ActiveJobCard({
           }
           <div className={`text-center relative z-10 flex items-center justify-center gap-2 ${isVilla ? '' : 'mb-4'}`}>
             <p className="flat-number-text font-extrabold text-3xl tracking-wide uppercase">
-              {isVilla ? unit.label : `Flat ${booking.flat_no}`}
+              {isVilla ? `${displayText('Villa')} ${booking.flat_no}` : displayText('Flat {{number}}', { number: booking.flat_no ?? '' })}
             </p>
             <button
               onClick={speakFlatNo}
@@ -273,7 +273,7 @@ export default function ActiveJobCard({
           {phfParsed &&
             <div className="grid grid-cols-3 gap-3 relative z-10">
               <div className="text-center">
-                <p className="text-[10px] font-bold text-[#D6B88A] mb-2 tracking-wider">{unit.towerLabel}</p>
+                <p className="text-[10px] font-bold text-[#D6B88A] mb-2 tracking-wider">{displayText(unit.towerLabel)}</p>
                 <div className="bg-[#5A3423] rounded-xl py-4 shadow-inner border-2 border-[#D6B88A]/50">
                   <p className="text-3xl font-extrabold flat-number-text">{phfParsed.tower}</p>
                 </div>
@@ -303,7 +303,7 @@ export default function ActiveJobCard({
                 style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
                 {tasks.map((task) =>
                   <div key={task.label} className="w-full flex-shrink-0 relative">
-                    <img src={task.img} alt={task.label} className="w-full h-28 object-cover" />
+                    <img src={task.img} alt={displayText(task.label)} className="w-full h-28 object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
                     <div className="absolute bottom-0 right-0 p-3">
                       {task.price != null && task.price > 0 &&

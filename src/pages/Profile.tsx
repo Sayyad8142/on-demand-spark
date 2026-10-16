@@ -713,7 +713,7 @@ export default function Profile() {
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="w-full justify-between">
                           <span className="text-muted-foreground">
-                            {selectedServices.length > 0 ? `${selectedServices.length} selected` : displayText("Select services")}
+                            {selectedServices.length > 0 ? displayText('{{count}} selected', { count: selectedServices.length }) : displayText("Select services")}
                           </span>
                           <ChevronDown className="h-4 w-4 opacity-50" />
                         </Button>
@@ -728,7 +728,7 @@ export default function Profile() {
                           setSelectedServices(selectedServices.filter(s => s !== service.value));
                         }
                       }}>
-                            {service.icon} {service.label}
+                            {service.icon} {serviceLabel(service.value)}
                           </DropdownMenuCheckboxItem>)}
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -736,7 +736,7 @@ export default function Profile() {
                         {selectedServices.map(serviceValue => {
                       const service = SERVICES.find(s => s.value === serviceValue);
                       return <Badge key={serviceValue} variant="secondary" className="gap-1">
-                              {service?.label}
+                              {serviceLabel(serviceValue)}
                               <X className="h-3 w-3 cursor-pointer" onClick={() => setSelectedServices(selectedServices.filter(s => s !== serviceValue))} />
                             </Badge>;
                     })}
@@ -749,7 +749,7 @@ export default function Profile() {
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="w-full justify-between">
                           <span className="text-muted-foreground">
-                            {selectedCommunities.length > 0 ? `${selectedCommunities.length} selected` : displayText("Select communities")}
+                            {selectedCommunities.length > 0 ? displayText('{{count}} selected', { count: selectedCommunities.length }) : displayText("Select communities")}
                           </span>
                           <ChevronDown className="h-4 w-4 opacity-50" />
                         </Button>

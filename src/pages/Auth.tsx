@@ -736,7 +736,7 @@ export default function Auth() {
                         <span className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-xs">
                           {complete ? <Check className="h-3.5 w-3.5" /> : stepNumber}
                         </span>
-                        {label}
+                        {displayText(label)}
                       </button>
                     );
                   })}
@@ -777,7 +777,7 @@ export default function Auth() {
                       {SERVICES.map(service => {
                         const isSelected = signUpServices.includes(service.value);
                         const isMaid = service.value === "maid";
-                        const serviceTitle = isMaid ? displayText("Maid Service") : displayText("Bathroom Cleaning");
+                        const serviceTitle = serviceLabel(service.value);
                         const serviceImg = isMaid ? maidServiceIcon : bathroomServiceIcon;
                         const serviceDesc = isMaid
                           ? displayText("Sweeping, mopping, dishwashing & more")
@@ -906,7 +906,7 @@ export default function Auth() {
                             </p>
                             <p className="mt-0.5 text-[11px] text-muted-foreground">
                               {upiQrFilledFrom
-                                ? `Detected: ${upiQrFilledFrom} · Tap to re-scan`
+                                ? displayText('Detected: {{upi}} · Tap to re-scan', { upi: upiQrFilledFrom })
                                 : 'PhonePe • Google Pay • Paytm • BHIM'}
                             </p>
                           </div>
@@ -1103,8 +1103,8 @@ export default function Auth() {
                   </div>
 
                   <div className="space-y-3 rounded-2xl bg-muted/60 p-4 text-sm">
-                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">{displayText("Name")}</span><span className="text-right font-semibold">{signUpFullName || "Not entered"}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">{displayText("Phone")}</span><span className="text-right font-semibold">{signUpPhone || "Not entered"}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">{displayText("Name")}</span><span className="text-right font-semibold">{signUpFullName || displayText("Not entered")}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">{displayText("Phone")}</span><span className="text-right font-semibold">{signUpPhone || displayText("Not entered")}</span></div>
                     <div className="flex justify-between gap-3"><span className="text-muted-foreground">{displayText("Community")}</span><span className="text-right font-semibold">{selectedCommunityName}</span></div>
                     <div className="flex justify-between gap-3"><span className="text-muted-foreground">{displayText("Service")}</span><span className="text-right font-semibold">{selectedServiceLabels.length ? selectedServiceLabels.join(", ") : displayText("Not selected")}</span></div>
                     <div className="flex justify-between gap-3"><span className="text-muted-foreground">{displayText("Payout")}</span><span className="text-right font-semibold">{hasPayoutDetails ? displayText("Added") : displayText("Skipped for now")}</span></div>
