@@ -12,6 +12,7 @@ import {
 import { Trophy, Star, TrendingUp, TrendingDown, CheckCircle2, XCircle, AlertTriangle, Clock, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatBookingAddress } from "@/lib/address";
+import { priorityBadge } from "@/lib/priorityBadge";
 
 interface PriorityScoreCardProps {
   worker: {
@@ -38,11 +39,17 @@ type FaultEvent = {
   created_at: string;
 };
 
+const BADGE_STYLE = {
+  excellent: { emoji: "🥇", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
+  very_good: { emoji: "🥈", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/30" },
+  good: { emoji: "🥉", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/30" },
+  needs_improvement: { emoji: "⚠️", color: "text-orange-600 dark:text-orange-400", bg: "bg-orange-50 dark:bg-orange-950/30" },
+  low: { emoji: "⚠️", color: "text-red-600 dark:text-red-400", bg: "bg-red-50 dark:bg-red-950/30" },
+} as const;
+
 function rankFromScore(score: number) {
-  if (score >= 90) return { label: displayText("Top 10%"), emoji: "🥇", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30" };
-  if (score >= 75) return { label: displayText("Top 25%"), emoji: "🥈", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/30" };
-  if (score >= 50) return { label: displayText("Average"), emoji: "🥉", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/30" };
-  return { label: displayText("Needs Improvement"), emoji: "⚠️", color: "text-red-600 dark:text-red-400", bg: "bg-red-50 dark:bg-red-950/30" };
+  const b = priorityBadge(score);
+  return { label: displayText(b.label), ...BADGE_STYLE[b.level] };
 }
 
 function tierLabelFromScore(score: number) {

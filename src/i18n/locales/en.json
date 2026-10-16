@@ -249,7 +249,6 @@
     "manual": "manual",
     "Save_failed": "Save failed",
     "Could_not_read_image": "Could not read image",
-    "UPI_Details": "UPI Details",
     "Enter_UPI_ID_for_payouts_Bank_details_are_optional": "Enter UPI ID for payouts. Bank details are optional.",
     "One_last_step": "One last step!",
     "Enter_your_UPI_ID_so_we_can_send_your_earnings_Bank_details_are_optional_and_can_be_added_later": "Enter your UPI ID so we can send your earnings. Bank details are optional and can be added later.",
@@ -931,6 +930,11 @@
     "Villa": "Villa",
     "Resend_OTP": "Resend OTP",
     "Resend_in": "Resend in",
-    "Loading_session": "Loading session..."
+    "Loading_session": "Loading session...",
+    "Excellent": "Excellent",
+    "Very_Good": "Very Good",
+    "Good": "Good",
+    "Low_Priority": "Low Priority",
+    "Priority_Level": "Priority Level:"
   }
 }
