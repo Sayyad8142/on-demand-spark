@@ -249,7 +249,6 @@
     "manual": "మాన్యువల్",
     "Save_failed": "సేవ్ చేయడం విఫలమైంది",
     "Could_not_read_image": "చిత్రాన్ని చదవలేకపోయాము",
-    "UPI_Details": "UPI వివరాలు",
     "Enter_UPI_ID_for_payouts_Bank_details_are_optional": "చెల్లింపుల కోసం UPI IDని నమోదు చేయండి. బ్యాంక్ వివరాలు ఐచ్ఛికం.",
     "One_last_step": "ఇంకొక్క అడుగు!",
     "Enter_your_UPI_ID_so_we_can_send_your_earnings_Bank_details_are_optional_and_can_be_added_later": "మీ సంపాదనను పంపడానికి మీ UPI IDని నమోదు చేయండి. బ్యాంక్ వివరాలు ఐచ్ఛికం మరియు తర్వాత జోడించవచ్చు.",
@@ -932,6 +931,11 @@
     "Resend_OTP": "OTP మళ్లీ పంపండి",
     "Resend_in": "మళ్లీ పంపడానికి",
     "Availability": "అందుబాటు",
-    "Loading_session": "లాగిన్ వివరాలు లోడ్ అవుతున్నాయి..."
+    "Loading_session": "లాగిన్ వివరాలు లోడ్ అవుతున్నాయి...",
+    "Excellent": "అద్భుతం",
+    "Very_Good": "చాలా బాగుంది",
+    "Good": "బాగుంది",
+    "Low_Priority": "తక్కువ ప్రాధాన్యత",
+    "Priority_Level": "ప్రాధాన్యత స్థాయి:"
   }
 }

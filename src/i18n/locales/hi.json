@@ -249,7 +249,6 @@
     "manual": "मैनुअल",
     "Save_failed": "सहेजना विफल रहा",
     "Could_not_read_image": "छवि नहीं पढ़ सका",
-    "UPI_Details": "UPI विवरण",
     "Enter_UPI_ID_for_payouts_Bank_details_are_optional": "भुगतान के लिए UPI ID दर्ज करें। बैंक विवरण वैकल्पिक हैं।",
     "One_last_step": "एक आखिरी कदम!",
     "Enter_your_UPI_ID_so_we_can_send_your_earnings_Bank_details_are_optional_and_can_be_added_later": "अपनी UPI ID दर्ज करें ताकि हम आपकी कमाई भेज सकें। बैंक विवरण वैकल्पिक हैं और बाद में जोड़े जा सकते हैं।",
@@ -931,6 +930,11 @@
     "Villa": "विला",
     "Resend_OTP": "OTP फिर भेजें",
     "Resend_in": "फिर भेजने में",
-    "Loading_session": "लॉगिन जानकारी लोड हो रही है..."
+    "Loading_session": "लॉगिन जानकारी लोड हो रही है...",
+    "Excellent": "उत्कृष्ट",
+    "Very_Good": "बहुत अच्छा",
+    "Good": "अच्छा",
+    "Low_Priority": "कम प्राथमिकता",
+    "Priority_Level": "प्राथमिकता स्तर:"
   }
 }
