@@ -12,3 +12,9 @@
 - [x] Expand and run reviewed offline pure tests with scrubbed credentials and kernel-denied network: 125 passed, 0 failed, 432 assertions.
 - [x] Update coordinated Android/security specifications without changing released behavior.
 - [x] Deliver A–H report and STOP; environment creation/migrations require separate approval.
+
+## Phase 7
+- [x] Correct quality FK without fabricating accepted time; add synthetic ownership regression tests.
+- [x] Document separated provisioning/executor/runtime lifecycle and unresolved hosted limits.
+- [x] Audit all five SQL sources and record offline results: 135 passed, 0 failed; source-shape checks passed, explicitly not PostgreSQL validation.
+- [x] Deliver A–G report and STOP; no connections, SQL execution, migrations or deployments.

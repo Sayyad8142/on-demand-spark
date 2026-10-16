@@ -62,7 +62,7 @@ ALTER TABLE public.v4_fault_revisions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY v4_fault_revisions_server ON public.v4_fault_revisions FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 CREATE TABLE public.v4_quality_observations (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), worker_id uuid NOT NULL, booking_id uuid NOT NULL, generation integer NOT NULL CHECK(generation>=0), occurred_at timestamptz NOT NULL, batch_id uuid NOT NULL REFERENCES public.v4_evidence_batches(id), UNIQUE(worker_id,booking_id,generation), FOREIGN KEY(worker_id,booking_id,generation,accepted_at) REFERENCES public.v4_assignments(worker_id,booking_id,generation,accepted_at)
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), worker_id uuid NOT NULL, booking_id uuid NOT NULL, generation integer NOT NULL CHECK(generation>=0), occurred_at timestamptz NOT NULL, batch_id uuid NOT NULL REFERENCES public.v4_evidence_batches(id), UNIQUE(worker_id,booking_id,generation), FOREIGN KEY(worker_id,booking_id,generation) REFERENCES public.v4_assignments(worker_id,booking_id,generation)
 );
 GRANT SELECT, INSERT ON public.v4_quality_observations TO service_role;
 REVOKE ALL ON public.v4_quality_observations FROM PUBLIC, anon, authenticated;

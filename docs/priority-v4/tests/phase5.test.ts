@@ -3,6 +3,7 @@ import { calculate, DAY, WINDOWS, inWindow, type Input, type Quality, type Outco
 import { shouldPublish } from '../engine/projection';
 import { maturity, exact } from '../engine/rational';
 import { AS_OF, empty, outcomes, opportunities } from './fixtures';
+import { qualityAssignmentMatches } from '../security/contracts';
 
 describe('Phase 5 pure boundary contracts',()=>{
  for(const [lane,days] of [['R',30],['Q',90],['A',14],['J',7]] as const) {
@@ -31,6 +32,17 @@ describe('Phase 5 pure boundary contracts',()=>{
     else expect(r.components[lane]).toBeGreaterThan(lane==='R'?18:15);
    });
   }
+ }
+});
+
+describe('Phase 7 synthetic quality assignment identity (not SQL enforcement)',()=>{
+ const owner={workerId:'synthetic-worker',bookingId:'synthetic-booking',generation:0};
+ test('matching primary-key triple needs no accepted timestamp',()=>expect(qualityAssignmentMatches({...owner},owner)).toBe(true));
+ for(const patch of [{workerId:'other-worker'},{bookingId:'other-booking'},{generation:1},{workerId:''},{bookingId:''},{generation:-1},{generation:1.5},{generation:NaN},{generation:Infinity}]) {
+  test(`unrelated or invalid triple ${String(Object.values(patch)[0])} refused`,()=>{
+   expect(qualityAssignmentMatches({...owner,...patch},owner)).toBe(false);
+   expect(qualityAssignmentMatches(owner,{...owner,...patch})).toBe(false);
+  });
  }
 });
 
