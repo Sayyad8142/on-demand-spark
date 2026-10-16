@@ -1,0 +1,153 @@
+Phase 7 actual contained pure run (no SQL/auth/device execution)
+
+NETWORK_DENIAL_VERIFIED
+REVIEWED_GRAPH=7; ENVIRONMENT_SCRUBBED; NO_APP_CONFIG; NETWORK_DENIED
+bun test v1.3.3 (274e01c7)
+
+tests/engine.test.ts:
+(pass) isolated V4 candidate > no valid evidence is exactly 60.00 [2.18ms]
+(pass) isolated V4 candidate > unverified evidence remains neutral [2.49ms]
+(pass) isolated V4 candidate > five assignments are neutral; ten mature [2.30ms]
+(pass) isolated V4 candidate > ten cancellations and no-shows lower only R [4.47ms]
+(pass) isolated V4 candidate > unattributed cancellations excluded [0.81ms]
+(pass) isolated V4 candidate > duplicate faults count once [0.56ms]
+(pass) isolated V4 candidate > conflicting duplicate quarantined independent of order [0.31ms]
+(pass) isolated V4 candidate > five and ten opportunity onboarding thresholds [3.94ms]
+(pass) isolated V4 candidate > confirmed acceptance and rejection count without visibility [0.51ms]
+(pass) isolated V4 candidate > unverified push, sent-only, offline, unavailable, failed and early withdrawal excluded [2.90ms]
+(pass) isolated V4 candidate > 15 second timeout visibility boundary [0.76ms]
+(pass) isolated V4 candidate > O/A cannot be activated by evidence counts [3.06ms]
+(pass) isolated V4 candidate > recent jobs floor and trusted positive reward [0.67ms]
+(pass) isolated V4 candidate > 30-day aging recovers fault prior and lifetime onboarding persists [0.31ms]
+(pass) isolated V4 candidate > 90-day quality aging and invalid ratings [1.52ms]
+(pass) isolated V4 candidate > complaint policy disabled, cross-lane fault excluded [0.32ms]
+(pass) isolated V4 candidate > future and invalid timestamp evidence cannot affect score [0.33ms]
+(pass) isolated V4 candidate > exact ROUND_HALF_UP [0.07ms]
+(pass) isolated V4 candidate > bounded components and deterministic permutation [101.00ms]
+(pass) isolated V4 candidate > parallel pure recalculations deterministic, NOT database concurrency proof [5.20ms]
+(pass) security mock contracts, not installed authorization > reject score and unknown profile fields [0.18ms]
+(pass) security mock contracts, not installed authorization > actor and offer ownership bound [0.28ms]
+(pass) security mock contracts, not installed authorization > legacy anon/body ID never verified by contract [0.05ms]
+(pass) security mock contracts, not installed authorization > timeout normalization is not fault; response needs confirmation [0.10ms]
+
+tests/phase5.test.ts:
+(pass) Phase 5 pure boundary contracts > R 30-day lower boundary -1ms [0.11ms]
+(pass) Phase 5 pure boundary contracts > R 30-day lower boundary 0ms
+(pass) Phase 5 pure boundary contracts > R 30-day lower boundary 1ms
+(pass) Phase 5 pure boundary contracts > R upper boundary excludes asOf [0.03ms]
+(pass) Phase 5 pure boundary contracts > R just before asOf included [0.03ms]
+(pass) Phase 5 pure boundary contracts > Q 90-day lower boundary -1ms
+(pass) Phase 5 pure boundary contracts > Q 90-day lower boundary 0ms
+(pass) Phase 5 pure boundary contracts > Q 90-day lower boundary 1ms
+(pass) Phase 5 pure boundary contracts > Q upper boundary excludes asOf
+(pass) Phase 5 pure boundary contracts > Q just before asOf included
+(pass) Phase 5 pure boundary contracts > A 14-day lower boundary -1ms
+(pass) Phase 5 pure boundary contracts > A 14-day lower boundary 0ms
+(pass) Phase 5 pure boundary contracts > A 14-day lower boundary 1ms
+(pass) Phase 5 pure boundary contracts > A upper boundary excludes asOf
+(pass) Phase 5 pure boundary contracts > A just before asOf included
+(pass) Phase 5 pure boundary contracts > J 7-day lower boundary -1ms
+(pass) Phase 5 pure boundary contracts > J 7-day lower boundary 0ms
+(pass) Phase 5 pure boundary contracts > J 7-day lower boundary 1ms
+(pass) Phase 5 pure boundary contracts > J upper boundary excludes asOf
+(pass) Phase 5 pure boundary contracts > J just before asOf included
+(pass) Phase 5 pure boundary contracts > 14-day predicate is NOT availability scoring integration [0.11ms]
+(pass) Phase 5 pure boundary contracts > R calculator exact lower boundary -1ms [0.25ms]
+(pass) Phase 5 pure boundary contracts > R calculator exact lower boundary 0ms [0.12ms]
+(pass) Phase 5 pure boundary contracts > R calculator exact lower boundary 1ms [0.11ms]
+(pass) Phase 5 pure boundary contracts > Q calculator exact lower boundary -1ms [0.11ms]
+(pass) Phase 5 pure boundary contracts > Q calculator exact lower boundary 0ms [0.10ms]
+(pass) Phase 5 pure boundary contracts > Q calculator exact lower boundary 1ms [0.08ms]
+(pass) Phase 5 pure boundary contracts > J calculator exact lower boundary -1ms [0.17ms]
+(pass) Phase 5 pure boundary contracts > J calculator exact lower boundary 0ms [0.12ms]
+(pass) Phase 5 pure boundary contracts > J calculator exact lower boundary 1ms [0.35ms]
+(pass) Phase 7 synthetic quality assignment identity (not SQL enforcement) > matching primary-key triple needs no accepted timestamp [0.12ms]
+(pass) Phase 7 synthetic quality assignment identity (not SQL enforcement) > unrelated or invalid triple other-worker refused [0.05ms]
+(pass) Phase 7 synthetic quality assignment identity (not SQL enforcement) > unrelated or invalid triple other-booking refused [0.01ms]
+(pass) Phase 7 synthetic quality assignment identity (not SQL enforcement) > unrelated or invalid triple 1 refused
+(pass) Phase 7 synthetic quality assignment identity (not SQL enforcement) > unrelated or invalid triple  refused
+(pass) Phase 7 synthetic quality assignment identity (not SQL enforcement) > unrelated or invalid triple  refused
+(pass) Phase 7 synthetic quality assignment identity (not SQL enforcement) > unrelated or invalid triple -1 refused
+(pass) Phase 7 synthetic quality assignment identity (not SQL enforcement) > unrelated or invalid triple 1.5 refused
+(pass) Phase 7 synthetic quality assignment identity (not SQL enforcement) > unrelated or invalid triple NaN refused
+(pass) Phase 7 synthetic quality assignment identity (not SQL enforcement) > unrelated or invalid triple Infinity refused
+(pass) Phase 5 rational mass and maturity > success mass saturates at exactly 20 [3.55ms]
+(pass) Phase 5 rational mass and maturity > fault mass saturates at exactly 5 [3.79ms]
+(pass) Phase 5 rational mass and maturity > success and fault caps are separate, not a shared cap [3.36ms]
+(pass) Phase 5 rational mass and maturity > sample maturity 0 [0.17ms]
+(pass) Phase 5 rational mass and maturity > sample maturity 1 [0.01ms]
+(pass) Phase 5 rational mass and maturity > sample maturity 2
+(pass) Phase 5 rational mass and maturity > sample maturity 3
+(pass) Phase 5 rational mass and maturity > sample maturity 4
+(pass) Phase 5 rational mass and maturity > sample maturity 5
+(pass) Phase 5 rational mass and maturity > sample maturity 6
+(pass) Phase 5 rational mass and maturity > sample maturity 7
+(pass) Phase 5 rational mass and maturity > sample maturity 8
+(pass) Phase 5 rational mass and maturity > sample maturity 9
+(pass) Phase 5 rational mass and maturity > sample maturity 10
+(pass) Phase 5 rational mass and maturity > sample maturity 11
+(pass) Phase 5 rational mass and maturity > five through ten monotonic maturity fractions [1.14ms]
+(pass) Phase 5 rational mass and maturity > quality mass cap is exactly 50 [0.90ms]
+(pass) Phase 5 corrected incident replay > corrected excluded incidents recover prior, not counted twice [1.17ms]
+(pass) Phase 5 corrected incident replay > replay before correction retains original fault [0.27ms]
+(pass) Phase 5 corrected incident replay > duplicate complete correction chain idempotent [0.71ms]
+(pass) Phase 5 corrected incident replay > complete correction chain order deterministic [0.42ms]
+(pass) Phase 5 corrected incident replay > quarantine gap [0.24ms]
+(pass) Phase 5 corrected incident replay > quarantine wrong predecessor [0.11ms]
+(pass) Phase 5 corrected incident replay > quarantine earlier decision [0.12ms]
+(pass) Phase 5 corrected incident replay > quarantine moved event [0.10ms]
+(pass) Phase 5 corrected incident replay > quarantine noninteger revision [0.47ms]
+(pass) Phase 5 corrected incident replay > unverified latest decision never falls back to superseded blame [0.73ms]
+(pass) Phase 5 corrected incident replay > missing original revision quarantined [0.28ms]
+(pass) Phase 5 rating and malformed input > integer rating 1 accepted [0.28ms]
+(pass) Phase 5 rating and malformed input > integer rating 2 accepted [0.15ms]
+(pass) Phase 5 rating and malformed input > integer rating 3 accepted [0.17ms]
+(pass) Phase 5 rating and malformed input > integer rating 4 accepted [0.61ms]
+(pass) Phase 5 rating and malformed input > integer rating 5 accepted [0.26ms]
+(pass) Phase 5 rating and malformed input > reject rating 0 [0.58ms]
+(pass) Phase 5 rating and malformed input > reject rating 6 [0.14ms]
+(pass) Phase 5 rating and malformed input > reject rating -1 [0.13ms]
+(pass) Phase 5 rating and malformed input > reject rating 1.5 [0.55ms]
+(pass) Phase 5 rating and malformed input > reject rating 3.5 [0.09ms]
+(pass) Phase 5 rating and malformed input > reject rating NaN [0.06ms]
+(pass) Phase 5 rating and malformed input > reject rating Infinity [0.06ms]
+(pass) Phase 5 rating and malformed input > reject rating -Infinity [0.17ms]
+(pass) Phase 5 rating and malformed input > reject rating 5 [0.11ms]
+(pass) Phase 5 rating and malformed input > reject rating null [0.09ms]
+(pass) Phase 5 rating and malformed input > malformed row NaN time [0.16ms]
+(pass) Phase 5 rating and malformed input > malformed row infinite knownAt [0.04ms]
+(pass) Phase 5 rating and malformed input > malformed row negative time [0.06ms]
+(pass) Phase 5 rating and malformed input > malformed row fractional time [0.04ms]
+(pass) Phase 5 rating and malformed input > malformed row known before event [0.03ms]
+(pass) Phase 5 rating and malformed input > malformed row empty key [0.03ms]
+(pass) Phase 5 rating and malformed input > malformed row nonboolean verification [0.08ms]
+(pass) Phase 5 rating and malformed input > null row quarantined without crashing [0.09ms]
+(pass) Phase 5 rating and malformed input > invalid envelope outcomes [0.06ms]
+(pass) Phase 5 rating and malformed input > invalid envelope quality [0.02ms]
+(pass) Phase 5 rating and malformed input > invalid envelope opportunities
+(pass) Phase 5 rating and malformed input > invalid envelope completions
+(pass) Phase 5 rating and malformed input > invalid envelope reliabilityTrusted [0.27ms]
+(pass) Phase 5 rating and malformed input > invalid envelope latePolicyApproved [0.05ms]
+(pass) Phase 5 rating and malformed input > malformed actionable duration never matures onboarding [0.57ms]
+(pass) Phase 5 aging, locks and correction tuple > zero history all priors and exact 60 [0.10ms]
+(pass) Phase 5 aging, locks and correction tuple > fault aging recovers and cannot become a persistent deduction [0.30ms]
+(pass) Phase 5 aging, locks and correction tuple > quality reward ages back to neutral [0.35ms]
+(pass) Phase 5 aging, locks and correction tuple > weekly reward ages to floor but lifetime maturity remains [0.17ms]
+(pass) Phase 5 aging, locks and correction tuple > O and A stay locked across aging corrections and trust failures [4.42ms]
+(pass) Phase 5 aging, locks and correction tuple > projection first (pure, not DB concurrency) [0.15ms]
+(pass) Phase 5 aging, locks and correction tuple > projection equal replay (pure, not DB concurrency) [0.01ms]
+(pass) Phase 5 aging, locks and correction tuple > projection same-time correction (pure, not DB concurrency)
+(pass) Phase 5 aging, locks and correction tuple > projection stale correction (pure, not DB concurrency)
+(pass) Phase 5 aging, locks and correction tuple > projection old timestamp high revision (pure, not DB concurrency)
+(pass) Phase 5 aging, locks and correction tuple > projection new timestamp resets revision (pure, not DB concurrency)
+(pass) Phase 5 aging, locks and correction tuple > invalid calculation position rejected [0.08ms]
+(pass) Phase 5 aging, locks and correction tuple > deterministic recalculation with all lanes and reversals [2.80ms]
+
+ 135 pass
+ 0 fail
+ 451 expect() calls
+Ran 135 tests across 2 files. [234.00ms]
+
+Separate local text source-shape check (not SQL parsing)
+SOURCE_SHAPE_OK tables=21 foreign_keys=40 explicit_inserts=1
+MISSING_COLUMN_REGRESSION_REJECTED; NO_SQL_PARSE_OR_EXECUTION
