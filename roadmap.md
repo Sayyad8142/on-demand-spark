@@ -1,8 +1,8 @@
 # Worker language translation
 
 ## Signup Step 2
-- [ ] Simplify payout selection into visual QR-upload and manual UPI choices; preserve existing validation and bank fallback.
-- [ ] Check reported utils error and verify both choices in the preview; do not publish.
+- [x] Simplify payout selection into visual QR-upload and manual UPI choices; preserve existing validation and bank fallback.
+- [x] Check reported utils error (not reproduced; current file has six lines and app build is OK); verify manual entry, QR decoding, confirmation and Hindi/Telugu choices in the preview; 54 tests passed; not published.
 
 - [x] Audit worker screens and display-only language gaps.
 - [x] Centralize translated display text, service labels and persistent language handling.
