@@ -802,7 +802,7 @@ export default function Profile() {
                   <p className="text-muted-foreground text-sm mb-2 flex items-center gap-1">
                     📱 {worker?.phone}
                   </p>
-                  <Badge variant={worker?.is_active ? "default" : displayText("secondary")} className={worker?.is_active ? "bg-green-500 hover:bg-green-600 shadow-sm" : ""}>
+                  <Badge variant={worker?.is_active ? "default" : "secondary"} className={worker?.is_active ? "bg-green-500 hover:bg-green-600 shadow-sm" : ""}>
                     {worker?.is_active ? t('profile.status.active') : t('profile.status.pending')}
                   </Badge>
                 </div>

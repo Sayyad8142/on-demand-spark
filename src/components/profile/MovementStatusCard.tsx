@@ -45,7 +45,7 @@ export default function MovementStatusCard() {
       <CardContent className="p-3 space-y-2">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-bold text-foreground">{displayText("📊 Movement Status")}</p>
-          <Badge variant={isTracking ? "default" : displayText("secondary")}>{trackingLabel}</Badge>
+          <Badge variant={isTracking ? "default" : "secondary"}>{displayText(trackingLabel)}</Badge>
         </div>
         <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
           <div>
