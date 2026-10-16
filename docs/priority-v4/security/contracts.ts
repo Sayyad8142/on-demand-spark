@@ -16,3 +16,10 @@ export function normalizeStatus(raw: string, authoritativeConfirmed: boolean): s
 }
 /** Final allowlist pending live privilege/payload inventory; deny unknown fields. */
 export function profileFieldsSafe(fields: string[]): boolean { return fields.length>0 && fields.every(f=>['full_name','photo_url','upi_id'].includes(f)); }
+
+/** Synthetic assignment identity contract only; not a DB constraint or trusted ingestion adapter. */
+export type AssignmentKey = { workerId: string; bookingId: string; generation: number };
+export function qualityAssignmentMatches(quality: AssignmentKey, assignment: AssignmentKey): boolean {
+ const valid = (k: AssignmentKey) => typeof k.workerId==='string' && k.workerId.length>0 && typeof k.bookingId==='string' && k.bookingId.length>0 && Number.isSafeInteger(k.generation) && k.generation>=0;
+ return valid(quality) && valid(assignment) && quality.workerId===assignment.workerId && quality.bookingId===assignment.bookingId && quality.generation===assignment.generation;
+}

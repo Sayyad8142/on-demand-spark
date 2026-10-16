@@ -9,3 +9,5 @@
 - Keep synthetic canonical anchors separate from legacy tables and require verified source manifests at ingestion. Why: internal foreign keys enforce consistency, not real-world ownership.
 - Run reviewed pure tests from a temporary copied import graph with a minimal environment and positively verified kernel network denial. Why: project config/preloads and service transports must not enter the permitted offline test run.
 - Derive stored total by integer rational accumulation before half-up rounding, and publish by history-insert trigger within the adapter's outer transaction. Why: decimal rounding ties and partial publication must not depend on display components or caller sequencing.
+- Link quality observations to the canonical assignment primary-key triple without copying acceptance time. Why: ratings need assignment ownership, not a fabricated acceptance timestamp.
+- Separate independent attestation ownership, temporary V4 DDL execution and non-DDL runtime authority; gate ingestion until installation/ownership handoff is verified. Why: a table creator cannot simultaneously be treated as an unprivileged fixture writer.
