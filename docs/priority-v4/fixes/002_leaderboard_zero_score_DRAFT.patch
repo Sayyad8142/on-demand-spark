@@ -1,0 +1,10 @@
+# DRAFT ONLY - not applied (editing the edge function would auto-deploy it).
+--- a/supabase/functions/get-worker-leaderboard/index.ts
++++ b/supabase/functions/get-worker-leaderboard/index.ts
+@@
+-        rating: w.rating || 5,
+-        priority_score: w.priority_score || 50,
++        rating: w.rating ?? null,
++        priority_score: Number.isFinite(Number(w.priority_score)) ? Number(w.priority_score) : 0,
+@@ (security) remove unsigned-JWT decode + "AUTH BYPASS FOR PREVIEW" fallback worker;
+@@ verify Firebase token with Admin SDK and return 401 when no worker resolves.
