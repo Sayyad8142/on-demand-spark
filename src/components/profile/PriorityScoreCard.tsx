@@ -46,10 +46,10 @@ function rankFromScore(score: number) {
 }
 
 function tierLabelFromScore(score: number) {
-  if (score >= 75) return "Top Performer";
-  if (score >= 50) return "Strong Score";
-  if (score >= 25) return "Building Up";
-  return "Getting Started";
+  if (score >= 75) return displayText("Top Performer");
+  if (score >= 50) return displayText("Strong Score");
+  if (score >= 25) return displayText("Building Up");
+  return displayText("Getting Started");
 }
 
 function reasonMeta(code: string) {
