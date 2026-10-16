@@ -240,6 +240,10 @@
     "logout": "लॉगआउट"
   },
   "worker": {
+    "Step_2": "चरण 2",
+    "UPI_Details": "UPI विवरण",
+    "Upload_QR_code": "QR कोड अपलोड करें",
+    "Replace_QR_code": "QR कोड बदलें",
     "Check_your_details": "अपने विवरण की जाँच करें",
     "passbook": "पासबुक",
     "manual": "मैनुअल",

@@ -1,5 +1,7 @@
 # Architecture rules
 
+- Signup QR/manual selection is presentation-only and shares the existing UPI value, decoder and validation. Why: changing the visible option must not change payout or signup requirements.
+
 - Worker localization uses i18next resources and display-only helpers in `src/i18n/display.ts`; never translate stored IDs, RPC inputs, comparison strings or server contracts. Why: language selection must not change booking, payout or authentication behavior.
 - Worker language is subscribed through React and persisted in localStorage plus Capacitor Preferences before initial rendering. Why: switching must be immediate and survive logout and native restarts.
 

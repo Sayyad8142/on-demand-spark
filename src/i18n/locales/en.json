@@ -240,6 +240,10 @@
     "logout": "Logout"
   },
   "worker": {
+    "Step_2": "Step 2",
+    "UPI_Details": "UPI Details",
+    "Upload_QR_code": "Upload QR code",
+    "Replace_QR_code": "Replace QR code",
     "Check_your_details": "Check your details",
     "passbook": "passbook",
     "manual": "manual",
