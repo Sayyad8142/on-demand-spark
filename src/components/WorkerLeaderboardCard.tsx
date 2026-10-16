@@ -61,7 +61,7 @@ export default function WorkerLeaderboardCard({
         const rank = data.findIndex((w: any) => w.id === currentWorkerId);
         if (rank !== -1) {
           setCurrentUserRank(rank + 1);
-          setCurrentUserScore(data[rank].priority_score || 0);
+          setCurrentUserScore(data[rank].priority_score ?? 0);
         }
       }
     } catch (err) {
@@ -156,7 +156,7 @@ export default function WorkerLeaderboardCard({
             </div>
             <div className="text-right">
               <p className="text-[10px] font-medium text-muted-foreground">{displayText("Priority Score")}</p>
-              <p className="text-xs font-bold text-primary">{w.priority_score || 0}/50</p>
+              <p className="text-xs font-bold text-primary">{w.priority_score ?? 0}/100</p>
             </div>
           </div>
         ))}
