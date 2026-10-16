@@ -49,12 +49,12 @@
     "accountCreated": "खाता सफलतापूर्वक बन गया",
     "otpAutoDetected": "OTP अपने आप मिल गया",
     "otpAutoFilled": "कोड स्वचालित रूप से भरा गया",
-    "otpResent": "Resend OTP",
+    "otpResent": "OTP फिर भेज दिया गया",
     "checkPhone": "सत्यापन कोड के लिए अपना फोन देखें",
     "otpSentTo": "हमने 6 अंकों का OTP भेजा है",
     "didntReceive": "OTP नहीं मिला?",
-    "resendOtp": "Resend OTP",
-    "resendIn": "Resend in",
+    "resendOtp": "OTP फिर भेजें",
+    "resendIn": "फिर भेजने में",
     "upiIdLabel": "UPI ID"
   },
   "home": {
@@ -451,7 +451,7 @@
     "rating": "रेटिंग",
     "All_Reviews": "सभी समीक्षाएं (",
     "No_reviews_yet": "अभी तक कोई समीक्षा नहीं",
-    "Flat": "• फ्लैट",
+    "Flat": "फ्लैट",
     "Booking_Alerts_Setup": "बुकिंग अलर्ट सेटअप",
     "Ensure_you_never_miss_a_booking": "सुनिश्चित करें कि आप कभी भी बुकिंग न चूकें",
     "Critical_issues_found": "महत्वपूर्ण समस्याएं मिलीं",
@@ -889,9 +889,9 @@
     "Customer_Reviews": "ग्राहक समीक्षाएं",
     "Logout": "लॉगआउट",
     "e_g_name_paytm": "उदा. name@paytm",
-    "Top_Performer": "सर्वश्रेष्ठ प्रदर्शनकर्ता",
-    "Strong_Score": "मजबूत स्कोर",
-    "Building_Up": "बढ़ रहा है",
+    "Top_Performer": "बेहतरीन प्रदर्शन",
+    "Strong_Score": "अच्छा स्कोर",
+    "Building_Up": "आगे बढ़ रहे हैं",
     "Getting_Started": "शुरुआत कर रहे हैं",
     "Basic": "बुनियादी",
     "Confirm": "पुष्टि करें",
@@ -924,6 +924,8 @@
     "Verification_service_is_temporarily_unavailable_Please_try_again_shortly": "सत्यापन सेवा अस्थायी रूप से अनुपलब्ध है। कृपया कुछ देर बाद पुनः प्रयास करें।",
     "The_server_is_taking_too_long_Please_try_again": "सर्वर बहुत समय ले रहा है। कृपया पुनः प्रयास करें।",
     "Verification_failed_Please_try_again": "सत्यापन विफल रहा। कृपया पुन: प्रयास करें।",
-    "Villa": "विला"
+    "Villa": "विला",
+    "Resend_OTP": "OTP फिर भेजें",
+    "Resend_in": "फिर भेजने में"
   }
 }
