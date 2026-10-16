@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from "react-i18next";
-import { Check, ChevronLeft, ChevronRight, FileText, Landmark, Phone, QrCode, ShieldCheck, Sparkles, Upload, UserRound, X, Loader2 } from "lucide-react";
+import { AtSign, Check, ChevronLeft, ChevronRight, FileText, Landmark, Phone, QrCode, ShieldCheck, Sparkles, Upload, UserRound, X, Loader2 } from "lucide-react";
 import jsQR from "jsqr";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import maidServiceIcon from "@/assets/service-maid.png";
@@ -99,6 +99,7 @@ export default function Auth() {
   const [extractingPassbook, setExtractingPassbook] = useState(false);
   const [decodingUpiQr, setDecodingUpiQr] = useState(false);
   const [upiQrFilledFrom, setUpiQrFilledFrom] = useState<string | null>(null);
+  const [upiEntryMode, setUpiEntryMode] = useState<'qr' | 'manual'>('qr');
   const [signUpStep, setSignUpStep] = useState(1);
   const [showBankDetails, setShowBankDetails] = useState(true);
   // Selected payout method on Step 2. UPI is the default and recommended path.
@@ -845,93 +846,53 @@ export default function Auth() {
                 const upiShowError = trimmedUpi.length > 0 && !upiValid;
                 return (
                 <div className="space-y-5">
-                  {/* Header */}
-                  <div className="space-y-1.5 px-1">
-                    <h2 className="text-2xl font-bold tracking-tight">
-                      {displayText("Get Paid Instantly")} <span aria-hidden>💸</span>
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
-                      {displayText("Add your UPI ID so we can send your earnings instantly after every completed booking.")}
-                    </p>
+                  <div className="space-y-1 px-1">
+                    <p className="text-xs font-semibold text-primary">{displayText("Step 2")}</p>
+                    <h2 className="text-2xl font-bold">{displayText("UPI Details")}</h2>
                   </div>
 
-                  {/* Primary UPI card */}
-                  <div className="space-y-5 rounded-3xl border-2 border-[#ff007a]/20 bg-gradient-to-br from-pink-50/60 via-white to-white p-4 shadow-sm">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#ff007a]/10 text-[#ff007a]">
-                        <QrCode className="h-6 w-6" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="text-base font-bold">UPI ID</p>
-                          <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-green-700">
-                            {displayText("Recommended")}
-                          </span>
-                        </div>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {displayText("Instant payouts • Takes less than 30 seconds")}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Option 1 — Upload QR */}
-                    <div className="space-y-2">
-                      <button
+                  <div className="grid grid-cols-2 gap-3" role="group" aria-label={displayText("UPI Details")}>
+                    {(['qr', 'manual'] as const).map(mode => (
+                      <Button
+                        key={mode}
                         type="button"
+                        variant="outline"
+                        aria-pressed={upiEntryMode === mode}
+                        onClick={() => setUpiEntryMode(mode)}
+                        disabled={loading || decodingUpiQr}
+                        className={`relative h-auto min-h-36 min-w-0 flex-col gap-3 whitespace-normal rounded-lg border-2 px-3 py-4 text-center hover:bg-muted hover:text-foreground ${upiEntryMode === mode ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-background text-foreground'}`}
+                      >
+                        <span className={`flex h-14 w-14 items-center justify-center rounded-lg ${upiEntryMode === mode ? 'bg-primary/10' : 'bg-muted'}`}>
+                          {mode === 'qr' ? <QrCode className="!h-9 !w-9" strokeWidth={1.5} /> : <AtSign className="!h-9 !w-9" strokeWidth={1.5} />}
+                        </span>
+                        <span className="w-full break-words text-sm font-semibold leading-snug">{displayText(mode === 'qr' ? 'Upload QR code' : 'Enter UPI ID')}</span>
+                        {upiEntryMode === mode && <Check aria-hidden className="absolute right-2 top-2 text-primary" />}
+                      </Button>
+                    ))}
+                  </div>
+
+                  {upiEntryMode === 'qr' ? (
+                    <div className="space-y-3">
+                      <Button
+                        type="button"
+                        variant="outline"
                         onClick={() => upiQrInputRef.current?.click()}
                         disabled={loading || decodingUpiQr}
-                        className={`group relative block w-full overflow-hidden rounded-2xl border-2 border-dashed p-4 text-left transition-all active:scale-[0.99] disabled:opacity-60 ${
-                          upiQrFilledFrom
-                            ? 'border-green-500 bg-green-50'
-                            : 'border-[#ff007a]/40 bg-white hover:border-[#ff007a]'
-                        }`}
+                        className="h-auto min-h-28 w-full flex-col gap-2 whitespace-normal rounded-lg border-dashed bg-muted/30 px-4 py-5 hover:bg-muted hover:text-foreground"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm ring-2 ${upiQrFilledFrom ? 'ring-green-500/40' : 'ring-[#ff007a]/20'}`}>
-                            {decodingUpiQr ? (
-                              <Loader2 className="h-7 w-7 animate-spin text-[#ff007a]" />
-                            ) : upiQrFilledFrom ? (
-                              <Check className="h-8 w-8 text-green-600" strokeWidth={2.5} />
-                            ) : (
-                              <QrCode className="h-8 w-8 text-gray-900" strokeWidth={1.5} />
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className={`text-sm font-bold ${upiQrFilledFrom ? 'text-green-700' : 'text-gray-900'}`}>
-                              {decodingUpiQr
-                                ? displayText("Reading your QR...")
-                                : upiQrFilledFrom
-                                ? displayText("✓ UPI QR uploaded")
-                                : displayText("📷 Upload UPI QR")}
-                            </p>
-                            <p className="mt-0.5 text-[11px] text-muted-foreground">
-                              {upiQrFilledFrom
-                                ? displayText('Detected: {{upi}} · Tap to re-scan', { upi: upiQrFilledFrom })
-                                : displayText("PhonePe • Google Pay • Paytm • BHIM")}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                      {!upiQrFilledFrom && (
-                        <p className="px-1 text-[11px] text-muted-foreground">{displayText("Any UPI QR works.")}</p>
+                        {decodingUpiQr ? <Loader2 className="!h-7 !w-7 animate-spin text-primary motion-reduce:animate-none" /> : upiQrFilledFrom ? <Check className="!h-7 !w-7 text-primary" /> : <Upload className="!h-7 !w-7 text-primary" />}
+                        <span className="text-sm font-semibold">{displayText(decodingUpiQr ? 'Reading your QR...' : upiQrFilledFrom ? 'Replace QR code' : 'Upload QR code')}</span>
+                        <span className="text-xs text-muted-foreground">PhonePe · GPay · Paytm</span>
+                      </Button>
+                      {trimmedUpi && (
+                        <p role="status" className="flex items-start gap-2 break-all text-sm text-foreground">
+                          {upiValid && <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />}
+                          {trimmedUpi}
+                        </p>
                       )}
-                      <input
-                        ref={upiQrInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handleUpiQrSelect}
-                        className="hidden"
-                      />
+                      {upiShowError && <p role="alert" className="text-xs text-destructive">{displayText("Please enter a valid UPI ID")}</p>}
                     </div>
-
-                    {/* Divider */}
-                    <div className="flex items-center gap-3">
-                      <div className="h-px flex-1 bg-border" />
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{displayText("OR")}</span>
-                      <div className="h-px flex-1 bg-border" />
-                    </div>
-
-                    {/* Option 2 — Type UPI */}
+                  ) : (
                     <div className="space-y-2">
                       <Label htmlFor="signup-upi" className="text-sm font-semibold">
                         {displayText("Enter UPI ID")}
@@ -945,38 +906,20 @@ export default function Auth() {
                           value={signUpUpiId}
                           onChange={e => { setSignUpUpiId(e.target.value); if (upiQrFilledFrom && e.target.value !== upiQrFilledFrom) setUpiQrFilledFrom(null); }}
                           disabled={loading}
-                          className={`h-12 rounded-2xl pr-10 text-base ${
-                            upiValid
-                              ? 'border-green-500/60 bg-green-50/40'
-                              : upiShowError
-                              ? 'border-amber-500/70 bg-amber-50/40'
-                              : ''
-                          }`}
+                          aria-invalid={upiShowError}
+                          aria-describedby={upiShowError ? 'signup-upi-error' : undefined}
+                          className={`h-12 rounded-lg pr-10 text-base ${upiShowError ? 'border-destructive' : upiValid ? 'border-primary' : ''}`}
                         />
                         {upiValid && (
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-green-600 p-1 text-white">
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-primary">
                             <Check className="h-3.5 w-3.5" />
                           </span>
                         )}
                       </div>
-                      {upiValid ? (
-                        <p className="flex items-center gap-1 text-xs font-medium text-green-700">
-                          {displayText("✅ UPI ID looks valid")}
-                        </p>
-                      ) : upiShowError ? (
-                        <p className="flex items-center gap-1 text-xs font-medium text-amber-700">
-                          {displayText("⚠️ Please enter a valid UPI ID")}
-                        </p>
-                      ) : (
-                        <div className="rounded-xl bg-muted/50 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-                          <span className="font-semibold text-foreground">{displayText("Examples:")}</span>
-                          <br />9876543210@ybl
-                          <br />name@oksbi
-                          <br />username@paytm
-                        </div>
-                      )}
+                      {upiShowError && <p id="signup-upi-error" role="alert" className="text-xs text-destructive">{displayText("Please enter a valid UPI ID")}</p>}
                     </div>
-                  </div>
+                  )}
+                  <input ref={upiQrInputRef} type="file" accept="image/*" onChange={handleUpiQrSelect} aria-label={displayText("Upload QR code")} className="hidden" />
 
                   {/* Bank fallback (collapsed) */}
                   {bankPayoutEnabled && (
@@ -1079,7 +1022,7 @@ export default function Auth() {
                       type="button"
                       onClick={goToSignupStepThree}
                       disabled={extractingPassbook || !upiValid}
-                      className="h-14 rounded-2xl bg-[#ff007a] text-base font-semibold text-white hover:bg-[#ff007a]/90"
+                      className="h-14 rounded-2xl text-base font-semibold"
                     >
                       {displayText("Continue")}
                     </Button>

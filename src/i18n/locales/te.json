@@ -240,6 +240,10 @@
     "logout": "లాగ్ అవుట్"
   },
   "worker": {
+    "Step_2": "దశ 2",
+    "UPI_Details": "UPI వివరాలు",
+    "Upload_QR_code": "QR కోడ్ అప్‌లోడ్ చేయండి",
+    "Replace_QR_code": "QR కోడ్ మార్చండి",
     "Check_your_details": "మీ వివరాలను తనిఖీ చేయండి",
     "passbook": "పాస్‌బుక్",
     "manual": "మాన్యువల్",
