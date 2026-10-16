@@ -282,7 +282,7 @@ function BookingCard({ booking }: { booking: Booking }) {
       ? new Date(booking.created_at)
       : null;
   const dateStr = when ? when.toLocaleDateString(displayLocale(), { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-  const timeStr = when ? when.toLocaleTimeString(displayLocale(), { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
+  const timeStr = when ? when.toLocaleTimeString(displayLocale(), { hour: '2-digit', minute: '2-digit', hour12: true }).replace('AM', displayText('AM')).replace('PM', displayText('PM')) : '';
 
   const rating = booking.rating ?? null;
 
@@ -325,7 +325,7 @@ function BookingCard({ booking }: { booking: Booking }) {
         <div className="flex items-start gap-2 mb-3">
           <MapPin className={`w-4 h-4 mt-0.5 shrink-0 ${isCancelled ? 'text-red-500' : 'text-green-600'}`} />
           <p className="text-sm font-bold text-foreground leading-snug">
-            {getUnitDisplay(booking as any).label}
+            {getUnitDisplay(booking as any).label.replace(/^Flat\b/, displayText('Flat')).replace(/^Villa\b/, displayText('Villa'))}
           </p>
         </div>
 

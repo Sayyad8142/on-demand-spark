@@ -49,7 +49,7 @@
     "accountCreated": "Account created successfully",
     "otpAutoDetected": "OTP Auto-detected",
     "otpAutoFilled": "Code filled automatically",
-    "otpResent": "Resend OTP",
+    "otpResent": "OTP resent",
     "checkPhone": "Check your phone for the verification code",
     "otpSentTo": "We have sent a 6-digit OTP to",
     "didntReceive": "Didn't receive the OTP?",
@@ -451,7 +451,7 @@
     "rating": "rating",
     "All_Reviews": "All Reviews (",
     "No_reviews_yet": "No reviews yet",
-    "Flat": "• Flat",
+    "Flat": "Flat",
     "Booking_Alerts_Setup": "Booking Alerts Setup",
     "Ensure_you_never_miss_a_booking": "Ensure you never miss a booking",
     "Critical_issues_found": "Critical issues found",
@@ -924,6 +924,9 @@
     "Verification_service_is_temporarily_unavailable_Please_try_again_shortly": "Verification service is temporarily unavailable. Please try again shortly.",
     "The_server_is_taking_too_long_Please_try_again": "The server is taking too long. Please try again.",
     "Verification_failed_Please_try_again": "Verification failed. Please try again.",
-    "Villa": "Villa"
+    "Villa": "Villa",
+    "Resend_OTP": "Resend OTP",
+    "Resend_in": "Resend in",
+    "Loading_session": "Loading session..."
   }
 }
