@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { BatteryCharging } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -7,6 +8,7 @@ interface BatteryOnboardingProps {
 }
 
 export default function BatteryOnboarding({ onFixNow }: BatteryOnboardingProps) {
+  useWorkerLanguage();
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-10">
       {/* Battery icon — fully charged, green */}
@@ -30,7 +32,7 @@ export default function BatteryOnboarding({ onFixNow }: BatteryOnboardingProps) 
         className="text-center font-bold tracking-tight"
         style={{ fontSize: "1.875rem", color: "#0f172a", lineHeight: 1.2 }}
       >
-        Give Battery Permission
+        {displayText("Give Battery Permission")}
       </h1>
       <h2
         className="mt-3 text-center font-semibold"
@@ -53,7 +55,7 @@ export default function BatteryOnboarding({ onFixNow }: BatteryOnboardingProps) 
           style={{ backgroundColor: "#ff007a", color: "#ffffff" }}
           onClick={onFixNow}
         >
-          Give Permission
+          {displayText("Give Permission")}
         </Button>
       </div>
     </div>

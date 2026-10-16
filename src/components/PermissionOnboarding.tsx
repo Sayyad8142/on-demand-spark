@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useEffect, useState, useCallback } from "react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
@@ -27,12 +28,12 @@ const STEP_META: Record<
 > = {
   notifications: {
     emoji: "🔔",
-    title: "Turn On Booking Alerts",
+    title: displayText("Turn On Booking Alerts"),
     doneText: "Booking Alerts Enabled",
   },
   overlay: {
     emoji: "📱",
-    title: "Show Booking Popups",
+    title: displayText("Show Booking Popups"),
     doneText: "Booking Popups Enabled",
   },
 };
@@ -40,6 +41,7 @@ const STEP_META: Record<
 export default function PermissionOnboarding({
   onComplete,
 }: PermissionOnboardingProps) {
+  useWorkerLanguage();
   const [states, setStates] = useState<PermissionState[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<StepId | null>(null);
@@ -112,17 +114,17 @@ export default function PermissionOnboarding({
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 text-center">
         <div className="text-7xl mb-6">🎉</div>
         <h1 className="text-4xl font-extrabold tracking-tight">
-          You're Ready
+          {displayText("You're Ready")}
         </h1>
         <p className="text-lg text-muted-foreground mt-3">
-          You can now receive bookings.
+          {displayText("You can now receive bookings.")}
         </p>
         <Button
           className="w-full max-w-sm h-16 text-lg font-bold text-white hover:opacity-90 mt-10"
           style={{ backgroundColor: "#ff007a" }}
           onClick={onComplete}
         >
-          START RECEIVING BOOKINGS
+          {displayText("START RECEIVING BOOKINGS")}
         </Button>
       </div>
     );
@@ -132,21 +134,21 @@ export default function PermissionOnboarding({
     <div className="min-h-screen bg-background flex flex-col">
       <header className="px-5 pt-10 pb-6 text-center">
         <h1 className="text-3xl font-extrabold tracking-tight">
-          Get Ready for Bookings
+          {displayText("Get Ready for Bookings")}
         </h1>
         <p className="text-base text-muted-foreground mt-2">
-          2 Steps Required
+          {displayText("2 Steps Required")}
         </p>
 
         <div className="mt-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-semibold text-muted-foreground">
-              Step{" "}
+              {displayText("Step")}{" "}
               {Math.min(
                 grantedCount + 1,
                 STEP_IDS.length
               )}{" "}
-              of {STEP_IDS.length}
+              {displayText("of")} {STEP_IDS.length}
             </span>
             <span className="text-sm font-semibold text-muted-foreground">
               {grantedCount}/{STEP_IDS.length}
@@ -199,6 +201,7 @@ function StepCard({
   busy: boolean;
   onEnable: () => void;
 }) {
+  useWorkerLanguage();
   const meta = STEP_META[id];
   return (
     <Card
@@ -224,7 +227,7 @@ function StepCard({
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Step {index}
+            {displayText("Step")} {index}
           </div>
           <h3 className="text-xl font-bold leading-tight mt-1">
             {meta.title}
@@ -239,7 +242,7 @@ function StepCard({
                 className="inline-flex items-center gap-1.5 text-base font-semibold"
                 style={{ color: "#ff007a" }}
               >
-                ⚠️ Required
+                {displayText("⚠️ Required")}
               </span>
             )}
           </div>

@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ interface PaymentCollectionModalProps {
 }
 
 export default function PaymentCollectionModal({ open, onClose, bookingId, amount, onCollected }: PaymentCollectionModalProps) {
+  useWorkerLanguage();
   const [loading, setLoading] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const { toast } = useToast();
@@ -35,11 +37,11 @@ export default function PaymentCollectionModal({ open, onClose, bookingId, amoun
         throw new Error(result?.error || "Failed to collect payment");
       }
 
-      toast({ title: "Payment Collected", description: `₹${amount} marked as collected via ${selectedMethod}` });
+      toast({ title: displayText("Payment Collected"), description: `₹${amount} marked as collected via ${selectedMethod}` });
       onCollected();
       onClose();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: displayText("Error"), description: err.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -49,9 +51,9 @@ export default function PaymentCollectionModal({ open, onClose, bookingId, amoun
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Collect Payment</DialogTitle>
+          <DialogTitle>{displayText("Collect Payment")}</DialogTitle>
           <DialogDescription>
-            Mark how you collected ₹{amount} from the customer.
+            {displayText("Mark how you collected ₹")}{amount} {displayText("from the customer.")}
           </DialogDescription>
         </DialogHeader>
 
@@ -66,8 +68,8 @@ export default function PaymentCollectionModal({ open, onClose, bookingId, amoun
           >
             <Banknote className="w-6 h-6 text-green-600" />
             <div className="text-left">
-              <p className="font-semibold">Cash</p>
-              <p className="text-xs text-muted-foreground">Customer paid in cash</p>
+              <p className="font-semibold">{displayText("Cash")}</p>
+              <p className="text-xs text-muted-foreground">{displayText("Customer paid in cash")}</p>
             </div>
           </button>
 
@@ -82,7 +84,7 @@ export default function PaymentCollectionModal({ open, onClose, bookingId, amoun
             <Smartphone className="w-6 h-6 text-blue-600" />
             <div className="text-left">
               <p className="font-semibold">UPI</p>
-              <p className="text-xs text-muted-foreground">Customer paid via UPI</p>
+              <p className="text-xs text-muted-foreground">{displayText("Customer paid via UPI")}</p>
             </div>
           </button>
 
@@ -96,7 +98,7 @@ export default function PaymentCollectionModal({ open, onClose, bookingId, amoun
             ) : (
               <Check className="w-5 h-5 mr-2" />
             )}
-            Confirm Collection
+            {displayText("Confirm Collection")}
           </Button>
         </div>
       </DialogContent>

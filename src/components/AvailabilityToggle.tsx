@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +34,7 @@ export function AvailabilityToggle({
   hasAvailabilitySlots = true,
   onNoSlots,
 }: AvailabilityToggleProps) {
+  useWorkerLanguage();
   const [isAvailable, setIsAvailable] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -109,8 +111,8 @@ export function AvailabilityToggle({
     // HARD BLOCK: cannot go online without any availability slots selected
     if (newValue && !hasAvailabilitySlots) {
       toast({
-        title: "Select slot to start bookings",
-        description: "Please select at least one time slot in Availability.",
+        title: displayText("Select slot to start bookings"),
+        description: displayText("Please select at least one time slot in Availability."),
         variant: "destructive",
       });
       onNoSlots?.();
@@ -120,8 +122,8 @@ export function AvailabilityToggle({
     // HARD BLOCK: no internet — bookings can't be delivered.
     if (newValue && !networkOnline) {
       toast({
-        title: "No internet connection",
-        description: "Reconnect to Wi-Fi or mobile data to go online.",
+        title: displayText("No internet connection"),
+        description: displayText("Reconnect to Wi-Fi or mobile data to go online."),
         variant: "destructive",
       });
       return;
@@ -131,8 +133,8 @@ export function AvailabilityToggle({
     // Trigger repair automatically and prompt the parent to guide the worker.
     if (newValue && !pushHealthy) {
       toast({
-        title: "Booking alerts not ready",
-        description: "Fixing notifications in the background. You'll be able to go online once it's ready.",
+        title: displayText("Booking alerts not ready"),
+        description: displayText("Fixing notifications in the background. You'll be able to go online once it's ready."),
         variant: "destructive",
       });
       onPushUnhealthy?.();
@@ -142,8 +144,8 @@ export function AvailabilityToggle({
     // Soft warning: onboarding incomplete (allow going online)
     if (newValue && !onboardingComplete) {
       toast({
-        title: "Setup incomplete",
-        description: "Complete your profile setup to receive more bookings.",
+        title: displayText("Setup incomplete"),
+        description: displayText("Complete your profile setup to receive more bookings."),
       });
       onOnboardingIncomplete?.();
     }
@@ -151,8 +153,8 @@ export function AvailabilityToggle({
     // Soft warning: payout not ready (allow going online)
     if (newValue && !payoutReady) {
       toast({
-        title: "Payout setup pending",
-        description: "You can receive bookings, but complete payout setup to get paid.",
+        title: displayText("Payout setup pending"),
+        description: displayText("You can receive bookings, but complete payout setup to get paid."),
       });
     }
 
@@ -184,7 +186,7 @@ export function AvailabilityToggle({
       // Roll back optimistic flip if backend update failed.
       setIsAvailable(prevValue);
       toast({
-        title: "Error",
+        title: displayText("Error"),
         description: error.message || "Failed to update availability",
         variant: "destructive",
       });

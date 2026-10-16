@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useEffect, useState, useCallback } from "react";
 import { AlertTriangle, Loader2, CheckCircle2 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
@@ -38,6 +39,7 @@ const ISSUE_LABEL: Record<Issue, string> = {
  *   3. re-check overlay permission
  */
 export function NotificationHealthWarning() {
+  useWorkerLanguage();
   const { user } = useAuth();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [fixing, setFixing] = useState(false);
@@ -101,13 +103,13 @@ export function NotificationHealthWarning() {
       if (ok) {
         setJustFixed(true);
         toast({
-          title: "Notifications fixed",
-          description: "You'll now receive booking alerts. Open Settings if any switch is still off.",
+          title: displayText("Notifications fixed"),
+          description: displayText("You'll now receive booking alerts. Open Settings if any switch is still off."),
         });
       } else {
         toast({
-          title: "Couldn't fully fix",
-          description: "Please open Android Settings and enable notifications & display over other apps.",
+          title: displayText("Couldn't fully fix"),
+          description: displayText("Please open Android Settings and enable notifications & display over other apps."),
           variant: "destructive",
         });
       }
@@ -120,7 +122,7 @@ export function NotificationHealthWarning() {
     return (
       <div className="mx-3 mt-2 flex items-center gap-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3">
         <CheckCircle2 className="h-5 w-5 text-green-600" />
-        <p className="text-sm font-medium text-green-700">Notifications working — you'll receive new bookings.</p>
+        <p className="text-sm font-medium text-green-700">{displayText("Notifications working — you'll receive new bookings.")}</p>
       </div>
     );
   }
@@ -133,10 +135,10 @@ export function NotificationHealthWarning() {
         <AlertTriangle className="h-5 w-5 shrink-0 text-destructive" />
         <div className="flex-1">
           <p className="text-sm font-semibold text-destructive">
-            Booking notifications are not working properly.
+            {displayText("Booking notifications are not working properly.")}
           </p>
           <p className="mt-0.5 text-xs text-foreground/80">
-            Please tap Fix Now to restore them.
+            {displayText("Please tap Fix Now to restore them.")}
           </p>
           <ul className="mt-1.5 ml-4 list-disc text-xs text-foreground/70">
             {issues.map((i) => (
@@ -153,7 +155,7 @@ export function NotificationHealthWarning() {
             {fixing ? (
               <>
                 <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                Fixing…
+                {displayText("Fixing…")}
               </>
             ) : (
               "Fix Notifications"

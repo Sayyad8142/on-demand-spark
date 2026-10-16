@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useEffect, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,7 @@ const formatLastUpdated = (iso: string | null) => {
 };
 
 export default function MovementStatusCard() {
+  useWorkerLanguage();
   const [status, setStatus] = useState<PassiveMovementStatus | null>(null);
 
   useEffect(() => {
@@ -42,22 +44,22 @@ export default function MovementStatusCard() {
     <Card className="shadow-sm">
       <CardContent className="p-3 space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-bold text-foreground">📊 Movement Status</p>
-          <Badge variant={isTracking ? "default" : "secondary"}>{trackingLabel}</Badge>
+          <p className="text-sm font-bold text-foreground">{displayText("📊 Movement Status")}</p>
+          <Badge variant={isTracking ? "default" : displayText("secondary")}>{trackingLabel}</Badge>
         </div>
         <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
           <div>
-            Steps:{" "}
+            {displayText("Steps:")}{" "}
             <span className="font-semibold text-foreground">{status?.steps ?? 0}</span>
           </div>
           <div>
-            Last Updated:{" "}
+            {displayText("Last Updated:")}{" "}
             <span className="font-semibold text-foreground">
               {formatLastUpdated(status?.lastUpdatedAt ?? null)}
             </span>
           </div>
           <div>
-            Permission:{" "}
+            {displayText("Permission:")}{" "}
             <span className="font-semibold text-foreground">{permissionLabel}</span>
           </div>
           <div>

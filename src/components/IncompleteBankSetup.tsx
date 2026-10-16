@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ interface IncompleteBankSetupProps {
 export default function IncompleteBankSetup({
   redirectTo = "/account-details",
 }: IncompleteBankSetupProps) {
+  useWorkerLanguage();
   const navigate = useNavigate();
 
   return (
@@ -33,11 +35,10 @@ export default function IncompleteBankSetup({
 
           <div className="space-y-2">
             <h1 className="text-xl font-bold text-destructive">
-              Complete account setup
+              {displayText("Complete account setup")}
             </h1>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              You need to update your account details before continuing. Add
-              your bank account so we can pay you for completed bookings.
+              {displayText("You need to update your account details before continuing. Add your bank account so we can pay you for completed bookings.")}
             </p>
           </div>
 
@@ -46,7 +47,7 @@ export default function IncompleteBankSetup({
             className="w-full h-12 text-base bg-destructive hover:bg-destructive/90 text-destructive-foreground"
             onClick={() => navigate(redirectTo)}
           >
-            Update account details to proceed
+            {displayText("Update account details to proceed")}
           </Button>
         </div>
       </Card>

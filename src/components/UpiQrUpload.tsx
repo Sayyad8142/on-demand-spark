@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -38,6 +39,7 @@ export default function UpiQrUpload({
   mode,
   workerId,
 }: UpiQrUploadProps) {
+  useWorkerLanguage();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -103,8 +105,8 @@ export default function UpiQrUpload({
     // Validate file type
     if (!file.type.startsWith("image/")) {
       toast({
-        title: "Invalid file",
-        description: "Please upload an image file",
+        title: displayText("Invalid file"),
+        description: displayText("Please upload an image file"),
         variant: "destructive",
       });
       return;
@@ -113,8 +115,8 @@ export default function UpiQrUpload({
     // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
       toast({
-        title: "File too large",
-        description: "Image must be less than 5MB",
+        title: displayText("File too large"),
+        description: displayText("Image must be less than 5MB"),
         variant: "destructive",
       });
       return;
@@ -128,8 +130,8 @@ export default function UpiQrUpload({
       
       if (!payload) {
         toast({
-          title: "Could not read QR",
-          description: "Please try another image with a clearer QR code",
+          title: displayText("Could not read QR"),
+          description: displayText("Please try another image with a clearer QR code"),
           variant: "destructive",
         });
         setUploading(false);
@@ -144,8 +146,8 @@ export default function UpiQrUpload({
       
       if (!upiId) {
         toast({
-          title: "Not a UPI QR",
-          description: "Could not find UPI ID in the QR code",
+          title: displayText("Not a UPI QR"),
+          description: displayText("Could not find UPI ID in the QR code"),
           variant: "destructive",
         });
         setUploading(false);
@@ -184,7 +186,7 @@ export default function UpiQrUpload({
         await uploadQrToStorage(file, payload, upiId);
       } else {
         toast({
-          title: "QR Scanned Successfully",
+          title: displayText("QR Scanned Successfully"),
           description: `UPI ID: ${upiId}`,
         });
       }
@@ -280,8 +282,8 @@ export default function UpiQrUpload({
     onQrUrlSaved?.(publicUrl);
 
     toast({
-      title: "Saved successfully",
-      description: "Your UPI QR code has been saved",
+      title: displayText("Saved successfully"),
+      description: displayText("Your UPI QR code has been saved"),
     });
   };
 
@@ -308,7 +310,7 @@ export default function UpiQrUpload({
       setPendingFile(null);
     } catch (error: any) {
       toast({
-        title: "Upload Failed",
+        title: displayText("Upload Failed"),
         description: error?.message || "Failed to save QR",
         variant: "destructive",
       });
@@ -338,7 +340,7 @@ export default function UpiQrUpload({
       setPendingFile(null);
     } catch (error: any) {
       toast({
-        title: "Upload Failed",
+        title: displayText("Upload Failed"),
         description: error?.message || "Failed to save QR",
         variant: "destructive",
       });
@@ -394,12 +396,12 @@ export default function UpiQrUpload({
         onQrRemoved?.();
 
         toast({
-          title: "Saved successfully",
-          description: "Your UPI QR code has been removed",
+          title: displayText("Saved successfully"),
+          description: displayText("Your UPI QR code has been removed"),
         });
       } catch (error: any) {
         toast({
-          title: "Error",
+          title: displayText("Error"),
           description: error.message || "Failed to remove QR",
           variant: "destructive",
         });
@@ -420,7 +422,7 @@ export default function UpiQrUpload({
     <div className="space-y-3">
       <Label className="flex items-center gap-2">
         <QrCode className="h-4 w-4" />
-        UPI QR Code (Optional)
+        {displayText("UPI QR Code (Optional)")}
       </Label>
 
       {/* Preview or Upload */}
@@ -429,7 +431,7 @@ export default function UpiQrUpload({
           <div className="flex items-center gap-3">
             <img
               src={previewUrl}
-              alt="UPI QR Code"
+              alt={displayText("UPI QR Code")}
               className="w-16 h-16 object-contain rounded-md border bg-white flex-shrink-0"
             />
             <div className="flex-1 min-w-0">
@@ -441,7 +443,7 @@ export default function UpiQrUpload({
                 ) : (
                   <X className="h-3 w-3" />
                 )}
-                {uploading ? "Saving..." : isSaved ? "QR Saved" : "Not saved"}
+                {uploading ? displayText("Saving...") : isSaved ? displayText("QR Saved") : displayText("Not saved")}
               </Badge>
               {extractedUpiId && (
                 <p className="text-sm text-muted-foreground truncate mt-1">
@@ -464,7 +466,7 @@ export default function UpiQrUpload({
               ) : (
                 <>
                   <Upload className="h-3 w-3 mr-1.5" />
-                  Replace
+                  {displayText("Replace")}
                 </>
               )}
             </Button>
@@ -477,7 +479,7 @@ export default function UpiQrUpload({
               className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
             >
               <Trash2 className="h-3 w-3 mr-1.5" />
-              Remove
+              {displayText("Remove")}
             </Button>
           </div>
         </div>
@@ -489,14 +491,14 @@ export default function UpiQrUpload({
           {uploading ? (
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
-              <p className="text-sm text-muted-foreground">Processing...</p>
+              <p className="text-sm text-muted-foreground">{displayText("Processing...")}</p>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
               <Upload className="h-8 w-8 text-muted-foreground" />
-              <p className="text-sm font-medium">Upload QR</p>
+              <p className="text-sm font-medium">{displayText("Upload QR")}</p>
               <p className="text-xs text-muted-foreground">
-                Upload your PhonePe/GPay QR. We'll auto-detect your UPI ID.
+                {displayText("Upload your PhonePe/GPay QR. We'll auto-detect your UPI ID.")}
               </p>
             </div>
           )}
@@ -515,25 +517,25 @@ export default function UpiQrUpload({
       <AlertDialog open={showUpiConfirm} onOpenChange={setShowUpiConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Update UPI ID?</AlertDialogTitle>
+            <AlertDialogTitle>{displayText("Update UPI ID?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              The QR code contains a different UPI ID:
+              {displayText("The QR code contains a different UPI ID:")}
               <br />
               <span className="font-semibold text-foreground">{pendingUpiId}</span>
               <br /><br />
-              Your current UPI ID is:
+              {displayText("Your current UPI ID is:")}
               <br />
               <span className="font-semibold text-foreground">{currentUpiId}</span>
               <br /><br />
-              Would you like to update to the new UPI ID?
+              {displayText("Would you like to update to the new UPI ID?")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={handleKeepExistingUpi}>
-              Keep Existing
+              {displayText("Keep Existing")}
             </AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmUpiChange}>
-              Update to New
+              {displayText("Update to New")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

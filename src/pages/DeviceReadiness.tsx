@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Check, X, AlertTriangle, RefreshCw } from "lucide-react";
@@ -7,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDeviceReadiness } from "@/hooks/useDeviceReadiness";
 
 export default function DeviceReadiness() {
+  useWorkerLanguage();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { checks, loading, hasCriticalFailure, refresh } = useDeviceReadiness(user?.id);
@@ -37,11 +39,11 @@ export default function DeviceReadiness() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-xl font-bold">Booking Alerts Setup</h1>
-            <p className="text-sm text-muted-foreground">Ensure you never miss a booking</p>
+            <h1 className="text-xl font-bold">{displayText("Booking Alerts Setup")}</h1>
+            <p className="text-sm text-muted-foreground">{displayText("Ensure you never miss a booking")}</p>
           </div>
           <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? displayText("animate-spin") : ""}`} />
           </Button>
         </div>
       </header>
@@ -53,10 +55,10 @@ export default function DeviceReadiness() {
               <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
               <div>
                 <p className="text-sm font-semibold text-red-900 dark:text-red-100">
-                  Critical issues found
+                  {displayText("Critical issues found")}
                 </p>
                 <p className="text-xs text-red-700 dark:text-red-300">
-                  Fix the items below or you will miss booking alerts when going online.
+                  {displayText("Fix the items below or you will miss booking alerts when going online.")}
                 </p>
               </div>
             </div>
@@ -78,12 +80,12 @@ export default function DeviceReadiness() {
         ))}
 
         {!loading && checks.length === 0 && (
-          <p className="text-center text-muted-foreground py-8">No checks available</p>
+          <p className="text-center text-muted-foreground py-8">{displayText("No checks available")}</p>
         )}
 
         <div className="pt-4">
           <Button className="w-full" onClick={() => navigate("/home")}>
-            Back to Home
+            {displayText("Back to Home")}
           </Button>
         </div>
       </main>

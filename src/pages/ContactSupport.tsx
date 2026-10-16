@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -66,6 +67,7 @@ const CONTACT_INFO = {
 };
 
 export default function ContactSupport() {
+  useWorkerLanguage();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [category, setCategory] = useState("");
@@ -78,7 +80,7 @@ export default function ContactSupport() {
     e.preventDefault();
 
     if (!category || !subject.trim() || !message.trim()) {
-      toast.error("Please fill in all fields");
+      toast.error(displayText("Please fill in all fields"));
       return;
     }
 
@@ -98,7 +100,7 @@ export default function ContactSupport() {
       if (error) throw error;
 
       setSubmitted(true);
-      toast.success("Support request submitted successfully");
+      toast.success(displayText("Support request submitted successfully"));
       
       // Reset form
       setTimeout(() => {
@@ -109,7 +111,7 @@ export default function ContactSupport() {
       }, 3000);
     } catch (error: any) {
       console.error('Error submitting support request:', error);
-      toast.error("Failed to submit request. Please try again.");
+      toast.error(displayText("Failed to submit request. Please try again."));
     } finally {
       setSubmitting(false);
     }
@@ -129,7 +131,7 @@ export default function ContactSupport() {
           </Button>
           <div className="flex items-center gap-2">
             <MessageCircle className="w-5 h-5 text-primary" />
-            <h1 className="text-xl font-semibold">Contact & Support</h1>
+            <h1 className="text-xl font-semibold">{displayText("Contact & Support")}</h1>
           </div>
         </div>
       </header>
@@ -141,17 +143,17 @@ export default function ContactSupport() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Phone className="w-5 h-5" />
-              Contact Information
+              {displayText("Contact Information")}
             </CardTitle>
             <CardDescription>
-              Get in touch with our support team
+              {displayText("Get in touch with our support team")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-start gap-3 p-3 bg-muted rounded-lg">
               <Phone className="w-5 h-5 text-primary mt-0.5" />
               <div>
-                <p className="font-medium">Phone Support</p>
+                <p className="font-medium">{displayText("Phone Support")}</p>
                 <a href={`tel:${CONTACT_INFO.phone}`} className="text-primary hover:underline">
                   {CONTACT_INFO.phone}
                 </a>
@@ -161,7 +163,7 @@ export default function ContactSupport() {
             <div className="flex items-start gap-3 p-3 bg-muted rounded-lg">
               <Mail className="w-5 h-5 text-primary mt-0.5" />
               <div>
-                <p className="font-medium">Email Support</p>
+                <p className="font-medium">{displayText("Email Support")}</p>
                 <a href={`mailto:${CONTACT_INFO.email}`} className="text-primary hover:underline">
                   {CONTACT_INFO.email}
                 </a>
@@ -171,14 +173,14 @@ export default function ContactSupport() {
             <div className="flex items-start gap-3 p-3 bg-muted rounded-lg">
               <Clock className="w-5 h-5 text-primary mt-0.5" />
               <div>
-                <p className="font-medium">Support Hours</p>
+                <p className="font-medium">{displayText("Support Hours")}</p>
                 <p className="text-sm text-muted-foreground">{CONTACT_INFO.hours}</p>
               </div>
             </div>
 
             <div className="p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
               <p className="text-sm text-amber-900 dark:text-amber-100">
-                <strong>Emergency:</strong> {CONTACT_INFO.emergencyNote}
+                <strong>{displayText("Emergency:")}</strong> {CONTACT_INFO.emergencyNote}
               </p>
             </div>
           </CardContent>
@@ -189,10 +191,10 @@ export default function ContactSupport() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FlaskConical className="w-5 h-5 text-primary" />
-              Practice Bookings
+              {displayText("Practice Bookings")}
             </CardTitle>
             <CardDescription>
-              Learn how bookings work without creating a real request
+              {displayText("Learn how bookings work without creating a real request")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -202,9 +204,9 @@ export default function ContactSupport() {
             >
               <span className="text-2xl">🧪</span>
               <span className="flex-1">
-                <span className="block font-semibold text-sm">Try Test Booking</span>
+                <span className="block font-semibold text-sm">{displayText("Try Test Booking")}</span>
                 <span className="block text-xs text-muted-foreground">
-                  Practice how bookings work — no real booking created
+                  {displayText("Practice how bookings work — no real booking created")}
                 </span>
               </span>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
@@ -217,10 +219,10 @@ export default function ContactSupport() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <HelpCircle className="w-5 h-5" />
-              Frequently Asked Questions
+              {displayText("Frequently Asked Questions")}
             </CardTitle>
             <CardDescription>
-              Quick answers to common questions
+              {displayText("Quick answers to common questions")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -244,64 +246,64 @@ export default function ContactSupport() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Send className="w-5 h-5" />
-              Submit Support Request
+              {displayText("Submit Support Request")}
             </CardTitle>
             <CardDescription>
-              Can't find what you're looking for? Send us a message
+              {displayText("Can't find what you're looking for? Send us a message")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {submitted ? (
               <div className="text-center py-8">
                 <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Request Submitted!</h3>
+                <h3 className="text-lg font-semibold mb-2">{displayText("Request Submitted!")}</h3>
                 <p className="text-muted-foreground">
-                  We'll get back to you within 24 hours.
+                  {displayText("We'll get back to you within 24 hours.")}
                 </p>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category *</Label>
+                  <Label htmlFor="category">{displayText("Category *")}</Label>
                   <Select value={category} onValueChange={setCategory}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select issue category" />
+                      <SelectValue placeholder={displayText("Select issue category")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="booking_issue">Booking Issue</SelectItem>
-                      <SelectItem value="payment_issue">Payment Issue</SelectItem>
-                      <SelectItem value="app_technical">Technical Problem</SelectItem>
-                      <SelectItem value="account_help">Account Help</SelectItem>
-                      <SelectItem value="customer_complaint">Customer Complaint</SelectItem>
-                      <SelectItem value="feature_request">Feature Request</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="booking_issue">{displayText("Booking Issue")}</SelectItem>
+                      <SelectItem value="payment_issue">{displayText("Payment Issue")}</SelectItem>
+                      <SelectItem value="app_technical">{displayText("Technical Problem")}</SelectItem>
+                      <SelectItem value="account_help">{displayText("Account Help")}</SelectItem>
+                      <SelectItem value="customer_complaint">{displayText("Customer Complaint")}</SelectItem>
+                      <SelectItem value="feature_request">{displayText("Feature Request")}</SelectItem>
+                      <SelectItem value="other">{displayText("Other")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="subject">Subject *</Label>
+                  <Label htmlFor="subject">{displayText("Subject *")}</Label>
                   <Input
                     id="subject"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
-                    placeholder="Brief description of your issue"
+                    placeholder={displayText("Brief description of your issue")}
                     maxLength={100}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="message">Message *</Label>
+                  <Label htmlFor="message">{displayText("Message *")}</Label>
                   <Textarea
                     id="message"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Provide details about your issue or question..."
+                    placeholder={displayText("Provide details about your issue or question...")}
                     rows={6}
                     maxLength={1000}
                   />
                   <p className="text-xs text-muted-foreground text-right">
-                    {message.length}/1000 characters
+                    {message.length}{displayText("/1000 characters")}
                   </p>
                 </div>
 
@@ -311,17 +313,17 @@ export default function ContactSupport() {
                   disabled={submitting || !category || !subject.trim() || !message.trim()}
                 >
                   {submitting ? (
-                    <>Submitting...</>
+                    <>{displayText("Submitting...")}</>
                   ) : (
                     <>
                       <Send className="w-4 h-4 mr-2" />
-                      Submit Request
+                      {displayText("Submit Request")}
                     </>
                   )}
                 </Button>
 
                 <p className="text-xs text-muted-foreground text-center">
-                  We typically respond within 24 hours during business days
+                  {displayText("We typically respond within 24 hours during business days")}
                 </p>
               </form>
             )}
@@ -331,7 +333,7 @@ export default function ContactSupport() {
         {/* Additional Resources */}
         <Card>
           <CardHeader>
-            <CardTitle>Additional Resources</CardTitle>
+            <CardTitle>{displayText("Additional Resources")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <Button
@@ -339,21 +341,21 @@ export default function ContactSupport() {
               className="w-full justify-start"
               onClick={() => navigate('/privacy-policy')}
             >
-              Privacy Policy
+              {displayText("Privacy Policy")}
             </Button>
             <Button
               variant="outline"
               className="w-full justify-start"
               onClick={() => navigate('/terms-of-service')}
             >
-              Terms of Service
+              {displayText("Terms of Service")}
             </Button>
             <Button
               variant="outline"
               className="w-full justify-start"
               onClick={() => navigate('/troubleshoot')}
             >
-              Troubleshooting Guide
+              {displayText("Troubleshooting Guide")}
             </Button>
           </CardContent>
         </Card>

@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -31,7 +32,7 @@ interface PayoutSummary {
 const formatTime = (iso?: string | null) => {
   try {
     const d = iso ? new Date(iso) : new Date();
-    return d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
+    return d.toLocaleTimeString(displayLocale(), { hour: "numeric", minute: "2-digit", hour12: true });
   } catch {
     return "";
   }
@@ -99,6 +100,7 @@ const logOtpDebug = (label: string, payload: Record<string, unknown>) => {
 };
 
 export default function CompleteBooking() {
+  useWorkerLanguage();
   const { bookingId = "" } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
 
@@ -422,7 +424,7 @@ export default function CompleteBooking() {
             <button
               onClick={handleBack}
               disabled={loading}
-              aria-label="Back"
+              aria-label={displayText("Back")}
               className="p-2 -ml-2 rounded-full hover:bg-muted active:scale-95 transition disabled:opacity-50"
             >
               <ArrowLeft className="w-6 h-6 text-foreground" />
@@ -435,10 +437,10 @@ export default function CompleteBooking() {
               <KeyRound className="w-7 h-7 text-pink-600" />
             </div>
             <h1 className="text-2xl font-semibold text-foreground tracking-tight">
-              Enter OTP
+              {displayText("Enter OTP")}
             </h1>
             <p className="text-sm text-muted-foreground mt-2 mb-10 text-center">
-              Ask customer for the 4-digit code
+              {displayText("Ask customer for the 4-digit code")}
             </p>
 
             <div ref={otpContainerRef} className={cn(shake && "animate-otp-shake")}>
@@ -505,7 +507,7 @@ export default function CompleteBooking() {
                     onClick={() => handleSubmit(true)}
                     className="ml-1 inline-flex items-center gap-1 font-semibold underline"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" /> Retry
+                    <RefreshCw className="w-3.5 h-3.5" /> {displayText("Retry")}
                   </button>
                 )}
               </div>
@@ -513,13 +515,13 @@ export default function CompleteBooking() {
 
             {loading && showSlowWarning && (
               <p className="text-xs text-amber-600 mt-4 text-center">
-                Taking longer than usual… check your internet.
+                {displayText("Taking longer than usual… check your internet.")}
               </p>
             )}
 
             {debugMode && (
               <div className="mt-4 rounded-xl border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
-                OTP length: {normalizeOtp(otpRef.current).length} · valid: {String(normalizeOtp(otpRef.current).length === 4)}
+                {displayText("OTP length:")} {normalizeOtp(otpRef.current).length} {displayText("· valid:")} {String(normalizeOtp(otpRef.current).length === 4)}
               </div>
             )}
           </div>
@@ -538,7 +540,7 @@ export default function CompleteBooking() {
               {loading ? (
                 <>
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Verifying…
+                  {displayText("Verifying…")}
                 </>
               ) : (
                 "Complete Job"
@@ -555,7 +557,7 @@ export default function CompleteBooking() {
               <Check className="w-10 h-10 text-green-600" strokeWidth={3} />
             </div>
             <h1 className="text-xl font-bold text-foreground mt-4">
-              Job Completed Successfully
+              {displayText("Job Completed Successfully")}
             </h1>
           </div>
 
@@ -564,7 +566,7 @@ export default function CompleteBooking() {
             <p className="text-5xl font-black text-foreground">
               ₹{payout?.payout_amount ?? 0}
             </p>
-            <p className="text-sm text-muted-foreground mt-1">earned</p>
+            <p className="text-sm text-muted-foreground mt-1">{displayText("earned")}</p>
           </div>
 
           {/* Payout status */}
@@ -572,19 +574,19 @@ export default function CompleteBooking() {
             {isPayoutCredited(payout) ? (
               <span className="inline-flex items-center gap-1.5 text-green-600 text-sm font-semibold">
                 <Check className="w-4 h-4" />
-                Payout credited
+                {displayText("Payout credited")}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 text-blue-600 text-sm font-semibold">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Payout processing
+                {displayText("Payout processing")}
               </span>
             )}
           </div>
 
           {/* Countdown */}
           <p className="text-sm text-muted-foreground mb-6">
-            Returning to Home in {countdown}…
+            {displayText("Returning to Home in")} {countdown}…
           </p>
 
           {/* View Earnings */}
@@ -596,7 +598,7 @@ export default function CompleteBooking() {
             variant="outline"
             className="mb-4 h-11 text-sm font-semibold rounded-xl border-pink-600 text-pink-600 hover:bg-pink-50"
           >
-            View Earnings
+            {displayText("View Earnings")}
           </Button>
 
           {/* View Details collapsible */}
@@ -606,47 +608,47 @@ export default function CompleteBooking() {
                 type="button"
                 className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground transition mx-auto"
               >
-                View Details <ChevronDown className="w-3.5 h-3.5" />
+                {displayText("View Details")} <ChevronDown className="w-3.5 h-3.5" />
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-3 text-left bg-muted/50 rounded-2xl p-4 space-y-2 text-xs">
               {payout && (
                 <>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Customer Paid</span>
+                    <span className="text-muted-foreground">{displayText("Customer Paid")}</span>
                     <span className="font-semibold">₹{payout.gross_amount}</span>
                   </div>
                   {payout.platform_fee > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Platform Fee (20%)</span>
+                      <span className="text-muted-foreground">{displayText("Platform Fee (20%)")}</span>
                       <span className="font-semibold text-destructive">−₹{payout.platform_fee}</span>
                     </div>
                   )}
                   <div className="flex justify-between border-t border-dashed pt-2">
-                    <span className="text-muted-foreground">Your Earnings</span>
+                    <span className="text-muted-foreground">{displayText("Your Earnings")}</span>
                     <span className="font-bold text-green-600">₹{payout.payout_amount}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Payout Method</span>
+                    <span className="text-muted-foreground">{displayText("Payout Method")}</span>
                     <span className="font-semibold">{resolvePayoutMethod(payout)}</span>
                   </div>
                   {!isPayoutCredited(payout) && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Expected Credit</span>
-                      <span className="font-semibold">Within 24 hours</span>
+                      <span className="text-muted-foreground">{displayText("Expected Credit")}</span>
+                      <span className="font-semibold">{displayText("Within 24 hours")}</span>
                     </div>
                   )}
                 </>
               )}
               {completedAt && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Completed At</span>
+                  <span className="text-muted-foreground">{displayText("Completed At")}</span>
                   <span className="font-semibold">{formatTime(completedAt)}</span>
                 </div>
               )}
               {bookingId && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Booking ID</span>
+                  <span className="text-muted-foreground">{displayText("Booking ID")}</span>
                   <span className="font-mono text-[10px]">#{bookingId.slice(0, 8)}</span>
                 </div>
               )}

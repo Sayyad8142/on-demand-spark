@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,11 +28,11 @@ import PriorityScoreCard from "@/components/profile/PriorityScoreCard";
 
 const SERVICES = [{
   value: "maid",
-  label: "Maid Service",
+  label: displayText("Maid Service"),
   icon: "🧹"
 }, {
   value: "bathroom_cleaning",
-  label: "Bathroom Cleaning",
+  label: displayText("Bathroom Cleaning"),
   icon: "🧼"
 }];
 const SERVICE_VALUES = new Set(SERVICES.map(service => service.value));
@@ -42,6 +43,7 @@ interface Community {
   is_active: boolean;
 }
 export default function Profile() {
+  useWorkerLanguage();
   const navigate = useNavigate();
   const {
     toast
@@ -286,8 +288,8 @@ export default function Profile() {
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     if (!ALLOWED_TYPES.includes(file.type)) {
       toast({
-        title: "Invalid format",
-        description: "Please upload a JPG, PNG, or WebP image",
+        title: displayText("Invalid format"),
+        description: displayText("Please upload a JPG, PNG, or WebP image"),
         variant: "destructive"
       });
       return;
@@ -296,8 +298,8 @@ export default function Profile() {
     // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
       toast({
-        title: "File too large",
-        description: "Image must be less than 5 MB",
+        title: displayText("File too large"),
+        description: displayText("Image must be less than 5 MB"),
         variant: "destructive"
       });
       return;
@@ -358,11 +360,11 @@ export default function Profile() {
       setPhotoUrl(publicUrl);
       refetchWorker();
 
-      toast({ title: "✅ Photo updated", description: "Your profile photo has been saved" });
+      toast({ title: displayText("✅ Photo updated"), description: displayText("Your profile photo has been saved") });
     } catch (error: any) {
       console.error('Photo upload error:', error);
       toast({
-        title: "Upload failed",
+        title: displayText("Upload failed"),
         description: error.message || "Could not upload photo. Please try again.",
         variant: "destructive"
       });
@@ -401,31 +403,31 @@ export default function Profile() {
   const handleUpdate = async () => {
     if (!fullName.trim()) {
       toast({
-        title: "Error",
-        description: "Name is required",
+        title: displayText("Error"),
+        description: displayText("Name is required"),
         variant: "destructive"
       });
       return;
     }
     if (selectedServices.length === 0) {
       toast({
-        title: "Error",
-        description: "Select at least one service",
+        title: displayText("Error"),
+        description: displayText("Select at least one service"),
         variant: "destructive"
       });
       return;
     }
     if (selectedCommunities.length === 0) {
       toast({
-        title: "Error",
-        description: "Select at least one community",
+        title: displayText("Error"),
+        description: displayText("Select at least one community"),
         variant: "destructive"
       });
       return;
     }
     if (!upiId.trim() || !upiId.includes("@")) {
       toast({
-        title: "UPI ID Required",
+        title: displayText("UPI ID Required"),
         description: "Please enter a valid UPI ID (must contain '@'). Example: name@paytm",
         variant: "destructive"
       });
@@ -442,13 +444,13 @@ export default function Profile() {
         communities: selectedCommunities,
       } as any);
       toast({
-        title: "Success",
-        description: "Profile updated successfully"
+        title: displayText("Success"),
+        description: displayText("Profile updated successfully")
       });
       setEditDialogOpen(false);
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: displayText("Error"),
         description: error.message,
         variant: "destructive"
       });
@@ -462,8 +464,8 @@ export default function Profile() {
       if (isGuestMode) {
         localStorage.removeItem('guest_mode');
         toast({
-          title: "Logged Out",
-          description: "You have exited guest mode"
+          title: displayText("Logged Out"),
+          description: displayText("You have exited guest mode")
         });
         navigate("/auth");
         return;
@@ -476,6 +478,7 @@ export default function Profile() {
 
       // Clear local storage regardless of error
       localStorage.clear();
+      localStorage.setItem('language', i18n.language);
 
       // Navigate to auth page regardless of error
       navigate("/auth");
@@ -484,23 +487,24 @@ export default function Profile() {
       if (error) {
         console.error('Logout error:', error);
         toast({
-          title: "Session Cleared",
-          description: "You have been logged out locally"
+          title: displayText("Session Cleared"),
+          description: displayText("You have been logged out locally")
         });
       } else {
         toast({
-          title: "Logged Out",
-          description: "You have been successfully logged out"
+          title: displayText("Logged Out"),
+          description: displayText("You have been successfully logged out")
         });
       }
     } catch (error: any) {
       console.error('Logout exception:', error);
       // Clear storage and navigate even on exception
       localStorage.clear();
+      localStorage.setItem('language', i18n.language);
       navigate("/auth");
       toast({
-        title: "Session Cleared",
-        description: "You have been logged out locally"
+        title: displayText("Session Cleared"),
+        description: displayText("You have been logged out locally")
       });
     }
   };
@@ -523,13 +527,13 @@ export default function Profile() {
       // Sign out (even if delete fails, we should sign out)
       await supabase.auth.signOut();
       toast({
-        title: "Account Deleted",
-        description: "Your account has been permanently deleted"
+        title: displayText("Account Deleted"),
+        description: displayText("Your account has been permanently deleted")
       });
       navigate("/auth");
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: displayText("Error"),
         description: error.message || "Failed to delete account",
         variant: "destructive"
       });
@@ -561,21 +565,21 @@ export default function Profile() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56 bg-background z-50" align="end">
-              <DropdownMenuLabel>Account Actions</DropdownMenuLabel>
+              <DropdownMenuLabel>{displayText("Account Actions")}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               
               <div className="p-1 space-y-1">
                 <Button onClick={() => navigate('/contact-support')} variant="ghost" className="w-full justify-start text-sm h-10">
                   <HelpCircle className="w-4 h-4 mr-2" />
-                  Contact & Support
+                  {displayText("Contact & Support")}
                 </Button>
                 <Button onClick={() => navigate('/privacy-policy')} variant="ghost" className="w-full justify-start text-sm h-10">
                   <Shield className="w-4 h-4 mr-2" />
-                  Privacy Policy
+                  {displayText("Privacy Policy")}
                 </Button>
                 <Button onClick={() => navigate('/terms-of-service')} variant="ghost" className="w-full justify-start text-sm h-10">
                   <FileText className="w-4 h-4 mr-2" />
-                  Terms of Service
+                  {displayText("Terms of Service")}
                 </Button>
               </div>
 
@@ -638,11 +642,11 @@ export default function Profile() {
                 <div className="space-y-4 py-4">
                   {/* Profile Photo Upload */}
                   <div className="space-y-2">
-                    <Label>Profile Photo</Label>
+                    <Label>{displayText("Profile Photo")}</Label>
                     <div className="flex items-center gap-4">
                       <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center border-2 border-border">
                         {photoUrl ? (
-                          <img src={photoUrl} alt="Profile" className="w-full h-full object-cover" />
+                          <img src={photoUrl} alt={displayText("Profile")} className="w-full h-full object-cover" />
                         ) : (
                           <Camera className="w-6 h-6 text-muted-foreground" />
                         )}
@@ -650,9 +654,9 @@ export default function Profile() {
                       <div className="flex-1">
                         <label htmlFor="edit-photo-upload" className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all ${uploadingPhoto ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}>
                           {uploadingPhoto ? (
-                            <><Loader2 className="w-4 h-4 animate-spin" />Uploading...</>
+                            <><Loader2 className="w-4 h-4 animate-spin" />{displayText("Uploading...")}</>
                           ) : (
-                            <><Camera className="w-4 h-4" />{photoUrl ? 'Change Photo' : 'Upload Photo'}</>
+                            <><Camera className="w-4 h-4" />{photoUrl ? displayText("Change Photo") : displayText("Upload Photo")}</>
                           )}
                         </label>
                         <input
@@ -663,7 +667,7 @@ export default function Profile() {
                           disabled={uploadingPhoto}
                           onChange={handlePhotoUpload}
                         />
-                        <p className="text-xs text-muted-foreground mt-1">JPG or PNG, max 5MB</p>
+                        <p className="text-xs text-muted-foreground mt-1">{displayText("JPG or PNG, max 5MB")}</p>
                       </div>
                     </div>
                   </div>
@@ -675,14 +679,14 @@ export default function Profile() {
 
                   <div className="space-y-2">
                     <Label htmlFor="edit-phone">{t('profile.phone')}</Label>
-                    <Input id="edit-phone" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Your mobile number" />
+                    <Input id="edit-phone" value={phone} onChange={e => setPhone(e.target.value)} placeholder={displayText("Your mobile number")} />
                   </div>
 
                   {/* Payment Details Section */}
                   <div className="space-y-3">
                     <Label className="flex items-center gap-2">
                       <CreditCard className="w-4 h-4" />
-                      Payment Details
+                      {displayText("Payment Details")}
                     </Label>
                     
                     {/* Manual UPI ID Input */}
@@ -696,7 +700,7 @@ export default function Profile() {
                         onChange={e => setUpiId(e.target.value)} 
                       />
                       <p className="text-xs text-muted-foreground">
-                        Required for receiving payouts
+                        {displayText("Required for receiving payouts")}
                       </p>
                     </div>
 
@@ -709,13 +713,13 @@ export default function Profile() {
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="w-full justify-between">
                           <span className="text-muted-foreground">
-                            {selectedServices.length > 0 ? `${selectedServices.length} selected` : "Select services"}
+                            {selectedServices.length > 0 ? `${selectedServices.length} selected` : displayText("Select services")}
                           </span>
                           <ChevronDown className="h-4 w-4 opacity-50" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="w-full">
-                    <DropdownMenuLabel>Select Services</DropdownMenuLabel>
+                    <DropdownMenuLabel>{displayText("Select Services")}</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         {SERVICES.map(service => <DropdownMenuCheckboxItem key={service.value} checked={selectedServices.includes(service.value)} onCheckedChange={checked => {
                         if (checked) {
@@ -745,13 +749,13 @@ export default function Profile() {
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="w-full justify-between">
                           <span className="text-muted-foreground">
-                            {selectedCommunities.length > 0 ? `${selectedCommunities.length} selected` : "Select communities"}
+                            {selectedCommunities.length > 0 ? `${selectedCommunities.length} selected` : displayText("Select communities")}
                           </span>
                           <ChevronDown className="h-4 w-4 opacity-50" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="w-full">
-                        <DropdownMenuLabel>Select Communities</DropdownMenuLabel>
+                        <DropdownMenuLabel>{displayText("Select Communities")}</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         {communities.map(community => <DropdownMenuCheckboxItem key={community.id} checked={selectedCommunities.includes(community.value)} onCheckedChange={checked => {
                         if (checked) {
@@ -798,7 +802,7 @@ export default function Profile() {
                   <p className="text-muted-foreground text-sm mb-2 flex items-center gap-1">
                     📱 {worker?.phone}
                   </p>
-                  <Badge variant={worker?.is_active ? "default" : "secondary"} className={worker?.is_active ? "bg-green-500 hover:bg-green-600 shadow-sm" : ""}>
+                  <Badge variant={worker?.is_active ? "default" : displayText("secondary")} className={worker?.is_active ? "bg-green-500 hover:bg-green-600 shadow-sm" : ""}>
                     {worker?.is_active ? t('profile.status.active') : t('profile.status.pending')}
                   </Badge>
                 </div>
@@ -815,7 +819,7 @@ export default function Profile() {
                     ₹{todayEarnings}
                   </p>
                   <p className="text-[9px] text-muted-foreground font-semibold text-center uppercase tracking-tight leading-tight">
-                    Today's Earnings
+                    {displayText("Today's Earnings")}
                   </p>
                 </div>
 
@@ -827,7 +831,7 @@ export default function Profile() {
                     ₹{monthEarnings}
                   </p>
                   <p className="text-[9px] text-muted-foreground font-semibold text-center uppercase tracking-tight leading-tight">
-                    THIS MONTH
+                    {displayText("THIS MONTH")}
                   </p>
                 </div>
 
@@ -900,7 +904,7 @@ export default function Profile() {
           <a href="tel:8008180018" className="block">
             <Button className="w-full h-12 bg-green-600 hover:bg-green-700 text-white">
               <Phone className="w-5 h-5 mr-2" />
-              Call Support: 8008180018
+              {displayText("Call Support: 8008180018")}
             </Button>
           </a>
           
@@ -909,7 +913,7 @@ export default function Profile() {
             className="text-xs text-center text-muted-foreground cursor-pointer select-none"
             onClick={handleVersionTap}
           >
-            Version {CURRENT_VERSION_CODE}
+            {displayText("Version")} {CURRENT_VERSION_CODE}
           </p>
         </div>
       </main>

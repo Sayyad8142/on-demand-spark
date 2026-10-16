@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,12 +24,12 @@ import serviceBathroomCleaning from "@/assets/service-bathroom-commode.jpg";
 import PaymentCollectionModal from "@/components/PaymentCollectionModal";
 
 const TASK_CONFIG: Record<string, {label: string; img: string; icon: typeof Utensils}> = {
-  dish_washing: { label: "Dish Washing", img: serviceDishWashing, icon: Utensils },
-  floor_cleaning: { label: "Jhadu Pocha", img: serviceFloorCleaning, icon: Sparkles }
+  dish_washing: { label: displayText("Dish Washing"), img: serviceDishWashing, icon: Utensils },
+  floor_cleaning: { label: displayText("Jhadu Pocha"), img: serviceFloorCleaning, icon: Sparkles }
 };
 
 const SERVICE_TASKS: Record<string, {label: string;img: string;}[]> = {
-  bathroom_cleaning: [{ label: "Bathroom Cleaning", img: serviceBathroomCleaning }]
+  bathroom_cleaning: [{ label: displayText("Bathroom Cleaning"), img: serviceBathroomCleaning }]
 };
 
 type Booking = BookingWithAddress;
@@ -48,6 +49,7 @@ export default function ActiveJobCard({
   updating,
   onRefresh
 }: ActiveJobCardProps) {
+  useWorkerLanguage();
   const [remainingSeconds, setRemainingSeconds] = useState<number>(0);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [taskPrices, setTaskPrices] = useState<Record<string, number>>({});
@@ -264,7 +266,7 @@ export default function ActiveJobCard({
             <button
               onClick={speakFlatNo}
               className="p-2 rounded-full bg-[#5A3423]/60 hover:bg-[#5A3423] transition-colors active:scale-90 ml-2"
-              aria-label="Speak flat number">
+              aria-label={displayText("Speak flat number")}>
               <Volume2 className="w-5 h-5 text-[#D6B88A]" />
             </button>
           </div>
@@ -277,13 +279,13 @@ export default function ActiveJobCard({
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-[10px] font-bold text-[#D6B88A] mb-2 tracking-wider">FLOOR</p>
+                <p className="text-[10px] font-bold text-[#D6B88A] mb-2 tracking-wider">{displayText("FLOOR")}</p>
                 <div className="bg-[#5A3423] rounded-xl py-4 shadow-inner border-2 border-[#D6B88A]/50">
                   <p className="text-3xl font-extrabold flat-number-text">{phfParsed.floor}</p>
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-[10px] font-bold text-[#D6B88A] mb-2 tracking-wider">DOOR</p>
+                <p className="text-[10px] font-bold text-[#D6B88A] mb-2 tracking-wider">{displayText("DOOR")}</p>
                 <div className="bg-[#5A3423] rounded-xl py-4 shadow-inner border-2 border-[#D6B88A]/50">
                   <p className="text-3xl font-extrabold flat-number-text">{phfParsed.door}</p>
                 </div>
@@ -323,9 +325,9 @@ export default function ActiveJobCard({
                 const extra = (booking.dish_intensity_extra_inr || 0) + (booking.surcharge_amount || 0);
                 const glassPartition = booking.glass_partition_fee || 0;
                 const chips: { icon: typeof Utensils; label: string; amount: number }[] = [];
-                if (surge > 0) chips.push({ icon: Zap, label: 'Surge', amount: surge });
-                if (extra > 0) chips.push({ icon: PlusCircle, label: 'Extra', amount: extra });
-                if (glassPartition > 0) chips.push({ icon: Sparkles, label: 'Glass Partition', amount: glassPartition });
+                if (surge > 0) chips.push({ icon: Zap, label: displayText("Surge"), amount: surge });
+                if (extra > 0) chips.push({ icon: PlusCircle, label: displayText("Extra"), amount: extra });
+                if (glassPartition > 0) chips.push({ icon: Sparkles, label: displayText("Glass Partition"), amount: glassPartition });
                 return chips.length >= 1 ? (
                   <div className="flex flex-wrap items-center gap-1.5">
                     {chips.map((chip) => {
@@ -343,7 +345,7 @@ export default function ActiveJobCard({
               {/* Earnings — worker net only */}
               <div className="pt-1">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-muted-foreground">You Earn</p>
+                  <p className="text-sm font-medium text-muted-foreground">{displayText("You Earn")}</p>
                   <p className="font-bold text-green-500 text-xl">₹{payoutBreakdown.netPayout}</p>
                 </div>
               </div>
@@ -363,10 +365,10 @@ export default function ActiveJobCard({
               }
               onClick={() => navigate(`/complete-booking/${booking.id}`)}
               disabled={isWorkCompletedDisabled}>
-              {updating ? "Updating..." :
+              {updating ? displayText("Updating...") :
                 <>
                   <KeyRound className="w-6 h-6 mr-2" />
-                  Complete with OTP
+                  {displayText("Complete with OTP")}
                 </>
               }
             </Button>
@@ -380,16 +382,16 @@ export default function ActiveJobCard({
               }
               onClick={() => navigate(`/start-booking/${booking.id}`)}
               disabled={isWorkCompletedDisabled}>
-              {updating ? "Updating..." :
+              {updating ? displayText("Updating...") :
                 <>
                   <Play className="w-6 h-6 mr-2" />
-                  Start Booking
+                  {displayText("Start Booking")}
                 </>
               }
             </Button>
           ) : otpAction === "resolving" ? (
             <Button size="lg" disabled className="w-full h-14 text-base font-semibold rounded-xl">
-              Checking booking…
+              {displayText("Checking booking…")}
             </Button>
           ) : otpAction === "unavailable" ? (
             <Button
@@ -398,7 +400,7 @@ export default function ActiveJobCard({
               className="w-full h-14 text-base font-semibold rounded-xl"
               onClick={() => setModeAttempt((n) => n + 1)}>
               <AlertTriangle className="w-5 h-5 mr-2" />
-              Booking code check unavailable — tap to retry
+              {displayText("Booking code check unavailable — tap to retry")}
             </Button>
           ) : null}
         </div>
@@ -410,7 +412,7 @@ export default function ActiveJobCard({
             className="w-full h-12 text-base font-bold bg-green-500 hover:bg-green-600 text-white shadow-md rounded-xl transition-all duration-200 active:scale-[0.98]"
             onClick={handleCallManager}>
             <Phone className="w-5 h-5 mr-2" />
-            Call Manager
+            {displayText("Call Manager")}
           </Button>
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Smartphone, Battery, Power, Bell, AlertTriangle, TestTube, Key } from "lucide-react";
@@ -14,6 +15,7 @@ import { Capacitor } from '@capacitor/core';
 const VAPID_PUBLIC = import.meta.env.VITE_VAPID_PUBLIC_KEY as string;
 
 export default function Troubleshoot() {
+  useWorkerLanguage();
   const navigate = useNavigate();
   const { user, session } = useAuth();
   const { worker } = useWorkerProfile(user?.id);
@@ -59,8 +61,8 @@ export default function Troubleshoot() {
   const setupWebPush = async () => {
     if (!user) {
       toast({
-        title: "Error",
-        description: "Please sign in first",
+        title: displayText("Error"),
+        description: displayText("Please sign in first"),
         variant: "destructive"
       });
       return;
@@ -72,8 +74,8 @@ export default function Troubleshoot() {
       const supported = await ensureServiceWorker();
       if (!supported) {
         toast({
-          title: "Not Supported",
-          description: "Web Push is not supported on this browser",
+          title: displayText("Not Supported"),
+          description: displayText("Web Push is not supported on this browser"),
           variant: "destructive"
         });
         return;
@@ -82,8 +84,8 @@ export default function Troubleshoot() {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
         toast({
-          title: "Permission Denied",
-          description: "Please allow notifications to enable Web Push",
+          title: displayText("Permission Denied"),
+          description: displayText("Please allow notifications to enable Web Push"),
           variant: "destructive"
         });
         return;
@@ -92,13 +94,13 @@ export default function Troubleshoot() {
       await subscribeWebPush(user.id, VAPID_PUBLIC);
       
       toast({
-        title: "Success",
-        description: "Web Push notifications enabled successfully!"
+        title: displayText("Success"),
+        description: displayText("Web Push notifications enabled successfully!")
       });
     } catch (error: any) {
       console.error("Web Push setup error:", error);
       toast({
-        title: "Error",
+        title: displayText("Error"),
         description: error.message || "Failed to enable Web Push",
         variant: "destructive"
       });
@@ -110,8 +112,8 @@ export default function Troubleshoot() {
   const createTestBooking = async () => {
     if (!user || !worker) {
       toast({
-        title: "Error",
-        description: "Worker profile not found",
+        title: displayText("Error"),
+        description: displayText("Worker profile not found"),
         variant: "destructive"
       });
       return;
@@ -144,13 +146,13 @@ export default function Troubleshoot() {
 
       console.log('✅ Test booking created:', data);
       toast({
-        title: "Test Booking Created",
-        description: "Modal should appear within ~1 second if you're online. Check for Web Push notification if tab is unfocused."
+        title: displayText("Test Booking Created"),
+        description: displayText("Modal should appear within ~1 second if you're online. Check for Web Push notification if tab is unfocused.")
       });
     } catch (error: any) {
       console.error('❌ Failed to create test booking:', error);
       toast({
-        title: "Error",
+        title: displayText("Error"),
         description: error.message || "Failed to create test booking",
         variant: "destructive"
       });
@@ -172,12 +174,12 @@ export default function Troubleshoot() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-xl font-bold">Troubleshooting</h1>
-            <p className="text-sm text-muted-foreground">Fix common issues</p>
+            <h1 className="text-xl font-bold">{displayText("Troubleshooting")}</h1>
+            <p className="text-sm text-muted-foreground">{displayText("Fix common issues")}</p>
             <div className="flex gap-2 mt-1 flex-wrap">
-              <Link to="/booking-diagnostics" className="text-xs underline hover:opacity-80 font-semibold">Booking Diagnostics</Link>
-              <Link to="/verify-push" className="text-xs underline hover:opacity-80">Verify Push</Link>
-              <Link to="/dev-cache-reset" className="text-xs underline hover:opacity-80">Dev Cache Reset</Link>
+              <Link to="/booking-diagnostics" className="text-xs underline hover:opacity-80 font-semibold">{displayText("Booking Diagnostics")}</Link>
+              <Link to="/verify-push" className="text-xs underline hover:opacity-80">{displayText("Verify Push")}</Link>
+              <Link to="/dev-cache-reset" className="text-xs underline hover:opacity-80">{displayText("Dev Cache Reset")}</Link>
             </div>
           </div>
         </div>
@@ -191,14 +193,14 @@ export default function Troubleshoot() {
               <Key className="w-6 h-6 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-1" />
               <div className="flex-1">
                 <h3 className="font-semibold mb-2 text-blue-900 dark:text-blue-100">
-                  Authentication Token Status
+                  {displayText("Authentication Token Status")}
                 </h3>
                 {tokenStatus === null ? (
-                  <p className="text-sm text-blue-700 dark:text-blue-300">Checking...</p>
+                  <p className="text-sm text-blue-700 dark:text-blue-300">{displayText("Checking...")}</p>
                 ) : tokenStatus.saved ? (
                   <div>
                     <p className="text-sm text-green-700 dark:text-green-300 mb-2">
-                      ✅ JWT token is saved and ready
+                      {displayText("✅ JWT token is saved and ready")}
                     </p>
                     <p className="text-xs font-mono bg-blue-100 dark:bg-blue-900 p-2 rounded text-blue-800 dark:text-blue-200">
                       {tokenStatus.preview}
@@ -207,10 +209,10 @@ export default function Troubleshoot() {
                 ) : (
                   <div>
                     <p className="text-sm text-red-700 dark:text-red-300 mb-2">
-                      ❌ No JWT token saved - overlay accept will fail
+                      {displayText("❌ No JWT token saved - overlay accept will fail")}
                     </p>
                     <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
-                      Click below to save your token now:
+                      {displayText("Click below to save your token now:")}
                     </p>
                     <Button
                       size="sm"
@@ -232,23 +234,23 @@ export default function Troubleshoot() {
                                 saved: true,
                                 preview: `${session.access_token.substring(0, 20)}...`
                               });
-                              toast({ title: "✅ JWT Saved", description: "Token saved and verified successfully" });
+                              toast({ title: displayText("✅ JWT Saved"), description: displayText("Token saved and verified successfully") });
                             } else {
                               console.error('❌ JWT verification failed after save');
-                              toast({ title: "⚠️ Verification failed", description: "Token saved but verification failed", variant: "destructive" });
+                              toast({ title: displayText("⚠️ Verification failed"), description: displayText("Token saved but verification failed"), variant: "destructive" });
                             }
                           } else {
                             console.error('❌ No session found');
-                            toast({ title: "❌ Not logged in", description: "Please log in first", variant: "destructive" });
+                            toast({ title: displayText("❌ Not logged in"), description: displayText("Please log in first"), variant: "destructive" });
                           }
                         } catch (error) {
                           console.error('❌ JWT save error:', error);
-                          toast({ title: "Error", description: String(error), variant: "destructive" });
+                          toast({ title: displayText("Error"), description: String(error), variant: "destructive" });
                         }
                       }}
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
-                      Save JWT Now
+                      {displayText("Save JWT Now")}
                     </Button>
                   </div>
                 )}
@@ -263,10 +265,10 @@ export default function Troubleshoot() {
             <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-1" />
             <div>
               <h3 className="font-semibold mb-2 text-yellow-900 dark:text-yellow-100">
-                Important for reliable notifications
+                {displayText("Important for reliable notifications")}
               </h3>
               <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                Some phone manufacturers restrict background apps. Follow these steps to ensure you never miss a booking.
+                {displayText("Some phone manufacturers restrict background apps. Follow these steps to ensure you never miss a booking.")}
               </p>
             </div>
           </div>
@@ -279,19 +281,19 @@ export default function Troubleshoot() {
               <Battery className="w-6 h-6 text-red-600 dark:text-red-400" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold mb-1">Disable Battery Optimization</h3>
+              <h3 className="font-semibold mb-1">{displayText("Disable Battery Optimization")}</h3>
               <p className="text-sm text-muted-foreground mb-3">
                 Allow Didi Now to run in the background without restrictions
               </p>
               <Button onClick={openBatterySettings} variant="outline" className="w-full">
-                Open Battery Settings
+                {displayText("Open Battery Settings")}
               </Button>
               <div className="mt-3 p-3 bg-muted rounded-lg">
-                <p className="text-xs font-medium mb-2">Manual Steps:</p>
+                <p className="text-xs font-medium mb-2">{displayText("Manual Steps:")}</p>
                 <ol className="text-xs text-muted-foreground space-y-1">
                   <li>1. Go to Settings → Apps → Didi Now</li>
-                  <li>2. Tap "Battery" or "Battery Usage"</li>
-                  <li>3. Select "Unrestricted" or "Don't optimize"</li>
+                  <li>{displayText("2. Tap \"Battery\" or \"Battery Usage\"")}</li>
+                  <li>{displayText("3. Select \"Unrestricted\" or \"Don't optimize\"")}</li>
                 </ol>
               </div>
             </div>
@@ -305,20 +307,20 @@ export default function Troubleshoot() {
               <Power className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold mb-1">Enable Auto-start</h3>
+              <h3 className="font-semibold mb-1">{displayText("Enable Auto-start")}</h3>
               <p className="text-sm text-muted-foreground mb-3">
                 Allow Didi Now to start automatically when your phone restarts
               </p>
               <Button onClick={openAutoStartSettings} variant="outline" className="w-full">
-                Open Auto-start Settings
+                {displayText("Open Auto-start Settings")}
               </Button>
               <div className="mt-3 p-3 bg-muted rounded-lg">
-                <p className="text-xs font-medium mb-2">Manual Steps (varies by brand):</p>
+                <p className="text-xs font-medium mb-2">{displayText("Manual Steps (varies by brand):")}</p>
                 <ol className="text-xs text-muted-foreground space-y-1">
-                  <li><strong>Xiaomi/Redmi:</strong> Security → Permissions → Autostart</li>
-                  <li><strong>Huawei:</strong> Settings → Apps → App launch</li>
-                  <li><strong>Oppo/Realme:</strong> Settings → App Management → Startup Manager</li>
-                  <li><strong>Vivo:</strong> Settings → Apps → Autostart</li>
+                  <li><strong>Xiaomi/Redmi:</strong> {displayText("Security → Permissions → Autostart")}</li>
+                  <li><strong>Huawei:</strong> {displayText("Settings → Apps → App launch")}</li>
+                  <li><strong>Oppo/Realme:</strong> {displayText("Settings → App Management → Startup Manager")}</li>
+                  <li><strong>Vivo:</strong> {displayText("Settings → Apps → Autostart")}</li>
                 </ol>
               </div>
             </div>
@@ -332,23 +334,23 @@ export default function Troubleshoot() {
               <TestTube className="w-6 h-6 text-orange-600 dark:text-orange-400" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold mb-1 text-orange-900 dark:text-orange-100">Test Booking Alert</h3>
+              <h3 className="font-semibold mb-1 text-orange-900 dark:text-orange-100">{displayText("Test Booking Alert")}</h3>
               <p className="text-sm text-orange-700 dark:text-orange-300 mb-3">
-                Create a test booking to verify notification system works
+                {displayText("Create a test booking to verify notification system works")}
               </p>
               <Button 
                 onClick={createTestBooking} 
                 disabled={testing || !worker}
                 className="w-full bg-orange-600 hover:bg-orange-700 text-white"
               >
-                {testing ? "Creating..." : "Create Test Booking"}
+                {testing ? displayText("Creating...") : displayText("Create Test Booking")}
               </Button>
               <div className="mt-3 p-3 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                <p className="text-xs font-medium mb-2 text-orange-900 dark:text-orange-100">What to verify:</p>
+                <p className="text-xs font-medium mb-2 text-orange-900 dark:text-orange-100">{displayText("What to verify:")}</p>
                 <ul className="text-xs text-orange-700 dark:text-orange-300 space-y-1">
-                  <li>✓ Modal appears within ~1 second when you're Online</li>
-                  <li>✓ Web Push notification appears if tab is unfocused</li>
-                  <li>✓ Sound plays (if enabled)</li>
+                  <li>{displayText("✓ Modal appears within ~1 second when you're Online")}</li>
+                  <li>{displayText("✓ Web Push notification appears if tab is unfocused")}</li>
+                  <li>{displayText("✓ Sound plays (if enabled)")}</li>
                 </ul>
               </div>
             </div>
@@ -362,19 +364,19 @@ export default function Troubleshoot() {
               <Bell className="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold mb-1 text-green-900 dark:text-green-100">Enable Web Push (Browser)</h3>
+              <h3 className="font-semibold mb-1 text-green-900 dark:text-green-100">{displayText("Enable Web Push (Browser)")}</h3>
               <p className="text-sm text-green-700 dark:text-green-300 mb-3">
-                Get booking alerts even when the tab is in the background
+                {displayText("Get booking alerts even when the tab is in the background")}
               </p>
               <Button 
                 onClick={setupWebPush} 
                 disabled={enabling}
                 className="w-full bg-green-600 hover:bg-green-700 text-white"
               >
-                {enabling ? "Enabling..." : "Enable Web Push"}
+                {enabling ? displayText("Enabling...") : displayText("Enable Web Push")}
               </Button>
               <p className="text-xs text-green-600 dark:text-green-400 mt-2">
-                This allows notifications to work even when the browser tab is not focused
+                {displayText("This allows notifications to work even when the browser tab is not focused")}
               </p>
             </div>
           </div>
@@ -387,17 +389,17 @@ export default function Troubleshoot() {
               <Bell className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold mb-1">Enable Notifications</h3>
+              <h3 className="font-semibold mb-1">{displayText("Enable Notifications")}</h3>
               <p className="text-sm text-muted-foreground mb-3">
-                Ensure notification permissions are granted
+                {displayText("Ensure notification permissions are granted")}
               </p>
               <div className="p-3 bg-muted rounded-lg">
-                <p className="text-xs font-medium mb-2">Steps:</p>
+                <p className="text-xs font-medium mb-2">{displayText("Steps:")}</p>
                 <ol className="text-xs text-muted-foreground space-y-1">
                   <li>1. Go to Settings → Apps → Didi Now</li>
-                  <li>2. Tap "Notifications"</li>
-                  <li>3. Enable "Allow notifications"</li>
-                  <li>4. Enable all notification categories</li>
+                  <li>{displayText("2. Tap \"Notifications\"")}</li>
+                  <li>{displayText("3. Enable \"Allow notifications\"")}</li>
+                  <li>{displayText("4. Enable all notification categories")}</li>
                 </ol>
               </div>
             </div>
@@ -411,7 +413,7 @@ export default function Troubleshoot() {
               <Smartphone className="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold mb-2">Device-Specific Settings</h3>
+              <h3 className="font-semibold mb-2">{displayText("Device-Specific Settings")}</h3>
               <div className="space-y-3">
                 <details className="p-3 bg-muted rounded-lg">
                   <summary className="text-sm font-medium cursor-pointer">Xiaomi / Redmi / POCO</summary>
@@ -464,16 +466,16 @@ export default function Troubleshoot() {
         {/* Still Having Issues */}
         <Card className="p-6 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
           <h3 className="font-semibold mb-2 text-blue-900 dark:text-blue-100">
-            Still having issues?
+            {displayText("Still having issues?")}
           </h3>
           <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
-            Make sure you've completed all the steps above. If notifications still don't work:
+            {displayText("Make sure you've completed all the steps above. If notifications still don't work:")}
           </p>
           <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-            <li>• Restart your phone after changing settings</li>
-            <li>• Check if you're online in the app</li>
-            <li>• Verify your internet connection</li>
-            <li>• Contact support if issues persist</li>
+            <li>{displayText("• Restart your phone after changing settings")}</li>
+            <li>{displayText("• Check if you're online in the app")}</li>
+            <li>{displayText("• Verify your internet connection")}</li>
+            <li>{displayText("• Contact support if issues persist")}</li>
           </ul>
         </Card>
       </main>

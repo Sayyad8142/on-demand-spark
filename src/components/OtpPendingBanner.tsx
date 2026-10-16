@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { OtpPendingBooking } from "@/hooks/useOtpReminderEscalation";
 
@@ -7,6 +8,7 @@ import type { OtpPendingBooking } from "@/hooks/useOtpReminderEscalation";
  * Hidden on the Complete-Booking screen (where the OTP entry already lives).
  */
 export default function OtpPendingBanner({ bookings }: { bookings: OtpPendingBooking[] }) {
+  useWorkerLanguage();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -21,11 +23,11 @@ export default function OtpPendingBanner({ bookings }: { bookings: OtpPendingBoo
       type="button"
       onClick={() => navigate(`/complete-booking/${target.id}?focusOtp=1`)}
       className="fixed top-0 inset-x-0 z-[80] w-full bg-amber-500 text-amber-950 px-4 py-2.5 text-sm font-semibold text-left shadow-md active:bg-amber-600 flex items-center gap-2"
-      aria-label="OTP pending – complete booking now"
+      aria-label={displayText("OTP pending – complete booking now")}
     >
       <span className="text-lg leading-none">⚠</span>
-      <span className="flex-1">OTP Pending – Complete booking now</span>
-      <span className="text-xs font-bold underline">Open</span>
+      <span className="flex-1">{displayText("OTP Pending – Complete booking now")}</span>
+      <span className="text-xs font-bold underline">{displayText("Open")}</span>
     </button>
   );
 }

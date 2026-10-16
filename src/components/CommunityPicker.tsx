@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, Loader2, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +29,7 @@ export function CommunityPicker({
   placeholder = "Select your community",
   onOptionsLoaded,
 }: CommunityPickerProps) {
+  useWorkerLanguage();
   const [open, setOpen] = useState(false);
   const [options, setOptions] = useState<CommunityOption[]>([]);
   const [state, setState] = useState<LoadState>("loading");
@@ -96,11 +98,11 @@ export function CommunityPicker({
       >
         {state === "loading" ? (
           <span className="flex items-center gap-2 font-normal text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading communities…
+            <Loader2 className="h-4 w-4 animate-spin" /> {displayText("Loading communities…")}
           </span>
         ) : state === "error" ? (
           <span className="flex items-center gap-2 font-normal text-destructive">
-            <RefreshCw className="h-4 w-4" /> Couldn’t load communities — tap to retry
+            <RefreshCw className="h-4 w-4" /> {displayText("Couldn’t load communities — tap to retry")}
           </span>
         ) : (
           <span className={cn("truncate", !selected && "font-normal text-muted-foreground")}>
@@ -113,14 +115,14 @@ export function CommunityPicker({
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="bottom" className="max-h-[80vh] rounded-t-3xl p-0">
           <SheetHeader className="border-b px-5 py-4 text-left">
-            <SheetTitle className="text-lg">Select your community</SheetTitle>
+            <SheetTitle className="text-lg">{displayText("Select your community")}</SheetTitle>
           </SheetHeader>
           <div className="max-h-[60vh] overflow-y-auto overscroll-contain p-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             {options.length === 0 ? (
               <div className="space-y-3 p-4 text-center">
-                <p className="text-sm text-muted-foreground">No communities available right now.</p>
+                <p className="text-sm text-muted-foreground">{displayText("No communities available right now.")}</p>
                 <Button variant="outline" onClick={() => load()} className="rounded-2xl">
-                  Try again
+                  {displayText("Try again")}
                 </Button>
               </div>
             ) : (

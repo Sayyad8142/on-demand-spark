@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,6 +23,7 @@ const hasValidBankDetails = (name: string, accountNumber: string, ifsc: string) 
 );
 
 export default function AccountDetails() {
+  useWorkerLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const fromSignup = searchParams.get("from") === "signup";
@@ -89,7 +91,7 @@ export default function AccountDetails() {
   const handleSave = async () => {
     const err = validate();
     if (err) {
-      toast({ title: "Check your details", description: err, variant: "destructive" });
+      toast({ title: displayText("Check your details"), description: err, variant: "destructive" });
       return;
     }
 
@@ -114,14 +116,14 @@ export default function AccountDetails() {
         payout_ready: true,
       } as any);
 
-      sonnerToast.success("Payout details saved");
+      sonnerToast.success(displayText("Payout details saved"));
 
       if (fromSignup) {
         navigate("/availability", { replace: true });
       }
     } catch (err: any) {
       toast({
-        title: "Save failed",
+        title: displayText("Save failed"),
         description: err?.message || "Could not save payout details",
         variant: "destructive",
       });
@@ -147,7 +149,7 @@ export default function AccountDetails() {
       sonnerToast.success("Bank details filled from image");
     } catch (err: any) {
       toast({
-        title: "Could not read image",
+        title: displayText("Could not read image"),
         description: err?.message || "Please enter the bank details manually",
         variant: "destructive",
       });
@@ -174,9 +176,9 @@ export default function AccountDetails() {
             </Button>
           )}
           <div>
-            <h1 className="text-xl font-semibold">UPI Details</h1>
+            <h1 className="text-xl font-semibold">{displayText("UPI Details")}</h1>
             <p className="text-xs text-muted-foreground">
-              Enter UPI ID for payouts. Bank details are optional.
+              {displayText("Enter UPI ID for payouts. Bank details are optional.")}
             </p>
           </div>
         </div>
@@ -187,8 +189,7 @@ export default function AccountDetails() {
           <Card className="border-primary/30 bg-primary/5">
             <CardContent className="py-3">
               <p className="text-sm">
-                <strong>One last step!</strong> Enter your UPI ID so we can send
-                your earnings. Bank details are optional and can be added later.
+                <strong>{displayText("One last step!")}</strong> {displayText("Enter your UPI ID so we can send your earnings. Bank details are optional and can be added later.")}
               </p>
             </CardContent>
           </Card>
@@ -201,7 +202,7 @@ export default function AccountDetails() {
               <CreditCard className="w-5 h-5" />
               UPI ID
               <span className="ml-auto text-xs font-normal text-destructive">
-                Required
+                {displayText("Required")}
               </span>
             </CardTitle>
           </CardHeader>
@@ -217,7 +218,7 @@ export default function AccountDetails() {
               autoCorrect="off"
             />
             <p className="text-xs text-muted-foreground">
-              Your earnings will be sent to this UPI ID.
+              {displayText("Your earnings will be sent to this UPI ID.")}
             </p>
           </CardContent>
         </Card>
@@ -227,26 +228,26 @@ export default function AccountDetails() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Landmark className="w-5 h-5" />
-              Bank Details
+              {displayText("Bank Details")}
               <span className="ml-auto text-xs font-normal text-muted-foreground">
-                Optional
+                {displayText("Optional")}
               </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="acct-name">Account Holder Name</Label>
+              <Label htmlFor="acct-name">{displayText("Account Holder Name")}</Label>
               <Input
                 id="acct-name"
                 value={accountHolderName}
                 onChange={(e) => setAccountHolderName(e.target.value)}
-                placeholder="Name as on bank account"
+                placeholder={displayText("Name as on bank account")}
                 disabled={saving}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="acct-no">Bank Account Number</Label>
+              <Label htmlFor="acct-no">{displayText("Bank Account Number")}</Label>
               <Input
                 id="acct-no"
                 inputMode="numeric"
@@ -254,14 +255,14 @@ export default function AccountDetails() {
                 onChange={(e) =>
                   setBankAccountNumber(e.target.value.replace(/\D/g, ""))
                 }
-                placeholder="9 to 18 digits"
+                placeholder={displayText("9 to 18 digits")}
                 maxLength={18}
                 disabled={saving}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="acct-no-confirm">Confirm Account Number</Label>
+              <Label htmlFor="acct-no-confirm">{displayText("Confirm Account Number")}</Label>
               <Input
                 id="acct-no-confirm"
                 inputMode="numeric"
@@ -269,7 +270,7 @@ export default function AccountDetails() {
                 onChange={(e) =>
                   setConfirmAccountNumber(e.target.value.replace(/\D/g, ""))
                 }
-                placeholder="Re-enter account number"
+                placeholder={displayText("Re-enter account number")}
                 maxLength={18}
                 disabled={saving}
               />
@@ -287,12 +288,12 @@ export default function AccountDetails() {
                 className="uppercase"
               />
               <p className="text-xs text-muted-foreground">
-                11 characters. Format: 4 letters + 0 + 6 alphanumeric.
+                {displayText("11 characters. Format: 4 letters + 0 + 6 alphanumeric.")}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="bank-name">Bank Name</Label>
+              <Label htmlFor="bank-name">{displayText("Bank Name")}</Label>
               <Input
                 id="bank-name"
                 value={bankName}
@@ -309,9 +310,9 @@ export default function AccountDetails() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <ShieldCheck className="w-5 h-5" />
-              Passbook Photo
+              {displayText("Passbook Photo")}
               <span className="ml-auto text-xs font-normal text-muted-foreground">
-                Optional
+                {displayText("Optional")}
               </span>
             </CardTitle>
           </CardHeader>
@@ -324,8 +325,8 @@ export default function AccountDetails() {
             />
             <p className="text-xs text-muted-foreground mt-2">
               {extracting
-                ? "Reading bank details from the uploaded image..."
-                : "Upload a clear photo of your bank passbook or cancelled cheque. We'll fill the fields when details can be read."}
+                ? displayText("Reading bank details from the uploaded image...")
+                : displayText("Upload a clear photo of your bank passbook or cancelled cheque. We'll fill the fields when details can be read.")}
             </p>
           </CardContent>
         </Card>
@@ -338,7 +339,7 @@ export default function AccountDetails() {
           {saving ? (
             <>
               <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              Saving...
+              {displayText("Saving...")}
             </>
           ) : fromSignup ? (
             "Save & Continue"

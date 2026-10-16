@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -38,10 +39,10 @@ type FaultEvent = {
 };
 
 function rankFromScore(score: number) {
-  if (score >= 90) return { label: "Top 10%", emoji: "🥇", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30" };
-  if (score >= 75) return { label: "Top 25%", emoji: "🥈", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/30" };
-  if (score >= 50) return { label: "Average", emoji: "🥉", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/30" };
-  return { label: "Needs Improvement", emoji: "⚠️", color: "text-red-600 dark:text-red-400", bg: "bg-red-50 dark:bg-red-950/30" };
+  if (score >= 90) return { label: displayText("Top 10%"), emoji: "🥇", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30" };
+  if (score >= 75) return { label: displayText("Top 25%"), emoji: "🥈", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/30" };
+  if (score >= 50) return { label: displayText("Average"), emoji: "🥉", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/30" };
+  return { label: displayText("Needs Improvement"), emoji: "⚠️", color: "text-red-600 dark:text-red-400", bg: "bg-red-50 dark:bg-red-950/30" };
 }
 
 function tierLabelFromScore(score: number) {
@@ -54,13 +55,13 @@ function tierLabelFromScore(score: number) {
 function reasonMeta(code: string) {
   switch (code) {
     case "worker_no_show":
-      return { label: "No Show", penalty: PENALTY.worker_no_show, icon: XCircle };
+      return { label: displayText("No Show"), penalty: PENALTY.worker_no_show, icon: XCircle };
     case "worker_cancelled":
-      return { label: "Cancelled After Accept", penalty: PENALTY.worker_cancelled, icon: XCircle };
+      return { label: displayText("Cancelled After Accept"), penalty: PENALTY.worker_cancelled, icon: XCircle };
     case "no_movement":
-      return { label: "No Movement", penalty: PENALTY.no_movement, icon: AlertTriangle };
+      return { label: displayText("No Movement"), penalty: PENALTY.no_movement, icon: AlertTriangle };
     case "complaint":
-      return { label: "Customer Complaint", penalty: PENALTY.complaint, icon: AlertTriangle };
+      return { label: displayText("Customer Complaint"), penalty: PENALTY.complaint, icon: AlertTriangle };
     default:
       return { label: code.replace(/_/g, " "), penalty: 0, icon: AlertTriangle };
   }
@@ -77,6 +78,7 @@ function formatWhen(iso: string) {
 }
 
 export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
+  useWorkerLanguage();
   const score = Math.round((worker?.priority_score ?? 0) * 10) / 10;
   const effectiveRating = worker?.admin_override_rating ?? worker?.rating ?? 0;
   const totalRatings = worker?.total_ratings ?? 0;
@@ -125,8 +127,8 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
   }, {});
 
   const breakdown: { label: string; value: number; positive: boolean }[] = [
-    { label: "Base score", value: 50, positive: true },
-    { label: "Completed Jobs", value: completedCount, positive: true },
+    { label: displayText("Base score"), value: 50, positive: true },
+    { label: displayText("Completed Jobs"), value: completedCount, positive: true },
   ];
   Object.entries(penaltyCounts).forEach(([code, count]) => {
     const meta = reasonMeta(code);
@@ -140,7 +142,7 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
   });
   const ratingBonus = effectiveRating >= 4.8 && totalRatings >= 5 ? 5 : 0;
   if (ratingBonus > 0) {
-    breakdown.push({ label: "High Rating Bonus", value: ratingBonus, positive: true });
+    breakdown.push({ label: displayText("High Rating Bonus"), value: ratingBonus, positive: true });
   }
 
   // Merged timeline for modal
@@ -152,7 +154,7 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
     ...recentCompleted.map((b) => ({
       id: b.id,
       when: b.completed_at,
-      label: "Completed Booking",
+      label: displayText("Completed Booking"),
       sublabel: formatBookingAddress(b as any),
       points: 1,
       positive: true,
@@ -165,7 +167,7 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
       <CardHeader className="pb-3 bg-gradient-to-br from-primary/10 to-primary/5">
         <CardTitle className="flex items-center gap-2 text-base">
           <Trophy className="w-5 h-5 text-primary" />
-          Priority Score
+          {displayText("Priority Score")}
         </CardTitle>
       </CardHeader>
 
@@ -194,7 +196,7 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
           <Progress value={Math.min(score, 100)} className="h-2" />
           <div className={`mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${rank.bg} ${rank.color}`}>
             <span>{rank.emoji}</span>
-            <span>Booking Priority Rank: {rank.label}</span>
+            <span>{displayText("Booking Priority Rank:")} {rank.label}</span>
           </div>
         </div>
 

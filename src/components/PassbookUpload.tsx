@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -40,6 +41,7 @@ export default function PassbookUpload({
   onUrlChange,
   onUploaded,
 }: PassbookUploadProps) {
+  useWorkerLanguage();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -83,8 +85,8 @@ export default function PassbookUpload({
 
     if (!ACCEPTED.split(",").includes(file.type)) {
       toast({
-        title: "Invalid file",
-        description: "Please upload a JPG, PNG, WEBP, or PDF",
+        title: displayText("Invalid file"),
+        description: displayText("Please upload a JPG, PNG, WEBP, or PDF"),
         variant: "destructive",
       });
       return;
@@ -92,8 +94,8 @@ export default function PassbookUpload({
 
     if (file.size > MAX_SIZE) {
       toast({
-        title: "File too large",
-        description: "Max size is 8MB",
+        title: displayText("File too large"),
+        description: displayText("Max size is 8MB"),
         variant: "destructive",
       });
       return;
@@ -145,13 +147,13 @@ export default function PassbookUpload({
       setIsPdf(file.type === "application/pdf");
 
       toast({
-        title: "Account image uploaded",
-        description: "We'll read the account details from it when possible",
+        title: displayText("Account image uploaded"),
+        description: displayText("We'll read the account details from it when possible"),
       });
     } catch (err: any) {
       console.error("Passbook upload error:", err);
       toast({
-        title: "Upload failed",
+        title: displayText("Upload failed"),
         description: err?.message || "Could not upload passbook",
         variant: "destructive",
       });
@@ -173,7 +175,7 @@ export default function PassbookUpload({
       onUrlChange(null);
     } catch (err: any) {
       toast({
-        title: "Error",
+        title: displayText("Error"),
         description: err?.message || "Failed to remove passbook",
         variant: "destructive",
       });
@@ -188,7 +190,7 @@ export default function PassbookUpload({
     <div className="space-y-3">
       <Label className="flex items-center gap-2">
         <BookOpen className="h-4 w-4" />
-        Account Details Image (Optional)
+        {displayText("Account Details Image (Optional)")}
       </Label>
 
       {hasPassbook ? (
@@ -201,7 +203,7 @@ export default function PassbookUpload({
             ) : previewUrl ? (
               <img
                 src={previewUrl}
-                alt="Passbook"
+                alt={displayText("Passbook")}
                 className="w-16 h-16 object-cover rounded-md border bg-white flex-shrink-0"
               />
             ) : (
@@ -212,10 +214,10 @@ export default function PassbookUpload({
             <div className="flex-1 min-w-0">
               <Badge variant="secondary" className="gap-1 text-xs">
                 <Check className="h-3 w-3" />
-                Image saved
+                {displayText("Image saved")}
               </Badge>
               <p className="text-xs text-muted-foreground mt-1 truncate">
-                {isPdf ? "PDF document" : "Image uploaded"}
+                {isPdf ? displayText("PDF document") : displayText("Image uploaded")}
               </p>
             </div>
           </div>
@@ -233,7 +235,7 @@ export default function PassbookUpload({
               ) : (
                 <>
                   <Upload className="h-3 w-3 mr-1.5" />
-                  Replace
+                  {displayText("Replace")}
                 </>
               )}
             </Button>
@@ -246,7 +248,7 @@ export default function PassbookUpload({
               className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
             >
               <Trash2 className="h-3 w-3 mr-1.5" />
-              Remove
+              {displayText("Remove")}
             </Button>
           </div>
         </div>
@@ -258,14 +260,14 @@ export default function PassbookUpload({
           {uploading ? (
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
-              <p className="text-sm text-muted-foreground">Uploading...</p>
+              <p className="text-sm text-muted-foreground">{displayText("Uploading...")}</p>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
               <Upload className="h-8 w-8 text-muted-foreground" />
-              <p className="text-sm font-medium">Upload account details image</p>
+              <p className="text-sm font-medium">{displayText("Upload account details image")}</p>
               <p className="text-xs text-muted-foreground">
-                Passbook or cancelled cheque (JPG, PNG, PDF)
+                {displayText("Passbook or cancelled cheque (JPG, PNG, PDF)")}
               </p>
             </div>
           )}

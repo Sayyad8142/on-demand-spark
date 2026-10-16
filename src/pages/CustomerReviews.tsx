@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,6 +26,7 @@ interface Review {
 }
 
 export default function CustomerReviews() {
+  useWorkerLanguage();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -152,7 +154,7 @@ export default function CustomerReviews() {
           <div>
             <h1 className="text-xl font-semibold">{t('profile.reviews', 'Customer Reviews')}</h1>
             <p className="text-sm text-muted-foreground">
-              {ratingsCount} review{ratingsCount !== 1 ? 's' : ''} • {workerRating.toFixed(1)} avg rating
+              {ratingsCount} {displayText("review")}{ratingsCount !== 1 ? 's' : ''} • {workerRating.toFixed(1)} {displayText("avg rating")}
             </p>
           </div>
         </div>
@@ -165,10 +167,10 @@ export default function CustomerReviews() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <BarChart3 className="w-5 h-5" />
-              Rating Breakdown
+              {displayText("Rating Breakdown")}
             </CardTitle>
             <CardDescription>
-              Distribution of your {ratingsCount} rating{ratingsCount !== 1 ? 's' : ''}
+              {displayText("Distribution of your")} {ratingsCount} {displayText("rating")}{ratingsCount !== 1 ? 's' : ''}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -184,14 +186,14 @@ export default function CustomerReviews() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <MessageSquare className="w-5 h-5" />
-              All Reviews ({reviews.length})
+              {displayText("All Reviews (")}{reviews.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {reviews.length === 0 ? (
               <div className="text-center py-8">
                 <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No reviews yet</p>
+                <p className="text-muted-foreground">{displayText("No reviews yet")}</p>
               </div>
             ) : (
               reviews.map((review) => (
@@ -203,7 +205,7 @@ export default function CustomerReviews() {
                           {review.bookings?.cust_name || 'Customer'}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {review.bookings?.service_type} • {review.bookings?.community} • Flat {review.bookings?.flat_no}
+                          {review.bookings?.service_type} • {review.bookings?.community} {displayText("• Flat")} {review.bookings?.flat_no}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {format(new Date(review.created_at), 'MMM d, yyyy')}

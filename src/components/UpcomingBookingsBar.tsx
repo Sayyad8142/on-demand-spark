@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Clock, IndianRupee } from "lucide-react";
@@ -20,6 +21,7 @@ interface UpcomingBookingsBarProps {
 
 
 export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
+  useWorkerLanguage();
   const [bookings, setBookings] = useState<UpcomingBooking[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -102,7 +104,7 @@ export function UpcomingBookingsBar({ limit = 10 }: UpcomingBookingsBarProps) {
 
   return (
     <section
-      aria-label="Upcoming scheduled bookings"
+      aria-label={displayText("Upcoming scheduled bookings")}
       className="fixed left-0 right-0 z-40 border-t border-border bg-background/95 shadow-lg backdrop-blur-sm"
       style={{ 
         bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))'

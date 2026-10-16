@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -32,6 +33,7 @@ interface EarningsSummary {
 }
 
 export default function Earnings() {
+  useWorkerLanguage();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [payouts, setPayouts] = useState<PayoutRow[]>([]);
@@ -174,11 +176,11 @@ export default function Earnings() {
 
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case "paid": return { label: "Paid", icon: CheckCircle2, cls: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" };
-      case "processing": case "pending": case "approved": return { label: "Processing", icon: Clock, cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" };
-      case "failed": case "reversed": return { label: "Failed", icon: XCircle, cls: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" };
+      case "paid": return { label: displayText("Paid"), icon: CheckCircle2, cls: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" };
+      case "processing": case "pending": case "approved": return { label: displayText("Processing"), icon: Clock, cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" };
+      case "failed": case "reversed": return { label: displayText("Failed"), icon: XCircle, cls: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" };
       case "estimating": return { label: PAYOUT_ESTIMATING_LABEL, icon: HelpCircle, cls: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" };
-      default: return { label: "Processing", icon: Clock, cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" };
+      default: return { label: displayText("Processing"), icon: Clock, cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" };
     }
   };
 
@@ -199,7 +201,7 @@ export default function Earnings() {
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-xl font-bold">Earnings</h1>
+          <h1 className="text-xl font-bold">{displayText("Earnings")}</h1>
         </div>
       </header>
 
@@ -210,11 +212,11 @@ export default function Earnings() {
             <CardContent className="p-3 flex items-center gap-3">
               <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-orange-800 dark:text-orange-300">UPI not set up</p>
-                <p className="text-xs text-orange-600 dark:text-orange-400">Add your UPI ID to receive instant payouts</p>
+                <p className="text-sm font-medium text-orange-800 dark:text-orange-300">{displayText("UPI not set up")}</p>
+                <p className="text-xs text-orange-600 dark:text-orange-400">{displayText("Add your UPI ID to receive instant payouts")}</p>
               </div>
               <Button size="sm" variant="outline" onClick={() => navigate("/profile")} className="border-orange-400 text-orange-700">
-                Add UPI
+                {displayText("Add UPI")}
               </Button>
             </CardContent>
           </Card>
@@ -222,20 +224,20 @@ export default function Earnings() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-3 gap-3">
-          <SummaryCard label="Today" amount={summary.today} icon={IndianRupee} colorClass="from-blue-500 to-blue-600" />
-          <SummaryCard label="This Week" amount={summary.week} icon={TrendingUp} colorClass="from-purple-500 to-purple-600" />
-          <SummaryCard label="Total Earned" amount={summary.total} icon={Wallet} colorClass="from-green-500 to-green-600" />
+          <SummaryCard label={displayText("Today")} amount={summary.today} icon={IndianRupee} colorClass="from-blue-500 to-blue-600" />
+          <SummaryCard label={displayText("This Week")} amount={summary.week} icon={TrendingUp} colorClass="from-purple-500 to-purple-600" />
+          <SummaryCard label={displayText("Total Earned")} amount={summary.total} icon={Wallet} colorClass="from-green-500 to-green-600" />
         </div>
 
         {/* Booking-wise Earnings */}
         <div>
-          <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Booking Earnings</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">{displayText("Booking Earnings")}</h2>
           {payouts.length === 0 ? (
             <Card className="border-dashed">
               <CardContent className="py-12 text-center">
                 <Wallet className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-                <p className="font-medium text-muted-foreground">No earnings yet</p>
-                <p className="text-xs text-muted-foreground mt-1">Complete bookings to start earning</p>
+                <p className="font-medium text-muted-foreground">{displayText("No earnings yet")}</p>
+                <p className="text-xs text-muted-foreground mt-1">{displayText("Complete bookings to start earning")}</p>
               </CardContent>
             </Card>
           ) : (
@@ -255,7 +257,7 @@ export default function Earnings() {
                         </span>
                         <div className="flex items-center gap-1.5">
                           {isJustPaid && (
-                            <Badge className="bg-green-500 text-white text-[10px] px-1.5 py-0 animate-pulse">Just Paid</Badge>
+                            <Badge className="bg-green-500 text-white text-[10px] px-1.5 py-0 animate-pulse">{displayText("Just Paid")}</Badge>
                           )}
                           <Badge className={`${cfg.cls} gap-1`}>
                             <Icon className="w-3 h-3" />
@@ -265,32 +267,32 @@ export default function Earnings() {
                       </div>
 
                       <div className="text-sm">
-                        <p className="text-xs text-muted-foreground">You Earn</p>
+                        <p className="text-xs text-muted-foreground">{displayText("You Earn")}</p>
                         <p className="text-xl font-bold text-green-600">{p.isEstimate ? '~' : ''}₹{p.payout_amount}</p>
                       </div>
 
                       {p.isEstimate && (
                         <p className="text-[11px] text-muted-foreground italic">
-                          Estimated payout. Will update once processed.
+                          {displayText("Estimated payout. Will update once processed.")}
                         </p>
                       )}
                       {p.paid_at && (
                         <p className="text-xs text-muted-foreground">
-                          Paid on {new Date(p.paid_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+                          {displayText("Paid on")} {new Date(p.paid_at).toLocaleString(displayLocale(), { dateStyle: "medium", timeStyle: "short" })}
                         </p>
                       )}
                       {(p as any).upi_ref_id && (
                         <p className="text-xs text-muted-foreground">
-                          UPI Ref: {(p as any).upi_ref_id}
+                          {displayText("UPI Ref:")} {(p as any).upi_ref_id}
                         </p>
                       )}
                       {p.failure_reason && (
-                        <p className="text-xs text-destructive">Reason: {p.failure_reason}</p>
+                        <p className="text-xs text-destructive">{displayText("Reason:")} {p.failure_reason}</p>
                       )}
                       {isFailed && (
                         <div className="flex gap-2 pt-1">
                           <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => navigate("/profile")}>
-                            Update UPI
+                            {displayText("Update UPI")}
                           </Button>
                         </div>
                       )}
@@ -309,6 +311,7 @@ export default function Earnings() {
 }
 
 function SummaryCard({ label, amount, icon: Icon, colorClass }: { label: string; amount: number; icon: typeof Clock; colorClass: string }) {
+  useWorkerLanguage();
   return (
     <Card className="border-0 shadow-lg overflow-hidden">
       <CardContent className="p-0">

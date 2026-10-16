@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Label } from '@/components/ui/label';
@@ -16,6 +17,7 @@ interface CommunitySelectorProps {
 }
 
 export function CommunitySelector({ workerId, value, onChange }: CommunitySelectorProps) {
+  useWorkerLanguage();
   const [communities, setCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -36,7 +38,7 @@ export function CommunitySelector({ workerId, value, onChange }: CommunitySelect
     } catch (error) {
       console.error('Error loading communities:', error);
       toast({
-        title: 'Error loading communities',
+        title: displayText("Error loading communities"),
         variant: 'destructive'
       });
     } finally {
@@ -54,14 +56,14 @@ export function CommunitySelector({ workerId, value, onChange }: CommunitySelect
       if (error) throw error;
 
       toast({
-        title: 'Community updated',
-        description: 'Your selected community has been updated'
+        title: displayText("Community updated"),
+        description: displayText("Your selected community has been updated")
       });
 
       onChange?.(communityId === 'none' ? null : communityId);
     } catch (error: any) {
       toast({
-        title: 'Update failed',
+        title: displayText("Update failed"),
         description: error.message,
         variant: 'destructive'
       });
@@ -74,13 +76,13 @@ export function CommunitySelector({ workerId, value, onChange }: CommunitySelect
 
   return (
     <div className="space-y-2">
-      <Label>Selected Community</Label>
+      <Label>{displayText("Selected Community")}</Label>
       <Select value={value || 'none'} onValueChange={handleChange}>
         <SelectTrigger>
-          <SelectValue placeholder="Select community" />
+          <SelectValue placeholder={displayText("Select community")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="none">No community selected</SelectItem>
+          <SelectItem value="none">{displayText("No community selected")}</SelectItem>
           {communities.map((community) => (
             <SelectItem key={community.id} value={community.id}>
               {community.name}
@@ -89,7 +91,7 @@ export function CommunitySelector({ workerId, value, onChange }: CommunitySelect
         </SelectContent>
       </Select>
       <p className="text-xs text-muted-foreground">
-        You'll only receive alerts for bookings in your selected community when you're within 100m
+        {displayText("You'll only receive alerts for bookings in your selected community when you're within 100m")}
       </p>
     </div>
   );

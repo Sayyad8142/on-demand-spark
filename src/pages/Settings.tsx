@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ShieldAlert, Smartphone, Loader2, Bell, Bug, Send, Download, Check, RefreshCw, Wallet, ChevronRight } from "lucide-react";
@@ -23,6 +24,7 @@ import { SimulatedOverlayModal } from "@/components/SimulatedOverlayModal";
 import { checkForUpdate, downloadAndApplyUpdate, getCurrentBundleVersion, type UpdateCheckResult } from "@/lib/liveUpdate";
 
 export default function Settings() {
+  useWorkerLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -70,13 +72,13 @@ export default function Settings() {
     
     if (granted) {
       toast({
-        title: "Permission granted",
-        description: "You can now enable booking alerts"
+        title: displayText("Permission granted"),
+        description: displayText("You can now enable booking alerts")
       });
     } else {
       toast({
-        title: "Permission required",
-        description: "Please grant overlay permission in system settings",
+        title: displayText("Permission required"),
+        description: displayText("Please grant overlay permission in system settings"),
         variant: "destructive"
       });
     }
@@ -85,8 +87,8 @@ export default function Settings() {
   const handleToggleOverlay = async (enabled: boolean) => {
     if (!hasPermission && enabled) {
       toast({
-        title: "Permission required",
-        description: "Please grant overlay permission first",
+        title: displayText("Permission required"),
+        description: displayText("Please grant overlay permission first"),
         variant: "destructive"
       });
       return;
@@ -97,20 +99,20 @@ export default function Settings() {
       if (enabled) {
         localStorage.setItem('overlay_mode', 'enabled');
         toast({
-          title: "Booking alerts activated",
-          description: "You'll receive overlay alerts for new bookings"
+          title: displayText("Booking alerts activated"),
+          description: displayText("You'll receive overlay alerts for new bookings")
         });
       } else {
         localStorage.removeItem('overlay_mode');
         toast({
-          title: "Booking alerts deactivated",
-          description: "You won't receive overlay alerts"
+          title: displayText("Booking alerts deactivated"),
+          description: displayText("You won't receive overlay alerts")
         });
       }
       setOverlayEnabled(enabled);
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: displayText("Error"),
         description: error.message,
         variant: "destructive"
       });
@@ -123,13 +125,13 @@ export default function Settings() {
     try {
       const token = await registerPush();
       toast({
-        title: "Notifications enabled",
-        description: "Push notifications registered successfully"
+        title: displayText("Notifications enabled"),
+        description: displayText("Push notifications registered successfully")
       });
       console.log('FCM Token:', token);
     } catch (error: any) {
       toast({
-        title: "Registration failed",
+        title: displayText("Registration failed"),
         description: error.message,
         variant: "destructive"
       });
@@ -162,8 +164,8 @@ export default function Settings() {
     if (!success) {
       setOtaUpdating(false);
       toast({
-        title: "Update failed",
-        description: "Could not apply update. Try again later.",
+        title: displayText("Update failed"),
+        description: displayText("Could not apply update. Try again later."),
         variant: "destructive"
       });
     }
@@ -190,8 +192,8 @@ export default function Settings() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold">Overlay Settings</h1>
-            <p className="text-sm text-muted-foreground">Manage booking alerts</p>
+            <h1 className="text-xl font-bold">{displayText("Overlay Settings")}</h1>
+            <p className="text-sm text-muted-foreground">{displayText("Manage booking alerts")}</p>
           </div>
         </div>
       </header>
@@ -206,8 +208,8 @@ export default function Settings() {
                   <Wallet className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="font-semibold text-sm">Earnings & Payouts</p>
-                  <p className="text-xs text-muted-foreground">Track your instant UPI payouts</p>
+                  <p className="font-semibold text-sm">{displayText("Earnings & Payouts")}</p>
+                  <p className="text-xs text-muted-foreground">{displayText("Track your instant UPI payouts")}</p>
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
@@ -226,10 +228,10 @@ export default function Settings() {
               }`} />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold mb-1">Overlay Permission</h3>
+              <h3 className="font-semibold mb-1">{displayText("Overlay Permission")}</h3>
               <p className="text-sm text-muted-foreground mb-3">
                 {hasPermission 
-                  ? "Permission granted. Booking alerts can display over other apps."
+                  ? displayText("Permission granted. Booking alerts can display over other apps.")
                   : "Allow Didi Now to display alerts over other apps like YouTube, WhatsApp, etc."
                 }
               </p>
@@ -237,14 +239,14 @@ export default function Settings() {
                 <div className="space-y-2">
                   <Button onClick={handleRequestPermission} className="w-full">
                     <Smartphone className="w-4 h-4 mr-2" />
-                    Grant Permission
+                    {displayText("Grant Permission")}
                   </Button>
                   <Button 
                     variant="outline" 
                     onClick={openAndroidOverlaySettings} 
                     className="w-full"
                   >
-                    Open Overlay Settings
+                    {displayText("Open Overlay Settings")}
                   </Button>
                 </div>
               )}
@@ -257,10 +259,10 @@ export default function Settings() {
           <div className="flex items-center justify-between">
             <div className="flex-1 pr-4">
               <Label htmlFor="overlay-mode" className="text-base font-semibold">
-                Stay Ready for Booking Alerts
+                {displayText("Stay Ready for Booking Alerts")}
               </Label>
               <p className="text-sm text-muted-foreground mt-1">
-                Receive instant overlay alerts when new bookings arrive, even while using other apps
+                {displayText("Receive instant overlay alerts when new bookings arrive, even while using other apps")}
               </p>
             </div>
             <Switch
@@ -275,13 +277,13 @@ export default function Settings() {
         {/* Info Card */}
         <Card className="p-6 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
           <h3 className="font-semibold mb-2 text-blue-900 dark:text-blue-100">
-            How it works
+            {displayText("How it works")}
           </h3>
           <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-2">
-            <li>• Booking alerts appear over other apps</li>
-            <li>• 30-second countdown to accept or reject</li>
-            <li>• Background service keeps you connected</li>
-            <li>• Works even when screen is off</li>
+            <li>{displayText("• Booking alerts appear over other apps")}</li>
+            <li>{displayText("• 30-second countdown to accept or reject")}</li>
+            <li>{displayText("• Background service keeps you connected")}</li>
+            <li>{displayText("• Works even when screen is off")}</li>
           </ul>
         </Card>
 
@@ -292,14 +294,14 @@ export default function Settings() {
               <Bell className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold mb-1">Push Notifications</h3>
+              <h3 className="font-semibold mb-1">{displayText("Push Notifications")}</h3>
               <p className="text-sm text-muted-foreground mb-3">
-                Register for booking alerts and updates
+                {displayText("Register for booking alerts and updates")}
               </p>
               
               {!isNative && (
                 <p className="text-xs text-muted-foreground mb-3 italic">
-                  Use the installed Android app to enable notifications.
+                  {displayText("Use the installed Android app to enable notifications.")}
                 </p>
               )}
 
@@ -311,7 +313,7 @@ export default function Settings() {
                 {isRegistering ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Registering...
+                    {displayText("Registering...")}
                   </>
                 ) : (
                   "Register Push Notifications"
@@ -322,11 +324,11 @@ export default function Settings() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between mb-2">
                     <Badge variant="outline" className="bg-green-50 dark:bg-green-900 text-green-700 dark:text-green-300">
-                      Registered
+                      {displayText("Registered")}
                     </Badge>
                     {lastSyncTime && (
                       <span className="text-xs text-muted-foreground">
-                        Last sync: {lastSyncTime.toLocaleTimeString()}
+                        {displayText("Last sync:")} {lastSyncTime.toLocaleTimeString()}
                       </span>
                     )}
                   </div>
@@ -337,7 +339,7 @@ export default function Settings() {
                     onClick={() => setShowToken(!showToken)}
                     className="w-full"
                   >
-                    {showToken ? "Hide Token" : "View FCM Token"}
+                    {showToken ? displayText("Hide Token") : displayText("View FCM Token")}
                   </Button>
                   
                   {showToken && (
@@ -360,17 +362,17 @@ export default function Settings() {
               <Bug className="w-6 h-6 text-orange-600 dark:text-orange-400" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold mb-1">Debug Tools</h3>
+              <h3 className="font-semibold mb-1">{displayText("Debug Tools")}</h3>
               <p className="text-sm text-muted-foreground mb-3">
-                Test push notifications and check worker status
+                {displayText("Test push notifications and check worker status")}
               </p>
               
               <div className="space-y-2 mb-3 text-xs font-mono bg-orange-100 dark:bg-orange-900/50 p-3 rounded">
-                <div><strong>User ID:</strong> {user?.id?.slice(0, 8)}...</div>
-                <div><strong>Worker ID:</strong> {worker?.id?.slice(0, 8)}...</div>
-                <div><strong>Community:</strong> {worker?.community || 'N/A'}</div>
-                <div><strong>Services:</strong> {worker?.service_types?.join(', ') || 'N/A'}</div>
-                <div><strong>FCM Token:</strong> {worker?.fcm_token ? '✅ Set' : '❌ Not set'}</div>
+                <div><strong>{displayText("User ID:")}</strong> {user?.id?.slice(0, 8)}...</div>
+                <div><strong>{displayText("Worker ID:")}</strong> {worker?.id?.slice(0, 8)}...</div>
+                <div><strong>{displayText("Community:")}</strong> {worker?.community || 'N/A'}</div>
+                <div><strong>{displayText("Services:")}</strong> {worker?.service_types?.map(serviceLabel).join(', ') || 'N/A'}</div>
+                <div><strong>FCM Token:</strong> {worker?.fcm_token ? displayText("✅ Set") : displayText("❌ Not set")}</div>
               </div>
 
               <Button 
@@ -382,7 +384,7 @@ export default function Settings() {
                 {isRegistering ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Re-registering...
+                    {displayText("Re-registering...")}
                   </>
                 ) : (
                   "Re-register Push Token"
@@ -399,15 +401,15 @@ export default function Settings() {
               <Download className="w-6 h-6 text-primary" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold mb-1">App Updates</h3>
+              <h3 className="font-semibold mb-1">{displayText("App Updates")}</h3>
               <p className="text-sm text-muted-foreground mb-3">
-                Check for the latest app improvements
+                {displayText("Check for the latest app improvements")}
               </p>
               
               <div className="text-xs font-mono bg-muted p-3 rounded mb-3 space-y-1">
-                <div><strong>Current version:</strong> {currentBundleVersion || '...'}</div>
+                <div><strong>{displayText("Current version:")}</strong> {currentBundleVersion || '...'}</div>
                 {otaResult?.latestVersion && (
-                  <div><strong>Latest available:</strong> {otaResult.latestVersion}</div>
+                  <div><strong>{displayText("Latest available:")}</strong> {otaResult.latestVersion}</div>
                 )}
                 {otaStatus && (
                   <div className="mt-1 font-sans font-medium">{otaStatus}</div>
@@ -424,12 +426,12 @@ export default function Settings() {
                   {otaChecking ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Checking...
+                      {displayText("Checking...")}
                     </>
                   ) : (
                     <>
                       <RefreshCw className="w-4 h-4 mr-2" />
-                      Check for Updates
+                      {displayText("Check for Updates")}
                     </>
                   )}
                 </Button>
@@ -443,12 +445,12 @@ export default function Settings() {
                     {otaUpdating ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Updating...
+                        {displayText("Updating...")}
                       </>
                     ) : (
                       <>
                         <Download className="w-4 h-4 mr-2" />
-                        Update to {otaResult.latestVersion}
+                        {displayText("Update to")} {otaResult.latestVersion}
                       </>
                     )}
                   </Button>
@@ -464,7 +466,7 @@ export default function Settings() {
           onClick={() => navigate("/troubleshoot")}
           className="w-full"
         >
-          Troubleshoot Issues
+          {displayText("Troubleshoot Issues")}
         </Button>
       </main>
     </div>
