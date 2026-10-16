@@ -28,12 +28,12 @@ const STEP_META: Record<
 > = {
   notifications: {
     emoji: "🔔",
-    title: displayText("Turn On Booking Alerts"),
+    title: "Turn On Booking Alerts",
     doneText: "Booking Alerts Enabled",
   },
   overlay: {
     emoji: "📱",
-    title: displayText("Show Booking Popups"),
+    title: "Show Booking Popups",
     doneText: "Booking Popups Enabled",
   },
 };
@@ -230,12 +230,12 @@ function StepCard({
             {displayText("Step")} {index}
           </div>
           <h3 className="text-xl font-bold leading-tight mt-1">
-            {meta.title}
+            {displayText(meta.title)}
           </h3>
           <div className="mt-2">
             {granted ? (
               <span className="inline-flex items-center gap-1.5 text-base font-semibold text-green-700">
-                ✅ {meta.doneText}
+                ✅ {displayText(meta.doneText)}
               </span>
             ) : (
               <span

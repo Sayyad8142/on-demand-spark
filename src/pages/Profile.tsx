@@ -28,11 +28,11 @@ import PriorityScoreCard from "@/components/profile/PriorityScoreCard";
 
 const SERVICES = [{
   value: "maid",
-  label: displayText("Maid Service"),
+  label: "Maid Service",
   icon: "🧹"
 }, {
   value: "bathroom_cleaning",
-  label: displayText("Bathroom Cleaning"),
+  label: "Bathroom Cleaning",
   icon: "🧼"
 }];
 const SERVICE_VALUES = new Set(SERVICES.map(service => service.value));

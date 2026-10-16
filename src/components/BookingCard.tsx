@@ -37,7 +37,7 @@ export function BookingCard({
         toast.success(displayText("Booking accepted!"));
         onAccept?.(booking.id);
       } else {
-        toast.error(result.error || 'Booking already taken');
+        toast.error(displayText(result.error || 'Booking already taken'));
       }
     } catch (error) {
       toast.error(displayText("Failed to accept booking"));
@@ -123,7 +123,7 @@ export function BookingCard({
         {booking.created_at && (
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Calendar className="w-3 h-3" />
-            {new Date(booking.created_at).toLocaleString()}
+            {new Date(booking.created_at).toLocaleString(displayLocale())}
           </div>
         )}
 

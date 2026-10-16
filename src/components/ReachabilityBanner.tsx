@@ -16,15 +16,15 @@ type State =
 
 const COPY: Partial<Record<State, { title: string; body: string }>> = {
   TOKEN_STALE: {
-    title: displayText("Notifications need re-registration"),
+    title: "Notifications need re-registration",
     body: "Your phone hasn't refreshed its notification token recently. Open the app to fix.",
   },
   NOTIFICATION_BLOCKED: {
-    title: displayText("Notifications are blocked"),
+    title: "Notifications are blocked",
     body: "Enable notifications in Android Settings or you won't receive new bookings.",
   },
   BATTERY_RESTRICTED: {
-    title: displayText("Battery saver is blocking bookings"),
+    title: "Battery saver is blocking bookings",
     body: "Disable battery optimization for Didi Now Partner to receive bookings reliably.",
   },
 };
@@ -58,15 +58,17 @@ export function ReachabilityBanner() {
     };
   }, [user?.id]);
 
-  if (!state || !COPY[state]) return null;
-  const { title, body } = COPY[state]!;
+  if (!state) return null;
+  const copy = COPY[state];
+  if (!copy) return null;
+  const { title, body } = copy;
 
   return (
     <div className="mx-3 mt-2 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3">
       <AlertTriangle className="h-5 w-5 shrink-0 text-destructive" />
       <div className="flex-1">
-        <p className="text-sm font-semibold text-destructive">{title}</p>
-        <p className="mt-0.5 text-xs text-foreground/80">{body}</p>
+        <p className="text-sm font-semibold text-destructive">{displayText(title)}</p>
+        <p className="mt-0.5 text-xs text-foreground/80">{displayText(body)}</p>
         <Button asChild size="sm" variant="destructive" className="mt-2 h-8 text-xs">
           <Link to="/troubleshoot">{displayText("Fix now")}</Link>
         </Button>

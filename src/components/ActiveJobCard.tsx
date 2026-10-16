@@ -24,12 +24,12 @@ import serviceBathroomCleaning from "@/assets/service-bathroom-commode.jpg";
 import PaymentCollectionModal from "@/components/PaymentCollectionModal";
 
 const TASK_CONFIG: Record<string, {label: string; img: string; icon: typeof Utensils}> = {
-  dish_washing: { label: displayText("Dish Washing"), img: serviceDishWashing, icon: Utensils },
-  floor_cleaning: { label: displayText("Jhadu Pocha"), img: serviceFloorCleaning, icon: Sparkles }
+  dish_washing: { label: "Dish Washing", img: serviceDishWashing, icon: Utensils },
+  floor_cleaning: { label: "Jhadu Pocha", img: serviceFloorCleaning, icon: Sparkles }
 };
 
 const SERVICE_TASKS: Record<string, {label: string;img: string;}[]> = {
-  bathroom_cleaning: [{ label: displayText("Bathroom Cleaning"), img: serviceBathroomCleaning }]
+  bathroom_cleaning: [{ label: "Bathroom Cleaning", img: serviceBathroomCleaning }]
 };
 
 type Booking = BookingWithAddress;
@@ -261,7 +261,7 @@ export default function ActiveJobCard({
           }
           <div className={`text-center relative z-10 flex items-center justify-center gap-2 ${isVilla ? '' : 'mb-4'}`}>
             <p className="flat-number-text font-extrabold text-3xl tracking-wide uppercase">
-              {isVilla ? `${displayText('Villa')} ${booking.flat_no}` : displayText('Flat {{number}}', { number: booking.flat_no ?? '' })}
+              {isVilla ? unit.label.replace(/^Villa\b/, displayText('Villa')) : displayText('Flat {{number}}', { number: booking.flat_no ?? '' })}
             </p>
             <button
               onClick={speakFlatNo}

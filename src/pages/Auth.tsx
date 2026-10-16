@@ -30,12 +30,12 @@ const SERVICES = [{
   value: "maid",
   label: "auth.services.maid",
   icon: maidServiceIcon,
-  description: displayText("Sweeping, mopping, dishes & more")
+  description: "Sweeping, mopping, dishes & more"
 }, {
   value: "bathroom_cleaning",
   label: "auth.services.bathroom_cleaning",
   icon: bathroomServiceIcon,
-  description: displayText("Deep bathroom cleaning")
+  description: "Deep bathroom cleaning"
 }];
 
 // SECURITY: Input validation schemas
