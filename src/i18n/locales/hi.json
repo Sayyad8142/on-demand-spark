@@ -926,6 +926,7 @@
     "Verification_failed_Please_try_again": "सत्यापन विफल रहा। कृपया पुन: प्रयास करें।",
     "Villa": "विला",
     "Resend_OTP": "OTP फिर भेजें",
-    "Resend_in": "फिर भेजने में"
+    "Resend_in": "फिर भेजने में",
+    "Loading_session": "लॉगिन जानकारी लोड हो रही है..."
   }
 }

@@ -926,6 +926,7 @@
     "Verification_failed_Please_try_again": "Verification failed. Please try again.",
     "Villa": "Villa",
     "Resend_OTP": "Resend OTP",
-    "Resend_in": "Resend in"
+    "Resend_in": "Resend in",
+    "Loading_session": "Loading session..."
   }
 }

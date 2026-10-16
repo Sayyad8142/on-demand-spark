@@ -927,6 +927,7 @@
     "Villa": "విల్లా",
     "Resend_OTP": "OTP మళ్లీ పంపండి",
     "Resend_in": "మళ్లీ పంపడానికి",
-    "Availability": "అందుబాటు"
+    "Availability": "అందుబాటు",
+    "Loading_session": "లాగిన్ వివరాలు లోడ్ అవుతున్నాయి..."
   }
 }
