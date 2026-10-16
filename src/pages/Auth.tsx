@@ -1033,7 +1033,7 @@ export default function Auth() {
 
                           <div className="space-y-2">
                             <Label htmlFor="signup-ifsc" className="text-sm">IFSC Code</Label>
-                            <Input id="signup-ifsc" type="text" placeholder=displayText("e.g., HDFC0001234") value={signUpIfscCode} onChange={e => setSignUpIfscCode(e.target.value.toUpperCase())} maxLength={11} disabled={loading} className="h-12 rounded-2xl text-base uppercase" />
+                            <Input id="signup-ifsc" type="text" placeholder="e.g., HDFC0001234" value={signUpIfscCode} onChange={e => setSignUpIfscCode(e.target.value.toUpperCase())} maxLength={11} disabled={loading} className="h-12 rounded-2xl text-base uppercase" />
                           </div>
 
                           <div className="space-y-2">
