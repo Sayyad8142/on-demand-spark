@@ -60,10 +60,10 @@ export default function MovementStatusCard() {
           </div>
           <div>
             {displayText("Permission:")}{" "}
-            <span className="font-semibold text-foreground">{permissionLabel}</span>
+            <span className="font-semibold text-foreground">{displayText(permissionLabel)}</span>
           </div>
           <div>
-            API: <span className="font-semibold text-foreground">{apiLabel}</span>
+            API: <span className="font-semibold text-foreground">{displayText(apiLabel)}</span>
           </div>
         </div>
         {status?.warning && (

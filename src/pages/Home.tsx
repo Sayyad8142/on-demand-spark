@@ -269,7 +269,7 @@ export default function Home() {
 
 
       {/* Main Content with top padding for fixed header */}
-      <div className={`p-4 space-y-4 pb-32 ${isGuestMode ? displayText("pt-4") : displayText("pt-28")}`}>
+      <div className={`p-4 space-y-4 pb-32 ${isGuestMode ? "pt-4" : "pt-28"}`}>
 
       {/* Worker Health badge — unified status from all signals */}
       {!isGuestMode && worker && workerHealth.status !== "ready" && (

@@ -41,7 +41,7 @@ export default function PaymentCollectionModal({ open, onClose, bookingId, amoun
       onCollected();
       onClose();
     } catch (err: any) {
-      toast({ title: displayText("Error"), description: err.message, variant: "destructive" });
+      toast({ title: displayText("Error"), description: displayText(err.message), variant: "destructive" });
     } finally {
       setLoading(false);
     }

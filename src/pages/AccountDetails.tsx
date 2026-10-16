@@ -56,9 +56,9 @@ export default function AccountDetails() {
 
   const validate = (): string | null => {
     // UPI is required
-    if (!upiId.trim()) return "UPI ID is required for payouts";
+    if (!upiId.trim()) return displayText("UPI ID is required for payouts");
     if (!UPI_REGEX.test(upiId.trim()))
-      return "Invalid UPI ID format (e.g., name@bank)";
+      return displayText("Invalid UPI ID format (e.g., name@bank)");
 
     // Bank details are optional. Only validate if any bank field was filled.
     const anyBankFieldFilled = !!(
@@ -71,19 +71,19 @@ export default function AccountDetails() {
 
     if (!anyBankFieldFilled) return null;
 
-    if (!accountHolderName.trim()) return "Account holder name is required when bank details are provided";
-    if (accountHolderName.trim().length < 2) return "Account holder name is too short";
+    if (!accountHolderName.trim()) return displayText("Account holder name is required when bank details are provided");
+    if (accountHolderName.trim().length < 2) return displayText("Account holder name is too short");
 
-    if (!bankAccountNumber.trim()) return "Bank account number is required when bank details are provided";
+    if (!bankAccountNumber.trim()) return displayText("Bank account number is required when bank details are provided");
     if (!/^\d{9,18}$/.test(bankAccountNumber.trim()))
-      return "Account number must be 9–18 digits";
+      return displayText("Account number must be 9–18 digits");
 
     if (bankAccountNumber.trim() !== confirmAccountNumber.trim())
-      return "Account numbers do not match";
+      return displayText("Account numbers do not match");
 
-    if (!ifscCode.trim()) return "IFSC code is required when bank details are provided";
+    if (!ifscCode.trim()) return displayText("IFSC code is required when bank details are provided");
     if (!IFSC_REGEX.test(ifscCode.trim().toUpperCase()))
-      return "Invalid IFSC code (e.g., HDFC0001234)";
+      return displayText("Invalid IFSC code (e.g., HDFC0001234)");
 
     return null;
   };

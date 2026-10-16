@@ -43,7 +43,7 @@ export default function DeviceReadiness() {
             <p className="text-sm text-muted-foreground">{displayText("Ensure you never miss a booking")}</p>
           </div>
           <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 ${loading ? displayText("animate-spin") : ""}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
         </div>
       </header>

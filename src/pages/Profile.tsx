@@ -451,7 +451,7 @@ export default function Profile() {
     } catch (error: any) {
       toast({
         title: displayText("Error"),
-        description: error.message,
+        description: displayText(error.message),
         variant: "destructive"
       });
     } finally {
@@ -870,7 +870,7 @@ export default function Profile() {
                 {[{
                 code: 'en',
                 label: 'EN',
-                toast: 'Language changed to English'
+                toast: displayText("Language changed to English")
               }, {
                 code: 'hi',
                 label: 'हि',

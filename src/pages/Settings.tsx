@@ -113,7 +113,7 @@ export default function Settings() {
     } catch (error: any) {
       toast({
         title: displayText("Error"),
-        description: error.message,
+        description: displayText(error.message),
         variant: "destructive"
       });
     } finally {
@@ -132,7 +132,7 @@ export default function Settings() {
     } catch (error: any) {
       toast({
         title: displayText("Registration failed"),
-        description: error.message,
+        description: displayText(error.message),
         variant: "destructive"
       });
       console.error('Push registration error:', error);
@@ -412,7 +412,7 @@ export default function Settings() {
                   <div><strong>{displayText("Latest available:")}</strong> {otaResult.latestVersion}</div>
                 )}
                 {otaStatus && (
-                  <div className="mt-1 font-sans font-medium">{otaStatus}</div>
+                  <div className="mt-1 font-sans font-medium">{displayText(otaStatus)}</div>
                 )}
               </div>
 

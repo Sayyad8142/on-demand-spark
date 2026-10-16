@@ -454,7 +454,7 @@ export default function Auth() {
       } catch (error: any) {
         toast({
           title: displayText("Demo Login Error"),
-          description: error.message,
+          description: displayText(error.message),
           variant: "destructive"
         });
         return;
@@ -520,7 +520,7 @@ export default function Auth() {
     } catch (error: any) {
       toast({
         title: displayText("Error"),
-        description: error.message,
+        description: displayText(error.message),
         variant: "destructive"
       });
     } finally {
@@ -661,7 +661,7 @@ export default function Auth() {
     } catch (error: any) {
       toast({
         title: displayText("Error"),
-        description: error.message,
+        description: displayText(error.message),
         variant: "destructive"
       });
     } finally {
@@ -716,7 +716,7 @@ export default function Auth() {
             <TabsContent value="signup" className="space-y-5">
               <div className="rounded-2xl bg-primary/10 p-1">
                 <div className="grid grid-cols-3 gap-1 text-center text-[11px] font-semibold">
-                  {["Basic", "Payout", "Confirm"].map((label, index) => {
+                  {[displayText("Basic"), displayText("Payout"), displayText("Confirm")].map((label, index) => {
                     const stepNumber = index + 1;
                     const active = signUpStep === stepNumber;
                     const complete = signUpStep > stepNumber;
@@ -907,7 +907,7 @@ export default function Auth() {
                             <p className="mt-0.5 text-[11px] text-muted-foreground">
                               {upiQrFilledFrom
                                 ? displayText('Detected: {{upi}} · Tap to re-scan', { upi: upiQrFilledFrom })
-                                : 'PhonePe • Google Pay • Paytm • BHIM'}
+                                : displayText("PhonePe • Google Pay • Paytm • BHIM")}
                             </p>
                           </div>
                         </div>
@@ -1033,7 +1033,7 @@ export default function Auth() {
 
                           <div className="space-y-2">
                             <Label htmlFor="signup-ifsc" className="text-sm">IFSC Code</Label>
-                            <Input id="signup-ifsc" type="text" placeholder="e.g., HDFC0001234" value={signUpIfscCode} onChange={e => setSignUpIfscCode(e.target.value.toUpperCase())} maxLength={11} disabled={loading} className="h-12 rounded-2xl text-base uppercase" />
+                            <Input id="signup-ifsc" type="text" placeholder=displayText("e.g., HDFC0001234") value={signUpIfscCode} onChange={e => setSignUpIfscCode(e.target.value.toUpperCase())} maxLength={11} disabled={loading} className="h-12 rounded-2xl text-base uppercase" />
                           </div>
 
                           <div className="space-y-2">

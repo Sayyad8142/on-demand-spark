@@ -64,7 +64,7 @@ export function CommunitySelector({ workerId, value, onChange }: CommunitySelect
     } catch (error: any) {
       toast({
         title: displayText("Update failed"),
-        description: error.message,
+        description: displayText(error.message),
         variant: 'destructive'
       });
     }

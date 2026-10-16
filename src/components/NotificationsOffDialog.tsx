@@ -63,7 +63,7 @@ export function NotificationsOffDialog({ onRetry }: Props) {
               disabled={retrying}
               className="flex-1"
             >
-              <RefreshCw className={`w-4 h-4 mr-2 ${retrying ? displayText("animate-spin") : ""}`} />
+              <RefreshCw className={`w-4 h-4 mr-2 ${retrying ? "animate-spin" : ""}`} />
               {retrying ? displayText("Retrying...") : displayText("Retry")}
             </Button>
           </div>

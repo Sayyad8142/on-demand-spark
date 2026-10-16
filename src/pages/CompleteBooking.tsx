@@ -501,7 +501,7 @@ export default function CompleteBooking() {
             {error && (
               <div className="flex items-center gap-2 text-destructive text-sm mt-6 max-w-sm">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <p className="font-medium">{error}</p>
+                <p className="font-medium">{displayText(error)}</p>
                 {errorKind === "network" && (
                   <button
                     onClick={() => handleSubmit(true)}
