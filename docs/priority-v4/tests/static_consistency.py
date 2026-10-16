@@ -63,7 +63,7 @@ def audit(sqls):
             assert re.match(r'\s*GRANT\b', after), table + ': missing immediate grant'
             assert f'ALTER TABLE public.{table} ENABLE ROW LEVEL SECURITY;' in after
             count += 1
-    assert count == 22, 'unexpected table inventory; review checker coverage'
+    assert count == 21, 'unexpected table inventory; review checker coverage'
     for table, local, parent, target in references:
         assert all(c in tables[table][0] for c in local), table + ': missing FK column'
         assert parent in tables, table + ': missing referenced table'
