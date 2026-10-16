@@ -106,7 +106,7 @@ export function CommunityPicker({
           </span>
         ) : (
           <span className={cn("truncate", !selected && "font-normal text-muted-foreground")}>
-            {selected ? selected.name : placeholder}
+            {selected ? selected.name : displayText(placeholder)}
           </span>
         )}
         <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground" />
