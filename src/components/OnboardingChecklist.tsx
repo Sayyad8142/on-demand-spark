@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { CheckCircle2, Circle, ChevronRight, Sparkles } from "lucide-react";
@@ -57,6 +58,7 @@ export function useOnboardingStatus(workerId: string | undefined, worker: any): 
 }
 
 export function OnboardingChecklist({ workerId, worker, onStatusChange }: OnboardingChecklistProps) {
+  useWorkerLanguage();
   const navigate = useNavigate();
   const status = useOnboardingStatus(workerId, worker);
 
@@ -69,22 +71,22 @@ export function OnboardingChecklist({ workerId, worker, onStatusChange }: Onboar
 
   const steps = [
     {
-      label: "Select your services",
+      label: displayText("Select your services"),
       done: status.hasServiceTypes,
       action: () => navigate("/profile"),
     },
     {
-      label: "Select your area",
+      label: displayText("Select your area"),
       done: status.hasCommunity,
       action: () => navigate("/profile"),
     },
     {
-      label: "Add UPI ID for payouts",
+      label: displayText("Add UPI ID for payouts"),
       done: status.hasBankDetails,
       action: () => navigate("/account-details"),
     },
     {
-      label: "Set your working hours",
+      label: displayText("Set your working hours"),
       done: status.hasAvailabilitySlots,
       action: () => navigate("/availability"),
     },
@@ -97,10 +99,10 @@ export function OnboardingChecklist({ workerId, worker, onStatusChange }: Onboar
       <div className="space-y-3">
         <div>
           <h3 className="font-bold text-sm text-blue-900 dark:text-blue-100">
-            Complete setup to receive bookings
+            {displayText("Complete setup to receive bookings")}
           </h3>
           <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-            {completedCount}/{steps.length} steps done
+            {completedCount}/{steps.length} {displayText("steps done")}
           </p>
         </div>
 

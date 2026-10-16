@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Home, Calendar, User, Clock, Phone } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -6,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function BottomNav() {
+  useWorkerLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
@@ -41,7 +43,7 @@ export default function BottomNav() {
   const navItems = [
   { path: "/home", icon: Home, label: t('nav.home') },
   { path: "/bookings", icon: Calendar, label: t('nav.bookings') },
-  { path: "tel:8008180018", icon: Phone, label: "Call", isExternal: true },
+  { path: "tel:8008180018", icon: Phone, label: displayText("Call"), isExternal: true },
   { path: "/availability", icon: Clock, label: t('nav.availability'), showBadge: hasAvailability },
   { path: "/profile", icon: User, label: t('nav.profile') }];
 
@@ -60,7 +62,7 @@ export default function BottomNav() {
               <button
                 key={path}
                 onClick={() => (window.location.href = path)}
-                aria-label="Call support"
+                aria-label={displayText("Call support")}
                 className="flex flex-col items-center justify-center flex-1 h-full group focus:outline-none"
               >
                 <div

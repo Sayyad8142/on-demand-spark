@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState } from "react";
 import { Loader2, Download, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export function OtaMandatoryModal({ bundleInfo }: Props) {
+  useWorkerLanguage();
   const [status, setStatus] = useState<string>("A required update is available");
   const [updating, setUpdating] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -33,9 +35,9 @@ export function OtaMandatoryModal({ bundleInfo }: Props) {
           )}
         </div>
 
-        <h2 className="text-xl font-bold mb-2">Update Required</h2>
+        <h2 className="text-xl font-bold mb-2">{displayText("Update Required")}</h2>
         <p className="text-sm text-muted-foreground mb-1">
-          Version {bundleInfo.version}
+          {displayText("Version")} {bundleInfo.version}
         </p>
         {bundleInfo.message && (
           <p className="text-sm text-muted-foreground mb-4">{bundleInfo.message}</p>
@@ -51,17 +53,17 @@ export function OtaMandatoryModal({ bundleInfo }: Props) {
           {updating ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Updating...
+              {displayText("Updating...")}
             </>
           ) : failed ? (
             <>
               <RefreshCw className="w-4 h-4 mr-2" />
-              Retry Update
+              {displayText("Retry Update")}
             </>
           ) : (
             <>
               <Download className="w-4 h-4 mr-2" />
-              Update Now
+              {displayText("Update Now")}
             </>
           )}
         </Button>

@@ -1,5 +1,8 @@
 # Architecture rules
 
+- Worker localization uses i18next resources and display-only helpers in `src/i18n/display.ts`; never translate stored IDs, RPC inputs, comparison strings or server contracts. Why: language selection must not change booking, payout or authentication behavior.
+- Worker language is subscribed through React and persisted in localStorage plus Capacitor Preferences before initial rendering. Why: switching must be immediate and survive logout and native restarts.
+
 - Booking offer lifecycle is logged append-only in `booking_offer_events` (unique per booking_request_id + event_type): device events via the `ack-booking-delivery` edge function, server events (push_sent, final status) via a trigger on `booking_requests`. Why: one deduped, auditable timeline per offer without touching dispatch or acceptance logic.
 - Offer telemetry is fire-and-forget and must never block or alter Accept/Reject; accept/reject RPCs remain the sole authority for assignment. Why: telemetry failures must not cost workers bookings.
 - Worker rejections go through `reject_booking_offer` (worker taken from the session server-side, refuses expired/assigned offers, idempotent); the legacy `reject_booking_request` is a guarded wrapper that refuses a supplied worker id that differs from the session, and the tier logic lives in service-role-only `_reject_booking_request_core`. Clients show "rejected" only on `confirmed: true`. Why: no client may name another worker or claim an unconfirmed rejection.

@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ export function BookingCard({
   onAccept,
   onReject,
 }: BookingCardProps) {
+  useWorkerLanguage();
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
 
@@ -32,13 +34,13 @@ export function BookingCard({
     try {
       const result = await tryAccept(booking.id);
       if (result.success) {
-        toast.success('Booking accepted!');
+        toast.success(displayText("Booking accepted!"));
         onAccept?.(booking.id);
       } else {
         toast.error(result.error || 'Booking already taken');
       }
     } catch (error) {
-      toast.error('Failed to accept booking');
+      toast.error(displayText("Failed to accept booking"));
       console.error('Error accepting booking:', error);
     } finally {
       setAccepting(false);
@@ -49,10 +51,10 @@ export function BookingCard({
     setRejecting(true);
     try {
       // TODO: Implement reject endpoint
-      toast.info('Booking rejected');
+      toast.info(displayText("Booking rejected"));
       onReject?.(booking.id);
     } catch (error) {
-      toast.error('Failed to reject booking');
+      toast.error(displayText("Failed to reject booking"));
       console.error('Error rejecting booking:', error);
     } finally {
       setRejecting(false);
@@ -95,7 +97,7 @@ export function BookingCard({
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-lg">{booking.cust_name}</h3>
             {booking.worker_name && (
-              <p className="text-xs text-muted-foreground font-medium">Worker: {booking.worker_name}</p>
+              <p className="text-xs text-muted-foreground font-medium">{displayText("Worker:")} {booking.worker_name}</p>
             )}
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <MapPin className="w-3 h-3" />
@@ -104,14 +106,14 @@ export function BookingCard({
           </div>
         </div>
         <Badge className={statusColorFn(booking.status)}>
-          {booking.status.replace('_', ' ')}
+          {bookingStatusLabel(booking.status)}
         </Badge>
       </div>
 
       <div className="space-y-2 mb-3">
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">
-            {booking.service_type.replace('_', ' ')}
+            {serviceLabel(booking.service_type)}
           </span>
           {booking.price_inr && (
             <span className="font-bold text-primary">₹{booking.price_inr}</span>
@@ -144,7 +146,7 @@ export function BookingCard({
             ) : (
               <>
                 <CheckCircle className="w-4 h-4 mr-2" />
-                Accept
+                {displayText("Accept")}
               </>
             )}
           </Button>
@@ -159,7 +161,7 @@ export function BookingCard({
             ) : (
               <>
                 <XCircle className="w-4 h-4 mr-2" />
-                Reject
+                {displayText("Reject")}
               </>
             )}
           </Button>

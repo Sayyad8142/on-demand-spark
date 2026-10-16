@@ -26,7 +26,7 @@ const bootstrap = async () => {
   }
   
   // Step 2: Now dynamically import i18n (may depend on storage)
-  const { default: i18n } = await import("./i18n/config");
+  const { default: i18n, restoreWorkerLanguage } = await import("./i18n/config");
   
   // Helper to ensure i18n is initialized
   const waitForI18n = (): Promise<void> => {
@@ -37,6 +37,7 @@ const bootstrap = async () => {
   };
   
   await waitForI18n();
+  await restoreWorkerLanguage();
   console.log('✅ i18n initialized');
   
   // Step 3: NOW import App (which imports Supabase client)
@@ -56,7 +57,8 @@ const bootstrap = async () => {
     loadCommunityTypes().catch(() => {});
   });
 
-  createRoot(document.getElementById("root")!).render(<App />);
+  const root = document.getElementById("root");
+  if (root) createRoot(root).render(<App />);
 };
 
 bootstrap().catch((error) => {

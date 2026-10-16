@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Trophy, Star, HelpCircle } from "lucide-react";
@@ -30,6 +31,7 @@ export default function WorkerLeaderboardCard({
   serviceTypes,
   isAvailable = false,
 }: WorkerLeaderboardCardProps) {
+  useWorkerLanguage();
   const [workers, setWorkers] = useState<LeaderboardWorker[]>([]);
   const [currentUserRank, setCurrentUserRank] = useState<number | null>(null);
   const [currentUserScore, setCurrentUserScore] = useState<number>(0);
@@ -95,10 +97,10 @@ export default function WorkerLeaderboardCard({
           <Trophy className="w-5 h-5 text-primary" />
           <div>
             <h3 className="text-xs font-bold text-foreground leading-tight">
-              🏆 Top Worker Leaderboard
+              {displayText("🏆 Top Worker Leaderboard")}
             </h3>
             <p className="text-[10px] text-muted-foreground">
-              Improve your score to receive bookings earlier.
+              {displayText("Improve your score to receive bookings earlier.")}
             </p>
           </div>
         </div>
@@ -109,9 +111,9 @@ export default function WorkerLeaderboardCard({
               <HelpCircle className="w-4 h-4 text-muted-foreground" />
             </TooltipTrigger>
             <TooltipContent className="max-w-[200px] p-3 text-xs">
-              <p className="font-bold mb-1">How is this calculated?</p>
-              <p>Your Priority Score improves with high ratings, completing bookings, and accepting requests quickly.</p>
-              <p className="mt-1">Cancellations and late arrivals decrease your score.</p>
+              <p className="font-bold mb-1">{displayText("How is this calculated?")}</p>
+              <p>{displayText("Your Priority Score improves with high ratings, completing bookings, and accepting requests quickly.")}</p>
+              <p className="mt-1">{displayText("Cancellations and late arrivals decrease your score.")}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -120,7 +122,7 @@ export default function WorkerLeaderboardCard({
       {!isAvailable && (
         <div className="mx-3 mt-3 px-3 py-2 bg-amber-50 rounded-lg border border-amber-100 flex items-center gap-2">
           <p className="text-[10px] text-amber-800 font-medium">
-            You must be <span className="font-bold">Available</span> to be ranked on the leaderboard.
+            {displayText("You must be")} <span className="font-bold">{displayText("Available")}</span> {displayText("to be ranked on the leaderboard.")}
           </p>
         </div>
       )}
@@ -143,7 +145,7 @@ export default function WorkerLeaderboardCard({
                 <div className="flex items-center gap-1.5">
                   <p className="text-xs font-bold leading-none">{w.full_name}</p>
                   {!(w as any).is_available && (
-                    <span className="text-[8px] bg-red-100 text-red-700 px-1 py-0 rounded font-medium">OFF</span>
+                    <span className="text-[8px] bg-red-100 text-red-700 px-1 py-0 rounded font-medium">{displayText("OFF")}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-1">
@@ -153,7 +155,7 @@ export default function WorkerLeaderboardCard({
               </div>
             </div>
             <div className="text-right">
-              <p className="text-[10px] font-medium text-muted-foreground">Priority Score</p>
+              <p className="text-[10px] font-medium text-muted-foreground">{displayText("Priority Score")}</p>
               <p className="text-xs font-bold text-primary">{w.priority_score || 0}/50</p>
             </div>
           </div>
@@ -164,11 +166,11 @@ export default function WorkerLeaderboardCard({
             <div className="border-t border-dashed my-2" />
             <div className="bg-primary px-3 py-2 rounded-lg text-white flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold">You</span>
-                <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded">Rank #{currentUserRank}</span>
+                <span className="text-xs font-bold">{displayText("You")}</span>
+                <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded">{displayText("Rank #")}{currentUserRank}</span>
               </div>
               <div className="text-right">
-                <p className="text-[10px] opacity-80">Priority Score</p>
+                <p className="text-[10px] opacity-80">{displayText("Priority Score")}</p>
                 <p className="text-xs font-bold">{currentUserScore}/50</p>
               </div>
             </div>
@@ -178,19 +180,19 @@ export default function WorkerLeaderboardCard({
         <div className="pt-2">
           {isTop1 ? (
             <p className="text-[11px] font-bold text-primary text-center">
-              👑 Congratulations! You're currently receiving booking offers before everyone else.
+              {displayText("👑 Congratulations! You're currently receiving booking offers before everyone else.")}
             </p>
           ) : isTop10 ? (
             <p className="text-[11px] font-bold text-primary text-center">
-              🎉 You're now among the Top 10 workers! Keep maintaining your performance.
+              {displayText("🎉 You're now among the Top 10 workers! Keep maintaining your performance.")}
             </p>
           ) : currentUserRank ? (
             <p className="text-[11px] text-muted-foreground text-center">
-              You are currently Rank #{currentUserRank}. Reach the Top 10 to receive booking opportunities sooner.
+              {displayText("You are currently Rank #")}{currentUserRank}{displayText(". Reach the Top 10 to receive booking opportunities sooner.")}
             </p>
           ) : null}
           <p className="text-[9px] text-muted-foreground text-center mt-1">
-            Higher priority means you receive booking offers before others.
+            {displayText("Higher priority means you receive booking offers before others.")}
           </p>
         </div>
       </div>

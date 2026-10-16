@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -6,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function WorkerRankCard() {
+  useWorkerLanguage();
   const navigate = useNavigate();
   const [rank, setRank] = useState<number | null>(null);
   const [level, setLevel] = useState<string | null>(null);
@@ -42,7 +44,7 @@ export default function WorkerRankCard() {
           <Trophy className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <p className="text-xs text-muted-foreground font-semibold">Your Rank</p>
+          <p className="text-xs text-muted-foreground font-semibold">{displayText("Your Rank")}</p>
           <p className="text-base font-bold">
             {rank ? `#${rank}` : "—"}
             {level && (

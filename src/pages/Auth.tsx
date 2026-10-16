@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -29,12 +30,12 @@ const SERVICES = [{
   value: "maid",
   label: "auth.services.maid",
   icon: maidServiceIcon,
-  description: "Sweeping, mopping, dishes & more"
+  description: displayText("Sweeping, mopping, dishes & more")
 }, {
   value: "bathroom_cleaning",
   label: "auth.services.bathroom_cleaning",
   icon: bathroomServiceIcon,
-  description: "Deep bathroom cleaning"
+  description: displayText("Deep bathroom cleaning")
 }];
 
 // SECURITY: Input validation schemas
@@ -48,6 +49,7 @@ const PASSBOOK_ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "appli
 const PASSBOOK_MAX_SIZE = 8 * 1024 * 1024;
 const AUTH_DRAFT_KEY = "didi-worker-auth-draft-v1";
 export default function Auth() {
+  useWorkerLanguage();
   const navigate = useNavigate();
   const {
     toast
@@ -175,19 +177,19 @@ export default function Auth() {
     if (event.target) event.target.value = "";
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      toast({ title: "Invalid file", description: "Please upload a QR code image", variant: "destructive" });
+      toast({ title: displayText("Invalid file"), description: displayText("Please upload a QR code image"), variant: "destructive" });
       return;
     }
     setDecodingUpiQr(true);
     try {
       const upi = await decodeUpiFromQrFile(file);
       if (!upi) {
-        toast({ title: "Could not read QR", description: "Try a clearer photo of your UPI QR", variant: "destructive" });
+        toast({ title: displayText("Could not read QR"), description: displayText("Try a clearer photo of your UPI QR"), variant: "destructive" });
         return;
       }
       setSignUpUpiId(upi);
       setUpiQrFilledFrom(upi);
-      toast({ title: "UPI ID added", description: upi });
+      toast({ title: displayText("UPI ID added"), description: upi });
     } finally {
       setDecodingUpiQr(false);
     }
@@ -280,13 +282,13 @@ export default function Auth() {
     if (!file) return;
 
     if (!PASSBOOK_ACCEPTED_TYPES.includes(file.type)) {
-      toast({ title: "Invalid file", description: "Upload JPG, PNG, WEBP, or PDF", variant: "destructive" });
+      toast({ title: displayText("Invalid file"), description: displayText("Upload JPG, PNG, WEBP, or PDF"), variant: "destructive" });
       event.target.value = "";
       return;
     }
 
     if (file.size > PASSBOOK_MAX_SIZE) {
-      toast({ title: "File too large", description: "Max size is 8MB", variant: "destructive" });
+      toast({ title: displayText("File too large"), description: displayText("Max size is 8MB"), variant: "destructive" });
       event.target.value = "";
       return;
     }
@@ -305,12 +307,12 @@ export default function Auth() {
       if (details?.bank_name) setSignUpBankName(details.bank_name);
 
       if (details?.account_holder_name || details?.bank_account_number || details?.ifsc_code) {
-        toast({ title: "Account details filled", description: "Please verify the extracted details before continuing" });
+        toast({ title: displayText("Account details filled"), description: displayText("Please verify the extracted details before continuing") });
       } else {
-        toast({ title: "Could not find details", description: "Please enter the bank details manually", variant: "destructive" });
+        toast({ title: displayText("Could not find details"), description: displayText("Please enter the bank details manually"), variant: "destructive" });
       }
     } catch (err: any) {
-      toast({ title: "Could not read image", description: err?.message || "Please enter the bank details manually", variant: "destructive" });
+      toast({ title: displayText("Could not read image"), description: err?.message || "Please enter the bank details manually", variant: "destructive" });
     } finally {
       setExtractingPassbook(false);
     }
@@ -344,8 +346,8 @@ export default function Auth() {
     // UPI is ALWAYS required for payouts (instant settlement).
     if (!hasUpi) {
       toast({
-        title: "UPI ID is required",
-        description: "Please enter your UPI ID or scan a UPI QR code to receive payouts.",
+        title: displayText("UPI ID is required"),
+        description: displayText("Please enter your UPI ID or scan a UPI QR code to receive payouts."),
         variant: "destructive",
       });
       return;
@@ -353,7 +355,7 @@ export default function Auth() {
     const upiValidation = upiSchema.safeParse(upi);
     if (!upiValidation.success) {
       toast({
-        title: "Invalid UPI ID",
+        title: displayText("Invalid UPI ID"),
         description: upiValidation.error.errors[0].message,
         variant: "destructive",
       });
@@ -373,19 +375,19 @@ export default function Auth() {
     }
 
     if (!signUpAccountHolderName.trim()) {
-      toast({ title: "Account holder name required", variant: "destructive" });
+      toast({ title: displayText("Account holder name required"), variant: "destructive" });
       return;
     }
     if (!accountNumberSchema.safeParse(signUpBankAccountNumber.trim()).success) {
-      toast({ title: "Invalid bank account number", description: "Must be 9–18 digits.", variant: "destructive" });
+      toast({ title: displayText("Invalid bank account number"), description: displayText("Must be 9–18 digits."), variant: "destructive" });
       return;
     }
     if (signUpBankAccountNumber.trim() !== signUpConfirmAccountNumber.trim()) {
-      toast({ title: "Account numbers do not match", variant: "destructive" });
+      toast({ title: displayText("Account numbers do not match"), variant: "destructive" });
       return;
     }
     if (!ifscSchema.safeParse(signUpIfscCode.trim().toUpperCase()).success) {
-      toast({ title: "Invalid IFSC code", description: "Format: 4 letters + 0 + 6 alphanumeric.", variant: "destructive" });
+      toast({ title: displayText("Invalid IFSC code"), description: displayText("Format: 4 letters + 0 + 6 alphanumeric."), variant: "destructive" });
       return;
     }
     setSignUpStep(3);
@@ -396,7 +398,7 @@ export default function Auth() {
   const goToSignupStepTwo = () => {
     if (!canContinueSignup) {
       toast({
-        title: "Please fill basic details",
+        title: displayText("Please fill basic details"),
         description: signUpServices.length === 0 ? "Select at least one service type" : "Name, phone, community, and service are required",
         variant: "destructive"
       });
@@ -408,7 +410,7 @@ export default function Auth() {
   const handleSignInSendOtp = async () => {
     if (!signInPhone) {
       toast({
-        title: "Please enter your phone number",
+        title: displayText("Please enter your phone number"),
         variant: "destructive"
       });
       return;
@@ -444,15 +446,15 @@ export default function Auth() {
         // Set demo mode flag
         localStorage.setItem('demo_mode', 'true');
         toast({
-          title: "Demo Mode Activated",
-          description: "Logged in as demo user for Play Store review"
+          title: displayText("Demo Mode Activated"),
+          description: displayText("Logged in as demo user for Play Store review")
         });
         navigate("/home");
         return;
       } catch (error: any) {
         toast({
-          title: "Demo Login Error",
-          description: error.message,
+          title: displayText("Demo Login Error"),
+          description: displayText(error.message),
           variant: "destructive"
         });
         return;
@@ -465,7 +467,7 @@ export default function Auth() {
     const validation = phoneSchema.safeParse(signInPhone);
     if (!validation.success) {
       toast({
-        title: "Invalid phone number",
+        title: displayText("Invalid phone number"),
         description: validation.error.errors[0].message,
         variant: "destructive"
       });
@@ -512,13 +514,13 @@ export default function Auth() {
         }
       });
       toast({
-        title: "OTP sent!",
-        description: "Check your phone for the verification code"
+        title: displayText("OTP sent!"),
+        description: displayText("Check your phone for the verification code")
       });
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message,
+        title: displayText("Error"),
+        description: displayText(error.message),
         variant: "destructive"
       });
     } finally {
@@ -528,7 +530,7 @@ export default function Auth() {
   const handleSignUpSendOtp = async () => {
     if (!signUpFullName || !signUpPhone || !signUpCommunity || signUpServices.length === 0) {
       toast({
-        title: "Please fill all required fields",
+        title: displayText("Please fill all required fields"),
         description: signUpServices.length === 0 ? "Select at least one service type" : undefined,
         variant: "destructive"
       });
@@ -539,7 +541,7 @@ export default function Auth() {
     const nameValidation = nameSchema.safeParse(signUpFullName);
     if (!nameValidation.success) {
       toast({
-        title: "Invalid name",
+        title: displayText("Invalid name"),
         description: nameValidation.error.errors[0].message,
         variant: "destructive"
       });
@@ -548,7 +550,7 @@ export default function Auth() {
     const phoneValidation = phoneSchema.safeParse(signUpPhone);
     if (!phoneValidation.success) {
       toast({
-        title: "Invalid phone number",
+        title: displayText("Invalid phone number"),
         description: phoneValidation.error.errors[0].message,
         variant: "destructive"
       });
@@ -557,8 +559,8 @@ export default function Auth() {
     // UPI is mandatory during signup.
     if (!signUpUpiId.trim()) {
       toast({
-        title: "UPI ID is required",
-        description: "Please enter your UPI ID to receive payouts.",
+        title: displayText("UPI ID is required"),
+        description: displayText("Please enter your UPI ID to receive payouts."),
         variant: "destructive"
       });
       return;
@@ -566,7 +568,7 @@ export default function Auth() {
     const upiValidation = upiSchema.safeParse(signUpUpiId.trim());
     if (!upiValidation.success) {
       toast({
-        title: "Invalid UPI ID",
+        title: displayText("Invalid UPI ID"),
         description: upiValidation.error.errors[0].message,
         variant: "destructive"
       });
@@ -590,21 +592,21 @@ export default function Auth() {
 
     if (anyBankFieldFilled) {
       if (!accountHolderNameBank) {
-        toast({ title: "Account holder name is required", description: "Please complete bank details or clear them all.", variant: "destructive" });
+        toast({ title: displayText("Account holder name is required"), description: displayText("Please complete bank details or clear them all."), variant: "destructive" });
         return;
       }
       const acctValidation = accountNumberSchema.safeParse(bankAccountNumber);
       if (!acctValidation.success) {
-        toast({ title: "Invalid bank account number", description: acctValidation.error.errors[0].message, variant: "destructive" });
+        toast({ title: displayText("Invalid bank account number"), description: acctValidation.error.errors[0].message, variant: "destructive" });
         return;
       }
       if (bankAccountNumber !== confirmAccountNumber) {
-        toast({ title: "Account numbers do not match", description: "Please re-enter the same account number in both fields.", variant: "destructive" });
+        toast({ title: displayText("Account numbers do not match"), description: displayText("Please re-enter the same account number in both fields."), variant: "destructive" });
         return;
       }
       const ifscValidation = ifscSchema.safeParse(ifscCode);
       if (!ifscValidation.success) {
-        toast({ title: "Invalid IFSC code", description: ifscValidation.error.errors[0].message, variant: "destructive" });
+        toast({ title: displayText("Invalid IFSC code"), description: ifscValidation.error.errors[0].message, variant: "destructive" });
         return;
       }
       bankPayload = {
@@ -653,13 +655,13 @@ export default function Auth() {
         }
       });
       toast({
-        title: "OTP sent!",
-        description: "Check your phone for the verification code"
+        title: displayText("OTP sent!"),
+        description: displayText("Check your phone for the verification code")
       });
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message,
+        title: displayText("Error"),
+        description: displayText(error.message),
         variant: "destructive"
       });
     } finally {
@@ -674,8 +676,8 @@ export default function Auth() {
           <Button variant="ghost" size="icon" onClick={() => {
           localStorage.setItem('guest_mode', 'true');
           toast({
-            title: "Guest Mode",
-            description: "Exploring as guest with demo data"
+            title: displayText("Guest Mode"),
+            description: displayText("Exploring as guest with demo data")
           });
           navigate("/home");
         }} className="h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm shadow-sm" title={t('auth.continueAsGuest', 'Continue as Guest')}>
@@ -714,7 +716,7 @@ export default function Auth() {
             <TabsContent value="signup" className="space-y-5">
               <div className="rounded-2xl bg-primary/10 p-1">
                 <div className="grid grid-cols-3 gap-1 text-center text-[11px] font-semibold">
-                  {["Basic", "Payout", "Confirm"].map((label, index) => {
+                  {[displayText("Basic"), displayText("Payout"), displayText("Confirm")].map((label, index) => {
                     const stepNumber = index + 1;
                     const active = signUpStep === stepNumber;
                     const complete = signUpStep > stepNumber;
@@ -734,7 +736,7 @@ export default function Auth() {
                         <span className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-xs">
                           {complete ? <Check className="h-3.5 w-3.5" /> : stepNumber}
                         </span>
-                        {label}
+                        {displayText(label)}
                       </button>
                     );
                   })}
@@ -744,8 +746,8 @@ export default function Auth() {
               {signUpStep === 1 && (
                 <div className="space-y-5 rounded-3xl border bg-card p-4 shadow-sm">
                   <div>
-                    <p className="text-lg font-bold">Step 1: Basic Details</p>
-                    <p className="text-sm text-muted-foreground">Tell us where you work and what service you provide.</p>
+                    <p className="text-lg font-bold">{displayText("Step 1: Basic Details")}</p>
+                    <p className="text-sm text-muted-foreground">{displayText("Tell us where you work and what service you provide.")}</p>
                   </div>
 
                   <div className="space-y-2">
@@ -770,16 +772,16 @@ export default function Auth() {
                   </div>
 
                   <div className="space-y-3">
-                    <Label className="text-base">Service Type</Label>
+                    <Label className="text-base">{displayText("Service Type")}</Label>
                     <div className="grid grid-cols-2 gap-3">
                       {SERVICES.map(service => {
                         const isSelected = signUpServices.includes(service.value);
                         const isMaid = service.value === "maid";
-                        const serviceTitle = isMaid ? "Maid Service" : "Bathroom Cleaning";
+                        const serviceTitle = serviceLabel(service.value);
                         const serviceImg = isMaid ? maidServiceIcon : bathroomServiceIcon;
                         const serviceDesc = isMaid
-                          ? "Sweeping, mopping, dishwashing & more"
-                          : "Deep bathroom & tile cleaning";
+                          ? displayText("Sweeping, mopping, dishwashing & more")
+                          : displayText("Deep bathroom & tile cleaning");
                         return (
                           <button
                             key={service.value}
@@ -832,7 +834,7 @@ export default function Auth() {
                   </div>
 
                   <Button onClick={goToSignupStepTwo} disabled={loading} className="h-12 w-full rounded-2xl text-base font-semibold">
-                    Continue
+                    {displayText("Continue")}
                   </Button>
                 </div>
               )}
@@ -846,10 +848,10 @@ export default function Auth() {
                   {/* Header */}
                   <div className="space-y-1.5 px-1">
                     <h2 className="text-2xl font-bold tracking-tight">
-                      Get Paid Instantly <span aria-hidden>💸</span>
+                      {displayText("Get Paid Instantly")} <span aria-hidden>💸</span>
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                      Add your UPI ID so we can send your earnings instantly after every completed booking.
+                      {displayText("Add your UPI ID so we can send your earnings instantly after every completed booking.")}
                     </p>
                   </div>
 
@@ -863,11 +865,11 @@ export default function Auth() {
                         <div className="flex items-center gap-2">
                           <p className="text-base font-bold">UPI ID</p>
                           <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-green-700">
-                            Recommended
+                            {displayText("Recommended")}
                           </span>
                         </div>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          Instant payouts • Takes less than 30 seconds
+                          {displayText("Instant payouts • Takes less than 30 seconds")}
                         </p>
                       </div>
                     </div>
@@ -897,21 +899,21 @@ export default function Auth() {
                           <div className="min-w-0 flex-1">
                             <p className={`text-sm font-bold ${upiQrFilledFrom ? 'text-green-700' : 'text-gray-900'}`}>
                               {decodingUpiQr
-                                ? 'Reading your QR...'
+                                ? displayText("Reading your QR...")
                                 : upiQrFilledFrom
-                                ? '✓ UPI QR uploaded'
-                                : '📷 Upload UPI QR'}
+                                ? displayText("✓ UPI QR uploaded")
+                                : displayText("📷 Upload UPI QR")}
                             </p>
                             <p className="mt-0.5 text-[11px] text-muted-foreground">
                               {upiQrFilledFrom
-                                ? `Detected: ${upiQrFilledFrom} · Tap to re-scan`
-                                : 'PhonePe • Google Pay • Paytm • BHIM'}
+                                ? displayText('Detected: {{upi}} · Tap to re-scan', { upi: upiQrFilledFrom })
+                                : displayText("PhonePe • Google Pay • Paytm • BHIM")}
                             </p>
                           </div>
                         </div>
                       </button>
                       {!upiQrFilledFrom && (
-                        <p className="px-1 text-[11px] text-muted-foreground">Any UPI QR works.</p>
+                        <p className="px-1 text-[11px] text-muted-foreground">{displayText("Any UPI QR works.")}</p>
                       )}
                       <input
                         ref={upiQrInputRef}
@@ -925,14 +927,14 @@ export default function Auth() {
                     {/* Divider */}
                     <div className="flex items-center gap-3">
                       <div className="h-px flex-1 bg-border" />
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">OR</span>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{displayText("OR")}</span>
                       <div className="h-px flex-1 bg-border" />
                     </div>
 
                     {/* Option 2 — Type UPI */}
                     <div className="space-y-2">
                       <Label htmlFor="signup-upi" className="text-sm font-semibold">
-                        Enter UPI ID
+                        {displayText("Enter UPI ID")}
                       </Label>
                       <div className="relative">
                         <Input
@@ -959,15 +961,15 @@ export default function Auth() {
                       </div>
                       {upiValid ? (
                         <p className="flex items-center gap-1 text-xs font-medium text-green-700">
-                          ✅ UPI ID looks valid
+                          {displayText("✅ UPI ID looks valid")}
                         </p>
                       ) : upiShowError ? (
                         <p className="flex items-center gap-1 text-xs font-medium text-amber-700">
-                          ⚠️ Please enter a valid UPI ID
+                          {displayText("⚠️ Please enter a valid UPI ID")}
                         </p>
                       ) : (
                         <div className="rounded-xl bg-muted/50 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-                          <span className="font-semibold text-foreground">Examples:</span>
+                          <span className="font-semibold text-foreground">{displayText("Examples:")}</span>
                           <br />9876543210@ybl
                           <br />name@oksbi
                           <br />username@paytm
@@ -990,7 +992,7 @@ export default function Auth() {
                               <Landmark className="h-3 w-3" />
                             </div>
                             <p className="text-xs font-medium">
-                              Can't receive UPI? <span className="text-muted-foreground">Add bank account</span>
+                              {displayText("Can't receive UPI?")} <span className="text-muted-foreground">{displayText("Add bank account")}</span>
                             </p>
                           </div>
                           <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
@@ -1000,8 +1002,8 @@ export default function Auth() {
                         <div className="space-y-4 p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="text-sm font-bold">Bank Account (Optional)</p>
-                              <p className="text-[11px] text-muted-foreground">Used only if UPI payouts are unavailable.</p>
+                              <p className="text-sm font-bold">{displayText("Bank Account (Optional)")}</p>
+                              <p className="text-[11px] text-muted-foreground">{displayText("Used only if UPI payouts are unavailable.")}</p>
                             </div>
                             <Button
                               type="button"
@@ -1015,18 +1017,18 @@ export default function Auth() {
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor="signup-acct-name" className="text-sm">Account Holder Name</Label>
-                            <Input id="signup-acct-name" type="text" placeholder="Name as on bank account" value={signUpAccountHolderName} onChange={e => setSignUpAccountHolderName(e.target.value)} disabled={loading} className="h-12 rounded-2xl text-base" />
+                            <Label htmlFor="signup-acct-name" className="text-sm">{displayText("Account Holder Name")}</Label>
+                            <Input id="signup-acct-name" type="text" placeholder={displayText("Name as on bank account")} value={signUpAccountHolderName} onChange={e => setSignUpAccountHolderName(e.target.value)} disabled={loading} className="h-12 rounded-2xl text-base" />
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor="signup-acct-no" className="text-sm">Account Number</Label>
-                            <Input id="signup-acct-no" inputMode="numeric" placeholder="9 to 18 digits" value={signUpBankAccountNumber} onChange={e => setSignUpBankAccountNumber(e.target.value.replace(/\D/g, ""))} maxLength={18} disabled={loading} className="h-12 rounded-2xl text-base" />
+                            <Label htmlFor="signup-acct-no" className="text-sm">{displayText("Account Number")}</Label>
+                            <Input id="signup-acct-no" inputMode="numeric" placeholder={displayText("9 to 18 digits")} value={signUpBankAccountNumber} onChange={e => setSignUpBankAccountNumber(e.target.value.replace(/\D/g, ""))} maxLength={18} disabled={loading} className="h-12 rounded-2xl text-base" />
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor="signup-acct-no-confirm" className="text-sm">Confirm Account Number</Label>
-                            <Input id="signup-acct-no-confirm" inputMode="numeric" placeholder="Re-enter account number" value={signUpConfirmAccountNumber} onChange={e => setSignUpConfirmAccountNumber(e.target.value.replace(/\D/g, ""))} maxLength={18} disabled={loading} className="h-12 rounded-2xl text-base" />
+                            <Label htmlFor="signup-acct-no-confirm" className="text-sm">{displayText("Confirm Account Number")}</Label>
+                            <Input id="signup-acct-no-confirm" inputMode="numeric" placeholder={displayText("Re-enter account number")} value={signUpConfirmAccountNumber} onChange={e => setSignUpConfirmAccountNumber(e.target.value.replace(/\D/g, ""))} maxLength={18} disabled={loading} className="h-12 rounded-2xl text-base" />
                           </div>
 
                           <div className="space-y-2">
@@ -1035,7 +1037,7 @@ export default function Auth() {
                           </div>
 
                           <div className="space-y-2">
-                            <Label className="text-sm">Passbook / Cancelled Cheque (optional)</Label>
+                            <Label className="text-sm">{displayText("Passbook / Cancelled Cheque (optional)")}</Label>
                             {signUpPassbookFile ? (
                               <div className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3">
                                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted">
@@ -1044,7 +1046,7 @@ export default function Auth() {
                                 <div className="min-w-0 flex-1">
                                   <p className="truncate text-sm font-medium">{signUpPassbookFile.name}</p>
                                   <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                                    <Check className="h-3 w-3" /> {extractingPassbook ? "Reading details..." : "Details auto-filled — verify above"}
+                                    <Check className="h-3 w-3" /> {extractingPassbook ? displayText("Reading details...") : displayText("Details auto-filled — verify above")}
                                   </p>
                                 </div>
                                 <Button type="button" variant="ghost" size="icon" onClick={() => {
@@ -1057,8 +1059,8 @@ export default function Auth() {
                             ) : (
                               <button type="button" onClick={() => passbookInputRef.current?.click()} disabled={loading || extractingPassbook} className="flex w-full flex-col items-center gap-1 rounded-2xl border-2 border-dashed border-border bg-background p-4 text-center transition-colors hover:bg-muted/50 disabled:opacity-50">
                                 <Upload className="h-5 w-5 text-muted-foreground" />
-                                <span className="text-sm font-semibold">Upload passbook or cheque</span>
-                                <span className="text-[11px] text-muted-foreground">Auto-fills bank details</span>
+                                <span className="text-sm font-semibold">{displayText("Upload passbook or cheque")}</span>
+                                <span className="text-[11px] text-muted-foreground">{displayText("Auto-fills bank details")}</span>
                               </button>
                             )}
                             <input ref={passbookInputRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={handlePassbookSelect} className="hidden" />
@@ -1079,7 +1081,7 @@ export default function Auth() {
                       disabled={extractingPassbook || !upiValid}
                       className="h-14 rounded-2xl bg-[#ff007a] text-base font-semibold text-white hover:bg-[#ff007a]/90"
                     >
-                      Continue
+                      {displayText("Continue")}
                     </Button>
                   </div>
                 </div>
@@ -1095,25 +1097,25 @@ export default function Auth() {
                       <ShieldCheck className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-lg font-bold">Step 3: Confirm & Send OTP</p>
-                      <p className="text-sm text-muted-foreground">Check your details before verification.</p>
+                      <p className="text-lg font-bold">{displayText("Step 3: Confirm & Send OTP")}</p>
+                      <p className="text-sm text-muted-foreground">{displayText("Check your details before verification.")}</p>
                     </div>
                   </div>
 
                   <div className="space-y-3 rounded-2xl bg-muted/60 p-4 text-sm">
-                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">Name</span><span className="text-right font-semibold">{signUpFullName || "Not entered"}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">Phone</span><span className="text-right font-semibold">{signUpPhone || "Not entered"}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">Community</span><span className="text-right font-semibold">{selectedCommunityName}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">Service</span><span className="text-right font-semibold">{selectedServiceLabels.length ? selectedServiceLabels.join(", ") : "Not selected"}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">Payout</span><span className="text-right font-semibold">{hasPayoutDetails ? "Added" : "Skipped for now"}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">{displayText("Name")}</span><span className="text-right font-semibold">{signUpFullName || displayText("Not entered")}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">{displayText("Phone")}</span><span className="text-right font-semibold">{signUpPhone || displayText("Not entered")}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">{displayText("Community")}</span><span className="text-right font-semibold">{selectedCommunityName}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">{displayText("Service")}</span><span className="text-right font-semibold">{selectedServiceLabels.length ? selectedServiceLabels.join(", ") : displayText("Not selected")}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">{displayText("Payout")}</span><span className="text-right font-semibold">{hasPayoutDetails ? displayText("Added") : displayText("Skipped for now")}</span></div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <Button type="button" variant="outline" onClick={() => setSignUpStep(2)} className="h-12 rounded-2xl">
-                      <ChevronLeft className="mr-1 h-4 w-4" /> Back
+                      <ChevronLeft className="mr-1 h-4 w-4" /> {displayText("Back")}
                     </Button>
                     <Button onClick={handleSignUpSendOtp} disabled={loading || extractingPassbook || !signUpFullName || !signUpPhone || !signUpCommunity || signUpServices.length === 0} className="h-12 rounded-2xl font-semibold">
-                      {loading ? t('auth.sending') : extractingPassbook ? "Reading image..." : t('auth.sendOtp')}
+                      {loading ? t('auth.sending') : extractingPassbook ? displayText("Reading image...") : t('auth.sendOtp')}
                     </Button>
                   </div>
                 </div>
@@ -1129,7 +1131,7 @@ export default function Auth() {
           i18n.changeLanguage('en');
           localStorage.setItem('language', 'en');
           toast({
-            title: "Language changed to English"
+            title: displayText("Language changed to English")
           });
         }} className="h-8 rounded-full px-3 text-xs">
           English
@@ -1158,7 +1160,7 @@ export default function Auth() {
       <a href="tel:8008180018" className="w-full mt-4">
         <Button className="my-2 h-11 w-full rounded-full bg-success text-success-foreground text-sm font-semibold shadow-sm hover:bg-success/90">
           <Phone className="w-4 h-4 mr-2" />
-          Call manager
+          {displayText("Call manager")}
         </Button>
       </a>
 

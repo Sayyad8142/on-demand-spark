@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -43,6 +44,7 @@ import { DEMO_WORKER, DEMO_ACTIVE_JOB, DEMO_BOOKINGS } from "@/config/demoData";
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
 export default function Home() {
+  useWorkerLanguage();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user, session } = useAuth();
@@ -166,8 +168,8 @@ export default function Home() {
   const handleToggle = async (value: boolean) => {
     if (isGuestMode) {
       toast({
-        title: "Guest Mode",
-        description: "Create an account to change availability",
+        title: displayText("Guest Mode"),
+        description: displayText("Create an account to change availability"),
         variant: "default",
       });
       return;
@@ -181,8 +183,8 @@ export default function Home() {
   const handleStatusUpdate = async (status: string) => {
     if (isGuestMode) {
       toast({
-        title: "Guest Mode",
-        description: "Create an account to update job status",
+        title: displayText("Guest Mode"),
+        description: displayText("Create an account to update job status"),
         variant: "default",
       });
       return;
@@ -203,14 +205,14 @@ export default function Home() {
   // Guard: Don't render if user is not loaded yet in non-guest mode
   if (!user && !isGuestMode) {
     return <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <div className="animate-pulse text-muted-foreground">{displayText("Loading...")}</div>
       </div>;
   }
   return <div className="min-h-screen">
       {/* Guest Mode Banner */}
       {isGuestMode && (
         <div className="bg-amber-500/90 text-white px-4 py-3 text-center text-sm font-medium flex items-center justify-center gap-2">
-          👀 Exploring in Guest Mode • Create account to receive real bookings
+          {displayText("👀 Exploring in Guest Mode • Create account to receive real bookings")}
           <Button
             variant="ghost"
             size="sm"
@@ -218,7 +220,7 @@ export default function Home() {
             className="text-white hover:text-white/80 hover:bg-white/20"
           >
             <LogOut className="h-4 w-4 mr-1" />
-            Exit
+            {displayText("Exit")}
           </Button>
         </div>
       )}
@@ -235,19 +237,19 @@ export default function Home() {
               onPushUnhealthy={async () => {
                 if (pushHealth.isChecking) {
                   toast({
-                    title: 'Preparing booking alerts',
-                    description: 'Please wait while the app restores push notifications in the background.',
+                    title: displayText("Preparing booking alerts"),
+                    description: displayText("Please wait while the app restores push notifications in the background."),
                   });
                   return;
                 }
 
                 const ok = await pushHealth.repair();
                 if (ok) {
-                  toast({ title: "Booking alerts restored", description: "You can now go online." });
+                  toast({ title: displayText("Booking alerts restored"), description: displayText("You can now go online.") });
                 } else {
                   toast({
-                    title: 'Booking alerts still unavailable',
-                    description: 'Please enable notifications and try the backup refresh again.',
+                    title: displayText("Booking alerts still unavailable"),
+                    description: displayText("Please enable notifications and try the backup refresh again."),
                     variant: 'destructive',
                   });
                 }
@@ -267,7 +269,7 @@ export default function Home() {
 
 
       {/* Main Content with top padding for fixed header */}
-      <div className={`p-4 space-y-4 pb-32 ${isGuestMode ? 'pt-4' : 'pt-28'}`}>
+      <div className={`p-4 space-y-4 pb-32 ${isGuestMode ? "pt-4" : "pt-28"}`}>
 
       {/* Worker Health badge — unified status from all signals */}
       {!isGuestMode && worker && workerHealth.status !== "ready" && (
@@ -277,10 +279,10 @@ export default function Home() {
             if (pushHealth.isChecking) return;
             const ok = await pushHealth.repair();
             toast({
-              title: ok ? "Booking alerts restored" : "Still unable to restore",
+              title: ok ? displayText("Booking alerts restored") : displayText("Still unable to restore"),
               description: ok
-                ? "You're ready to receive bookings."
-                : "Please open Device Readiness to fix remaining issues.",
+                ? displayText("You're ready to receive bookings.")
+                : displayText("Please open Device Readiness to fix remaining issues."),
               variant: ok ? "default" : "destructive",
             });
             if (!ok) navigate("/device-readiness");
@@ -312,15 +314,15 @@ export default function Home() {
               <AlertTriangle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div className="space-y-1">
                 <h2 className="font-semibold text-base text-foreground">
-                  Complete payout details to start getting bookings
+                  {displayText("Complete payout details to start getting bookings")}
                 </h2>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  You won’t receive bookings until payout details are added.
+                  {displayText("You won’t receive bookings until payout details are added.")}
                 </p>
               </div>
             </div>
             <Button className="w-full h-11" onClick={() => navigate('/account-details')}>
-              Add payout details
+              {displayText("Add payout details")}
             </Button>
           </div>
         </Card>
@@ -342,10 +344,10 @@ export default function Home() {
           onRetry={async () => {
             const ok = await pushHealth.repair();
             toast({
-              title: ok ? "Notifications enabled" : "Still unable to enable",
+              title: ok ? displayText("Notifications enabled") : displayText("Still unable to enable"),
               description: ok
-                ? "You'll start receiving booking requests."
-                : "Please enable notifications in your phone settings.",
+                ? displayText("You'll start receiving booking requests.")
+                : displayText("Please enable notifications in your phone settings."),
               variant: ok ? "default" : "destructive",
             });
             return ok;
@@ -410,14 +412,14 @@ export default function Home() {
                   <Clock className="w-6 h-6 text-primary" />
                 </div>
               </div>
-              <AlertDialogTitle className="text-center">Select slot to start bookings</AlertDialogTitle>
+              <AlertDialogTitle className="text-center">{displayText("Select slot to start bookings")}</AlertDialogTitle>
               <AlertDialogDescription className="text-center">
-                You haven't selected any time slots. Please choose your available hours to start receiving bookings.
+                {displayText("You haven't selected any time slots. Please choose your available hours to start receiving bookings.")}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogAction onClick={() => navigate('/availability')} className="w-full">
-                Set my time slots
+                {displayText("Set my time slots")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

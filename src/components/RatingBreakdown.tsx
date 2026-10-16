@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { Star } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
@@ -13,6 +14,7 @@ interface RatingBreakdownProps {
 }
 
 export default function RatingBreakdown({ ratings, totalRatings }: RatingBreakdownProps) {
+  useWorkerLanguage();
   if (totalRatings === 0) {
     return (
       <div className="text-center py-4">
@@ -22,7 +24,7 @@ export default function RatingBreakdown({ ratings, totalRatings }: RatingBreakdo
           ))}
         </div>
         <p className="text-sm font-semibold">5.0</p>
-        <p className="text-xs text-muted-foreground">Default rating for new workers</p>
+        <p className="text-xs text-muted-foreground">{displayText("Default rating for new workers")}</p>
       </div>
     );
   }

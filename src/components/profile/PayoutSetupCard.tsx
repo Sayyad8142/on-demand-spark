@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +30,7 @@ export default function PayoutSetupCard({
   currentUpiId,
   onSetupComplete,
 }: PayoutSetupCardProps) {
+  useWorkerLanguage();
   const [accountName, setAccountName] = useState(currentAccountName);
   const [bankAccountNumber, setBankAccountNumber] = useState(currentBankAccountNumber);
   const [ifscCode, setIfscCode] = useState(currentIfscCode);
@@ -39,11 +41,11 @@ export default function PayoutSetupCard({
     if (!workerId) return;
 
     if (!accountName.trim()) {
-      toast.error("Account holder name is required");
+      toast.error(displayText("Account holder name is required"));
       return;
     }
     if (!/^\d{9,18}$/.test(bankAccountNumber.trim())) {
-      toast.error("Account number must be 9–18 digits");
+      toast.error(displayText("Account number must be 9–18 digits"));
       return;
     }
     if (!IFSC_REGEX.test(ifscCode.trim().toUpperCase())) {
@@ -73,7 +75,7 @@ export default function PayoutSetupCard({
 
       if (error) throw error;
 
-      toast.success("Payout details saved successfully");
+      toast.success(displayText("Payout details saved successfully"));
       onSetupComplete();
     } catch (err: any) {
       console.error("Payout save error:", err);
@@ -88,7 +90,7 @@ export default function PayoutSetupCard({
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Wallet className="w-5 h-5" />
-          Payout Details
+          {displayText("Payout Details")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -96,30 +98,30 @@ export default function PayoutSetupCard({
           <div className="flex items-center gap-2 mb-1">
             <Badge className="bg-green-100 text-green-700 gap-1">
               <CheckCircle2 className="w-3 h-3" />
-              Payout details saved
+              {displayText("Payout details saved")}
             </Badge>
           </div>
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="payout-name">Account Holder Name</Label>
+          <Label htmlFor="payout-name">{displayText("Account Holder Name")}</Label>
           <Input
             id="payout-name"
             value={accountName}
             onChange={(e) => setAccountName(e.target.value)}
-            placeholder="Your full name"
+            placeholder={displayText("Your full name")}
             disabled={saving}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="payout-account-number">Bank Account Number</Label>
+          <Label htmlFor="payout-account-number">{displayText("Bank Account Number")}</Label>
           <Input
             id="payout-account-number"
             inputMode="numeric"
             value={bankAccountNumber}
             onChange={(e) => setBankAccountNumber(e.target.value.replace(/\D/g, ""))}
-            placeholder="9 to 18 digits"
+            placeholder={displayText("9 to 18 digits")}
             maxLength={18}
             disabled={saving}
           />
@@ -139,7 +141,7 @@ export default function PayoutSetupCard({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="payout-upi">UPI ID (optional)</Label>
+          <Label htmlFor="payout-upi">{displayText("UPI ID (optional)")}</Label>
           <Input
             id="payout-upi"
             value={upiId}
@@ -153,7 +155,7 @@ export default function PayoutSetupCard({
           {saving ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Saving...
+              {displayText("Saving...")}
             </>
           ) : (
             "Save Details"

@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Clock, Check } from "lucide-react";
@@ -52,6 +53,7 @@ const generateInitialWeekData = (endHour: number = 19): Record<DayKey, Slot[]> =
 });
 
 export default function Availability() {
+  useWorkerLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const fromSignup = searchParams.get("from") === "signup";
@@ -135,8 +137,8 @@ export default function Availability() {
       } else {
         // No worker record found
         toast({
-          title: "Error",
-          description: "Worker profile not found",
+          title: displayText("Error"),
+          description: displayText("Worker profile not found"),
           variant: "destructive"
         });
         setLoading(false);
@@ -144,8 +146,8 @@ export default function Availability() {
     } catch (error: any) {
       console.error("Error loading worker:", error);
       toast({
-        title: "Error",
-        description: "Failed to load your profile",
+        title: displayText("Error"),
+        description: displayText("Failed to load your profile"),
         variant: "destructive"
       });
       setLoading(false);
@@ -188,8 +190,8 @@ export default function Availability() {
     } catch (error: any) {
       console.error("Error loading availability:", error);
       toast({
-        title: "Error",
-        description: "Failed to load your availability",
+        title: displayText("Error"),
+        description: displayText("Failed to load your availability"),
         variant: "destructive"
       });
     } finally {
@@ -257,8 +259,8 @@ export default function Availability() {
   const saveAvailability = async () => {
     if (!workerId) {
       toast({
-        title: "Error",
-        description: "Worker profile not found",
+        title: displayText("Error"),
+        description: displayText("Worker profile not found"),
         variant: "destructive"
       });
       return;
@@ -303,7 +305,7 @@ export default function Availability() {
     } catch (error: any) {
       console.error("Error saving availability:", error);
       toast({
-        title: "Error",
+        title: displayText("Error"),
         description: error.message || "Failed to save availability",
         variant: "destructive"
       });
@@ -344,7 +346,7 @@ export default function Availability() {
           {t('availability.title')}
         </h1>
         <p className="text-[12px] text-muted-foreground mt-1 font-medium">
-          <span style={{ color: GREEN }} className="font-semibold">{selectedCount} slots</span>
+          <span style={{ color: GREEN }} className="font-semibold">{displayText('{{count}} slots', { count: selectedCount })}</span>
           <span className="mx-1.5 text-muted-foreground/50">·</span>
           {getDayName(activeDay)}
         </p>
@@ -357,7 +359,7 @@ export default function Availability() {
             style={{ backgroundColor: GREEN_SOFT_BG, borderColor: GREEN_SOFT_BORDER }}
           >
             <p className="text-[12px] text-foreground/80 leading-snug">
-              <span className="font-semibold text-foreground">Set your working hours</span> — you won't get bookings until saved.
+              <span className="font-semibold text-foreground">{displayText("Set your working hours")}</span> {displayText("— you won't get bookings until saved.")}
             </p>
           </div>
         </div>
@@ -454,7 +456,7 @@ export default function Availability() {
                     }
               }
             >
-              {slot.label}
+              {slot.label.replace('AM', displayText('AM')).replace('PM', displayText('PM'))}
             </button>
           ))}
         </div>

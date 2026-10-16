@@ -1,9 +1,11 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import BookingLeaderboard from "@/components/BookingLeaderboard";
 
 export default function Leaderboard() {
+  useWorkerLanguage();
   const navigate = useNavigate();
 
   return (
@@ -13,7 +15,7 @@ export default function Leaderboard() {
           <Button variant="ghost" size="icon" onClick={() => navigate("/bookings")}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-xl font-bold">Worker Ranking</h1>
+          <h1 className="text-xl font-bold">{displayText("Worker Ranking")}</h1>
         </div>
       </header>
 

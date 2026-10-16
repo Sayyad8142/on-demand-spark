@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { PhoneCall, Download, Sparkles } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import logo from "@/assets/didi-partner-logo.png";
@@ -9,6 +10,7 @@ interface Props {
 }
 
 const ForceUpdateScreen = ({ config }: Props) => {
+  useWorkerLanguage();
   const title = config?.update_title || "Update Required";
   const message =
     config?.user_update_message ||
@@ -44,7 +46,7 @@ const ForceUpdateScreen = ({ config }: Props) => {
           <img src={logo} alt="Didi Now Partner" className="w-16 h-16 object-contain" />
         </div>
         <p className="text-white/90 text-sm font-medium tracking-wide">
-          DIDI NOW PARTNER
+          {displayText("DIDI NOW PARTNER")}
         </p>
       </div>
 
@@ -66,14 +68,14 @@ const ForceUpdateScreen = ({ config }: Props) => {
         {/* Version info */}
         <div className="bg-gray-50 rounded-xl p-4 mb-4 space-y-2">
           <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-500">Your version</span>
+            <span className="text-sm text-gray-500">{displayText("Your version")}</span>
             <span className="text-sm font-bold text-gray-800">
               {CURRENT_VERSION_NAME}
             </span>
           </div>
           <div className="h-px bg-gray-200" />
           <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-500">Required version</span>
+            <span className="text-sm text-gray-500">{displayText("Required version")}</span>
             <span className="text-sm font-bold text-pink-600">
               {requiredVersion}+
             </span>
@@ -85,7 +87,7 @@ const ForceUpdateScreen = ({ config }: Props) => {
           <div className="bg-pink-50 border border-pink-100 rounded-xl p-4">
             <div className="flex items-center gap-2 mb-2">
               <Sparkles className="w-4 h-4 text-pink-600" />
-              <p className="text-sm font-bold text-pink-900">What's new</p>
+              <p className="text-sm font-bold text-pink-900">{displayText("What's new")}</p>
             </div>
             <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
               {releaseNotes}
@@ -102,7 +104,7 @@ const ForceUpdateScreen = ({ config }: Props) => {
           style={{ height: 58, fontSize: 17 }}
         >
           <Download className="w-5 h-5" />
-          Update Now
+          {displayText("Update Now")}
         </button>
 
         <button
@@ -111,11 +113,11 @@ const ForceUpdateScreen = ({ config }: Props) => {
           style={{ height: 56, fontSize: 16, background: "rgba(255,255,255,0.12)" }}
         >
           <PhoneCall className="w-5 h-5" />
-          Call Manager
+          {displayText("Call Manager")}
         </button>
 
         <p className="text-center text-white/80 text-xs mt-2">
-          Need help? Call {supportPhone}
+          {displayText("Need help? Call")} {supportPhone}
         </p>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Loader2, AlertCircle, KeyRound, RefreshCw, Play } from "lucide-react";
@@ -36,6 +37,7 @@ type ErrorKind = "validation" | "wrong_otp" | "locked" | "network" | "terminal" 
  * If the gateway is unavailable, nothing is started.
  */
 export default function StartBooking() {
+  useWorkerLanguage();
   const { bookingId = "" } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
 
@@ -151,7 +153,7 @@ export default function StartBooking() {
         <button
           onClick={handleBack}
           disabled={loading}
-          aria-label="Back"
+          aria-label={displayText("Back")}
           className="p-2 -ml-2 rounded-full hover:bg-muted active:scale-95 transition disabled:opacity-50"
         >
           <ArrowLeft className="w-6 h-6 text-foreground" />
@@ -164,10 +166,10 @@ export default function StartBooking() {
           <KeyRound className="w-7 h-7 text-green-600" />
         </div>
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">
-          Start Booking
+          {displayText("Start Booking")}
         </h1>
         <p className="text-sm text-muted-foreground mt-2 mb-10 text-center">
-          Ask customer for the 4-digit Start OTP
+          {displayText("Ask customer for the 4-digit Start OTP")}
         </p>
 
         <div ref={otpContainerRef} className={cn(shake && "animate-otp-shake")}>
@@ -220,13 +222,13 @@ export default function StartBooking() {
         {error && (
           <div className="flex items-center gap-2 text-destructive text-sm mt-6 max-w-sm">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <p className="font-medium">{error}</p>
+            <p className="font-medium">{displayText(error)}</p>
             {errorKind === "network" && (
               <button
                 onClick={() => handleSubmit()}
                 className="ml-1 inline-flex items-center gap-1 font-semibold underline"
               >
-                <RefreshCw className="w-3.5 h-3.5" /> Retry
+                <RefreshCw className="w-3.5 h-3.5" /> {displayText("Retry")}
               </button>
             )}
           </div>
@@ -243,12 +245,12 @@ export default function StartBooking() {
           {loading ? (
             <>
               <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              Verifying…
+              {displayText("Verifying…")}
             </>
           ) : (
             <>
               <Play className="w-5 h-5 mr-2" />
-              Start Job
+              {displayText("Start Job")}
             </>
           )}
         </Button>

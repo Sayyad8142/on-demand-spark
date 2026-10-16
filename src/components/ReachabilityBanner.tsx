@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,15 +16,15 @@ type State =
 
 const COPY: Partial<Record<State, { title: string; body: string }>> = {
   TOKEN_STALE: {
-    title: "Notifications need re-registration",
+    title: displayText("Notifications need re-registration"),
     body: "Your phone hasn't refreshed its notification token recently. Open the app to fix.",
   },
   NOTIFICATION_BLOCKED: {
-    title: "Notifications are blocked",
+    title: displayText("Notifications are blocked"),
     body: "Enable notifications in Android Settings or you won't receive new bookings.",
   },
   BATTERY_RESTRICTED: {
-    title: "Battery saver is blocking bookings",
+    title: displayText("Battery saver is blocking bookings"),
     body: "Disable battery optimization for Didi Now Partner to receive bookings reliably.",
   },
 };
@@ -33,6 +34,7 @@ const COPY: Partial<Record<State, { title: string; body: string }>> = {
  * state degrades. Hides for healthy/offline/degraded states.
  */
 export function ReachabilityBanner() {
+  useWorkerLanguage();
   const { user } = useAuth();
   const [state, setState] = useState<State | null>(null);
 
@@ -66,7 +68,7 @@ export function ReachabilityBanner() {
         <p className="text-sm font-semibold text-destructive">{title}</p>
         <p className="mt-0.5 text-xs text-foreground/80">{body}</p>
         <Button asChild size="sm" variant="destructive" className="mt-2 h-8 text-xs">
-          <Link to="/troubleshoot">Fix now</Link>
+          <Link to="/troubleshoot">{displayText("Fix now")}</Link>
         </Button>
       </div>
     </div>

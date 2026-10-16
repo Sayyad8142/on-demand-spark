@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Trophy, Star, Zap, IndianRupee, TrendingUp, HelpCircle } from "lucide-react";
@@ -30,6 +31,7 @@ interface LeaderboardData {
 }
 
 export default function BookingLeaderboard() {
+  useWorkerLanguage();
   const [data, setData] = useState<LeaderboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +70,7 @@ export default function BookingLeaderboard() {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-primary" />
-                <h3 className="font-bold text-sm">Your Rank — #{me.rank}</h3>
+                <h3 className="font-bold text-sm">{displayText("Your Rank — #")}{me.rank}</h3>
               </div>
               <LevelBadge level={me.level} />
             </div>
@@ -100,11 +102,11 @@ export default function BookingLeaderboard() {
 
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div className="bg-white/50 dark:bg-black/20 p-2 rounded-xl text-center">
-                <p className="text-[10px] text-muted-foreground font-semibold uppercase">Jobs Today</p>
+                <p className="text-[10px] text-muted-foreground font-semibold uppercase">{displayText("Jobs Today")}</p>
                 <p className="text-sm font-bold">{me.jobsToday}</p>
               </div>
               <div className="bg-white/50 dark:bg-black/20 p-2 rounded-xl text-center">
-                <p className="text-[10px] text-muted-foreground font-semibold uppercase">Earned Today</p>
+                <p className="text-[10px] text-muted-foreground font-semibold uppercase">{displayText("Earned Today")}</p>
                 <p className="text-sm font-bold text-green-600 flex items-center justify-center">
                   <IndianRupee className="w-3 h-3" />
                   {me.earningsToday}
@@ -113,7 +115,7 @@ export default function BookingLeaderboard() {
             </div>
 
             <p className="text-[10px] text-muted-foreground italic text-center">
-              "Higher performance can improve your booking priority."
+              {displayText("\"Higher performance can improve your booking priority.\"")}
             </p>
           </div>
         </Card>
@@ -123,7 +125,7 @@ export default function BookingLeaderboard() {
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
           <h2 className="text-sm font-bold flex items-center gap-1.5">
-            🏆 Today's Top Workers
+            {displayText("🏆 Today's Top Workers")}
           </h2>
           <TooltipProvider>
             <Tooltip>
@@ -131,7 +133,7 @@ export default function BookingLeaderboard() {
                 <HelpCircle className="w-3.5 h-3.5 text-muted-foreground" />
               </TooltipTrigger>
               <TooltipContent className="text-[10px] max-w-[200px]">
-                Workers in your community ranked by Priority Score, Rating, and Performance.
+                {displayText("Workers in your community ranked by Priority Score, Rating, and Performance.")}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -152,6 +154,7 @@ export default function BookingLeaderboard() {
 }
 
 function WorkerRow({ worker, medal }: { worker: LeaderboardEntry; medal?: string }) {
+  useWorkerLanguage();
   return (
     <div className={`flex items-center justify-between p-2.5 rounded-xl border ${worker.isMe ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800' : 'bg-card border-border'} shadow-sm`}>
       <div className="flex items-center gap-3">
@@ -174,7 +177,7 @@ function WorkerRow({ worker, medal }: { worker: LeaderboardEntry; medal?: string
             </p>
             {worker.isMe && (
               <span className="px-1 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 text-[9px] font-extrabold uppercase">
-                YOU
+                {displayText("YOU")}
               </span>
             )}
             <LevelBadge level={worker.level} size="xs" />
@@ -192,7 +195,7 @@ function WorkerRow({ worker, medal }: { worker: LeaderboardEntry; medal?: string
         </div>
       </div>
       <div className="text-right">
-        <p className="text-[10px] font-bold text-foreground leading-none">{worker.jobsToday} Jobs</p>
+        <p className="text-[10px] font-bold text-foreground leading-none">{worker.jobsToday} {displayText("Jobs")}</p>
         <p className="text-[11px] font-extrabold text-green-600 flex items-center justify-end mt-0.5">
           <IndianRupee className="w-2.5 h-2.5" />
           {worker.earningsToday}
@@ -203,6 +206,7 @@ function WorkerRow({ worker, medal }: { worker: LeaderboardEntry; medal?: string
 }
 
 function LevelBadge({ level, size = "sm" }: { level: string; size?: "sm" | "xs" }) {
+  useWorkerLanguage();
   const colors: Record<string, string> = {
     Elite: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 border-emerald-200",
     Pro: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 border-blue-200",
@@ -226,6 +230,7 @@ function LevelBadge({ level, size = "sm" }: { level: string; size?: "sm" | "xs" 
 }
 
 function LeaderboardSkeleton() {
+  useWorkerLanguage();
   return (
     <div className="space-y-4">
       <Skeleton className="h-40 w-full rounded-2xl" />

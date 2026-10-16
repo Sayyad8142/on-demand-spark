@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 /**
  * WorkerHealthBadge — Home screen health badge.
  *
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export function WorkerHealthBadge({ health, onRepair }: Props) {
+  useWorkerLanguage();
   const navigate = useNavigate();
   const { status, reasons, loading } = health;
 
@@ -26,7 +28,7 @@ export function WorkerHealthBadge({ health, onRepair }: Props) {
     status === "ready"
       ? {
           Icon: CheckCircle2,
-          title: "Ready for bookings",
+          title: displayText("Ready for bookings"),
           tone: "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-900",
           iconTone: "text-emerald-600 dark:text-emerald-400",
           titleTone: "text-emerald-900 dark:text-emerald-100",
@@ -34,14 +36,14 @@ export function WorkerHealthBadge({ health, onRepair }: Props) {
       : status === "warning"
       ? {
           Icon: AlertTriangle,
-          title: "Needs attention",
+          title: displayText("Needs attention"),
           tone: "bg-amber-50 border-amber-200 dark:bg-amber-950/40 dark:border-amber-900",
           iconTone: "text-amber-600 dark:text-amber-400",
           titleTone: "text-amber-900 dark:text-amber-100",
         }
       : {
           Icon: ShieldAlert,
-          title: "Cannot receive bookings",
+          title: displayText("Cannot receive bookings"),
           tone: "bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-900",
           iconTone: "text-red-600 dark:text-red-400",
           titleTone: "text-red-900 dark:text-red-100",
@@ -74,12 +76,12 @@ export function WorkerHealthBadge({ health, onRepair }: Props) {
             </ul>
           ) : (
             <p className="text-xs text-muted-foreground mt-0.5">
-              Notifications, network and booking alerts are all working.
+              {displayText("Notifications, network and booking alerts are all working.")}
             </p>
           )}
           {status !== "ready" && (
             <p className="mt-2 text-xs font-medium text-foreground/80">
-              Tap to {status === "blocked" ? "fix now" : "view details"} →
+              {displayText("Tap to")} {status === "blocked" ? displayText("fix now") : displayText("view details")} →
             </p>
           )}
         </div>

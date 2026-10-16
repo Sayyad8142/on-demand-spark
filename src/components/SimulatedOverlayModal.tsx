@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ export function SimulatedOverlayModal({
   onReject,
   timeoutSec = 30,
 }: SimulatedOverlayModalProps) {
+  useWorkerLanguage();
   const [seconds, setSeconds] = useState(timeoutSec);
 
   useEffect(() => {
@@ -67,7 +69,7 @@ export function SimulatedOverlayModal({
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle className="text-xl text-center">🔔 New Booking!</DialogTitle>
+          <DialogTitle className="text-xl text-center">{displayText("🔔 New Booking!")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -93,7 +95,7 @@ export function SimulatedOverlayModal({
           {/* Countdown Timer */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm text-muted-foreground">
-              <span>Auto-reject in</span>
+              <span>{displayText("Auto-reject in")}</span>
               <span className="font-semibold text-destructive">{seconds}s</span>
             </div>
             <Progress value={progress} className="h-2" />
@@ -107,14 +109,14 @@ export function SimulatedOverlayModal({
               size="lg"
               className="h-12"
             >
-              Reject
+              {displayText("Reject")}
             </Button>
             <Button
               onClick={onAccept}
               size="lg"
               className="h-12 bg-green-600 hover:bg-green-700"
             >
-              Accept
+              {displayText("Accept")}
             </Button>
           </div>
         </div>

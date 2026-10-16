@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BellOff, RefreshCw, Settings } from "lucide-react";
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function NotificationsOffDialog({ onRetry }: Props) {
+  useWorkerLanguage();
   const [retrying, setRetrying] = useState(false);
 
   const openSettings = async () => {
@@ -43,16 +45,16 @@ export function NotificationsOffDialog({ onRetry }: Props) {
         <div className="flex-1 space-y-3">
           <div>
             <h3 className="font-semibold text-base text-foreground mb-1">
-              Notifications are turned off
+              {displayText("Notifications are turned off")}
             </h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Please enable notifications in your phone settings to receive booking requests.
+              {displayText("Please enable notifications in your phone settings to receive booking requests.")}
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <Button size="sm" onClick={openSettings} className="flex-1">
               <Settings className="w-4 h-4 mr-2" />
-              Open Settings
+              {displayText("Open Settings")}
             </Button>
             <Button
               size="sm"
@@ -62,7 +64,7 @@ export function NotificationsOffDialog({ onRetry }: Props) {
               className="flex-1"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${retrying ? "animate-spin" : ""}`} />
-              {retrying ? "Retrying..." : "Retry"}
+              {retrying ? displayText("Retrying...") : displayText("Retry")}
             </Button>
           </div>
         </div>

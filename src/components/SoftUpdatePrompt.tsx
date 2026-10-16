@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { Download, PhoneCall, X } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export const SoftUpdatePrompt = ({ open, config, onRemindLater }: Props) => {
+  useWorkerLanguage();
   const title = config?.update_title || "Update Available";
   const message =
     config?.soft_update_message ||
@@ -44,21 +46,21 @@ export const SoftUpdatePrompt = ({ open, config, onRemindLater }: Props) => {
             <button
               onClick={onRemindLater}
               className="p-1 rounded-full hover:bg-white/20"
-              aria-label="Close"
+              aria-label={displayText("Close")}
             >
               <X className="w-5 h-5" />
             </button>
           </div>
           <h2 className="text-xl font-extrabold mt-3">{title}</h2>
-          <p className="text-white/90 text-sm mt-1">v{requiredVersion} is here</p>
+          <p className="text-white/90 text-sm mt-1">v{requiredVersion} {displayText("is here")}</p>
         </div>
 
         <div className="p-5">
           <p className="text-gray-700 text-sm leading-relaxed mb-4">{message}</p>
 
           <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 flex justify-between mb-4">
-            <span>Your version: <b>{CURRENT_VERSION_NAME}</b></span>
-            <span>Latest: <b className="text-pink-600">{requiredVersion}</b></span>
+            <span>{displayText("Your version:")} <b>{CURRENT_VERSION_NAME}</b></span>
+            <span>{displayText("Latest:")} <b className="text-pink-600">{requiredVersion}</b></span>
           </div>
 
           <button
@@ -66,7 +68,7 @@ export const SoftUpdatePrompt = ({ open, config, onRemindLater }: Props) => {
             className="w-full bg-pink-600 text-white font-bold rounded-xl active:scale-[0.97] transition-transform flex items-center justify-center gap-2"
             style={{ height: 50 }}
           >
-            <Download className="w-5 h-5" /> Update Now
+            <Download className="w-5 h-5" /> {displayText("Update Now")}
           </button>
 
           <button
@@ -74,7 +76,7 @@ export const SoftUpdatePrompt = ({ open, config, onRemindLater }: Props) => {
             className="w-full mt-2 text-gray-600 font-semibold rounded-xl border border-gray-200 active:scale-[0.97] transition-transform"
             style={{ height: 48 }}
           >
-            Remind Me Later
+            {displayText("Remind Me Later")}
           </button>
 
           <button
@@ -82,7 +84,7 @@ export const SoftUpdatePrompt = ({ open, config, onRemindLater }: Props) => {
             className="w-full mt-2 text-pink-600 font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
             style={{ height: 44 }}
           >
-            <PhoneCall className="w-4 h-4" /> Call Manager
+            <PhoneCall className="w-4 h-4" /> {displayText("Call Manager")}
           </button>
         </div>
       </DialogContent>

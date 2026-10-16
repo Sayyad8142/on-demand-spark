@@ -1,3 +1,4 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { Card } from "@/components/ui/card";
 import { Trophy, Star } from "lucide-react";
 
@@ -20,6 +21,7 @@ function ratingColor(r: number) {
 }
 
 export default function HomePerformanceCard({ priorityScore, rating, totalRatings }: HomePerformanceCardProps) {
+  useWorkerLanguage();
   const score = Math.max(0, Math.min(100, Math.round(priorityScore ?? 0)));
   const hasRatings = (totalRatings ?? 0) > 0 && (rating ?? 0) > 0;
   const rate = hasRatings ? Number(rating) : 5;
@@ -36,7 +38,7 @@ export default function HomePerformanceCard({ priorityScore, rating, totalRating
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between gap-1">
-              <p className="text-[11px] font-semibold text-muted-foreground">Priority</p>
+              <p className="text-[11px] font-semibold text-muted-foreground">{displayText("Priority")}</p>
               <p className={`text-xs font-bold ${sc.text}`}>
                 {score}<span className="text-muted-foreground font-medium">/100</span>
               </p>
@@ -53,7 +55,7 @@ export default function HomePerformanceCard({ priorityScore, rating, totalRating
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between gap-1">
-              <p className="text-[11px] font-semibold text-muted-foreground">Rating</p>
+              <p className="text-[11px] font-semibold text-muted-foreground">{displayText("Rating")}</p>
               <p className={`text-xs font-bold ${rc.text}`}>{rate.toFixed(1)} ★</p>
             </div>
             <div className={`mt-0.5 h-[3px] w-full rounded-full ${rc.track} overflow-hidden`}>
