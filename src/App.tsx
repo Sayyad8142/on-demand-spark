@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { displayText, useWorkerLanguage } from "@/i18n/display";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
@@ -80,11 +81,12 @@ import { useActiveJob } from "@/hooks/useActiveJob";
 const queryClient = new QueryClient();
 
 function StartupSplash({ label = "Loading..." }: { label?: string }) {
+  useWorkerLanguage();
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="text-center space-y-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-        <p className="text-muted-foreground">{label}</p>
+        <p className="text-muted-foreground">{displayText(label)}</p>
       </div>
     </div>
   );
