@@ -1,0 +1,10 @@
+DRAFT — do not apply until approved (saving the function file auto-deploys it).
+Target: supabase/functions/ack-booking-delivery/index.ts, step 1 (worker resolution)
+
+-    if (worker_id) {
++    // worker_id is interpolated into a PostgREST .or() filter; reject anything
++    // that is not a plain UID/UUID so commas/parentheses cannot inject filters.
++    if (worker_id !== undefined && !/^[A-Za-z0-9_-]{1,128}$/.test(String(worker_id))) {
++      return json({ error: "bad worker_id" }, 400);
++    }
++    if (worker_id) {
