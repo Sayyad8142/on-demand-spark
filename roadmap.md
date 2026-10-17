@@ -10,3 +10,10 @@
 - [x] Verify three-language signup switching and browser restart persistence; Telugu guest navigation; 54 safety tests passed.
 - [x] Produce coverage report and identify native/server limitations; do not publish.
 - [ ] Verify authenticated booking/payout workflows and native restart/notifications — blocked by no native Firebase session/device in this sandbox.
+## Push acknowledgment recovery
+- [x] Root cause: live ack-booking-delivery is an old build accepting only received/opened.
+- [x] Stage corrected function + worker_id validation in docs/ack-recovery/staged; 24 offline tests pass.
+- [x] Deployment, verification, monitoring and rollback procedure written.
+- [ ] Deploy — blocked: owner must confirm backup + settings saved and explicitly approve.
+- [ ] Mark 15–17 Oct no_device_ack offers as outage for 14 workers — blocked: needs approval after deploy.
+- [ ] Native retry fix for dropped 4xx ACKs — blocked: next app release.
