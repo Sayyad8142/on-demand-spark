@@ -50,7 +50,7 @@ CREATE POLICY sel ON bookings FOR SELECT USING (true);
 CREATE POLICY bookings_update_admin_authenticated_only ON bookings FOR UPDATE TO authenticated USING (auth.uid() IS NOT NULL AND is_admin()) WITH CHECK (auth.uid() IS NOT NULL AND is_admin());
 CREATE POLICY bookings_update_own_firebase ON bookings FOR UPDATE USING (user_id=get_profile_id()) WITH CHECK (user_id=get_profile_id());
 CREATE POLICY bookings_worker_update_assigned ON bookings FOR UPDATE USING (EXISTS (SELECT 1 FROM workers w WHERE w.id=bookings.worker_id AND (w.id=auth.uid() OR w.user_id=auth.uid()::text)));
-GRANT SELECT, UPDATE ON bookings TO anon, authenticated; GRANT ALL ON bookings, worker_payouts, booking_events TO service_role;
+GRANT SELECT ON workers, user_roles TO anon, authenticated; GRANT SELECT, UPDATE ON bookings TO anon, authenticated; GRANT ALL ON bookings, worker_payouts, booking_events TO service_role;
 CREATE FUNCTION update_booking_status(p uuid, s text) RETURNS void LANGUAGE sql SECURITY DEFINER AS $$ UPDATE bookings SET status=s WHERE id=p $$;
 GRANT EXECUTE ON FUNCTION update_booking_status(uuid,text) TO authenticated;
 -- admin RPC as live (security definer, is_admin check, labels completion as otp/worker)
