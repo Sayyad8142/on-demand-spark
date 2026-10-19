@@ -1,3 +1,4 @@
+-- Read from production 2026-10-19. The read tool masked one log placeholder as [REDACTED]; restored to "auth=%" (Postgres refuses the function otherwise).
 CREATE OR REPLACE FUNCTION public.reject_booking_offer(p_booking_id uuid)
  RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
 AS $function$
@@ -60,7 +61,7 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'worker-not-found');
   END IF;
   IF p_worker_id IS NOT NULL AND p_worker_id <> v_worker_id THEN
-    RAISE WARNING 'reject_booking_request: worker mismatch auth=[REDACTED] supplied=%', v_worker_id, p_worker_id;
+    RAISE WARNING 'reject_booking_request: worker mismatch auth=% supplied=%', v_worker_id, p_worker_id;
     RETURN jsonb_build_object('success', false, 'error', 'forbidden');
   END IF;
   RETURN public.reject_booking_offer(p_booking_id);
