@@ -44,7 +44,7 @@ class AckRetryWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
                 continue
             }
             AckQueue.bumpAttempt(ctx, entry)
-            val ok = BackendSync.sendAckDirect(
+            val result = BackendSync.sendAckDirect(
                 ctx = ctx,
                 bookingId = entry.bookingId,
                 bookingRequestId = entry.bookingRequestId,
@@ -52,7 +52,10 @@ class AckRetryWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
                 attempt = entry.attempts + 1,
                 ackToken = entry.ackToken,
             )
-            if (ok) {
+            if (result == BackendSync.AckResult.REJECTED) {
+                AckQueue.remove(ctx, entry)
+                WorkerLog.add(ctx, "ACK_RETRY", "rejected (not acked) event=${entry.event} — dropped")
+            } else if (result == BackendSync.AckResult.OK) {
                 AckQueue.remove(ctx, entry)
                 WorkerLog.add(ctx, "ACK_RETRY", "ok event=${entry.event} booking=${entry.bookingId ?: entry.bookingRequestId}")
             } else {
