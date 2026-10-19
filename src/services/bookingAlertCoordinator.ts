@@ -27,6 +27,8 @@ export interface BookingAlert {
   scheduledDate?: string;
   scheduledTime?: string;
   prealertSent?: boolean;
+  /** Phase 1C: signed ack token from the FCM payload — echoed unchanged. */
+  ackToken?: string;
   requestStatus?: string;
   timeoutAt?: string;
   source: "fcm" | "realtime_bookings" | "realtime_requests" | "heartbeat" | "resume";
@@ -149,6 +151,14 @@ export function invalidateOffer(bookingId: string, bookingRequestId?: string) {
  */
 export async function processIncomingBooking(alert: BookingAlert): Promise<boolean> {
   const { bookingId } = alert;
+
+  // Phase 1C: remember the signed ack token so every later lifecycle ACK
+  // (popup_shown / worker_seen / accept_tapped / ...) can echo it unchanged.
+  if (alert.ackToken) {
+    import("@/lib/bookingAck").then(({ rememberAckToken }) =>
+      rememberAckToken({ bookingId, bookingRequestId: alert.bookingRequestId, ackToken: alert.ackToken })
+    ).catch(() => {});
+  }
 
   // An acceptance is being decided right now — never open a competing offer
   // in that window (no second popup while the worker is being assigned).

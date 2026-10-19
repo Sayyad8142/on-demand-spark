@@ -10,6 +10,7 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import { processIncomingBooking } from '@/services/bookingAlertCoordinator';
 import { logScheduledOfferDecision } from '@/lib/scheduledBookingGuards';
+import { extractAckToken, rememberAckToken } from '@/lib/bookingAck';
 
 let fcmInitialized = false;
 
