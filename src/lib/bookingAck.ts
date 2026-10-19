@@ -11,6 +11,16 @@
  * Idempotent on both sides: the server only writes the timestamp the first
  * time, and we cache acked (booking_id + event) pairs in memory to avoid
  * spamming the network.
+ *
+ * Phase 1C — signed acknowledgment tokens:
+ * The backend (Admin Panel `docs/ack-fix/phase1b`) mints a short-lived,
+ * offer-bound HMAC token per push and puts it in the FCM data payload as
+ * `ack_token`. The Worker App echoes the token UNCHANGED back to
+ * ack-booking-delivery so background / expired-session devices can prove
+ * delivery without a live Supabase session. Rules enforced here:
+ *   - the token is never generated or modified on the client,
+ *   - the token is never logged or sent to analytics,
+ *   - HTTP 400/401/403 responses are never treated as a successful ACK.
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +45,108 @@ const acked = new Set<string>();
 const key = (id: string, ev: AckEvent) => `${id}::${ev}`;
 const WORKER_ID_CACHE_KEY = "didi_worker_id";
 let cachedWorkerId: string | null = null;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Signed ACK token handling (Phase 1C)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Backend contract: the FCM data key is `ack_token` (Admin Panel phase1b). */
+export const ACK_TOKEN_PAYLOAD_KEY = "ack_token";
+/** Body key the ack-booking-delivery edge function reads. */
+export const ACK_TOKEN_BODY_KEY = "ack_token";
+/** Defensive cap — the backend rejects tokens longer than 2048 chars. */
+export const ACK_TOKEN_MAX_LEN = 2048;
+
+/** Returns the token only if it looks intact; never trims/re-encodes the value. */
+export function normalizeAckToken(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const t = v.trim();
+  if (!t || t.length > ACK_TOKEN_MAX_LEN) return null;
+  return t;
+}
+
+/** Extracts `ack_token` (plus the camelCase alias) from an FCM data payload. */
+export function extractAckToken(data: Record<string, unknown> | undefined | null): string | null {
+  if (!data) return null;
+  return normalizeAckToken(data[ACK_TOKEN_PAYLOAD_KEY]) ?? normalizeAckToken((data as any).ackToken);
+}
+
+// Token registry: popup_shown / worker_seen / accept_tapped ACKs fire from UI
+// surfaces that only know booking ids, so remember the token the push carried
+// and re-attach it to every lifecycle ACK for that offer.
+interface RememberedToken {
+  bookingId?: string;
+  bookingRequestId?: string;
+  token: string;
+  rememberedAt: number;
+}
+const rememberedTokens = new Map<string, RememberedToken>();
+const MAX_REMEMBERED_TOKENS = 40;
+const REMEMBERED_TOKEN_TTL_MS = 30 * 60 * 1000;
+
+const tokenKeyOf = (bookingId?: string, bookingRequestId?: string) =>
+  bookingRequestId || bookingId || "";
+
+/** Stores the signed token an FCM push carried, keyed by offer id. */
+export function rememberAckToken(args: { bookingId?: string; bookingRequestId?: string; ackToken?: string | null }) {
+  const token = normalizeAckToken(args.ackToken);
+  if (!token) return;
+  const k = tokenKeyOf(args.bookingId, args.bookingRequestId);
+  if (!k) return;
+  if (rememberedTokens.size >= MAX_REMEMBERED_TOKENS) {
+    const oldest = rememberedTokens.keys().next().value;
+    if (oldest) rememberedTokens.delete(oldest);
+  }
+  rememberedTokens.set(k, {
+    bookingId: args.bookingId,
+    bookingRequestId: args.bookingRequestId,
+    token,
+    rememberedAt: Date.now(),
+  });
+}
+
+/** Looks up a previously remembered token for this offer. */
+export function recallAckToken(bookingId?: string, bookingRequestId?: string): string | null {
+  const k = tokenKeyOf(bookingId, bookingRequestId);
+  const hit = rememberedTokens.get(k);
+  if (!hit) return null;
+  if (Date.now() - hit.rememberedAt > REMEMBERED_TOKEN_TTL_MS) {
+    rememberedTokens.delete(k);
+    return null;
+  }
+  return hit.token;
+}
+
+/**
+ * Pure body builder for the ack-booking-delivery edge function.
+ * Exposed for offline contract tests against the backend reference handler.
+ */
+export function buildAckBody(args: {
+  bookingId?: string;
+  bookingRequestId?: string;
+  workerId?: string | null;
+  event: AckEvent;
+  appState?: string;
+  appVersion?: string;
+  ackToken?: string | null;
+  deviceInfo?: Record<string, unknown>;
+}): Record<string, unknown> {
+  const token = normalizeAckToken(args.ackToken);
+  return {
+    booking_id: args.bookingId,
+    booking_request_id: args.bookingRequestId,
+    ...(args.workerId ? { worker_id: args.workerId } : {}),
+    event_type: args.event,
+    app_state: args.appState ?? appState(),
+    app_version: args.appVersion ?? CURRENT_VERSION_NAME,
+    ...(token ? { [ACK_TOKEN_BODY_KEY]: token } : {}),
+    device_info: args.deviceInfo ?? {
+      platform: Capacitor.getPlatform(),
+      native: Capacitor.isNativePlatform(),
+      source: "webview",
+    },
+  };
+}
 
 async function getWorkerId(): Promise<string | null> {
   if (cachedWorkerId) return cachedWorkerId;
@@ -84,9 +196,11 @@ interface AckArgs {
   bookingId?: string;
   bookingRequestId?: string;
   event: AckEvent;
+  /** Signed acknowledgment token from the FCM payload — echoed unchanged. */
+  ackToken?: string | null;
 }
 
-export async function ackBookingDelivery({ bookingId, bookingRequestId, event }: AckArgs): Promise<void> {
+export async function ackBookingDelivery({ bookingId, bookingRequestId, event, ackToken }: AckArgs): Promise<void> {
   const cacheKey = key(bookingRequestId ?? bookingId ?? "?", event);
   if (acked.has(cacheKey)) return;
   acked.add(cacheKey);
@@ -95,32 +209,26 @@ export async function ackBookingDelivery({ bookingId, bookingRequestId, event }:
 
   try {
     // worker_id is best-effort: if it cannot be resolved locally we still send
-    // the ACK, and the edge function falls back to JWT-based resolution.
+    // the ACK, and the edge function falls back to JWT-based resolution (or
+    // authenticates via the signed ack_token, which needs no session at all).
     const workerId = await getWorkerId();
     if (!workerId) {
       console.warn(`[ACK] ${event}: worker_id unresolved locally, sending JWT-only ACK`);
     }
 
-    const { data, error } = await supabase.functions.invoke("ack-booking-delivery", {
-      body: {
-        booking_id: bookingId,
-        booking_request_id: bookingRequestId,
-        ...(workerId ? { worker_id: workerId } : {}),
-        event_type: event,
-        app_state: appState(),
+    // Explicit token wins; otherwise reuse the token the FCM push carried.
+    const token = normalizeAckToken(ackToken) ?? recallAckToken(bookingId, bookingRequestId);
 
-        app_version: CURRENT_VERSION_NAME,
-        device_info: {
-          platform: Capacitor.getPlatform(),
-          native: Capacitor.isNativePlatform(),
-          source: "webview",
-        },
-      },
-    });
+    const body = buildAckBody({ bookingId, bookingRequestId, workerId, event, ackToken: token });
+
+    const { data, error } = await supabase.functions.invoke("ack-booking-delivery", { body });
 
     if (error) {
+      // 400/401/403 (bad event, invalid/expired/mismatched token, wrong
+      // worker) are NOT successful acknowledgments — log the outcome, keep
+      // the token out of the message, and allow a later lifecycle event to
+      // retry with fresh state.
       console.warn(`[ACK] ${event} failed`, error.message);
-      // allow retry next time
       acked.delete(cacheKey);
       return;
     }
@@ -134,7 +242,7 @@ export async function ackBookingDelivery({ bookingId, bookingRequestId, event }:
 /** Reset the in-memory cache (e.g. on logout or test) */
 export function resetAckCache() {
   acked.clear();
+  rememberedTokens.clear();
   cachedWorkerId = null;
   try { localStorage.removeItem(WORKER_ID_CACHE_KEY); } catch { /* ignore */ }
 }
-

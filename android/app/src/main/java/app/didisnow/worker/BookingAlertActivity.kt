@@ -39,6 +39,8 @@ class BookingAlertActivity : AppCompatActivity() {
     private var vibrator: Vibrator? = null
     private var ackBookingId: String? = null
     private var ackRequestId: String? = null
+    // Phase 1C: signed ack token from the launch intent — echoed unchanged.
+    private var ackToken: String? = null
     private var popupAcked = false
     private var offerRetired = false
 
@@ -211,7 +213,7 @@ class BookingAlertActivity : AppCompatActivity() {
                 } else {
                     Log.d("BookingAlert", "⏱️ Countdown finished - auto closing")
                     Toast.makeText(this@BookingAlertActivity, "Booking timed out", Toast.LENGTH_SHORT).show()
-                    BackendSync.ackDeliveryAsync(applicationContext, ackBookingId ?: bookingId, "offer_expired", ackRequestId)
+                    BackendSync.ackDeliveryAsync(applicationContext, ackBookingId ?: bookingId, "offer_expired", ackRequestId, ackToken)
                     retireOffer(accepted = false)
                     finish()
                 }
@@ -223,6 +225,7 @@ class BookingAlertActivity : AppCompatActivity() {
         // OS never actually renders (immediate finish, launch race, killed task).
         ackBookingId = bookingId
         ackRequestId = intent.getStringExtra("booking_request_id")
+        ackToken = intent.getStringExtra("ack_token")
 
         // Another worker already got this booking (delayed/stale alert):
         // never run a fresh countdown for it.
@@ -260,7 +263,7 @@ class BookingAlertActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
             acceptInFlight = true
-            BackendSync.ackDeliveryAsync(applicationContext, bookingId, "accept_tapped", ackRequestId)
+            BackendSync.ackDeliveryAsync(applicationContext, bookingId, "accept_tapped", ackRequestId, ackToken)
 
             stopAlertSound()
             stopVibration()
@@ -280,7 +283,7 @@ class BookingAlertActivity : AppCompatActivity() {
 
         btnReject.setOnClickListener {
             Log.d("BookingAlert", "❌ Reject button clicked")
-            BackendSync.ackDeliveryAsync(applicationContext, bookingId, "reject_tapped", ackRequestId)
+            BackendSync.ackDeliveryAsync(applicationContext, bookingId, "reject_tapped", ackRequestId, ackToken)
             stopAlertSound()
             stopVibration()
             countdownHandler?.removeCallbacks(countdownRunnable)
@@ -301,7 +304,7 @@ class BookingAlertActivity : AppCompatActivity() {
         if (!popupAcked && !ackBookingId.isNullOrBlank()) {
             popupAcked = true
             Log.d("BookingAlert", "📨 [ACK] popup_shown (activity visible) booking_id=$ackBookingId")
-            BackendSync.ackDeliveryAsync(applicationContext, ackBookingId, "popup_shown", ackRequestId)
+            BackendSync.ackDeliveryAsync(applicationContext, ackBookingId, "popup_shown", ackRequestId, ackToken)
         }
     }
 

@@ -37,6 +37,8 @@ object AckQueue {
         val attempts: Int,
         val appVersion: String?,
         val appState: String?,
+        /** Phase 1C: signed ack token carried with this ACK (never logged). */
+        val ackToken: String? = null,
     )
 
     private fun prefs(ctx: Context) =
@@ -55,6 +57,7 @@ object AckQueue {
         event: String,
         appVersion: String? = null,
         appState: String? = null,
+        ackToken: String? = null,
     ) {
         if (bookingId.isNullOrBlank() && bookingRequestId.isNullOrBlank()) return
         val now = System.currentTimeMillis()
@@ -79,6 +82,7 @@ object AckQueue {
             put("attempts", 0)
             if (appVersion != null) put("app_version", appVersion)
             if (appState != null) put("app_state", appState)
+            if (!ackToken.isNullOrBlank()) put("ack_token", ackToken)
         }
         arr.put(entry)
 
@@ -109,6 +113,7 @@ object AckQueue {
                     attempts = o.optInt("attempts", 0),
                     appVersion = o.optString("app_version").ifBlank { null },
                     appState = o.optString("app_state").ifBlank { null },
+                    ackToken = o.optString("ack_token").ifBlank { null },
                 )
             )
         }
