@@ -34,6 +34,15 @@ class AckRetryWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
 
         var anyFailed = false
         for (entry in entries) {
+            // Phase 1C: token-bearing ACKs authenticate with a short-lived
+            // signed ack_token (offer TTL + grace). Bound their retries so an
+            // expired token is never replayed; later ACKs fall back to the
+            // session path instead.
+            if (entry.ackToken != null && entry.attempts >= ACK_TOKEN_MAX_ATTEMPTS) {
+                AckQueue.remove(ctx, entry)
+                WorkerLog.add(ctx, "ACK_RETRY", "drop token ack event=${entry.event} cap=$ACK_TOKEN_MAX_ATTEMPTS")
+                continue
+            }
             AckQueue.bumpAttempt(ctx, entry)
             val ok = BackendSync.sendAckDirect(
                 ctx = ctx,
@@ -41,6 +50,7 @@ class AckRetryWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
                 bookingRequestId = entry.bookingRequestId,
                 event = entry.event,
                 attempt = entry.attempts + 1,
+                ackToken = entry.ackToken,
             )
             if (ok) {
                 AckQueue.remove(ctx, entry)
@@ -56,6 +66,9 @@ class AckRetryWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
 
     companion object {
         const val UNIQUE_NAME = "worker-ack-retry"
+
+        /** Retry cap for entries carrying a signed ack_token. */
+        const val ACK_TOKEN_MAX_ATTEMPTS = 3
 
         fun enqueue(context: Context, reason: String) {
             try {

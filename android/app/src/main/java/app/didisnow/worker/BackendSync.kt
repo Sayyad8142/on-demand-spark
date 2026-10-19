@@ -141,6 +141,7 @@ object BackendSync {
         bookingId: String?,
         event: String,
         bookingRequestId: String? = null,
+        ackToken: String? = null,
     ): Boolean {
         if (bookingId.isNullOrBlank() && bookingRequestId.isNullOrBlank()) {
             WorkerLog.add(ctx, "ACK", "skip $event — no booking id/request id")
@@ -150,13 +151,13 @@ object BackendSync {
         val workerId = resolveWorkerId(ctx)
         if (workerId.isNullOrBlank()) {
             WorkerLog.add(ctx, "ACK", "queue $event — no worker_id available yet")
-            AckQueue.enqueue(ctx, bookingId, bookingRequestId, event, appVersion(ctx), "no_worker_id")
+            AckQueue.enqueue(ctx, bookingId, bookingRequestId, event, appVersion(ctx), "no_worker_id", ackToken)
             return false
         }
 
-        val ok = sendAckHttp(ctx, workerId, bookingId, bookingRequestId, event, attempt = 1)
+        val ok = sendAckHttp(ctx, workerId, bookingId, bookingRequestId, event, attempt = 1, ackToken = ackToken)
         if (!ok) {
-            AckQueue.enqueue(ctx, bookingId, bookingRequestId, event, appVersion(ctx), "http_fail")
+            AckQueue.enqueue(ctx, bookingId, bookingRequestId, event, appVersion(ctx), "http_fail", ackToken)
             AckRetryWorker.enqueue(ctx, "ack_fail:$event")
         }
         return ok
@@ -169,9 +170,10 @@ object BackendSync {
         bookingRequestId: String?,
         event: String,
         attempt: Int,
+        ackToken: String? = null,
     ): Boolean {
         val workerId = resolveWorkerId(ctx) ?: return false
-        return sendAckHttp(ctx, workerId, bookingId, bookingRequestId, event, attempt)
+        return sendAckHttp(ctx, workerId, bookingId, bookingRequestId, event, attempt, ackToken)
     }
 
     private fun sendAckHttp(
@@ -181,11 +183,14 @@ object BackendSync {
         bookingRequestId: String?,
         event: String,
         attempt: Int,
+        ackToken: String? = null,
     ): Boolean {
         val url = "$SUPABASE_URL/functions/v1/ack-booking-delivery"
         val body = JSONObject().apply {
             if (!bookingId.isNullOrBlank()) put("booking_id", bookingId)
             if (!bookingRequestId.isNullOrBlank()) put("booking_request_id", bookingRequestId)
+            // Phase 1C: signed ack token — echoed unchanged, never logged.
+            if (!ackToken.isNullOrBlank()) put("ack_token", ackToken)
             put("worker_id", workerId)
             put("event_type", event)
             put("app_version", appVersion(ctx))
@@ -346,7 +351,13 @@ object BackendSync {
         "popup_shown", "worker_seen", "accept_tapped", "reject_tapped", "offer_expired", "offer_dismissed",
     )
 
-    fun ackDeliveryAsync(ctx: Context, bookingId: String?, event: String, bookingRequestId: String? = null) {
+    fun ackDeliveryAsync(
+        ctx: Context,
+        bookingId: String?,
+        event: String,
+        bookingRequestId: String? = null,
+        ackToken: String? = null,
+    ) {
         if (bookingId.isNullOrBlank() && bookingRequestId.isNullOrBlank()) return
         val app = ctx.applicationContext
         // Duplicate protection: Activity + Overlay can both present the same
@@ -360,14 +371,14 @@ object BackendSync {
         }
 
         try {
-            AckQueue.enqueue(app, bookingId, bookingRequestId, event, appVersion(app), "durable")
+            AckQueue.enqueue(app, bookingId, bookingRequestId, event, appVersion(app), "durable", ackToken)
             AckRetryWorker.enqueue(app, "ack:$event")
         } catch (e: Exception) {
             WorkerLog.add(app, "ACK", "durable enqueue failed: ${e.message}")
         }
         Thread({
             val ok = try {
-                sendAckDirect(app, bookingId, bookingRequestId, event, attempt = 1)
+                sendAckDirect(app, bookingId, bookingRequestId, event, attempt = 1, ackToken = ackToken)
             } catch (_: Exception) { false }
             if (ok) {
                 try {
@@ -382,8 +393,8 @@ object BackendSync {
 
 
     /** Convenience for failure events (popup_failed, overlay_blocked, etc). */
-    fun ackFailureAsync(ctx: Context, bookingId: String?, reason: String, bookingRequestId: String? = null) {
-        ackDeliveryAsync(ctx, bookingId, reason, bookingRequestId)
+    fun ackFailureAsync(ctx: Context, bookingId: String?, reason: String, bookingRequestId: String? = null, ackToken: String? = null) {
+        ackDeliveryAsync(ctx, bookingId, reason, bookingRequestId, ackToken)
     }
 
     // ─────────────────────────────────────────────────────────────────────────
