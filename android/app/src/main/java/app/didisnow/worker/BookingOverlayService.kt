@@ -58,6 +58,8 @@ class BookingOverlayService : Service() {
     private var statusCheckRunnable: Runnable? = null
     private var currentBookingId: String? = null
     private var currentBookingRequestId: String? = null
+    // Phase 1C: signed ack token for the current offer — echoed unchanged.
+    private var currentAckToken: String? = null
     // Authoritative offer countdown (seconds) resolved from the FCM payload.
     private var offerSecondsLeft: Int = OfferTimer.DEFAULT_TTL_SECONDS
     
@@ -171,6 +173,7 @@ class BookingOverlayService : Service() {
                 "show" -> {
                     val bookingId = intent?.getStringExtra("booking_id") ?: ""
                     currentBookingRequestId = intent?.getStringExtra("booking_request_id")
+                    currentAckToken = intent?.getStringExtra("ack_token")
                     val bookingType = intent?.getStringExtra("booking_type") ?: "instant"
                     val prealertSent = intent?.getBooleanExtra("prealert_sent", false) ?: false
                     val scheduledTime = intent?.getStringExtra("scheduled_time") ?: ""
@@ -488,7 +491,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                     countdownHandler?.postDelayed(this, 1000)
                 } else {
                     android.util.Log.d("BookingOverlay", "⏱️ Countdown expired - auto closing")
-                    BackendSync.ackDeliveryAsync(applicationContext, bookingId, "offer_expired", currentBookingRequestId)
+                    BackendSync.ackDeliveryAsync(applicationContext, bookingId, "offer_expired", currentBookingRequestId, currentAckToken)
                     finishAndStop("countdown_expired")
                 }
             }
@@ -521,7 +524,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
             }
             acceptInFlight = true
             android.util.Log.d("BookingOverlay", "✅ Accept button clicked")
-            BackendSync.ackDeliveryAsync(applicationContext, bookingId, "accept_tapped", currentBookingRequestId)
+            BackendSync.ackDeliveryAsync(applicationContext, bookingId, "accept_tapped", currentBookingRequestId, currentAckToken)
             
             // Disable buttons immediately to prevent double taps
             val acceptBtn = overlayView?.findViewById<Button>(R.id.btnAccept)
@@ -624,7 +627,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
             
             acceptInFlight = true
             android.util.Log.d("BookingOverlay", "❌ Reject button clicked")
-            BackendSync.ackDeliveryAsync(applicationContext, bookingId, "reject_tapped", currentBookingRequestId)
+            BackendSync.ackDeliveryAsync(applicationContext, bookingId, "reject_tapped", currentBookingRequestId, currentAckToken)
             
             // Disable buttons immediately
             val acceptBtn = overlayView?.findViewById<Button>(R.id.btnAccept)
@@ -692,7 +695,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
 
             // 📨 ACK popup_shown — overlay is actually on screen now.
             android.util.Log.d("BookingOverlay", "📨 [ACK] Sending popup_shown for booking_id=$bookingId req=$currentBookingRequestId")
-            BackendSync.ackDeliveryAsync(applicationContext, bookingId, "popup_shown", currentBookingRequestId)
+            BackendSync.ackDeliveryAsync(applicationContext, bookingId, "popup_shown", currentBookingRequestId, currentAckToken)
 
 
             // Start countdown AFTER view is added to window
@@ -704,7 +707,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
             android.util.Log.e("BookingOverlay", "❌ Failed to add overlay to window", e)
             e.printStackTrace()
             // Tell backend exactly why the popup did not show
-            BackendSync.ackFailureAsync(applicationContext, bookingId, "popup_failed", currentBookingRequestId)
+            BackendSync.ackFailureAsync(applicationContext, bookingId, "popup_failed", currentBookingRequestId, currentAckToken)
             Toast.makeText(this, "Failed to show overlay: ${e.message}", Toast.LENGTH_LONG).show()
             OverlaySingleton.isShowing = false
             stopSelf()
