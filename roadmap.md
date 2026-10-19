@@ -17,3 +17,8 @@
 - [ ] Deploy — blocked: owner must confirm backup + settings saved and explicitly approve.
 - [ ] Mark 15–17 Oct no_device_ack offers as outage for 14 workers — blocked: needs approval after deploy.
 - [ ] Native retry fix for dropped 4xx ACKs — blocked: next app release.
+## Notification reliability audit (19 Oct)
+- [x] Full audit written: docs/notification-reliability-audit-2026-10-19.md — pipeline, all 11 ACK call sites, live event table (device ACKs stop 14 Oct 13:17 UTC), popup behavior, Android/iOS scope, A–F verdict = D (backend rejects 400, client drops silently).
+- [ ] Deploy corrected ack-booking-delivery — blocked: explicit owner approval (CRITICAL-1).
+- [ ] Reject core fix — blocked: explicit owner approval (CRITICAL-2, docs/reject-fix/).
+- [ ] Next release: stop silently dropping terminal 4xx ACKs + popup Retry on failed reject (HIGH-1, §4).
