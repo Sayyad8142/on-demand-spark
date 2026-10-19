@@ -1,9 +1,10 @@
+// Run: bun test reject_core.offline.test.ts (needs @electric-sql/pglite)
 import { PGlite } from "@electric-sql/pglite";
 import { test, expect } from "bun:test";
 import { readFileSync } from "fs";
 const strip=(s:string)=>s.slice(s.indexOf("CREATE OR REPLACE"));
-const OLD=strip(readFileSync("/dev-server/docs/reject-fix/000_reject_core_LIVE_BACKUP.sql","utf8"));
-const NEW=readFileSync("/tmp/pg/fixed.sql","utf8");
+const OLD=strip(readFileSync(`${import.meta.dir}/000_reject_core_LIVE_BACKUP.sql`,"utf8"));
+const _n=readFileSync(`${import.meta.dir}/001_reject_core_array_fix_DRAFT.sql`,"utf8");const NEW=strip(_n).split("$function$;")[0]+"$function$;";
 const B="11111111-1111-1111-1111-111111111111";
 const W=(n:number)=>`00000000-0000-0000-0000-00000000000${n}`;
 async function db(fn:string, tiers:number[]){
