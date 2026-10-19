@@ -33,6 +33,9 @@ export async function initFCM() {
     const data = notification.data || {};
     const bookingId = data.bookingId || data.booking_id;
     const bookingRequestId = data.booking_request_id || data.bookingRequestId;
+    // Phase 1C: echo-only signed ack token — never generated or modified here.
+    const ackToken = extractAckToken(data);
+    if (ackToken) rememberAckToken({ bookingId, bookingRequestId, ackToken });
 
     // Short-circuit: admin reassignment — not a new offer.
     if (data.type === 'BOOKING_REASSIGNED') {
@@ -65,7 +68,7 @@ export async function initFCM() {
 
       // ACK the FCM delivery immediately (fire-and-forget)
       import('@/lib/bookingAck').then(({ ackBookingDelivery }) =>
-        ackBookingDelivery({ bookingId, bookingRequestId, event: 'push_received' })
+        ackBookingDelivery({ bookingId, bookingRequestId, ackToken, event: 'push_received' })
       ).catch(() => {});
 
       // Start FCM ack timeout tracker — if popup never shows, report missed
@@ -85,6 +88,7 @@ export async function initFCM() {
         scheduledDate: scheduleInfo.scheduledDate,
         scheduledTime: scheduleInfo.scheduledTime,
         prealertSent: scheduleInfo.prealertSent,
+        ackToken,
         source: 'fcm',
       });
     }
