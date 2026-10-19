@@ -100,6 +100,9 @@ export async function initFCM() {
     const data = notification.notification.data || {};
     const bookingId = data.bookingId || data.booking_id;
     const bookingRequestId = data.booking_request_id || data.bookingRequestId;
+    // Phase 1C: echo-only signed ack token — never generated or modified here.
+    const ackToken = extractAckToken(data);
+    if (ackToken) rememberAckToken({ bookingId, bookingRequestId, ackToken });
 
     if (data.type === 'BOOKING_REASSIGNED') {
       const { handleBookingReassigned } = await import('@/lib/bookingReassign');
@@ -136,6 +139,7 @@ export async function initFCM() {
         scheduledDate: scheduleInfo.scheduledDate,
         scheduledTime: scheduleInfo.scheduledTime,
         prealertSent: scheduleInfo.prealertSent,
+        ackToken,
         source: 'fcm',
       });
     }
