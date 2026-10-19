@@ -398,10 +398,11 @@ object BackendSync {
             WorkerLog.add(app, "ACK", "durable enqueue failed: ${e.message}")
         }
         Thread({
-            val ok = try {
+            val result = try {
                 sendAckDirect(app, bookingId, bookingRequestId, event, attempt = 1, ackToken = ackToken)
-            } catch (_: Exception) { false }
-            if (ok) {
+            } catch (_: Exception) { AckResult.RETRY }
+            // OK → done; REJECTED → never acked, drop so the bad token is not replayed.
+            if (result != AckResult.RETRY) {
                 try {
                     AckQueue.remove(
                         app,
