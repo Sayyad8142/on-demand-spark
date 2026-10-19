@@ -197,7 +197,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
         // Validate critical data
         if (bookingId == null || bookingId.isEmpty()) {
           Log.e(TAG, "❌ CRITICAL: No bookingId in FCM payload! Cannot show overlay.");
-          Log.e(TAG, "❌ Full data payload: " + data.toString());
+          Log.e(TAG, "❌ Payload keys: " + data.keySet()); // never log values (ack_token)
           return;
         }
 

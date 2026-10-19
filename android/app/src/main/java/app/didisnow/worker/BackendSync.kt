@@ -68,7 +68,8 @@ object BackendSync {
             conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             val code = conn.responseCode
             conn.disconnect()
-            val ok = code in 200..299
+            val result = classifyAckHttp(code, !ackToken.isNullOrBlank())
+            val ok = result == AckResult.OK
             WorkerLog.add(
                 ctx,
                 "BACKEND",
@@ -149,14 +150,17 @@ object BackendSync {
         }
 
         val workerId = resolveWorkerId(ctx)
-        if (workerId.isNullOrBlank()) {
+        // Phase 1C: a signed ack_token authenticates on its own, so a missing
+        // local worker_id only blocks token-less ACKs.
+        if (workerId.isNullOrBlank() && ackToken.isNullOrBlank()) {
             WorkerLog.add(ctx, "ACK", "queue $event — no worker_id available yet")
             AckQueue.enqueue(ctx, bookingId, bookingRequestId, event, appVersion(ctx), "no_worker_id", ackToken)
             return false
         }
 
-        val ok = sendAckHttp(ctx, workerId, bookingId, bookingRequestId, event, attempt = 1, ackToken = ackToken)
-        if (!ok) {
+        val result = sendAckHttp(ctx, workerId, bookingId, bookingRequestId, event, attempt = 1, ackToken = ackToken)
+        val ok = result == AckResult.OK
+        if (result == AckResult.RETRY) {
             AckQueue.enqueue(ctx, bookingId, bookingRequestId, event, appVersion(ctx), "http_fail", ackToken)
             AckRetryWorker.enqueue(ctx, "ack_fail:$event")
         }
@@ -171,27 +175,44 @@ object BackendSync {
         event: String,
         attempt: Int,
         ackToken: String? = null,
-    ): Boolean {
-        val workerId = resolveWorkerId(ctx) ?: return false
+    ): AckResult {
+        val workerId = resolveWorkerId(ctx)
+        if (workerId.isNullOrBlank() && ackToken.isNullOrBlank()) return AckResult.RETRY
         return sendAckHttp(ctx, workerId, bookingId, bookingRequestId, event, attempt, ackToken)
+    }
+
+    /**
+     * Phase 1C outcome. REJECTED (400, or 401/403 on a token ACK) is never a
+     * successful acknowledgment: it is logged and dropped, not retried with
+     * the same (invalid/expired) token.
+     */
+    enum class AckResult { OK, RETRY, REJECTED }
+
+    /** Pure classification — mirrored by src/lib/__tests__/ackToken.test.ts. */
+    fun classifyAckHttp(code: Int, hasToken: Boolean): AckResult = when {
+        code in 200..299 -> AckResult.OK
+        code == 401 || code == 403 -> if (hasToken) AckResult.REJECTED else AckResult.RETRY
+        code == 408 || code == 429 -> AckResult.RETRY
+        code in 400..499 -> AckResult.REJECTED
+        else -> AckResult.RETRY
     }
 
     private fun sendAckHttp(
         ctx: Context,
-        workerId: String,
+        workerId: String?,
         bookingId: String?,
         bookingRequestId: String?,
         event: String,
         attempt: Int,
         ackToken: String? = null,
-    ): Boolean {
+    ): AckResult {
         val url = "$SUPABASE_URL/functions/v1/ack-booking-delivery"
         val body = JSONObject().apply {
             if (!bookingId.isNullOrBlank()) put("booking_id", bookingId)
             if (!bookingRequestId.isNullOrBlank()) put("booking_request_id", bookingRequestId)
             // Phase 1C: signed ack token — echoed unchanged, never logged.
             if (!ackToken.isNullOrBlank()) put("ack_token", ackToken)
-            put("worker_id", workerId)
+            if (!workerId.isNullOrBlank()) put("worker_id", workerId)
             put("event_type", event)
             put("app_version", appVersion(ctx))
             put("native_app_version", appVersion(ctx))
@@ -217,7 +238,8 @@ object BackendSync {
             conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             val code = conn.responseCode
             conn.disconnect()
-            val ok = code in 200..299
+            val result = classifyAckHttp(code, !ackToken.isNullOrBlank())
+            val ok = result == AckResult.OK
             WorkerLog.add(
                 ctx,
                 "ACK",
@@ -227,19 +249,17 @@ object BackendSync {
             if (ok && !bookingId.isNullOrBlank() && (event == "popup_shown" || event == "worker_seen")) {
                 try { AckWatchdogWorker.cancel(ctx, bookingId) } catch (_: Exception) {}
             }
-            // Terminal 4xx (except auth) — treat as done so queue drops it.
-            if (!ok && code in 400..499 && code != 401 && code != 403) {
-                WorkerLog.add(ctx, "ACK", "$event terminal http=$code — dropping")
-                return true
+            if (result == AckResult.REJECTED) {
+                WorkerLog.add(ctx, "ACK", "$event REJECTED http=$code — not acknowledged, dropping")
             }
-            ok
+            result
         } catch (e: Exception) {
             WorkerLog.add(
                 ctx,
                 "ACK",
                 "$event booking=${bookingId ?: bookingRequestId} attempt=$attempt FAILED: ${e.message}"
             )
-            false
+            AckResult.RETRY
         }
     }
 
@@ -294,7 +314,8 @@ object BackendSync {
             conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             val code = conn.responseCode
             conn.disconnect()
-            val ok = code in 200..299
+            val result = classifyAckHttp(code, !ackToken.isNullOrBlank())
+            val ok = result == AckResult.OK
             WorkerLog.add(ctx, "MISSED", "$reason booking=$bookingId → http=$code")
             ok
         } catch (e: Exception) {
@@ -377,10 +398,11 @@ object BackendSync {
             WorkerLog.add(app, "ACK", "durable enqueue failed: ${e.message}")
         }
         Thread({
-            val ok = try {
+            val result = try {
                 sendAckDirect(app, bookingId, bookingRequestId, event, attempt = 1, ackToken = ackToken)
-            } catch (_: Exception) { false }
-            if (ok) {
+            } catch (_: Exception) { AckResult.RETRY }
+            // OK → done; REJECTED → never acked, drop so the bad token is not replayed.
+            if (result != AckResult.RETRY) {
                 try {
                     AckQueue.remove(
                         app,
@@ -505,7 +527,8 @@ object BackendSync {
             conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             val code = conn.responseCode
             conn.disconnect()
-            val ok = code in 200..299
+            val result = classifyAckHttp(code, !ackToken.isNullOrBlank())
+            val ok = result == AckResult.OK
             WorkerLog.add(ctx, "HEARTBEAT", "state=$appState token=${fcmToken != null} → http=$code")
             ok
         } catch (e: Exception) {
