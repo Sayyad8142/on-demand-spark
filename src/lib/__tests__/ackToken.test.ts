@@ -23,7 +23,7 @@ const TOKEN = "v1.eyJyIjoiYSJ9.c2ln";
 /** Mirror of BackendSync.classifyAckHttp (Kotlin) — keep in sync. */
 function classify(code: number, hasToken: boolean) {
   if (code >= 200 && code < 300) return "OK";
-  if (code === 401 || code === 403) return hasToken ? "REJECTED" : "RETRY";
+  if (code === 401 || code === 403) return "REJECTED";
   if (code === 408 || code === 429) return "RETRY";
   if (code >= 400 && code < 500) return "REJECTED";
   return "RETRY";
@@ -84,7 +84,24 @@ describe("signed ack token", () => {
     expect(classify(400, true)).toBe("REJECTED");
     expect(classify(401, true)).toBe("REJECTED");
     expect(classify(403, true)).toBe("REJECTED");
-    expect(classify(401, false)).toBe("RETRY");
+    expect(classify(401, false)).toBe("REJECTED");
+    expect(classify(403, false)).toBe("REJECTED");
     expect(classify(503, true)).toBe("RETRY");
   });
 });
+
+describe("Phase 1 compatibility gaps", () => {
+  it("token remembered by request id is recalled by booking id alone", async () => {
+    const m = await import("@/lib/bookingAck");
+    m.resetAckCache();
+    m.rememberAckToken({ bookingId: "b-9", bookingRequestId: "r-9", ackToken: "v1.x.y" });
+    expect(m.recallAckToken("b-9")).toBe("v1.x.y");
+  });
+  it("logout reset clears remembered tokens", async () => {
+    const m = await import("@/lib/bookingAck");
+    m.rememberAckToken({ bookingId: "b-8", ackToken: "v1.a.b" });
+    m.resetAckCache();
+    expect(m.recallAckToken("b-8")).toBeNull();
+  });
+});
+
