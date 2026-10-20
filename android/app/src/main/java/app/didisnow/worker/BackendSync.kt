@@ -149,19 +149,20 @@ object BackendSync {
             return false
         }
 
+        val gen = AckQueue.generation(ctx)
         val workerId = resolveWorkerId(ctx)
         // Phase 1C: a signed ack_token authenticates on its own, so a missing
         // local worker_id only blocks token-less ACKs.
         if (workerId.isNullOrBlank() && ackToken.isNullOrBlank()) {
             WorkerLog.add(ctx, "ACK", "queue $event — no worker_id available yet")
-            AckQueue.enqueue(ctx, bookingId, bookingRequestId, event, appVersion(ctx), "no_worker_id", ackToken)
+            AckQueue.enqueue(ctx, bookingId, bookingRequestId, event, appVersion(ctx), "no_worker_id", ackToken, gen)
             return false
         }
 
         val result = sendAckHttp(ctx, workerId, bookingId, bookingRequestId, event, attempt = 1, ackToken = ackToken)
         val ok = result == AckResult.OK
         if (result == AckResult.RETRY) {
-            AckQueue.enqueue(ctx, bookingId, bookingRequestId, event, appVersion(ctx), "http_fail", ackToken)
+            AckQueue.enqueue(ctx, bookingId, bookingRequestId, event, appVersion(ctx), "http_fail", ackToken, gen)
             AckRetryWorker.enqueue(ctx, "ack_fail:$event")
         }
         return ok
@@ -381,6 +382,7 @@ object BackendSync {
     ) {
         if (bookingId.isNullOrBlank() && bookingRequestId.isNullOrBlank()) return
         val app = ctx.applicationContext
+        val gen = AckQueue.generation(app)
         // Duplicate protection: Activity + Overlay can both present the same
         // offer (fallback races). Presentation events are emitted exactly once
         // per offer per device within DEDUP_TTL_MS.
@@ -392,7 +394,7 @@ object BackendSync {
         }
 
         try {
-            AckQueue.enqueue(app, bookingId, bookingRequestId, event, appVersion(app), "durable", ackToken)
+            AckQueue.enqueue(app, bookingId, bookingRequestId, event, appVersion(app), "durable", ackToken, gen)
             AckRetryWorker.enqueue(app, "ack:$event")
         } catch (e: Exception) {
             WorkerLog.add(app, "ACK", "durable enqueue failed: ${e.message}")

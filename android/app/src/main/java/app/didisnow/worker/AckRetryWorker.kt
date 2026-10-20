@@ -38,9 +38,10 @@ class AckRetryWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
             // signed ack_token (offer TTL + grace). Bound their retries so an
             // expired token is never replayed; later ACKs fall back to the
             // session path instead.
-            if (entry.ackToken != null && entry.attempts >= ACK_TOKEN_MAX_ATTEMPTS) {
+            val cap = if (entry.ackToken != null) ACK_TOKEN_MAX_ATTEMPTS else SESSION_MAX_ATTEMPTS
+            if (entry.attempts >= cap || AckQueue.isTokenExpired(entry.ackToken)) {
                 AckQueue.remove(ctx, entry)
-                WorkerLog.add(ctx, "ACK_RETRY", "drop token ack event=${entry.event} cap=$ACK_TOKEN_MAX_ATTEMPTS")
+                WorkerLog.add(ctx, "ACK_RETRY", "drop ack event=${entry.event} attempts=${entry.attempts} cap=$cap")
                 continue
             }
             AckQueue.bumpAttempt(ctx, entry)
@@ -70,8 +71,14 @@ class AckRetryWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
     companion object {
         const val UNIQUE_NAME = "worker-ack-retry"
 
-        /** Retry cap for entries carrying a signed ack_token. */
+        /**
+         * Retry caps count RETRY-WORKER attempts only; the initial direct
+         * request is NOT included (token ACK: 1 initial + up to 3 retries).
+         * Token entries also stop at token expiry, whichever comes first.
+         */
         const val ACK_TOKEN_MAX_ATTEMPTS = 3
+        /** Session-only ACKs: 1 initial + up to 5 retries, and ≤24h queue age. */
+        const val SESSION_MAX_ATTEMPTS = 5
 
         fun enqueue(context: Context, reason: String) {
             try {

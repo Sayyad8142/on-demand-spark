@@ -120,7 +120,7 @@ object OfferQueue {
         putExtra("expires_at", offer.optLong("expires_at", 0L))
         putExtra("sent_at", offer.optLong("sent_at", 0L))
         putExtra("ttl_seconds", offer.optInt("ttl_seconds", OfferTimer.DEFAULT_TTL_SECONDS))
-        offer.optString("ack_token").takeIf { it.isNotBlank() }
+        offer.optString("ack_token").takeIf { it.isNotBlank() && !AckQueue.isTokenExpired(it) }
             ?.let { putExtra("ack_token", it) }
         putExtra("from_queue", true)
     }
