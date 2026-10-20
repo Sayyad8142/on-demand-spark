@@ -62,6 +62,7 @@ public class AuthBridge extends Plugin {
         // Worker-scoped ACK state (incl. signed ack_tokens) must not survive logout/account switch.
         try { AckQueue.INSTANCE.clear(getContext()); } catch (Exception ignored) {}
         try { OfferQueue.INSTANCE.clearAll(getContext(), "logout"); } catch (Exception ignored) {}
+        try { androidx.work.WorkManager.getInstance(getContext()).cancelUniqueWork(AckRetryWorker.UNIQUE_NAME); } catch (Exception ignored) {}
         if (success) {
             android.util.Log.d("AuthBridge", "🗑️ Cleared JWT + pending FCM token");
         } else {

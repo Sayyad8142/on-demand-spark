@@ -105,3 +105,53 @@ describe("Phase 1 compatibility gaps", () => {
   });
 });
 
+const tok = (exp: number, tag = "s") =>
+  `v1.${btoa(JSON.stringify({ r: "r", w: "w", b: "b", exp })).replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_")}.${tag}`;
+const future = () => Math.floor(Date.now() / 1000) + 600;
+
+describe("Phase 1 build readiness: alias + expiry", () => {
+  it("two successive offers for one booking: alias resolves to newest, exact ids stay separate", async () => {
+    const m = await import("@/lib/bookingAck");
+    m.resetAckCache();
+    const t1 = tok(future(), "one"), t2 = tok(future(), "two");
+    m.rememberAckToken({ bookingId: "B", bookingRequestId: "R1", ackToken: t1 });
+    m.rememberAckToken({ bookingId: "B", bookingRequestId: "R2", ackToken: t2 });
+    expect(m.recallAckToken("B")).toBe(t2);
+    expect(m.recallAckToken("B", "R1")).toBe(t1); // delayed event from old offer uses its own token
+    expect(m.recallAckToken("B", "R2")).toBe(t2);
+  });
+  it("unknown request id never falls back to the booking alias", async () => {
+    const m = await import("@/lib/bookingAck");
+    m.resetAckCache();
+    m.rememberAckToken({ bookingId: "B", bookingRequestId: "R1", ackToken: tok(future()) });
+    expect(m.recallAckToken("B", "R-other")).toBeNull();
+  });
+  it("request id belonging to another booking does not resolve", async () => {
+    const m = await import("@/lib/bookingAck");
+    m.resetAckCache();
+    m.rememberAckToken({ bookingId: "B", bookingRequestId: "R1", ackToken: tok(future()) });
+    expect(m.recallAckToken("C", "R1")).toBeNull();
+  });
+  it("reassignment (offer cleared) removes token and alias", async () => {
+    const m = await import("@/lib/bookingAck");
+    m.resetAckCache();
+    m.rememberAckToken({ bookingId: "B", bookingRequestId: "R1", ackToken: tok(future()) });
+    m.forgetAckToken("B", "R1");
+    expect(m.recallAckToken("B")).toBeNull();
+    expect(m.recallAckToken("B", "R1")).toBeNull();
+  });
+  it("expired token is never reused", async () => {
+    const m = await import("@/lib/bookingAck");
+    m.resetAckCache();
+    m.rememberAckToken({ bookingId: "B", bookingRequestId: "R1", ackToken: tok(Math.floor(Date.now() / 1000) - 5) });
+    expect(m.recallAckToken("B", "R1")).toBeNull();
+  });
+  it("account switch clears exact entries and aliases", async () => {
+    const m = await import("@/lib/bookingAck");
+    m.rememberAckToken({ bookingId: "B", bookingRequestId: "R1", ackToken: tok(future()) });
+    m.resetAckCache();
+    expect(m.recallAckToken("B")).toBeNull();
+    expect(m.recallAckToken("B", "R1")).toBeNull();
+  });
+});
+

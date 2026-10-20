@@ -71,21 +71,40 @@ export function extractAckToken(data: Record<string, unknown> | undefined | null
   return normalizeAckToken(data[ACK_TOKEN_PAYLOAD_KEY]) ?? normalizeAckToken((data as any).ackToken);
 }
 
-// Token registry: popup_shown / worker_seen / accept_tapped ACKs fire from UI
-// surfaces that only know booking ids, so remember the token the push carried
-// and re-attach it to every lifecycle ACK for that offer.
+// Token registry. Exact offers are keyed by booking_request_id (preferred).
+// Callers that only know a booking id (Accept/Reject/worker_seen) go through a
+// single alias that points at the CURRENT offer for that booking; a newer offer
+// replaces it and clearing an offer removes it. Memory-only; never logged.
 interface RememberedToken {
   bookingId?: string;
   bookingRequestId?: string;
   token: string;
   rememberedAt: number;
 }
-const rememberedTokens = new Map<string, RememberedToken>();
+const rememberedTokens = new Map<string, RememberedToken>(); // exact key -> entry
+const bookingAlias = new Map<string, string>(); // booking id -> exact key of current offer
 const MAX_REMEMBERED_TOKENS = 40;
 const REMEMBERED_TOKEN_TTL_MS = 30 * 60 * 1000;
 
 const tokenKeyOf = (bookingId?: string, bookingRequestId?: string) =>
-  bookingRequestId || bookingId || "";
+  bookingRequestId ? `r:${bookingRequestId}` : bookingId ? `b:${bookingId}` : "";
+
+/** Client-only expiry read (epoch ms) used to stop retries/reuse; server stays authoritative. */
+export function ackTokenExpiryMs(token: string): number | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const exp = Number(JSON.parse(atob(b64 + "===".slice((b64.length + 3) % 4))).exp);
+    return Number.isFinite(exp) && exp > 0 ? exp * 1000 : null;
+  } catch { return null; }
+}
+
+function isUsable(e: RememberedToken, now = Date.now()) {
+  if (now - e.rememberedAt > REMEMBERED_TOKEN_TTL_MS) return false;
+  const exp = ackTokenExpiryMs(e.token);
+  return exp == null || now < exp;
+}
 
 /** Stores the signed token an FCM push carried, keyed by offer id. */
 export function rememberAckToken(args: { bookingId?: string; bookingRequestId?: string; ackToken?: string | null }) {
@@ -97,18 +116,34 @@ export function rememberAckToken(args: { bookingId?: string; bookingRequestId?: 
     const oldest = rememberedTokens.keys().next().value;
     if (oldest) rememberedTokens.delete(oldest);
   }
-  const entry = { bookingId: args.bookingId, bookingRequestId: args.bookingRequestId, token, rememberedAt: Date.now() };
-  rememberedTokens.set(k, entry);
-  // Also index by booking id: Accept/Reject/worker_seen callers may only know it.
-  if (args.bookingId && args.bookingId !== k) rememberedTokens.set(args.bookingId, entry);
+  rememberedTokens.set(k, { bookingId: args.bookingId, bookingRequestId: args.bookingRequestId, token, rememberedAt: Date.now() });
+  if (args.bookingId) bookingAlias.set(args.bookingId, k); // newest offer wins
 }
 
-/** Looks up a previously remembered token for this offer. */
+/** Removes an offer's token and any alias pointing at it (offer cleared/reassigned). */
+export function forgetAckToken(bookingId?: string, bookingRequestId?: string) {
+  const k = bookingRequestId ? tokenKeyOf(undefined, bookingRequestId) : bookingId ? bookingAlias.get(bookingId) : undefined;
+  if (k) rememberedTokens.delete(k);
+  if (bookingId) {
+    const aliased = bookingAlias.get(bookingId);
+    if (!bookingRequestId || aliased === k) {
+      if (aliased) rememberedTokens.delete(aliased);
+      bookingAlias.delete(bookingId);
+    }
+  }
+}
+
+/** Looks up a token: exact request id first; booking-id alias only when no request id is given. */
 export function recallAckToken(bookingId?: string, bookingRequestId?: string): string | null {
-  const k = tokenKeyOf(bookingId, bookingRequestId);
-  const hit = rememberedTokens.get(k) ?? (bookingId ? rememberedTokens.get(bookingId) : undefined);
+  const k = bookingRequestId
+    ? tokenKeyOf(undefined, bookingRequestId)
+    : bookingId ? (bookingAlias.get(bookingId) ?? tokenKeyOf(bookingId)) : "";
+  if (!k) return null;
+  const hit = rememberedTokens.get(k);
   if (!hit) return null;
-  if (Date.now() - hit.rememberedAt > REMEMBERED_TOKEN_TTL_MS) {
+  // A request id that belongs to a different booking never resolves.
+  if (bookingId && hit.bookingId && hit.bookingId !== bookingId) return null;
+  if (!isUsable(hit)) {
     rememberedTokens.delete(k);
     return null;
   }
@@ -243,6 +278,7 @@ export async function ackBookingDelivery({ bookingId, bookingRequestId, event, a
 export function resetAckCache() {
   acked.clear();
   rememberedTokens.clear();
+  bookingAlias.clear();
   cachedWorkerId = null;
   try { localStorage.removeItem(WORKER_ID_CACHE_KEY); } catch { /* ignore */ }
 }

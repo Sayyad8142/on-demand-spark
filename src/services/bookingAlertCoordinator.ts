@@ -136,6 +136,7 @@ export function invalidateOffer(bookingId: string, bookingRequestId?: string) {
   console.log(`🚫 [Coordinator] Offer no longer available: ${bookingId}`);
 
   dismissAlert(bookingId);
+  import("@/lib/bookingAck").then(({ forgetAckToken }) => forgetAckToken(bookingId, bookingRequestId)).catch(() => {});
 
   try {
     const plugin = (window as any)?.Capacitor?.Plugins?.OverlayPlugin;

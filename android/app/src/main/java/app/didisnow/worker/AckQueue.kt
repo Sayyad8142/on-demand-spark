@@ -28,6 +28,32 @@ object AckQueue {
     private const val KEY = "pending"
     private const val MAX_ENTRIES = 100
     private const val MAX_AGE_MS = 24L * 60 * 60 * 1000 // 24h
+    private const val KEY_GEN = "generation"
+
+    /**
+     * Client-side expiry of a signed ack_token, in epoch ms, or null if it
+     * cannot be read. Used ONLY to stop client retries — the server remains
+     * authoritative, and this is never used as the offer's acceptance deadline.
+     * Format: v1.<base64url(JSON{r,w,b,exp})>.<sig>. Never logged.
+     */
+    fun tokenExpiryMs(token: String?): Long? {
+        if (token.isNullOrBlank()) return null
+        return try {
+            val parts = token.split(".")
+            if (parts.size != 3) return null
+            val json = String(android.util.Base64.decode(parts[1], android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP), Charsets.UTF_8)
+            val exp = JSONObject(json).optLong("exp", 0L)
+            if (exp <= 0L) null else exp * 1000L
+        } catch (_: Exception) { null }
+    }
+
+    fun isTokenExpired(token: String?, now: Long = System.currentTimeMillis()): Boolean {
+        val exp = tokenExpiryMs(token) ?: return false
+        return now >= exp
+    }
+
+    /** Bumped on logout/account switch; stale callbacks carrying an older value cannot re-enqueue. */
+    fun generation(ctx: Context): Long = prefs(ctx).getLong(KEY_GEN, 0L)
 
     data class Entry(
         val bookingId: String?,
@@ -58,8 +84,17 @@ object AckQueue {
         appVersion: String? = null,
         appState: String? = null,
         ackToken: String? = null,
+        expectedGeneration: Long? = null,
     ) {
         if (bookingId.isNullOrBlank() && bookingRequestId.isNullOrBlank()) return
+        if (expectedGeneration != null && expectedGeneration != generation(ctx)) {
+            WorkerLog.add(ctx, "ACK_QUEUE", "drop stale-generation event=$event (logout/account switch)")
+            return
+        }
+        if (isTokenExpired(ackToken)) {
+            WorkerLog.add(ctx, "ACK_QUEUE", "drop expired-token event=$event")
+            return
+        }
         val now = System.currentTimeMillis()
         val arr = readAll(ctx)
 
@@ -154,7 +189,7 @@ object AckQueue {
         val out = JSONArray()
         for (i in 0 until arr.length()) {
             val o = arr.optJSONObject(i) ?: continue
-            if (now - o.optLong("queued_at", now) > MAX_AGE_MS) {
+            if (now - o.optLong("queued_at", now) > MAX_AGE_MS || isTokenExpired(o.optString("ack_token").ifBlank { null }, now)) {
                 WorkerLog.add(ctx, "ACK_QUEUE", "dropped stale event=${o.optString("event")}")
                 continue
             }
@@ -173,6 +208,6 @@ object AckQueue {
 
     @Synchronized
     fun clear(ctx: Context) {
-        prefs(ctx).edit().remove(KEY).apply()
+        prefs(ctx).edit().remove(KEY).putLong(KEY_GEN, generation(ctx) + 1).commit()
     }
 }
