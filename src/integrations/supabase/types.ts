@@ -449,6 +449,8 @@ export type Database = {
       }
       app_config: {
         Row: {
+          bookings_paused: boolean
+          bookings_paused_message: string | null
           bypass_worker_freshness_gate: boolean
           created_at: string | null
           disable_online_payments: boolean
@@ -481,6 +483,8 @@ export type Database = {
           worker_update_title: string
         }
         Insert: {
+          bookings_paused?: boolean
+          bookings_paused_message?: string | null
           bypass_worker_freshness_gate?: boolean
           created_at?: string | null
           disable_online_payments?: boolean
@@ -513,6 +517,8 @@ export type Database = {
           worker_update_title?: string
         }
         Update: {
+          bookings_paused?: boolean
+          bookings_paused_message?: string | null
           bypass_worker_freshness_gate?: boolean
           created_at?: string | null
           disable_online_payments?: boolean
@@ -7417,6 +7423,16 @@ export type Database = {
       }
       admin_booking_opportunity_audit: {
         Args: { _day?: string }
+        Returns: Json
+      }
+      admin_bulk_enable_worker_availability: {
+        Args: {
+          p_community_id: string
+          p_dry_run?: boolean
+          p_reviewed_at: string
+          p_service: string
+          p_worker_ids: string[]
+        }
         Returns: Json
       }
       admin_bulk_set_test_flag_by_user: {
