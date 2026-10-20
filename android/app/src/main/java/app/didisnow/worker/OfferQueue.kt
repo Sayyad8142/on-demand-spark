@@ -86,6 +86,9 @@ object OfferQueue {
             put("sent_at", intent.getLongExtra("sent_at", 0L))
             put("ttl_seconds", intent.getIntExtra("ttl_seconds", OfferTimer.DEFAULT_TTL_SECONDS))
             put("queued_at_sec", System.currentTimeMillis() / 1000)
+            // Phase 1: keep the signed ack_token with its offer so ACKs after a
+            // process restart still authenticate. App-private prefs only; never logged.
+            intent.getStringExtra("ack_token")?.takeIf { it.isNotBlank() }?.let { put("ack_token", it) }
         }
     }
 
@@ -117,6 +120,8 @@ object OfferQueue {
         putExtra("expires_at", offer.optLong("expires_at", 0L))
         putExtra("sent_at", offer.optLong("sent_at", 0L))
         putExtra("ttl_seconds", offer.optInt("ttl_seconds", OfferTimer.DEFAULT_TTL_SECONDS))
+        offer.optString("ack_token").takeIf { it.isNotBlank() }
+            ?.let { putExtra("ack_token", it) }
         putExtra("from_queue", true)
     }
 

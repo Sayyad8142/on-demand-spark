@@ -287,6 +287,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('⚠️ [Logout] FCM cleanup error:', error);
     }
+    try { (await import('@/lib/bookingAck')).resetAckCache(); } catch { /* ignore */ }
     try { await supabase.auth.signOut(); } catch (error) { console.error('❌ Sign out error:', error); }
     await clearSessionCompletely();
   }, [clearSessionCompletely, session]);

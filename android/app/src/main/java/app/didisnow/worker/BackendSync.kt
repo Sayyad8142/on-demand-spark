@@ -191,7 +191,7 @@ object BackendSync {
     /** Pure classification — mirrored by src/lib/__tests__/ackToken.test.ts. */
     fun classifyAckHttp(code: Int, hasToken: Boolean): AckResult = when {
         code in 200..299 -> AckResult.OK
-        code == 401 || code == 403 -> if (hasToken) AckResult.REJECTED else AckResult.RETRY
+        code == 401 || code == 403 -> AckResult.REJECTED // never loop on auth failure
         code == 408 || code == 429 -> AckResult.RETRY
         code in 400..499 -> AckResult.REJECTED
         else -> AckResult.RETRY

@@ -97,18 +97,16 @@ export function rememberAckToken(args: { bookingId?: string; bookingRequestId?: 
     const oldest = rememberedTokens.keys().next().value;
     if (oldest) rememberedTokens.delete(oldest);
   }
-  rememberedTokens.set(k, {
-    bookingId: args.bookingId,
-    bookingRequestId: args.bookingRequestId,
-    token,
-    rememberedAt: Date.now(),
-  });
+  const entry = { bookingId: args.bookingId, bookingRequestId: args.bookingRequestId, token, rememberedAt: Date.now() };
+  rememberedTokens.set(k, entry);
+  // Also index by booking id: Accept/Reject/worker_seen callers may only know it.
+  if (args.bookingId && args.bookingId !== k) rememberedTokens.set(args.bookingId, entry);
 }
 
 /** Looks up a previously remembered token for this offer. */
 export function recallAckToken(bookingId?: string, bookingRequestId?: string): string | null {
   const k = tokenKeyOf(bookingId, bookingRequestId);
-  const hit = rememberedTokens.get(k);
+  const hit = rememberedTokens.get(k) ?? (bookingId ? rememberedTokens.get(bookingId) : undefined);
   if (!hit) return null;
   if (Date.now() - hit.rememberedAt > REMEMBERED_TOKEN_TTL_MS) {
     rememberedTokens.delete(k);
@@ -232,7 +230,9 @@ export async function ackBookingDelivery({ bookingId, bookingRequestId, event, a
       acked.delete(cacheKey);
       return;
     }
-    console.log(`[ACK] ${event} ok`, data);
+    // 200 + skipped/request_not_found is terminal but NOT proof of delivery.
+    const skipped = (data as any)?.skipped === true || (data as any)?.reason === "request_not_found";
+    console.log(`[ACK] ${event} ${skipped ? "skipped (not recorded)" : "ok"}`);
   } catch (e) {
     console.warn(`[ACK] ${event} threw`, e);
     acked.delete(cacheKey);
