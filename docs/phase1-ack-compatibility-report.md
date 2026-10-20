@@ -24,7 +24,7 @@ Limits (retry-worker attempts; the **initial request is not counted**):
 - **Session-only ACK:** 1 initial request + up to 5 retries = max 6 sends, within 24h queue age.
 - Token `exp` is read client-side only to stop retries; server verification is authoritative; it is never used as the offer's accept deadline.
 
-**Contract match: NOT VERIFIED.** The Admin Panel Phase 1B draft (seen earlier) defines token expiry = offer TTL + 15-min grace and idempotent events, but I don't remember it setting any client retry count. The Admin Panel project is not accessible from this workspace now, so the owner must confirm these limits with the backend.
+**Contract match: NOT VERIFIED.** The Admin Panel Phase 1B draft (seen earlier) defines token expiry = offer TTL + 15-min grace and idempotent events, but no client retry count was recorded from it. The Admin Panel project is not accessible from this workspace now, so the owner must confirm these limits with the backend.
 
 ## 3. Checks actually run
 - `bunx vitest run`: **6 files, 85/85 passed** (mocked transport): includes classification, alias/successive offers, delayed old-offer events, reassignment, expiry, account switch.
