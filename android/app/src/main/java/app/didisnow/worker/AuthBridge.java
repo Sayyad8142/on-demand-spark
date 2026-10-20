@@ -59,6 +59,9 @@ public class AuthBridge extends Plugin {
             .remove("pending_fcm_token")
             .remove("pending_fcm_token_timestamp")
             .commit();
+        // Worker-scoped ACK state (incl. signed ack_tokens) must not survive logout/account switch.
+        try { AckQueue.INSTANCE.clear(getContext()); } catch (Exception ignored) {}
+        try { OfferQueue.INSTANCE.clearAll(getContext(), "logout"); } catch (Exception ignored) {}
         if (success) {
             android.util.Log.d("AuthBridge", "🗑️ Cleared JWT + pending FCM token");
         } else {
