@@ -469,6 +469,7 @@ export type Database = {
           play_store_url_user: string
           play_store_url_worker: string
           release_notes: string | null
+          scheduled_bookings_paused: boolean
           soft_update_enabled: boolean
           soft_update_message: string
           support_phone: string
@@ -503,6 +504,7 @@ export type Database = {
           play_store_url_user?: string
           play_store_url_worker?: string
           release_notes?: string | null
+          scheduled_bookings_paused?: boolean
           soft_update_enabled?: boolean
           soft_update_message?: string
           support_phone?: string
@@ -537,6 +539,7 @@ export type Database = {
           play_store_url_user?: string
           play_store_url_worker?: string
           release_notes?: string | null
+          scheduled_bookings_paused?: boolean
           soft_update_enabled?: boolean
           soft_update_message?: string
           support_phone?: string
@@ -2147,6 +2150,60 @@ export type Database = {
           queue_length?: number | null
           requests_last_minute?: number | null
           stale_pending?: number | null
+        }
+        Relationships: []
+      }
+      dispatch_nudge_flag_audit: {
+        Row: {
+          admin_id: string
+          created_at: string
+          id: number
+          new_enabled: boolean
+          nudge: string
+          old_enabled: boolean | null
+          reason: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          id?: number
+          new_enabled: boolean
+          nudge: string
+          old_enabled?: boolean | null
+          reason: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          id?: number
+          new_enabled?: boolean
+          nudge?: string
+          old_enabled?: boolean | null
+          reason?: string
+        }
+        Relationships: []
+      }
+      dispatch_nudge_flags: {
+        Row: {
+          enabled: boolean
+          nudge: string
+          reason: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          enabled?: boolean
+          nudge: string
+          reason?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          enabled?: boolean
+          nudge?: string
+          reason?: string | null
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -6161,6 +6218,8 @@ export type Database = {
           failed_at: string | null
           failure_category: string | null
           failure_reason: string | null
+          frozen_at: string | null
+          frozen_reason: string | null
           gross_amount: number
           held_at: string | null
           hold_reason: string | null
@@ -6201,6 +6260,8 @@ export type Database = {
           failed_at?: string | null
           failure_category?: string | null
           failure_reason?: string | null
+          frozen_at?: string | null
+          frozen_reason?: string | null
           gross_amount: number
           held_at?: string | null
           hold_reason?: string | null
@@ -6241,6 +6302,8 @@ export type Database = {
           failed_at?: string | null
           failure_category?: string | null
           failure_reason?: string | null
+          frozen_at?: string | null
+          frozen_reason?: string | null
           gross_amount?: number
           held_at?: string | null
           hold_reason?: string | null
@@ -7530,6 +7593,7 @@ export type Database = {
       }
       admin_dispatch_health_snapshot: { Args: never; Returns: Json }
       admin_dispatch_live_monitor: { Args: never; Returns: Json }
+      admin_dispatch_nudge_status: { Args: never; Returns: Json }
       admin_dispatch_performance_dashboard: {
         Args: {
           p_community?: string
@@ -7554,6 +7618,15 @@ export type Database = {
         Returns: Json
       }
       admin_dispatch_speed_metrics: { Args: { p_days?: number }; Returns: Json }
+      admin_dispatch_speed_v2: {
+        Args: {
+          p_community?: string
+          p_from: string
+          p_service?: string
+          p_to: string
+        }
+        Returns: Json
+      }
       admin_emergency_manual_assign: {
         Args: { p_admin_id?: string; p_booking_id: string; p_worker_id: string }
         Returns: Json
@@ -7788,6 +7861,10 @@ export type Database = {
         Args: { p_booking_id: string; p_is_test: boolean; p_reason?: string }
         Returns: undefined
       }
+      admin_set_dispatch_nudge: {
+        Args: { p_enabled: boolean; p_nudge: string; p_reason: string }
+        Returns: Json
+      }
       admin_set_legal_pdf: {
         Args: { kind: string; url: string }
         Returns: undefined
@@ -7859,6 +7936,10 @@ export type Database = {
           updated_at: string
           worker_id: string
         }[]
+      }
+      admin_unfreeze_worker_payout: {
+        Args: { p_payout_id: string; p_reason: string }
+        Returns: Json
       }
       admin_update_case_status: {
         Args: { p_case: string; p_note: string; p_status: string }
@@ -10213,6 +10294,10 @@ export type Database = {
       user_cancel_booking: {
         Args: { p_booking_id: string; p_reason: string }
         Returns: undefined
+      }
+      verify_dispatch_internal_key: {
+        Args: { p_token: string }
+        Returns: boolean
       }
       vr_boundary_math: { Args: never; Returns: Json }
       vr_cleanup: { Args: never; Returns: Json }
