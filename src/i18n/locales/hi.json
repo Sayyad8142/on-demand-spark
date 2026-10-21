@@ -943,6 +943,14 @@
     "Battery_saver_is_on": "बैटरी सेवर चालू है",
     "In_Settings_choose_Allow_or_Don_t_optimise_then_come_back": "सेटिंग्स में 'अनुमति दें' या 'ऑप्टिमाइज़ न करें' चुनें, फिर वापस आएं।",
     "Movement_access_helps_confirm_you_reached_the_flat_You_can_still_do_the_job_if_you_say_no": "मूवमेंट अनुमति से पता चलता है कि आप फ्लैट पर पहुंच गईं। मना करने पर भी आप काम कर सकती हैं।",
-    "Booking_alerts_are_off": "बुकिंग अलर्ट बंद हैं"
+    "Booking_alerts_are_off": "बुकिंग अलर्ट बंद हैं",
+    "Continue_with_notifications": "सिर्फ़ नोटिफ़िकेशन के साथ आगे बढ़ें",
+    "Notifications_are_turned_off_you_won_t_hear_booking_alerts": "नोटिफ़िकेशन बंद हैं — आपको बुकिंग अलर्ट नहीं सुनाई देंगे",
+    "Booking_alerts_are_blocked_in_phone_settings": "फ़ोन सेटिंग में बुकिंग अलर्ट बंद हैं",
+    "Booking_alerts_are_silent_turn_on_sound": "बुकिंग अलर्ट की आवाज़ बंद है — आवाज़ चालू करें",
+    "Booking_popups_are_off_you_will_get_notifications_only": "बुकिंग पॉपअप बंद हैं — आपको सिर्फ़ नोटिफ़िकेशन मिलेंगे",
+    "Booking_alerts_not_registered_yet": "बुकिंग अलर्ट अभी रजिस्टर नहीं हुए",
+    "Booking_alerts_need_to_be_refreshed": "बुकिंग अलर्ट रीफ़्रेश करने होंगे",
+    "Fix_in_Settings": "सेटिंग में ठीक करें"
   }
 }
