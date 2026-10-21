@@ -1,7 +1,30 @@
-# Worker App — Signup, Login & First-Time Setup Audit (2026-10-21)
+# Worker App — Signup, Login & First-Time Setup (2026-10-21)
 
-Audit only. No code changed, nothing deployed, no production data touched.
-Labels: SOURCE = read in code · NOT VERIFIED = needs Android build / real phone.
+## Status at a glance (supersedes any older "audit only" wording below)
+| Item | Implemented in source | Android built | Tested | Deployed / published |
+|---|---|---|---|---|
+| Setup gate on notifications (earlier fix) | YES | NO (no JDK/Gradle in sandbox) | Offline unit tests only | NO |
+| Battery "Later", one-time movement ask, account-switch reset, translations (earlier fix) | YES | NO | Offline unit tests only | NO |
+| **Option 2 — popups optional** ("Continue with notifications"; setup no longer blocks on popups) | YES | NO | Offline unit tests (`setupGate.test.ts`) | NO |
+| **Booking channel check** (blocked / silent / app disabled detected separately; direct channel Settings; re-check on return) | YES (new native `OverlayPlugin.getBookingChannelStatus` / `openBookingChannelSettings`) | NO — **native code not compiled** | Classification logic unit-tested; native method NOT VERIFIED | NO |
+| Home health card: notifications off / channel blocked / channel silent / channel not checked / popups off (notifications only) / push pending / push failed | YES (display only — availability & dispatch untouched) | NO | Type check clean; NOT VERIFIED on phone | NO |
+| Notification fallback when popup denied | Already present (SOURCE: `MyFirebaseService.java` posts the booking notification **before** the overlay check, then reports `overlay_blocked` and tries `BookingAlertActivity`) — no change needed | NO | NOT VERIFIED on phone | NO |
+| popup_shown only on real display | Already present (SOURCE: `bookingAlertCoordinator.ts` sends it only on render; native sends from the overlay/activity once shown) — unchanged | NO | NOT VERIFIED on phone | NO |
+
+Test run: `bunx vitest run` → 102/102 passed. TypeScript check clean. Android compile: NOT RUN (toolchain absent).
+Unchanged: Accept/Reject, offer deadlines, ACK rules, dispatch, availability, payouts.
+
+### Delivery behaviour — all NOT VERIFIED until real-phone tests
+- App in foreground, background, and **locked screen**: no popup delivery is promised. Locked screen: expect the notification only. Android 10+ may block the fallback `BookingAlertActivity` from the background; the notification remains the guaranteed path.
+- Tapping the notification must open the same, still-valid offer — the existing intent carries booking id / request id / token; verify on device (incl. expired offer → no Accept).
+- If the native build lacks the new channel method, the app shows "Booking alert sound not checked yet" instead of claiming alerts work.
+
+### Play Console / overlay note
+Project notes said "No SYSTEM_ALERT_WINDOW", but the manifest declares it and the approved design (option 2) keeps popups optional. The note was resolved in favour of the approved design. A missing rejection notice is **not** proof the old note was wrong. Whether Play requires a declaration for `SYSTEM_ALERT_WINDOW`: **NOT VERIFIED** against current official Play guidance in this pass — check the Play Console "Permissions and APIs that access sensitive information" policy before release. `USE_FULL_SCREEN_INTENT` stays removed.
+
+---
+
+Original audit (findings below were written before the fixes above):
 
 ## A. Current flow (plain language)
 1. **Phone + OTP** (`src/pages/Auth.tsx`, `src/pages/OtpVerify.tsx`): Firebase phone OTP. Unknown number → Sign Up (name, area, services, UPI). No admin-approval gate in the client (SOURCE); blocked workers see `WorkerBlocked`.
