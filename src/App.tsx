@@ -225,6 +225,7 @@ function AppInner() {
       try { clearAccountSetupState(window.localStorage, lastUserIdRef.current); } catch { /* ignore */ }
       androidPermissionFlowRef.current = { running: false, runtimeRequested: false, completed: false };
       activityAskedRef.current = null;
+      overlayDeclinedRef.current = false;
     }
     lastUserIdRef.current = uid;
   }, [session?.user?.id]);

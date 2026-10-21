@@ -13,11 +13,16 @@ import {
   requestOverlay,
   requestNotificationPermission,
   openNotificationSettings,
+  checkBookingChannel,
+  openBookingChannelSettings,
 } from "@/lib/permissions";
+import type { ChannelHealth } from "@/lib/setupGate";
 import { notificationAction } from "@/lib/setupGate";
 
 interface PermissionOnboardingProps {
   onComplete: () => void;
+  /** Popups are optional: worker keeps booking notifications without the popup. */
+  onContinueWithoutPopups?: () => void;
 }
 
 type StepId = "notifications" | "overlay";
@@ -42,15 +47,18 @@ const STEP_META: Record<
 
 export default function PermissionOnboarding({
   onComplete,
+  onContinueWithoutPopups,
 }: PermissionOnboardingProps) {
   useWorkerLanguage();
   const [states, setStates] = useState<PermissionState[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<StepId | null>(null);
+  const [channel, setChannel] = useState<ChannelHealth>("unknown");
 
   const refresh = useCallback(async () => {
-    const next = await checkAllPermissions();
+    const [next, ch] = await Promise.all([checkAllPermissions(), checkBookingChannel()]);
     setStates(next);
+    setChannel(ch);
     setLoading(false);
   }, []);
 
@@ -81,7 +89,9 @@ export default function PermissionOnboarding({
 
   const isGranted = (id: StepId) => {
     const status = getStatus(id);
-    return status === "granted" || status === "not_required";
+    const ok = status === "granted" || status === "not_required";
+    if (id === "notifications") return ok && channel !== "blocked" && channel !== "app_disabled";
+    return ok;
   };
 
   const grantedCount = STEP_IDS.filter(isGranted).length;
@@ -97,7 +107,9 @@ export default function PermissionOnboarding({
       try {
         if (id === "notifications") {
           // Android won't show the prompt again once blocked — go to Settings instead.
-          if (notificationAction(getStatus("notifications")) === "open_settings") {
+          if (channel === "blocked" && getStatus("notifications") === "granted") {
+            await openBookingChannelSettings();
+          } else if (notificationAction(getStatus("notifications")) === "open_settings") {
             await openNotificationSettings();
           } else {
             await requestNotificationPermission();
@@ -112,7 +124,7 @@ export default function PermissionOnboarding({
         setTimeout(refresh, 800);
       }
     },
-    [refresh, busyId, states]
+    [refresh, busyId, states, channel]
   );
 
   const progressPct = (grantedCount / STEP_IDS.length) * 100;
@@ -187,8 +199,9 @@ export default function PermissionOnboarding({
               id={id}
               granted={isGranted(id)}
               busy={busyId === id}
-              blocked={id === "notifications" && getStatus(id) === "denied"}
+              blocked={id === "notifications" && (getStatus(id) === "denied" || channel === "blocked")}
               onEnable={() => handleEnable(id)}
+              onSkip={id === "overlay" && isGranted("notifications") ? onContinueWithoutPopups : undefined}
             />
           ))
         )}
@@ -204,6 +217,7 @@ function StepCard({
   busy,
   blocked,
   onEnable,
+  onSkip,
 }: {
   index: number;
   id: StepId;
@@ -211,6 +225,7 @@ function StepCard({
   busy: boolean;
   blocked: boolean;
   onEnable: () => void;
+  onSkip?: () => void;
 }) {
   useWorkerLanguage();
   const meta = STEP_META[id];
@@ -279,6 +294,11 @@ function StepCard({
               displayText(blocked ? "Open Settings" : "Enable")
             )}
           </Button>
+          {onSkip && (
+            <Button variant="outline" className="w-full h-12 mt-3 text-base font-semibold" onClick={onSkip} disabled={busy}>
+              {displayText("Continue with notifications")}
+            </Button>
+          )}
         </div>
       )}
     </Card>
