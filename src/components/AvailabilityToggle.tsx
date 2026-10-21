@@ -169,7 +169,7 @@ export function AvailabilityToggle({
     try {
       // Secure path: call the authenticated Edge Function
       const { data, error } = await supabase.functions.invoke("update-availability", {
-        body: { is_available: newValue },
+        body: buildAvailabilityRequest(newValue, "toggle_tap"),
       });
       
       if (error) throw error;

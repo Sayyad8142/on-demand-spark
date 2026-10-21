@@ -103,10 +103,11 @@ export function useWorkerProfile(userId: string | undefined) {
     }
   }, [queryClient, userId]);
 
+  // Only for a deliberate worker tap — never call from lifecycle/health code.
   const updateAvailability = useCallback(async (isAvailable: boolean) => {
     if (!userId) return;
     const { data, error } = await supabase.functions.invoke("update-availability", {
-      body: { is_available: isAvailable },
+      body: buildAvailabilityRequest(isAvailable, "toggle_tap"),
     });
     if (error) throw error;
     if (!data.ok) throw new Error(data.error || 'Failed to update availability');
