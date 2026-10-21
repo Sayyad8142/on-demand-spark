@@ -953,6 +953,25 @@
     "Booking_alerts_not_registered_yet": "బుకింగ్ అలర్ట్‌లు ఇంకా రిజిస్టర్ కాలేదు",
     "Booking_alerts_need_to_be_refreshed": "బుకింగ్ అలర్ట్‌లను రిఫ్రెష్ చేయాలి",
     "Fix_in_Settings": "సెట్టింగ్‌లలో సరిచేయండి",
-    "Booking_alert_sound_not_checked_yet": "బుకింగ్ అలర్ట్ శబ్దం ఇంకా తనిఖీ కాలేదు"
+    "Booking_alert_sound_not_checked_yet": "బుకింగ్ అలర్ట్ శబ్దం ఇంకా తనిఖీ కాలేదు",
+    "Checks_look_good_Keep_the_app_installed_and_notifications_on": "అంతా బాగుంది. యాప్ ఉంచండి, నోటిఫికేషన్లు ఆన్‌లో ఉంచండి.",
+    "Booking_alerts": "బుకింగ్ అలర్ట్‌లు",
+    "Connection": "కనెక్షన్",
+    "Notification_permission": "నోటిఫికేషన్ అనుమతి",
+    "Booking_eligibility": "బుకింగ్ అర్హత",
+    "ON": "ఆన్",
+    "Ready": "సిద్ధం",
+    "Unknown": "తెలియదు",
+    "Connected": "కనెక్ట్ అయింది",
+    "Last_connected_a_while_ago": "కొంతసేపటి క్రితం కనెక్ట్ అయింది",
+    "Enabled": "ఆన్",
+    "Disabled": "ఆఫ్",
+    "Eligible": "అర్హత ఉంది",
+    "Not_eligible": "అర్హత లేదు",
+    "Your_app_needs_to_be_updated": "మీ యాప్‌ను అప్‌డేట్ చేయాలి.",
+    "Your_internet_connection_is_unavailable": "ఇంటర్నెట్ కనెక్షన్ లేదు.",
+    "Please_enable_notifications_to_receive_booking_alerts": "బుకింగ్ అలర్ట్‌ల కోసం నోటిఫికేషన్లు ఆన్ చేయండి.",
+    "Booking_alerts_need_to_be_registered_Open_the_app_with_internet_access": "బుకింగ్ అలర్ట్‌లు నమోదు కావాలి. ఇంటర్నెట్‌తో యాప్ తెరవండి.",
+    "You_are_OFF_Turn_ON_to_get_bookings": "మీరు ఆఫ్‌లో ఉన్నారు. బుకింగ్‌ల కోసం ఆన్ చేయండి."
   }
 }
