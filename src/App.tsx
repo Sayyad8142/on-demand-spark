@@ -24,6 +24,7 @@ import {
   checkBatteryState,
   checkNotificationPermission,
   checkOverlayState,
+  checkBookingChannel,
   checkActivityState,
   requestActivity,
   requestBatteryExemption,
