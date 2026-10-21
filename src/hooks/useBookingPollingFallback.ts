@@ -21,6 +21,7 @@ import { App as CapApp } from "@capacitor/app";
 import { supabase } from "@/integrations/supabase/client";
 import { processIncomingBooking } from "@/services/bookingAlertCoordinator";
 import { canShowWorkerBookingOffer, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
+import { isFreshOffer, OFFERS_RESYNC_EVENT } from "@/lib/offerFreshness";
 
 const POLL_FOREGROUND_MS = 10_000;
 const POLL_BACKGROUND_MS = 30_000;
@@ -30,6 +31,7 @@ interface PendingItem {
   booking_id: string;
   status: string;
   timeout_at: string;
+  recovered?: boolean;
   booking: {
     id: string;
     service_type: string | null;
@@ -74,6 +76,11 @@ export function useBookingPollingFallback(workerId: string | undefined | null, i
 
         console.log(`[Polling] Found ${items.length} pending booking(s) via fallback`);
         for (const item of items) {
+          // Never show expired or server-recovered (timed-out) offers as new.
+          if (!isFreshOffer(item)) {
+            console.log("[Polling] Skipping expired/recovered offer", item.booking_id);
+            continue;
+          }
           const offerLogInput = { ...item.booking, request_status: item.status };
           if (!canShowWorkerBookingOffer(offerLogInput)) {
             logScheduledOfferDecision(offerLogInput, "poll", false);
@@ -126,6 +133,11 @@ export function useBookingPollingFallback(workerId: string | undefined | null, i
     };
     document.addEventListener("visibilitychange", onVis);
 
+    // 2b. Reconnect backfill: realtime reconnect or network back online.
+    const onResync = () => pollOnce();
+    window.addEventListener(OFFERS_RESYNC_EVENT, onResync);
+    window.addEventListener("online", onResync);
+
     // 3. Native: Capacitor appStateChange
     let nativeSub: { remove: () => void } | null = null;
     if (Capacitor.isNativePlatform()) {
@@ -142,6 +154,8 @@ export function useBookingPollingFallback(workerId: string | undefined | null, i
         intervalRef.current = null;
       }
       document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener(OFFERS_RESYNC_EVENT, onResync);
+      window.removeEventListener("online", onResync);
       nativeSub?.remove();
     };
   }, [workerId, isOnline]);

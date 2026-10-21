@@ -1,3 +1,4 @@
+import { createReconnectDetector, requestOffersResync } from "@/lib/offerFreshness";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { processIncomingBooking, invalidateOffer, isOwnAcceptance } from "@/services/bookingAlertCoordinator";
@@ -18,6 +19,7 @@ export function useBookingRequestsRealtime(
 
     console.log("📡 [BookingRequests] Setting up realtime for worker:", workerId);
 
+    const isReconnect = createReconnectDetector();
     const channel = supabase
       .channel(`booking-requests:${workerId}`)
       .on(
@@ -109,6 +111,7 @@ export function useBookingRequestsRealtime(
       )
       .subscribe((status) => {
         console.log("📡 [BookingRequests] Subscription:", status);
+        if (isReconnect(status)) requestOffersResync("realtime_reconnect");
       });
 
     return () => {
