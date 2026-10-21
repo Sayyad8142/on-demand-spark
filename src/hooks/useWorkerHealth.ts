@@ -17,6 +17,7 @@ import type { PushHealthState } from "./usePushHealthGuard";
 import { App as CapApp } from "@capacitor/app";
 import { checkBookingChannel } from "@/lib/permissions";
 import type { ChannelHealth } from "@/lib/setupGate";
+import { statusSummary, type StatusSummary } from "@/lib/workerReachability";
 
 // @ts-ignore
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -35,6 +36,7 @@ export interface WorkerHealthState {
   reasons: WorkerHealthReason[];
   online: boolean;
   loading: boolean;
+  summary?: StatusSummary;
 }
 
 interface DeviceExtras {
@@ -63,6 +65,11 @@ export function useWorkerHealth(
     notificationHealth?: string | null;
     fcmTokenStatus?: string | null;
     outdated?: boolean;
+    isAvailable?: boolean | null;
+    isBusy?: boolean | null;
+    isBlocked?: boolean | null;
+    payoutReady?: boolean | null;
+    lastHeartbeatAt?: string | null;
   }>({});
 
   // Network listeners
@@ -121,7 +128,7 @@ export function useWorkerHealth(
       try {
         const { data } = await supabase
           .from("workers")
-          .select("notification_health, fcm_token_status")
+          .select("notification_health, fcm_token_status, is_available, is_busy, is_blocked, payout_ready, last_heartbeat_at")
           .eq("id", workerId)
           .maybeSingle();
         if (cancelled) return;
@@ -129,6 +136,11 @@ export function useWorkerHealth(
           ...prev,
           notificationHealth: (data as any)?.notification_health ?? null,
           fcmTokenStatus: (data as any)?.fcm_token_status ?? null,
+          isAvailable: (data as any)?.is_available ?? null,
+          isBusy: (data as any)?.is_busy ?? null,
+          isBlocked: (data as any)?.is_blocked ?? null,
+          payoutReady: (data as any)?.payout_ready ?? null,
+          lastHeartbeatAt: (data as any)?.last_heartbeat_at ?? null,
         }));
       } catch {
         /* ignore */
@@ -232,6 +244,18 @@ export function useWorkerHealth(
       reasons: reasons.slice(0, 3),
       online,
       loading: pushHealth.isChecking && reasons.length === 0,
+      summary: statusSummary({
+        isAvailable: workerFlags.isAvailable ?? null,
+        isBusy: workerFlags.isBusy,
+        isBlocked: workerFlags.isBlocked,
+        payoutReady: workerFlags.payoutReady ?? null,
+        online,
+        native: Capacitor.isNativePlatform(),
+        permissionGranted: pushHealth.isChecking ? null : pushHealth.permissionGranted,
+        channelOk: channel === "unknown" ? null : !(channel === "blocked" || channel === "app_disabled"),
+        tokenRegistered: pushHealth.isChecking ? null : (pushHealth.tokenExists && pushHealth.tokenSyncedToBackend && pushHealth.tokenHealthy),
+        lastHeartbeatAt: workerFlags.lastHeartbeatAt ?? null,
+      }),
     });
   }, [
     online,
@@ -242,7 +266,7 @@ export function useWorkerHealth(
     pushHealth.isChecking,
     deviceExtras.batteryOptimized,
     deviceExtras.overlayGranted,
-    workerFlags.notificationHealth,
+    workerFlags,
     channel,
   ]);
 

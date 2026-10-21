@@ -76,9 +76,10 @@ export function WorkerHealthBadge({ health, onRepair }: Props) {
             </ul>
           ) : (
             <p className="text-xs text-muted-foreground mt-0.5">
-              {displayText("Notifications, network and booking alerts are all working.")}
+              {displayText("Checks look good. Keep the app installed and notifications on.")}
             </p>
           )}
+          {health.summary && <StatusRows summary={health.summary} />}
           {status !== "ready" && (
             <p className="mt-2 text-xs font-medium text-foreground/80">
               {displayText("Tap to")} {status === "blocked" ? displayText("fix now") : displayText("view details")} →
@@ -87,5 +88,28 @@ export function WorkerHealthBadge({ health, onRepair }: Props) {
         </div>
       </div>
     </Card>
+  );
+}
+
+function StatusRows({ summary }: { summary: NonNullable<WorkerHealthState["summary"]> }) {
+  const rows: [string, string][] = [
+    ["Availability", summary.availability === "on" ? "ON" : summary.availability === "off" ? "OFF" : "Checking"],
+    ["Booking alerts", summary.alerts === "ready" ? "Ready" : summary.alerts === "attention" ? "Needs attention" : "Unknown"],
+    ["Connection", summary.connection === "connected" ? "Connected" : summary.connection === "stale" ? "Last connected a while ago" : "Unknown"],
+    ["Notification permission", summary.notificationPermission === "enabled" ? "Enabled" : summary.notificationPermission === "disabled" ? "Disabled" : "Unknown"],
+    ["Booking eligibility", summary.eligibility === "eligible" ? "Eligible" : summary.eligibility === "not_eligible" ? "Not eligible" : "Checking"],
+  ];
+  return (
+    <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-0.5 text-xs">
+      {rows.map(([k, v]) => (
+        <div key={k} className="contents">
+          <dt className="text-muted-foreground">{displayText(k)}</dt>
+          <dd className="font-medium text-foreground text-right">{displayText(v)}</dd>
+        </div>
+      ))}
+      {summary.messages.filter((m) => m !== "Booking alerts are blocked in phone settings").map((m) => (
+        <p key={m} className="col-span-2 text-foreground/80 mt-1">{displayText(m)}</p>
+      ))}
+    </dl>
   );
 }
