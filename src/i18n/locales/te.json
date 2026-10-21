@@ -952,6 +952,7 @@
     "Booking_popups_are_off_you_will_get_notifications_only": "బుకింగ్ పాపప్‌లు ఆఫ్ — మీకు నోటిఫికేషన్‌లు మాత్రమే వస్తాయి",
     "Booking_alerts_not_registered_yet": "బుకింగ్ అలర్ట్‌లు ఇంకా రిజిస్టర్ కాలేదు",
     "Booking_alerts_need_to_be_refreshed": "బుకింగ్ అలర్ట్‌లను రిఫ్రెష్ చేయాలి",
-    "Fix_in_Settings": "సెట్టింగ్‌లలో సరిచేయండి"
+    "Fix_in_Settings": "సెట్టింగ్‌లలో సరిచేయండి",
+    "Booking_alert_sound_not_checked_yet": "బుకింగ్ అలర్ట్ శబ్దం ఇంకా తనిఖీ కాలేదు"
   }
 }

@@ -951,6 +951,7 @@
     "Booking_popups_are_off_you_will_get_notifications_only": "Booking popups are off — you will get notifications only",
     "Booking_alerts_not_registered_yet": "Booking alerts not registered yet",
     "Booking_alerts_need_to_be_refreshed": "Booking alerts need to be refreshed",
-    "Fix_in_Settings": "Fix in Settings"
+    "Fix_in_Settings": "Fix in Settings",
+    "Booking_alert_sound_not_checked_yet": "Booking alert sound not checked yet"
   }
 }

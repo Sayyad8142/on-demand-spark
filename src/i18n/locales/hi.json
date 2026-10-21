@@ -951,6 +951,7 @@
     "Booking_popups_are_off_you_will_get_notifications_only": "बुकिंग पॉपअप बंद हैं — आपको सिर्फ़ नोटिफ़िकेशन मिलेंगे",
     "Booking_alerts_not_registered_yet": "बुकिंग अलर्ट अभी रजिस्टर नहीं हुए",
     "Booking_alerts_need_to_be_refreshed": "बुकिंग अलर्ट रीफ़्रेश करने होंगे",
-    "Fix_in_Settings": "सेटिंग में ठीक करें"
+    "Fix_in_Settings": "सेटिंग में ठीक करें",
+    "Booking_alert_sound_not_checked_yet": "बुकिंग अलर्ट की आवाज़ अभी जाँची नहीं गई"
   }
 }

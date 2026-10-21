@@ -167,6 +167,9 @@ export function useWorkerHealth(
     } else if (channel === "blocked") {
       reasons.push({ code: "channel_blocked", label: "Booking alerts are blocked in phone settings", severity: "blocker" });
       score -= 40;
+    } else if (Capacitor.isNativePlatform() && channel === "unknown") {
+      reasons.push({ code: "channel_unchecked", label: "Booking alert sound not checked yet", severity: "warn" });
+      score -= 5;
     } else if (channel === "silent") {
       reasons.push({ code: "channel_silent", label: "Booking alerts are silent — turn on sound", severity: "warn" });
       score -= 15;
