@@ -66,8 +66,34 @@ object BackendSync {
                 setRequestProperty("Authorization", "Bearer $ANON_KEY")
             }
             conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-            val code = conn.responseCode
+            var code = conn.responseCode
             conn.disconnect()
+            // Legacy receiver compatibility: the production build answers 400
+            // to every current event name and only accepts "received"/"opened"
+            // with booking_id + worker_id. Retry ONCE with the legacy name.
+            val legacyEvent = LEGACY_ACK_EVENT[event]
+            if (code == 400 && legacyEvent != null && !bookingId.isNullOrBlank() && !workerId.isNullOrBlank()) {
+                val legacyBody = JSONObject().apply {
+                    put("booking_id", bookingId)
+                    put("worker_id", workerId)
+                    put("event_type", legacyEvent)
+                    put("app_version", appVersion(ctx))
+                }
+                val lc = (URL(url).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    connectTimeout = 8_000
+                    readTimeout = 8_000
+                    doOutput = true
+                    setRequestProperty("Content-Type", "application/json")
+                    setRequestProperty("apikey", ANON_KEY)
+                    setRequestProperty("Authorization", "Bearer $ANON_KEY")
+                }
+                lc.outputStream.use { it.write(legacyBody.toString().toByteArray(Charsets.UTF_8)) }
+                val legacyCode = lc.responseCode
+                lc.disconnect()
+                WorkerLog.add(ctx, "ACK", "$event legacy=$legacyEvent → http=$legacyCode")
+                code = legacyCode
+            }
             val result = classifyAckHttp(code, !ackToken.isNullOrBlank())
             val ok = result == AckResult.OK
             WorkerLog.add(
@@ -189,6 +215,13 @@ object BackendSync {
      */
     enum class AckResult { OK, RETRY, REJECTED }
 
+    /** Mirrors LEGACY_ACK_EVENT in src/lib/bookingAck.ts. */
+    val LEGACY_ACK_EVENT: Map<String, String> = mapOf(
+        "push_received" to "received",
+        "popup_shown" to "opened",
+        "worker_seen" to "opened",
+    )
+
     /** Pure classification — mirrored by src/lib/__tests__/ackToken.test.ts. */
     fun classifyAckHttp(code: Int, hasToken: Boolean): AckResult = when {
         code in 200..299 -> AckResult.OK
@@ -237,8 +270,34 @@ object BackendSync {
                 setRequestProperty("Authorization", "Bearer $ANON_KEY")
             }
             conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-            val code = conn.responseCode
+            var code = conn.responseCode
             conn.disconnect()
+            // Legacy receiver compatibility: the production build answers 400
+            // to every current event name and only accepts "received"/"opened"
+            // with booking_id + worker_id. Retry ONCE with the legacy name.
+            val legacyEvent = LEGACY_ACK_EVENT[event]
+            if (code == 400 && legacyEvent != null && !bookingId.isNullOrBlank() && !workerId.isNullOrBlank()) {
+                val legacyBody = JSONObject().apply {
+                    put("booking_id", bookingId)
+                    put("worker_id", workerId)
+                    put("event_type", legacyEvent)
+                    put("app_version", appVersion(ctx))
+                }
+                val lc = (URL(url).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    connectTimeout = 8_000
+                    readTimeout = 8_000
+                    doOutput = true
+                    setRequestProperty("Content-Type", "application/json")
+                    setRequestProperty("apikey", ANON_KEY)
+                    setRequestProperty("Authorization", "Bearer $ANON_KEY")
+                }
+                lc.outputStream.use { it.write(legacyBody.toString().toByteArray(Charsets.UTF_8)) }
+                val legacyCode = lc.responseCode
+                lc.disconnect()
+                WorkerLog.add(ctx, "ACK", "$event legacy=$legacyEvent → http=$legacyCode")
+                code = legacyCode
+            }
             val result = classifyAckHttp(code, !ackToken.isNullOrBlank())
             val ok = result == AckResult.OK
             WorkerLog.add(
@@ -313,8 +372,34 @@ object BackendSync {
                 setRequestProperty("Authorization", "Bearer $ANON_KEY")
             }
             conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-            val code = conn.responseCode
+            var code = conn.responseCode
             conn.disconnect()
+            // Legacy receiver compatibility: the production build answers 400
+            // to every current event name and only accepts "received"/"opened"
+            // with booking_id + worker_id. Retry ONCE with the legacy name.
+            val legacyEvent = LEGACY_ACK_EVENT[event]
+            if (code == 400 && legacyEvent != null && !bookingId.isNullOrBlank() && !workerId.isNullOrBlank()) {
+                val legacyBody = JSONObject().apply {
+                    put("booking_id", bookingId)
+                    put("worker_id", workerId)
+                    put("event_type", legacyEvent)
+                    put("app_version", appVersion(ctx))
+                }
+                val lc = (URL(url).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    connectTimeout = 8_000
+                    readTimeout = 8_000
+                    doOutput = true
+                    setRequestProperty("Content-Type", "application/json")
+                    setRequestProperty("apikey", ANON_KEY)
+                    setRequestProperty("Authorization", "Bearer $ANON_KEY")
+                }
+                lc.outputStream.use { it.write(legacyBody.toString().toByteArray(Charsets.UTF_8)) }
+                val legacyCode = lc.responseCode
+                lc.disconnect()
+                WorkerLog.add(ctx, "ACK", "$event legacy=$legacyEvent → http=$legacyCode")
+                code = legacyCode
+            }
             val result = classifyAckHttp(code, !ackToken.isNullOrBlank())
             val ok = result == AckResult.OK
             WorkerLog.add(ctx, "MISSED", "$reason booking=$bookingId → http=$code")
@@ -527,8 +612,34 @@ object BackendSync {
                 setRequestProperty("Authorization", "Bearer $ANON_KEY")
             }
             conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-            val code = conn.responseCode
+            var code = conn.responseCode
             conn.disconnect()
+            // Legacy receiver compatibility: the production build answers 400
+            // to every current event name and only accepts "received"/"opened"
+            // with booking_id + worker_id. Retry ONCE with the legacy name.
+            val legacyEvent = LEGACY_ACK_EVENT[event]
+            if (code == 400 && legacyEvent != null && !bookingId.isNullOrBlank() && !workerId.isNullOrBlank()) {
+                val legacyBody = JSONObject().apply {
+                    put("booking_id", bookingId)
+                    put("worker_id", workerId)
+                    put("event_type", legacyEvent)
+                    put("app_version", appVersion(ctx))
+                }
+                val lc = (URL(url).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    connectTimeout = 8_000
+                    readTimeout = 8_000
+                    doOutput = true
+                    setRequestProperty("Content-Type", "application/json")
+                    setRequestProperty("apikey", ANON_KEY)
+                    setRequestProperty("Authorization", "Bearer $ANON_KEY")
+                }
+                lc.outputStream.use { it.write(legacyBody.toString().toByteArray(Charsets.UTF_8)) }
+                val legacyCode = lc.responseCode
+                lc.disconnect()
+                WorkerLog.add(ctx, "ACK", "$event legacy=$legacyEvent → http=$legacyCode")
+                code = legacyCode
+            }
             val result = classifyAckHttp(code, !ackToken.isNullOrBlank())
             val ok = result == AckResult.OK
             WorkerLog.add(ctx, "HEARTBEAT", "state=$appState token=${fcmToken != null} → http=$code")

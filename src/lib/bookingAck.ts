@@ -181,6 +181,43 @@ export function buildAckBody(args: {
   };
 }
 
+/**
+ * Legacy receiver compatibility. The ack-booking-delivery build live in
+ * production (probed 2026-10-21) only accepts event_type "received" |
+ * "opened" and requires booking_id + worker_id; every current event name is
+ * answered with 400, so no device confirmation has been recorded since
+ * 2026-10-14. Only the three delivery events have a legacy meaning;
+ * interaction events (accept/reject taps, expiry) have none and are never
+ * re-sent. The newer receiver maps these aliases too.
+ */
+export const LEGACY_ACK_EVENT: Partial<Record<string, "received" | "opened">> = {
+  push_received: "received",
+  popup_shown: "opened",
+  worker_seen: "opened",
+};
+
+export function buildLegacyAckBody(args: {
+  bookingId?: string;
+  workerId?: string | null;
+  event: string;
+  appVersion?: string;
+}): Record<string, unknown> | null {
+  const legacy = LEGACY_ACK_EVENT[args.event];
+  if (!legacy || !args.bookingId || !args.workerId) return null;
+  return {
+    booking_id: args.bookingId,
+    worker_id: args.workerId,
+    event_type: legacy,
+    app_version: args.appVersion ?? CURRENT_VERSION_NAME,
+  };
+}
+
+/** HTTP status from a supabase-js FunctionsHttpError, if present. */
+export function ackErrorStatus(error: unknown): number | null {
+  const s = (error as any)?.context?.status;
+  return typeof s === "number" ? s : null;
+}
+
 async function getWorkerId(): Promise<string | null> {
   if (cachedWorkerId) return cachedWorkerId;
 
@@ -257,6 +294,18 @@ export async function ackBookingDelivery({ bookingId, bookingRequestId, event, a
     const { data, error } = await supabase.functions.invoke("ack-booking-delivery", { body });
 
     if (error) {
+      // Legacy receiver: a 400 on a delivery event is retried ONCE with the
+      // legacy event name. A 2xx there counts; anything else is not success.
+      const legacyBody = ackErrorStatus(error) === 400
+        ? buildLegacyAckBody({ bookingId, workerId, event })
+        : null;
+      if (legacyBody) {
+        const legacy = await supabase.functions.invoke("ack-booking-delivery", { body: legacyBody });
+        if (!legacy.error) {
+          console.log(`[ACK] ${event} ok (legacy receiver)`);
+          return;
+        }
+      }
       // 400/401/403 (bad event, invalid/expired/mismatched token, wrong
       // worker) are NOT successful acknowledgments — log the outcome, keep
       // the token out of the message, and allow a later lifecycle event to

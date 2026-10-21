@@ -1,3 +1,4 @@
+import { buildAvailabilityRequest } from "@/lib/availabilityRequest";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
@@ -169,7 +170,7 @@ export function AvailabilityToggle({
     try {
       // Secure path: call the authenticated Edge Function
       const { data, error } = await supabase.functions.invoke("update-availability", {
-        body: { is_available: newValue },
+        body: buildAvailabilityRequest(newValue, "toggle_tap"),
       });
       
       if (error) throw error;
