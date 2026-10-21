@@ -48,3 +48,16 @@ Real-phone checklist (PENDING): fresh install → deny notifications twice → c
 
 ## F. Admin Panel / backend dependencies
 None required for fixes 1–5. Optional: show workers' `notification_health` / token status in Admin Panel to spot "permission on but alerts not delivered".
+
+## G. Fixes applied (2026-10-21, not deployed)
+Files: `src/lib/setupGate.ts` (new), `src/lib/__tests__/setupGate.test.ts` (new, 9 tests), `src/components/BatteryReminderCard.tsx` (new), `src/App.tsx`, `src/components/PermissionOnboarding.tsx`, `src/pages/BatteryOnboarding.tsx`, `src/pages/Home.tsx`, `src/lib/permissions.ts`, `src/i18n/locales/{en,hi,te}.json`.
+Checks: vitest 94/94, type check clean. Android compile NOT RUN. Real-phone tests NOT RUN.
+
+## H. Popup (overlay) permission — evidence, decision PENDING
+- Instruction: project memory "Android Policy Compliance v2" + Core rule "No SYSTEM_ALERT_WINDOW, location, or full-screen intents".
+- Reality: `AndroidManifest.xml` line 7 declares SYSTEM_ALERT_WINDOW; also FOREGROUND_SERVICE(_HEALTH), which the memory also says were removed. Code depending on it: `BookingOverlayService.kt`, `OverlayPlugin.java`, `OverlayPermissionHelper.kt`, `src/lib/permissions.ts` (requestOverlay/checkOverlayState), setup gate in `App.tsx`, `useWorkerHealth.ts`.
+- Classification: **stale/contradicted instruction**, not a verified Play rejection (no Play policy notice found in the workspace). Only USE_FULL_SCREEN_INTENT is actually removed.
+- Options:
+  1. Keep overlay required (current): foreground + background + lock screen show the big popup; needs Play Console declaration for overlay.
+  2. Keep overlay optional (remove from setup gate): popup when granted, otherwise high-priority notification; locked screen = heads-up/tray only.
+  3. Remove overlay entirely: foreground in-app alert, background/locked = notification only; smallest Play risk, slower worker response.
