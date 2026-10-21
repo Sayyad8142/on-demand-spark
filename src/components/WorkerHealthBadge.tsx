@@ -70,7 +70,7 @@ export function WorkerHealthBadge({ health, onRepair }: Props) {
             <ul className="mt-1 space-y-0.5">
               {reasons.map((r) => (
                 <li key={r.code} className="text-xs text-muted-foreground leading-snug">
-                  • {r.label}
+                  • {displayText(r.label)}
                 </li>
               ))}
             </ul>

@@ -62,3 +62,43 @@ describe("repeated taps", () => {
     expect(calls).toBe(1);
   });
 });
+
+import { isSetupBlockingV2, classifyChannel, alertIssues, alertsVerified } from "../setupGate";
+
+describe("optional popups (option 2)", () => {
+  it("missing popup permission does not trap the worker after Continue with notifications", () => {
+    expect(isSetupBlockingV2({ notifications: "granted", overlay: "denied", channel: "ok", overlayDeclined: true })).toBe(false);
+  });
+  it("popup step is still shown once until the worker chooses", () => {
+    expect(isSetupBlockingV2({ notifications: "granted", overlay: "missing", channel: "ok" })).toBe(true);
+  });
+  it("notifications off still blocks even if popups declined", () => {
+    expect(isSetupBlockingV2({ notifications: "denied", overlay: "granted", channel: "ok", overlayDeclined: true })).toBe(true);
+  });
+  it("blocked booking channel blocks setup", () => {
+    expect(isSetupBlockingV2({ notifications: "granted", overlay: "granted", channel: "blocked" })).toBe(true);
+  });
+});
+
+describe("booking channel", () => {
+  it("classifies blocked, silent and app-disabled separately", () => {
+    expect(classifyChannel({ appEnabled: false })).toBe("app_disabled");
+    expect(classifyChannel({ appEnabled: true, supported: true, blocked: true })).toBe("blocked");
+    expect(classifyChannel({ appEnabled: true, supported: true, silent: true })).toBe("silent");
+    expect(classifyChannel({ appEnabled: true, supported: true })).toBe("ok");
+    expect(classifyChannel(null)).toBe("unknown");
+  });
+  it("permission + token alone never count as verified", () => {
+    const issues = alertIssues({ notifications: "granted", channel: "unknown", overlay: "granted", push: "ok" });
+    expect(alertsVerified(issues, "unknown")).toBe(false);
+  });
+  it("lists each issue separately", () => {
+    expect(alertIssues({ notifications: "granted", channel: "silent", overlay: "denied", push: "pending" }))
+      .toEqual(["channel_silent", "push_pending", "popups_off"]);
+    expect(alertIssues({ notifications: "denied", channel: "ok", overlay: "granted", push: "failed" }))
+      .toEqual(["notifications_disabled", "push_failed"]);
+  });
+  it("popups off alone still allows verified alerts", () => {
+    expect(alertsVerified(["popups_off"], "ok")).toBe(true);
+  });
+});

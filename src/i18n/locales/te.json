@@ -944,6 +944,15 @@
     "Battery_saver_is_on": "బ్యాటరీ సేవర్ ఆన్‌లో ఉంది",
     "In_Settings_choose_Allow_or_Don_t_optimise_then_come_back": "సెట్టింగ్స్‌లో 'అనుమతించు' లేదా 'ఆప్టిమైజ్ చేయవద్దు' ఎంచుకుని, తిరిగి రండి.",
     "Movement_access_helps_confirm_you_reached_the_flat_You_can_still_do_the_job_if_you_say_no": "మీరు ఫ్లాట్‌కు చేరుకున్నారని నిర్ధారించడానికి కదలిక అనుమతి సహాయపడుతుంది. వద్దన్నా మీరు పని చేయవచ్చు.",
-    "Booking_alerts_are_off": "బుకింగ్ అలర్ట్‌లు ఆఫ్‌లో ఉన్నాయి"
+    "Booking_alerts_are_off": "బుకింగ్ అలర్ట్‌లు ఆఫ్‌లో ఉన్నాయి",
+    "Continue_with_notifications": "నోటిఫికేషన్‌లతో కొనసాగండి",
+    "Notifications_are_turned_off_you_won_t_hear_booking_alerts": "నోటిఫికేషన్‌లు ఆఫ్‌లో ఉన్నాయి — బుకింగ్ అలర్ట్‌లు వినిపించవు",
+    "Booking_alerts_are_blocked_in_phone_settings": "ఫోన్ సెట్టింగ్‌లలో బుకింగ్ అలర్ట్‌లు బ్లాక్ అయ్యాయి",
+    "Booking_alerts_are_silent_turn_on_sound": "బుకింగ్ అలర్ట్‌లకు శబ్దం లేదు — శబ్దం ఆన్ చేయండి",
+    "Booking_popups_are_off_you_will_get_notifications_only": "బుకింగ్ పాపప్‌లు ఆఫ్ — మీకు నోటిఫికేషన్‌లు మాత్రమే వస్తాయి",
+    "Booking_alerts_not_registered_yet": "బుకింగ్ అలర్ట్‌లు ఇంకా రిజిస్టర్ కాలేదు",
+    "Booking_alerts_need_to_be_refreshed": "బుకింగ్ అలర్ట్‌లను రిఫ్రెష్ చేయాలి",
+    "Fix_in_Settings": "సెట్టింగ్‌లలో సరిచేయండి",
+    "Booking_alert_sound_not_checked_yet": "బుకింగ్ అలర్ట్ శబ్దం ఇంకా తనిఖీ కాలేదు"
   }
 }
