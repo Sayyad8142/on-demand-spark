@@ -14,6 +14,9 @@ import { useEffect, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
 import type { PushHealthState } from "./usePushHealthGuard";
+import { App as CapApp } from "@capacitor/app";
+import { checkBookingChannel } from "@/lib/permissions";
+import type { ChannelHealth } from "@/lib/setupGate";
 
 // @ts-ignore
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -98,6 +101,18 @@ export function useWorkerHealth(
     };
   }, []);
 
+  // Booking channel: real OS state, re-checked on resume (display only).
+  const [channel, setChannel] = useState<ChannelHealth>("unknown");
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) { setChannel("not_required"); return; }
+    let cancelled = false;
+    const load = () => checkBookingChannel().then((c) => { if (!cancelled) setChannel(c); });
+    load();
+    const t = setInterval(load, 60_000);
+    const sub = CapApp.addListener("appStateChange", (st) => { if (st.isActive) load(); });
+    return () => { cancelled = true; clearInterval(t); sub.then((x) => x.remove()); };
+  }, []);
+
   // Worker row poll — refresh notification_health / fcm_token_status
   useEffect(() => {
     if (!workerId) return;
@@ -146,16 +161,27 @@ export function useWorkerHealth(
       score -= 40;
     }
 
+    if (channel === "app_disabled" && pushHealth.permissionGranted) {
+      reasons.push({ code: "notifications_denied", label: "Notifications are turned off — you won't hear booking alerts", severity: "blocker" });
+      score -= 40;
+    } else if (channel === "blocked") {
+      reasons.push({ code: "channel_blocked", label: "Booking alerts are blocked in phone settings", severity: "blocker" });
+      score -= 40;
+    } else if (channel === "silent") {
+      reasons.push({ code: "channel_silent", label: "Booking alerts are silent — turn on sound", severity: "warn" });
+      score -= 15;
+    }
+
     if (Capacitor.isNativePlatform() && (!pushHealth.tokenExists || !pushHealth.tokenSyncedToBackend)) {
       reasons.push({
-        code: "no_fcm_token",
+        code: pushHealth.tokenExists ? "push_pending" : "no_fcm_token",
         label: "Booking alerts not registered yet",
         severity: "blocker",
       });
       score -= 40;
     } else if (Capacitor.isNativePlatform() && !pushHealth.tokenHealthy) {
       reasons.push({
-        code: "fcm_token_invalid",
+        code: "push_failed",
         label: "Booking alerts need to be refreshed",
         severity: "blocker",
       });
@@ -183,7 +209,7 @@ export function useWorkerHealth(
     if (deviceExtras.overlayGranted === false) {
       reasons.push({
         code: "overlay_off",
-        label: "Full-screen booking popup is disabled",
+        label: "Booking popups are off — you will get notifications only",
         severity: "warn",
       });
       score -= 10;
@@ -214,6 +240,7 @@ export function useWorkerHealth(
     deviceExtras.batteryOptimized,
     deviceExtras.overlayGranted,
     workerFlags.notificationHealth,
+    channel,
   ]);
 
   return state;
