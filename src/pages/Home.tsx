@@ -21,6 +21,7 @@ import { AvailabilityToggle } from "@/components/AvailabilityToggle";
 import { UpcomingBookingsBar } from "@/components/UpcomingBookingsBar";
 // Notification health banners removed — token repair is fully automatic via useAutoPushRepair.
 import { OnboardingChecklist, useOnboardingStatus } from "@/components/OnboardingChecklist";
+import { BatteryReminderCard } from "@/components/BatteryReminderCard";
 import { NotificationsOffDialog } from "@/components/NotificationsOffDialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -327,6 +328,8 @@ export default function Home() {
           </div>
         </Card>
       )}
+
+      {!isGuestMode && worker && <BatteryReminderCard />}
 
       {/* Onboarding Checklist */}
       {!isGuestMode && worker && (

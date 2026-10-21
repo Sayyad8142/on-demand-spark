@@ -1,62 +1,54 @@
-import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
-import { BatteryCharging } from "lucide-react";
+import { useState } from "react";
+import { displayText, useWorkerLanguage } from "@/i18n/display";
+import { BatteryCharging, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface BatteryOnboardingProps {
-  onFixNow: () => void;
+  onFixNow: () => void | Promise<void>;
   onSkip?: () => void;
 }
 
-export default function BatteryOnboarding({ onFixNow }: BatteryOnboardingProps) {
+export default function BatteryOnboarding({ onFixNow, onSkip }: BatteryOnboardingProps) {
   useWorkerLanguage();
+  const [busy, setBusy] = useState(false);
+
+  const handleFix = async () => {
+    if (busy) return; // ignore repeated taps
+    setBusy(true);
+    try { await onFixNow(); } finally { setBusy(false); }
+  };
+
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-10">
-      {/* Battery icon — fully charged, green */}
-      <div
-        className="flex items-center justify-center mb-10"
-        style={{
-          width: 150,
-          height: 150,
-          borderRadius: 40,
-          backgroundColor: "#e8f9ee",
-        }}
-      >
-        <BatteryCharging
-          style={{ width: 96, height: 96, color: "#16a34a" }}
-          strokeWidth={2}
-        />
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-10">
+      <div className="flex items-center justify-center mb-10 w-[150px] h-[150px] rounded-[40px] bg-green-50">
+        <BatteryCharging className="w-24 h-24 text-green-600" strokeWidth={2} />
       </div>
 
-      {/* Trilingual titles */}
-      <h1
-        className="text-center font-bold tracking-tight"
-        style={{ fontSize: "1.875rem", color: "#0f172a", lineHeight: 1.2 }}
-      >
+      <h1 className="text-center font-bold tracking-tight text-3xl text-foreground leading-tight">
         {displayText("Give Battery Permission")}
       </h1>
-      <h2
-        className="mt-3 text-center font-semibold"
-        style={{ fontSize: "1.375rem", color: "#0f172a", lineHeight: 1.25 }}
-      >
-        बैटरी अनुमति दें
-      </h2>
-      <h2
-        className="mt-2 text-center font-semibold"
-        style={{ fontSize: "1.375rem", color: "#0f172a", lineHeight: 1.25 }}
-      >
-        బ్యాటరీ అనుమతి ఇవ్వండి
-      </h2>
+      <p className="mt-3 text-center text-lg text-muted-foreground max-w-sm">
+        {displayText("Battery saver can delay booking alerts.")}
+      </p>
+      <p className="mt-2 text-center text-base text-muted-foreground max-w-sm">
+        {displayText("In Settings choose Allow or Don't optimise, then come back.")}
+      </p>
 
-      {/* Button in the middle — right under the titles, always reachable */}
-      <div className="w-full max-w-sm mt-10">
+      <div className="w-full max-w-sm mt-10 space-y-3">
         <Button
           size="lg"
-          className="w-full h-14 text-base font-semibold rounded-xl shadow-none hover:opacity-90"
-          style={{ backgroundColor: "#ff007a", color: "#ffffff" }}
-          onClick={onFixNow}
+          className="w-full h-14 text-base font-semibold rounded-xl shadow-none hover:opacity-90 text-white"
+          style={{ backgroundColor: "#ff007a" }}
+          onClick={handleFix}
+          disabled={busy}
         >
-          {displayText("Give Permission")}
+          {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : displayText("Give Permission")}
         </Button>
+        {onSkip && (
+          <Button variant="ghost" size="lg" className="w-full h-12 text-base" onClick={onSkip}>
+            {displayText("Later")}
+          </Button>
+        )}
       </div>
     </div>
   );
