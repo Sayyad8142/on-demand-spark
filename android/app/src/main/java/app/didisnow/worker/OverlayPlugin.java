@@ -305,4 +305,70 @@ public class OverlayPlugin extends Plugin {
             call.reject("Could not open overlay settings on this device");
         }
     }
+
+    /**
+     * Real state of the "booking_alerts" channel (read-only, never changes it).
+     * appEnabled=false → whole app blocked; blocked → channel importance NONE;
+     * silent → importance below HIGH or no sound. missing → channel not created yet.
+     */
+    @PluginMethod
+    public void getBookingChannelStatus(PluginCall call) {
+        JSObject res = new JSObject();
+        try {
+            Context ctx = getContext();
+            android.app.NotificationManager nm =
+                (android.app.NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+            boolean appEnabled = androidx.core.app.NotificationManagerCompat.from(ctx).areNotificationsEnabled();
+            res.put("appEnabled", appEnabled);
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || nm == null) {
+                res.put("supported", false);
+                call.resolve(res);
+                return;
+            }
+            res.put("supported", true);
+            android.app.NotificationChannel ch = nm.getNotificationChannel("booking_alerts");
+            if (ch == null) {
+                res.put("missing", true);
+                call.resolve(res);
+                return;
+            }
+            int imp = ch.getImportance();
+            res.put("missing", false);
+            res.put("importance", imp);
+            res.put("blocked", imp == android.app.NotificationManager.IMPORTANCE_NONE);
+            res.put("soundOn", ch.getSound() != null);
+            res.put("silent", imp < android.app.NotificationManager.IMPORTANCE_HIGH || ch.getSound() == null);
+            call.resolve(res);
+        } catch (Exception e) {
+            call.reject("Channel status error: " + e.getMessage());
+        }
+    }
+
+    /** Opens the booking channel's own Settings page (falls back to app notification settings). */
+    @PluginMethod
+    public void openBookingChannelSettings(PluginCall call) {
+        Context ctx = getContext();
+        try {
+            Intent i;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                i = new Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS);
+                i.putExtra(Settings.EXTRA_APP_PACKAGE, ctx.getPackageName());
+                i.putExtra(Settings.EXTRA_CHANNEL_ID, "booking_alerts");
+            } else {
+                i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + ctx.getPackageName()));
+            }
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            ctx.startActivity(i);
+            call.resolve(new JSObject().put("opened", true));
+        } catch (Exception e) {
+            try {
+                Intent f = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + ctx.getPackageName()));
+                f.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                ctx.startActivity(f);
+                call.resolve(new JSObject().put("opened", true).put("fallback", true));
+            } catch (Exception e2) {
+                call.reject("Could not open channel settings");
+            }
+        }
+    }
 }
