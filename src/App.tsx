@@ -31,7 +31,6 @@ import {
 } from "@/lib/permissions";
 // requestLocationPermissions intentionally not imported — see startup effect note below.
 import { isSetupBlocking, shouldShowBatteryPrompt, snoozeBattery, clearAccountSetupState, shouldRequestActivity } from "@/lib/setupGate";
-import { displayText } from "@/i18n/display";
 import { toast as sonnerToast } from "sonner";
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
 import { startCancellationVoice, stopCancellationVoice } from "@/lib/cancellationVoice";
