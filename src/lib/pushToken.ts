@@ -148,12 +148,9 @@ export async function syncTokenToBackend(token: string, userId: string, reason: 
         fcm_token_updated_at: now,
         last_fcm_token_refresh_at: now,
         fcm_token_platform: Capacitor.isNativePlatform() ? 'android' : 'web',
-        availability_state: 'ONLINE_HEALTHY',
-        notification_health: 'good',
-        no_ack_count: 0,
-        notification_repair_failures: 0,
-        fcm_last_fail_at: null,
-        fcm_last_fail_reason: null,
+        // A token sync does NOT prove delivery: never claim availability_state,
+        // notification_health, no_ack_count or fail history here. Only real
+        // device ACKs / server health checks may change those.
         last_app_opened_at: now,
         app_version: CURRENT_VERSION_NAME,
         updated_at: now,
