@@ -952,6 +952,26 @@
     "Booking_alerts_not_registered_yet": "बुकिंग अलर्ट अभी रजिस्टर नहीं हुए",
     "Booking_alerts_need_to_be_refreshed": "बुकिंग अलर्ट रीफ़्रेश करने होंगे",
     "Fix_in_Settings": "सेटिंग में ठीक करें",
-    "Booking_alert_sound_not_checked_yet": "बुकिंग अलर्ट की आवाज़ अभी जाँची नहीं गई"
+    "Booking_alert_sound_not_checked_yet": "बुकिंग अलर्ट की आवाज़ अभी जाँची नहीं गई",
+    "Checks_look_good_Keep_the_app_installed_and_notifications_on": "ठीक दिख रहा है। ऐप इंस्टॉल रखें और नोटिफ़िकेशन चालू रखें।",
+    "Availability": "उपलब्धता",
+    "Booking_alerts": "बुकिंग अलर्ट",
+    "Connection": "कनेक्शन",
+    "Notification_permission": "नोटिफ़िकेशन अनुमति",
+    "Booking_eligibility": "बुकिंग पात्रता",
+    "ON": "चालू",
+    "Ready": "तैयार",
+    "Unknown": "पता नहीं",
+    "Connected": "जुड़ा है",
+    "Last_connected_a_while_ago": "कुछ समय पहले जुड़ा था",
+    "Enabled": "चालू",
+    "Disabled": "बंद",
+    "Eligible": "योग्य",
+    "Not_eligible": "योग्य नहीं",
+    "Your_app_needs_to_be_updated": "आपका ऐप अपडेट करना ज़रूरी है।",
+    "Your_internet_connection_is_unavailable": "इंटरनेट कनेक्शन नहीं है।",
+    "Please_enable_notifications_to_receive_booking_alerts": "बुकिंग अलर्ट पाने के लिए नोटिफ़िकेशन चालू करें।",
+    "Booking_alerts_need_to_be_registered_Open_the_app_with_internet_access": "बुकिंग अलर्ट रजिस्टर होने बाकी हैं। इंटरनेट के साथ ऐप खोलें।",
+    "You_are_OFF_Turn_ON_to_get_bookings": "आप बंद हैं। बुकिंग के लिए चालू करें।"
   }
 }

@@ -952,6 +952,26 @@
     "Booking_alerts_not_registered_yet": "Booking alerts not registered yet",
     "Booking_alerts_need_to_be_refreshed": "Booking alerts need to be refreshed",
     "Fix_in_Settings": "Fix in Settings",
-    "Booking_alert_sound_not_checked_yet": "Booking alert sound not checked yet"
+    "Booking_alert_sound_not_checked_yet": "Booking alert sound not checked yet",
+    "Checks_look_good_Keep_the_app_installed_and_notifications_on": "Checks look good. Keep the app installed and notifications on.",
+    "Availability": "Availability",
+    "Booking_alerts": "Booking alerts",
+    "Connection": "Connection",
+    "Notification_permission": "Notification permission",
+    "Booking_eligibility": "Booking eligibility",
+    "ON": "ON",
+    "Ready": "Ready",
+    "Unknown": "Unknown",
+    "Connected": "Connected",
+    "Last_connected_a_while_ago": "Last connected a while ago",
+    "Enabled": "Enabled",
+    "Disabled": "Disabled",
+    "Eligible": "Eligible",
+    "Not_eligible": "Not eligible",
+    "Your_app_needs_to_be_updated": "Your app needs to be updated.",
+    "Your_internet_connection_is_unavailable": "Your internet connection is unavailable.",
+    "Please_enable_notifications_to_receive_booking_alerts": "Please enable notifications to receive booking alerts.",
+    "Booking_alerts_need_to_be_registered_Open_the_app_with_internet_access": "Booking alerts need to be registered. Open the app with internet access.",
+    "You_are_OFF_Turn_ON_to_get_bookings": "You are OFF. Turn ON to get bookings."
   }
 }

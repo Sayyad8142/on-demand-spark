@@ -9912,6 +9912,15 @@ export type Database = {
         Args: { p_worker_id: string }
         Returns: undefined
       }
+      record_offer_ack: {
+        Args: {
+          p_event: string
+          p_now?: string
+          p_request_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
       redispatch_booking: { Args: { p_booking_id: string }; Returns: undefined }
       refresh_community_hourly_availability: { Args: never; Returns: undefined }
       register_worker: {
