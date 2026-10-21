@@ -935,6 +935,14 @@
     "Very_Good": "Very Good",
     "Good": "Good",
     "Low_Priority": "Low Priority",
-    "Priority_Level": "Priority Level:"
+    "Priority_Level": "Priority Level:",
+    "Enable": "Enable",
+    "Later": "Later",
+    "Notifications_are_blocked_Tap_Open_Settings_turn_on_Notifications_then_come_back": "Notifications are blocked. Tap Open Settings, turn on Notifications, then come back.",
+    "Battery_saver_can_delay_booking_alerts": "Battery saver can delay booking alerts.",
+    "Battery_saver_is_on": "Battery saver is on",
+    "In_Settings_choose_Allow_or_Don_t_optimise_then_come_back": "In Settings choose Allow or Don't optimise, then come back.",
+    "Movement_access_helps_confirm_you_reached_the_flat_You_can_still_do_the_job_if_you_say_no": "Movement access helps confirm you reached the flat. You can still do the job if you say no.",
+    "Booking_alerts_are_off": "Booking alerts are off"
   }
 }

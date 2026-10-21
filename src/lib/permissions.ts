@@ -122,7 +122,7 @@ function getBatteryPlugin(): BatteryPlugin | null {
   return batteryPlugin;
 }
 
-async function tryOpenAppSettingsFallback(reason: "overlay" | "battery" | "activity"): Promise<boolean> {
+async function tryOpenAppSettingsFallback(reason: "overlay" | "battery" | "activity" | "notifications"): Promise<boolean> {
   try {
     const appPlugin = CapApp as unknown as { openSettings?: () => Promise<void> };
     if (typeof appPlugin.openSettings !== "function") {
@@ -190,6 +190,11 @@ export async function requestNotificationPermission(): Promise<boolean> {
     } catch { return false; }
   }
   return false;
+}
+
+/** Opens this app's Android settings page so a worker can turn notifications back on. */
+export async function openNotificationSettings(): Promise<boolean> {
+  return tryOpenAppSettingsFallback("notifications");
 }
 
 // ---------- Overlay (Android only) ----------
@@ -402,19 +407,10 @@ export async function requestActivity(): Promise<boolean> {
     return true;
   }
 
+  // Denied: movement features simply stay off. Never jump to Settings automatically.
   console.log("[ACTIVITY_PERMISSION_DENIED]");
-  reportPermissionDebug({ permissionId: "activity", step: "requestPermission", status: "fallback", fallbackPath: "Capacitor App.openSettings", message: "[ACTIVITY_PERMISSION_DENIED] Permission was not granted from the prompt; trying to open app settings" });
-
-  console.log("[ACTIVITY_PERMISSION_SETTINGS_FALLBACK] attempting App.openSettings");
-  const opened = await tryOpenAppSettingsFallback("activity");
-  if (opened) {
-    reportPermissionDebug({ permissionId: "activity", step: "App.openSettings", status: "success", message: "[ACTIVITY_PERMISSION_SETTINGS_FALLBACK] App settings opened" });
-    return false;
-  }
-
-  console.warn("[ACTIVITY_PERMISSION_ERROR] settings could not be opened — showing manual instructions dialog");
-  reportPermissionDebug({ permissionId: "activity", step: "App.openSettings", status: "failed", error: "[ACTIVITY_PERMISSION_ERROR] App settings could not be opened — showing manual instructions" });
-  throw new ActivityPermissionManualFallbackError();
+  reportPermissionDebug({ permissionId: "activity", step: "requestPermission", status: "failed", message: "[ACTIVITY_PERMISSION_DENIED] Movement features unavailable" });
+  return false;
 }
 
 // ---------- Aggregate ----------

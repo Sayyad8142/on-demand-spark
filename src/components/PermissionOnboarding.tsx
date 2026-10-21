@@ -12,7 +12,9 @@ import {
   checkAllPermissions,
   requestOverlay,
   requestNotificationPermission,
+  openNotificationSettings,
 } from "@/lib/permissions";
+import { notificationAction } from "@/lib/setupGate";
 
 interface PermissionOnboardingProps {
   onComplete: () => void;
@@ -90,10 +92,16 @@ export default function PermissionOnboarding({
       if (id === "overlay" && !Capacitor.isNativePlatform()) {
         return;
       }
+      if (busyId) return; // ignore repeated taps
       setBusyId(id);
       try {
         if (id === "notifications") {
-          await requestNotificationPermission();
+          // Android won't show the prompt again once blocked — go to Settings instead.
+          if (notificationAction(getStatus("notifications")) === "open_settings") {
+            await openNotificationSettings();
+          } else {
+            await requestNotificationPermission();
+          }
         } else {
           await requestOverlay();
         }
@@ -104,7 +112,7 @@ export default function PermissionOnboarding({
         setTimeout(refresh, 800);
       }
     },
-    [refresh]
+    [refresh, busyId, states]
   );
 
   const progressPct = (grantedCount / STEP_IDS.length) * 100;
@@ -179,6 +187,7 @@ export default function PermissionOnboarding({
               id={id}
               granted={isGranted(id)}
               busy={busyId === id}
+              blocked={id === "notifications" && getStatus(id) === "denied"}
               onEnable={() => handleEnable(id)}
             />
           ))
@@ -193,12 +202,14 @@ function StepCard({
   id,
   granted,
   busy,
+  blocked,
   onEnable,
 }: {
   index: number;
   id: StepId;
   granted: boolean;
   busy: boolean;
+  blocked: boolean;
   onEnable: () => void;
 }) {
   useWorkerLanguage();
@@ -251,6 +262,11 @@ function StepCard({
 
       {!granted && (
         <div className="mt-5">
+          {blocked && (
+            <p className="text-base mb-3 text-muted-foreground">
+              {displayText("Notifications are blocked. Tap Open Settings, turn on Notifications, then come back.")}
+            </p>
+          )}
           <Button
             className="w-full h-14 text-lg font-bold text-white hover:opacity-90"
             style={{ backgroundColor: "#ff007a" }}
@@ -260,7 +276,7 @@ function StepCard({
             {busy ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
-              "Enable"
+              displayText(blocked ? "Open Settings" : "Enable")
             )}
           </Button>
         </div>

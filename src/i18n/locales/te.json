@@ -936,6 +936,14 @@
     "Very_Good": "చాలా బాగుంది",
     "Good": "బాగుంది",
     "Low_Priority": "తక్కువ ప్రాధాన్యత",
-    "Priority_Level": "ప్రాధాన్యత స్థాయి:"
+    "Priority_Level": "ప్రాధాన్యత స్థాయి:",
+    "Enable": "ఆన్ చేయండి",
+    "Later": "తర్వాత",
+    "Notifications_are_blocked_Tap_Open_Settings_turn_on_Notifications_then_come_back": "నోటిఫికేషన్లు బ్లాక్ అయ్యాయి. సెట్టింగ్స్ తెరవండి నొక్కి, నోటిఫికేషన్లు ఆన్ చేసి, తిరిగి యాప్‌కి రండి.",
+    "Battery_saver_can_delay_booking_alerts": "బ్యాటరీ సేవర్ బుకింగ్ అలర్ట్‌లను ఆలస్యం చేయవచ్చు.",
+    "Battery_saver_is_on": "బ్యాటరీ సేవర్ ఆన్‌లో ఉంది",
+    "In_Settings_choose_Allow_or_Don_t_optimise_then_come_back": "సెట్టింగ్స్‌లో 'అనుమతించు' లేదా 'ఆప్టిమైజ్ చేయవద్దు' ఎంచుకుని, తిరిగి రండి.",
+    "Movement_access_helps_confirm_you_reached_the_flat_You_can_still_do_the_job_if_you_say_no": "మీరు ఫ్లాట్‌కు చేరుకున్నారని నిర్ధారించడానికి కదలిక అనుమతి సహాయపడుతుంది. వద్దన్నా మీరు పని చేయవచ్చు.",
+    "Booking_alerts_are_off": "బుకింగ్ అలర్ట్‌లు ఆఫ్‌లో ఉన్నాయి"
   }
 }

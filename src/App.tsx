@@ -24,11 +24,14 @@ import {
   checkBatteryState,
   checkNotificationPermission,
   checkOverlayState,
+  checkActivityState,
   requestActivity,
   requestBatteryExemption,
   requestNotificationPermission,
 } from "@/lib/permissions";
 // requestLocationPermissions intentionally not imported — see startup effect note below.
+import { isSetupBlocking, shouldShowBatteryPrompt, snoozeBattery, clearAccountSetupState, shouldRequestActivity } from "@/lib/setupGate";
+import { toast as sonnerToast } from "sonner";
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
 import { startCancellationVoice, stopCancellationVoice } from "@/lib/cancellationVoice";
 import { startOtpReminderVoice, stopOtpReminderVoice } from "@/lib/otpReminderVoice";
@@ -211,6 +214,19 @@ function AppInner() {
 
 
 
+  // Account switch: reset per-session launch flow and clear the previous account's setup state.
+  const lastUserIdRef = useRef<string | null>(null);
+  const activityAskedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const uid = session?.user?.id ?? null;
+    if (lastUserIdRef.current && lastUserIdRef.current !== uid) {
+      try { clearAccountSetupState(window.localStorage, lastUserIdRef.current); } catch { /* ignore */ }
+      androidPermissionFlowRef.current = { running: false, runtimeRequested: false, completed: false };
+      activityAskedRef.current = null;
+    }
+    lastUserIdRef.current = uid;
+  }, [session?.user?.id]);
+
   const checkAndroidSettingsPermissions = useCallback(async ({ allowHide }: { allowHide: boolean }) => {
     const userId = session?.user?.id;
     if (!userId || !Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
@@ -221,14 +237,14 @@ function AppInner() {
 
     setPermissionCheckLoading(true);
     try {
-      const [overlay, battery] = await Promise.all([checkOverlayState(), checkBatteryState()]);
-      const overlayMissing = overlay.status !== "granted" && overlay.status !== "not_required";
+      const [notif, overlay, battery] = await Promise.all([checkNotificationPermission(), checkOverlayState(), checkBatteryState()]);
       const batteryMissing = battery.status !== "granted" && battery.status !== "not_required";
-      setShowBatteryWarning(batteryMissing);
+      setShowBatteryWarning(shouldShowBatteryPrompt({ missing: batteryMissing, userId, store: window.localStorage }));
 
-      console.log(`[Permissions] onboarding check overlay=${overlay.status} battery=${battery.status}`);
+      console.log(`[Permissions] onboarding check notifications=${notif.status} overlay=${overlay.status} battery=${battery.status}`);
 
-      if (overlayMissing) {
+      // Real status every time (entering app, returning from Settings): alerts AND popups must be on.
+      if (isSetupBlocking({ notifications: notif.status, overlay: overlay.status })) {
         setShowPermissionOnboarding(true);
       } else if (allowHide) {
         setShowPermissionOnboarding(false);
@@ -276,18 +292,9 @@ function AppInner() {
         console.log("[Permissions] Android app-launch flow started");
         if (!flow.runtimeRequested) {
           console.log("[Permissions] notification permission requested");
-          const notificationEnabled = await requestNotificationPermission();
-          if (!notificationEnabled && !notificationWarningShownRef.current) {
-            notificationWarningShownRef.current = true;
-            const state = await checkNotificationPermission();
-            if (state.status === "denied" || state.status === "missing") {
-              window.setTimeout(() => {
-                alert("Booking alerts are disabled. Please enable notifications to receive jobs.");
-              }, 500);
-            }
-          }
-          console.log("[Permissions] activity permission requested/skipped");
-          await requestActivity();
+          // Only prompts when Android can still show it; blocked state is handled on the setup screen.
+          await requestNotificationPermission();
+          // Physical activity is requested later, only when a booking needs movement tracking.
           flow.runtimeRequested = true;
         }
 
@@ -377,7 +384,23 @@ function AppInner() {
       return;
     }
     console.log("[Movement] booking accepted");
-    startMovementMonitoring(trackedJob!.id, worker.id).catch((error) => {
+    const workerId = worker.id;
+    const jobId = trackedJob!.id;
+    // Runs after acceptance already succeeded — never blocks Accept. Denial = movement features off.
+    void (async () => {
+      try {
+        const uid = session?.user?.id ?? workerId;
+        const activity = await checkActivityState();
+        if (shouldRequestActivity(activity.status, activityAskedRef.current === uid)) {
+          activityAskedRef.current = uid;
+          sonnerToast(displayText("Movement access helps confirm you reached the flat. You can still do the job if you say no."));
+          await requestActivity();
+        }
+      } catch (e) {
+        console.warn("[Movement] activity permission check failed", e);
+      }
+      await startMovementMonitoring(jobId, workerId);
+    })().catch((error) => {
       console.error("[Movement] active-job start failed", error);
     });
   }, [worker?.id, trackedJob?.id, trackedJob?.status]);
@@ -622,11 +645,14 @@ function AppInner() {
       {showBatteryWarning && session?.user?.id && (
         <div className="fixed inset-0 z-[90]">
           <BatteryOnboarding
-            onFixNow={() => {
-              requestBatteryExemption();
+            onFixNow={async () => {
+              // Opening Settings is not success: the real setting is re-checked when the worker returns.
+              await requestBatteryExemption();
+            }}
+            onSkip={() => {
+              try { snoozeBattery(window.localStorage, session.user.id); } catch { /* ignore */ }
               setShowBatteryWarning(false);
             }}
-            onSkip={() => setShowBatteryWarning(false)}
           />
         </div>
       )}
