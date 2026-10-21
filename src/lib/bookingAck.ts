@@ -294,6 +294,18 @@ export async function ackBookingDelivery({ bookingId, bookingRequestId, event, a
     const { data, error } = await supabase.functions.invoke("ack-booking-delivery", { body });
 
     if (error) {
+      // Legacy receiver: a 400 on a delivery event is retried ONCE with the
+      // legacy event name. A 2xx there counts; anything else is not success.
+      const legacyBody = ackErrorStatus(error) === 400
+        ? buildLegacyAckBody({ bookingId, workerId, event })
+        : null;
+      if (legacyBody) {
+        const legacy = await supabase.functions.invoke("ack-booking-delivery", { body: legacyBody });
+        if (!legacy.error) {
+          console.log(`[ACK] ${event} ok (legacy receiver)`);
+          return;
+        }
+      }
       // 400/401/403 (bad event, invalid/expired/mismatched token, wrong
       // worker) are NOT successful acknowledgments — log the outcome, keep
       // the token out of the message, and allow a later lifecycle event to
