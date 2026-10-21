@@ -58,3 +58,68 @@ export function singleFlight<T>(fn: () => Promise<T>): () => Promise<T | undefin
     try { return await fn(); } finally { running = false; }
   };
 }
+
+// ---------- Optional popups (approved option 2) ----------
+/**
+ * Setup blocks only on what booking notifications need. Popups (overlay) are optional:
+ * the worker may tap "Continue with notifications". `overlayDeclined` is memory-only for
+ * this app session — it is never treated as "granted" and never persisted.
+ */
+export function isSetupBlockingV2(s: {
+  notifications?: SetupPermissionStatus;
+  overlay?: SetupPermissionStatus;
+  channel?: ChannelHealth;
+  overlayDeclined?: boolean;
+}): boolean {
+  if (!isSatisfied(s.notifications)) return true;
+  if (s.channel === "blocked") return true;
+  if (!isSatisfied(s.overlay) && !s.overlayDeclined) return true;
+  return false;
+}
+
+// ---------- Booking channel ----------
+export type ChannelHealth = "ok" | "blocked" | "silent" | "missing" | "app_disabled" | "unknown" | "not_required";
+
+export interface RawChannelStatus {
+  appEnabled?: boolean; supported?: boolean; missing?: boolean; blocked?: boolean; silent?: boolean;
+}
+
+export function classifyChannel(raw: RawChannelStatus | null | undefined): ChannelHealth {
+  if (!raw) return "unknown";
+  if (raw.appEnabled === false) return "app_disabled";
+  if (raw.supported === false) return "not_required";
+  if (raw.missing) return "missing";
+  if (raw.blocked) return "blocked";
+  if (raw.silent) return "silent";
+  return "ok";
+}
+
+// ---------- Alert readiness (display only; never changes availability/dispatch) ----------
+export type AlertIssue =
+  | "notifications_disabled"
+  | "channel_blocked"
+  | "channel_silent"
+  | "popups_off"
+  | "push_pending"
+  | "push_failed";
+
+export function alertIssues(s: {
+  notifications?: SetupPermissionStatus;
+  channel?: ChannelHealth;
+  overlay?: SetupPermissionStatus;
+  push?: "ok" | "pending" | "failed";
+}): AlertIssue[] {
+  const out: AlertIssue[] = [];
+  if (!isSatisfied(s.notifications) || s.channel === "app_disabled") out.push("notifications_disabled");
+  else if (s.channel === "blocked") out.push("channel_blocked");
+  else if (s.channel === "silent") out.push("channel_silent");
+  if (s.push === "failed") out.push("push_failed");
+  else if (s.push === "pending") out.push("push_pending");
+  if (!isSatisfied(s.overlay)) out.push("popups_off");
+  return out;
+}
+
+/** "Fully working" can never be claimed from permission or a stored token alone. */
+export function alertsVerified(issues: AlertIssue[], channel: ChannelHealth | undefined): boolean {
+  return issues.filter((i) => i !== "popups_off").length === 0 && (channel === "ok" || channel === "not_required");
+}
