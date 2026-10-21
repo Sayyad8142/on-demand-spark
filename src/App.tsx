@@ -30,7 +30,7 @@ import {
   requestNotificationPermission,
 } from "@/lib/permissions";
 // requestLocationPermissions intentionally not imported — see startup effect note below.
-import { isSetupBlocking, shouldShowBatteryPrompt, snoozeBattery, clearAccountSetupState, shouldRequestActivity } from "@/lib/setupGate";
+import { isSetupBlockingV2, shouldShowBatteryPrompt, snoozeBattery, clearAccountSetupState, shouldRequestActivity } from "@/lib/setupGate";
 import { toast as sonnerToast } from "sonner";
 import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
 import { startCancellationVoice, stopCancellationVoice } from "@/lib/cancellationVoice";
@@ -199,6 +199,7 @@ function AppInner() {
   usePermissionRegressionWatch(session?.user?.id, worker?.id, !!worker?.is_available);
   const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
   const [showPermissionOnboarding, setShowPermissionOnboarding] = useState(false);
+  const overlayDeclinedRef = useRef(false);
   const [showBatteryWarning, setShowBatteryWarning] = useState(false);
   const [permissionCheckLoading, setPermissionCheckLoading] = useState(false);
   const [cancellationAlert, setCancellationAlert] = useState<{ bookingId?: string } | null>(null);
@@ -237,14 +238,15 @@ function AppInner() {
 
     setPermissionCheckLoading(true);
     try {
-      const [notif, overlay, battery] = await Promise.all([checkNotificationPermission(), checkOverlayState(), checkBatteryState()]);
+      const [notif, overlay, battery, channel] = await Promise.all([checkNotificationPermission(), checkOverlayState(), checkBatteryState(), checkBookingChannel()]);
       const batteryMissing = battery.status !== "granted" && battery.status !== "not_required";
       setShowBatteryWarning(shouldShowBatteryPrompt({ missing: batteryMissing, userId, store: window.localStorage }));
 
       console.log(`[Permissions] onboarding check notifications=${notif.status} overlay=${overlay.status} battery=${battery.status}`);
 
-      // Real status every time (entering app, returning from Settings): alerts AND popups must be on.
-      if (isSetupBlocking({ notifications: notif.status, overlay: overlay.status })) {
+      // Real status every time. Alerts + booking channel required; popups optional once the
+      // worker taps "Continue with notifications" (memory-only for this session).
+      if (isSetupBlockingV2({ notifications: notif.status, overlay: overlay.status, channel, overlayDeclined: overlayDeclinedRef.current })) {
         setShowPermissionOnboarding(true);
       } else if (allowHide) {
         setShowPermissionOnboarding(false);
@@ -628,7 +630,10 @@ function AppInner() {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <PermissionOnboarding onComplete={() => checkAndroidSettingsPermissions({ allowHide: true })} />
+        <PermissionOnboarding
+          onComplete={() => checkAndroidSettingsPermissions({ allowHide: true })}
+          onContinueWithoutPopups={() => { overlayDeclinedRef.current = true; checkAndroidSettingsPermissions({ allowHide: true }); }}
+        />
       </TooltipProvider>
     );
   }

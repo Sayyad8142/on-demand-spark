@@ -427,3 +427,35 @@ export async function checkAllPermissions(): Promise<PermissionState[]> {
 export function hasOutstandingPermissions(states: PermissionState[]): boolean {
   return states.some(s => s.status === "missing" || s.status === "denied" || s.status === "unknown");
 }
+
+// ---------- Booking notification channel (Android) ----------
+import { classifyChannel, type ChannelHealth } from "@/lib/setupGate";
+
+interface ChannelPlugin {
+  getBookingChannelStatus(): Promise<Record<string, unknown>>;
+  openBookingChannelSettings(): Promise<{ opened: boolean }>;
+}
+let channelPlugin: ChannelPlugin | null = null;
+function getChannelPlugin(): ChannelPlugin | null {
+  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return null;
+  if (!channelPlugin) {
+    try { channelPlugin = registerPlugin<ChannelPlugin>("OverlayPlugin"); } catch { return null; }
+  }
+  return channelPlugin;
+}
+
+/** Reads the real booking_alerts channel state. "unknown" if the native build lacks the method. */
+export async function checkBookingChannel(): Promise<ChannelHealth> {
+  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return "not_required";
+  const p = getChannelPlugin();
+  if (!p) return "unknown";
+  try { return classifyChannel(await p.getBookingChannelStatus() as any); }
+  catch { return "unknown"; }
+}
+
+export async function openBookingChannelSettings(): Promise<boolean> {
+  const p = getChannelPlugin();
+  if (!p) return openNotificationSettings();
+  try { return !!(await p.openBookingChannelSettings())?.opened; }
+  catch { return openNotificationSettings(); }
+}
