@@ -24,7 +24,7 @@ Checks: `bunx vitest run` 108/108 passed; TypeScript clean. Android compile: NOT
 
 - `worker-health-watchdog` (cron every 2 min) sets `is_available=false` when `last_seen_at` older than `HEARTBEAT_STALE_MIN = 5` minutes.
 - App heartbeats: 45 s only while the Home screen is open and the app is in the foreground (`useEnhancedHeartbeat`); otherwise 30 min (`useWorkerHeartbeat`) plus FCM keepalive every 30 min. Android suspends JS timers in background.
-- Result: any worker who locks the phone or switches apps is paused within ~5–7 min — exactly when she relies on push. Live: see query below.
+- Result: any worker who locks the phone or switches apps is paused within ~5–7 min — exactly when she relies on push. Live: no workers currently carry an auto-pause stamp from the last 7 days (the watchdog clears it on resume), so it flaps silently; earlier audit saw 2 paused for heartbeat_stale.
 - Recommended fix (Admin Panel, needs approval): raise stale threshold above the background interval (e.g. 45–60 min), or judge health by token/ACK failures instead of heartbeat age; never auto-pause on heartbeat age alone. App-side shorter background heartbeats are not reliable on Android and drain battery.
 
 ## 4. Admin Panel ACK receiver — deployment readiness: NOT READY
