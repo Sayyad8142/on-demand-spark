@@ -270,6 +270,45 @@ interface AckArgs {
   ackToken?: string | null;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Authenticated-session fallback (build 102+)
+// The live receiver accepts EITHER a signed ack_token OR a verified worker
+// login (Supabase session JWT in `Authorization: Bearer`, which supabase-js
+// attaches automatically). The receiver must derive the worker from that
+// login; worker_id is deliberately NOT sent on the fallback request.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Only delivery confirmations may use the fallback; taps are never re-sent. */
+export const SESSION_FALLBACK_EVENTS: ReadonlySet<string> = new Set(["push_received", "popup_shown", "worker_seen"]);
+
+/** Pure: should a refused token ACK be retried once with the worker login? */
+export function sessionFallbackAllowed(args: { event: string; status: number | null; sentToken: boolean }): boolean {
+  return args.sentToken && (args.status === 401 || args.status === 403) && SESSION_FALLBACK_EVENTS.has(args.event);
+}
+
+/** Pure: JWT usable if its `exp` is more than `skewMs` in the future. */
+export function jwtUsable(jwt: string | null | undefined, nowMs = Date.now(), skewMs = 30_000): boolean {
+  if (!jwt) return false;
+  const exp = ackTokenExpiryMs(jwt);
+  return exp != null && exp - skewMs > nowMs;
+}
+
+/** Ensures a current worker session; refreshes when near expiry. Never logs tokens. */
+async function ensureFreshSession(): Promise<boolean> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const s = data?.session;
+    if (!s?.access_token) return false;
+    if (jwtUsable(s.access_token)) return true;
+    const refresh = (supabase.auth as any).refreshSession;
+    if (typeof refresh !== "function") return false;
+    const { data: r, error } = await refresh.call(supabase.auth);
+    return !error && jwtUsable(r?.session?.access_token);
+  } catch {
+    return false;
+  }
+}
+
 export async function ackBookingDelivery({ bookingId, bookingRequestId, event, ackToken }: AckArgs): Promise<void> {
   const cacheKey = key(bookingRequestId ?? bookingId ?? "?", event);
   if (acked.has(cacheKey)) return;
@@ -289,11 +328,25 @@ export async function ackBookingDelivery({ bookingId, bookingRequestId, event, a
     // Explicit token wins; otherwise reuse the token the FCM push carried.
     const token = normalizeAckToken(ackToken) ?? recallAckToken(bookingId, bookingRequestId);
 
+    // No token: the login is the only proof — make sure it is fresh first.
+    if (!token) await ensureFreshSession();
+
     const body = buildAckBody({ bookingId, bookingRequestId, workerId, event, ackToken: token });
 
     const { data, error } = await supabase.functions.invoke("ack-booking-delivery", { body });
 
     if (error) {
+      // Token refused (missing on server, invalid, expired): retry ONCE with
+      // the verified worker login, no token and no worker_id.
+      if (sessionFallbackAllowed({ event, status: ackErrorStatus(error), sentToken: !!token }) && (await ensureFreshSession())) {
+        const fb = await supabase.functions.invoke("ack-booking-delivery", {
+          body: buildAckBody({ bookingId, bookingRequestId, workerId: null, event, ackToken: null }),
+        });
+        if (!fb.error) {
+          console.log(`[ACK] ${event} ok (session fallback)`);
+          return;
+        }
+      }
       // Legacy receiver: a 400 on a delivery event is retried ONCE with the
       // legacy event name. A 2xx there counts; anything else is not success.
       const legacyBody = ackErrorStatus(error) === 400
