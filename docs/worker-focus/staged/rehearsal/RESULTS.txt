@@ -1,0 +1,98 @@
+initdb: warning: enabling "trust" authentication for local connections
+initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+=== APPLY
+applied
+=== T1 existing rows unchanged
+ workers_unchanged 
+-------------------
+ t
+(1 row)
+
+ bookings_unchanged 
+--------------------
+ t
+(1 row)
+
+=== T2 service_role writes, newer-wins
+ upsert_worker_diagnostic_status 
+---------------------------------
+ 
+(1 row)
+
+ upsert_worker_diagnostic_status 
+---------------------------------
+ 
+(1 row)
+
+ upsert_worker_diagnostic_status 
+---------------------------------
+ 
+(1 row)
+
+ network |    slot_state    |      observed_at       
+---------+------------------+------------------------
+ online  | current_selected | 2026-10-22 11:30:00+00
+(1 row)
+
+ upsert_worker_diagnostic_status 
+---------------------------------
+ 
+(1 row)
+
+ network |  session_state  | logout_recorded 
+---------+-----------------+-----------------
+ online  | explicit_logout | t
+(1 row)
+
+ events_after_duplicate 
+------------------------
+                      1
+(1 row)
+
+=== T3 anon blocked
+psql:/dev-server/docs/worker-focus/staged/rehearsal/verify.sql:19: ERROR:  permission denied for table worker_diagnostic_status
+psql:/dev-server/docs/worker-focus/staged/rehearsal/verify.sql:20: ERROR:  permission denied for function upsert_worker_diagnostic_status
+=== T4 signed-in non-admin: sees 0 rows, cannot write
+ nonadmin_status_rows 
+----------------------
+                    0
+(1 row)
+
+ nonadmin_event_rows 
+---------------------
+                   0
+(1 row)
+
+psql:/dev-server/docs/worker-focus/staged/rehearsal/verify.sql:26: ERROR:  permission denied for table worker_diagnostic_events
+psql:/dev-server/docs/worker-focus/staged/rehearsal/verify.sql:27: ERROR:  permission denied for table worker_diagnostic_status
+psql:/dev-server/docs/worker-focus/staged/rehearsal/verify.sql:28: ERROR:  permission denied for function upsert_worker_diagnostic_status
+=== T5 admin reads, cannot write
+ admin_status_rows 
+-------------------
+                 1
+(1 row)
+
+ admin_event_rows 
+------------------
+                1
+(1 row)
+
+psql:/dev-server/docs/worker-focus/staged/rehearsal/verify.sql:33: ERROR:  permission denied for table worker_diagnostic_events
+=== T6 still unchanged + no triggers added on existing tables
+ workers_unchanged 
+-------------------
+ t
+(1 row)
+
+ triggers_on_existing 
+----------------------
+                    0
+(1 row)
+
+=== ROLLBACK
+rolled_back
+0
+0
+t
+=== RE-APPLY
+reapplied
