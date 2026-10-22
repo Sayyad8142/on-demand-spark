@@ -174,7 +174,7 @@ object BackendSync {
         ackToken: String? = null,
     ): Boolean {
         if (bookingId.isNullOrBlank() && bookingRequestId.isNullOrBlank()) {
-            WorkerLog.add(ctx, "ACK", "skip $event — no booking id/request id")
+            WorkerLog.add(ctx, "ACK", "skip $rawEvent — no booking id/request id")
             return false
         }
 
