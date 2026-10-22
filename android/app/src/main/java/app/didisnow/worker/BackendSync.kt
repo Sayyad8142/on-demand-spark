@@ -231,6 +231,45 @@ object BackendSync {
         else -> AckResult.RETRY
     }
 
+    /** Delivery confirmations that may use the login fallback (taps never). Mirrors SESSION_FALLBACK_EVENTS. */
+    val SESSION_FALLBACK_EVENTS: Set<String> = setOf("push_received", "popup_shown", "worker_seen")
+
+    /** Pure: mirrors sessionFallbackAllowed() in src/lib/bookingAck.ts. */
+    fun sessionFallbackAllowed(event: String, code: Int, sentToken: Boolean): Boolean =
+        sentToken && (code == 401 || code == 403) && event in SESSION_FALLBACK_EVENTS
+
+    /**
+     * Current worker login (Supabase session JWT written by AuthContext into
+     * CapacitorStorage.didi_session). Returned only if not expiring within 30 s.
+     * Cleared on logout, so a logged-out phone never authenticates. Never logged.
+     */
+    private fun sessionJwt(ctx: Context): String? {
+        return try {
+            val cap = ctx.applicationContext.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE)
+            val raw = cap.getString("didi_session", null) ?: return null
+            val obj = JSONObject(raw)
+            val jwt = obj.optString("accessToken").ifBlank { obj.optString("access_token") }.ifBlank { null } ?: return null
+            val exp = AckQueue.tokenExpiryMs(jwt) ?: return null
+            if (exp - 30_000 > System.currentTimeMillis()) jwt else null
+        } catch (_: Exception) { null }
+    }
+
+    private fun postAck(url: String, auth: String, body: JSONObject): Int {
+        val c = (URL(url).openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = 8_000
+            readTimeout = 8_000
+            doOutput = true
+            setRequestProperty("Content-Type", "application/json")
+            setRequestProperty("apikey", ANON_KEY)
+            setRequestProperty("Authorization", "Bearer $auth")
+        }
+        c.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+        val code = c.responseCode
+        c.disconnect()
+        return code
+    }
+
     private fun sendAckHttp(
         ctx: Context,
         workerId: String?,
@@ -267,11 +306,31 @@ object BackendSync {
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json")
                 setRequestProperty("apikey", ANON_KEY)
-                setRequestProperty("Authorization", "Bearer $ANON_KEY")
+                // No signed token: the verified worker login is the proof of identity.
+                val primaryAuth = if (ackToken.isNullOrBlank()) sessionJwt(ctx) ?: ANON_KEY else ANON_KEY
+                setRequestProperty("Authorization", "Bearer $primaryAuth")
             }
             conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             var code = conn.responseCode
             conn.disconnect()
+            // Token refused (invalid/expired/unknown to server): retry ONCE with
+            // the worker login — no ack_token, no worker_id (server derives it).
+            if (sessionFallbackAllowed(event, code, !ackToken.isNullOrBlank())) {
+                val jwt = sessionJwt(ctx)
+                if (jwt != null) {
+                    val fbBody = JSONObject(body.toString()).apply { remove("ack_token"); remove("worker_id") }
+                    code = postAck(url, jwt, fbBody)
+                    WorkerLog.add(ctx, "ACK", "$event session-fallback → http=$code")
+                } else {
+                    WorkerLog.add(ctx, "ACK", "$event token refused, no current login — queued for next open")
+                    return AckResult.RETRY
+                }
+            } else if (ackToken.isNullOrBlank() && (code == 401 || code == 403) && event in SESSION_FALLBACK_EVENTS && sessionJwt(ctx) == null) {
+                // Login expired in background: keep it (bounded) in the queue; the app
+                // refreshes the login on open/resume and the queue is flushed then.
+                WorkerLog.add(ctx, "ACK", "$event no current login — queued for next open")
+                return AckResult.RETRY
+            }
             // Legacy receiver compatibility: the production build answers 400
             // to every current event name and only accepts "received"/"opened"
             // with booking_id + worker_id. Retry ONCE with the legacy name.

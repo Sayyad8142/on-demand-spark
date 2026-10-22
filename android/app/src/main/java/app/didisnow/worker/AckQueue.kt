@@ -91,10 +91,15 @@ object AckQueue {
             WorkerLog.add(ctx, "ACK_QUEUE", "drop stale-generation event=$event (logout/account switch)")
             return
         }
-        if (isTokenExpired(ackToken)) {
-            WorkerLog.add(ctx, "ACK_QUEUE", "drop expired-token event=$event")
-            return
-        }
+        // Expired token: delivery confirmations are kept WITHOUT the token and
+        // go through the worker login later; anything else is dropped.
+        val ackToken = if (isTokenExpired(ackToken)) {
+            if (event !in BackendSync.SESSION_FALLBACK_EVENTS) {
+                WorkerLog.add(ctx, "ACK_QUEUE", "drop expired-token event=$event")
+                return
+            }
+            null
+        } else ackToken
         val now = System.currentTimeMillis()
         val arr = readAll(ctx)
 
@@ -189,7 +194,8 @@ object AckQueue {
         val out = JSONArray()
         for (i in 0 until arr.length()) {
             val o = arr.optJSONObject(i) ?: continue
-            if (now - o.optLong("queued_at", now) > MAX_AGE_MS || isTokenExpired(o.optString("ack_token").ifBlank { null }, now)) {
+            if (now - o.optLong("queued_at", now) > MAX_AGE_MS ||
+                (isTokenExpired(o.optString("ack_token").ifBlank { null }, now) && o.optString("event") !in BackendSync.SESSION_FALLBACK_EVENTS)) {
                 WorkerLog.add(ctx, "ACK_QUEUE", "dropped stale event=${o.optString("event")}")
                 continue
             }

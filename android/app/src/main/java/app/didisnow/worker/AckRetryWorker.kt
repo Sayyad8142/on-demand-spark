@@ -39,7 +39,10 @@ class AckRetryWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
             // expired token is never replayed; later ACKs fall back to the
             // session path instead.
             val cap = if (entry.ackToken != null) ACK_TOKEN_MAX_ATTEMPTS else SESSION_MAX_ATTEMPTS
-            if (entry.attempts >= cap || AckQueue.isTokenExpired(entry.ackToken)) {
+            // Expired token: delivery confirmations continue via the worker
+            // login (session fallback); other events are dropped.
+            val tokenExpired = AckQueue.isTokenExpired(entry.ackToken)
+            if (entry.attempts >= cap || (tokenExpired && entry.event !in BackendSync.SESSION_FALLBACK_EVENTS)) {
                 AckQueue.remove(ctx, entry)
                 WorkerLog.add(ctx, "ACK_RETRY", "drop ack event=${entry.event} attempts=${entry.attempts} cap=$cap")
                 continue
@@ -51,7 +54,7 @@ class AckRetryWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
                 bookingRequestId = entry.bookingRequestId,
                 event = entry.event,
                 attempt = entry.attempts + 1,
-                ackToken = entry.ackToken,
+                ackToken = if (tokenExpired) null else entry.ackToken,
             )
             if (result == BackendSync.AckResult.REJECTED) {
                 AckQueue.remove(ctx, entry)
