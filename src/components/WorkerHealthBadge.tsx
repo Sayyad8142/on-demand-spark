@@ -11,6 +11,9 @@ import { CheckCircle2, AlertTriangle, ShieldAlert } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import type { WorkerHealthState } from "@/hooks/useWorkerHealth";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { openNotificationSettings } from "@/lib/permissions";
+import type { SelfHelpItem } from "@/lib/workerDiagnostics";
 
 interface Props {
   health: WorkerHealthState;
@@ -79,7 +82,10 @@ export function WorkerHealthBadge({ health, onRepair }: Props) {
               {displayText("Checks look good. Keep the app installed and notifications on.")}
             </p>
           )}
-          {health.summary && <StatusRows summary={health.summary} />}
+          {health.summary && <StatusRows summary={health.summary} slots={health.slots} />}
+          {health.selfHelp && health.selfHelp.length > 0 && (
+            <SelfHelpActions items={health.selfHelp} shown={health.summary?.messages ?? []} onRepair={onRepair} />
+          )}
           {status !== "ready" && (
             <p className="mt-2 text-xs font-medium text-foreground/80">
               {displayText("Tap to")} {status === "blocked" ? displayText("fix now") : displayText("view details")} →
@@ -91,12 +97,59 @@ export function WorkerHealthBadge({ health, onRepair }: Props) {
   );
 }
 
-function StatusRows({ summary }: { summary: NonNullable<WorkerHealthState["summary"]> }) {
+function SelfHelpActions({ items, shown, onRepair }: { items: SelfHelpItem[]; shown: string[]; onRepair?: () => void }) {
+  const navigate = useNavigate();
+  const run = (item: SelfHelpItem) => {
+    switch (item.action) {
+      case "open_notification_settings": void openNotificationSettings(); break;
+      case "select_slots": navigate("/availability"); break;
+      case "log_in": navigate("/auth"); break;
+      case "retry_registration": if (onRepair) onRepair(); else navigate("/device-readiness"); break;
+      case "retry": window.location.reload(); break;
+      case "check_internet": break;
+    }
+  };
+  return (
+    <div className="mt-2 space-y-1.5">
+      {items.map((item) => (
+        <div key={item.code} className="space-y-1">
+          {!shown.includes(item.message) && <p className="text-xs text-foreground/80">{displayText(item.message)}</p>}
+          {item.action === "check_internet" ? (
+            <p className="text-xs font-medium text-foreground">{displayText(item.actionLabel)}</p>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              onClick={(e) => { e.stopPropagation(); run(item); }}
+            >
+              {displayText(item.actionLabel)}
+            </Button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function slotLabel(slots: WorkerHealthState["slots"]): string {
+  switch (slots) {
+    case "current_selected": return "Selected now";
+    case "current_not_selected": return "Not selected for now";
+    case "outside_hours": return "Outside working hours";
+    case "none_configured": return "None selected";
+    case "invalid": return "Needs fixing";
+    default: return "Unknown";
+  }
+}
+
+function StatusRows({ summary, slots }: { summary: NonNullable<WorkerHealthState["summary"]>; slots?: WorkerHealthState["slots"] }) {
   const rows: [string, string][] = [
     ["Availability", summary.availability === "on" ? "ON" : summary.availability === "off" ? "OFF" : "Checking"],
     ["Booking alerts", summary.alerts === "ready" ? "Ready" : summary.alerts === "attention" ? "Needs attention" : "Unknown"],
     ["Connection", summary.connection === "connected" ? "Connected" : summary.connection === "stale" ? "Last connected a while ago" : "Unknown"],
     ["Notification permission", summary.notificationPermission === "enabled" ? "Enabled" : summary.notificationPermission === "disabled" ? "Disabled" : "Unknown"],
+    ["Working slots", slotLabel(slots)],
     ["Booking eligibility", summary.eligibility === "eligible" ? "Eligible" : summary.eligibility === "not_eligible" ? "Not eligible" : "Checking"],
   ];
   return (

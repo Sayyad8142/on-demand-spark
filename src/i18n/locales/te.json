@@ -386,7 +386,7 @@
     "unknown": "తెలియదు",
     "Enter_OTP": "OTP నమోదు చేయండి",
     "Ask_customer_for_the_4_digit_code": "కస్టమర్‌ను 4-అంకెల కోడ్ అడగండి",
-    "Retry": "మళ్లీ ప్రయత్నించండి",
+    "Retry": "మళ్ళీ ప్రయత్నించండి",
     "Taking_longer_than_usual_check_your_internet": "సాధారణం కంటే ఎక్కువ సమయం తీసుకుంటోంది… మీ ఇంటర్నెట్‌ను తనిఖీ చేయండి.",
     "OTP_length": "OTP పొడవు:",
     "valid": "· చెల్లుబాటు:",
@@ -972,6 +972,22 @@
     "Your_internet_connection_is_unavailable": "ఇంటర్నెట్ కనెక్షన్ లేదు.",
     "Please_enable_notifications_to_receive_booking_alerts": "బుకింగ్ అలర్ట్‌ల కోసం నోటిఫికేషన్లు ఆన్ చేయండి.",
     "Booking_alerts_need_to_be_registered_Open_the_app_with_internet_access": "బుకింగ్ అలర్ట్‌లు నమోదు కావాలి. ఇంటర్నెట్‌తో యాప్ తెరవండి.",
-    "You_are_OFF_Turn_ON_to_get_bookings": "మీరు ఆఫ్‌లో ఉన్నారు. బుకింగ్‌ల కోసం ఆన్ చేయండి."
+    "You_are_OFF_Turn_ON_to_get_bookings": "మీరు ఆఫ్‌లో ఉన్నారు. బుకింగ్‌ల కోసం ఆన్ చేయండి.",
+    "Booking_alerts_are_disabled_Please_enable_notifications_to_receive_new_bookings": "బుకింగ్ అలర్ట్‌లు ఆఫ్‌లో ఉన్నాయి. కొత్త బుకింగ్‌లు పొందడానికి దయచేసి నోటిఫికేషన్‌లు ఆన్ చేయండి.",
+    "Your_session_has_expired": "మీ సెషన్ ముగిసింది.",
+    "Could_not_connect_to_Didi_Now": "Didi Now కి కనెక్ట్ కాలేదు.",
+    "Booking_alerts_are_not_registered": "బుకింగ్ అలర్ట్‌లు రిజిస్టర్ కాలేదు.",
+    "No_working_slots_selected": "పని సమయాలు ఎంచుకోలేదు.",
+    "Log_in_again": "మళ్ళీ లాగిన్ అవ్వండి",
+    "Check_internet_connection": "ఇంటర్నెట్ కనెక్షన్ చూడండి",
+    "Open_notification_settings": "నోటిఫికేషన్ సెట్టింగ్‌లు తెరవండి",
+    "Retry_registration": "రిజిస్ట్రేషన్ మళ్ళీ చేయండి",
+    "Select_working_slots": "పని సమయాలు ఎంచుకోండి",
+    "Working_slots": "పని సమయాలు",
+    "Selected_now": "ఇప్పుడు ఎంచుకున్నారు",
+    "Not_selected_for_now": "ఇప్పటికి ఎంచుకోలేదు",
+    "Outside_working_hours": "పని సమయం బయట",
+    "None_selected": "ఏదీ ఎంచుకోలేదు",
+    "Needs_fixing": "సరిచేయాలి"
   }
 }

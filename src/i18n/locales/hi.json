@@ -386,7 +386,7 @@
     "unknown": "अज्ञात",
     "Enter_OTP": "OTP दर्ज करें",
     "Ask_customer_for_the_4_digit_code": "ग्राहक से 4-अंकीय कोड मांगें",
-    "Retry": "पुन: प्रयास करें",
+    "Retry": "फिर से कोशिश करें",
     "Taking_longer_than_usual_check_your_internet": "सामान्य से अधिक समय लग रहा है… अपना इंटरनेट जांचें।",
     "OTP_length": "OTP लंबाई:",
     "valid": "· वैध:",
@@ -972,6 +972,22 @@
     "Your_internet_connection_is_unavailable": "इंटरनेट कनेक्शन नहीं है।",
     "Please_enable_notifications_to_receive_booking_alerts": "बुकिंग अलर्ट पाने के लिए नोटिफ़िकेशन चालू करें।",
     "Booking_alerts_need_to_be_registered_Open_the_app_with_internet_access": "बुकिंग अलर्ट रजिस्टर होने बाकी हैं। इंटरनेट के साथ ऐप खोलें।",
-    "You_are_OFF_Turn_ON_to_get_bookings": "आप बंद हैं। बुकिंग के लिए चालू करें।"
+    "You_are_OFF_Turn_ON_to_get_bookings": "आप बंद हैं। बुकिंग के लिए चालू करें।",
+    "Booking_alerts_are_disabled_Please_enable_notifications_to_receive_new_bookings": "बुकिंग अलर्ट बंद हैं। नई बुकिंग पाने के लिए कृपया नोटिफिकेशन चालू करें।",
+    "Your_session_has_expired": "आपका सत्र समाप्त हो गया है।",
+    "Could_not_connect_to_Didi_Now": "Didi Now से कनेक्ट नहीं हो सका।",
+    "Booking_alerts_are_not_registered": "बुकिंग अलर्ट रजिस्टर नहीं हैं।",
+    "No_working_slots_selected": "कोई काम का समय नहीं चुना गया।",
+    "Log_in_again": "फिर से लॉग इन करें",
+    "Check_internet_connection": "इंटरनेट कनेक्शन जांचें",
+    "Open_notification_settings": "नोटिफिकेशन सेटिंग खोलें",
+    "Retry_registration": "रजिस्ट्रेशन फिर से करें",
+    "Select_working_slots": "काम का समय चुनें",
+    "Working_slots": "काम का समय",
+    "Selected_now": "अभी चुना गया",
+    "Not_selected_for_now": "अभी के लिए नहीं चुना",
+    "Outside_working_hours": "काम के समय से बाहर",
+    "None_selected": "कुछ नहीं चुना",
+    "Needs_fixing": "ठीक करना ज़रूरी"
   }
 }
