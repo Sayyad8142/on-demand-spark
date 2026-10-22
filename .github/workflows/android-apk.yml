@@ -2,8 +2,6 @@ name: Android APK (Capacitor)
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
 
 jobs:
   build-apk:
@@ -25,10 +23,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Ensure Capacitor deps
-        run: |
-          npm i -D @capacitor/cli
-          npm i @capacitor/android @capacitor/app @capacitor/device @capacitor/preferences @capacitor/push-notifications --no-audit --no-fund
 
       - name: Build web assets
         run: npm run build
