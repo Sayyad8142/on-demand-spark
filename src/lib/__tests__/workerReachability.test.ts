@@ -74,6 +74,6 @@ describe("worker status summary", () => {
     expect(s.connection).toBe("stale");
   });
   it("notifications denied", () => {
-    expect(statusSummary({ ...ok, permissionGranted: false }).messages[0]).toBe("Please enable notifications to receive booking alerts.");
+    expect(statusSummary({ ...ok, permissionGranted: false }).messages[0]).toBe("Booking alerts are disabled. Please enable notifications to receive new bookings.");
   });
 });

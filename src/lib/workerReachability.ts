@@ -104,7 +104,7 @@ export function statusSummary(s: {
   const perm = !s.native ? "enabled" : s.permissionGranted == null ? "unknown" : s.permissionGranted ? "enabled" : "disabled";
   if (s.updateRequired) messages.push("Your app needs to be updated.");
   if (!s.online) messages.push("Your internet connection is unavailable.");
-  if (perm === "disabled") messages.push("Please enable notifications to receive booking alerts.");
+  if (perm === "disabled") messages.push("Booking alerts are disabled. Please enable notifications to receive new bookings.");
   else if (s.native && s.channelOk === false) messages.push("Booking alerts are blocked in phone settings");
   if (s.native && s.tokenRegistered === false) messages.push("Booking alerts need to be registered. Open the app with internet access.");
 
