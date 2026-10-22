@@ -17,7 +17,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 vi.mock("@capacitor/core", () => ({ Capacitor: { getPlatform: () => "android", isNativePlatform: () => true } }));
 vi.mock("@/config/version", () => ({ CURRENT_VERSION_NAME: "test" }));
 
-import { ackBookingDelivery, jwtUsable, resetAckCache, sessionFallbackAllowed } from "@/lib/bookingAck";
+import { ackBookingDelivery, canonicalAckEvent, jwtUsable, resetAckCache, sessionFallbackAllowed } from "@/lib/bookingAck";
 
 const b64 = (o: object) => btoa(JSON.stringify(o)).replace(/=+$/, "");
 const jwt = (expSec: number) => `h.${b64({ exp: expSec, sub: "u1" })}.s`;
@@ -138,5 +138,20 @@ describe("ackBookingDelivery with login fallback", () => {
     expect(out).not.toContain(VALID_LOGIN);
     expect(out).not.toContain(ACK_TOKEN);
     spy.forEach((s) => s.mockRestore());
+  });
+  it("booking_seen alias is sent as canonical worker_seen and deduped with it", async () => {
+    getSession.mockResolvedValue(session(VALID_LOGIN));
+    invoke.mockResolvedValue(ok);
+    expect(canonicalAckEvent("booking_seen")).toBe("worker_seen");
+    await ackBookingDelivery({ bookingId: "b1", bookingRequestId: "r1", event: "booking_seen" });
+    await ackBookingDelivery({ bookingId: "b1", bookingRequestId: "r1", event: "worker_seen" });
+    expect(invoke).toHaveBeenCalledTimes(1);
+    expect(invoke.mock.calls[0][1].body.event_type).toBe("worker_seen");
+  });
+  it("fallback request carries no ack_token anywhere (body or custom headers)", async () => {
+    getSession.mockResolvedValue(session(VALID_LOGIN));
+    invoke.mockResolvedValueOnce(err(401)).mockResolvedValueOnce(ok);
+    await ackBookingDelivery({ bookingId: "b1", event: "popup_shown", ackToken: ACK_TOKEN });
+    expect(JSON.stringify(invoke.mock.calls[1][1])).not.toContain(ACK_TOKEN);
   });
 });

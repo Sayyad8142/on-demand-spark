@@ -265,7 +265,7 @@ async function getWorkerId(): Promise<string | null> {
 interface AckArgs {
   bookingId?: string;
   bookingRequestId?: string;
-  event: AckEvent;
+  event: AckEvent | "booking_seen";
   /** Signed acknowledgment token from the FCM payload — echoed unchanged. */
   ackToken?: string | null;
 }
@@ -309,7 +309,13 @@ async function ensureFreshSession(): Promise<boolean> {
   }
 }
 
-export async function ackBookingDelivery({ bookingId, bookingRequestId, event, ackToken }: AckArgs): Promise<void> {
+/** Canonical event names; `booking_seen` is an accepted alias of `worker_seen`. */
+export function canonicalAckEvent(event: string): AckEvent {
+  return (event === "booking_seen" ? "worker_seen" : event) as AckEvent;
+}
+
+export async function ackBookingDelivery({ bookingId, bookingRequestId, event: rawEvent, ackToken }: AckArgs): Promise<void> {
+  const event = canonicalAckEvent(rawEvent);
   const cacheKey = key(bookingRequestId ?? bookingId ?? "?", event);
   if (acked.has(cacheKey)) return;
   acked.add(cacheKey);
