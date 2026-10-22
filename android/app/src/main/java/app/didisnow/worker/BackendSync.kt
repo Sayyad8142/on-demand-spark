@@ -163,18 +163,22 @@ object BackendSync {
      *   - network / 5xx failure → queued + AckRetryWorker scheduled (exp backoff)
      *   - terminal 4xx (except 401/403) → dropped, not retried
      */
+    /** Canonical event names; `booking_seen` is an accepted alias of `worker_seen`. */
+    fun canonicalAckEvent(event: String): String = if (event == "booking_seen") "worker_seen" else event
+
     fun ackDelivery(
         ctx: Context,
         bookingId: String?,
-        event: String,
+        rawEvent: String,
         bookingRequestId: String? = null,
         ackToken: String? = null,
     ): Boolean {
         if (bookingId.isNullOrBlank() && bookingRequestId.isNullOrBlank()) {
-            WorkerLog.add(ctx, "ACK", "skip $event — no booking id/request id")
+            WorkerLog.add(ctx, "ACK", "skip $rawEvent — no booking id/request id")
             return false
         }
 
+        val event = canonicalAckEvent(rawEvent)
         val gen = AckQueue.generation(ctx)
         val workerId = resolveWorkerId(ctx)
         // Phase 1C: a signed ack_token authenticates on its own, so a missing
@@ -246,9 +250,18 @@ object BackendSync {
     private fun sessionJwt(ctx: Context): String? {
         return try {
             val cap = ctx.applicationContext.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE)
-            val raw = cap.getString("didi_session", null) ?: return null
-            val obj = JSONObject(raw)
-            val jwt = obj.optString("accessToken").ifBlank { obj.optString("access_token") }.ifBlank { null } ?: return null
+            // didi_session = AuthContext mirror; didi-worker-session = supabase-js
+            // storage (auto-refreshed while the app runs). Freshest usable wins.
+            val jwt = listOf("didi_session", "didi-worker-session")
+                .mapNotNull { k ->
+                    cap.getString(k, null)?.let { raw ->
+                        try {
+                            val o = JSONObject(raw)
+                            o.optString("accessToken").ifBlank { o.optString("access_token") }.ifBlank { null }
+                        } catch (_: Exception) { null }
+                    }
+                }
+                .maxByOrNull { AckQueue.tokenExpiryMs(it) ?: 0L } ?: return null
             val exp = AckQueue.tokenExpiryMs(jwt) ?: return null
             if (exp - 30_000 > System.currentTimeMillis()) jwt else null
         } catch (_: Exception) { null }
