@@ -148,7 +148,7 @@ export function selfHelp(s: {
   const out: SelfHelpItem[] = [];
   if (s.session === "session_expired") out.push({ code: "session_expired", message: "Your session has expired.", action: "log_in", actionLabel: "Log in again" });
   if (s.network === "no_internet") out.push({ code: "no_internet", message: "Your internet connection is unavailable.", action: "check_internet", actionLabel: "Check internet connection" });
-  else if (s.network === "server_unavailable") out.push({ code: "server_unavailable", message: "Could not connect to Didi Now.", action: "retry", actionLabel: "Retry" });
+  else if (s.network === "server_unreachable") out.push({ code: "server_unavailable", message: "Could not connect to Didi Now.", action: "retry", actionLabel: "Retry" });
   if (s.permission === "denied") out.push({ code: "notifications_disabled", message: NOTIFICATIONS_DISABLED_MESSAGE, action: "open_notification_settings", actionLabel: "Open notification settings" });
   if (s.tokenRegistered === false) out.push({ code: "push_registration_failed", message: "Booking alerts are not registered.", action: "retry_registration", actionLabel: "Retry registration" });
   if (s.slots === "none_configured" || s.slots === "invalid") out.push({ code: "no_working_slot", message: "No working slots selected.", action: "select_slots", actionLabel: "Select working slots" });
