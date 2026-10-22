@@ -179,7 +179,7 @@ object BackendSync {
         val workerId = resolveWorkerId(ctx)
         // Phase 1C: a signed ack_token authenticates on its own, so a missing
         // local worker_id only blocks token-less ACKs.
-        if (workerId.isNullOrBlank() && ackToken.isNullOrBlank()) {
+        if (workerId.isNullOrBlank() && ackToken.isNullOrBlank() && sessionJwt(ctx) == null) {
             WorkerLog.add(ctx, "ACK", "queue $event — no worker_id available yet")
             AckQueue.enqueue(ctx, bookingId, bookingRequestId, event, appVersion(ctx), "no_worker_id", ackToken, gen)
             return false
@@ -204,7 +204,7 @@ object BackendSync {
         ackToken: String? = null,
     ): AckResult {
         val workerId = resolveWorkerId(ctx)
-        if (workerId.isNullOrBlank() && ackToken.isNullOrBlank()) return AckResult.RETRY
+        if (workerId.isNullOrBlank() && ackToken.isNullOrBlank() && sessionJwt(ctx) == null) return AckResult.RETRY
         return sendAckHttp(ctx, workerId, bookingId, bookingRequestId, event, attempt, ackToken)
     }
 
