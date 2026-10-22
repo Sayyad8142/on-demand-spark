@@ -18,6 +18,8 @@ import { App as CapApp } from "@capacitor/app";
 import { checkBookingChannel } from "@/lib/permissions";
 import type { ChannelHealth } from "@/lib/setupGate";
 import { statusSummary, type StatusSummary } from "@/lib/workerReachability";
+import { networkState, selfHelp, slotState, type SelfHelpItem, type SlotState } from "@/lib/workerDiagnostics";
+import { recordDiagnostic } from "@/lib/diagnosticsSync";
 
 // @ts-ignore
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -37,6 +39,10 @@ export interface WorkerHealthState {
   online: boolean;
   loading: boolean;
   summary?: StatusSummary;
+  /** Selected working slots — separate from booking eligibility. */
+  slots?: SlotState;
+  /** Actionable self-help, most important first. */
+  selfHelp?: SelfHelpItem[];
 }
 
 interface DeviceExtras {
@@ -70,12 +76,14 @@ export function useWorkerHealth(
     isBlocked?: boolean | null;
     payoutReady?: boolean | null;
     lastHeartbeatAt?: string | null;
+    slotRows?: { day_of_week: number; slots: string[] | null }[] | null;
+    lastServerOkAt?: string | null;
   }>({});
 
   // Network listeners
   useEffect(() => {
-    const on = () => setOnline(true);
-    const off = () => setOnline(false);
+    const on = () => { setOnline(true); recordDiagnostic("network_restored"); };
+    const off = () => { setOnline(false); recordDiagnostic("network_lost"); };
     window.addEventListener("online", on);
     window.addEventListener("offline", off);
     return () => {
@@ -126,12 +134,21 @@ export function useWorkerHealth(
     let cancelled = false;
     const load = async () => {
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("workers")
           .select("notification_health, fcm_token_status, is_available, is_busy, is_blocked, payout_ready, last_heartbeat_at")
           .eq("id", workerId)
           .maybeSingle();
+        const slotRes = await supabase
+          .from("worker_availability")
+          .select("day_of_week, slots")
+          .eq("worker_id", workerId);
         if (cancelled) return;
+        setWorkerFlags((prev) => ({
+          ...prev,
+          slotRows: slotRes.error ? prev.slotRows ?? null : ((slotRes.data as any) ?? []),
+          lastServerOkAt: error ? prev.lastServerOkAt ?? null : new Date().toISOString(),
+        }));
         setWorkerFlags((prev) => ({
           ...prev,
           notificationHealth: (data as any)?.notification_health ?? null,
@@ -238,7 +255,19 @@ export function useWorkerHealth(
       ? "warning"
       : "ready";
 
+    const native = Capacitor.isNativePlatform();
+    const slots = slotState(workerFlags.slotRows ?? null);
+    const help = selfHelp({
+      network: networkState({ browserOnline: online, lastServerOkAt: workerFlags.lastServerOkAt ?? null }),
+      permission: !native ? "granted" : pushHealth.isChecking ? "unknown" : pushHealth.permissionGranted ? "granted" : "denied",
+      tokenRegistered: !native ? true : pushHealth.isChecking ? null : (pushHealth.tokenExists && pushHealth.tokenSyncedToBackend && pushHealth.tokenHealthy),
+      session: "none",
+      slots,
+    });
+
     setState({
+      slots,
+      selfHelp: help,
       status,
       score,
       reasons: reasons.slice(0, 3),
