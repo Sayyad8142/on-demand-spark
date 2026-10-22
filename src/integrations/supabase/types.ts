@@ -5530,6 +5530,105 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_diagnostic_events: {
+        Row: {
+          data: Json
+          event_id: string
+          id: number
+          kind: string
+          observed_at: string
+          received_at: string
+          worker_id: string
+        }
+        Insert: {
+          data?: Json
+          event_id: string
+          id?: number
+          kind: string
+          observed_at: string
+          received_at?: string
+          worker_id: string
+        }
+        Update: {
+          data?: Json
+          event_id?: string
+          id?: number
+          kind?: string
+          observed_at?: string
+          received_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_diagnostic_events_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_reliability_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_diagnostic_events_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_diagnostic_status: {
+        Row: {
+          app_version: string | null
+          last_logout_at: string | null
+          network: string | null
+          notification_permission: string | null
+          observed_at: string
+          received_at: string
+          session_state: string | null
+          slot_state: string | null
+          token_registered: boolean | null
+          worker_id: string
+        }
+        Insert: {
+          app_version?: string | null
+          last_logout_at?: string | null
+          network?: string | null
+          notification_permission?: string | null
+          observed_at: string
+          received_at?: string
+          session_state?: string | null
+          slot_state?: string | null
+          token_registered?: boolean | null
+          worker_id: string
+        }
+        Update: {
+          app_version?: string | null
+          last_logout_at?: string | null
+          network?: string | null
+          notification_permission?: string | null
+          observed_at?: string
+          received_at?: string
+          session_state?: string | null
+          slot_state?: string | null
+          token_registered?: boolean | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_diagnostic_status_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: true
+            referencedRelation: "worker_reliability_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_diagnostic_status_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: true
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_emergency_pause: {
         Row: {
           id: string
@@ -10281,6 +10380,15 @@ export type Database = {
           p_resolution_status: string
         }
         Returns: string
+      }
+      upsert_worker_diagnostic_status: {
+        Args: {
+          p_fields: Json
+          p_logout: boolean
+          p_observed_at: string
+          p_worker_id: string
+        }
+        Returns: undefined
       }
       urlencode:
         | { Args: { data: Json }; Returns: string }
