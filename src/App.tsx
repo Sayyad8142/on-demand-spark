@@ -651,7 +651,7 @@ function AppInner() {
       <Toaster />
       <Sonner />
       {showOtaMandatory && <OtaMandatoryModal bundleInfo={otaResult.bundleInfo!} />}
-      {update.mode === "force_deferred" && <UpdateAfterJobBanner />}
+      {update.mode === "force_deferred" && !bookingOfferVisible && <UpdateAfterJobBanner />}
       <SoftUpdateSheet open={update.mode === "soft" && !showOtaMandatory && !bookingOfferVisible} onLater={update.later} storeUrl={update.answer?.storeUrl} />
       {showBatteryWarning && session?.user?.id && (
         <div className="fixed inset-0 z-[90]">
