@@ -16,8 +16,8 @@ import { usePermissionRegressionWatch } from "@/hooks/usePermissionRegressionWat
 import { useFCMTokenSync } from "@/hooks/useFCMTokenSync";
 import { useAppState } from "@/hooks/useAppState";
 import { useWorkerHeartbeat } from "@/hooks/useWorkerHeartbeat";
-import { useForceUpdateCheck } from "@/hooks/useForceUpdateCheck";
-import { SoftUpdatePrompt } from "@/components/SoftUpdatePrompt";
+import { useUpdateDecision } from "@/hooks/useUpdateDecision";
+import { SoftUpdateSheet, UpdateAfterJobBanner } from "@/components/SoftUpdateSheet";
 import { initNativePush } from "@/native/push";
 import { tryAccept } from "@/lib/bookingActions";
 import {
@@ -190,7 +190,6 @@ function AppInner() {
   useAppState(); // Refresh JWT when app comes to foreground
   useFCMTokenSync(session?.user?.id); // Sync any natively-persisted FCM token to backend
   useAutoPushRepair(session?.user?.id); // Auto-heal push token on login, open, and resume
-  const { needsUpdate, softUpdate, config: updateConfig, dismissSoftUpdate } = useForceUpdateCheck();
   const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
   // Global always-on worker heartbeat (works regardless of online toggle).
   useWorkerHeartbeat(worker?.id ?? session?.user?.id);
@@ -378,6 +377,8 @@ function AppInner() {
   // active booking in [accepted, on_the_way, started]. Stops as soon as the
   // booking transitions to a terminal state (completed/cancelled/none).
   const { activeJob: trackedJob } = useActiveJob(session?.user?.id);
+  // Single centralized update decision (Admin Panel builds; deferred during active booking).
+  const update = useUpdateDecision(trackedJob?.status);
   useEffect(() => {
     if (!worker?.id) return;
     const status = trackedJob?.status;
@@ -591,12 +592,12 @@ function AppInner() {
   }, [showCancellationAlert]);
 
   // If Play Store update is required, show force update screen (HARD BLOCK)
-  if (needsUpdate) {
+  if (update.mode === "force") {
     return (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <ForceUpdateScreen config={updateConfig} />
+        <ForceUpdateScreen installedBuild={update.installedBuild} minBuild={update.policy?.minBuild ?? null} />
       </TooltipProvider>
     );
   }
@@ -648,7 +649,8 @@ function AppInner() {
       <Toaster />
       <Sonner />
       {showOtaMandatory && <OtaMandatoryModal bundleInfo={otaResult.bundleInfo!} />}
-      <SoftUpdatePrompt open={softUpdate && !showOtaMandatory} config={updateConfig} onRemindLater={dismissSoftUpdate} />
+      {update.mode === "force_deferred" && <UpdateAfterJobBanner />}
+      <SoftUpdateSheet open={update.mode === "soft" && !showOtaMandatory} onLater={update.later} />
       {showBatteryWarning && session?.user?.id && (
         <div className="fixed inset-0 z-[90]">
           <BatteryOnboarding
