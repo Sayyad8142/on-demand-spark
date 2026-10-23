@@ -1,13 +1,23 @@
-# Worker App update system (Android only) — 2026-10-23
+# Worker App update system (Android) — connected to Admin Panel contract
 
-Status: implemented in development. NOT deployed, NOT published, no production settings changed.
+Status: implemented in development. NOT deployed, NOT published, no settings changed.
 
-## Needs deployment / approval
-1. Admin Panel / database: add `app_config.latest_worker_version_code integer` (nullable). Until it exists the soft sheet never shows (version names are never compared).
-2. Admin Panel: use `min_worker_version_code` + `worker_hard_update_enabled` (force) and `latest_worker_version_code` + `worker_soft_update_enabled` (soft). Store-link fields are ignored by the app.
-3. New Android build (build 102 already contains this) via Play Store; native Play in-app update trigger is disabled in MainActivity.
-4. Activating force/soft = editing those app_config values (owner approval required).
+## Contract used
+`POST /rest/v1/rpc/get_app_update_decision` with the public app key, body `{"_app":"worker","_platform":"android","_build":<installed Android versionCode>}`.
+The app uses the returned `decision` directly (none/soft/force). Legacy `app_config` fields are no longer read for updates.
 
-## Verified
-- Play listing `app.didisnow.worker` returns 200; `com.didinow.partner` / `com.didinow.worker` return 404 (old fallback link was broken).
-- Current production row: hard off, soft off, min build 1 → no prompt for anyone.
+## Safety rules in the app
+- Offline, error, malformed answer, unknown decision, answer for another app/platform, or force without `min_build` → no prompt.
+- `store_url` used only if it is `https://play.google.com/store/apps/details?id=app.didisnow.worker`; otherwise the fixed official link.
+- Soft sheet hidden during active bookings; "Later" hides it for 3 days or until a newer latest build.
+- Force deferred during active bookings (banner), applied after the job.
+- Recheck on every app resume (not throttled), so returning from Google Play rechecks immediately.
+- Never changes availability, bookings, acceptance or completion. Native Play in-app trigger stays disabled.
+
+## Live check (read-only)
+- worker/android row: inactive, latest_build 1, min_build 1 → build 102 gets `none`. Unknown target → `none`. Anon can execute the RPC.
+
+## Remaining
+1. New Android build via Play Store (build 102 already ships the disabled Play trigger).
+2. Activating soft/force = editing the worker/android row in the Admin Panel (owner approval). Note RPC requires `store_verified_version = latest_version` for force.
+3. Not checked on a real phone; not tested signed in.
