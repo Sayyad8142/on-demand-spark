@@ -85,7 +85,7 @@ export function decideUpdate(args: {
   const { answer, activeBookingStatus, bookingAlertOpen = false, snooze = null, now } = args;
   if (!answer) return "none"; // offline / no answer yet: never block
   const busy = hasActiveBooking(activeBookingStatus);
-  if (answer.decision === "force") return busy ? "force_deferred" : "force";
+  if (answer.decision === "force") return busy || bookingAlertOpen ? "force_deferred" : "force";
   if (answer.decision === "soft" && !busy && !bookingAlertOpen && !isSoftSnoozed(snooze, answer.latestBuild, now)) return "soft";
   return "none";
 }
