@@ -9021,6 +9021,10 @@ export type Database = {
       }
       get_active_booking_statuses: { Args: never; Returns: string[] }
       get_app_setting: { Args: { k: string }; Returns: string }
+      get_app_update_decision: {
+        Args: { _app: string; _build: number; _platform: string }
+        Returns: Json
+      }
       get_assigned_worker_info: {
         Args: { booking_id: string }
         Returns: {
