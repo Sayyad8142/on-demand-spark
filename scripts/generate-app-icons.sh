@@ -36,17 +36,17 @@ place_text() {
 place_text 1024 54 none "$TMP/fg.png"
 # Legacy square icon (rounded corners) and round icon.
 place_text 1024 84 "$BG" "$TMP/square.png"
-"${IM[@]}" "$TMP/square.png" \( -size 1024x1024 xc:none -fill white -draw "roundrectangle 0,0 1023,1023 180,180" \) \
+"${IM[@]}" "$TMP/square.png" -alpha set \( -size 1024x1024 xc:none -fill white -draw "roundrectangle 0,0 1023,1023 180,180" \) \
   -compose DstIn -composite "$TMP/legacy.png"
 place_text 1024 72 "$BG" "$TMP/sq_round.png"
-"${IM[@]}" "$TMP/sq_round.png" \( -size 1024x1024 xc:none -fill white -draw "circle 512,512 512,0" \) \
+"${IM[@]}" "$TMP/sq_round.png" -alpha set \( -size 1024x1024 xc:none -fill white -draw "circle 512,512 512,0" \) \
   -compose DstIn -composite "$TMP/round.png"
 
 for d in "mdpi 48 108" "hdpi 72 162" "xhdpi 96 216" "xxhdpi 144 324" "xxxhdpi 192 432"; do
   set -- $d
   mkdir -p "$RES/mipmap-$1"
   "${IM[@]}" "$TMP/legacy.png" -resize "${2}x${2}" "$RES/mipmap-$1/ic_launcher.png"
-  "${IM[@]}" "$TMP/round.png"  -resize "${2}x${2}" "$RES/mipmap-$1/ic_launcher_round.png"
+  "${IM[@]}" "$TMP/round.png"  -resize "${2}x${2}" PNG32:"$RES/mipmap-$1/ic_launcher_round.png"
   "${IM[@]}" "$TMP/fg.png"     -resize "${3}x${3}" "$RES/mipmap-$1/ic_launcher_foreground.png"
 done
 mkdir -p "$RES/mipmap-anydpi-v26" "$RES/values"
