@@ -591,6 +591,102 @@ export type Database = {
         }
         Relationships: []
       }
+      app_update_configs: {
+        Row: {
+          app: string
+          created_at: string
+          id: string
+          is_active: boolean
+          latest_build: number
+          latest_version: string
+          message: string
+          min_build: number
+          mode: string
+          platform: string
+          release_notes: string
+          store_id: string
+          store_verified_at: string | null
+          store_verified_method: string | null
+          store_verified_version: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          app: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          latest_build?: number
+          latest_version?: string
+          message?: string
+          min_build?: number
+          mode?: string
+          platform: string
+          release_notes?: string
+          store_id: string
+          store_verified_at?: string | null
+          store_verified_method?: string | null
+          store_verified_version?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          app?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          latest_build?: number
+          latest_version?: string
+          message?: string
+          min_build?: number
+          mode?: string
+          platform?: string
+          release_notes?: string
+          store_id?: string
+          store_verified_at?: string | null
+          store_verified_method?: string | null
+          store_verified_version?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      app_update_history: {
+        Row: {
+          action: string
+          app: string
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_row: Json | null
+          note: string | null
+          old_row: Json | null
+          platform: string
+        }
+        Insert: {
+          action: string
+          app: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_row?: Json | null
+          note?: string | null
+          old_row?: Json | null
+          platform: string
+        }
+        Update: {
+          action?: string
+          app?: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_row?: Json | null
+          note?: string | null
+          old_row?: Json | null
+          platform?: string
+        }
+        Relationships: []
+      }
       assignments: {
         Row: {
           booking_id: string
@@ -7446,6 +7542,10 @@ export type Database = {
         Returns: Json
       }
       _sla_core_work: { Args: never; Returns: undefined }
+      _sync_legacy_app_update: {
+        Args: { c: Database["public"]["Tables"]["app_update_configs"]["Row"] }
+        Returns: undefined
+      }
       _tip_booking_open: { Args: { p_booking_id: string }; Returns: boolean }
       _woc_sla_minutes: { Args: { p_esc: string }; Returns: number }
       abandon_booking_tip: { Args: { p_tip_payment_id: string }; Returns: Json }
@@ -7655,6 +7755,39 @@ export type Database = {
       admin_complete_booking_with_otp: {
         Args: { p_booking_id: string; p_otp: string }
         Returns: Json
+      }
+      admin_confirm_store_version: {
+        Args: {
+          _app: string
+          _method: string
+          _platform: string
+          _version: string
+        }
+        Returns: {
+          app: string
+          created_at: string
+          id: string
+          is_active: boolean
+          latest_build: number
+          latest_version: string
+          message: string
+          min_build: number
+          mode: string
+          platform: string
+          release_notes: string
+          store_id: string
+          store_verified_at: string | null
+          store_verified_method: string | null
+          store_verified_version: string | null
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "app_update_configs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       admin_credit_wallet: {
         Args: {
@@ -7940,6 +8073,44 @@ export type Database = {
         Returns: Json
       }
       admin_run_dispatch_self_test: { Args: never; Returns: Json }
+      admin_save_app_update: {
+        Args: {
+          _app: string
+          _latest_build: number
+          _latest_version: string
+          _message: string
+          _min_build: number
+          _mode: string
+          _platform: string
+          _release_notes: string
+          _title: string
+        }
+        Returns: {
+          app: string
+          created_at: string
+          id: string
+          is_active: boolean
+          latest_build: number
+          latest_version: string
+          message: string
+          min_build: number
+          mode: string
+          platform: string
+          release_notes: string
+          store_id: string
+          store_verified_at: string | null
+          store_verified_method: string | null
+          store_verified_version: string | null
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "app_update_configs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_save_worker_payout_details: {
         Args: {
           p_account_holder_name: string
@@ -7951,6 +8122,34 @@ export type Database = {
           p_worker_id: string
         }
         Returns: Json
+      }
+      admin_set_app_update_active: {
+        Args: { _active: boolean; _app: string; _platform: string }
+        Returns: {
+          app: string
+          created_at: string
+          id: string
+          is_active: boolean
+          latest_build: number
+          latest_version: string
+          message: string
+          min_build: number
+          mode: string
+          platform: string
+          release_notes: string
+          store_id: string
+          store_verified_at: string | null
+          store_verified_method: string | null
+          store_verified_version: string | null
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "app_update_configs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       admin_set_booking_status: {
         Args: { p_booking_id: string; p_new_status: string; p_note?: string }
