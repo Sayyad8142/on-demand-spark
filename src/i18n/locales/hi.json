@@ -988,6 +988,12 @@
     "Not_selected_for_now": "अभी के लिए नहीं चुना",
     "Outside_working_hours": "काम के समय से बाहर",
     "None_selected": "कुछ नहीं चुना",
-    "Needs_fixing": "ठीक करना ज़रूरी"
+    "Needs_fixing": "ठीक करना ज़रूरी",
+    "A_New_Update_Is_Available": "नया अपडेट उपलब्ध है!",
+    "soft_update_body": "Didi Now Partner का नया वर्ज़न तैयार है। फ़्री होने पर अपडेट करें।",
+    "force_update_body": "यह वर्ज़न अब काम नहीं करता। बुकिंग पाते रहने के लिए कृपया अपडेट करें।",
+    "Installed_build": "इंस्टॉल बिल्ड",
+    "Required_build": "ज़रूरी बिल्ड",
+    "update_after_job": "इस काम के बाद अपडेट ज़रूरी है। पहले अपनी बुकिंग पूरी करें।"
   }
 }

@@ -1,124 +1,36 @@
-import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
-import { PhoneCall, Download, Sparkles } from "lucide-react";
-import { Capacitor } from "@capacitor/core";
+import { Download, PhoneCall } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import logo from "@/assets/didi-partner-logo.png";
-import { CURRENT_VERSION_NAME } from "@/config/version";
-import type { AppUpdateConfig } from "@/hooks/useForceUpdateCheck";
+import { displayText, useWorkerLanguage } from "@/i18n/display";
+import { WORKER_PLAY_STORE_URL } from "@/lib/updateDecision";
 
-interface Props {
-  config: AppUpdateConfig | null;
-}
+interface Props { installedBuild: number; minBuild: number | null }
 
-const ForceUpdateScreen = ({ config }: Props) => {
+const SUPPORT_PHONE = "8008180018";
+
+const ForceUpdateScreen = ({ installedBuild, minBuild }: Props) => {
   useWorkerLanguage();
-  const title = config?.update_title || "Update Required";
-  const message =
-    config?.user_update_message ||
-    "Please update Didi Now Partner to continue receiving bookings.";
-  const releaseNotes = config?.release_notes?.trim() || "";
-  const requiredVersion = config?.latest_worker_version_name || "Latest";
-  const supportPhone = config?.support_phone || "8008180018";
-
-  const handleUpdateNow = () => {
-    const isIOS = Capacitor.getPlatform() === "ios";
-    const url = isIOS
-      ? config?.ios_store_url_worker ||
-        "https://play.google.com/store/apps/details?id=com.didinow.partner"
-      : config?.play_store_url_worker ||
-        "https://play.google.com/store/apps/details?id=com.didinow.partner";
-    window.open(url, "_blank");
-  };
-
-  const handleCallManager = () => {
-    window.open(`tel:${supportPhone}`, "_self");
-  };
-
   return (
-    <div
-      className="min-h-screen flex flex-col px-5 py-8 overflow-y-auto"
-      style={{
-        background: "linear-gradient(160deg, #ff007a 0%, #ff4da6 60%, #ff80c0 100%)",
-      }}
-    >
-      {/* Logo + Brand */}
-      <div className="flex flex-col items-center mt-2 mb-6">
-        <div className="bg-white rounded-2xl p-3 shadow-lg mb-3">
-          <img src={logo} alt="Didi Now Partner" className="w-16 h-16 object-contain" />
+    <div className="flex min-h-screen flex-col bg-background px-6 py-10">
+      <div className="flex flex-1 flex-col items-center justify-center text-center">
+        <img src={logo} alt="Didi Now Partner" className="mb-6 h-20 w-20 object-contain" />
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+          <Download className="h-8 w-8 text-primary" />
         </div>
-        <p className="text-white/90 text-sm font-medium tracking-wide">
-          {displayText("DIDI NOW PARTNER")}
-        </p>
+        <h1 className="mb-3 text-3xl font-extrabold text-foreground">{displayText("Update Required")}</h1>
+        <p className="mb-6 max-w-sm text-base text-muted-foreground">{displayText("force_update_body")}</p>
+        <div className="w-full max-w-sm space-y-2 rounded-xl bg-muted p-4 text-sm">
+          <div className="flex justify-between"><span className="text-muted-foreground">{displayText("Installed build")}</span><b>{installedBuild}</b></div>
+          {minBuild !== null && <div className="flex justify-between"><span className="text-muted-foreground">{displayText("Required build")}</span><b className="text-primary">{minBuild}+</b></div>}
+        </div>
       </div>
-
-      {/* Card */}
-      <div className="bg-white rounded-3xl shadow-2xl p-6 mb-5">
-        <div className="flex items-center justify-center mb-4">
-          <div className="bg-pink-50 p-3 rounded-full">
-            <Download className="w-7 h-7 text-pink-600" />
-          </div>
-        </div>
-
-        <h1 className="text-2xl font-extrabold text-gray-900 text-center mb-2">
-          {title}
-        </h1>
-        <p className="text-gray-600 text-center text-base leading-relaxed mb-5">
-          {message}
-        </p>
-
-        {/* Version info */}
-        <div className="bg-gray-50 rounded-xl p-4 mb-4 space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-500">{displayText("Your version")}</span>
-            <span className="text-sm font-bold text-gray-800">
-              {CURRENT_VERSION_NAME}
-            </span>
-          </div>
-          <div className="h-px bg-gray-200" />
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-500">{displayText("Required version")}</span>
-            <span className="text-sm font-bold text-pink-600">
-              {requiredVersion}+
-            </span>
-          </div>
-        </div>
-
-        {/* Release notes */}
-        {releaseNotes && (
-          <div className="bg-pink-50 border border-pink-100 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-4 h-4 text-pink-600" />
-              <p className="text-sm font-bold text-pink-900">{displayText("What's new")}</p>
-            </div>
-            <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
-              {releaseNotes}
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Buttons */}
-      <div className="mt-auto space-y-3 pb-2">
-        <button
-          onClick={handleUpdateNow}
-          className="w-full flex items-center justify-center gap-2 bg-white text-pink-600 font-extrabold rounded-2xl shadow-lg active:scale-[0.97] transition-transform"
-          style={{ height: 58, fontSize: 17 }}
-        >
-          <Download className="w-5 h-5" />
-          {displayText("Update Now")}
-        </button>
-
-        <button
-          onClick={handleCallManager}
-          className="w-full flex items-center justify-center gap-2 font-bold rounded-2xl active:scale-[0.97] transition-transform border-2 border-white/70 text-white"
-          style={{ height: 56, fontSize: 16, background: "rgba(255,255,255,0.12)" }}
-        >
-          <PhoneCall className="w-5 h-5" />
-          {displayText("Call Manager")}
-        </button>
-
-        <p className="text-center text-white/80 text-xs mt-2">
-          {displayText("Need help? Call")} {supportPhone}
-        </p>
+      <div className="space-y-3">
+        <Button size="lg" className="h-14 w-full text-base font-extrabold" onClick={() => window.open(WORKER_PLAY_STORE_URL, "_blank")}>
+          <Download className="mr-2 h-5 w-5" /> {displayText("Update Now")}
+        </Button>
+        <a href={`tel:${SUPPORT_PHONE}`} className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          <PhoneCall className="h-4 w-4" /> {displayText("Need help? Call")} {SUPPORT_PHONE}
+        </a>
       </div>
     </div>
   );

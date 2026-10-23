@@ -988,6 +988,12 @@
     "Not_selected_for_now": "Not selected for now",
     "Outside_working_hours": "Outside working hours",
     "None_selected": "None selected",
-    "Needs_fixing": "Needs fixing"
+    "Needs_fixing": "Needs fixing",
+    "A_New_Update_Is_Available": "A New Update Is Available!",
+    "soft_update_body": "A newer version of Didi Now Partner is ready. Update when you are free.",
+    "force_update_body": "This version is no longer supported. Please update to keep receiving bookings.",
+    "Installed_build": "Installed build",
+    "Required_build": "Required build",
+    "update_after_job": "Update required after this job. Finish your booking first."
   }
 }

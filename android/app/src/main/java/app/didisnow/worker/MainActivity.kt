@@ -83,9 +83,8 @@ class MainActivity : BridgeActivity() {
         deliverPendingCancellationAlert()
         deliverPendingReassignedAlert()
 
-        // Google Play In-App Updates — Immediate flow (primary force update)
-        // Supabase app_config force update screen remains as fallback.
-        inAppUpdateManager.checkForUpdate()
+        // Google Play In-App Updates trigger DISABLED: the Admin Panel minimum
+        // build (checked in the web layer) is the sole mandatory-update authority.
 
         // Telemetry — schedule periodic native heartbeat + fire one immediately
         // so the backend sees this device is reachable even before JS layer boots.
@@ -110,7 +109,6 @@ class MainActivity : BridgeActivity() {
         )
         deliverPendingCancellationAlert()
         deliverPendingReassignedAlert()
-        inAppUpdateManager.resumeUpdateIfPending()
         // Fire a foreground heartbeat each time worker brings the app back.
         try { BackendSync.sendHeartbeatAsync(this, "foreground") } catch (_: Exception) {}
         // Flush any ACKs that failed to send in the background.

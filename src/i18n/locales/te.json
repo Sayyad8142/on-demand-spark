@@ -988,6 +988,12 @@
     "Not_selected_for_now": "ఇప్పటికి ఎంచుకోలేదు",
     "Outside_working_hours": "పని సమయం బయట",
     "None_selected": "ఏదీ ఎంచుకోలేదు",
-    "Needs_fixing": "సరిచేయాలి"
+    "Needs_fixing": "సరిచేయాలి",
+    "A_New_Update_Is_Available": "కొత్త అప్‌డేట్ అందుబాటులో ఉంది!",
+    "soft_update_body": "Didi Now Partner కొత్త వెర్షన్ సిద్ధంగా ఉంది. మీకు వీలైనప్పుడు అప్‌డేట్ చేయండి.",
+    "force_update_body": "ఈ వెర్షన్‌కు ఇక మద్దతు లేదు. బుకింగ్‌లు పొందడానికి దయచేసి అప్‌డేట్ చేయండి.",
+    "Installed_build": "ఇన్‌స్టాల్ చేసిన బిల్డ్",
+    "Required_build": "అవసరమైన బిల్డ్",
+    "update_after_job": "ఈ పని తర్వాత అప్‌డేట్ అవసరం. ముందు మీ బుకింగ్ పూర్తి చేయండి."
   }
 }
