@@ -17,6 +17,7 @@ import { useFCMTokenSync } from "@/hooks/useFCMTokenSync";
 import { useAppState } from "@/hooks/useAppState";
 import { useWorkerHeartbeat } from "@/hooks/useWorkerHeartbeat";
 import { useUpdateDecision } from "@/hooks/useUpdateDecision";
+import { useBookingOfferVisible } from "@/hooks/useBookingOfferVisible";
 import { SoftUpdateSheet, UpdateAfterJobBanner } from "@/components/SoftUpdateSheet";
 import { initNativePush } from "@/native/push";
 import { tryAccept } from "@/lib/bookingActions";
@@ -378,7 +379,8 @@ function AppInner() {
   // booking transitions to a terminal state (completed/cancelled/none).
   const { activeJob: trackedJob } = useActiveJob(session?.user?.id);
   // Single centralized update decision (Admin Panel builds; deferred during active booking).
-  const update = useUpdateDecision(trackedJob?.status);
+  const bookingOfferVisible = useBookingOfferVisible();
+  const update = useUpdateDecision(trackedJob?.status, bookingOfferVisible);
   useEffect(() => {
     if (!worker?.id) return;
     const status = trackedJob?.status;
@@ -649,8 +651,8 @@ function AppInner() {
       <Toaster />
       <Sonner />
       {showOtaMandatory && <OtaMandatoryModal bundleInfo={otaResult.bundleInfo!} />}
-      {update.mode === "force_deferred" && <UpdateAfterJobBanner />}
-      <SoftUpdateSheet open={update.mode === "soft" && !showOtaMandatory} onLater={update.later} storeUrl={update.answer?.storeUrl} />
+      {update.mode === "force_deferred" && !bookingOfferVisible && <UpdateAfterJobBanner />}
+      <SoftUpdateSheet open={update.mode === "soft" && !showOtaMandatory && !bookingOfferVisible} onLater={update.later} storeUrl={update.answer?.storeUrl} />
       {showBatteryWarning && session?.user?.id && (
         <div className="fixed inset-0 z-[90]">
           <BatteryOnboarding

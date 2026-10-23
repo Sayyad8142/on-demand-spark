@@ -85,11 +85,29 @@ export function decideUpdate(args: {
   const { answer, activeBookingStatus, bookingAlertOpen = false, snooze = null, now } = args;
   if (!answer) return "none"; // offline / no answer yet: never block
   const busy = hasActiveBooking(activeBookingStatus);
-  if (answer.decision === "force") return busy ? "force_deferred" : "force";
+  if (answer.decision === "force") return busy || bookingAlertOpen ? "force_deferred" : "force";
   if (answer.decision === "soft" && !busy && !bookingAlertOpen && !isSoftSnoozed(snooze, answer.latestBuild, now)) return "soft";
   return "none";
 }
 
 export function makeSnooze(latestBuild: number, now: number): SoftSnooze {
   return { build: latestBuild, until: now + SOFT_SNOOZE_MS };
+}
+
+/** Safety cap: an offer with no usable expiry stops counting as on-screen after this long. */
+export const OFFER_ALERT_MAX_MS = 3 * 60 * 1000;
+
+/**
+ * True while a booking offer popup should be treated as on screen (optional update must stay hidden).
+ * Uses the offer expiry when valid, otherwise a short cap from when it appeared. Display only.
+ */
+export function offerAlertActive(
+  alert: { timeoutAt?: string | null } | null | undefined,
+  shownAt: number | null,
+  now: number,
+): boolean {
+  if (!alert) return false;
+  const exp = alert.timeoutAt ? Date.parse(alert.timeoutAt) : NaN;
+  const cap = (shownAt ?? now) + OFFER_ALERT_MAX_MS;
+  return now < (Number.isFinite(exp) ? Math.min(exp, cap) : cap);
 }

@@ -59,3 +59,33 @@ describe("Later snooze", () => {
   it("snooze never hides force", () =>
     expect(decideUpdate({ answer: a({ decision: "force", min_build: 103 }), snooze: makeSnooze(999, now), now })).toBe("force"));
 });
+
+import { offerAlertActive, OFFER_ALERT_MAX_MS } from "../updateDecision";
+
+describe("booking offer popup vs update prompts", () => {
+  const soft = a({ decision: "soft", latest_build: 103 });
+  const force = a({ decision: "force", min_build: 103 });
+  it("soft hidden immediately while offer visible, back after it clears", () => {
+    expect(decideUpdate({ answer: soft, bookingAlertOpen: true, now })).toBe("none");
+    expect(decideUpdate({ answer: soft, bookingAlertOpen: false, now })).toBe("soft");
+  });
+  it("force never covers Accept/Reject: deferred while offer visible", () => {
+    expect(decideUpdate({ answer: force, bookingAlertOpen: true, now })).toBe("force_deferred");
+    expect(decideUpdate({ answer: force, bookingAlertOpen: false, now })).toBe("force");
+  });
+  it("offer + active booking together still defer", () =>
+    expect(decideUpdate({ answer: force, bookingAlertOpen: true, activeBookingStatus: "accepted", now })).toBe("force_deferred"));
+  it("Later cooldown still holds after the offer clears", () =>
+    expect(decideUpdate({ answer: soft, snooze: makeSnooze(103, now), bookingAlertOpen: false, now: now + 1000 })).toBe("none"));
+  it("offer active until its expiry", () => {
+    const t = new Date(now + 30_000).toISOString();
+    expect(offerAlertActive({ timeoutAt: t }, now, now + 29_000)).toBe(true);
+    expect(offerAlertActive({ timeoutAt: t }, now, now + 31_000)).toBe(false);
+  });
+  it("offer without/with broken expiry stops counting after the cap", () => {
+    expect(offerAlertActive({}, now, now + OFFER_ALERT_MAX_MS - 1)).toBe(true);
+    expect(offerAlertActive({ timeoutAt: "bad" }, now, now + OFFER_ALERT_MAX_MS + 1)).toBe(false);
+    expect(offerAlertActive({ timeoutAt: new Date(now + 3_600_000).toISOString() }, now, now + OFFER_ALERT_MAX_MS + 1)).toBe(false);
+  });
+  it("no offer → inactive", () => expect(offerAlertActive(null, null, now)).toBe(false));
+});
