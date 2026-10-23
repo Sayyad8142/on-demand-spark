@@ -403,7 +403,7 @@ class MovementTrackingService : Service(), SensorEventListener {
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setContentTitle("Didi Now Worker tracking active")
             .setContentText(text)
-            .setSmallIcon(R.drawable.app_icon)
+            .setSmallIcon(R.drawable.ic_notification)
             .setOngoing(true)
             .setSilent(true)
             .setOnlyAlertOnce(true)
