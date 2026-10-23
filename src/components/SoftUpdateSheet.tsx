@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { displayText, useWorkerLanguage } from "@/i18n/display";
 import { WORKER_PLAY_STORE_URL } from "@/lib/updateDecision";
 
-interface Props { open: boolean; onLater: () => void }
+interface Props { open: boolean; onLater: () => void; storeUrl?: string }
 
-export function SoftUpdateSheet({ open, onLater }: Props) {
+export function SoftUpdateSheet({ open, onLater, storeUrl = WORKER_PLAY_STORE_URL }: Props) {
   useWorkerLanguage();
   return (
     <Drawer open={open} onOpenChange={(v) => { if (!v) onLater(); }}>
@@ -17,7 +17,7 @@ export function SoftUpdateSheet({ open, onLater }: Props) {
         <DrawerTitle className="text-center text-2xl font-extrabold">{displayText("A New Update Is Available!")}</DrawerTitle>
         <DrawerDescription className="mt-2 text-center text-base">{displayText("soft_update_body")}</DrawerDescription>
         <div className="mt-auto space-y-3 pt-8">
-          <Button size="lg" className="h-14 w-full text-base font-bold" onClick={() => window.open(WORKER_PLAY_STORE_URL, "_blank")}>
+          <Button size="lg" className="h-14 w-full text-base font-bold" onClick={() => window.open(storeUrl, "_blank")}>
             <Download className="mr-2 h-5 w-5" /> {displayText("Update Now")}
           </Button>
           <Button size="lg" variant="outline" className="h-12 w-full" onClick={onLater}>{displayText("Later")}</Button>

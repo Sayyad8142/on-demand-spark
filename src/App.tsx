@@ -597,7 +597,7 @@ function AppInner() {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <ForceUpdateScreen installedBuild={update.installedBuild} minBuild={update.policy?.minBuild ?? null} />
+        <ForceUpdateScreen installedBuild={update.installedBuild} minBuild={update.answer?.minBuild ?? null} storeUrl={update.answer?.storeUrl} />
       </TooltipProvider>
     );
   }
@@ -650,7 +650,7 @@ function AppInner() {
       <Sonner />
       {showOtaMandatory && <OtaMandatoryModal bundleInfo={otaResult.bundleInfo!} />}
       {update.mode === "force_deferred" && <UpdateAfterJobBanner />}
-      <SoftUpdateSheet open={update.mode === "soft" && !showOtaMandatory} onLater={update.later} />
+      <SoftUpdateSheet open={update.mode === "soft" && !showOtaMandatory} onLater={update.later} storeUrl={update.answer?.storeUrl} />
       {showBatteryWarning && session?.user?.id && (
         <div className="fixed inset-0 z-[90]">
           <BatteryOnboarding

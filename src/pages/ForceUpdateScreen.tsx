@@ -4,11 +4,11 @@ import logo from "@/assets/didi-partner-logo.png";
 import { displayText, useWorkerLanguage } from "@/i18n/display";
 import { WORKER_PLAY_STORE_URL } from "@/lib/updateDecision";
 
-interface Props { installedBuild: number; minBuild: number | null }
+interface Props { installedBuild: number; minBuild: number | null; storeUrl?: string }
 
 const SUPPORT_PHONE = "8008180018";
 
-const ForceUpdateScreen = ({ installedBuild, minBuild }: Props) => {
+const ForceUpdateScreen = ({ installedBuild, minBuild, storeUrl = WORKER_PLAY_STORE_URL }: Props) => {
   useWorkerLanguage();
   return (
     <div className="flex min-h-screen flex-col bg-background px-6 py-10">
@@ -25,7 +25,7 @@ const ForceUpdateScreen = ({ installedBuild, minBuild }: Props) => {
         </div>
       </div>
       <div className="space-y-3">
-        <Button size="lg" className="h-14 w-full text-base font-extrabold" onClick={() => window.open(WORKER_PLAY_STORE_URL, "_blank")}>
+        <Button size="lg" className="h-14 w-full text-base font-extrabold" onClick={() => window.open(storeUrl, "_blank")}>
           <Download className="mr-2 h-5 w-5" /> {displayText("Update Now")}
         </Button>
         <a href={`tel:${SUPPORT_PHONE}`} className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
