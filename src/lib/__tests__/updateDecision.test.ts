@@ -1,52 +1,61 @@
 import { describe, it, expect } from "vitest";
-import { decideUpdate, policyFromConfig, makeSnooze, WORKER_PLAY_STORE_URL, SOFT_SNOOZE_MS, type UpdatePolicy } from "../updateDecision";
+import { decideUpdate, parseUpdateAnswer, makeSnooze, safeStoreUrl, WORKER_PLAY_STORE_URL, SOFT_SNOOZE_MS } from "../updateDecision";
 
 const now = 1_000_000;
-const p = (o: Partial<UpdatePolicy> = {}): UpdatePolicy => ({ minBuild: null, latestBuild: null, latestName: null, hardEnabled: false, softEnabled: false, ...o });
+const a = (o: Record<string, unknown>) => parseUpdateAnswer({ contract_version: 1, app: "worker", platform: "android", ...o });
 
-describe("updateDecision", () => {
-  it("store link uses verified package app.didisnow.worker", () => {
-    expect(WORKER_PLAY_STORE_URL).toBe("https://play.google.com/store/apps/details?id=app.didisnow.worker");
+describe("server decision is used directly", () => {
+  it("none", () => expect(decideUpdate({ answer: a({ decision: "none" }), now })).toBe("none"));
+  it("soft", () => expect(decideUpdate({ answer: a({ decision: "soft", latest_build: 103 }), now })).toBe("soft"));
+  it("force", () => expect(decideUpdate({ answer: a({ decision: "force", min_build: 103 }), now })).toBe("force"));
+  it("inactive target (only contract_version + none) → none", () =>
+    expect(decideUpdate({ answer: parseUpdateAnswer({ contract_version: 1, decision: "none" }), now })).toBe("none"));
+});
+
+describe("offline / malformed never lock out", () => {
+  it("no answer (offline)", () => expect(decideUpdate({ answer: null, now })).toBe("none"));
+  it("garbage", () => {
+    for (const r of [null, "x", 5, {}, { decision: "FORCE" }, { decision: "lock" }])
+      expect(decideUpdate({ answer: parseUpdateAnswer(r), now })).toBe("none");
   });
-  it("force only below minimum build", () => {
-    expect(decideUpdate({ installedBuild: 101, policy: p({ hardEnabled: true, minBuild: 102 }), now })).toBe("force");
-    expect(decideUpdate({ installedBuild: 102, policy: p({ hardEnabled: true, minBuild: 102 }), now })).toBe("none");
+  it("force without min_build ignored", () => expect(parseUpdateAnswer({ decision: "force" }).decision).toBe("none"));
+  it("answer for another app/platform ignored", () => {
+    expect(parseUpdateAnswer({ app: "user", platform: "android", decision: "force", min_build: 9 }).decision).toBe("none");
+    expect(parseUpdateAnswer({ app: "worker", platform: "ios", decision: "force", min_build: 9 }).decision).toBe("none");
   });
-  it("force requires hard switch on", () => {
-    expect(decideUpdate({ installedBuild: 1, policy: p({ minBuild: 102 }), now })).toBe("none");
+});
+
+describe("store redirection", () => {
+  it("accepts official listing", () => expect(safeStoreUrl(WORKER_PLAY_STORE_URL)).toBe(WORKER_PLAY_STORE_URL));
+  it("rejects other packages/hosts", () => {
+    for (const u of ["https://play.google.com/store/apps/details?id=com.didinow.partner", "http://play.google.com/store/apps/details?id=app.didisnow.worker",
+      "https://evil.com/store/apps/details?id=app.didisnow.worker", "nonsense", undefined])
+      expect(safeStoreUrl(u)).toBe(WORKER_PLAY_STORE_URL);
   });
-  it("compares numerically (99 < 102, not string order)", () => {
-    expect(decideUpdate({ installedBuild: 99, policy: p({ hardEnabled: true, minBuild: 102 }), now })).toBe("force");
+  it("parsed answer always carries safe url", () =>
+    expect(a({ decision: "soft", store_url: "https://evil.com" }).storeUrl).toBe(WORKER_PLAY_STORE_URL));
+});
+
+describe("active bookings and alerts", () => {
+  it("force deferred during active work, applies after", () => {
+    for (const s of ["assigned", "accepted", "on_the_way", "started", "in_progress"])
+      expect(decideUpdate({ answer: a({ decision: "force", min_build: 103 }), activeBookingStatus: s, now })).toBe("force_deferred");
+    expect(decideUpdate({ answer: a({ decision: "force", min_build: 103 }), activeBookingStatus: "completed", now })).toBe("force");
   });
-  it("force deferred during accepted / ongoing booking", () => {
-    for (const s of ["accepted", "on_the_way", "started", "in_progress", "assigned"])
-      expect(decideUpdate({ installedBuild: 100, policy: p({ hardEnabled: true, minBuild: 102 }), activeBookingStatus: s, now })).toBe("force_deferred");
-    expect(decideUpdate({ installedBuild: 100, policy: p({ hardEnabled: true, minBuild: 102 }), activeBookingStatus: "completed", now })).toBe("force");
+  it("soft hidden during booking or open alert", () => {
+    expect(decideUpdate({ answer: a({ decision: "soft", latest_build: 103 }), activeBookingStatus: "started", now })).toBe("none");
+    expect(decideUpdate({ answer: a({ decision: "soft", latest_build: 103 }), bookingAlertOpen: true, now })).toBe("none");
   });
-  it("soft only when below latest build and enabled", () => {
-    expect(decideUpdate({ installedBuild: 102, policy: p({ softEnabled: true, latestBuild: 103 }), now })).toBe("soft");
-    expect(decideUpdate({ installedBuild: 103, policy: p({ softEnabled: true, latestBuild: 103 }), now })).toBe("none");
-    expect(decideUpdate({ installedBuild: 102, policy: p({ latestBuild: 103 }), now })).toBe("none");
-  });
-  it("soft never shows without a numeric latest build", () => {
-    expect(decideUpdate({ installedBuild: 102, policy: policyFromConfig({ worker_soft_update_enabled: true, latest_worker_version_name: "99.0" }), now })).toBe("none");
-  });
-  it("Later hides soft until a newer build or 3 days", () => {
+});
+
+describe("Later snooze", () => {
+  it("hides until 3 days or a newer build", () => {
     const snooze = makeSnooze(103, now);
-    const pol = p({ softEnabled: true, latestBuild: 103 });
-    expect(decideUpdate({ installedBuild: 102, policy: pol, snooze, now: now + 1000 })).toBe("none");
-    expect(decideUpdate({ installedBuild: 102, policy: pol, snooze, now: now + SOFT_SNOOZE_MS + 1 })).toBe("soft");
-    expect(decideUpdate({ installedBuild: 102, policy: p({ softEnabled: true, latestBuild: 104 }), snooze, now: now + 1000 })).toBe("soft");
+    const ans = a({ decision: "soft", latest_build: 103 });
+    expect(decideUpdate({ answer: ans, snooze, now: now + 1000 })).toBe("none");
+    expect(decideUpdate({ answer: ans, snooze, now: now + SOFT_SNOOZE_MS + 1 })).toBe("soft");
+    expect(decideUpdate({ answer: a({ decision: "soft", latest_build: 104 }), snooze, now: now + 1000 })).toBe("soft");
   });
-  it("soft hidden during active booking", () => {
-    expect(decideUpdate({ installedBuild: 102, policy: p({ softEnabled: true, latestBuild: 103 }), activeBookingStatus: "started", now })).toBe("none");
-  });
-  it("legacy shared flags and store URLs are ignored", () => {
-    const pol = policyFromConfig({ soft_update_enabled: true, force_update: true, min_worker_version_code: 500, play_store_url_worker: "https://x" });
-    expect(decideUpdate({ installedBuild: 102, policy: pol, now })).toBe("none");
-  });
-  it("current production row produces no prompt", () => {
-    const pol = policyFromConfig({ min_worker_version_code: 1, worker_hard_update_enabled: false, worker_soft_update_enabled: false });
-    expect(decideUpdate({ installedBuild: 102, policy: pol, now })).toBe("none");
-  });
+  it("snooze never hides force", () =>
+    expect(decideUpdate({ answer: a({ decision: "force", min_build: 103 }), snooze: makeSnooze(999, now), now })).toBe("force"));
 });

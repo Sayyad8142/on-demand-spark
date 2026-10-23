@@ -3,7 +3,7 @@ import { App as CapApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
 import { CURRENT_VERSION_CODE } from "@/config/version";
-import { decideUpdate, makeSnooze, policyFromConfig, type SoftSnooze, type UpdatePolicy } from "@/lib/updateDecision";
+import { decideUpdate, makeSnooze, parseUpdateAnswer, type SoftSnooze, type UpdateAnswer } from "@/lib/updateDecision";
 
 const SNOOZE_KEY = "worker_soft_update_snooze_v3";
 
@@ -19,21 +19,21 @@ async function installedBuild(): Promise<number> {
 }
 
 /**
- * Centralized update check. Re-reads the installed build and Admin Panel policy
- * on start and every time the app resumes. Display only: never changes availability.
+ * Asks the Admin Panel RPC on start and on every resume (no throttle, so returning
+ * from Google Play rechecks immediately). Display only: never changes availability.
  */
-export function useUpdateDecision(activeBookingStatus: string | null | undefined) {
-  const [policy, setPolicy] = useState<UpdatePolicy | null>(null);
+export function useUpdateDecision(activeBookingStatus: string | null | undefined, bookingAlertOpen = false) {
+  const [answer, setAnswer] = useState<UpdateAnswer | null>(null);
   const [build, setBuild] = useState<number>(CURRENT_VERSION_CODE);
   const [snooze, setSnooze] = useState<SoftSnooze | null>(readSnooze);
 
   const refresh = useCallback(async () => {
-    setBuild(await installedBuild());
+    const b = await installedBuild();
+    setBuild(b);
     try {
-      // select("*") so newly added contract columns (latest_worker_version_code) are read without breaking older schemas.
-      const { data, error } = await supabase.from("app_config").select("*").maybeSingle();
-      if (!error && data) setPolicy(policyFromConfig(data as Record<string, unknown>));
-    } catch { /* keep last known policy; never block on network failure */ }
+      const { data, error } = await supabase.rpc("get_app_update_decision" as never, { _app: "worker", _platform: "android", _build: b } as never);
+      if (!error) setAnswer(parseUpdateAnswer(data));
+    } catch { /* offline: keep last known answer; never block */ }
   }, []);
 
   useEffect(() => {
@@ -47,14 +47,13 @@ export function useUpdateDecision(activeBookingStatus: string | null | undefined
     return () => { document.removeEventListener("visibilitychange", onVis); remove?.(); };
   }, [refresh]);
 
-  const mode = decideUpdate({ installedBuild: build, policy, activeBookingStatus, snooze, now: Date.now() });
+  const mode = decideUpdate({ answer, activeBookingStatus, bookingAlertOpen, snooze, now: Date.now() });
 
   const later = useCallback(() => {
-    if (!policy?.latestBuild) return;
-    const s = makeSnooze(policy.latestBuild, Date.now());
+    const s = makeSnooze(answer?.latestBuild ?? build + 1, Date.now());
     try { localStorage.setItem(SNOOZE_KEY, JSON.stringify(s)); } catch {}
     setSnooze(s);
-  }, [policy?.latestBuild]);
+  }, [answer?.latestBuild, build]);
 
-  return { mode, policy, installedBuild: build, later };
+  return { mode, answer, installedBuild: build, later };
 }
