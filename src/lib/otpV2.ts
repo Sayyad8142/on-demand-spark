@@ -3,9 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 /**
  * OTP V2 gateway client (two-stage OTP: Start OTP + Completion OTP).
  *
- * Contract (backend finalized in source, NOT yet deployed):
+ * Contract (final backend contract):
  *   POST /functions/v1/otp-v2-gateway
- *   { action: "verify_start" | "verify_completion", booking_id, otp }
+ *   { action: "resolve_mode" | "verify_start" | "verify_completion", booking_id, otp? }
+ *   HTTP 200 may still carry { success: false, error_code } — always checked.
  *   → { success: true, status: "started" | "completed", idempotent: boolean }
  *   → errors: INVALID_REQUEST, UNAUTHORIZED, BOOKING_NOT_FOUND, LEGACY_BOOKING,
  *     NOT_CURRENT_ASSIGNMENT, TERMINAL_BOOKING, CREDENTIAL_INVALID, INVALID_STATUS,
@@ -64,8 +65,6 @@ export type OtpV2ErrorCode =
   | "INCORRECT_OTP"
   | "LOCKED"
   | "LIFETIME_LOCKED"
-  | "OTP_EXPIRED"
-  | "COOLDOWN"
   | "OTP_V2_UNAVAILABLE"
   | "OTP_V2_OPERATION_FAILED"
   | "NETWORK"
@@ -75,7 +74,8 @@ export type OtpV2Success = { ok: true; status: "started" | "completed"; idempote
 /** Server-supplied limits shown to the worker (never authorize anything). */
 export type OtpV2Limits = {
   remainingAttempts?: number;
-  expiresAt?: string;
+  /** From LOCKED `locked_until` (ISO). The backend has no time-based OTP expiry. */
+  lockedUntil?: string;
   retryAfterSeconds?: number;
 };
 export type OtpV2Failure = { ok: false; code: OtpV2ErrorCode; message: string; limits?: OtpV2Limits };
@@ -84,25 +84,24 @@ export type OtpV2Failure = { ok: false; code: OtpV2ErrorCode; message: string; l
 export const V2_OTP_LENGTH = 6;
 export const LEGACY_OTP_LENGTH = 4;
 
-/** Read remaining attempts / expiry / cooldown from a gateway body. */
-export function parseOtpLimits(body: Record<string, unknown> | null | undefined): OtpV2Limits | undefined {
+/** Read remaining attempts / lock end from a gateway body (no expiry: backend has none). */
+export function parseOtpLimits(body: Record<string, unknown> | null | undefined, now: number = Date.now()): OtpV2Limits | undefined {
   if (!body) return undefined;
   const out: OtpV2Limits = {};
   const ra = body.remaining_attempts ?? body.attempts_remaining;
   if (typeof ra === "number" && Number.isInteger(ra) && ra >= 0) out.remainingAttempts = ra;
-  const exp = body.expires_at;
-  if (typeof exp === "string" && !Number.isNaN(Date.parse(exp))) out.expiresAt = exp;
-  const retry = body.retry_after_seconds;
-  if (typeof retry === "number" && Number.isFinite(retry) && retry > 0) out.retryAfterSeconds = Math.ceil(retry);
-  else if (typeof body.locked_until === "string" && !Number.isNaN(Date.parse(body.locked_until))) {
-    const secs = Math.ceil((Date.parse(body.locked_until) - Date.now()) / 1000);
+  if (typeof body.locked_until === "string" && !Number.isNaN(Date.parse(body.locked_until))) {
+    out.lockedUntil = body.locked_until;
+    const secs = Math.ceil((Date.parse(body.locked_until) - now) / 1000);
     if (secs > 0) out.retryAfterSeconds = secs;
+  } else if (typeof body.retry_after_seconds === "number" && Number.isFinite(body.retry_after_seconds) && body.retry_after_seconds > 0) {
+    out.retryAfterSeconds = Math.ceil(body.retry_after_seconds);
   }
   return Object.keys(out).length ? out : undefined;
 }
 
 /** Plain-language extra line built from server limits ("" when none). */
-export function otpLimitsMessage(limits?: OtpV2Limits, now: number = Date.now()): string {
+export function otpLimitsMessage(limits?: OtpV2Limits): string {
   if (!limits) return "";
   const parts: string[] = [];
   if (limits.retryAfterSeconds) {
@@ -111,10 +110,6 @@ export function otpLimitsMessage(limits?: OtpV2Limits, now: number = Date.now())
   }
   if (limits.remainingAttempts !== undefined) {
     parts.push(limits.remainingAttempts === 1 ? "1 attempt left." : `${limits.remainingAttempts} attempts left.`);
-  }
-  if (limits.expiresAt) {
-    const mins = Math.ceil((Date.parse(limits.expiresAt) - now) / 60000);
-    if (mins > 0) parts.push(mins === 1 ? "Code expires in 1 minute." : `Code expires in ${mins} minutes.`);
   }
   return parts.join(" ");
 }
@@ -135,8 +130,6 @@ const KNOWN_CODES: readonly OtpV2ErrorCode[] = [
   "INCORRECT_OTP",
   "LOCKED",
   "LIFETIME_LOCKED",
-  "OTP_EXPIRED",
-  "COOLDOWN",
   "OTP_V2_UNAVAILABLE",
   "OTP_V2_OPERATION_FAILED",
 ];
@@ -266,17 +259,24 @@ async function callGateway(action: OtpV2Action, bookingId: string, otp: string):
       console.warn("[OTP_V2] gateway not deployed (404)", { action, bookingId });
       return failure("OTP_V2_UNAVAILABLE");
     }
-    const code = toErrorCode(raw.payload?.code ?? raw.payload?.error_code ?? raw.payload?.error);
+    const code = toErrorCode(raw.payload?.error_code ?? raw.payload?.code ?? raw.payload?.error);
     console.warn("[OTP_V2] gateway error", { action, bookingId, code, httpStatus: raw.status });
     return failure(code, otpV2ErrorMessage(code), parseOtpLimits(raw.payload));
   }
 
   const body = (raw.data ?? {}) as Record<string, unknown>;
-  if (body.success === true && (body.status === "started" || body.status === "completed")) {
-    return { ok: true, status: body.status, idempotent: body.idempotent === true };
+  // HTTP 200 is not success by itself: require success === true AND the
+  // status this action is supposed to produce.
+  const expected = action === "verify_start" ? "started" : "completed";
+  if (body.success === true && body.status === expected) {
+    return { ok: true, status: expected, idempotent: body.idempotent === true };
+  }
+  if (body.success === true) {
+    console.warn("[OTP_V2] unexpected success shape", { action, bookingId });
+    return failure("OTP_V2_OPERATION_FAILED");
   }
 
-  const code = toErrorCode(body.code ?? body.error_code ?? body.error);
+  const code = toErrorCode(body.error_code ?? body.code ?? body.error);
   console.warn("[OTP_V2] verification refused", { action, bookingId, code });
   return failure(code, otpV2ErrorMessage(code), parseOtpLimits(body));
 }
@@ -357,8 +357,6 @@ const V2_ONLY_CODES: readonly OtpV2ErrorCode[] = [
   "INCORRECT_OTP",
   "LOCKED",
   "LIFETIME_LOCKED",
-  "OTP_EXPIRED",
-  "COOLDOWN",
   "CREDENTIAL_INVALID",
   "INVALID_STATUS",
 ];
@@ -391,7 +389,7 @@ export async function resolveOtpMode(bookingId: string): Promise<ResolvedOtpMode
 
   const raw = await invokeGateway({ action: "resolve_mode", booking_id: bookingId });
   if (raw.kind === "http_error") {
-    const code = toErrorCode(raw.payload?.code ?? raw.payload?.error_code);
+    const code = toErrorCode(raw.payload?.error_code ?? raw.payload?.code);
     if (code === "NOT_CURRENT_ASSIGNMENT" || code === "TERMINAL_BOOKING" || code === "BOOKING_NOT_FOUND") {
       forgetOtpMode(bookingId);
       try {
@@ -451,11 +449,7 @@ export function otpV2ErrorMessage(code: OtpV2ErrorCode, fallback?: string): stri
     case "INCORRECT_OTP":
       return "Wrong OTP. Please ask the customer for the correct code.";
     case "LOCKED":
-      return "Too many wrong attempts. This OTP is locked for 15 minutes.";
-    case "OTP_EXPIRED":
-      return "This OTP has expired. Ask the customer to open the app for a new code.";
-    case "COOLDOWN":
-      return "Please wait before trying again.";
+      return "Too many wrong attempts. This OTP is locked for now.";
     case "LIFETIME_LOCKED":
       return "This OTP is permanently locked. Please contact support.";
     case "START_NOT_VERIFIED":

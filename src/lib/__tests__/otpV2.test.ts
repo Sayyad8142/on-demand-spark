@@ -446,17 +446,51 @@ describe("Six-digit V2 codes and server limits", () => {
     expect(r.ok === false && r.message).toContain("2 attempts left.");
   });
 
-  it("cooldown shows minutes to wait", async () => {
-    invoke.mockResolvedValueOnce(httpErr(429, { code: "COOLDOWN", retry_after_seconds: 600 }));
+  it("LOCKED uses server locked_until, no fixed duration", async () => {
+    const until = new Date(Date.now() + 9.5 * 60_000).toISOString();
+    invoke.mockResolvedValueOnce(httpErr(423, { success: false, error_code: "LOCKED", locked_until: until }));
     const r = await verifyStartOtp(B, OTP);
-    expect(r.ok === false && r.code).toBe("COOLDOWN");
+    expect(r.ok === false && r.code).toBe("LOCKED");
+    expect(r.ok === false && r.limits?.lockedUntil).toBe(until);
     expect(r.ok === false && r.message).toContain("Try again in 10 minutes.");
+    expect(r.ok === false && r.message).not.toContain("15");
   });
 
-  it("expired code is reported, never treated as legacy", async () => {
-    invoke.mockResolvedValueOnce(httpErr(410, { code: "OTP_EXPIRED" }));
-    const d = await decideCompletion(B, OTP, true);
-    expect(d.path === "v2_error" && d.code).toBe("OTP_EXPIRED");
+  it("HTTP 200 with success:false + error_code is a failure", async () => {
+    invoke.mockResolvedValueOnce(ok({ success: false, error_code: "INCORRECT_OTP", remaining_attempts: 1 }));
+    const r = await verifyStartOtp(B, OTP);
+    expect(r.ok === false && r.code).toBe("INCORRECT_OTP");
+  });
+
+  it.each(["INCORRECT_OTP", "LOCKED", "LIFETIME_LOCKED", "START_NOT_VERIFIED", "NOT_CURRENT_ASSIGNMENT",
+    "CREDENTIAL_INVALID", "TERMINAL_BOOKING", "INVALID_STATUS", "LEGACY_BOOKING"])(
+    "HTTP 200 error_code %s is recognised exactly", async (code) => {
+      invoke.mockResolvedValueOnce(ok({ success: false, error_code: code }));
+      const r = await verifyCompletionOtp(B, OTP);
+      expect(r.ok === false && r.code).toBe(code);
+    });
+
+  it("success:true with the wrong status for the action is not success", async () => {
+    invoke.mockResolvedValueOnce(ok({ success: true, status: "completed" }));
+    const r = await verifyStartOtp(B, OTP);
+    expect(r.ok).toBe(false);
+  });
+
+  it("no expiry codes or messages exist", async () => {
+    invoke.mockResolvedValueOnce(httpErr(410, { error_code: "OTP_EXPIRED", expires_at: new Date(Date.now() + 60_000).toISOString() }));
+    const r = await verifyStartOtp(B, OTP);
+    expect(r.ok === false && r.code).toBe("OTP_V2_OPERATION_FAILED");
+    expect(r.ok === false && r.message).not.toMatch(/expire/i);
+  });
+
+  it("Start requires exactly six digits", async () => {
+    const r = await verifyStartOtp(B, "1234");
+    expect(r.ok === false && r.code).toBe("INVALID_REQUEST");
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("V2 switch stays off by default", () => {
+    expect(isOtpV2ClientEnabled()).toBe(false);
   });
 
   it("V2 booking cannot complete before start", () => {

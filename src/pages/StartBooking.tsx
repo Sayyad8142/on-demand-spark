@@ -121,7 +121,7 @@ export default function StartBooking() {
       }
       if (code === "INCORRECT_OTP") {
         fail("wrong_otp", result.message || otpV2ErrorMessage(code), true);
-      } else if (code === "LOCKED" || code === "LIFETIME_LOCKED" || code === "COOLDOWN" || code === "OTP_EXPIRED") {
+      } else if (code === "LOCKED" || code === "LIFETIME_LOCKED") {
         fail("locked", result.message || otpV2ErrorMessage(code));
       } else if (TERMINAL_CODES.includes(code)) {
         fail("terminal", otpV2ErrorMessage(code));
