@@ -27,7 +27,7 @@ type ErrorKind = "validation" | "wrong_otp" | "locked" | "network" | "terminal" 
 /**
  * Start Booking — first stage of the two-stage OTP flow.
  *
- * The worker asks the customer for the 4-digit Booking Start OTP and submits
+ * The worker asks the customer for the 6-digit Booking Start OTP and submits
  * it to the OTP V2 gateway (verify_start). The booking is marked started ONLY
  * after confirmed backend success — never locally before verification.
  *

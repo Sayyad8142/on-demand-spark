@@ -15,7 +15,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { otpV2ErrorMessage } from "@/lib/otpV2";
+import { otpV2ErrorMessage, isOtpV2ClientEnabled, resolveOtpMode, V2_OTP_LENGTH, LEGACY_OTP_LENGTH } from "@/lib/otpV2";
 import { decideCompletion, TERMINAL_CODES, RETRYABLE_CODES } from "@/lib/otpCompletionFlow";
 
 interface PayoutSummary {
@@ -90,7 +90,7 @@ type ErrorKind = "validation" | "wrong_otp" | "payment" | "network" | "timeout" 
 
 const TIMEOUT_WARNING_MS = 12_000;
 
-const normalizeOtp = (value: unknown) => String(value ?? "").replace(/\D/g, "").trim().slice(0, 4);
+const normalizeOtpTo = (value: unknown, len: number) => String(value ?? "").replace(/\D/g, "").trim().slice(0, len);
 
 const logOtpDebug = (label: string, payload: Record<string, unknown>) => {
   try {
@@ -105,6 +105,10 @@ export default function CompleteBooking() {
   const navigate = useNavigate();
 
   const [otp, setOtp] = useState("");
+  // Code length shown on screen only: six for V2 bookings, four for legacy.
+  // The server still decides which completion path is allowed.
+  const [otpLength, setOtpLength] = useState<number>(LEGACY_OTP_LENGTH);
+  const normalizeOtp = (value: unknown) => normalizeOtpTo(value, otpLength);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorKind, setErrorKind] = useState<ErrorKind>(null);
@@ -147,6 +151,15 @@ export default function CompleteBooking() {
         .maybeSingle();
       if (!cancelled && data) setBookingMeta(data);
     })();
+    return () => { cancelled = true; };
+  }, [bookingId]);
+
+  useEffect(() => {
+    if (!bookingId || !isOtpV2ClientEnabled()) return;
+    let cancelled = false;
+    resolveOtpMode(bookingId).then((m) => {
+      if (!cancelled) setOtpLength(m === "v2" ? V2_OTP_LENGTH : LEGACY_OTP_LENGTH);
+    });
     return () => { cancelled = true; };
   }, [bookingId]);
 
@@ -237,8 +250,8 @@ export default function CompleteBooking() {
       isRetry,
     });
 
-    if (enteredOtp.length !== 4) {
-      setError("Please enter the complete 4-digit OTP");
+    if (enteredOtp.length !== otpLength) {
+      setError(`Please enter the complete ${otpLength}-digit OTP`);
       setErrorKind("validation");
       triggerShake();
       return;
@@ -276,7 +289,7 @@ export default function CompleteBooking() {
         stopSlowTimer();
         haptic.error();
         if (decision.code === "INCORRECT_OTP") {
-          handleWrongOtp(otpV2ErrorMessage(decision.code), enteredOtp);
+          handleWrongOtp(decision.message || otpV2ErrorMessage(decision.code), enteredOtp);
         } else if (TERMINAL_CODES.includes(decision.code)) {
           setError(otpV2ErrorMessage(decision.code));
           setErrorKind("other");
@@ -440,12 +453,12 @@ export default function CompleteBooking() {
               {displayText("Enter OTP")}
             </h1>
             <p className="text-sm text-muted-foreground mt-2 mb-10 text-center">
-              {displayText("Ask customer for the 4-digit code")}
+              {displayText(otpLength === V2_OTP_LENGTH ? "Ask customer for the 6-digit Completion OTP" : "Ask customer for the 4-digit code")}
             </p>
 
             <div ref={otpContainerRef} className={cn(shake && "animate-otp-shake")}>
               <InputOTP
-                maxLength={4}
+                maxLength={otpLength}
                 value={otp}
                 onChange={(v) => {
                   const cleaned = normalizeOtp(v);
@@ -453,7 +466,7 @@ export default function CompleteBooking() {
                   setOtp(cleaned);
                   logOtpDebug("change", { length: cleaned.length });
                   // Only clear validation error once user actually has < 4 digits
-                  if (error && errorKind === "validation" && cleaned.length < 4) {
+                  if (error && errorKind === "validation" && cleaned.length < otpLength) {
                     setError(null);
                     setErrorKind(null);
                   } else if (error && errorKind !== "network" && errorKind !== "timeout" && errorKind !== "validation") {
@@ -465,7 +478,7 @@ export default function CompleteBooking() {
                     window.clearTimeout(autoVerifyTimerRef.current);
                     autoVerifyTimerRef.current = null;
                   }
-                  if (cleaned.length === 4 && !loading && !submitLockRef.current) {
+                  if (cleaned.length === otpLength && !loading && !submitLockRef.current) {
                     console.log("[OTP_AUTO_VERIFY]", { length: cleaned.length, source: "auto" });
                     // Small debounce so React state + native IME settle on low-end Android
                     autoVerifyTimerRef.current = window.setTimeout(() => {
@@ -478,13 +491,13 @@ export default function CompleteBooking() {
                 pattern="[0-9]*"
                 autoFocus
               >
-                <InputOTPGroup className="gap-3">
-                  {[0, 1, 2, 3].map((i) => (
+                <InputOTPGroup className={otpLength === V2_OTP_LENGTH ? "gap-2" : "gap-3"}>
+                  {Array.from({ length: otpLength }, (_, i) => i).map((i) => (
                     <InputOTPSlot
                       key={i}
                       index={i}
                       className={cn(
-                        "h-16 w-16 text-3xl font-semibold rounded-2xl border",
+                        otpLength === V2_OTP_LENGTH ? "h-14 w-11 text-2xl font-semibold rounded-2xl border" : "h-16 w-16 text-3xl font-semibold rounded-2xl border",
                         "first:rounded-2xl last:rounded-2xl border-l",
                         "bg-background transition-all",
                         errorKind === "wrong_otp" || errorKind === "validation"
@@ -521,7 +534,7 @@ export default function CompleteBooking() {
 
             {debugMode && (
               <div className="mt-4 rounded-xl border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
-                {displayText("OTP length:")} {normalizeOtp(otpRef.current).length} {displayText("· valid:")} {String(normalizeOtp(otpRef.current).length === 4)}
+                {displayText("OTP length:")} {normalizeOtp(otpRef.current).length} {displayText("· valid:")} {String(normalizeOtp(otpRef.current).length === otpLength)}
               </div>
             )}
           </div>
@@ -534,7 +547,7 @@ export default function CompleteBooking() {
                 console.log("[OTP_MANUAL_VERIFY]", { length: current.length, source: "manual" });
                 handleSubmit(false, current);
               }}
-              disabled={loading || normalizeOtp(otp).length !== 4}
+              disabled={loading || normalizeOtp(otp).length !== otpLength}
               className="w-full h-14 text-base font-semibold rounded-2xl bg-pink-600 hover:bg-pink-700 text-white shadow-sm disabled:opacity-40 disabled:shadow-none"
             >
               {loading ? (
