@@ -15,7 +15,7 @@ import {
 import { TERMINAL_CODES, RETRYABLE_CODES } from "@/lib/otpCompletionFlow";
 
 const normalizeOtp = (value: unknown) =>
-  String(value ?? "").replace(/\D/g, "").trim().slice(0, 4);
+  String(value ?? "").replace(/\D/g, "").trim().slice(0, 6);
 
 const haptic = {
   success: () => { try { navigator.vibrate?.([30]); } catch { /* noop */ } },
@@ -27,7 +27,7 @@ type ErrorKind = "validation" | "wrong_otp" | "locked" | "network" | "terminal" 
 /**
  * Start Booking — first stage of the two-stage OTP flow.
  *
- * The worker asks the customer for the 4-digit Booking Start OTP and submits
+ * The worker asks the customer for the 6-digit Booking Start OTP and submits
  * it to the OTP V2 gateway (verify_start). The booking is marked started ONLY
  * after confirmed backend success — never locally before verification.
  *
@@ -92,8 +92,8 @@ export default function StartBooking() {
     if (submitLockRef.current || loading) return;
     const enteredOtp = normalizeOtp(submittedOtp ?? otpRef.current ?? otp);
 
-    if (enteredOtp.length !== 4) {
-      fail("validation", "Please enter the complete 4-digit OTP");
+    if (enteredOtp.length !== 6) {
+      fail("validation", "Please enter the complete 6-digit OTP");
       return;
     }
 
@@ -120,9 +120,9 @@ export default function StartBooking() {
         return;
       }
       if (code === "INCORRECT_OTP") {
-        fail("wrong_otp", otpV2ErrorMessage(code), true);
-      } else if (code === "LOCKED" || code === "LIFETIME_LOCKED") {
-        fail("locked", otpV2ErrorMessage(code));
+        fail("wrong_otp", result.message || otpV2ErrorMessage(code), true);
+      } else if (code === "LOCKED" || code === "LIFETIME_LOCKED" || code === "COOLDOWN" || code === "OTP_EXPIRED") {
+        fail("locked", result.message || otpV2ErrorMessage(code));
       } else if (TERMINAL_CODES.includes(code)) {
         fail("terminal", otpV2ErrorMessage(code));
         window.dispatchEvent(new CustomEvent("bookingReassigned", { detail: { bookingId } }));
@@ -169,12 +169,12 @@ export default function StartBooking() {
           {displayText("Start Booking")}
         </h1>
         <p className="text-sm text-muted-foreground mt-2 mb-10 text-center">
-          {displayText("Ask customer for the 4-digit Start OTP")}
+          {displayText("Ask customer for the 6-digit Start OTP")}
         </p>
 
         <div ref={otpContainerRef} className={cn(shake && "animate-otp-shake")}>
           <InputOTP
-            maxLength={4}
+            maxLength={6}
             value={otp}
             onChange={(v) => {
               const cleaned = normalizeOtp(v);
@@ -188,7 +188,7 @@ export default function StartBooking() {
                 window.clearTimeout(autoVerifyTimerRef.current);
                 autoVerifyTimerRef.current = null;
               }
-              if (cleaned.length === 4 && !loading && !submitLockRef.current) {
+              if (cleaned.length === 6 && !loading && !submitLockRef.current) {
                 autoVerifyTimerRef.current = window.setTimeout(() => {
                   autoVerifyTimerRef.current = null;
                   handleSubmit(cleaned);
@@ -199,13 +199,13 @@ export default function StartBooking() {
             pattern="[0-9]*"
             autoFocus
           >
-            <InputOTPGroup className="gap-3">
-              {[0, 1, 2, 3].map((i) => (
+            <InputOTPGroup className="gap-2">
+              {[0, 1, 2, 3, 4, 5].map((i) => (
                 <InputOTPSlot
                   key={i}
                   index={i}
                   className={cn(
-                    "h-16 w-16 text-3xl font-semibold rounded-2xl border",
+                    "h-14 w-11 text-2xl font-semibold rounded-2xl border",
                     "first:rounded-2xl last:rounded-2xl border-l",
                     "bg-background transition-all",
                     errorKind === "wrong_otp" || errorKind === "validation"
@@ -239,7 +239,7 @@ export default function StartBooking() {
       <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom),1rem)] bg-background">
         <Button
           onClick={() => handleSubmit()}
-          disabled={loading || normalizeOtp(otp).length !== 4}
+          disabled={loading || normalizeOtp(otp).length !== 6}
           className="w-full h-14 text-base font-semibold rounded-2xl bg-green-600 hover:bg-green-700 text-white shadow-sm disabled:opacity-40 disabled:shadow-none"
         >
           {loading ? (

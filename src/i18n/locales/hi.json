@@ -994,6 +994,13 @@
     "force_update_body": "यह वर्ज़न अब काम नहीं करता। बुकिंग पाते रहने के लिए कृपया अपडेट करें।",
     "Installed_build": "इंस्टॉल बिल्ड",
     "Required_build": "ज़रूरी बिल्ड",
-    "update_after_job": "इस काम के बाद अपडेट ज़रूरी है। पहले अपनी बुकिंग पूरी करें।"
+    "update_after_job": "इस काम के बाद अपडेट ज़रूरी है। पहले अपनी बुकिंग पूरी करें।",
+    "Start_Booking_with_OTP": "ओटीपी से बुकिंग शुरू करें",
+    "Complete_Booking_with_OTP": "ओटीपी से बुकिंग पूरी करें",
+    "Ask_customer_for_the_6_digit_Start_OTP": "ग्राहक से 6 अंकों का स्टार्ट ओटीपी माँगें",
+    "Ask_customer_for_the_6_digit_Completion_OTP": "ग्राहक से 6 अंकों का कम्प्लीशन ओटीपी माँगें",
+    "Please_enter_the_complete_6_digit_OTP": "कृपया पूरा 6 अंकों का ओटीपी डालें",
+    "This_OTP_has_expired_Ask_the_customer_to_open_the_app_for_a_new_code": "यह ओटीपी समाप्त हो गया है। नया कोड पाने के लिए ग्राहक से ऐप खोलने को कहें।",
+    "Please_wait_before_trying_again": "दोबारा कोशिश करने से पहले थोड़ा रुकें।"
   }
 }

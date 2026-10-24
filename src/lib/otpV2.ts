@@ -64,13 +64,60 @@ export type OtpV2ErrorCode =
   | "INCORRECT_OTP"
   | "LOCKED"
   | "LIFETIME_LOCKED"
+  | "OTP_EXPIRED"
+  | "COOLDOWN"
   | "OTP_V2_UNAVAILABLE"
   | "OTP_V2_OPERATION_FAILED"
   | "NETWORK"
   | "TIMEOUT";
 
 export type OtpV2Success = { ok: true; status: "started" | "completed"; idempotent: boolean };
-export type OtpV2Failure = { ok: false; code: OtpV2ErrorCode; message: string };
+/** Server-supplied limits shown to the worker (never authorize anything). */
+export type OtpV2Limits = {
+  remainingAttempts?: number;
+  expiresAt?: string;
+  retryAfterSeconds?: number;
+};
+export type OtpV2Failure = { ok: false; code: OtpV2ErrorCode; message: string; limits?: OtpV2Limits };
+
+/** V2 Start and Completion OTPs are six digits; legacy completion stays four. */
+export const V2_OTP_LENGTH = 6;
+export const LEGACY_OTP_LENGTH = 4;
+
+/** Read remaining attempts / expiry / cooldown from a gateway body. */
+export function parseOtpLimits(body: Record<string, unknown> | null | undefined): OtpV2Limits | undefined {
+  if (!body) return undefined;
+  const out: OtpV2Limits = {};
+  const ra = body.remaining_attempts ?? body.attempts_remaining;
+  if (typeof ra === "number" && Number.isInteger(ra) && ra >= 0) out.remainingAttempts = ra;
+  const exp = body.expires_at;
+  if (typeof exp === "string" && !Number.isNaN(Date.parse(exp))) out.expiresAt = exp;
+  const retry = body.retry_after_seconds;
+  if (typeof retry === "number" && Number.isFinite(retry) && retry > 0) out.retryAfterSeconds = Math.ceil(retry);
+  else if (typeof body.locked_until === "string" && !Number.isNaN(Date.parse(body.locked_until))) {
+    const secs = Math.ceil((Date.parse(body.locked_until) - Date.now()) / 1000);
+    if (secs > 0) out.retryAfterSeconds = secs;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+/** Plain-language extra line built from server limits ("" when none). */
+export function otpLimitsMessage(limits?: OtpV2Limits, now: number = Date.now()): string {
+  if (!limits) return "";
+  const parts: string[] = [];
+  if (limits.retryAfterSeconds) {
+    const mins = Math.ceil(limits.retryAfterSeconds / 60);
+    parts.push(mins <= 1 ? "Try again in 1 minute." : `Try again in ${mins} minutes.`);
+  }
+  if (limits.remainingAttempts !== undefined) {
+    parts.push(limits.remainingAttempts === 1 ? "1 attempt left." : `${limits.remainingAttempts} attempts left.`);
+  }
+  if (limits.expiresAt) {
+    const mins = Math.ceil((Date.parse(limits.expiresAt) - now) / 60000);
+    if (mins > 0) parts.push(mins === 1 ? "Code expires in 1 minute." : `Code expires in ${mins} minutes.`);
+  }
+  return parts.join(" ");
+}
 export type OtpV2Result = OtpV2Success | OtpV2Failure;
 
 export const isOtpV2Failure = (r: OtpV2Result): r is OtpV2Failure => r.ok === false;
@@ -88,6 +135,8 @@ const KNOWN_CODES: readonly OtpV2ErrorCode[] = [
   "INCORRECT_OTP",
   "LOCKED",
   "LIFETIME_LOCKED",
+  "OTP_EXPIRED",
+  "COOLDOWN",
   "OTP_V2_UNAVAILABLE",
   "OTP_V2_OPERATION_FAILED",
 ];
@@ -95,13 +144,15 @@ const KNOWN_CODES: readonly OtpV2ErrorCode[] = [
 export const GATEWAY_TIMEOUT_MS = 20_000;
 
 const normalizeOtp = (value: unknown) =>
-  String(value ?? "").replace(/\D/g, "").trim().slice(0, 4);
+  String(value ?? "").replace(/\D/g, "").trim().slice(0, V2_OTP_LENGTH);
 
-const failure = (code: OtpV2ErrorCode, message?: string): OtpV2Failure => ({
-  ok: false,
-  code,
-  message: message || otpV2ErrorMessage(code),
-});
+const failure = (code: OtpV2ErrorCode, message?: string, limits?: OtpV2Limits): OtpV2Failure => {
+  const base = message || otpV2ErrorMessage(code);
+  const extra = otpLimitsMessage(limits);
+  return limits
+    ? { ok: false, code, message: extra ? `${base} ${extra}` : base, limits }
+    : { ok: false, code, message: base };
+};
 
 // Single-flight guard: one in-flight request per action+booking.
 const inFlight = new Map<string, Promise<OtpV2Result>>();
@@ -217,7 +268,7 @@ async function callGateway(action: OtpV2Action, bookingId: string, otp: string):
     }
     const code = toErrorCode(raw.payload?.code ?? raw.payload?.error_code ?? raw.payload?.error);
     console.warn("[OTP_V2] gateway error", { action, bookingId, code, httpStatus: raw.status });
-    return failure(code, otpV2ErrorMessage(code));
+    return failure(code, otpV2ErrorMessage(code), parseOtpLimits(raw.payload));
   }
 
   const body = (raw.data ?? {}) as Record<string, unknown>;
@@ -227,13 +278,20 @@ async function callGateway(action: OtpV2Action, bookingId: string, otp: string):
 
   const code = toErrorCode(body.code ?? body.error_code ?? body.error);
   console.warn("[OTP_V2] verification refused", { action, bookingId, code });
-  return failure(code, otpV2ErrorMessage(code));
+  return failure(code, otpV2ErrorMessage(code), parseOtpLimits(body));
 }
 
 async function verify(action: OtpV2Action, bookingId: string, otpRaw: string): Promise<OtpV2Result> {
   const otp = normalizeOtp(otpRaw);
-  if (!bookingId || otp.length !== 4) {
-    return failure("INVALID_REQUEST", "Please enter the complete 4-digit OTP");
+  // Start: six digits only. Completion: six digits (V2) or four digits, which
+  // the gateway either answers LEGACY_BOOKING (legacy path) or refuses.
+  const lengthOk =
+    otp.length === V2_OTP_LENGTH || (action === "verify_completion" && otp.length === LEGACY_OTP_LENGTH);
+  if (!bookingId || !lengthOk) {
+    return failure(
+      "INVALID_REQUEST",
+      action === "verify_start" ? "Please enter the complete 6-digit OTP" : "Please enter the complete OTP",
+    );
   }
   const key = `${action}:${bookingId}`;
   const existing = inFlight.get(key);
@@ -299,6 +357,8 @@ const V2_ONLY_CODES: readonly OtpV2ErrorCode[] = [
   "INCORRECT_OTP",
   "LOCKED",
   "LIFETIME_LOCKED",
+  "OTP_EXPIRED",
+  "COOLDOWN",
   "CREDENTIAL_INVALID",
   "INVALID_STATUS",
 ];
@@ -392,6 +452,10 @@ export function otpV2ErrorMessage(code: OtpV2ErrorCode, fallback?: string): stri
       return "Wrong OTP. Please ask the customer for the correct code.";
     case "LOCKED":
       return "Too many wrong attempts. This OTP is locked for 15 minutes.";
+    case "OTP_EXPIRED":
+      return "This OTP has expired. Ask the customer to open the app for a new code.";
+    case "COOLDOWN":
+      return "Please wait before trying again.";
     case "LIFETIME_LOCKED":
       return "This OTP is permanently locked. Please contact support.";
     case "START_NOT_VERIFIED":

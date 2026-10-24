@@ -994,6 +994,13 @@
     "force_update_body": "ఈ వెర్షన్‌కు ఇక మద్దతు లేదు. బుకింగ్‌లు పొందడానికి దయచేసి అప్‌డేట్ చేయండి.",
     "Installed_build": "ఇన్‌స్టాల్ చేసిన బిల్డ్",
     "Required_build": "అవసరమైన బిల్డ్",
-    "update_after_job": "ఈ పని తర్వాత అప్‌డేట్ అవసరం. ముందు మీ బుకింగ్ పూర్తి చేయండి."
+    "update_after_job": "ఈ పని తర్వాత అప్‌డేట్ అవసరం. ముందు మీ బుకింగ్ పూర్తి చేయండి.",
+    "Start_Booking_with_OTP": "OTPతో బుకింగ్ ప్రారంభించండి",
+    "Complete_Booking_with_OTP": "OTPతో బుకింగ్ పూర్తి చేయండి",
+    "Ask_customer_for_the_6_digit_Start_OTP": "కస్టమర్‌ను 6 అంకెల స్టార్ట్ OTP అడగండి",
+    "Ask_customer_for_the_6_digit_Completion_OTP": "కస్టమర్‌ను 6 అంకెల పూర్తి OTP అడగండి",
+    "Please_enter_the_complete_6_digit_OTP": "దయచేసి పూర్తి 6 అంకెల OTP నమోదు చేయండి",
+    "This_OTP_has_expired_Ask_the_customer_to_open_the_app_for_a_new_code": "ఈ OTP గడువు ముగిసింది. కొత్త కోడ్ కోసం కస్టమర్‌ను యాప్ తెరవమని చెప్పండి.",
+    "Please_wait_before_trying_again": "మళ్లీ ప్రయత్నించే ముందు కొంచెం ఆగండి."
   }
 }
