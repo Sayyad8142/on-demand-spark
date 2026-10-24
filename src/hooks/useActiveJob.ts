@@ -188,6 +188,19 @@ export function useActiveJob(userId: string | undefined) {
 
     window.addEventListener("bookingAccepted", onBookingAccepted);
 
+    // Start OTP verified on the server → re-read the booking so the card
+    // shows the server's "started" status (never set locally).
+    const onBookingStarted = () => {
+      let attempts = 0;
+      const tryFetch = () => {
+        attempts++;
+        fetchActiveJob();
+        if (attempts < 3) setTimeout(tryFetch, 1000);
+      };
+      tryFetch();
+    };
+    window.addEventListener("bookingStarted", onBookingStarted);
+
     // Admin reassignment — clear immediately and refetch to confirm.
     const onBookingReassigned = async (event: Event) => {
       const bookingId = (event as CustomEvent)?.detail?.bookingId;
@@ -214,6 +227,7 @@ export function useActiveJob(userId: string | undefined) {
 
     return () => {
       window.removeEventListener("bookingAccepted", onBookingAccepted);
+      window.removeEventListener("bookingStarted", onBookingStarted);
       window.removeEventListener("bookingReassigned", onBookingReassigned);
     };
   }, [fetchActiveJob]);
