@@ -29,7 +29,7 @@ import {
 import { decideCompletion, TERMINAL_CODES, RETRYABLE_CODES } from "@/lib/otpCompletionFlow";
 
 const B = "booking-1";
-const OTP = "4821";
+const OTP = "482193";
 
 const validSession = () => ({
   data: { session: { access_token: "worker-token", expires_at: Math.floor(Date.now() / 1000) + 3600 } },
@@ -410,5 +410,57 @@ describe("Mode resolution (unknown mode)", () => {
     expect(await resolveOtpMode(B)).toBe("v2");
     expect(await resolveOtpMode(B)).toBe("v2");
     expect(invoke).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Six-digit V2 codes and server limits", () => {
+  beforeEach(() => {
+    __resetOtpV2State();
+    invoke.mockReset();
+    getSession.mockReset().mockResolvedValue(validSession());
+    refreshSession.mockReset();
+  });
+
+  it("Start OTP refuses four digits without a request", async () => {
+    const r = await verifyStartOtp(B, "4821");
+    expect(r.ok === false && r.code).toBe("INVALID_REQUEST");
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("Start OTP sends exactly six digits", async () => {
+    invoke.mockResolvedValueOnce(ok({ success: true, status: "started", idempotent: false }));
+    await verifyStartOtp(B, "482193");
+    expect(invoke.mock.calls[0][1].body.otp).toBe("482193");
+  });
+
+  it("four-digit completion still reaches the gateway so it can answer LEGACY_BOOKING", async () => {
+    invoke.mockResolvedValueOnce(httpErr(409, { code: "LEGACY_BOOKING" }));
+    const d = await decideCompletion(B, "4821", true);
+    expect(d).toEqual({ path: "legacy" });
+  });
+
+  it("wrong code shows remaining attempts from the server", async () => {
+    invoke.mockResolvedValueOnce(httpErr(400, { code: "INCORRECT_OTP", remaining_attempts: 2 }));
+    const r = await verifyCompletionOtp(B, OTP);
+    expect(r.ok === false && r.limits?.remainingAttempts).toBe(2);
+    expect(r.ok === false && r.message).toContain("2 attempts left.");
+  });
+
+  it("cooldown shows minutes to wait", async () => {
+    invoke.mockResolvedValueOnce(httpErr(429, { code: "COOLDOWN", retry_after_seconds: 600 }));
+    const r = await verifyStartOtp(B, OTP);
+    expect(r.ok === false && r.code).toBe("COOLDOWN");
+    expect(r.ok === false && r.message).toContain("Try again in 10 minutes.");
+  });
+
+  it("expired code is reported, never treated as legacy", async () => {
+    invoke.mockResolvedValueOnce(httpErr(410, { code: "OTP_EXPIRED" }));
+    const d = await decideCompletion(B, OTP, true);
+    expect(d.path === "v2_error" && d.code).toBe("OTP_EXPIRED");
+  });
+
+  it("V2 booking cannot complete before start", () => {
+    expect(getOtpCardAction({ v2Enabled: true, mode: "v2", status: "accepted" })).toBe("start");
+    expect(getOtpCardAction({ v2Enabled: true, mode: "v2", status: "started" })).toBe("complete");
   });
 });
