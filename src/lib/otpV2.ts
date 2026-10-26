@@ -136,8 +136,9 @@ const KNOWN_CODES: readonly OtpV2ErrorCode[] = [
 
 export const GATEWAY_TIMEOUT_MS = 20_000;
 
+// Never truncate: a longer code must be refused, not silently cut to four digits.
 const normalizeOtp = (value: unknown) =>
-  String(value ?? "").replace(/\D/g, "").trim().slice(0, V2_OTP_LENGTH);
+  String(value ?? "").replace(/\D/g, "").trim();
 
 const failure = (code: OtpV2ErrorCode, message?: string, limits?: OtpV2Limits): OtpV2Failure => {
   const base = message || otpV2ErrorMessage(code);

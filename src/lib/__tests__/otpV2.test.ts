@@ -413,7 +413,7 @@ describe("Mode resolution (unknown mode)", () => {
   });
 });
 
-describe("Six-digit V2 codes and server limits", () => {
+describe("Four-digit V2 codes and server limits", () => {
   beforeEach(() => {
     __resetOtpV2State();
     invoke.mockReset();
