@@ -10,12 +10,13 @@ import {
   isOtpV2Failure,
   isOtpV2ClientEnabled,
   otpV2ErrorMessage,
+  V2_OTP_LENGTH,
   type OtpV2ErrorCode,
 } from "@/lib/otpV2";
 import { TERMINAL_CODES, RETRYABLE_CODES } from "@/lib/otpCompletionFlow";
 
 const normalizeOtp = (value: unknown) =>
-  String(value ?? "").replace(/\D/g, "").trim().slice(0, 6);
+  String(value ?? "").replace(/\D/g, "").trim().slice(0, V2_OTP_LENGTH);
 
 const haptic = {
   success: () => { try { navigator.vibrate?.([30]); } catch { /* noop */ } },
@@ -27,7 +28,7 @@ type ErrorKind = "validation" | "wrong_otp" | "locked" | "network" | "terminal" 
 /**
  * Start Booking — first stage of the two-stage OTP flow.
  *
- * The worker asks the customer for the 6-digit Booking Start OTP and submits
+ * The worker asks the customer for the 4-digit Booking Start OTP and submits
  * it to the OTP V2 gateway (verify_start). The booking is marked started ONLY
  * after confirmed backend success — never locally before verification.
  *
@@ -92,8 +93,8 @@ export default function StartBooking() {
     if (submitLockRef.current || loading) return;
     const enteredOtp = normalizeOtp(submittedOtp ?? otpRef.current ?? otp);
 
-    if (enteredOtp.length !== 6) {
-      fail("validation", "Please enter the complete 6-digit OTP");
+    if (enteredOtp.length !== V2_OTP_LENGTH) {
+      fail("validation", "Please enter the complete 4-digit OTP");
       return;
     }
 
@@ -169,12 +170,12 @@ export default function StartBooking() {
           {displayText("Start Booking")}
         </h1>
         <p className="text-sm text-muted-foreground mt-2 mb-10 text-center">
-          {displayText("Ask customer for the 6-digit Start OTP")}
+          {displayText("Ask customer for the 4-digit Start OTP")}
         </p>
 
         <div ref={otpContainerRef} className={cn(shake && "animate-otp-shake")}>
           <InputOTP
-            maxLength={6}
+            maxLength={V2_OTP_LENGTH}
             value={otp}
             onChange={(v) => {
               const cleaned = normalizeOtp(v);
@@ -188,7 +189,7 @@ export default function StartBooking() {
                 window.clearTimeout(autoVerifyTimerRef.current);
                 autoVerifyTimerRef.current = null;
               }
-              if (cleaned.length === 6 && !loading && !submitLockRef.current) {
+              if (cleaned.length === V2_OTP_LENGTH && !loading && !submitLockRef.current) {
                 autoVerifyTimerRef.current = window.setTimeout(() => {
                   autoVerifyTimerRef.current = null;
                   handleSubmit(cleaned);
@@ -239,7 +240,7 @@ export default function StartBooking() {
       <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom),1rem)] bg-background">
         <Button
           onClick={() => handleSubmit()}
-          disabled={loading || normalizeOtp(otp).length !== 6}
+          disabled={loading || normalizeOtp(otp).length !== V2_OTP_LENGTH}
           className="w-full h-14 text-base font-semibold rounded-2xl bg-green-600 hover:bg-green-700 text-white shadow-sm disabled:opacity-40 disabled:shadow-none"
         >
           {loading ? (

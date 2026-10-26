@@ -80,8 +80,8 @@ export type OtpV2Limits = {
 };
 export type OtpV2Failure = { ok: false; code: OtpV2ErrorCode; message: string; limits?: OtpV2Limits };
 
-/** V2 Start and Completion OTPs are six digits; legacy completion stays four. */
-export const V2_OTP_LENGTH = 6;
+/** V2 Start and Completion OTPs are four digits: the live otp-v2-gateway only accepts /^\d{4}$/ (verified 2026-10-26). Legacy completion is also four. */
+export const V2_OTP_LENGTH = 4;
 export const LEGACY_OTP_LENGTH = 4;
 
 /** Read remaining attempts / lock end from a gateway body (no expiry: backend has none). */
@@ -136,8 +136,9 @@ const KNOWN_CODES: readonly OtpV2ErrorCode[] = [
 
 export const GATEWAY_TIMEOUT_MS = 20_000;
 
+// Never truncate: a longer code must be refused, not silently cut to four digits.
 const normalizeOtp = (value: unknown) =>
-  String(value ?? "").replace(/\D/g, "").trim().slice(0, V2_OTP_LENGTH);
+  String(value ?? "").replace(/\D/g, "").trim();
 
 const failure = (code: OtpV2ErrorCode, message?: string, limits?: OtpV2Limits): OtpV2Failure => {
   const base = message || otpV2ErrorMessage(code);
@@ -283,14 +284,13 @@ async function callGateway(action: OtpV2Action, bookingId: string, otp: string):
 
 async function verify(action: OtpV2Action, bookingId: string, otpRaw: string): Promise<OtpV2Result> {
   const otp = normalizeOtp(otpRaw);
-  // Start: six digits only. Completion: six digits (V2) or four digits, which
-  // the gateway either answers LEGACY_BOOKING (legacy path) or refuses.
-  const lengthOk =
-    otp.length === V2_OTP_LENGTH || (action === "verify_completion" && otp.length === LEGACY_OTP_LENGTH);
+  // Start and Completion: exactly four digits (live gateway contract). For
+  // completion the gateway answers LEGACY_BOOKING for pre-V2 bookings.
+  const lengthOk = otp.length === V2_OTP_LENGTH;
   if (!bookingId || !lengthOk) {
     return failure(
       "INVALID_REQUEST",
-      action === "verify_start" ? "Please enter the complete 6-digit OTP" : "Please enter the complete OTP",
+      action === "verify_start" ? "Please enter the complete 4-digit OTP" : "Please enter the complete OTP",
     );
   }
   const key = `${action}:${bookingId}`;
