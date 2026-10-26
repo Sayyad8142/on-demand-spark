@@ -105,7 +105,7 @@ export default function CompleteBooking() {
   const navigate = useNavigate();
 
   const [otp, setOtp] = useState("");
-  // Code length shown on screen only: six for V2 bookings, four for legacy.
+  // Code length shown on screen only: four for both V2 and legacy (live gateway contract).
   // The server still decides which completion path is allowed.
   const [otpLength, setOtpLength] = useState<number>(LEGACY_OTP_LENGTH);
   const normalizeOtp = (value: unknown) => normalizeOtpTo(value, otpLength);

@@ -1,6 +1,4 @@
-  // Start and Completion: exactly four digits (live gateway contract). For
-  // completion the gateway answers LEGACY_BOOKING for pre-V2 bookings.
-  const lengthOk = otp.length === V2_OTP_LENGTH;import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * OTP V2 gateway client (two-stage OTP: Start OTP + Completion OTP).
@@ -285,10 +283,9 @@ async function callGateway(action: OtpV2Action, bookingId: string, otp: string):
 
 async function verify(action: OtpV2Action, bookingId: string, otpRaw: string): Promise<OtpV2Result> {
   const otp = normalizeOtp(otpRaw);
-  // Start: six digits only. Completion: six digits (V2) or four digits, which
-  // the gateway either answers LEGACY_BOOKING (legacy path) or refuses.
-  const lengthOk =
-    otp.length === V2_OTP_LENGTH || (action === "verify_completion" && otp.length === LEGACY_OTP_LENGTH);
+  // Start and Completion: exactly four digits (live gateway contract). For
+  // completion the gateway answers LEGACY_BOOKING for pre-V2 bookings.
+  const lengthOk = otp.length === V2_OTP_LENGTH;
   if (!bookingId || !lengthOk) {
     return failure(
       "INVALID_REQUEST",
