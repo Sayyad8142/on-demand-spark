@@ -29,7 +29,7 @@ import {
 import { decideCompletion, TERMINAL_CODES, RETRYABLE_CODES } from "@/lib/otpCompletionFlow";
 
 const B = "booking-1";
-const OTP = "482193";
+const OTP = "4821";
 
 const validSession = () => ({
   data: { session: { access_token: "worker-token", expires_at: Math.floor(Date.now() / 1000) + 3600 } },
@@ -427,10 +427,10 @@ describe("Six-digit V2 codes and server limits", () => {
     expect(invoke).not.toHaveBeenCalled();
   });
 
-  it("Start OTP sends exactly six digits", async () => {
+  it("Start OTP sends exactly four digits (live gateway pattern)", async () => {
     invoke.mockResolvedValueOnce(ok({ success: true, status: "started", idempotent: false }));
-    await verifyStartOtp(B, "482193");
-    expect(invoke.mock.calls[0][1].body.otp).toBe("482193");
+    await verifyStartOtp(B, "4821");
+    expect(invoke.mock.calls[0][1].body.otp).toBe("4821");
   });
 
   it("four-digit completion still reaches the gateway so it can answer LEGACY_BOOKING", async () => {
@@ -483,7 +483,7 @@ describe("Six-digit V2 codes and server limits", () => {
     expect(r.ok === false && r.message).not.toMatch(/expire/i);
   });
 
-  it("Start requires exactly six digits", async () => {
+  it("Start refuses six digits without a request", async () => {
     const r = await verifyStartOtp(B, "1234");
     expect(r.ok === false && r.code).toBe("INVALID_REQUEST");
     expect(invoke).not.toHaveBeenCalled();

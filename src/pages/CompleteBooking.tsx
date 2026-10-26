@@ -453,7 +453,7 @@ export default function CompleteBooking() {
               {displayText("Enter OTP")}
             </h1>
             <p className="text-sm text-muted-foreground mt-2 mb-10 text-center">
-              {displayText(otpLength === V2_OTP_LENGTH ? "Ask customer for the 6-digit Completion OTP" : "Ask customer for the 4-digit code")}
+              {displayText("Ask customer for the 4-digit code")}
             </p>
 
             <div ref={otpContainerRef} className={cn(shake && "animate-otp-shake")}>
@@ -491,13 +491,13 @@ export default function CompleteBooking() {
                 pattern="[0-9]*"
                 autoFocus
               >
-                <InputOTPGroup className={otpLength === V2_OTP_LENGTH ? "gap-2" : "gap-3"}>
+                <InputOTPGroup className={otpLength > 4 ? "gap-2" : "gap-3"}>
                   {Array.from({ length: otpLength }, (_, i) => i).map((i) => (
                     <InputOTPSlot
                       key={i}
                       index={i}
                       className={cn(
-                        otpLength === V2_OTP_LENGTH ? "h-14 w-11 text-2xl font-semibold rounded-2xl border" : "h-16 w-16 text-3xl font-semibold rounded-2xl border",
+                        otpLength > 4 ? "h-14 w-11 text-2xl font-semibold rounded-2xl border" : "h-16 w-16 text-3xl font-semibold rounded-2xl border",
                         "first:rounded-2xl last:rounded-2xl border-l",
                         "bg-background transition-all",
                         errorKind === "wrong_otp" || errorKind === "validation"

@@ -1,4 +1,6 @@
-import { supabase } from "@/integrations/supabase/client";
+  // Start and Completion: exactly four digits (live gateway contract). For
+  // completion the gateway answers LEGACY_BOOKING for pre-V2 bookings.
+  const lengthOk = otp.length === V2_OTP_LENGTH;import { supabase } from "@/integrations/supabase/client";
 
 /**
  * OTP V2 gateway client (two-stage OTP: Start OTP + Completion OTP).
@@ -80,8 +82,8 @@ export type OtpV2Limits = {
 };
 export type OtpV2Failure = { ok: false; code: OtpV2ErrorCode; message: string; limits?: OtpV2Limits };
 
-/** V2 Start and Completion OTPs are six digits; legacy completion stays four. */
-export const V2_OTP_LENGTH = 6;
+/** V2 Start and Completion OTPs are four digits: the live otp-v2-gateway only accepts /^\d{4}$/ (verified 2026-10-26). Legacy completion is also four. */
+export const V2_OTP_LENGTH = 4;
 export const LEGACY_OTP_LENGTH = 4;
 
 /** Read remaining attempts / lock end from a gateway body (no expiry: backend has none). */
@@ -290,7 +292,7 @@ async function verify(action: OtpV2Action, bookingId: string, otpRaw: string): P
   if (!bookingId || !lengthOk) {
     return failure(
       "INVALID_REQUEST",
-      action === "verify_start" ? "Please enter the complete 6-digit OTP" : "Please enter the complete OTP",
+      action === "verify_start" ? "Please enter the complete 4-digit OTP" : "Please enter the complete OTP",
     );
   }
   const key = `${action}:${bookingId}`;
