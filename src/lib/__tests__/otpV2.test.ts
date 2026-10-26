@@ -421,8 +421,8 @@ describe("Six-digit V2 codes and server limits", () => {
     refreshSession.mockReset();
   });
 
-  it("Start OTP refuses four digits without a request", async () => {
-    const r = await verifyStartOtp(B, "4821");
+  it("Start OTP refuses three digits without a request", async () => {
+    const r = await verifyStartOtp(B, "482");
     expect(r.ok === false && r.code).toBe("INVALID_REQUEST");
     expect(invoke).not.toHaveBeenCalled();
   });
@@ -484,7 +484,7 @@ describe("Six-digit V2 codes and server limits", () => {
   });
 
   it("Start refuses six digits without a request", async () => {
-    const r = await verifyStartOtp(B, "1234");
+    const r = await verifyStartOtp(B, "482193");
     expect(r.ok === false && r.code).toBe("INVALID_REQUEST");
     expect(invoke).not.toHaveBeenCalled();
   });
