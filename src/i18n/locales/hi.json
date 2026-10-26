@@ -997,6 +997,8 @@
     "update_after_job": "इस काम के बाद अपडेट ज़रूरी है। पहले अपनी बुकिंग पूरी करें।",
     "Start_Booking_with_OTP": "ओटीपी से बुकिंग शुरू करें",
     "Complete_Booking_with_OTP": "ओटीपी से बुकिंग पूरी करें",
+    "Verify_Start_Booking": "जाँचें और बुकिंग शुरू करें",
+    "End_Booking_with_OTP": "ओटीपी से बुकिंग समाप्त करें",
     "Ask_customer_for_the_6_digit_Start_OTP": "ग्राहक से 6 अंकों का स्टार्ट ओटीपी माँगें",
     "Ask_customer_for_the_6_digit_Completion_OTP": "ग्राहक से 6 अंकों का कम्प्लीशन ओटीपी माँगें",
     "Please_enter_the_complete_6_digit_OTP": "कृपया पूरा 6 अंकों का ओटीपी डालें",

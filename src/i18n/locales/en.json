@@ -997,6 +997,8 @@
     "update_after_job": "Update required after this job. Finish your booking first.",
     "Start_Booking_with_OTP": "Start Booking with OTP",
     "Complete_Booking_with_OTP": "Complete Booking with OTP",
+    "Verify_Start_Booking": "Verify & Start Booking",
+    "End_Booking_with_OTP": "End Booking with OTP",
     "Ask_customer_for_the_6_digit_Start_OTP": "Ask customer for the 6-digit Start OTP",
     "Ask_customer_for_the_6_digit_Completion_OTP": "Ask customer for the 6-digit Completion OTP",
     "Please_enter_the_complete_6_digit_OTP": "Please enter the complete 6-digit OTP",

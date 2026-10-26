@@ -368,7 +368,7 @@ export default function ActiveJobCard({
               {updating ? displayText("Updating...") :
                 <>
                   <KeyRound className="w-6 h-6 mr-2" />
-                  {displayText(v2Enabled && otpMode === "v2" ? "Complete Booking with OTP" : "Complete with OTP")}
+                  {displayText(v2Enabled && otpMode === "v2" ? "End Booking with OTP" : "Complete with OTP")}
                 </>
               }
             </Button>
