@@ -886,7 +886,7 @@
     "Continue_as_Guest": "अतिथि के रूप में जारी रखें",
     "Bank_Transfer": "बैंक ट्रांसफर",
     "UPI_Transfer": "UPI ट्रांसफर",
-    "Please_enter_the_complete_4_digit_OTP": "कृपया पूरा 4-अंकों वाला OTP दर्ज करें",
+    "Please_enter_the_complete_4_digit_OTP": "कृपया पूरा 4 अंकों का OTP डालें",
     "Please_collect_payment_before_completing_this_job": "इस काम को पूरा करने से पहले कृपया भुगतान प्राप्त करें।",
     "Network_error_Please_try_again": "नेटवर्क त्रुटि। कृपया पुनः प्रयास करें।",
     "Customer_Reviews": "ग्राहक समीक्षाएं",
@@ -1003,6 +1003,12 @@
     "Ask_customer_for_the_6_digit_Completion_OTP": "ग्राहक से 6 अंकों का कम्प्लीशन ओटीपी माँगें",
     "Please_enter_the_complete_6_digit_OTP": "कृपया पूरा 6 अंकों का ओटीपी डालें",
     "This_OTP_has_expired_Ask_the_customer_to_open_the_app_for_a_new_code": "यह ओटीपी समाप्त हो गया है। नया कोड पाने के लिए ग्राहक से ऐप खोलने को कहें।",
-    "Please_wait_before_trying_again": "दोबारा कोशिश करने से पहले थोड़ा रुकें।"
+    "Please_wait_before_trying_again": "दोबारा कोशिश करने से पहले थोड़ा रुकें।",
+    "Incorrect_code_Ask_the_customer_for_the_4_digit_Start_OTP": "गलत कोड। ग्राहक से 4 अंकों का स्टार्ट OTP पूछें।",
+    "Too_many_wrong_tries_Please_call_support": "बहुत ज़्यादा गलत कोशिशें। कृपया सपोर्ट को कॉल करें।",
+    "This_booking_can_t_be_started_now_It_may_be_cancelled_or_reassigned": "यह बुकिंग अभी शुरू नहीं हो सकती। यह रद्द या किसी और को दी गई हो सकती है।",
+    "This_booking_is_not_assigned_to_you": "यह बुकिंग आपको नहीं दी गई है।",
+    "Please_sign_in_again": "कृपया फिर से साइन इन करें।",
+    "Couldn_t_check_the_code_Please_try_again": "कोड जाँच नहीं हो सका। कृपया फिर से कोशिश करें।"
   }
 }
