@@ -120,9 +120,9 @@ export default function StartBooking() {
         }
         const failure = r as Extract<typeof r, { ok: false }>;
         const msg = startOtpMessage(failure.code);
-        if (r.code === "INCORRECT_OTP" || r.code === "INVALID_REQUEST") fail("wrong_otp", msg, true);
-        else if (r.code === "LOCKED") fail("locked", msg);
-        else if (r.code === "NOT_AVAILABLE" || r.code === "NOT_ASSIGNED") {
+        if (failure.code === "INCORRECT_OTP" || failure.code === "INVALID_REQUEST") fail("wrong_otp", msg, true);
+        else if (failure.code === "LOCKED") fail("locked", msg);
+        else if (failure.code === "NOT_AVAILABLE" || failure.code === "NOT_ASSIGNED") {
           fail("terminal", msg);
           window.dispatchEvent(new CustomEvent("bookingReassigned", { detail: { bookingId } }));
         } else fail("network", msg);
