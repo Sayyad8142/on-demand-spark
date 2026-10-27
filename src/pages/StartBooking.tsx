@@ -14,6 +14,11 @@ import {
   type OtpV2ErrorCode,
 } from "@/lib/otpV2";
 import { TERMINAL_CODES, RETRYABLE_CODES } from "@/lib/otpCompletionFlow";
+import {
+  isStartOtpWorkerEnabled,
+  verifyStartOtp as verifyStartOtpMain,
+  startOtpMessage,
+} from "@/lib/startOtp";
 
 const normalizeOtp = (value: unknown) =>
   String(value ?? "").replace(/\D/g, "").trim().slice(0, V2_OTP_LENGTH);
@@ -55,7 +60,7 @@ export default function StartBooking() {
 
   // V2 client switched off → original lifecycle has no Start step.
   useEffect(() => {
-    if (!isOtpV2ClientEnabled()) navigate(`/complete-booking/${bookingId}`, { replace: true });
+    if (!isStartOtpWorkerEnabled() && !isOtpV2ClientEnabled()) navigate(`/complete-booking/${bookingId}`, { replace: true });
   }, [bookingId, navigate]);
 
 
@@ -104,6 +109,25 @@ export default function StartBooking() {
     setErrorKind(null);
 
     try {
+      if (isStartOtpWorkerEnabled()) {
+        const r = await verifyStartOtpMain(bookingId, enteredOtp);
+        if (r.ok) {
+          haptic.success();
+          // Never mark started locally: the job card refetches from the server.
+          window.dispatchEvent(new CustomEvent("bookingStarted", { detail: { bookingId } }));
+          navigate("/home", { replace: true });
+          return;
+        }
+        const msg = startOtpMessage(r.code);
+        if (r.code === "INCORRECT_OTP" || r.code === "INVALID_REQUEST") fail("wrong_otp", msg, true);
+        else if (r.code === "LOCKED") fail("locked", msg);
+        else if (r.code === "NOT_AVAILABLE" || r.code === "NOT_ASSIGNED") {
+          fail("terminal", msg);
+          window.dispatchEvent(new CustomEvent("bookingReassigned", { detail: { bookingId } }));
+        } else fail("network", msg);
+        return;
+      }
+
       const result = await verifyStartOtp(bookingId, enteredOtp);
 
       if (!isOtpV2Failure(result)) {
@@ -201,7 +225,7 @@ export default function StartBooking() {
             autoFocus
           >
             <InputOTPGroup className="gap-2">
-              {[0, 1, 2, 3, 4, 5].map((i) => (
+              {Array.from({ length: V2_OTP_LENGTH }, (_, i) => i).map((i) => (
                 <InputOTPSlot
                   key={i}
                   index={i}
