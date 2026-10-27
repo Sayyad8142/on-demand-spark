@@ -42,8 +42,8 @@ describe("Start OTP (4-digit)", () => {
   });
 
   it("start button only for allowed statuses", () => {
-    for (const s of ["assigned", "accepted", "confirmed", "on_the_way", "reached"]) expect(canShowStartButton(true, s)).toBe(true);
-    for (const s of ["started", "completed", "cancelled", "pending"]) expect(canShowStartButton(true, s)).toBe(false);
+    for (const s of ["assigned", "accepted", "confirmed", "on_the_way"]) expect(canShowStartButton(true, s)).toBe(true);
+    for (const s of ["started", "completed", "cancelled", "pending", "reached"]) expect(canShowStartButton(true, s)).toBe(false);
   });
 
   it("requires exactly 4 digits and never calls server otherwise", async () => {
@@ -62,6 +62,24 @@ describe("Start OTP (4-digit)", () => {
   it("idempotent success counts as success", async () => {
     invoke.mockResolvedValue({ data: { ok: true, idempotent: true }, error: null });
     expect(await verifyStartOtp(B, OTP)).toEqual({ ok: true, idempotent: true });
+  });
+
+  it("server reply {ok:true,status:'started'} is success; idempotent too", async () => {
+    invoke.mockResolvedValue({ data: { ok: true, status: "started" }, error: null });
+    expect(await verifyStartOtp(B, OTP)).toEqual({ ok: true, idempotent: false });
+    invoke.mockResolvedValue({ data: { ok: true, status: "started", idempotent: true }, error: null });
+    expect(await verifyStartOtp(B, OTP)).toEqual({ ok: true, idempotent: true });
+  });
+
+  it("401 → sign in again", async () => {
+    invoke.mockResolvedValue(httpErr(401));
+    expect(await verifyStartOtp(B, OTP)).toEqual({ ok: false, code: "UNAUTHENTICATED" });
+    expect(startOtpMessage("UNAUTHENTICATED")).toBe("Please sign in again.");
+  });
+
+  it("error_code in body wins over HTTP status", async () => {
+    invoke.mockResolvedValue(httpErr(400, { error_code: "LOCKED" }));
+    expect(await verifyStartOtp(B, OTP)).toEqual({ ok: false, code: "LOCKED" });
   });
 
   it("200 without ok:true is not success", async () => {

@@ -886,7 +886,7 @@
     "Continue_as_Guest": "గెస్ట్‌గా కొనసాగండి",
     "Bank_Transfer": "బ్యాంక్ ట్రాన్స్ఫర్",
     "UPI_Transfer": "UPI ట్రాన్స్ఫర్",
-    "Please_enter_the_complete_4_digit_OTP": "దయచేసి పూర్తి 4-అంకెల OTPని నమోదు చేయండి",
+    "Please_enter_the_complete_4_digit_OTP": "దయచేసి పూర్తి 4 అంకెల OTP నమోదు చేయండి",
     "Please_collect_payment_before_completing_this_job": "ఈ పనిని పూర్తి చేసే ముందు దయచేసి పేమెంట్ సేకరించండి.",
     "Network_error_Please_try_again": "నెట్‌వర్క్ ఎర్రర్. దయచేసి మళ్ళీ ప్రయత్నించండి.",
     "Customer_Reviews": "కస్టమర్ రివ్యూలు",
@@ -1003,6 +1003,12 @@
     "Ask_customer_for_the_6_digit_Completion_OTP": "కస్టమర్‌ను 6 అంకెల పూర్తి OTP అడగండి",
     "Please_enter_the_complete_6_digit_OTP": "దయచేసి పూర్తి 6 అంకెల OTP నమోదు చేయండి",
     "This_OTP_has_expired_Ask_the_customer_to_open_the_app_for_a_new_code": "ఈ OTP గడువు ముగిసింది. కొత్త కోడ్ కోసం కస్టమర్‌ను యాప్ తెరవమని చెప్పండి.",
-    "Please_wait_before_trying_again": "మళ్లీ ప్రయత్నించే ముందు కొంచెం ఆగండి."
+    "Please_wait_before_trying_again": "మళ్లీ ప్రయత్నించే ముందు కొంచెం ఆగండి.",
+    "Incorrect_code_Ask_the_customer_for_the_4_digit_Start_OTP": "తప్పు కోడ్. కస్టమర్‌ను 4 అంకెల స్టార్ట్ OTP అడగండి.",
+    "Too_many_wrong_tries_Please_call_support": "చాలా తప్పు ప్రయత్నాలు. దయచేసి సపోర్ట్‌కు కాల్ చేయండి.",
+    "This_booking_can_t_be_started_now_It_may_be_cancelled_or_reassigned": "ఈ బుకింగ్‌ను ఇప్పుడు ప్రారంభించలేరు. ఇది రద్దు చేయబడి లేదా వేరొకరికి ఇవ్వబడి ఉండవచ్చు.",
+    "This_booking_is_not_assigned_to_you": "ఈ బుకింగ్ మీకు కేటాయించబడలేదు.",
+    "Please_sign_in_again": "దయచేసి మళ్లీ సైన్ ఇన్ చేయండి.",
+    "Couldn_t_check_the_code_Please_try_again": "కోడ్ తనిఖీ చేయలేకపోయాం. దయచేసి మళ్లీ ప్రయత్నించండి."
   }
 }

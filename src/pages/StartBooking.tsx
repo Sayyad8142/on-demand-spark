@@ -111,17 +111,18 @@ export default function StartBooking() {
     try {
       if (isStartOtpWorkerEnabled()) {
         const r = await verifyStartOtpMain(bookingId, enteredOtp);
-        if (r.ok) {
+        if (r.ok === true) {
           haptic.success();
           // Never mark started locally: the job card refetches from the server.
           window.dispatchEvent(new CustomEvent("bookingStarted", { detail: { bookingId } }));
           navigate("/home", { replace: true });
           return;
         }
-        const msg = startOtpMessage(r.code);
-        if (r.code === "INCORRECT_OTP" || r.code === "INVALID_REQUEST") fail("wrong_otp", msg, true);
-        else if (r.code === "LOCKED") fail("locked", msg);
-        else if (r.code === "NOT_AVAILABLE" || r.code === "NOT_ASSIGNED") {
+        const failure = r as Extract<typeof r, { ok: false }>;
+        const msg = startOtpMessage(failure.code);
+        if (failure.code === "INCORRECT_OTP" || failure.code === "INVALID_REQUEST") fail("wrong_otp", msg, true);
+        else if (failure.code === "LOCKED") fail("locked", msg);
+        else if (failure.code === "NOT_AVAILABLE" || failure.code === "NOT_ASSIGNED") {
           fail("terminal", msg);
           window.dispatchEvent(new CustomEvent("bookingReassigned", { detail: { bookingId } }));
         } else fail("network", msg);

@@ -13,7 +13,7 @@ export const START_OTP_WORKER_ENABLED_DEFAULT = false;
 export const START_OTP_LENGTH = 4;
 export const START_OTP_TIMEOUT_MS = 15_000;
 /** Statuses from which the server allows a start. */
-export const START_ALLOWED_STATUSES = ["assigned", "accepted", "confirmed", "on_the_way", "reached"] as const;
+export const START_ALLOWED_STATUSES = ["assigned", "accepted", "confirmed", "on_the_way"] as const;
 
 export function isStartOtpWorkerEnabled(): boolean {
   // Test-phone override only; the server is the sole authority for starting.
