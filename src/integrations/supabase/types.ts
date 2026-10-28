@@ -1262,6 +1262,62 @@ export type Database = {
           },
         ]
       }
+      booking_start_otps: {
+        Row: {
+          attempts: number
+          booking_id: string
+          code_enc: string
+          code_hash: string
+          code_salt: string
+          expires_at: string
+          issued_at: string
+          issued_for_worker_id: string
+          last_attempt_at: string | null
+          locked_at: string | null
+          updated_at: string
+          verified_at: string | null
+          verified_by_worker_id: string | null
+        }
+        Insert: {
+          attempts?: number
+          booking_id: string
+          code_enc: string
+          code_hash: string
+          code_salt: string
+          expires_at: string
+          issued_at?: string
+          issued_for_worker_id: string
+          last_attempt_at?: string | null
+          locked_at?: string | null
+          updated_at?: string
+          verified_at?: string | null
+          verified_by_worker_id?: string | null
+        }
+        Update: {
+          attempts?: number
+          booking_id?: string
+          code_enc?: string
+          code_hash?: string
+          code_salt?: string
+          expires_at?: string
+          issued_at?: string
+          issued_for_worker_id?: string
+          last_attempt_at?: string | null
+          locked_at?: string | null
+          updated_at?: string
+          verified_at?: string | null
+          verified_by_worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_start_otps_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_status_history: {
         Row: {
           booking_id: string
@@ -1641,6 +1697,7 @@ export type Database = {
           service_type: string
           slot_surge_amount: number
           slot_surge_time: string | null
+          start_otp_required: boolean
           started_at: string | null
           status: string
           surcharge_amount: number | null
@@ -1744,6 +1801,7 @@ export type Database = {
           service_type: string
           slot_surge_amount?: number
           slot_surge_time?: string | null
+          start_otp_required?: boolean
           started_at?: string | null
           status?: string
           surcharge_amount?: number | null
@@ -1847,6 +1905,7 @@ export type Database = {
           service_type?: string
           slot_surge_amount?: number
           slot_surge_time?: string | null
+          start_otp_required?: boolean
           started_at?: string | null
           status?: string
           surcharge_amount?: number | null
@@ -4374,6 +4433,62 @@ export type Database = {
             columns: ["community_id"]
             isOneToOne: false
             referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      start_otp_config: {
+        Row: {
+          enabled: boolean
+          id: boolean
+          max_attempts: number
+          min_seconds_between_attempts: number
+          ttl_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          id?: boolean
+          max_attempts?: number
+          min_seconds_between_attempts?: number
+          ttl_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          id?: boolean
+          max_attempts?: number
+          min_seconds_between_attempts?: number
+          ttl_minutes?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      start_otp_releases: {
+        Row: {
+          booking_id: string
+          reason: string | null
+          released_at: string
+          released_by: string | null
+        }
+        Insert: {
+          booking_id: string
+          reason?: string | null
+          released_at?: string
+          released_by?: string | null
+        }
+        Update: {
+          booking_id?: string
+          reason?: string | null
+          released_at?: string
+          released_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "start_otp_releases_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
         ]
@@ -7532,6 +7647,10 @@ export type Database = {
         Returns: number
       }
       _is_admin_message: { Args: { rec: unknown }; Returns: boolean }
+      _issue_start_otp: {
+        Args: { p_booking_id: string; p_worker_id: string }
+        Returns: undefined
+      }
       _log_slot_violation: {
         Args: { p_booking_id: string; p_channel: string; p_worker_id: string }
         Returns: undefined
@@ -7542,6 +7661,15 @@ export type Database = {
         Returns: Json
       }
       _sla_core_work: { Args: never; Returns: undefined }
+      _start_otp_for_customer: {
+        Args: { p_booking_id: string; p_profile_id: string }
+        Returns: Json
+      }
+      _start_otp_hash: {
+        Args: { p_code: string; p_salt: string }
+        Returns: string
+      }
+      _start_otp_key: { Args: never; Returns: string }
       _sync_legacy_app_update: {
         Args: { c: Database["public"]["Tables"]["app_update_configs"]["Row"] }
         Returns: undefined
@@ -8056,6 +8184,11 @@ export type Database = {
         Args: { p_rejection_reason: string; p_request_id: string }
         Returns: undefined
       }
+      admin_release_start_otp: {
+        Args: { p_booking_id: string; p_reason?: string }
+        Returns: Json
+      }
+      admin_reset_start_otp: { Args: { p_booking_id: string }; Returns: Json }
       admin_resolve_case: {
         Args: {
           p_case: string
@@ -8839,6 +8972,7 @@ export type Database = {
               service_type: string
               slot_surge_amount: number
               slot_surge_time: string | null
+              start_otp_required: boolean
               started_at: string | null
               status: string
               surcharge_amount: number | null
@@ -9414,6 +9548,7 @@ export type Database = {
         }[]
       }
       get_my_payout_breakdown: { Args: { p_booking_id: string }; Returns: Json }
+      get_my_start_otp: { Args: { p_booking_id: string }; Returns: Json }
       get_my_wallet_balance: {
         Args: never
         Returns: {
@@ -10333,6 +10468,10 @@ export type Database = {
         }
         Returns: Json
       }
+      service_get_start_otp: {
+        Args: { p_booking_id: string; p_profile_id: string }
+        Returns: Json
+      }
       set_worker_availability: {
         Args: {
           p_changed_by?: string
@@ -10512,6 +10651,7 @@ export type Database = {
           service_type: string
           slot_surge_amount: number
           slot_surge_time: string | null
+          start_otp_required: boolean
           started_at: string | null
           status: string
           surcharge_amount: number | null
@@ -10618,6 +10758,10 @@ export type Database = {
       verify_dispatch_internal_key: {
         Args: { p_token: string }
         Returns: boolean
+      }
+      verify_start_otp: {
+        Args: { p_booking_id: string; p_otp: string }
+        Returns: Json
       }
       vr_boundary_math: { Args: never; Returns: Json }
       vr_cleanup: { Args: never; Returns: Json }
