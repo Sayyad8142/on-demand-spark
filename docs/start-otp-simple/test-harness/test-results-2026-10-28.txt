@@ -1,0 +1,353 @@
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ as_user 
+---------
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ as_user 
+---------
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ as_user 
+---------
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ as_user 
+---------
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ as_user 
+---------
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ as_user 
+---------
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ as_user 
+---------
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ as_user 
+---------
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ as_user 
+---------
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ nap 
+-----
+ 
+(1 row)
+
+ as_user 
+---------
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ as_user 
+---------
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ as_user 
+---------
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ as_user 
+---------
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ as_user 
+---------
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ as_user 
+---------
+ 
+(1 row)
+
+ as_user 
+---------
+ 
+(1 row)
+
+ admin_release_start_otp 
+-------------------------
+ {"success": true}
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ t 
+---
+ 
+(1 row)
+
+ n  | result |                                        name                                         |                            detail                            
+----+--------+-------------------------------------------------------------------------------------+--------------------------------------------------------------
+  1 | PASS   | OFF: client cannot force start_otp_required on insert                               | 
+  2 | PASS   | OFF: no Start code issued on assignment                                             | 
+  3 | PASS   | OFF: End code still created                                                         | 
+  4 | PASS   | OFF: legacy booking completes with End code from assigned (deployed function shape) | 
+  5 | PASS   | ON: new booking flagged                                                             | 
+  6 | PASS   | ON: no code before assignment                                                       | 
+  7 | PASS   | ON: code issued on assignment for W1                                                | 
+  8 | PASS   | ON: stored value is not the plain code                                              | 
+  9 | PASS   | ON: Start code differs from End code (or coincidence 1/10000)                       | 3904 vs 7857
+ 10 | PASS   | ON: existing booking still legacy                                                   | 
+ 11 | PASS   | worker cannot read code table                                                       | 
+ 12 | PASS   | worker cannot read encryption key                                                   | 
+ 13 | PASS   | worker cannot call service retrieval                                                | 
+ 14 | PASS   | worker get_my_start_otp refused                                                     | 
+ 15 | PASS   | worker direct status=started blocked                                                | 
+ 16 | PASS   | worker direct OTP-complete before start blocked                                     | 
+ 17 | PASS   | worker fake admin completion blocked                                                | 
+ 18 | PASS   | worker cannot clear flag or set started_at                                          | 
+ 19 | PASS   | forged session setting does not allow start                                         | 
+ 20 | PASS   | other worker refused NOT_ASSIGNED                                                   | 
+ 21 | PASS   | customer direct start blocked                                                       | 
+ 22 | PASS   | customer fake admin completion blocked                                              | 
+ 23 | PASS   | insert as completed blocked                                                         | 
+ 24 | PASS   | customer gets code                                                                  | 
+ 25 | PASS   | different customer refused                                                          | 
+ 26 | PASS   | bad format refused                                                                  | 
+ 27 | PASS   | wrong 1 -> WRONG_CODE, 4 left                                                       | {"code": "WRONG_CODE", "success": false, "attempts_left": 4}
+ 28 | PASS   | immediate retry -> TOO_FAST                                                         | 
+ 29 | PASS   | response never includes code                                                        | 
+ 30 | PASS   | 5th wrong -> LOCKED                                                                 | {"code": "LOCKED", "success": false, "attempts_left": 0}
+ 31 | PASS   | correct code after lock still refused                                               | {"code": "LOCKED", "success": false}
+ 32 | PASS   | booking still not started after lock                                                | 
+ 33 | PASS   | unassign deletes code                                                               | 
+ 34 | PASS   | new worker gets fresh code, attempts reset                                          | 
+ 35 | PASS   | previous worker refused after reassignment                                          | 
+ 36 | PASS   | direct swap re-issues code                                                          | 
+ 37 | PASS   | expired code refused                                                                | 
+ 38 | PASS   | customer view re-issues expired code                                                | 
+ 39 | PASS   | correct code starts booking                                                         | 
+ 40 | PASS   | repeat verify is idempotent                                                         | 
+ 41 | PASS   | status started + started_at set                                                     | 
+ 42 | PASS   | customer no longer sees Start code after start                                      | 
+ 43 | PASS   | End code completion works after start (deployed function shape)                     | 
+ 44 | PASS   | code issued when inserted already assigned                                          | 
+ 45 | PASS   | End function refused before start (returns an error)                                | 
+ 46 | PASS   | admin reset re-issues code                                                          | 
+ 47 | PASS   | admin End-code completion still works                                               | 
+ 48 | PASS   | server admin completion still works                                                 | 
+ 49 | PASS   | worker cannot release                                                               | 
+ 50 | PASS   | release: no open Start-OTP bookings left                                            | 
+ 51 | PASS   | release: codes removed                                                              | 
+ 52 | PASS   | released booking completes with End code only                                       | 
+ 53 | PASS   | switch OFF again: new bookings legacy                                               | 
+ 54 | PASS   | scheduled assignment blocked by live guard -> no code issued                        | 
+(54 rows)
+
+ passed | failed 
+--------+--------
+     54 |      0
+(1 row)
+
