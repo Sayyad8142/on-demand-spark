@@ -11,6 +11,7 @@ Labels: SOURCE = repo code, LIVE = read-only check on main server `paywwbuqycovj
 2. LIVE: The server has no Start code. `bookings` holds only `completion_otp` (+ `otp_verified_at`, `started_at`). No other table/column in any schema stores a Start code, hash, attempts or expiry.
 3. LIVE: `completion_otp` is 4 digits (535/535 bookings, last 30 days), created at booking insert by trigger `trg_enforce_server_completion_otp`. So the "4-digit Start OTP" the User App shows is almost certainly this End code under a Start label (User App NOT ACCESSIBLE — NOT VERIFIED).
 4. LIVE: `otp-v2-gateway` is deployed (unauthenticated call → 401 UNAUTHORIZED; verify_start without otp → 400 INVALID_REQUEST). Its behaviour for a real booking with a session is NOT VERIFIED; with no Start code stored, it cannot check one for a real booking.
+6. LIVE: The newer Start screen (src/lib/startOtp.ts:104) calls `verify-start-otp`, which returns 404 (not deployed). The older V2 path calls `otp-v2-gateway`. Before switching on, one of the two must be chosen and wired to a working server check.
 5. Status is NOT misread as started: Flat 9198 (booking a2a7f3a6…) is `assigned`, `started_at` null, `reach_status` pending.
 
 ## Statuses
