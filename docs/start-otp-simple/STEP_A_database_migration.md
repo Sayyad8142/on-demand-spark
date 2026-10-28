@@ -95,3 +95,20 @@ own booking; the End code has no attempt limit and uses `random()`.
   rolls back cleanly.
 - **Turning the switch ON: NO-GO** until the User App customer path (Step C) is confirmed, the deployed
   End function is exported and checked, and a spare-phone test (Step E) passes.
+
+## Production execution — 28 Oct 2026 ~13:05 UTC (LIVE)
+
+- Pre-checks: no Start OTP objects existed; 957 bookings, 2 open; Vault extension present.
+- Migration: **succeeded** (exact tested SQL).
+- Switch: `enabled = false` (5 tries / 3 s / 720 min).
+- Bookings flagged: 0 of 957. Start codes: 0. Releases: 0. Open bookings (1 pending, 1 assigned) unflagged, unchanged.
+- Function access: as designed (helpers/key/service retrieval: service role only; worker check, customer view, admin reset/release: signed-in only; nobody signed-out).
+  The read-only checker itself was refused access to the key function.
+- **Unexpected:** this project's default privileges gave `anon` and `authenticated` table rights on the three new tables
+  (the disposable test DB had none). RLS is ON with no client policies, so no rows can be read or written by apps today,
+  but the intended second lock (no grants) is missing. Trigger functions are also executable by PUBLIC (cannot be
+  called usefully outside a trigger). Not fixed — needs approval:
+  `REVOKE ALL ON public.booking_start_otps, public.start_otp_releases FROM anon, authenticated;`
+  `REVOKE INSERT, UPDATE, DELETE ON public.start_otp_config FROM anon, authenticated; REVOKE SELECT ON public.start_otp_config FROM anon;`
+  `REVOKE EXECUTE ON FUNCTION public.start_otp_bookings_guard(), public.start_otp_issue_on_assign() FROM PUBLIC, anon, authenticated;`
+- Vault key presence: NOT VERIFIED directly (secret reads are blocked for the checker); will be exercised the first time a code is issued (switch ON only).
