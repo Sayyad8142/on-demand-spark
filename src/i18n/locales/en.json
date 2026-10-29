@@ -1009,6 +1009,8 @@
     "This_booking_can_t_be_started_now_It_may_be_cancelled_or_reassigned": "This booking can't be started now. It may be cancelled or reassigned.",
     "This_booking_is_not_assigned_to_you": "This booking is not assigned to you.",
     "Please_sign_in_again": "Please sign in again.",
-    "Couldn_t_check_the_code_Please_try_again": "Couldn't check the code. Please try again."
+    "Couldn_t_check_the_code_Please_try_again": "Couldn't check the code. Please try again.",
+    "Start_code_is_not_available_Please_call_support": "Start code is not available. Please call support.",
+    "Tries_left_count": "Tries left: {{count}}"
   }
 }

@@ -1009,6 +1009,8 @@
     "This_booking_can_t_be_started_now_It_may_be_cancelled_or_reassigned": "यह बुकिंग अभी शुरू नहीं हो सकती। यह रद्द या किसी और को दी गई हो सकती है।",
     "This_booking_is_not_assigned_to_you": "यह बुकिंग आपको नहीं दी गई है।",
     "Please_sign_in_again": "कृपया फिर से साइन इन करें।",
-    "Couldn_t_check_the_code_Please_try_again": "कोड जाँच नहीं हो सका। कृपया फिर से कोशिश करें।"
+    "Couldn_t_check_the_code_Please_try_again": "कोड जाँच नहीं हो सका। कृपया फिर से कोशिश करें।",
+    "Start_code_is_not_available_Please_call_support": "स्टार्ट कोड उपलब्ध नहीं है। कृपया सपोर्ट को कॉल करें।",
+    "Tries_left_count": "बची कोशिशें: {{count}}"
   }
 }
