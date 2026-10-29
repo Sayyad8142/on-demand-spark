@@ -1,22 +1,24 @@
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * 4-digit Start OTP (worker side) — talks ONLY to `verify-start-otp`.
+ * 4-digit Start OTP (worker side) — talks ONLY to the database RPC
+ * `verify_start_otp(p_booking_id, p_otp)`.
  *
- * - Rollout switch START_OTP_WORKER_ENABLED (default false). OFF → the app
- *   behaves exactly like before; this module never calls the server.
- * - Worker identity comes only from the Supabase session; no worker_id sent.
+ * - Which button shows is decided per booking by the server flag
+ *   `start_otp_required` (set by the server only while its master switch is on).
+ *   Bookings without the flag keep the legacy End OTP flow exactly.
+ * - Worker identity comes only from the Supabase session (auth.uid()); no worker_id sent.
  * - The OTP is never logged, stored, cached, or put in URLs/analytics.
  * - "Started" is never set locally: success only means "refetch the booking".
  */
 export const START_OTP_WORKER_ENABLED_DEFAULT = false;
 export const START_OTP_LENGTH = 4;
 export const START_OTP_TIMEOUT_MS = 15_000;
-/** Statuses from which the server allows a start. */
-export const START_ALLOWED_STATUSES = ["assigned", "accepted", "confirmed", "on_the_way"] as const;
+/** Statuses from which the server allows a start (matches verify_start_otp). */
+export const START_ALLOWED_STATUSES = ["assigned", "accepted", "on_the_way"] as const;
 
+/** Legacy local test override; no longer decides which button appears. */
 export function isStartOtpWorkerEnabled(): boolean {
-  // Test-phone override only; the server is the sole authority for starting.
   try {
     const o = localStorage.getItem("start_otp_worker");
     if (o === "1") return true;
@@ -27,73 +29,82 @@ export function isStartOtpWorkerEnabled(): boolean {
   return START_OTP_WORKER_ENABLED_DEFAULT;
 }
 
-export function canShowStartButton(enabled: boolean, status: string): boolean {
-  return enabled && (START_ALLOWED_STATUSES as readonly string[]).includes(status);
+export function canShowStartButton(startRequired: boolean, status: string): boolean {
+  return startRequired && (START_ALLOWED_STATUSES as readonly string[]).includes(status);
+}
+
+export type StartCardAction = "start" | "complete" | "none";
+
+/** Job-card action for a booking the server flagged start_otp_required = true. */
+export function startOtpCardAction(status: string): StartCardAction {
+  if (canShowStartButton(true, status)) return "start";
+  if (status === "started") return "complete";
+  return "none";
+}
+
+/** True when a flagged booking must be started before the End OTP screen may be used. */
+export function mustStartFirst(startRequired: boolean | null | undefined, status: string | null | undefined): boolean {
+  return startRequired === true && (START_ALLOWED_STATUSES as readonly string[]).includes(status ?? "");
 }
 
 export type StartOtpErrorCode =
-  | "INVALID_REQUEST"
-  | "INCORRECT_OTP"
+  | "WRONG_CODE"
   | "LOCKED"
+  | "TOO_FAST"
+  | "EXPIRED"
   | "NOT_ASSIGNED"
-  | "NOT_AVAILABLE"
-  | "UNAUTHENTICATED"
+  | "INVALID_STATUS"
+  | "CODE_UNAVAILABLE"
+  | "UNAUTHORIZED"
+  | "LEGACY_BOOKING"
+  | "INVALID_FORMAT"
+  | "BOOKING_NOT_FOUND"
   | "INTERNAL"
   | "NETWORK";
 
-export type StartOtpResult = { ok: true; idempotent: boolean } | { ok: false; code: StartOtpErrorCode };
+export type StartOtpResult =
+  | { ok: true; alreadyStarted: boolean }
+  | { ok: false; code: StartOtpErrorCode; attemptsLeft?: number };
 
-const STATUS_TO_CODE: Record<number, StartOtpErrorCode> = {
-  400: "INVALID_REQUEST",
-  401: "UNAUTHENTICATED",
-  403: "NOT_ASSIGNED",
-  409: "NOT_AVAILABLE",
-  422: "INCORRECT_OTP",
-  423: "LOCKED",
-  500: "INTERNAL",
-};
-const KNOWN = new Set<string>(Object.values(STATUS_TO_CODE));
+const KNOWN = new Set<string>([
+  "WRONG_CODE", "LOCKED", "TOO_FAST", "EXPIRED", "NOT_ASSIGNED", "INVALID_STATUS",
+  "CODE_UNAVAILABLE", "UNAUTHORIZED", "LEGACY_BOOKING", "INVALID_FORMAT", "BOOKING_NOT_FOUND",
+]);
 
+/** English message (translated at display time via displayText). */
 export function startOtpMessage(code: StartOtpErrorCode): string {
   switch (code) {
-    case "INCORRECT_OTP":
+    case "WRONG_CODE":
       return "Incorrect code. Ask the customer for the 4-digit Start OTP.";
     case "LOCKED":
       return "Too many wrong tries. Please call support.";
-    case "NOT_AVAILABLE":
-      return "This booking can't be started now. It may be cancelled or reassigned.";
+    case "TOO_FAST":
+      return "Please wait before trying again.";
+    case "EXPIRED":
+      return "This OTP has expired. Ask the customer to open the app for a new code.";
     case "NOT_ASSIGNED":
+    case "BOOKING_NOT_FOUND":
       return "This booking is not assigned to you.";
-    case "UNAUTHENTICATED":
+    case "INVALID_STATUS":
+      return "This booking can't be started now. It may be cancelled or reassigned.";
+    case "CODE_UNAVAILABLE":
+      return "Start code is not available. Please call support.";
+    case "UNAUTHORIZED":
       return "Please sign in again.";
-    case "INVALID_REQUEST":
+    case "INVALID_FORMAT":
       return "Please enter the complete 4-digit OTP";
     default:
       return "Couldn't check the code. Please try again.";
   }
 }
 
-async function readCode(error: unknown): Promise<StartOtpErrorCode> {
-  const ctx = (error as { context?: unknown })?.context;
-  if (!(ctx instanceof Response)) return "NETWORK";
-  let bodyCode: string | undefined;
-  try {
-    const j = await ctx.clone().json();
-    bodyCode = typeof j?.error_code === "string" ? j.error_code : typeof j?.code === "string" ? j.code : undefined;
-  } catch {
-    /* non-JSON */
-  }
-  if (bodyCode && KNOWN.has(bodyCode)) return bodyCode as StartOtpErrorCode;
-  return STATUS_TO_CODE[ctx.status] ?? "INTERNAL";
-}
-
 async function call(bookingId: string, otp: string): Promise<StartOtpResult> {
-  if (!bookingId || !new RegExp(`^\\d{${START_OTP_LENGTH}}$`).test(otp)) return { ok: false, code: "INVALID_REQUEST" };
+  if (!bookingId || !new RegExp(`^\\d{${START_OTP_LENGTH}}$`).test(otp)) return { ok: false, code: "INVALID_FORMAT" };
   try {
     const { data: s } = await supabase.auth.getSession();
-    if (!s?.session?.access_token) return { ok: false, code: "UNAUTHENTICATED" };
+    if (!s?.session?.access_token) return { ok: false, code: "UNAUTHORIZED" };
   } catch {
-    return { ok: false, code: "UNAUTHENTICATED" };
+    return { ok: false, code: "UNAUTHORIZED" };
   }
   let timer: ReturnType<typeof setTimeout> | null = null;
   const timeout = new Promise<StartOtpResult>((r) => {
@@ -101,12 +112,16 @@ async function call(bookingId: string, otp: string): Promise<StartOtpResult> {
   });
   const req = (async (): Promise<StartOtpResult> => {
     try {
-      const res = await supabase.functions.invoke("verify-start-otp", { body: { booking_id: bookingId, otp } });
-      if (res.error) return { ok: false, code: await readCode(res.error) };
+      const res = await supabase.rpc("verify_start_otp", { p_booking_id: bookingId, p_otp: otp });
+      if (res.error) {
+        const st = (res as { status?: number }).status;
+        return { ok: false, code: st === 401 || st === 403 ? "UNAUTHORIZED" : "INTERNAL" };
+      }
       const body = (res.data ?? {}) as Record<string, unknown>;
-      if (body.ok === true) return { ok: true, idempotent: body.idempotent === true };
-      const c = typeof body.error_code === "string" ? body.error_code : body.code;
-      return { ok: false, code: typeof c === "string" && KNOWN.has(c) ? (c as StartOtpErrorCode) : "INTERNAL" };
+      if (body.success === true) return { ok: true, alreadyStarted: body.already_started === true };
+      const c = typeof body.code === "string" && KNOWN.has(body.code) ? (body.code as StartOtpErrorCode) : "INTERNAL";
+      const left = typeof body.attempts_left === "number" ? body.attempts_left : undefined;
+      return left === undefined ? { ok: false, code: c } : { ok: false, code: c, attemptsLeft: left };
     } catch {
       return { ok: false, code: "NETWORK" };
     }
