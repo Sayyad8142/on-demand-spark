@@ -17,7 +17,7 @@ import {
   getOtpCardAction,
   type ResolvedOtpMode,
 } from "@/lib/otpV2";
-import { isStartOtpWorkerEnabled, canShowStartButton } from "@/lib/startOtp";
+import { startOtpCardAction } from "@/lib/startOtp";
 
 import serviceDishWashing from "@/assets/service-dish-washing.webp";
 import serviceFloorCleaning from "@/assets/service-floor-cleaning.webp";
@@ -74,10 +74,10 @@ export default function ActiveJobCard({
     resolveOtpMode(booking.id).then((m) => { if (!cancelled) setOtpMode(m); });
     return () => { cancelled = true; };
   }, [v2Enabled, booking.id, booking.status, modeAttempt]);
-  // 4-digit Start OTP rollout (off by default → identical to today).
-  const startOtpOn = isStartOtpWorkerEnabled();
-  const otpAction = startOtpOn
-    ? (canShowStartButton(true, booking.status) ? "start" : booking.status === "started" ? "complete" : "none")
+  // 4-digit Start OTP: decided per booking by the server flag. Unflagged
+  // bookings keep the legacy End OTP flow exactly.
+  const otpAction = (booking as { start_otp_required?: boolean | null }).start_otp_required === true
+    ? startOtpCardAction(booking.status)
     : getOtpCardAction({ v2Enabled, mode: otpMode, status: booking.status });
 
   // Fetch per-task prices
