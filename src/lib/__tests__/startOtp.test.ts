@@ -20,7 +20,7 @@ import {
   START_OTP_WORKER_ENABLED_DEFAULT,
   __resetStartOtpState,
 } from "@/lib/startOtp";
-import { getOtpCardAction } from "@/lib/otpCompletionFlow";
+import { getOtpCardAction } from "@/lib/otpV2";
 import { WORKER_BOOKING_COLUMNS } from "@/lib/workerBookingColumns";
 
 const B = "b-1";
