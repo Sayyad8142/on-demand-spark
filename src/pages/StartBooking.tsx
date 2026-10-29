@@ -15,10 +15,11 @@ import {
 } from "@/lib/otpV2";
 import { TERMINAL_CODES, RETRYABLE_CODES } from "@/lib/otpCompletionFlow";
 import {
-  isStartOtpWorkerEnabled,
   verifyStartOtp as verifyStartOtpMain,
   startOtpMessage,
+  mustStartFirst,
 } from "@/lib/startOtp";
+import { supabase } from "@/integrations/supabase/client";
 
 const normalizeOtp = (value: unknown) =>
   String(value ?? "").replace(/\D/g, "").trim().slice(0, V2_OTP_LENGTH);
@@ -58,11 +59,30 @@ export default function StartBooking() {
   const otpContainerRef = useRef<HTMLDivElement | null>(null);
   const autoVerifyTimerRef = useRef<number | null>(null);
 
-  // V2 client switched off → original lifecycle has no Start step.
+  // Route guard: the server flag `start_otp_required` decides the flow.
+  // Flagged + startable → stay; flagged + started → End OTP screen;
+  // unflagged → original lifecycle (V2 gateway only if that client is on).
+  const [startRequired, setStartRequired] = useState(false);
   useEffect(() => {
-    if (!isStartOtpWorkerEnabled() && !isOtpV2ClientEnabled()) navigate(`/complete-booking/${bookingId}`, { replace: true });
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("bookings")
+        .select("status,start_otp_required")
+        .eq("id", bookingId)
+        .maybeSingle();
+      if (cancelled) return;
+      const row = data as { status?: string; start_otp_required?: boolean } | null;
+      if (row?.start_otp_required === true) {
+        if (mustStartFirst(true, row.status)) setStartRequired(true);
+        else if (row.status === "started") navigate(`/complete-booking/${bookingId}`, { replace: true });
+        else navigate("/home", { replace: true });
+        return;
+      }
+      if (!isOtpV2ClientEnabled()) navigate(`/complete-booking/${bookingId}`, { replace: true });
+    })();
+    return () => { cancelled = true; };
   }, [bookingId, navigate]);
-
 
   // Auto-focus first OTP slot so the numeric keyboard opens
   useEffect(() => {
@@ -109,7 +129,7 @@ export default function StartBooking() {
     setErrorKind(null);
 
     try {
-      if (isStartOtpWorkerEnabled()) {
+      if (startRequired || !isOtpV2ClientEnabled()) {
         const r = await verifyStartOtpMain(bookingId, enteredOtp);
         if (r.ok === true) {
           haptic.success();
@@ -119,13 +139,21 @@ export default function StartBooking() {
           return;
         }
         const failure = r as Extract<typeof r, { ok: false }>;
-        const msg = startOtpMessage(failure.code);
-        if (failure.code === "INCORRECT_OTP" || failure.code === "INVALID_REQUEST") fail("wrong_otp", msg, true);
-        else if (failure.code === "LOCKED") fail("locked", msg);
-        else if (failure.code === "NOT_AVAILABLE" || failure.code === "NOT_ASSIGNED") {
-          fail("terminal", msg);
+        const c = failure.code;
+        if (c === "LEGACY_BOOKING") {
+          navigate(`/complete-booking/${bookingId}`, { replace: true });
+          return;
+        }
+        if (c === "WRONG_CODE" && typeof failure.attemptsLeft === "number") {
+          fail("wrong_otp", displayText("Incorrect code. {{count}} tries left.", { count: failure.attemptsLeft }), true);
+        } else if (c === "WRONG_CODE" || c === "INVALID_FORMAT") fail("wrong_otp", startOtpMessage(c), true);
+        else if (c === "LOCKED") fail("locked", startOtpMessage(c));
+        else if (c === "NOT_ASSIGNED" || c === "BOOKING_NOT_FOUND" || c === "INVALID_STATUS") {
+          fail("terminal", startOtpMessage(c));
           window.dispatchEvent(new CustomEvent("bookingReassigned", { detail: { bookingId } }));
-        } else fail("network", msg);
+          setTimeout(() => navigate("/home", { replace: true }), 1800);
+        } else if (c === "EXPIRED" || c === "CODE_UNAVAILABLE" || c === "UNAUTHORIZED") fail("other", startOtpMessage(c));
+        else fail("network", startOtpMessage(c));
         return;
       }
 
