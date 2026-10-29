@@ -1,0 +1,1 @@
+REVOKE TRUNCATE, REFERENCES, TRIGGER, MAINTAIN ON public.start_otp_config FROM anon, authenticated;
