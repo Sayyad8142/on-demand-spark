@@ -1,3 +1,4 @@
+import { mustStartFirst } from "@/lib/startOtp";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -146,13 +147,19 @@ export default function CompleteBooking() {
     (async () => {
       const { data } = await supabase
         .from("bookings")
-        .select("flat_no, service_type, cust_phone")
+        .select("flat_no, service_type, cust_phone, status, start_otp_required")
         .eq("id", bookingId)
         .maybeSingle();
-      if (!cancelled && data) setBookingMeta(data);
+      if (cancelled || !data) return;
+      // Start OTP bookings must be started first (server also refuses).
+      if (mustStartFirst(data.start_otp_required, data.status)) {
+        navigate(`/start-booking/${bookingId}`, { replace: true });
+        return;
+      }
+      setBookingMeta({ flat_no: data.flat_no, service_type: data.service_type, cust_phone: data.cust_phone });
     })();
     return () => { cancelled = true; };
-  }, [bookingId]);
+  }, [bookingId, navigate]);
 
   useEffect(() => {
     if (!bookingId || !isOtpV2ClientEnabled()) return;
