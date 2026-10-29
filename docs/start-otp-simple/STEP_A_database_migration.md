@@ -112,3 +112,15 @@ own booking; the End code has no attempt limit and uses `random()`.
   `REVOKE INSERT, UPDATE, DELETE ON public.start_otp_config FROM anon, authenticated; REVOKE SELECT ON public.start_otp_config FROM anon;`
   `REVOKE EXECUTE ON FUNCTION public.start_otp_bookings_guard(), public.start_otp_issue_on_assign() FROM PUBLIC, anon, authenticated;`
 - Vault key presence: NOT VERIFIED directly (secret reads are blocked for the checker); will be exercised the first time a code is issued (switch ON only).
+
+## Permission cleanup (approved, prompt-31) — 2026-10-29
+
+Pre-check: names, owners (postgres), RLS on, and grants matched the audit. Only difference: 3 new everyday bookings (960 total), none flagged.
+Ran exactly the 4 approved REVOKE statements. No other permissions changed.
+
+After:
+- booking_start_otps / start_otp_releases: postgres + service_role only.
+- start_otp_config: authenticated keeps SELECT; anon has no SELECT. Both still hold TRUNCATE/REFERENCES/TRIGGER/MAINTAIN (outside approved scope; PostgREST can't send TRUNCATE). Proposed follow-up: `REVOKE TRUNCATE, REFERENCES, TRIGGER, MAINTAIN ON public.start_otp_config FROM anon, authenticated;`
+- start_otp_bookings_guard / start_otp_issue_on_assign: postgres + service_role only. Both triggers still enabled (Postgres checks trigger function rights only when the trigger is created, not when it fires).
+- verify_start_otp, get_my_start_otp, admin_reset_start_otp, admin_release_start_otp: signed-in users keep execute; signed-out users don't.
+- Switch OFF; 0 flagged bookings; 0 codes; 0 releases.
