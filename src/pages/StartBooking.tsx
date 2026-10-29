@@ -63,6 +63,7 @@ export default function StartBooking() {
   // Flagged + startable → stay; flagged + started → End OTP screen;
   // unflagged → original lifecycle (V2 gateway only if that client is on).
   const [startRequired, setStartRequired] = useState(false);
+  const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -145,7 +146,8 @@ export default function StartBooking() {
           return;
         }
         if (c === "WRONG_CODE" && typeof failure.attemptsLeft === "number") {
-          fail("wrong_otp", displayText("Incorrect code. {{count}} tries left.", { count: failure.attemptsLeft }), true);
+          setAttemptsLeft(failure.attemptsLeft);
+          fail("wrong_otp", startOtpMessage(c), true);
         } else if (c === "WRONG_CODE" || c === "INVALID_FORMAT") fail("wrong_otp", startOtpMessage(c), true);
         else if (c === "LOCKED") fail("locked", startOtpMessage(c));
         else if (c === "NOT_ASSIGNED" || c === "BOOKING_NOT_FOUND" || c === "INVALID_STATUS") {
@@ -276,7 +278,12 @@ export default function StartBooking() {
         {error && (
           <div className="flex items-center gap-2 text-destructive text-sm mt-6 max-w-sm">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <p className="font-medium">{displayText(error)}</p>
+            <p className="font-medium">
+              {displayText(error)}
+              {errorKind === "wrong_otp" && attemptsLeft !== null && (
+                <> {displayText("Tries left: {{count}}", { count: attemptsLeft })}</>
+              )}
+            </p>
             {errorKind === "network" && (
               <button
                 onClick={() => handleSubmit()}

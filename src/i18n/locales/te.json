@@ -1009,6 +1009,8 @@
     "This_booking_can_t_be_started_now_It_may_be_cancelled_or_reassigned": "ఈ బుకింగ్‌ను ఇప్పుడు ప్రారంభించలేరు. ఇది రద్దు చేయబడి లేదా వేరొకరికి ఇవ్వబడి ఉండవచ్చు.",
     "This_booking_is_not_assigned_to_you": "ఈ బుకింగ్ మీకు కేటాయించబడలేదు.",
     "Please_sign_in_again": "దయచేసి మళ్లీ సైన్ ఇన్ చేయండి.",
-    "Couldn_t_check_the_code_Please_try_again": "కోడ్ తనిఖీ చేయలేకపోయాం. దయచేసి మళ్లీ ప్రయత్నించండి."
+    "Couldn_t_check_the_code_Please_try_again": "కోడ్ తనిఖీ చేయలేకపోయాం. దయచేసి మళ్లీ ప్రయత్నించండి.",
+    "Start_code_is_not_available_Please_call_support": "స్టార్ట్ కోడ్ అందుబాటులో లేదు. దయచేసి సపోర్ట్‌కు కాల్ చేయండి.",
+    "Tries_left_count": "మిగిలిన ప్రయత్నాలు: {{count}}"
   }
 }
