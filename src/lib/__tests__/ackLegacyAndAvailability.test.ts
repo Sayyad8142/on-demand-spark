@@ -34,7 +34,7 @@ describe("availability request", () => {
     const r = buildAvailabilityRequest(false, "toggle_tap");
     expect(r.is_available).toBe(false);
     expect(r.action_source).toBe("toggle_tap");
-    expect(r.app_version).toBe("10.0.02");
+    expect(r.app_version).toBe("10.0.03");
   });
   it("refuses unknown sources", () => {
     expect(() => buildAvailabilityRequest(false, "app_resume" as any)).toThrow();
