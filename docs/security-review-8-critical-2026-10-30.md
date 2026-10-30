@@ -16,3 +16,13 @@ Nothing changed. Every table below also has full table rights for signed-out (an
 Highest priority: 1 (customer data readable signed-out), 7 (can affect worker availability), 6, 8.
 
 Live `complete-booking-with-otp` source: NOT RETRIEVABLE (no Supabase management access token in this environment). Project copy accepts `assigned, accepted, on_the_way, started`. Live behaviour NOT VERIFIED.
+
+## Pre-apply verification (2026-10-30 08:30 UTC, read-only) — STOPPED
+
+- Workers' own ratings: PASS (134/134 covered by workers_view_own_ratings).
+- BLOCKER: rating recalculation trigger (trg_recalc_worker_rating -> recalc_worker_rating) is NOT security definer; it averages worker_ratings as the rating customer. Removing public read would make worker averages count only rows the caller can see. Needs both functions made SECURITY DEFINER in the same migration.
+- view worker_rating_stats is security_invoker: would also narrow to visible rows.
+- NOT VERIFIED: Admin Panel project not accessible; cannot confirm it reads as is_admin().
+- NOT VERIFIED: presence snapshots written every 5 min by edge function snapshot-worker-presence, called by cron with anon key; deployed source unreadable, so unknown whether it inserts with service role (last write 08:25 UTC).
+- Flats: only server functions (security definer) read it; set_booking_building_name / enforce_booking_flat_size_and_price unaffected.
+- Pause/case tables: all DB writers are security definer admin functions; unaffected.
