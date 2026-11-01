@@ -20,10 +20,13 @@ export interface OnboardingStatus {
   hasAvailabilitySlots: boolean;
   hasBankDetails: boolean;
   isComplete: boolean;
+  /** true only after the saved slots were actually read from the backend */
+  availabilitySlotsKnown?: boolean;
 }
 
 export function useOnboardingStatus(workerId: string | undefined, worker: any): OnboardingStatus {
   const [hasSlots, setHasSlots] = useState(true); // optimistic default
+  const [slotsKnown, setSlotsKnown] = useState(false);
 
   useEffect(() => {
     if (!workerId) return;
@@ -36,6 +39,7 @@ export function useOnboardingStatus(workerId: string | undefined, worker: any): 
         // wrongly blocked from going online.
         if (error) return;
         setHasSlots(hasValidSlots(data as any));
+        setSlotsKnown(true);
       });
 
   }, [workerId]);
@@ -50,6 +54,7 @@ export function useOnboardingStatus(workerId: string | undefined, worker: any): 
     hasServiceTypes,
     hasCommunity,
     hasAvailabilitySlots: hasSlots,
+    availabilitySlotsKnown: slotsKnown,
     hasBankDetails,
     isComplete: hasServiceTypes && hasCommunity && hasSlots && hasBankDetails,
   };

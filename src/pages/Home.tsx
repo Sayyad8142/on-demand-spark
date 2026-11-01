@@ -70,6 +70,8 @@ export default function Home() {
     isGuestMode ? null : worker
   );
 
+  const slotsStatus: boolean | null = onboarding.availabilitySlotsKnown ? onboarding.hasAvailabilitySlots : null;
+
   // Mandatory availability: a worker with no valid saved slots is sent to the
   // slots screen once per session (no loops; never turns availability ON).
   useEffect(() => {
