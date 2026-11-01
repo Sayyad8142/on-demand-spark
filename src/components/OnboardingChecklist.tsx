@@ -1,3 +1,4 @@
+import { hasValidSlots } from "@/lib/availabilityGate";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
@@ -34,10 +35,7 @@ export function useOnboardingStatus(workerId: string | undefined, worker: any): 
         // On a read failure keep the optimistic default so the worker isn't
         // wrongly blocked from going online.
         if (error) return;
-        const anySelected = !!(data && data.some((row: any) =>
-          Array.isArray(row.slots) && row.slots.length > 0
-        ));
-        setHasSlots(anySelected);
+        setHasSlots(hasValidSlots(data as any));
       });
 
   }, [workerId]);

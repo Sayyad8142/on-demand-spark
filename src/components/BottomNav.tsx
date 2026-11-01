@@ -1,3 +1,4 @@
+import { hasValidSlots } from "@/lib/availabilityGate";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Home, Calendar, User, Clock, Phone } from "lucide-react";
@@ -27,9 +28,7 @@ export default function BottomNav() {
         if (error) throw error;
 
         // Check if any day has at least one slot selected
-        const hasSlots = data?.some((day) =>
-        Array.isArray(day.slots) && day.slots.length > 0
-        );
+        const hasSlots = hasValidSlots(data as any);
 
         setHasAvailability(!!hasSlots);
       } catch (error) {

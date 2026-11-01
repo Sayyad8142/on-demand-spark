@@ -56,7 +56,7 @@ export default function Availability() {
   useWorkerLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const fromSignup = searchParams.get("from") === "signup";
+  const fromSignup = searchParams.get("from") === "signup" || searchParams.get("setup") === "1";
   const {
     toast
   } = useToast();
@@ -177,15 +177,8 @@ export default function Availability() {
         });
         setWeekData(newWeekData);
       } else {
-        // First time user - select all slots by default
-        const newWeekData = generateInitialWeekData(endHour);
-        for (let day = 0; day < 7; day++) {
-          newWeekData[day as DayKey] = newWeekData[day as DayKey].map(slot => ({
-            ...slot,
-            selected: true
-          }));
-        }
-        setWeekData(newWeekData);
+        // First-time worker: nothing pre-selected — they must choose and save.
+        setWeekData(generateInitialWeekData(endHour));
       }
     } catch (error: any) {
       console.error("Error loading availability:", error);
@@ -271,7 +264,7 @@ export default function Availability() {
     if (!hasAnySlot) {
       toast({
         title: t('availability.noSlotsError'),
-        description: t('availability.noSlotsErrorDesc'),
+        description: displayText("Please select at least one time slot to continue."),
         variant: "destructive"
       });
       return;
@@ -359,7 +352,7 @@ export default function Availability() {
             style={{ backgroundColor: GREEN_SOFT_BG, borderColor: GREEN_SOFT_BORDER }}
           >
             <p className="text-[12px] text-foreground/80 leading-snug">
-              <span className="font-semibold text-foreground">{displayText("Set your working hours")}</span> {displayText("— you won't get bookings until saved.")}
+              {displayText("Welcome to Didi Now! Please select your working hours to start receiving bookings.")}
             </p>
           </div>
         </div>
