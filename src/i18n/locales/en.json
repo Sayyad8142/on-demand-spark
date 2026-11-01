@@ -1011,6 +1011,10 @@
     "Please_sign_in_again": "Please sign in again.",
     "Couldn_t_check_the_code_Please_try_again": "Couldn't check the code. Please try again.",
     "Start_code_is_not_available_Please_call_support": "Start code is not available. Please call support.",
-    "Tries_left_count": "Tries left: {{count}}"
+    "Tries_left_count": "Tries left: {{count}}",
+    "Please_select_your_available_time_slots_before_going_online": "Please select your available time slots before going online.",
+    "Set_Availability": "Set Availability",
+    "Please_select_at_least_one_time_slot_to_continue": "Please select at least one time slot to continue.",
+    "Welcome_to_Didi_Now_Please_select_your_working_hours_to_start_receiving_bookings": "Welcome to Didi Now! Please select your working hours to start receiving bookings."
   }
 }

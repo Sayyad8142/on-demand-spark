@@ -1,3 +1,4 @@
+import { shouldRedirectToSetup } from "@/lib/availabilityGate";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -68,6 +69,26 @@ export default function Home() {
     isGuestMode ? undefined : worker?.id,
     isGuestMode ? null : worker
   );
+
+  const slotsStatus: boolean | null = onboarding.availabilitySlotsKnown ? onboarding.hasAvailabilitySlots : null;
+
+  // Mandatory availability: a worker with no valid saved slots is sent to the
+  // slots screen once per session (no loops; never turns availability ON).
+  useEffect(() => {
+    if (!worker?.id) return;
+    const key = `availability_setup_redirected_${worker.id}`;
+    const already = sessionStorage.getItem(key) === "1";
+    if (shouldRedirectToSetup({
+      hasSlots: slotsStatus,
+      pathname: window.location.pathname,
+      alreadyRedirected: already,
+      isGuest: isGuestMode,
+    })) {
+      sessionStorage.setItem(key, "1");
+      navigate("/availability?setup=1");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worker?.id, slotsStatus]);
 
   // Push health guard: mandatory token validation
   const pushHealth = usePushHealthGuard(isGuestMode ? undefined : user?.id);

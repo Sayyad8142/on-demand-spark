@@ -1,3 +1,4 @@
+import { hasValidSlots } from "@/lib/availabilityGate";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
@@ -19,10 +20,13 @@ export interface OnboardingStatus {
   hasAvailabilitySlots: boolean;
   hasBankDetails: boolean;
   isComplete: boolean;
+  /** true only after the saved slots were actually read from the backend */
+  availabilitySlotsKnown?: boolean;
 }
 
 export function useOnboardingStatus(workerId: string | undefined, worker: any): OnboardingStatus {
   const [hasSlots, setHasSlots] = useState(true); // optimistic default
+  const [slotsKnown, setSlotsKnown] = useState(false);
 
   useEffect(() => {
     if (!workerId) return;
@@ -34,10 +38,8 @@ export function useOnboardingStatus(workerId: string | undefined, worker: any): 
         // On a read failure keep the optimistic default so the worker isn't
         // wrongly blocked from going online.
         if (error) return;
-        const anySelected = !!(data && data.some((row: any) =>
-          Array.isArray(row.slots) && row.slots.length > 0
-        ));
-        setHasSlots(anySelected);
+        setHasSlots(hasValidSlots(data as any));
+        setSlotsKnown(true);
       });
 
   }, [workerId]);
@@ -52,6 +54,7 @@ export function useOnboardingStatus(workerId: string | undefined, worker: any): 
     hasServiceTypes,
     hasCommunity,
     hasAvailabilitySlots: hasSlots,
+    availabilitySlotsKnown: slotsKnown,
     hasBankDetails,
     isComplete: hasServiceTypes && hasCommunity && hasSlots && hasBankDetails,
   };

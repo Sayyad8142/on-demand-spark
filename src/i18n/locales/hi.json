@@ -1011,6 +1011,10 @@
     "Please_sign_in_again": "कृपया फिर से साइन इन करें।",
     "Couldn_t_check_the_code_Please_try_again": "कोड जाँच नहीं हो सका। कृपया फिर से कोशिश करें।",
     "Start_code_is_not_available_Please_call_support": "स्टार्ट कोड उपलब्ध नहीं है। कृपया सपोर्ट को कॉल करें।",
-    "Tries_left_count": "बची कोशिशें: {{count}}"
+    "Tries_left_count": "बची कोशिशें: {{count}}",
+    "Please_select_your_available_time_slots_before_going_online": "कृपया ऑनलाइन होने से पहले अपने उपलब्ध समय स्लॉट चुनें।",
+    "Set_Availability": "उपलब्धता सेट करें",
+    "Please_select_at_least_one_time_slot_to_continue": "जारी रखने के लिए कृपया कम से कम एक समय स्लॉट चुनें।",
+    "Welcome_to_Didi_Now_Please_select_your_working_hours_to_start_receiving_bookings": "Didi Now में आपका स्वागत है! बुकिंग पाने के लिए कृपया अपने काम के घंटे चुनें।"
   }
 }
