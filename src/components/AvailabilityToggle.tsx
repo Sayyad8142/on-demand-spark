@@ -1,3 +1,5 @@
+import { canTurnOn } from "@/lib/availabilityGate";
+import { ToastAction } from "@/components/ui/toast";
 import { buildAvailabilityRequest } from "@/lib/availabilityRequest";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useEffect, useState } from "react";
@@ -109,15 +111,29 @@ export function AvailabilityToggle({
     if (loading) return;
     const newValue = !isAvailable;
 
-    // HARD BLOCK: cannot go online without any availability slots selected
-    if (newValue && !hasAvailabilitySlots) {
-      toast({
-        title: displayText("Select slot to start bookings"),
-        description: displayText("Please select at least one time slot in Availability."),
-        variant: "destructive",
-      });
-      onNoSlots?.();
-      return;
+    // HARD BLOCK: cannot go online without valid saved slots. Re-read the
+    // worker's saved slots from the backend at tap time (never trust a cached prop).
+    if (newValue) {
+      let slotsOk = hasAvailabilitySlots;
+      const { data: slotRows, error: slotErr } = await supabase
+        .from("worker_availability")
+        .select("slots")
+        .eq("worker_id", workerId);
+      if (!slotErr) slotsOk = canTurnOn(true, slotRows as any);
+      if (!slotsOk) {
+        setIsAvailable(false);
+        toast({
+          title: displayText("Select slot to start bookings"),
+          description: displayText("Please select your available time slots before going online."),
+          variant: "destructive",
+          action: (
+            <ToastAction altText={displayText("Set Availability")} onClick={() => onNoSlots?.()}>
+              {displayText("Set Availability")}
+            </ToastAction>
+          ),
+        });
+        return;
+      }
     }
 
     // HARD BLOCK: no internet — bookings can't be delivered.
