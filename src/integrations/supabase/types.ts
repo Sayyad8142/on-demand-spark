@@ -7028,6 +7028,30 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_training_video_settings: {
+        Row: {
+          enabled: boolean
+          id: boolean
+          updated_at: string
+          updated_by: string | null
+          youtube_video_id: string | null
+        }
+        Insert: {
+          enabled?: boolean
+          id?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          youtube_video_id?: string | null
+        }
+        Update: {
+          enabled?: boolean
+          id?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          youtube_video_id?: string | null
+        }
+        Relationships: []
+      }
       workers: {
         Row: {
           acceptance_rate_7d: number | null
@@ -8307,6 +8331,22 @@ export type Database = {
       admin_set_worker_rating: {
         Args: { p_rating: number; p_worker_id: string }
         Returns: undefined
+      }
+      admin_set_worker_training_video: {
+        Args: { p_enabled: boolean; p_video_id: string }
+        Returns: {
+          enabled: boolean
+          id: boolean
+          updated_at: string
+          updated_by: string | null
+          youtube_video_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "worker_training_video_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       admin_slot_supply_breakdown: {
         Args: { p_community?: string; p_slot_start: string }
