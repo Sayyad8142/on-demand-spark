@@ -41,6 +41,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { DEMO_WORKER, DEMO_ACTIVE_JOB, DEMO_BOOKINGS } from "@/config/demoData";
+import { HomeTrainingVideoSlot } from "@/components/HomeTrainingVideoSlot";
 // Movement monitoring is owned by App.tsx — no imports needed here.
 
 // @ts-ignore - Capacitor bridge
@@ -319,6 +320,9 @@ export default function Home() {
           totalRatings={(worker as any)?.total_ratings}
         />
       )}
+
+      <HomeTrainingVideoSlot isGuest={isGuestMode} hasActiveJob={!!activeJob} hasWorker={!!worker} />
+
 
       {!isGuestMode && worker && !activeJob && (
         <WorkerLeaderboardCard 
