@@ -4,7 +4,7 @@
  */
 
 /** Master client switch. Keep false until the Admin Panel backend is live and integration tests pass. */
-export const TRAINING_VIDEO_CLIENT_ENABLED = false;
+export const TRAINING_VIDEO_CLIENT_ENABLED = true;
 
 export const TRAINING_VIDEO_TABLE = "worker_training_video_settings";
 export const TRAINING_VIDEO_REFRESH_MS = 5 * 60 * 1000;
