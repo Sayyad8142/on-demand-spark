@@ -10,7 +10,7 @@ const ok: VisibilityInput = {
 };
 
 describe("training video rules", () => {
-  it("ships disabled until backend integration passes", () => expect(TRAINING_VIDEO_CLIENT_ENABLED).toBe(false));
+  it("client switch is on for phone testing (admin setting still decides)", () => expect(TRAINING_VIDEO_CLIENT_ENABLED).toBe(true));
   it("admin OFF → hidden", () => expect(parseTrainingVideoRow({ enabled: false, youtube_video_id: "dQw4w9WgXcQ" })).toBeNull());
   it("admin ON with valid id → shown", () => {
     const c = parseTrainingVideoRow({ enabled: true, youtube_video_id: "dQw4w9WgXcQ" });
