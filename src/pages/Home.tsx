@@ -249,7 +249,7 @@ export default function Home() {
       )}
 
       {/* Fixed Availability Toggle - Hidden in guest mode */}
-      {!isGuestMode && (
+      {!isGuestMode && !activeJob && (
         <div className="fixed top-0 left-0 right-0 z-20 bg-background border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 24px)' }}>
           <div className="p-2 px-4">
             <AvailabilityToggle
@@ -292,7 +292,7 @@ export default function Home() {
 
 
       {/* Main Content with top padding for fixed header */}
-      <div className={`p-4 space-y-4 pb-32 ${isGuestMode ? "pt-4" : "pt-28"}`}>
+      <div className={`p-4 space-y-4 pb-32 ${isGuestMode ? "pt-4" : activeJob ? "pt-[max(env(safe-area-inset-top,0px),24px)]" : "pt-28"}`}>
 
       {/* Worker Health badge — unified status from all signals */}
       {!isGuestMode && worker && workerHealth.status !== "ready" && (
@@ -333,7 +333,7 @@ export default function Home() {
         />
       )}
 
-      {!isGuestMode && worker && !payoutReady && (
+      {!isGuestMode && worker && !activeJob && !payoutReady && (
         <Card className="p-5 border-2 border-primary/30 bg-primary/5 shadow-sm">
           <div className="space-y-3">
             <div className="flex items-start gap-3">
@@ -354,10 +354,10 @@ export default function Home() {
         </Card>
       )}
 
-      {!isGuestMode && worker && <BatteryReminderCard />}
+      {!isGuestMode && worker && !activeJob && <BatteryReminderCard />}
 
       {/* Onboarding Checklist */}
-      {!isGuestMode && worker && (
+      {!isGuestMode && worker && !activeJob && (
         <div id="onboarding-checklist">
           <OnboardingChecklist
             workerId={worker.id}
@@ -384,7 +384,7 @@ export default function Home() {
       )}
         
       {/* Web Push Banner */}
-      {showWebPushBanner && <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 relative">
+      {showWebPushBanner && !activeJob && <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 relative">
           <button onClick={() => setShowWebPushBanner(false)} className="absolute top-2 right-2 p-1 hover:bg-blue-100 dark:hover:bg-blue-900 rounded">
             <X className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           </button>
@@ -428,10 +428,10 @@ export default function Home() {
 
 
       {/* Upcoming Bookings Bar */}
-      {!isGuestMode && worker && <UpcomingBookingsBar />}
+      {!isGuestMode && worker && !activeJob && <UpcomingBookingsBar />}
 
       {/* Block bookings if no time slots selected */}
-      {!isGuestMode && worker && !onboarding.hasAvailabilitySlots && (
+      {!isGuestMode && worker && !activeJob && !onboarding.hasAvailabilitySlots && (
         <AlertDialog open>
           <AlertDialogContent>
             <AlertDialogHeader>

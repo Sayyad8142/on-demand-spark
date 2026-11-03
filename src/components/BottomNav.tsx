@@ -68,7 +68,9 @@ export default function BottomNav() {
                   className="-mt-1 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg shadow-[#16C75A]/40 ring-4 ring-background transition-all duration-150 active:scale-95 group-hover:brightness-110"
                   style={{ backgroundColor: '#16C75A' }}
                 >
-                  <Phone className="w-6 h-6 fill-white" strokeWidth={2.5} />
+                  <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor" aria-hidden="true">
+                    <path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24 11.36 11.36 0 0 0 3.57.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1.02l-2.2 2.2Z" />
+                  </svg>
                 </div>
               </button>
             );
