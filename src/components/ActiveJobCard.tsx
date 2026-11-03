@@ -21,7 +21,7 @@ import { startOtpCardAction } from "@/lib/startOtp";
 
 import serviceDishWashing from "@/assets/service-dish-washing.webp";
 import serviceFloorCleaning from "@/assets/service-floor-cleaning.webp";
-import serviceBathroomCleaning from "@/assets/service-bathroom-cleaning-pro.jpg";
+import serviceBathroomCleaning from "@/assets/service-bathroom-cleaning-pro.webp";
 import { announceFlat, buildFlatAnnouncement } from "@/lib/flatVoice";
 import PaymentCollectionModal from "@/components/PaymentCollectionModal";
 
