@@ -1,5 +1,5 @@
 \set ON_ERROR_STOP 1
-create temp table r(name text, ok boolean);
+create temp table r(name text, ok boolean); grant all on r to authenticated;
 -- fixtures
 insert into bookings values
  ('00000000-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','accepted',true,null,now()-interval '25 minutes',null), -- delayed
