@@ -22,7 +22,6 @@ import {
   type StartOtpReminderBooking,
 } from "@/lib/startOtpReminder";
 
-const POLL_MS = 60_000;
 const TITLE = "Start OTP Pending";
 const BODY = "Please collect and enter the customer's Start OTP.";
 
@@ -127,8 +126,9 @@ export default function StartOtpReminderManager({ userId }: { userId: string | u
       }
     };
 
+    // No polling: reminders are scheduled locally once; re-sync only on
+    // open/resume, booking events and realtime booking changes.
     void sync();
-    const interval = window.setInterval(sync, POLL_MS);
     const onEvt = () => { void sync(); };
     window.addEventListener("bookingAccepted", onEvt);
     window.addEventListener("bookingCancelledAlert", onEvt);
@@ -147,7 +147,6 @@ export default function StartOtpReminderManager({ userId }: { userId: string | u
 
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
       window.removeEventListener("bookingAccepted", onEvt);
       window.removeEventListener("bookingCancelledAlert", onEvt);
       window.removeEventListener("startOtpVerified", onEvt);
