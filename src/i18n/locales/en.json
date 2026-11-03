@@ -996,6 +996,8 @@
     "Required_build": "Required build",
     "update_after_job": "Update required after this job. Finish your booking first.",
     "Start_Booking_with_OTP": "Start Booking with OTP",
+    "Start_OTP_Pending": "Start OTP Pending",
+    "Start_OTP_Delayed_Enter_OTP": "Start OTP Delayed — Enter OTP",
     "Complete_Booking_with_OTP": "Complete Booking with OTP",
     "Verify_Start_Booking": "Verify & Start Booking",
     "End_Booking_with_OTP": "End Booking with OTP",

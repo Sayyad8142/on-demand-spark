@@ -996,6 +996,8 @@
     "Required_build": "ज़रूरी बिल्ड",
     "update_after_job": "इस काम के बाद अपडेट ज़रूरी है। पहले अपनी बुकिंग पूरी करें।",
     "Start_Booking_with_OTP": "ओटीपी से बुकिंग शुरू करें",
+    "Start_OTP_Pending": "स्टार्ट OTP बाकी है",
+    "Start_OTP_Delayed_Enter_OTP": "स्टार्ट OTP में देरी — OTP डालें",
     "Complete_Booking_with_OTP": "ओटीपी से बुकिंग पूरी करें",
     "Verify_Start_Booking": "जाँचें और बुकिंग शुरू करें",
     "End_Booking_with_OTP": "ओटीपी से बुकिंग समाप्त करें",
