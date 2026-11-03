@@ -127,7 +127,7 @@ object BackendSync {
      * a data-clear that only preserved CapacitorStorage). Backfills
      * worker_prefs on success.
      */
-    private fun resolveWorkerId(ctx: Context): String? {
+    fun resolveWorkerId(ctx: Context): String? {
         val app = ctx.applicationContext
         val workerPrefs = app.getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
         val fromPrefs = workerPrefs.getString("user_id", null)

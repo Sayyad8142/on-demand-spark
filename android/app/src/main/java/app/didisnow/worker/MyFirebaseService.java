@@ -71,6 +71,16 @@ public class MyFirebaseService extends FirebaseMessagingService {
     Log.d(TAG, "🏷️ Message type: " + type);
     Log.d(TAG, "🏷️ Booking type: " + bookingType);
 
+    // Start OTP reminder cancel (data-only, idempotent, booking-scoped). No UI.
+    if ("START_OTP_REMINDER_CANCEL".equals(type)) {
+      try {
+        StartOtpReminderCanceller.cancel(getApplicationContext(), data.get("booking_id"), data.get("worker_uid"));
+      } catch (Exception e) {
+        Log.e(TAG, "Start OTP reminder cancel failed", e);
+      }
+      return;
+    }
+
     // Phase 2: silent keepalive PING — ack via background worker, no UI.
     if ("PING".equals(type)) {
       Log.d(TAG, "📡 Keepalive PING — enqueuing ack worker");
