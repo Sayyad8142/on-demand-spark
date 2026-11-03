@@ -69,6 +69,7 @@ import DeviceReadiness from "./pages/DeviceReadiness";
 import BookingDiagnostics from "./pages/BookingDiagnostics";
 import CompleteBooking from "./pages/CompleteBooking";
 import StartBooking from "./pages/StartBooking";
+import StartOtpReminderManager from "@/components/StartOtpReminderManager";
 import AccountDetails from "./pages/AccountDetails";
 import BatteryOnboarding from "./pages/BatteryOnboarding";
 import BottomNav from "./components/BottomNav";
@@ -723,6 +724,7 @@ function AppInner() {
       )}
       <BrowserRouter>
         <NativeNavigationHandler />
+        <StartOtpReminderManager userId={session?.user?.id} />
         <OtpPendingBanner bookings={otpPendingBookings} />
         <Routes>
           <Route path="/auth" element={<PublicAuthRoute><Auth /></PublicAuthRoute>} />
