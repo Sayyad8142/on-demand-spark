@@ -313,7 +313,7 @@ export default function ActiveJobCard({
         </div>
 
         {/* OTP action: legacy → Complete from any active status; V2 → Start, then Complete; unknown → safe state */}
-        <div className="px-3">
+        <div className="px-3 pb-3">
           {otpAction === "complete" ? (
             <Button
               size="lg"
