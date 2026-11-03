@@ -18,6 +18,7 @@ import {
   type ResolvedOtpMode,
 } from "@/lib/otpV2";
 import { startOtpCardAction } from "@/lib/startOtp";
+import { cardIndicator } from "@/lib/startOtpReminder";
 
 import serviceDishWashing from "@/assets/service-dish-washing.webp";
 import serviceFloorCleaning from "@/assets/service-floor-cleaning.webp";
@@ -332,6 +333,8 @@ export default function ActiveJobCard({
               }
             </Button>
           ) : otpAction === "start" ? (
+            <>
+            <StartOtpIndicator booking={booking as any} />
             <Button
               size="lg"
               className={`w-full h-14 text-lg font-bold shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98] ${
@@ -348,6 +351,7 @@ export default function ActiveJobCard({
                 </>
               }
             </Button>
+            </>
           ) : otpAction === "resolving" ? (
             <Button size="lg" disabled className="w-full h-14 text-base font-semibold rounded-xl">
               {displayText("Checking booking…")}
@@ -375,4 +379,23 @@ export default function ActiveJobCard({
         onCollected={() => onRefresh?.()}
       />
     </Card>;
+}
+function StartOtpIndicator({ booking }: { booking: { status: string; start_otp_required?: boolean | null; started_at?: string | null; accepted_at?: string | null; assigned_at?: string | null; id: string } }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(t);
+  }, []);
+  const state = cardIndicator({
+    id: booking.id, status: booking.status, start_otp_required: booking.start_otp_required ?? null,
+    started_at: booking.started_at ?? null, accepted_at: booking.accepted_at ?? null, assigned_at: booking.assigned_at ?? null,
+  }, now);
+  if (state === "none") return null;
+  const delayed = state === "delayed";
+  return (
+    <div className={`mb-2 flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold ${delayed ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
+      {delayed ? <AlertTriangle className="w-4 h-4" /> : <KeyRound className="w-4 h-4" />}
+      {displayText(delayed ? "Start OTP Delayed — Enter OTP" : "Start OTP Pending")}
+    </div>
+  );
 }
