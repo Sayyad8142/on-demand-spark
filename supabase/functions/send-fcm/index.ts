@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
       for (const row of workersData) {
         const targetId = row.user_id || row.id;
         
-        if (!isCancellationAlert && row.payout_ready !== true) {
+        if (!isCancellationAlert && messageType !== "START_OTP_REMINDER_CANCEL" && row.payout_ready !== true) {
           skippedWorkers.push({ id: targetId, name: row.full_name || "unknown", reason: "payout_not_ready" });
           continue;
         }
@@ -254,11 +254,17 @@ Deno.serve(async (req) => {
             body: String(body),
           };
 
-          const message = isBookingAlert || isCancellationAlert
+          // Start OTP reminder cancel: silent (data-only), 2 h lifetime, worker_uid set by server.
+          const isReminderCancel = data?.type === "START_OTP_REMINDER_CANCEL";
+          if (isReminderCancel) {
+            baseData.worker_uid = String(userId);
+            baseData.reason = String(data?.reason || "");
+          }
+          const message = isBookingAlert || isCancellationAlert || isReminderCancel
             ? {
                 message: {
                   token,
-                  android: { priority: "HIGH" as const, ttl: "60s" },
+                  android: { priority: "HIGH" as const, ttl: isReminderCancel ? "7200s" : "60s" },
                   data: baseData,
                 },
               }
