@@ -1262,6 +1262,47 @@ export type Database = {
           },
         ]
       }
+      booking_start_otp_flags: {
+        Row: {
+          booking_id: string
+          delayed_at: string
+          level: string
+          resolution: string | null
+          resolved_at: string | null
+          updated_at: string
+          urgent_at: string | null
+          worker_id: string | null
+        }
+        Insert: {
+          booking_id: string
+          delayed_at?: string
+          level: string
+          resolution?: string | null
+          resolved_at?: string | null
+          updated_at?: string
+          urgent_at?: string | null
+          worker_id?: string | null
+        }
+        Update: {
+          booking_id?: string
+          delayed_at?: string
+          level?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          updated_at?: string
+          urgent_at?: string | null
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_start_otp_flags_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_start_otps: {
         Row: {
           attempts: number
@@ -10400,6 +10441,7 @@ export type Database = {
       }
       redispatch_booking: { Args: { p_booking_id: string }; Returns: undefined }
       refresh_community_hourly_availability: { Args: never; Returns: undefined }
+      refresh_start_otp_flags: { Args: never; Returns: Json }
       register_worker: {
         Args: {
           p_community: string
