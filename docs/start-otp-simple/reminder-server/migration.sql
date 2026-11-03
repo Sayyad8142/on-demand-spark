@@ -76,7 +76,7 @@ create or replace function public.notify_start_otp_reminder_cancel()
 returns trigger language plpgsql security definer set search_path = public as $$
 declare
   fn_url text := 'https://paywwbuqycovjopryele.supabase.co/functions/v1/send-fcm';
-  anon_key text := current_setting('app.start_otp_cancel_key', true);
+  anon_key text := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheXd3YnVxeWNvdmpvcHJ5ZWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkyNjksImV4cCI6MjA3MDc0NTI2OX0.js1MaTBkjuGlaDfQjrZpZ9_G8Jy9ygNAB8KpNDiQg8o'; -- public anon key, same as existing cancel trigger
   v_reason text;
 begin
   if old.start_otp_required is not true or old.worker_id is null or old.started_at is not null then
@@ -93,7 +93,7 @@ begin
   begin
     perform net.http_post(
       url := fn_url,
-      headers := jsonb_build_object('Content-Type','application/json','Authorization','Bearer ' || coalesce(anon_key,'')),
+      headers := jsonb_build_object('Content-Type','application/json','Authorization','Bearer ' || anon_key),
       body := jsonb_build_object(
         'workerIds', jsonb_build_array(old.worker_id::text),
         'title', '', 'body', '',
