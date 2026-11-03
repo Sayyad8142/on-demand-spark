@@ -1,0 +1,1 @@
+revoke all on function public.notify_start_otp_reminder_cancel() from public, anon, authenticated;
