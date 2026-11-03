@@ -186,7 +186,7 @@ export default function ActiveJobCard({
   const [speakFailed, setSpeakFailed] = useState(false);
   const speakFlatNo = async () => {
     if (speaking) return;
-    const flat = isVilla ? (booking.flat_no ?? '') : (booking.flat_no ?? '');
+    const flat = booking.flat_no ?? "";
     const { text, lang } = buildFlatAnnouncement(flat, { villa: isVilla, lang: i18n.language });
     setSpeaking(true);
     setSpeakFailed(false);
