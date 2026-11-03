@@ -407,7 +407,7 @@ export default function Home() {
           </div>
         </Card>}
 
-      {activeJob && <ActiveJobCard booking={activeJob} onStatusUpdate={handleStatusUpdate} updating={updating} onRefresh={refetchActiveJob} />}
+      {activeJob && <div className="pt-6 sm:pt-8"><ActiveJobCard booking={activeJob} onStatusUpdate={handleStatusUpdate} updating={updating} onRefresh={refetchActiveJob} /></div>}
       
       {/* Guest Mode Logout Button - Big Red */}
       {isGuestMode && (
