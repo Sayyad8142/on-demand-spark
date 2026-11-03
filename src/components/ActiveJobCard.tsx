@@ -21,7 +21,8 @@ import { startOtpCardAction } from "@/lib/startOtp";
 
 import serviceDishWashing from "@/assets/service-dish-washing.webp";
 import serviceFloorCleaning from "@/assets/service-floor-cleaning.webp";
-import serviceBathroomCleaning from "@/assets/service-bathroom-commode.jpg";
+import serviceBathroomCleaning from "@/assets/service-bathroom-cleaning-pro.webp";
+import { announceFlat, buildFlatAnnouncement } from "@/lib/flatVoice";
 import PaymentCollectionModal from "@/components/PaymentCollectionModal";
 
 const TASK_CONFIG: Record<string, {label: string; img: string; icon: typeof Utensils}> = {
@@ -181,65 +182,17 @@ export default function ActiveJobCard({
   const phfParsed = unit.phf;
   const isBlock = unit.towerLabel === 'BLOCK';
 
-  const handleCallManager = () => {
-    window.location.href = `tel:${MANAGER_PHONE}`;
-  };
-
-  const speakFlatNo = () => {
-    if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const lang = i18n.language;
-    const voices = window.speechSynthesis.getVoices();
-
-    let text: string;
-    let utteranceLang: string;
-
-    if (isVilla) {
-      // Villas: speak the whole villa number, never tower/floor/door
-      const villaNo = booking.flat_no ?? '';
-      if (lang === 'te') {
-        text = `విల్లా నంబర్ ${villaNo}`;
-        utteranceLang = voices.some((v) => v.lang.startsWith('te')) ? 'te-IN' : 'hi-IN';
-        if (utteranceLang === 'hi-IN') text = `विला नंबर ${villaNo}`;
-      } else if (lang === 'hi') {
-        text = `विला नंबर ${villaNo}`;
-        utteranceLang = 'hi-IN';
-      } else {
-        text = `Villa number ${villaNo}`;
-        utteranceLang = 'en-IN';
-      }
-    } else if (lang === 'te') {
-      const teVoice = voices.find((v) => v.lang.startsWith('te'));
-      if (teVoice) {
-        text = `ఫ్లాట్ నంబర్ ${booking.flat_no}`;
-        if (phfParsed) text += `. ${isBlock ? 'బ్లాక్' : 'టవర్'} ${phfParsed.tower}. ఫ్లోర్ ${phfParsed.floor}. డోర్ నంబర్ ${phfParsed.door}.`;
-        utteranceLang = 'te-IN';
-      } else {
-        text = `फ्लैट नंबर ${booking.flat_no}`;
-        if (phfParsed) text += `. ${isBlock ? 'ब्लॉक' : 'टावर'} ${phfParsed.tower}. फ्लोर ${phfParsed.floor}. डोर नंबर ${phfParsed.door}.`;
-        utteranceLang = 'hi-IN';
-      }
-    } else if (lang === 'hi') {
-      text = `फ्लैट नंबर ${booking.flat_no}`;
-      if (phfParsed) text += `. ${isBlock ? 'ब्लॉक' : 'टावर'} ${phfParsed.tower}. फ्लोर ${phfParsed.floor}. डोर नंबर ${phfParsed.door}.`;
-      utteranceLang = 'hi-IN';
-    } else {
-      text = `Flat number ${booking.flat_no}`;
-      if (phfParsed) text += `. ${isBlock ? 'Block' : 'Tower'} ${phfParsed.tower}. Floor ${phfParsed.floor}. Door number ${phfParsed.door}.`;
-      utteranceLang = 'en-IN';
-    }
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = utteranceLang;
-    const langPrefix = utteranceLang.split('-')[0];
-    const indianVoice = voices.find((v) => v.lang === utteranceLang) ||
-    voices.find((v) => v.lang.startsWith(langPrefix) && v.lang.includes('IN')) ||
-    voices.find((v) => v.lang.startsWith(langPrefix));
-    if (indianVoice) utterance.voice = indianVoice;
-    utterance.rate = 0.85;
-    utterance.pitch = 1.0;
-    utterance.volume = 1;
-    window.speechSynthesis.speak(utterance);
+  const [speaking, setSpeaking] = useState(false);
+  const [speakFailed, setSpeakFailed] = useState(false);
+  const speakFlatNo = async () => {
+    if (speaking) return;
+    const flat = booking.flat_no ?? "";
+    const { text, lang } = buildFlatAnnouncement(flat, { villa: isVilla, lang: i18n.language });
+    setSpeaking(true);
+    setSpeakFailed(false);
+    const ok = await announceFlat(text, lang);
+    setSpeaking(false);
+    if (!ok) setSpeakFailed(true);
   };
 
   const isWorkCompletedDisabled = updating;
@@ -270,7 +223,8 @@ export default function ActiveJobCard({
             </p>
             <button
               onClick={speakFlatNo}
-              className="p-2 rounded-full bg-[#5A3423]/60 hover:bg-[#5A3423] transition-colors active:scale-90 ml-2"
+              className={`p-2 rounded-full transition-colors active:scale-90 ml-2 ${speaking ? 'bg-[#5A3423] ring-2 ring-[#D6B88A] animate-pulse' : speakFailed ? 'bg-destructive/70' : 'bg-[#5A3423]/60 hover:bg-[#5A3423]'}`}
+              aria-busy={speaking}
               aria-label={displayText("Speak flat number")}>
               <Volume2 className="w-5 h-5 text-[#D6B88A]" />
             </button>
@@ -359,7 +313,7 @@ export default function ActiveJobCard({
         </div>
 
         {/* OTP action: legacy → Complete from any active status; V2 → Start, then Complete; unknown → safe state */}
-        <div className="px-3">
+        <div className="px-3 pb-3">
           {otpAction === "complete" ? (
             <Button
               size="lg"
@@ -383,7 +337,7 @@ export default function ActiveJobCard({
               className={`w-full h-14 text-lg font-bold shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98] ${
                 isWorkCompletedDisabled ?
                 "bg-gray-400 hover:bg-gray-400 cursor-not-allowed text-white/80" :
-                "bg-blue-600 hover:bg-blue-700 text-white"}`
+                "bg-green-600 hover:bg-green-700 text-white"}`
               }
               onClick={() => navigate(`/start-booking/${booking.id}`)}
               disabled={isWorkCompletedDisabled}>
@@ -410,16 +364,6 @@ export default function ActiveJobCard({
           ) : null}
         </div>
 
-        {/* Call Manager Button */}
-        <div className="px-3 pb-3">
-          <Button
-            size="lg"
-            className="w-full h-12 text-base font-bold bg-green-500 hover:bg-green-600 text-white shadow-md rounded-xl transition-all duration-200 active:scale-[0.98]"
-            onClick={handleCallManager}>
-            <Phone className="w-5 h-5 mr-2" />
-            {displayText("Call Manager")}
-          </Button>
-        </div>
       </div>
 
       {/* Payment Collection Modal */}
