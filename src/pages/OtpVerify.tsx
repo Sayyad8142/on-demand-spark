@@ -318,9 +318,8 @@ export default function OtpVerify() {
             communities: [community],
             selected_community_id: communityData.id,
             is_active: true,
-            is_available: false,
-            is_busy: false,
-              payout_ready: hasValidBankDetails,
+            // Returning worker: keep their own Available ON/OFF and Busy state.
+            payout_ready: hasValidBankDetails,
             // Only overwrite bank fields if newly provided during signup
             ...(bankDetails
               ? {
