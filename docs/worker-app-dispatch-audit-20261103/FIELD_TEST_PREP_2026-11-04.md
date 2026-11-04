@@ -11,7 +11,7 @@
 
 ## Blocker — needs owner GO (production server)
 - `worker-health-watchdog` (cron every 2 min) still sets `is_available=false` on stale heartbeat (5 min) / missing token / misses, even though `dispatch.heartbeat_auto_offline_enabled = off`. This contradicts Fix 3.
-- Proposed minimal fix: unschedule the watchdog cron (`select cron.unschedule('worker-health-watchdog')`), reversible by re-scheduling. Not applied.
+- Proposed minimal fix: unschedule the watchdog cron (`select cron.unschedule('worker-health-watchdog')`), reversible by re-scheduling. APPLIED 2026-11-04 16:43 UTC with owner GO: `cron.alter_job(35, active := false)` (paused, not deleted). Resume: `select cron.alter_job(35, active := true);`
 - Logout still sets Available OFF and clears the token (intentional: logged-out phone must not receive offers).
 
 ## Tests
