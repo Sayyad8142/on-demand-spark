@@ -1017,6 +1017,9 @@
     "Please_select_your_available_time_slots_before_going_online": "Please select your available time slots before going online.",
     "Set_Availability": "Set Availability",
     "Please_select_at_least_one_time_slot_to_continue": "Please select at least one time slot to continue.",
-    "Welcome_to_Didi_Now_Please_select_your_working_hours_to_start_receiving_bookings": "Welcome to Didi Now! Please select your working hours to start receiving bookings."
+    "Welcome_to_Didi_Now_Please_select_your_working_hours_to_start_receiving_bookings": "Welcome to Didi Now! Please select your working hours to start receiving bookings.",
+    "Reconnect_Title": "Time to reconnect",
+    "Reconnect_Body": "You haven't opened Didi Now Partner for 3 days. Open the app so booking alerts keep reaching you.",
+    "Reconnect_OK": "OK — Open App"
   }
 }

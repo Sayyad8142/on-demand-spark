@@ -1017,6 +1017,9 @@
     "Please_select_your_available_time_slots_before_going_online": "ఆన్‌లైన్‌కి వెళ్లే ముందు దయచేసి మీ అందుబాటు సమయ స్లాట్‌లను ఎంచుకోండి.",
     "Set_Availability": "అందుబాటు సెట్ చేయండి",
     "Please_select_at_least_one_time_slot_to_continue": "కొనసాగడానికి దయచేసి కనీసం ఒక సమయ స్లాట్‌ను ఎంచుకోండి.",
-    "Welcome_to_Didi_Now_Please_select_your_working_hours_to_start_receiving_bookings": "Didi Now కి స్వాగతం! బుకింగ్‌లు పొందడానికి దయచేసి మీ పని గంటలను ఎంచుకోండి."
+    "Welcome_to_Didi_Now_Please_select_your_working_hours_to_start_receiving_bookings": "Didi Now కి స్వాగతం! బుకింగ్‌లు పొందడానికి దయచేసి మీ పని గంటలను ఎంచుకోండి.",
+    "Reconnect_Title": "మళ్లీ కనెక్ట్ అవ్వండి",
+    "Reconnect_Body": "మీరు 3 రోజులుగా Didi Now Partner తెరవలేదు. బుకింగ్ అలర్ట్‌లు అందేలా యాప్ తెరవండి.",
+    "Reconnect_OK": "సరే — యాప్ తెరవండి"
   }
 }
