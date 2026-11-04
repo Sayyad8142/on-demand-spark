@@ -6890,6 +6890,36 @@ export type Database = {
           },
         ]
       }
+      worker_reconnect_followups: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          reason: string
+          resolved_at: string | null
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          reason: string
+          resolved_at?: string | null
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          reason?: string
+          resolved_at?: string | null
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: []
+      }
       worker_registration_requests: {
         Row: {
           community: string
@@ -7191,8 +7221,10 @@ export type Database = {
           last_push_error_at: string | null
           last_push_error_code: string | null
           last_push_success_at: string | null
+          last_reconnect_reminder_at: string | null
           last_seen_at: string | null
           last_streak_date: string | null
+          last_verified_app_open_at: string | null
           location_enabled: boolean | null
           no_ack_count: number | null
           not_reached_7d: number
@@ -7230,6 +7262,8 @@ export type Database = {
           razorpay_vpa_fund_account_id: string | null
           reachability_score: number | null
           reachability_status: string | null
+          reconnect_paused_by_admin: boolean
+          reconnect_paused_by_worker: boolean
           reliability_score: number
           respect_availability: boolean | null
           score_reason: string | null
@@ -7346,8 +7380,10 @@ export type Database = {
           last_push_error_at?: string | null
           last_push_error_code?: string | null
           last_push_success_at?: string | null
+          last_reconnect_reminder_at?: string | null
           last_seen_at?: string | null
           last_streak_date?: string | null
+          last_verified_app_open_at?: string | null
           location_enabled?: boolean | null
           no_ack_count?: number | null
           not_reached_7d?: number
@@ -7385,6 +7421,8 @@ export type Database = {
           razorpay_vpa_fund_account_id?: string | null
           reachability_score?: number | null
           reachability_status?: string | null
+          reconnect_paused_by_admin?: boolean
+          reconnect_paused_by_worker?: boolean
           reliability_score?: number
           respect_availability?: boolean | null
           score_reason?: string | null
@@ -7501,8 +7539,10 @@ export type Database = {
           last_push_error_at?: string | null
           last_push_error_code?: string | null
           last_push_success_at?: string | null
+          last_reconnect_reminder_at?: string | null
           last_seen_at?: string | null
           last_streak_date?: string | null
+          last_verified_app_open_at?: string | null
           location_enabled?: boolean | null
           no_ack_count?: number | null
           not_reached_7d?: number
@@ -7540,6 +7580,8 @@ export type Database = {
           razorpay_vpa_fund_account_id?: string | null
           reachability_score?: number | null
           reachability_status?: string | null
+          reconnect_paused_by_admin?: boolean
+          reconnect_paused_by_worker?: boolean
           reliability_score?: number
           respect_availability?: boolean | null
           score_reason?: string | null
@@ -8365,6 +8407,10 @@ export type Database = {
         Args: { kind: string; url: string }
         Returns: undefined
       }
+      admin_set_reconnect_pause: {
+        Args: { _paused: boolean; _worker_id: string }
+        Returns: Json
+      }
       admin_set_web_version: {
         Args: { force?: boolean; new_version: string }
         Returns: undefined
@@ -8565,8 +8611,10 @@ export type Database = {
               last_push_error_at: string | null
               last_push_error_code: string | null
               last_push_success_at: string | null
+              last_reconnect_reminder_at: string | null
               last_seen_at: string | null
               last_streak_date: string | null
+              last_verified_app_open_at: string | null
               location_enabled: boolean | null
               no_ack_count: number | null
               not_reached_7d: number
@@ -8604,6 +8652,8 @@ export type Database = {
               razorpay_vpa_fund_account_id: string | null
               reachability_score: number | null
               reachability_status: string | null
+              reconnect_paused_by_admin: boolean
+              reconnect_paused_by_worker: boolean
               reliability_score: number
               respect_availability: boolean | null
               score_reason: string | null
@@ -8729,8 +8779,10 @@ export type Database = {
               last_push_error_at: string | null
               last_push_error_code: string | null
               last_push_success_at: string | null
+              last_reconnect_reminder_at: string | null
               last_seen_at: string | null
               last_streak_date: string | null
+              last_verified_app_open_at: string | null
               location_enabled: boolean | null
               no_ack_count: number | null
               not_reached_7d: number
@@ -8768,6 +8820,8 @@ export type Database = {
               razorpay_vpa_fund_account_id: string | null
               reachability_score: number | null
               reachability_status: string | null
+              reconnect_paused_by_admin: boolean
+              reconnect_paused_by_worker: boolean
               reliability_score: number
               respect_availability: boolean | null
               score_reason: string | null
@@ -10439,6 +10493,7 @@ export type Database = {
         }
         Returns: Json
       }
+      record_verified_app_open: { Args: never; Returns: Json }
       redispatch_booking: { Args: { p_booking_id: string }; Returns: undefined }
       refresh_community_hourly_availability: { Args: never; Returns: undefined }
       refresh_start_otp_flags: { Args: never; Returns: Json }
@@ -10554,6 +10609,7 @@ export type Database = {
         Args: { p_booking_id: string; p_profile_id: string }
         Returns: Json
       }
+      set_reconnect_pause: { Args: { _paused: boolean }; Returns: Json }
       set_worker_availability: {
         Args: {
           p_changed_by?: string
