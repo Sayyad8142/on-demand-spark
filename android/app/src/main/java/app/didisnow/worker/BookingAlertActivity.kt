@@ -780,6 +780,19 @@ class BookingAlertActivity : AppCompatActivity() {
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
+                        } else if (responseBody.contains("BOOKING_ACCEPTANCE_CLOSED:")) {
+                            // Outside operating hours (P0001). Close for good — no retry.
+                            acceptInFlight = false
+                            OfferQueue.endAcceptance(applicationContext, bookingId)
+                            OfferQueue.markTaken(applicationContext, bookingId)
+                            OfferQueue.clearAll(applicationContext, "acceptance_closed")
+                            retireOffer(accepted = false)
+                            Toast.makeText(
+                                this@BookingAlertActivity,
+                                ACCEPTANCE_CLOSED_MSG,
+                                Toast.LENGTH_LONG
+                            ).show()
+                            Log.w("BookingAlert", "⛔ Acceptance closed (operating hours)")
                         } else {
                             // Network / server error — NOT a loss. Let her retry.
                             keepScreenOpen = true

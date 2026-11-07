@@ -21,6 +21,7 @@ import { useBookingOfferVisible } from "@/hooks/useBookingOfferVisible";
 import { SoftUpdateSheet, UpdateAfterJobBanner } from "@/components/SoftUpdateSheet";
 import { initNativePush } from "@/native/push";
 import { tryAccept } from "@/lib/bookingActions";
+import { invalidateOffer } from "@/services/bookingAlertCoordinator";
 import {
   checkBatteryState,
   checkNotificationPermission,
@@ -451,7 +452,11 @@ function AppInner() {
             if (bookingId) {
               console.log('🔗 Deep link accept for bookingId:', bookingId);
               const result = await tryAccept(bookingId);
-              if (!result.success) {
+              if (!result.success && result.acceptanceClosed) {
+                invalidateOffer(bookingId);
+                window.dispatchEvent(new CustomEvent('bookingAcceptanceClosed', { detail: { bookingId } }));
+                sonnerToast.error(result.error);
+              } else if (!result.success) {
                 console.warn('Booking accept failed:', result.error);
               } else {
                 window.dispatchEvent(new CustomEvent('bookingAccepted', { detail: { bookingId } }));

@@ -248,7 +248,14 @@ export function useUnifiedBookingAlerts(
 
     try {
       const result = await tryAccept(bookingId, workerId || undefined);
-      if (!result.success) {
+      if (!result.success && result.acceptanceClosed) {
+        // Closed for the day: close this offer everywhere (sound, countdown,
+        // native popup, queue) and refresh state. No retry.
+        endAcceptance(bookingId);
+        invalidateOffer(bookingId, pending.bookingRequestId);
+        window.dispatchEvent(new CustomEvent("bookingAcceptanceClosed", { detail: { bookingId } }));
+        toast({ title: result.error, variant: "destructive" });
+      } else if (!result.success) {
         endAcceptance(bookingId);
         toast({ title: result.error || "Booking already taken", variant: "destructive" });
       } else {

@@ -42,6 +42,9 @@ private object OverlaySingleton {
     @Volatile var isShowing: Boolean = false
 }
 
+
+internal const val ACCEPTANCE_CLOSED_MSG = "Booking acceptance is closed. Didi Now operates from 7:00 AM to 7:00 PM."
+
 class BookingOverlayService : Service() {
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
@@ -569,6 +572,12 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                 } catch (t: Throwable) {
                     android.util.Log.e("BookingOverlay", "❌ Accept flow crashed", t)
                     outcome = "accept_exception"
+                    if (t.message == ACCEPTANCE_CLOSED_MSG) {
+                        outcome = "acceptance_closed"
+                        // Never re-show this offer; drop the queue too (closed for the day).
+                        OfferQueue.markTaken(applicationContext, bookingId)
+                        OfferQueue.clearAll(applicationContext, "acceptance_closed")
+                    }
                     val reason = t.message?.takeIf { it.isNotBlank() } ?: "Accept failed"
                     ui { Toast.makeText(this@BookingOverlayService, "⚠️ $reason", Toast.LENGTH_LONG).show() }
                 } finally {
@@ -1108,6 +1117,9 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                             android.util.Log.d("BookingOverlay", "❌ Accept failed: $error")
                             throw IllegalStateException("Server rejected: $error")
                         }
+                    } else if (responseBody.contains("BOOKING_ACCEPTANCE_CLOSED:")) {
+                        // Outside operating hours (P0001). Final answer — no retry.
+                        throw IllegalStateException(ACCEPTANCE_CLOSED_MSG)
                     } else {
                         // HTTP error - throw with details
                         val errorMsg = try {

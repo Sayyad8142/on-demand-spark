@@ -59,7 +59,10 @@ export function useBookingAlerts(userId: string | undefined, isOnline: boolean, 
     if (!pending) return;
 
     const result = await tryAccept(pending.id, workerId || undefined);
-    if (!result.success) {
+    if (!result.success && result.acceptanceClosed) {
+      window.dispatchEvent(new CustomEvent("bookingAcceptanceClosed", { detail: { bookingId: pending.id } }));
+      toast({ title: result.error, variant: "destructive" });
+    } else if (!result.success) {
       toast({ title: result.error || "Booking already taken", variant: "destructive" });
     } else {
       toast({ title: "Booking accepted" });
