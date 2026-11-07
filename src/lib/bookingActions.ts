@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { canShowWorkerBookingOffer, isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 import { ackBookingDelivery } from "@/lib/bookingAck";
+import { isAcceptanceClosedError, ACCEPTANCE_CLOSED_MESSAGE } from "@/lib/acceptanceClosed";
 
 // Helper to ensure session is valid before making API calls
 async function ensureValidSession(): Promise<boolean> {
@@ -32,7 +33,10 @@ async function ensureValidSession(): Promise<boolean> {
   }
 }
 
-export async function tryAccept(bookingId: string, workerId?: string): Promise<{ success: boolean; error?: string }> {
+export async function tryAccept(
+  bookingId: string,
+  workerId?: string,
+): Promise<{ success: boolean; error?: string; acceptanceClosed?: boolean }> {
   // Ensure valid session before accepting
   const sessionValid = await ensureValidSession();
   if (!sessionValid) {
@@ -72,6 +76,10 @@ export async function tryAccept(bookingId: string, workerId?: string): Promise<{
   const { data, error } = await supabase.rpc("try_accept_booking", { p_booking_id: bookingId });
   
   if (error) {
+    if (isAcceptanceClosedError(error)) {
+      // Outside operating hours — final answer, never retried.
+      return { success: false, acceptanceClosed: true, error: ACCEPTANCE_CLOSED_MESSAGE };
+    }
     console.error("❌ RPC error accepting booking:", error);
     return { success: false, error: error.message };
   }
