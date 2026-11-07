@@ -171,6 +171,11 @@ export default function ActiveJobCard({
   }, [cooldownEndTime]);
 
 
+  // Hooks must run on every render (before any early return), otherwise the
+  // card crashes when the booking moves to completed/cancelled while shown.
+  const [speaking, setSpeaking] = useState(false);
+  const [speakFailed, setSpeakFailed] = useState(false);
+
   // Don't show for completed or cancelled bookings
   if (!['assigned', 'accepted', 'on_the_way', 'started'].includes(booking.status)) {
     console.log('🚫 ActiveJobCard: Not showing card, status is:', booking.status);
@@ -183,8 +188,6 @@ export default function ActiveJobCard({
   const phfParsed = unit.phf;
   const isBlock = unit.towerLabel === 'BLOCK';
 
-  const [speaking, setSpeaking] = useState(false);
-  const [speakFailed, setSpeakFailed] = useState(false);
   const speakFlatNo = async () => {
     if (speaking) return;
     const flat = booking.flat_no ?? "";
