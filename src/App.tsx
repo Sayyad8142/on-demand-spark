@@ -398,6 +398,9 @@ function AppInner() {
     console.log("[Movement] booking accepted");
     const workerId = worker.id;
     const jobId = trackedJob!.id;
+    // If the booking ends / changes (or the worker logs out) while the
+    // permission prompt is still open, this run must not start tracking.
+    let cancelled = false;
     // Runs after acceptance already succeeded — never blocks Accept. Denial = movement features off.
     void (async () => {
       try {
@@ -411,11 +414,22 @@ function AppInner() {
       } catch (e) {
         console.warn("[Movement] activity permission check failed", e);
       }
+      if (cancelled) return;
       await startMovementMonitoring(jobId, workerId);
     })().catch((error) => {
       console.error("[Movement] active-job start failed", error);
     });
+    return () => {
+      cancelled = true;
+    };
   }, [worker?.id, trackedJob?.id, trackedJob?.status]);
+
+  // Logout / lost session: stop any movement check immediately.
+  useEffect(() => {
+    if (session?.user?.id) return;
+    void stopMovementMonitoring();
+    void stopPassiveMovementMonitoring();
+  }, [session?.user?.id]);
 
 
   // Initialize native push notifications when we have a session.
@@ -423,8 +437,11 @@ function AppInner() {
     const userId = session?.user?.id;
     if (!userId) return;
     if (!Capacitor.isNativePlatform()) return;
-    console.log("🔔 Initializing native push for user:", userId);
-    initNativePush(userId);
+    console.log("🔔 Initializing native push");
+    // Never let a push setup failure become an unhandled rejection.
+    Promise.resolve()
+      .then(() => initNativePush(userId))
+      .catch((e) => console.warn("initNativePush failed", e instanceof Error ? e.message : e));
     // Foreground booking-alert routing + push_received ACK.
     // (Previously never initialized, so foreground FCM booking payloads were dropped.)
     import("@/lib/fcm")
