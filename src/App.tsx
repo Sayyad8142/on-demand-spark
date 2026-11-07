@@ -451,14 +451,23 @@ function AppInner() {
             const bookingId = url.searchParams.get('bookingId') || '';
             if (bookingId) {
               console.log('🔗 Deep link accept for bookingId:', bookingId);
-              const result = await tryAccept(bookingId);
-              if (!result.success && result.acceptanceClosed) {
+              // Same single-flight claim as the pop-up and the in-app card.
+              if (!(await claimDeviceAcceptance(bookingId))) return;
+              const result = await tryAccept(bookingId).catch(() => ({ success: false, error: 'network' } as const));
+              const outcome = classifyAcceptResult(result);
+              await releaseDeviceAcceptance(bookingId, outcome === 'won');
+              if (outcome === 'closed') {
                 invalidateOffer(bookingId);
                 window.dispatchEvent(new CustomEvent('bookingAcceptanceClosed', { detail: { bookingId } }));
                 sonnerToast.error(result.error);
-              } else if (!result.success) {
+              } else if (outcome === 'gone') {
+                invalidateOffer(bookingId);
                 console.warn('Booking accept failed:', result.error);
+              } else if (outcome === 'retry') {
+                // Offer left open — the worker can tap Accept again while it is valid.
+                console.warn('Booking accept failed (retryable):', result.error);
               } else {
+                markAcceptedByMe(bookingId);
                 window.dispatchEvent(new CustomEvent('bookingAccepted', { detail: { bookingId } }));
               }
             }
