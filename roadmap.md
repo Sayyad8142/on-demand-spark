@@ -33,7 +33,8 @@
 - [x] 9 Offer checks reduced to realtime + FCM + one backup poller
 - [x] 10 Unused files and phone-number scripts deleted; test-booking tool dev-only
 - [x] 12 Tests: 27 files / 322 pass; 8 offline Deno + 15 DB rehearsal checks pass
-- [ ] 1 Lock down send-fcm/send-webpush — staged in docs/security-fixes-2026-11-07; blocked: owner approval (auto-deploy)
+- [ ] 1 Lock down send-fcm/send-webpush — all callers mapped (2 functions + 2 DB triggers use public key), staged fixes + 17 offline tests + trigger rehearsal; blocked: owner GO
 - [ ] 11 Database policies — staged + rehearsed; blocked: owner + User/Admin app approval
 - [ ] Native build + phone checks — blocked: no Android build tools here
-- [ ] Remaining type shortcuts (~250) and hard-coded colours — not done; separate cleanup pass
+- [~] Type shortcuts: 22 native-bridge casts replaced by one typed definition (103→76 `as any`); lint 197 pre-existing style errors
+- [ ] Hard-coded colours — blocked: swapping to theme colours changes look; needs owner OK on colour mapping
