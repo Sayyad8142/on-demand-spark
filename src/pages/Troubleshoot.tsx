@@ -221,7 +221,7 @@ export default function Troubleshoot() {
                           console.log('💾 Manual JWT save triggered');
                           const { data: { session } } = await supabase.auth.getSession();
                           if (session?.access_token) {
-                            console.log('🔑 Token found:', session.access_token.substring(0, 30) + '...');
+                            console.log('🔑 Token found');
                             // @ts-ignore - Capacitor bridge
                             const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
                             await AuthBridge.saveToken({ token: session.access_token });

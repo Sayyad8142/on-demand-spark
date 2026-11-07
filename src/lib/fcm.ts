@@ -29,7 +29,7 @@ export async function initFCM() {
   
   // Handle notification received (foreground) — route through coordinator
   PushNotifications.addListener('pushNotificationReceived', async (notification) => {
-    console.log('🔔 Foreground notification:', notification);
+    console.log('🔔 Foreground notification:', { type: notification.data?.type, bookingId: notification.data?.bookingId || notification.data?.booking_id });
     const data = notification.data || {};
     const bookingId = data.bookingId || data.booking_id;
     const bookingRequestId = data.booking_request_id || data.bookingRequestId;
@@ -96,7 +96,7 @@ export async function initFCM() {
   
   // Handle notification clicked — route through coordinator
   PushNotifications.addListener('pushNotificationActionPerformed', async (notification) => {
-    console.log('🔔 Notification clicked:', notification);
+    console.log('🔔 Notification clicked:', { type: notification.notification?.data?.type, actionId: notification.actionId });
     const data = notification.notification.data || {};
     const bookingId = data.bookingId || data.booking_id;
     const bookingRequestId = data.booking_request_id || data.bookingRequestId;

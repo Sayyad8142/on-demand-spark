@@ -98,7 +98,7 @@ export class NativeOverlayBridge implements OverlayBridge {
         }
       }
 
-      console.log('🚀 Showing booking overlay with payload:', payload);
+      console.log('🚀 Showing booking overlay:', payload.bookingId);
       
       // Transform payload to match OverlayPlugin expectations (JSON string format)
       const bookingData = {

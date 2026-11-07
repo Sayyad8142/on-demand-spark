@@ -53,7 +53,7 @@ export async function initNativePush(userId?: string) {
     listenersInitialized = true;
 
     PushNotifications.addListener('registration', async (token) => {
-      console.log('🎯 [push.ts] FCM token received:', token.value.substring(0, 30) + '...');
+      console.log('🎯 [push.ts] FCM token received (len=' + token.value.length + ')');
       if (activeUserId && token.value !== lastSyncedToken) {
         const synced = await syncTokenToBackend(token.value, activeUserId, 'native-registration-event');
         if (synced) lastSyncedToken = token.value;
@@ -65,7 +65,7 @@ export async function initNativePush(userId?: string) {
     });
 
     PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      console.log('Push received (fg):', notification);
+      console.log('Push received (fg):', notification.data?.type ?? 'unknown');
       const data = notification.data || {};
       if (data.type === 'BOOKING_CANCELLED') {
         window.dispatchEvent(new CustomEvent('bookingCancelledAlert', {
@@ -79,7 +79,7 @@ export async function initNativePush(userId?: string) {
     });
 
     PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-      console.log('Push action:', action);
+      console.log('Push action:', action.actionId);
     });
   }
 }

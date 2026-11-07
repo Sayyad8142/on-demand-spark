@@ -120,7 +120,7 @@ export default function OtpVerify() {
 
         // Listen for SMS events
         listenerHandle = await SmsRetrieverPlugin.addListener('smsReceived', (data: any) => {
-          console.log('📱 SMS received event:', data);
+          console.log('📱 SMS received event');
 
           // Get OTP directly from native layer if available, or extract from message
           let detectedOtp = data.otp;
@@ -133,12 +133,12 @@ export default function OtpVerify() {
           }
 
           if (detectedOtp) {
-            console.log('📱 Auto-filling OTP:', detectedOtp);
+            console.log('📱 Auto-filling OTP');
             setOtp(detectedOtp);
             setAutoDetected(true);
             toast({
               title: t('auth.otpAutoDetected', 'OTP Auto-detected'),
-              description: t('auth.otpAutoFilled', `Code ${detectedOtp} filled automatically`, { otp: detectedOtp })
+              description: t('auth.otpAutoFilled', 'Code filled automatically')
             });
           }
         });

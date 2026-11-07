@@ -48,7 +48,7 @@ export async function showBookingOverlayNative(payload: {
     return;
   }
   
-  console.log('Trigger native overlay via FCM payload', payload);
+  console.log('Trigger native overlay via FCM payload');
   
   // The overlay is typically triggered by FCM notification data
   // This function is here for future direct overlay triggers if needed
