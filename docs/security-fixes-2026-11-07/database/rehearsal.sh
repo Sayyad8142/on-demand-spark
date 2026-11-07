@@ -25,7 +25,7 @@ do $$ declare t text; begin foreach t in array array['bookings','worker_ratings'
   execute format('alter table public.%I enable row level security', t);
   execute format('grant select, insert, update, delete on public.%I to anon, authenticated, service_role', t);
 end loop; end $$;
-grant usage, select on all sequences in schema public to anon, authenticated;
+grant usage, select on all sequences in schema public to anon, authenticated, service_role;
 grant usage on schema auth to anon, authenticated;
 create policy b_all on public.bookings for select using (true);
 -- live policies as of 2026-11-07
