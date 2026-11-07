@@ -21,6 +21,7 @@ import { useBookingOfferVisible } from "@/hooks/useBookingOfferVisible";
 import { SoftUpdateSheet, UpdateAfterJobBanner } from "@/components/SoftUpdateSheet";
 import { initNativePush } from "@/native/push";
 import { tryAccept } from "@/lib/bookingActions";
+import { invalidateOffer } from "@/services/bookingAlertCoordinator";
 import {
   checkBatteryState,
   checkNotificationPermission,
@@ -454,7 +455,7 @@ function AppInner() {
               if (!result.success && result.acceptanceClosed) {
                 invalidateOffer(bookingId);
                 window.dispatchEvent(new CustomEvent('bookingAcceptanceClosed', { detail: { bookingId } }));
-                toast({ title: result.error, variant: 'destructive' });
+                sonnerToast.error(result.error);
               } else if (!result.success) {
                 console.warn('Booking accept failed:', result.error);
               } else {
