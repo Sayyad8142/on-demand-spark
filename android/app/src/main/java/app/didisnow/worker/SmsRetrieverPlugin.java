@@ -81,7 +81,7 @@ public class SmsRetrieverPlugin extends Plugin {
                                         // Extract 6-digit OTP
                                         String otp = extractOtp(message);
                                         if (otp != null) {
-                                            Log.d(TAG, "✅ OTP extracted: " + otp);
+                                            Log.d(TAG, "✅ OTP extracted (len=" + otp.length() + ")");
                                             
                                             // Notify JS layer
                                             JSObject ret = new JSObject();

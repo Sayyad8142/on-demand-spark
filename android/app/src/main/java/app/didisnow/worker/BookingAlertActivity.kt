@@ -548,7 +548,7 @@ class BookingAlertActivity : AppCompatActivity() {
             .putString("supabase_jwt", accessToken)
             .apply()
         
-        Log.d("BookingAlert", "💾 Session synced to both stores (RT last 6: ${refreshToken.takeLast(6)})")
+        Log.d("BookingAlert", "💾 Session synced to both stores")
     }
     
     /**
@@ -623,7 +623,7 @@ class BookingAlertActivity : AppCompatActivity() {
                         )
                         
                         lastRefreshTime = System.currentTimeMillis()
-                        Log.d("BookingAlert", "✅ [NATIVE] Token refreshed -> wrote didi_session + didi-worker-session (RT last 6: ${newRefreshToken.takeLast(6)})")
+                        Log.d("BookingAlert", "✅ [NATIVE] Token refreshed -> wrote didi_session + didi-worker-session")
                         return newAccessToken
                     }
                 } else {

@@ -190,7 +190,7 @@ class BookingOverlayService : Service() {
                     
                     // Try to get access token from Intent first (passed from web)
                     var accessToken = intent?.getStringExtra("ACCESS_TOKEN")
-                    android.util.Log.d("BookingOverlay", "🔑 Access token from Intent: ${if (accessToken != null) "✅ Present (${accessToken.take(12)}...)" else "❌ Not passed"}")
+                    android.util.Log.d("BookingOverlay", "🔑 Access token from Intent: ${if (accessToken != null) "✅ Present" else "❌ Not passed"}")
 
                     android.util.Log.d("BookingOverlay", "📋 Booking details - ID: $bookingId, Type: $bookingType, Prealert: $prealertSent, Scheduled: $scheduledTime, Service: $serviceType, Community: $community")
                     
@@ -294,7 +294,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                                 stopSelf()
                                 return START_NOT_STICKY
                             }
-                            android.util.Log.d("BookingOverlay", "✅ Access token from SharedPreferences: ${accessToken?.take(12)}...")
+                            android.util.Log.d("BookingOverlay", "✅ Access token from SharedPreferences: present=${!accessToken.isNullOrEmpty()}")
                         } catch (e: Exception) {
                             android.util.Log.e("BookingOverlay", "❌ Failed to parse session JSON", e)
 BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", currentBookingRequestId)
@@ -326,7 +326,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                     
                     // Store token for use in updateBooking
                     currentAccessToken = accessToken
-                    android.util.Log.d("BookingOverlay", "✅ Token validated and cached (${accessToken?.take(12)}...) - proceeding to show overlay")
+                    android.util.Log.d("BookingOverlay", "✅ Token validated and cached - proceeding to show overlay")
 
                     // Store booking ID for status polling
                     currentBookingId = bookingId
@@ -907,7 +907,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
             .putString("supabase_jwt", accessToken)
             .apply()
         
-        android.util.Log.d("BookingOverlay", "💾 Session synced to both stores (RT last 6: ${refreshToken.takeLast(6)})")
+        android.util.Log.d("BookingOverlay", "💾 Session synced to both stores")
     }
     
     /**
@@ -1000,7 +1000,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                         this@BookingOverlayService.currentAccessToken = newAccessToken
                         lastRefreshTime = System.currentTimeMillis()
                         
-                        android.util.Log.d("BookingOverlay", "✅ [NATIVE] Token refreshed -> wrote didi_session + didi-worker-session (RT last 6: ${newRefreshToken.takeLast(6)})")
+                        android.util.Log.d("BookingOverlay", "✅ [NATIVE] Token refreshed -> wrote didi_session + didi-worker-session")
                         return newAccessToken
                     }
                 } else {
@@ -1033,7 +1033,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                     try {
                         val session = JSONObject(sessionJson)
                         jwt = session.optString("accessToken", "")
-                        android.util.Log.d("BookingOverlay", "🔑 Token from SharedPreferences: ${jwt?.take(12)}...")
+                        android.util.Log.d("BookingOverlay", "🔑 Token from SharedPreferences: present=${!jwt.isNullOrEmpty()}")
                     } catch (e: Exception) {
                         android.util.Log.e("BookingOverlay", "❌ Failed to parse session", e)
                     }
@@ -1058,7 +1058,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                 throw IllegalStateException("No access token available - Please log in again")
             }
             
-            android.util.Log.d("BookingOverlay", "✅ Using token: ${jwt?.take(12)}...")
+            android.util.Log.d("BookingOverlay", "✅ Using token: present=${!jwt.isNullOrEmpty()}")
             
             if (action == "accepted") {
                 // Call try_accept_booking RPC with user JWT

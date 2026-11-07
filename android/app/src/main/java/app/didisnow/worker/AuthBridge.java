@@ -31,7 +31,6 @@ public class AuthBridge extends Plugin {
             String savedToken = prefs().getString("supabase_jwt", null);
             if (token.equals(savedToken)) {
                 android.util.Log.d("AuthBridge", "✅ JWT token saved and verified");
-                android.util.Log.d("AuthBridge", "🔑 Token preview: " + token.substring(0, Math.min(50, token.length())) + "...");
                 ret.put("ok", true);
                 call.resolve(ret);
             } else {
