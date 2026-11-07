@@ -35,3 +35,23 @@ Nothing here is live. Applying any step needs owner GO.
 
 ## Tests
 `deno test --allow-env docs/security-fixes-2026-11-07/notification-senders/` — offline, no network.
+
+## 4. Does keep-alive help? (LIVE read-only, 2026-11-07)
+- Pings sent in last 7 days: 0. Acks: 0 (never). The job has never worked, so there is **no evidence** it helps.
+- 20 workers received some notification in 7 days without it; 18 workers are ON.
+- Android limits (PRIOR knowledge, NOT VERIFIED on devices):
+  - Silent high-priority pushes that show nothing make Google lower the app's high-priority standing →
+    could slow real booking alerts. Staged fix: PING sent at NORMAL priority (tested).
+  - NORMAL pushes wait for Doze maintenance windows, so a ping proves "token alive", not "instant delivery".
+  - Force-stopped apps (some Xiaomi/Oppo/Vivo battery modes) get no pushes at all; a ping can only *detect* this.
+  - Ack runs via a plain WorkManager job; it may run late in Doze, so a late ack ≠ unreachable.
+- Recommendation: run it for 2 weeks after Stage 2, then compare ack rate vs missed-booking reports before keeping it.
+
+## 5. Bypass check
+- send-fcm guard covers every sender (43 flow tests).
+- GAP (SOURCE): the relays in front of send-fcm (booking-notifications, notify-next-tier, fcm-keepalive,
+  worker-health-watchdog) accept any caller and then use the service key. Staged `relay_auth.ts` closes this;
+  same observe → enforce switch.
+- The app's rejection redispatch calls notify-next-tier without a provable identity; allowed only when the server
+  confirms a real recent rejection for that booking and tier. Better long-term: have `reject_booking_offer` trigger redispatch itself.
+- Favourite-worker alerts: no separate sender exists; they go out through booking-notifications as BOOKING_ALERT.
