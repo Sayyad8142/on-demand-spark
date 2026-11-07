@@ -21,6 +21,8 @@ export interface VerifiedCaller {
   isAdmin: boolean;
   /** worker ids that belong to this user (resolved server-side) */
   ownWorkerIds: string[];
+  /** true when the x-internal-key header matched DISPATCH_INTERNAL_KEY (DB triggers via pg_net) */
+  internalKeyValid?: boolean;
 }
 
 export interface NotifyRequest {
@@ -35,6 +37,7 @@ export type NotifyDecision =
 const SELF_TEST_TYPES = new Set(["TEST_PUSH", "SELF_TEST"]);
 
 export function decideNotifyAccess(caller: VerifiedCaller | null, req: NotifyRequest): NotifyDecision {
+  if (caller?.internalKeyValid) return { allow: true, reason: "internal_key" };
   if (!caller || !caller.role) return { allow: false, status: 401, reason: "no_verified_token" };
   if (caller.role === "service_role") return { allow: true, reason: "service_role" };
   if (caller.role !== "authenticated" || !caller.userId) {
@@ -51,4 +54,12 @@ export function decideNotifyAccess(caller: VerifiedCaller | null, req: NotifyReq
 export function applyMode(decision: NotifyDecision, mode: NotifyAuthMode): { block: boolean; log: string | null } {
   if (decision.allow) return { block: false, log: null };
   return { block: mode === "enforce", log: `notify_auth_${mode}_refuse:${decision.reason}` };
+}
+
+/** Constant-time compare for the x-internal-key header. Empty/missing never matches. */
+export function internalKeyMatches(given: string | null | undefined, expected: string | null | undefined): boolean {
+  if (!given || !expected || given.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < given.length; i++) diff |= given.charCodeAt(i) ^ expected.charCodeAt(i);
+  return diff === 0;
 }
