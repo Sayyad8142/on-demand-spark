@@ -21,7 +21,9 @@ import { useBookingOfferVisible } from "@/hooks/useBookingOfferVisible";
 import { SoftUpdateSheet, UpdateAfterJobBanner } from "@/components/SoftUpdateSheet";
 import { initNativePush } from "@/native/push";
 import { tryAccept } from "@/lib/bookingActions";
-import { invalidateOffer } from "@/services/bookingAlertCoordinator";
+import { invalidateOffer, markAcceptedByMe } from "@/services/bookingAlertCoordinator";
+import { classifyAcceptResult } from "@/lib/acceptOutcome";
+import { claimDeviceAcceptance, releaseDeviceAcceptance } from "@/lib/deviceAcceptLock";
 import {
   checkBatteryState,
   checkNotificationPermission,
