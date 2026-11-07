@@ -49,3 +49,31 @@ export function buildKeepalivePingPayload(workerIds: string[], nowMs: number): S
 export function isSilent(data: Record<string, string> | undefined): boolean {
   return SILENT_TYPES.has(String(data?.type ?? ""));
 }
+
+/** Data-only types in send-fcm (live: BOOKING_ALERT, BOOKING_CANCELLED,
+ *  START_OTP_REMINDER_CANCEL; staged: + PING). Everything else gets a tray notification. */
+const DATA_ONLY = new Set(["BOOKING_ALERT", "BOOKING_CANCELLED", "START_OTP_REMINDER_CANCEL", "PING"]);
+
+/** Mirror of the staged send-fcm message shape (lines 263-278 + PING branch). */
+export function buildFcmMessage(token: string, p: SendFcmPayload) {
+  const type = String(p.data?.type ?? "");
+  const ttl = type === "START_OTP_REMINDER_CANCEL" ? "7200s" : "60s";
+  const base = { token, android: { priority: "HIGH" as const, ttl }, data: { ...p.data, title: p.title, body: p.body } };
+  return DATA_ONLY.has(type) ? { message: base } : { message: { ...base, notification: { title: p.title, body: p.body } } };
+}
+
+/** Payload shapes the existing senders build today (SOURCE). */
+export const callerPayloads = {
+  bookingAlert: (ids: string[], bookingId: string, opts: Record<string, string> = {}): SendFcmPayload => ({
+    workerIds: ids, title: "New Booking", body: "New Booking",
+    data: { type: "BOOKING_ALERT", bookingId, booking_type: "instant", ...opts },
+  }),
+  cancellation: (id: string, bookingId: string): SendFcmPayload => ({
+    workerIds: [id], title: "Booking cancelled", body: "Booking cancelled",
+    data: { type: "BOOKING_CANCELLED", bookingId, actionable: "false" },
+  }),
+  reminderCancel: (id: string, bookingId: string): SendFcmPayload => ({
+    workerIds: [id], title: "reminder", body: "reminder",
+    data: { type: "START_OTP_REMINDER_CANCEL", bookingId, reason: "started" },
+  }),
+};
