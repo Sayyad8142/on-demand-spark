@@ -5,7 +5,6 @@ import { toast } from "@/hooks/use-toast";
 import { Capacitor } from "@capacitor/core";
 import {
   BookingAlert,
-  processIncomingBooking,
   onNewAlert,
   dismissAlert,
   invalidateOffer,
@@ -15,7 +14,6 @@ import {
   isOwnAcceptance,
   pruneShownBookings,
 } from "@/services/bookingAlertCoordinator";
-import { canShowWorkerBookingOffer, isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 import { isVillaCommunity } from "@/lib/communityTypes";
 import { classifyAcceptResult, canRetryAccept } from "@/lib/acceptOutcome";
 import { claimDeviceAcceptance, releaseDeviceAcceptance } from "@/lib/deviceAcceptLock";
@@ -35,12 +33,10 @@ import { formatVillaLabel } from "@/lib/address";
 export function useUnifiedBookingAlerts(
   userId: string | undefined,
   isOnline: boolean,
-  match: (b: any) => boolean,
+  _match: (b: any) => boolean,
   workerId?: string | null
 ) {
   const [pending, setPending] = useState<BookingAlert | null>(null);
-  const matchRef = useRef(match);
-  matchRef.current = match;
 
   // Listen to coordinator for alerts from ALL sources
   useEffect(() => {
