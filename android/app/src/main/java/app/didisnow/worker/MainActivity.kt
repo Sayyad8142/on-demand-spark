@@ -62,7 +62,6 @@ class MainActivity : BridgeActivity() {
         registerPlugin(ForegroundServicePlugin::class.java)
         registerPlugin(OverlayPlugin::class.java)
         registerPlugin(AuthBridge::class.java)
-        registerPlugin(LocationPlugin::class.java)
         registerPlugin(SmsRetrieverPlugin::class.java)
         registerPlugin(LiveUpdatePlugin::class.java) // registered as "DidiLiveUpdate" via annotation
         registerPlugin(StepCounterPlugin::class.java)
