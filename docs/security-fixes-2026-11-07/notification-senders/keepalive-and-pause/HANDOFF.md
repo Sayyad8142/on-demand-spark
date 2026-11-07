@@ -34,4 +34,4 @@ Nothing here is live. Applying any step needs owner GO.
 4. Check function logs for `keepalive_sent_batch` and phone log "PING received".
 
 ## Tests
-`deno test docs/security-fixes-2026-11-07/notification-senders/` — offline, no network.
+`deno test --allow-env docs/security-fixes-2026-11-07/notification-senders/` — offline, no network.
