@@ -22,15 +22,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { processIncomingBooking } from "@/services/bookingAlertCoordinator";
 import { canShowWorkerBookingOffer, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 import { isFreshOffer, OFFERS_RESYNC_EVENT } from "@/lib/offerFreshness";
+import { reportMissedBooking } from "@/lib/missedBookingDiagnostics";
 
 const POLL_FOREGROUND_MS = 10_000;
 const POLL_BACKGROUND_MS = 30_000;
+// If the backup poll finds an offer older than this, FCM/realtime failed to deliver → report.
+const MISSED_BOOKING_THRESHOLD_MS = 45 * 1000;
 
 interface PendingItem {
   booking_request_id: string;
   booking_id: string;
   status: string;
   timeout_at: string;
+  offered_at?: string | null;
   recovered?: boolean;
   booking: {
     id: string;
@@ -50,6 +54,7 @@ export function useBookingPollingFallback(workerId: string | undefined | null, i
   const intervalRef = useRef<number | null>(null);
   const inFlightRef = useRef(false);
   const isForegroundRef = useRef(true);
+  const reportedMissedRef = useRef(new Set<string>());
 
   useEffect(() => {
     if (!workerId || !isOnline) {
@@ -89,6 +94,22 @@ export function useBookingPollingFallback(workerId: string | undefined | null, i
           }
 
           logScheduledOfferDecision(offerLogInput, "poll", true);
+          // Missed-delivery diagnostics (moved here from the old heartbeat
+          // poller): if the backup poll is the first to find an offer that is
+          // already old, FCM/realtime failed to surface it in time.
+          const offeredMs = item.offered_at ? Date.parse(item.offered_at) : 0;
+          const ageMs = offeredMs ? Date.now() - offeredMs : 0;
+          if (offeredMs && ageMs > MISSED_BOOKING_THRESHOLD_MS && !reportedMissedRef.current.has(item.booking_request_id)) {
+            reportedMissedRef.current.add(item.booking_request_id);
+            void reportMissedBooking({
+              workerId,
+              bookingId: item.booking.id,
+              bookingRequestId: item.booking_request_id,
+              reason: "heartbeat_recovered_stale_pending",
+              isOnlineToggle: true,
+              extra: { request_age_ms: ageMs, source: "poll" },
+            });
+          }
           await processIncomingBooking({
             bookingId: item.booking.id,
             bookingRequestId: item.booking_request_id,
@@ -139,13 +160,16 @@ export function useBookingPollingFallback(workerId: string | undefined | null, i
     window.addEventListener("online", onResync);
 
     // 3. Native: Capacitor appStateChange
-    let nativeSub: { remove: () => void } | null = null;
+    let nativeSub: { remove: () => Promise<void> | void } | null = null;
+    let disposed = false;
     if (Capacitor.isNativePlatform()) {
       CapApp.addListener("appStateChange", (s) => {
         isForegroundRef.current = s.isActive;
         restartInterval();
         if (s.isActive) pollOnce();
-      }).then((sub) => { nativeSub = sub; });
+      })
+        .then((sub) => { if (disposed) void sub.remove(); else nativeSub = sub; })
+        .catch(() => { /* interval + visibility still run */ });
     }
 
     return () => {
@@ -156,7 +180,8 @@ export function useBookingPollingFallback(workerId: string | undefined | null, i
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener(OFFERS_RESYNC_EVENT, onResync);
       window.removeEventListener("online", onResync);
-      nativeSub?.remove();
+      disposed = true;
+      void nativeSub?.remove();
     };
   }, [workerId, isOnline]);
 }

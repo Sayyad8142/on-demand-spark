@@ -6,7 +6,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { useUnifiedBookingAlerts } from "@/hooks/useUnifiedBookingAlerts";
 import { useActiveJob } from "@/hooks/useActiveJob";
-import { useEnhancedHeartbeat } from "@/hooks/useEnhancedHeartbeat";
 import { useBookingRequestsRealtime } from "@/hooks/useBookingRequestsRealtime";
 import { useBookingPollingFallback } from "@/hooks/useBookingPollingFallback";
 import { usePushHealthGuard } from "@/hooks/usePushHealthGuard";
@@ -103,14 +102,15 @@ export default function Home() {
   // Auto-heal missing data (service_types, availability slots)
   useAutoHeal(isGuestMode ? undefined : worker?.id, isGuestMode ? null : worker);
 
-  // Enhanced heartbeat: 45s interval with device info + pending booking fallback
+  // Heartbeat writes live in the global useWorkerHeartbeat (App). Pending-offer
+  // backup checks are done only by useBookingPollingFallback below.
   const isOnline = !!worker?.is_available;
-  useEnhancedHeartbeat(isGuestMode ? undefined : worker?.id, isOnline);
 
   // Layer 2: Realtime subscription on booking_requests
   useBookingRequestsRealtime(isGuestMode ? undefined : worker?.id, isOnline && payoutReady);
 
-  // Layer 3: Server-side polling fallback (10s foreground / 30s background)
+  // Layer 3: Server-side polling fallback (10s foreground / 30s background,
+  // plus immediate checks on open / resume / reconnect)
   useBookingPollingFallback(isGuestMode ? undefined : worker?.id, isOnline && payoutReady);
   
   const [toggling, setToggling] = useState(false);

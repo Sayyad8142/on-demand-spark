@@ -95,42 +95,18 @@ export function useUnifiedBookingAlerts(
     return unsub;
   }, []);
 
-  // Layer 1 (existing): bookings table INSERT listener for backward compat
+  // Offers arrive through ONE coordinated system: booking_requests realtime
+  // (useBookingRequestsRealtime), FCM, and the server polling backup
+  // (useBookingPollingFallback, which also re-checks on resume / reconnect).
+  // The old bookings-INSERT listener was removed: it duplicated those paths
+  // and could surface bookings this worker was never offered (bypassing
+  // dispatch order / favorite-worker priority). This channel now only closes
+  // offers that another worker won.
   useEffect(() => {
     if (!userId || !isOnline) return;
 
     const channel = supabase
       .channel("booking-alerts-unified")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "bookings",
-          filter: "status=eq.pending",
-        },
-        async (payload) => {
-          const b = payload.new as any;
-          if (matchRef.current(b)) {
-            if (isBeforeScheduledDispatchWindow(b)) {
-              logScheduledOfferDecision(b, "realtime", false);
-              return;
-            }
-            await processIncomingBooking({
-              bookingId: b.id,
-              custName: b.cust_name || "Customer",
-              community: b.community || "",
-              serviceType: b.service_type || "",
-              flatNo: b.flat_no || "",
-              priceInr: b.price_inr ?? 0,
-              bookingType: b.booking_type,
-              scheduledDate: b.scheduled_date,
-              scheduledTime: b.scheduled_time,
-              source: "realtime_bookings",
-            });
-          }
-        }
-      )
       // Listen for booking status changes to dismiss stale alerts
       .on(
         "postgres_changes",
@@ -168,67 +144,6 @@ export function useUnifiedBookingAlerts(
     const interval = setInterval(pruneShownBookings, 10 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
-
-  // On app resume, check for pending booking requests
-  useEffect(() => {
-    if (!workerId || !isOnline) return;
-
-    const handleResume = async () => {
-      if (document.visibilityState !== "visible") return;
-      console.log("📱 [UnifiedAlerts] App resumed, checking pending requests");
-
-      try {
-        const { data: requests } = await supabase
-          .from("booking_requests")
-          .select("id, booking_id, timeout_at, status")
-          .eq("worker_id", workerId)
-          .eq("status", "pending")
-          .gt("timeout_at", new Date().toISOString())
-          .limit(3);
-
-        if (!requests?.length) return;
-
-        for (const req of requests) {
-          const { data: booking } = await supabase
-            .from("bookings")
-            .select("id, cust_name, community, service_type, flat_no, price_inr, status, booking_type, scheduled_date, scheduled_time, prealert_sent")
-            .eq("id", req.booking_id)
-            .maybeSingle();
-
-          if (booking?.status === "pending") {
-            const offerLogInput = { ...booking, request_status: req.status };
-            if (!canShowWorkerBookingOffer(offerLogInput)) {
-              logScheduledOfferDecision(offerLogInput, "resume", false);
-              console.log("📱 [UnifiedAlerts] Scheduled request hidden until prealert_sent=true", booking.id);
-              continue;
-            }
-
-            await processIncomingBooking({
-              bookingId: booking.id,
-              bookingRequestId: req.id,
-              custName: booking.cust_name || "Customer",
-              community: booking.community || "",
-              serviceType: booking.service_type || "",
-              flatNo: booking.flat_no || "",
-              priceInr: booking.price_inr ?? 0,
-              bookingType: booking.booking_type,
-              scheduledDate: booking.scheduled_date ?? undefined,
-              scheduledTime: booking.scheduled_time ?? undefined,
-              prealertSent: booking.prealert_sent ?? undefined,
-              requestStatus: req.status ?? undefined,
-              timeoutAt: req.timeout_at,
-              source: "resume",
-            });
-          }
-        }
-      } catch (e) {
-        console.warn("📱 [UnifiedAlerts] Resume check failed:", e);
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleResume);
-    return () => document.removeEventListener("visibilitychange", handleResume);
-  }, [workerId, isOnline]);
 
   const clearAlert = useCallback(() => {
     if (pending) dismissAlert(pending.bookingId);
