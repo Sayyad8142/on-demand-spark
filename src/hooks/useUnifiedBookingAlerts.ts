@@ -5,20 +5,19 @@ import { toast } from "@/hooks/use-toast";
 import { Capacitor } from "@capacitor/core";
 import {
   BookingAlert,
-  processIncomingBooking,
   onNewAlert,
   dismissAlert,
   invalidateOffer,
   markAlertOpened,
   markAlertRendered,
-  beginAcceptance,
-  endAcceptance,
   markAcceptedByMe,
   isOwnAcceptance,
   pruneShownBookings,
 } from "@/services/bookingAlertCoordinator";
-import { canShowWorkerBookingOffer, isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 import { isVillaCommunity } from "@/lib/communityTypes";
+import { classifyAcceptResult, canRetryAccept } from "@/lib/acceptOutcome";
+import { claimDeviceAcceptance, releaseDeviceAcceptance } from "@/lib/deviceAcceptLock";
+import { postBookingAlertFallback } from "@/lib/bookingAlertFallback";
 import { formatVillaLabel } from "@/lib/address";
 
 /**
@@ -31,15 +30,17 @@ import { formatVillaLabel } from "@/lib/address";
  * Also sets up the bookings INSERT realtime listener as before, but routes
  * through the coordinator for dedup.
  */
+interface NativeOverlayTrigger {
+  showBookingOverlay?: (opts: { booking: string }) => Promise<void> | void;
+}
+
 export function useUnifiedBookingAlerts(
   userId: string | undefined,
   isOnline: boolean,
-  match: (b: any) => boolean,
+  _match: (b: Record<string, unknown>) => boolean,
   workerId?: string | null
 ) {
   const [pending, setPending] = useState<BookingAlert | null>(null);
-  const matchRef = useRef(match);
-  matchRef.current = match;
 
   // Listen to coordinator for alerts from ALL sources
   useEffect(() => {
@@ -48,45 +49,44 @@ export function useUnifiedBookingAlerts(
       setPending(alert);
       markAlertOpened(alert.bookingId, alert.bookingRequestId);
 
-      // Trigger native Android overlay if available.
-      // When the native overlay/activity actually renders it sends its own
-      // popup_shown ACK, so we only ack from JS when the native path is not
-      // used (web / plugin missing / trigger failed) and the in-app UI renders.
-      let nativeHandled = false;
-      if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
-        try {
-          const plugin = (window as any)?.Capacitor?.Plugins?.OverlayPlugin;
-          if (plugin?.showBookingOverlay) {
-            const bookingJson = JSON.stringify({
-              id: alert.bookingId,
-              booking_request_id: alert.bookingRequestId,
-              cust_name: alert.custName,
-              community: alert.community,
-              service_type: alert.serviceType,
-              flat_no: alert.flatNo,
-              // Villa-aware display info (presentation only)
-              is_villa: isVillaCommunity(alert.community),
-              unit_label: isVillaCommunity(alert.community)
-                ? formatVillaLabel(alert.flatNo)
-                : `Flat #${alert.flatNo}`,
-              price_inr: alert.priceInr,
-              booking_type: alert.bookingType,
-              scheduled_date: alert.scheduledDate,
-              scheduled_time: alert.scheduledTime,
-              prealert_sent: alert.prealertSent === true,
-            });
-            console.log("🚀 Triggering native overlay from coordinator");
-            plugin.showBookingOverlay({ booking: bookingJson });
-            nativeHandled = true;
-          }
-        } catch (err) {
-          console.error("❌ Native overlay trigger failed:", err);
-          nativeHandled = false;
-        }
-      }
-
-      if (!nativeHandled) {
-        markAlertRendered(alert.bookingId, alert.bookingRequestId);
+      // Trigger native Android overlay if available. The native pop-up sends
+      // its own popup_shown ACK once it renders. If it cannot open (call
+      // rejected, plugin missing), the in-app alert renders here and a backup
+      // notification is posted so the worker still hears the offer.
+      const showInApp = () => markAlertRendered(alert.bookingId, alert.bookingRequestId);
+      const plugin = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android"
+        ? (window as unknown as { Capacitor?: { Plugins?: { OverlayPlugin?: NativeOverlayTrigger } } })
+            .Capacitor?.Plugins?.OverlayPlugin ?? null
+        : null;
+      if (plugin?.showBookingOverlay) {
+        const bookingJson = JSON.stringify({
+          id: alert.bookingId,
+          booking_request_id: alert.bookingRequestId,
+          cust_name: alert.custName,
+          community: alert.community,
+          service_type: alert.serviceType,
+          flat_no: alert.flatNo,
+          // Villa-aware display info (presentation only)
+          is_villa: isVillaCommunity(alert.community),
+          unit_label: isVillaCommunity(alert.community)
+            ? formatVillaLabel(alert.flatNo)
+            : `Flat #${alert.flatNo}`,
+          price_inr: alert.priceInr,
+          booking_type: alert.bookingType,
+          scheduled_date: alert.scheduledDate,
+          scheduled_time: alert.scheduledTime,
+          prealert_sent: alert.prealertSent === true,
+        });
+        console.log("🚀 Triggering native overlay from coordinator");
+        Promise.resolve()
+          .then(() => plugin.showBookingOverlay({ booking: bookingJson }))
+          .catch((err: unknown) => {
+            console.error("❌ Native overlay trigger failed:", err instanceof Error ? err.message : err);
+            showInApp();
+            void postBookingAlertFallback(alert);
+          });
+      } else {
+        showInApp();
       }
 
       toast({ title: "New booking available" });
@@ -96,42 +96,18 @@ export function useUnifiedBookingAlerts(
     return unsub;
   }, []);
 
-  // Layer 1 (existing): bookings table INSERT listener for backward compat
+  // Offers arrive through ONE coordinated system: booking_requests realtime
+  // (useBookingRequestsRealtime), FCM, and the server polling backup
+  // (useBookingPollingFallback, which also re-checks on resume / reconnect).
+  // The old bookings-INSERT listener was removed: it duplicated those paths
+  // and could surface bookings this worker was never offered (bypassing
+  // dispatch order / favorite-worker priority). This channel now only closes
+  // offers that another worker won.
   useEffect(() => {
     if (!userId || !isOnline) return;
 
     const channel = supabase
       .channel("booking-alerts-unified")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "bookings",
-          filter: "status=eq.pending",
-        },
-        async (payload) => {
-          const b = payload.new as any;
-          if (matchRef.current(b)) {
-            if (isBeforeScheduledDispatchWindow(b)) {
-              logScheduledOfferDecision(b, "realtime", false);
-              return;
-            }
-            await processIncomingBooking({
-              bookingId: b.id,
-              custName: b.cust_name || "Customer",
-              community: b.community || "",
-              serviceType: b.service_type || "",
-              flatNo: b.flat_no || "",
-              priceInr: b.price_inr ?? 0,
-              bookingType: b.booking_type,
-              scheduledDate: b.scheduled_date,
-              scheduledTime: b.scheduled_time,
-              source: "realtime_bookings",
-            });
-          }
-        }
-      )
       // Listen for booking status changes to dismiss stale alerts
       .on(
         "postgres_changes",
@@ -142,7 +118,7 @@ export function useUnifiedBookingAlerts(
           filter: "status=eq.assigned",
         },
         (payload) => {
-          const b = payload.new as any;
+          const b = payload.new as { id: string };
           // Our own acceptance assigned it — do not close our own booking.
           if (isOwnAcceptance(b.id)) {
             console.log("🛡️ [UnifiedAlerts] Assigned to this worker, keeping state", b.id);
@@ -170,67 +146,6 @@ export function useUnifiedBookingAlerts(
     return () => clearInterval(interval);
   }, []);
 
-  // On app resume, check for pending booking requests
-  useEffect(() => {
-    if (!workerId || !isOnline) return;
-
-    const handleResume = async () => {
-      if (document.visibilityState !== "visible") return;
-      console.log("📱 [UnifiedAlerts] App resumed, checking pending requests");
-
-      try {
-        const { data: requests } = await supabase
-          .from("booking_requests")
-          .select("id, booking_id, timeout_at, status")
-          .eq("worker_id", workerId)
-          .eq("status", "pending")
-          .gt("timeout_at", new Date().toISOString())
-          .limit(3);
-
-        if (!requests?.length) return;
-
-        for (const req of requests) {
-          const { data: booking } = await supabase
-            .from("bookings")
-            .select("id, cust_name, community, service_type, flat_no, price_inr, status, booking_type, scheduled_date, scheduled_time, prealert_sent")
-            .eq("id", req.booking_id)
-            .maybeSingle();
-
-          if (booking?.status === "pending") {
-            const offerLogInput = { ...booking, request_status: req.status };
-            if (!canShowWorkerBookingOffer(offerLogInput)) {
-              logScheduledOfferDecision(offerLogInput, "resume", false);
-              console.log("📱 [UnifiedAlerts] Scheduled request hidden until prealert_sent=true", booking.id);
-              continue;
-            }
-
-            await processIncomingBooking({
-              bookingId: booking.id,
-              bookingRequestId: req.id,
-              custName: booking.cust_name || "Customer",
-              community: booking.community || "",
-              serviceType: booking.service_type || "",
-              flatNo: booking.flat_no || "",
-              priceInr: booking.price_inr ?? 0,
-              bookingType: booking.booking_type,
-              scheduledDate: booking.scheduled_date ?? undefined,
-              scheduledTime: booking.scheduled_time ?? undefined,
-              prealertSent: booking.prealert_sent ?? undefined,
-              requestStatus: req.status ?? undefined,
-              timeoutAt: req.timeout_at,
-              source: "resume",
-            });
-          }
-        }
-      } catch (e) {
-        console.warn("📱 [UnifiedAlerts] Resume check failed:", e);
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleResume);
-    return () => document.removeEventListener("visibilitychange", handleResume);
-  }, [workerId, isOnline]);
-
   const clearAlert = useCallback(() => {
     if (pending) dismissAlert(pending.bookingId);
     setPending(null);
@@ -240,36 +155,57 @@ export function useUnifiedBookingAlerts(
     if (!pending) return;
 
     const bookingId = pending.bookingId;
-    // Single flight: a second tap must never start a parallel acceptance.
-    if (!beginAcceptance(bookingId)) {
+    // Never extend an expired offer: once the server window has passed, close it.
+    if (!canRetryAccept(pending.timeoutAt)) {
+      invalidateOffer(bookingId, pending.bookingRequestId);
+      dismissAlert(bookingId);
+      setPending(null);
+      toast({ title: "This offer has expired" });
+      return;
+    }
+    // Single flight across this screen, the pop-up and the full-screen alert.
+    if (!(await claimDeviceAcceptance(bookingId))) {
       console.log("⚠️ [UnifiedAlerts] Accept ignored — already in flight", bookingId);
       return;
     }
 
+    let outcome: ReturnType<typeof classifyAcceptResult> = "retry";
+    let message: string | undefined;
     try {
       const result = await tryAccept(bookingId, workerId || undefined);
-      if (!result.success && result.acceptanceClosed) {
-        // Closed for the day: close this offer everywhere (sound, countdown,
-        // native popup, queue) and refresh state. No retry.
-        endAcceptance(bookingId);
-        invalidateOffer(bookingId, pending.bookingRequestId);
-        window.dispatchEvent(new CustomEvent("bookingAcceptanceClosed", { detail: { bookingId } }));
-        toast({ title: result.error, variant: "destructive" });
-      } else if (!result.success) {
-        endAcceptance(bookingId);
-        toast({ title: result.error || "Booking already taken", variant: "destructive" });
-      } else {
-        // Backend confirmed we won — protects against the assigned-listener
-        // and the native poller closing our own booking as "taken".
-        markAcceptedByMe(bookingId);
-        toast({ title: "Booking accepted" });
-      }
-    } catch (e) {
-      endAcceptance(bookingId);
+      outcome = classifyAcceptResult(result);
+      message = result.error;
+    } catch {
+      outcome = "retry";
+    }
+
+    if (outcome === "won") {
+      // Backend confirmed we won — protects against the assigned-listener
+      // and the native poller closing our own booking as "taken".
+      markAcceptedByMe(bookingId);
+      await releaseDeviceAcceptance(bookingId, true);
+      toast({ title: "Booking accepted" });
+      dismissAlert(bookingId);
+      setPending(null);
+      return;
+    }
+
+    await releaseDeviceAcceptance(bookingId, false);
+
+    if (outcome === "retry") {
+      // Temporary problem — keep the still-valid offer so she can tap again.
       toast({ title: "Network problem. Please try again.", variant: "destructive" });
       return;
     }
 
+    // closed / gone: close this offer everywhere on the phone. No retry.
+    invalidateOffer(bookingId, pending.bookingRequestId);
+    if (outcome === "closed") {
+      window.dispatchEvent(new CustomEvent("bookingAcceptanceClosed", { detail: { bookingId } }));
+      toast({ title: message, variant: "destructive" });
+    } else {
+      toast({ title: message || "Booking already taken", variant: "destructive" });
+    }
     dismissAlert(bookingId);
     setPending(null);
   }, [pending, workerId]);

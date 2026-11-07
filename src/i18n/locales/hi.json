@@ -399,7 +399,7 @@
     "View_Earnings": "कमाई देखें",
     "View_Details": "विवरण देखें",
     "Customer_Paid": "ग्राहक ने भुगतान किया",
-    "Platform_Fee_20": "प्लेटफॉर्म शुल्क (20%)",
+    "Platform_Fee_percent": "प्लेटफॉर्म शुल्क ({{percent}}%)",
     "Your_Earnings": "की कमाई",
     "Payout_Method": "भुगतान विधि",
     "Expected_Credit": "अपेक्षित क्रेडिट",

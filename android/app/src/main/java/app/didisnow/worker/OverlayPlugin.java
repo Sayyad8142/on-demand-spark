@@ -252,6 +252,38 @@ public class OverlayPlugin extends Plugin {
         }
     }
 
+    /**
+     * Device-wide single-flight Accept claim shared with the in-app card (JS).
+     * Same OfferQueue claim the pop-up and full-screen alert use, so only one
+     * Accept request per booking can run on this phone. Server stays authoritative.
+     */
+    @PluginMethod
+    public void claimAcceptance(PluginCall call) {
+        String bookingId = call.getString("bookingId", "");
+        JSObject ret = new JSObject();
+        if (bookingId == null || bookingId.isEmpty()) {
+            ret.put("claimed", false);
+            call.resolve(ret);
+            return;
+        }
+        boolean claimed = OfferQueue.INSTANCE.beginAcceptance(getContext(), bookingId);
+        ret.put("claimed", claimed);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void releaseAcceptance(PluginCall call) {
+        String bookingId = call.getString("bookingId", "");
+        Boolean accepted = call.getBoolean("accepted", false);
+        if (bookingId != null && !bookingId.isEmpty()) {
+            if (Boolean.TRUE.equals(accepted)) {
+                OfferQueue.INSTANCE.markAcceptedByMe(getContext(), bookingId);
+            }
+            OfferQueue.INSTANCE.endAcceptance(getContext(), bookingId);
+        }
+        call.resolve();
+    }
+
     @PluginMethod
     public void hideOverlay(PluginCall call) {
         try {

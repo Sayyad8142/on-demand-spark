@@ -128,7 +128,7 @@ export default function Settings() {
         title: displayText("Notifications enabled"),
         description: displayText("Push notifications registered successfully")
       });
-      console.log('FCM Token:', token);
+      console.log('FCM token registered:', !!token);
     } catch (error: any) {
       toast({
         title: displayText("Registration failed"),

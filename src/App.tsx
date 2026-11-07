@@ -21,7 +21,9 @@ import { useBookingOfferVisible } from "@/hooks/useBookingOfferVisible";
 import { SoftUpdateSheet, UpdateAfterJobBanner } from "@/components/SoftUpdateSheet";
 import { initNativePush } from "@/native/push";
 import { tryAccept } from "@/lib/bookingActions";
-import { invalidateOffer } from "@/services/bookingAlertCoordinator";
+import { invalidateOffer, markAcceptedByMe } from "@/services/bookingAlertCoordinator";
+import { classifyAcceptResult } from "@/lib/acceptOutcome";
+import { claimDeviceAcceptance, releaseDeviceAcceptance } from "@/lib/deviceAcceptLock";
 import {
   checkBatteryState,
   checkNotificationPermission,
@@ -396,6 +398,9 @@ function AppInner() {
     console.log("[Movement] booking accepted");
     const workerId = worker.id;
     const jobId = trackedJob!.id;
+    // If the booking ends / changes (or the worker logs out) while the
+    // permission prompt is still open, this run must not start tracking.
+    let cancelled = false;
     // Runs after acceptance already succeeded — never blocks Accept. Denial = movement features off.
     void (async () => {
       try {
@@ -409,11 +414,22 @@ function AppInner() {
       } catch (e) {
         console.warn("[Movement] activity permission check failed", e);
       }
+      if (cancelled) return;
       await startMovementMonitoring(jobId, workerId);
     })().catch((error) => {
       console.error("[Movement] active-job start failed", error);
     });
+    return () => {
+      cancelled = true;
+    };
   }, [worker?.id, trackedJob?.id, trackedJob?.status]);
+
+  // Logout / lost session: stop any movement check immediately.
+  useEffect(() => {
+    if (session?.user?.id) return;
+    void stopMovementMonitoring();
+    void stopPassiveMovementMonitoring();
+  }, [session?.user?.id]);
 
 
   // Initialize native push notifications when we have a session.
@@ -421,8 +437,11 @@ function AppInner() {
     const userId = session?.user?.id;
     if (!userId) return;
     if (!Capacitor.isNativePlatform()) return;
-    console.log("🔔 Initializing native push for user:", userId);
-    initNativePush(userId);
+    console.log("🔔 Initializing native push");
+    // Never let a push setup failure become an unhandled rejection.
+    Promise.resolve()
+      .then(() => initNativePush(userId))
+      .catch((e) => console.warn("initNativePush failed", e instanceof Error ? e.message : e));
     // Foreground booking-alert routing + push_received ACK.
     // (Previously never initialized, so foreground FCM booking payloads were dropped.)
     import("@/lib/fcm")
@@ -451,14 +470,23 @@ function AppInner() {
             const bookingId = url.searchParams.get('bookingId') || '';
             if (bookingId) {
               console.log('🔗 Deep link accept for bookingId:', bookingId);
-              const result = await tryAccept(bookingId);
-              if (!result.success && result.acceptanceClosed) {
+              // Same single-flight claim as the pop-up and the in-app card.
+              if (!(await claimDeviceAcceptance(bookingId))) return;
+              const result = await tryAccept(bookingId).catch(() => ({ success: false, error: 'network' } as const));
+              const outcome = classifyAcceptResult(result);
+              await releaseDeviceAcceptance(bookingId, outcome === 'won');
+              if (outcome === 'closed') {
                 invalidateOffer(bookingId);
                 window.dispatchEvent(new CustomEvent('bookingAcceptanceClosed', { detail: { bookingId } }));
                 sonnerToast.error(result.error);
-              } else if (!result.success) {
+              } else if (outcome === 'gone') {
+                invalidateOffer(bookingId);
                 console.warn('Booking accept failed:', result.error);
+              } else if (outcome === 'retry') {
+                // Offer left open — the worker can tap Accept again while it is valid.
+                console.warn('Booking accept failed (retryable):', result.error);
               } else {
+                markAcceptedByMe(bookingId);
                 window.dispatchEvent(new CustomEvent('bookingAccepted', { detail: { bookingId } }));
               }
             }

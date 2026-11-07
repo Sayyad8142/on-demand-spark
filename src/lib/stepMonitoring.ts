@@ -92,6 +92,7 @@ const movementTableApi: {
     eq: (column: string, value: string) => { eq: (column: string, value: string) => Promise<{ error: { message?: string } | null }> };
   };
 } = movementTable;
+let movementGeneration = 0;
 let activeSession: {
   bookingId: string;
   workerId: string;
@@ -298,6 +299,11 @@ export async function startMovementMonitoring(bookingId: string, workerId: strin
     return;
   }
   await stopMovementMonitoring();
+  // Each start gets a generation; stop() bumps it. Any await that resumes
+  // after a stop (booking ended, reassigned, logout) bails out instead of
+  // re-starting tracking.
+  const generation = ++movementGeneration;
+  const isStale = () => generation !== movementGeneration;
   console.log("[Movement] starting tracking");
   console.log("[Movement] worker_id", workerId);
   console.log("[Movement] booking_id", bookingId);
@@ -333,6 +339,7 @@ export async function startMovementMonitoring(bookingId: string, workerId: strin
     }
 
     const { support } = await ensureMovementPrerequisites(plugin);
+    if (isStale()) return;
     if (!support.supported) {
       await saveMovementCheck(bookingId, workerId, {
         sensor_supported: false,
@@ -344,6 +351,7 @@ export async function startMovementMonitoring(bookingId: string, workerId: strin
     }
 
     const { granted } = await plugin.requestPermission();
+    if (isStale()) return;
     console.log("[Movement] permission status", { granted });
     setStatus({ permissionGranted: granted });
     if (!granted) {
@@ -359,6 +367,7 @@ export async function startMovementMonitoring(bookingId: string, workerId: strin
     }
 
     const minSteps = await fetchMinSteps();
+    if (isStale() || !activeSession) return;
     activeSession.minSteps = minSteps;
     await saveMovementCheck(bookingId, workerId, {
       sensor_supported: true,
@@ -369,8 +378,11 @@ export async function startMovementMonitoring(bookingId: string, workerId: strin
       min_required_steps: minSteps,
     });
 
-    activeSession.stepListener = await plugin.addListener("stepUpdate", (data) => handleStepUpdate(data as NativeStepUpdate));
-    activeSession.completionListener = await plugin.addListener("monitoringComplete", async (result) => {
+    if (isStale() || !activeSession) return;
+    const stepListener = await plugin.addListener("stepUpdate", (data) => handleStepUpdate(data as NativeStepUpdate));
+    if (isStale() || !activeSession) { stepListener.remove(); return; }
+    activeSession.stepListener = stepListener;
+    const completionListener = await plugin.addListener("monitoringComplete", async (result) => {
       const final = result as MonitoringResult;
       console.log("[Movement] Movement monitoring complete", final);
       const steps = final.stepsInWindow ?? activeSession?.lastSteps ?? 0;
@@ -387,7 +399,15 @@ export async function startMovementMonitoring(bookingId: string, workerId: strin
       });
     });
 
+    if (isStale() || !activeSession) { completionListener.remove(); return; }
+    activeSession.completionListener = completionListener;
+
     const startResult = await plugin.startMonitoring({ bookingId, windowSeconds: MONITORING_WINDOW_SECONDS });
+    if (isStale()) {
+      // Stopped while the native service was starting — stop it again.
+      try { await plugin.stopMonitoring(); } catch { /* ignore */ }
+      return;
+    }
     console.log("[Movement] native service started", { booking_id: bookingId, window_seconds: MONITORING_WINDOW_SECONDS, sensor_type: startResult.sensorType ?? support.sensorType, min_steps: minSteps });
     setStatus({ status: "Not Moving", warning: null, sensorType: startResult.sensorType ?? support.sensorType });
     startLiveLoop();
@@ -411,6 +431,7 @@ export async function startMovementMonitoring(bookingId: string, workerId: strin
 
 /** Stop monitoring (e.g. if booking is cancelled/completed). */
 export async function stopMovementMonitoring(): Promise<void> {
+  movementGeneration++;
   const session = activeSession;
   activeSession = null;
   if (!session) return;

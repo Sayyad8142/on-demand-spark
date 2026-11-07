@@ -75,6 +75,10 @@ export function dismissAlert(bookingId: string) {
   import("@/lib/fcmAckTracker").then(({ resolveFcmOffer }) =>
     resolveFcmOffer(bookingId, "dismissed")
   ).catch(() => {});
+  // Remove the backup notification (only exists if the pop-up failed to open).
+  import("@/lib/bookingAlertFallback").then(({ clearBookingAlertFallback }) =>
+    clearBookingAlertFallback(bookingId)
+  ).catch(() => {});
 }
 
 export function clearAlertState() {

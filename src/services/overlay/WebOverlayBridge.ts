@@ -30,7 +30,7 @@ export class WebOverlayBridge implements OverlayBridge {
   }
 
   async showOverlay(payload: BookingOverlayPayload): Promise<void> {
-    console.log('📱 Showing web overlay modal', payload);
+    console.log('📱 Showing web overlay modal', payload.bookingId);
     
     // Trigger callback if registered
     if (this.overlayCallback) {

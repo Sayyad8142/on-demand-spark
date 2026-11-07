@@ -31,7 +31,6 @@ public class AuthBridge extends Plugin {
             String savedToken = prefs().getString("supabase_jwt", null);
             if (token.equals(savedToken)) {
                 android.util.Log.d("AuthBridge", "✅ JWT token saved and verified");
-                android.util.Log.d("AuthBridge", "🔑 Token preview: " + token.substring(0, Math.min(50, token.length())) + "...");
                 ret.put("ok", true);
                 call.resolve(ret);
             } else {
@@ -85,6 +84,30 @@ public class AuthBridge extends Plugin {
         ret.put("token", token);
         ret.put("timestamp", timestamp);
         call.resolve(ret);
+    }
+
+    /**
+     * Returns the phone's CURRENT FCM token straight from Firebase (not the
+     * pending copy, which is cleared after a sync). Used by the notification
+     * health check to compare against the server-registered token.
+     * The token value is never logged.
+     */
+    @PluginMethod
+    public void getCurrentFCMToken(PluginCall call) {
+        try {
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().getToken()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
+                        JSObject ret = new JSObject();
+                        ret.put("token", task.getResult());
+                        call.resolve(ret);
+                    } else {
+                        call.reject("token_unavailable");
+                    }
+                });
+        } catch (Exception e) {
+            call.reject("token_unavailable");
+        }
     }
 
     /**

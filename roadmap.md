@@ -22,3 +22,18 @@
 - [ ] Deploy corrected ack-booking-delivery — blocked: explicit owner approval (CRITICAL-1).
 - [ ] Reject core fix — blocked: explicit owner approval (CRITICAL-2, docs/reject-fix/).
 - [ ] Next release: stop silently dropping terminal 4xx ACKs + popup Retry on failed reject (HIGH-1, §4).
+## Fix confirmed review problems (7 Nov)
+- [x] 2 Private values removed from logs (TS + Android)
+- [x] 3 Community fee instead of 20% (estimates + completion screen)
+- [x] 4 One shared accept lock (in-app + pop-up); offer kept open on network errors
+- [x] 5 Pop-up failure → in-app alert + backup notification
+- [x] 6 Movement checks stop on booking end/logout; boot location service removed
+- [x] 7 Notification health detects phone/server token mismatch
+- [x] 8 Ringtone, heartbeat/poller listener and push-start leaks fixed; ActiveJobCard hooks crash fixed
+- [x] 9 Offer checks reduced to realtime + FCM + one backup poller
+- [x] 10 Unused files and phone-number scripts deleted; test-booking tool dev-only
+- [x] 12 Tests: 27 files / 322 pass; 8 offline Deno + 15 DB rehearsal checks pass
+- [ ] 1 Lock down send-fcm/send-webpush — staged in docs/security-fixes-2026-11-07; blocked: owner approval (auto-deploy)
+- [ ] 11 Database policies — staged + rehearsed; blocked: owner + User/Admin app approval
+- [ ] Native build + phone checks — blocked: no Android build tools here
+- [ ] Remaining type shortcuts (~250) and hard-coded colours — not done; separate cleanup pass

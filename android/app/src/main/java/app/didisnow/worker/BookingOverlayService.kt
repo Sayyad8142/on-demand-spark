@@ -190,7 +190,7 @@ class BookingOverlayService : Service() {
                     
                     // Try to get access token from Intent first (passed from web)
                     var accessToken = intent?.getStringExtra("ACCESS_TOKEN")
-                    android.util.Log.d("BookingOverlay", "🔑 Access token from Intent: ${if (accessToken != null) "✅ Present (${accessToken.take(12)}...)" else "❌ Not passed"}")
+                    android.util.Log.d("BookingOverlay", "🔑 Access token from Intent: ${if (accessToken != null) "✅ Present" else "❌ Not passed"}")
 
                     android.util.Log.d("BookingOverlay", "📋 Booking details - ID: $bookingId, Type: $bookingType, Prealert: $prealertSent, Scheduled: $scheduledTime, Service: $serviceType, Community: $community")
                     
@@ -294,7 +294,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                                 stopSelf()
                                 return START_NOT_STICKY
                             }
-                            android.util.Log.d("BookingOverlay", "✅ Access token from SharedPreferences: ${accessToken?.take(12)}...")
+                            android.util.Log.d("BookingOverlay", "✅ Access token from SharedPreferences: present=${!accessToken.isNullOrEmpty()}")
                         } catch (e: Exception) {
                             android.util.Log.e("BookingOverlay", "❌ Failed to parse session JSON", e)
 BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", currentBookingRequestId)
@@ -326,7 +326,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                     
                     // Store token for use in updateBooking
                     currentAccessToken = accessToken
-                    android.util.Log.d("BookingOverlay", "✅ Token validated and cached (${accessToken?.take(12)}...) - proceeding to show overlay")
+                    android.util.Log.d("BookingOverlay", "✅ Token validated and cached - proceeding to show overlay")
 
                     // Store booking ID for status polling
                     currentBookingId = bookingId
@@ -558,28 +558,35 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
             }
             
             // Wrap entire flow with 12s watchdog timeout
+            val acceptTappedAt = System.currentTimeMillis()
             serviceScope.launch {
                 var outcome = "unknown"
+                // A retryable failure (network / timeout / login refresh) keeps a
+                // still-valid offer open; "Server rejected: …" (taken / expired)
+                // and acceptance-closed are final and close it.
+                var retryable = false
                 try {
                     val finished = withTimeoutOrNull(12_000) {
                         updateBooking(bookingId, "accepted")
                         true
                     }
                     outcome = if (finished == true) "accept_success" else "accept_timeout"
-                    if (finished != true) {
-                        ui { Toast.makeText(this@BookingOverlayService, "Network slow. Will refresh.", Toast.LENGTH_SHORT).show() }
-                    }
+                    if (finished != true) retryable = true
                 } catch (t: Throwable) {
                     android.util.Log.e("BookingOverlay", "❌ Accept flow crashed", t)
                     outcome = "accept_exception"
+                    retryable = t.message != ACCEPTANCE_CLOSED_MSG &&
+                        !(t.message ?: "").startsWith("Server rejected:")
                     if (t.message == ACCEPTANCE_CLOSED_MSG) {
                         outcome = "acceptance_closed"
                         // Never re-show this offer; drop the queue too (closed for the day).
                         OfferQueue.markTaken(applicationContext, bookingId)
                         OfferQueue.clearAll(applicationContext, "acceptance_closed")
                     }
-                    val reason = t.message?.takeIf { it.isNotBlank() } ?: "Accept failed"
-                    ui { Toast.makeText(this@BookingOverlayService, "⚠️ $reason", Toast.LENGTH_LONG).show() }
+                    if (!retryable) {
+                        val reason = t.message?.takeIf { it.isNotBlank() } ?: "Accept failed"
+                        ui { Toast.makeText(this@BookingOverlayService, "⚠️ $reason", Toast.LENGTH_LONG).show() }
+                    }
                 } finally {
                     // Always close overlay and stop service
                     acceptInFlight = false
@@ -594,6 +601,28 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                     // Tell React layer to refresh either way (it will fetch latest state)
                     LocalBroadcastManager.getInstance(applicationContext)
                         .sendBroadcast(Intent("DIDI_BOOKING_REFRESH").apply { putExtra("booking_id", bookingId) })
+
+                    // Retryable failure while the offer window is still open:
+                    // keep the pop-up, re-enable the buttons and resume the
+                    // countdown from the real remaining time (never extended).
+                    val elapsedSec = ((System.currentTimeMillis() - acceptTappedAt) / 1000).toInt()
+                    val remaining = secondsLeft - elapsedSec
+                    if (retryable && remaining > 1 && !isShuttingDown && overlayView != null &&
+                        !OfferQueue.isTaken(applicationContext, bookingId)) {
+                        secondsLeft = remaining
+                        ui {
+                            overlayView?.findViewById<Button>(R.id.btnAccept)?.isEnabled = true
+                            overlayView?.findViewById<Button>(R.id.btnReject)?.isEnabled = true
+                            Toast.makeText(this@BookingOverlayService, "Network problem. Tap Accept again.", Toast.LENGTH_LONG).show()
+                        }
+                        countdownRunnable?.let { r -> countdownHandler?.post(r) }
+                        startBookingStatusPolling(bookingId)
+                        android.util.Log.d("BookingOverlay", "↩️ Accept retryable ($outcome) — offer kept open, ${remaining}s left")
+                        return@launch
+                    }
+                    if (retryable) {
+                        ui { Toast.makeText(this@BookingOverlayService, "Network slow. Will refresh.", Toast.LENGTH_SHORT).show() }
+                    }
                     
                     // Launch MainActivity to bring app to foreground showing the accepted booking
                     if (outcome == "accept_success") {
@@ -907,7 +936,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
             .putString("supabase_jwt", accessToken)
             .apply()
         
-        android.util.Log.d("BookingOverlay", "💾 Session synced to both stores (RT last 6: ${refreshToken.takeLast(6)})")
+        android.util.Log.d("BookingOverlay", "💾 Session synced to both stores")
     }
     
     /**
@@ -1000,7 +1029,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                         this@BookingOverlayService.currentAccessToken = newAccessToken
                         lastRefreshTime = System.currentTimeMillis()
                         
-                        android.util.Log.d("BookingOverlay", "✅ [NATIVE] Token refreshed -> wrote didi_session + didi-worker-session (RT last 6: ${newRefreshToken.takeLast(6)})")
+                        android.util.Log.d("BookingOverlay", "✅ [NATIVE] Token refreshed -> wrote didi_session + didi-worker-session")
                         return newAccessToken
                     }
                 } else {
@@ -1033,7 +1062,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                     try {
                         val session = JSONObject(sessionJson)
                         jwt = session.optString("accessToken", "")
-                        android.util.Log.d("BookingOverlay", "🔑 Token from SharedPreferences: ${jwt?.take(12)}...")
+                        android.util.Log.d("BookingOverlay", "🔑 Token from SharedPreferences: present=${!jwt.isNullOrEmpty()}")
                     } catch (e: Exception) {
                         android.util.Log.e("BookingOverlay", "❌ Failed to parse session", e)
                     }
@@ -1058,7 +1087,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                 throw IllegalStateException("No access token available - Please log in again")
             }
             
-            android.util.Log.d("BookingOverlay", "✅ Using token: ${jwt?.take(12)}...")
+            android.util.Log.d("BookingOverlay", "✅ Using token: present=${!jwt.isNullOrEmpty()}")
             
             if (action == "accepted") {
                 // Call try_accept_booking RPC with user JWT
@@ -1346,22 +1375,28 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
             // Stop any existing sound
             stopAlertSound()
             
-            // Use custom loud ringtone from raw resources
-            mediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(
+            // Use custom loud ringtone from raw resources. Built in a local
+            // first so a failed prepare()/start() never leaks the player.
+            val player = MediaPlayer()
+            try {
+                player.setAudioAttributes(
                     AudioAttributes.Builder()
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                         .setUsage(AudioAttributes.USAGE_ALARM)
                         .build()
                 )
-                setDataSource(
+                player.setDataSource(
                     this@BookingOverlayService,
                     android.net.Uri.parse("android.resource://${packageName}/${R.raw.new_loud_ringtone}")
                 )
-                isLooping = true // Loop the alarm sound
-                setVolume(1.0f, 1.0f) // Max volume
-                prepare()
-                start()
+                player.isLooping = true // Loop the alarm sound
+                player.setVolume(1.0f, 1.0f) // Max volume
+                player.prepare()
+                player.start()
+                mediaPlayer = player
+            } catch (e: Exception) {
+                try { player.release() } catch (_: Exception) {}
+                throw e
             }
             
             android.util.Log.d("BookingOverlay", "🔊 Alert sound started (custom ringtone)")
@@ -1409,13 +1444,17 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
 
     private fun stopAlertSound() {
         try {
-            mediaPlayer?.apply {
-                if (isPlaying) {
-                    stop()
-                }
-                release()
-            }
+            val player = mediaPlayer
             mediaPlayer = null
+            if (player != null) {
+                try {
+                    if (player.isPlaying) player.stop()
+                } catch (_: Exception) {
+                } finally {
+                    // Always release, even if stop() threw.
+                    try { player.release() } catch (_: Exception) {}
+                }
+            }
             android.util.Log.d("BookingOverlay", "🔇 Alert sound stopped")
         } catch (e: Exception) {
             android.util.Log.e("BookingOverlay", "❌ Failed to stop alert sound", e)

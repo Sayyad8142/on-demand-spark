@@ -74,6 +74,8 @@ export default function VerifyPush() {
       const { data, error } = await supabase.functions.invoke("send-webpush", {
         body: {
           workerIds: [user.id],
+          // Marks this as a self-test so the locked-down sender allows it.
+          type: "TEST_PUSH",
           title: "Didi Now — Test Push",
           body: "If you see this, Web Push works 🎉",
           url: "/home",

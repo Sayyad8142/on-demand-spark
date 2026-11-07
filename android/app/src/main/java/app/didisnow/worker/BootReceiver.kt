@@ -3,7 +3,6 @@ package app.didisnow.worker
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.util.Log
 
 class BootReceiver : BroadcastReceiver() {
@@ -49,27 +48,8 @@ class BootReceiver : BroadcastReceiver() {
             WorkerLog.add(context, "BOOT", "Failed to schedule HeartbeatWorker: ${e.message}")
         }
 
-        // 2. Re-warm movement / location services if worker was online.
-        if (wasAvailable && isBoot) {
-            try {
-                MovementTrackingService.startPassive(context, "passive:boot")
-                WorkerLog.add(context, "SVC", "MovementTrackingService re-warmed")
-            } catch (e: Exception) {
-                WorkerLog.add(context, "SVC", "MovementTrackingService warm-up failed: ${e.message}")
-            }
-
-            try {
-                val locationServiceIntent = Intent(context, LocationTrackingService::class.java)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(locationServiceIntent)
-                } else {
-                    context.startService(locationServiceIntent)
-                }
-                LocationUpdateWorker.schedule(context)
-                WorkerLog.add(context, "SVC", "LocationTrackingService restarted")
-            } catch (e: Exception) {
-                WorkerLog.add(context, "SVC", "LocationTrackingService restart failed: ${e.message}")
-            }
-        }
+        // 2. No movement/location services are re-started on boot. Movement
+        // checks run only during an accepted booking and are started by the
+        // app itself; Didi Now never tracks location.
     }
 }

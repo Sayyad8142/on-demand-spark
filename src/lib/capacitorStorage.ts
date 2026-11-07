@@ -3,7 +3,7 @@ import { Capacitor } from '@capacitor/core';
 
 // In-memory cache to provide synchronous access for Supabase auth
 // This solves the issue where Supabase expects sync storage but Capacitor is async
-let memoryCache: Record<string, string> = {};
+const memoryCache: Record<string, string> = {};
 let initialized = false;
 let initializationPromise: Promise<void> | null = null;
 

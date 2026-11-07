@@ -40,11 +40,19 @@ export function useWorkerHeartbeat(workerIdOrUserId: string | undefined | null) 
     document.addEventListener("visibilitychange", onVisible);
 
     // Native foreground resume
-    let nativeSub: any;
+    // The listener handle arrives asynchronously; if the effect was already
+    // cleaned up by then, remove it immediately so it never leaks.
+    let nativeSub: { remove: () => Promise<void> | void } | null = null;
+    let disposed = false;
     if (Capacitor.isNativePlatform()) {
       CapApp.addListener("appStateChange", ({ isActive }) => {
         if (isActive) sendWorkerHeartbeat(workerIdOrUserId, "foreground");
-      }).then((sub) => { nativeSub = sub; });
+      })
+        .then((sub) => {
+          if (disposed) void sub.remove();
+          else nativeSub = sub;
+        })
+        .catch(() => { /* listener unavailable — interval + visibility still run */ });
     }
 
     return () => {
@@ -53,7 +61,9 @@ export function useWorkerHeartbeat(workerIdOrUserId: string | undefined | null) 
         intervalRef.current = null;
       }
       document.removeEventListener("visibilitychange", onVisible);
-      if (nativeSub) nativeSub.remove();
+      disposed = true;
+      if (nativeSub) void nativeSub.remove();
+      nativeSub = null;
     };
   }, [workerIdOrUserId]);
 }
