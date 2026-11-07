@@ -25,6 +25,6 @@ body: JSON.stringify(buildKeepalivePingPayload(eligible, Date.now())),
 ```ts
 const isPing = data?.type === "PING";
 const message = isBookingAlert || isCancellationAlert || isReminderCancel || isPing
-  ? { message: { token, android: { priority: "HIGH", ttl: isReminderCancel ? "7200s" : "60s" }, data: baseData } }
+  ? { message: { token, android: { priority: isPing ? "NORMAL" : "HIGH", ttl: isReminderCancel ? "7200s" : "60s" }, data: baseData } }
   : /* unchanged */;
 ```
