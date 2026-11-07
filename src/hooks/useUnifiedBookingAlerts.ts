@@ -11,14 +11,14 @@ import {
   invalidateOffer,
   markAlertOpened,
   markAlertRendered,
-  beginAcceptance,
-  endAcceptance,
   markAcceptedByMe,
   isOwnAcceptance,
   pruneShownBookings,
 } from "@/services/bookingAlertCoordinator";
 import { canShowWorkerBookingOffer, isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 import { isVillaCommunity } from "@/lib/communityTypes";
+import { classifyAcceptResult, canRetryAccept } from "@/lib/acceptOutcome";
+import { claimDeviceAcceptance, releaseDeviceAcceptance } from "@/lib/deviceAcceptLock";
 import { formatVillaLabel } from "@/lib/address";
 
 /**
@@ -240,36 +240,57 @@ export function useUnifiedBookingAlerts(
     if (!pending) return;
 
     const bookingId = pending.bookingId;
-    // Single flight: a second tap must never start a parallel acceptance.
-    if (!beginAcceptance(bookingId)) {
+    // Never extend an expired offer: once the server window has passed, close it.
+    if (!canRetryAccept(pending.timeoutAt)) {
+      invalidateOffer(bookingId, pending.bookingRequestId);
+      dismissAlert(bookingId);
+      setPending(null);
+      toast({ title: "This offer has expired" });
+      return;
+    }
+    // Single flight across this screen, the pop-up and the full-screen alert.
+    if (!(await claimDeviceAcceptance(bookingId))) {
       console.log("⚠️ [UnifiedAlerts] Accept ignored — already in flight", bookingId);
       return;
     }
 
+    let outcome: ReturnType<typeof classifyAcceptResult> = "retry";
+    let message: string | undefined;
     try {
       const result = await tryAccept(bookingId, workerId || undefined);
-      if (!result.success && result.acceptanceClosed) {
-        // Closed for the day: close this offer everywhere (sound, countdown,
-        // native popup, queue) and refresh state. No retry.
-        endAcceptance(bookingId);
-        invalidateOffer(bookingId, pending.bookingRequestId);
-        window.dispatchEvent(new CustomEvent("bookingAcceptanceClosed", { detail: { bookingId } }));
-        toast({ title: result.error, variant: "destructive" });
-      } else if (!result.success) {
-        endAcceptance(bookingId);
-        toast({ title: result.error || "Booking already taken", variant: "destructive" });
-      } else {
-        // Backend confirmed we won — protects against the assigned-listener
-        // and the native poller closing our own booking as "taken".
-        markAcceptedByMe(bookingId);
-        toast({ title: "Booking accepted" });
-      }
-    } catch (e) {
-      endAcceptance(bookingId);
+      outcome = classifyAcceptResult(result);
+      message = result.error;
+    } catch {
+      outcome = "retry";
+    }
+
+    if (outcome === "won") {
+      // Backend confirmed we won — protects against the assigned-listener
+      // and the native poller closing our own booking as "taken".
+      markAcceptedByMe(bookingId);
+      await releaseDeviceAcceptance(bookingId, true);
+      toast({ title: "Booking accepted" });
+      dismissAlert(bookingId);
+      setPending(null);
+      return;
+    }
+
+    await releaseDeviceAcceptance(bookingId, false);
+
+    if (outcome === "retry") {
+      // Temporary problem — keep the still-valid offer so she can tap again.
       toast({ title: "Network problem. Please try again.", variant: "destructive" });
       return;
     }
 
+    // closed / gone: close this offer everywhere on the phone. No retry.
+    invalidateOffer(bookingId, pending.bookingRequestId);
+    if (outcome === "closed") {
+      window.dispatchEvent(new CustomEvent("bookingAcceptanceClosed", { detail: { bookingId } }));
+      toast({ title: message, variant: "destructive" });
+    } else {
+      toast({ title: message || "Booking already taken", variant: "destructive" });
+    }
     dismissAlert(bookingId);
     setPending(null);
   }, [pending, workerId]);
