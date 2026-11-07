@@ -30,10 +30,14 @@ import { formatVillaLabel } from "@/lib/address";
  * Also sets up the bookings INSERT realtime listener as before, but routes
  * through the coordinator for dedup.
  */
+interface NativeOverlayTrigger {
+  showBookingOverlay?: (opts: { booking: string }) => Promise<void> | void;
+}
+
 export function useUnifiedBookingAlerts(
   userId: string | undefined,
   isOnline: boolean,
-  _match: (b: any) => boolean,
+  _match: (b: Record<string, unknown>) => boolean,
   workerId?: string | null
 ) {
   const [pending, setPending] = useState<BookingAlert | null>(null);
@@ -51,7 +55,8 @@ export function useUnifiedBookingAlerts(
       // notification is posted so the worker still hears the offer.
       const showInApp = () => markAlertRendered(alert.bookingId, alert.bookingRequestId);
       const plugin = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android"
-        ? (window as any)?.Capacitor?.Plugins?.OverlayPlugin
+        ? (window as unknown as { Capacitor?: { Plugins?: { OverlayPlugin?: NativeOverlayTrigger } } })
+            .Capacitor?.Plugins?.OverlayPlugin ?? null
         : null;
       if (plugin?.showBookingOverlay) {
         const bookingJson = JSON.stringify({
@@ -113,7 +118,7 @@ export function useUnifiedBookingAlerts(
           filter: "status=eq.assigned",
         },
         (payload) => {
-          const b = payload.new as any;
+          const b = payload.new as { id: string };
           // Our own acceptance assigned it — do not close our own booking.
           if (isOwnAcceptance(b.id)) {
             console.log("🛡️ [UnifiedAlerts] Assigned to this worker, keeping state", b.id);

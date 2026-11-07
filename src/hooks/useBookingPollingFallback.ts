@@ -76,7 +76,7 @@ export function useBookingPollingFallback(workerId: string | undefined | null, i
           console.warn("[Polling] get-pending-worker-bookings error:", error.message);
           return;
         }
-        const items: PendingItem[] = (data as any)?.pending ?? [];
+        const items: PendingItem[] = (data as { pending?: PendingItem[] } | null)?.pending ?? [];
         if (!items.length) return;
 
         console.log(`[Polling] Found ${items.length} pending booking(s) via fallback`);
