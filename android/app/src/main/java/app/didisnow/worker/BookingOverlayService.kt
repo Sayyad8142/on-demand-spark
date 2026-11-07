@@ -1346,22 +1346,28 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
             // Stop any existing sound
             stopAlertSound()
             
-            // Use custom loud ringtone from raw resources
-            mediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(
+            // Use custom loud ringtone from raw resources. Built in a local
+            // first so a failed prepare()/start() never leaks the player.
+            val player = MediaPlayer()
+            try {
+                player.setAudioAttributes(
                     AudioAttributes.Builder()
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                         .setUsage(AudioAttributes.USAGE_ALARM)
                         .build()
                 )
-                setDataSource(
+                player.setDataSource(
                     this@BookingOverlayService,
                     android.net.Uri.parse("android.resource://${packageName}/${R.raw.new_loud_ringtone}")
                 )
-                isLooping = true // Loop the alarm sound
-                setVolume(1.0f, 1.0f) // Max volume
-                prepare()
-                start()
+                player.isLooping = true // Loop the alarm sound
+                player.setVolume(1.0f, 1.0f) // Max volume
+                player.prepare()
+                player.start()
+                mediaPlayer = player
+            } catch (e: Exception) {
+                try { player.release() } catch (_: Exception) {}
+                throw e
             }
             
             android.util.Log.d("BookingOverlay", "🔊 Alert sound started (custom ringtone)")
@@ -1409,13 +1415,17 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
 
     private fun stopAlertSound() {
         try {
-            mediaPlayer?.apply {
-                if (isPlaying) {
-                    stop()
-                }
-                release()
-            }
+            val player = mediaPlayer
             mediaPlayer = null
+            if (player != null) {
+                try {
+                    if (player.isPlaying) player.stop()
+                } catch (_: Exception) {
+                } finally {
+                    // Always release, even if stop() threw.
+                    try { player.release() } catch (_: Exception) {}
+                }
+            }
             android.util.Log.d("BookingOverlay", "🔇 Alert sound stopped")
         } catch (e: Exception) {
             android.util.Log.e("BookingOverlay", "❌ Failed to stop alert sound", e)
