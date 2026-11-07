@@ -127,9 +127,10 @@ public class BookingCancellationActivity extends Activity {
     handler.removeCallbacks(timeoutClose);
     try {
       if (mediaPlayer != null) {
-        mediaPlayer.stop();
-        mediaPlayer.release();
+        MediaPlayer p = mediaPlayer;
         mediaPlayer = null;
+        try { p.stop(); } catch (Exception ignored) {}
+        p.release();
       }
     } catch (Exception ignored) {}
     try {

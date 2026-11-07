@@ -432,22 +432,28 @@ class BookingAlertActivity : AppCompatActivity() {
             // Stop any existing sound
             stopAlertSound()
             
-            // Use the custom loud ringtone from raw resources
-            mediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(
+            // Use the custom loud ringtone from raw resources. Local first so a
+            // failed prepare()/start() never leaks the player.
+            val player = MediaPlayer()
+            try {
+                player.setAudioAttributes(
                     AudioAttributes.Builder()
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                         .setUsage(AudioAttributes.USAGE_ALARM)
                         .build()
                 )
-                setDataSource(
+                player.setDataSource(
                     this@BookingAlertActivity,
                     android.net.Uri.parse("android.resource://${packageName}/${R.raw.new_loud_ringtone}")
                 )
-                isLooping = true
-                setVolume(1.0f, 1.0f)
-                prepare()
-                start()
+                player.isLooping = true
+                player.setVolume(1.0f, 1.0f)
+                player.prepare()
+                player.start()
+                mediaPlayer = player
+            } catch (e: Exception) {
+                try { player.release() } catch (_: Exception) {}
+                throw e
             }
             
             Log.d("BookingAlert", "🔊 Custom alert sound started")
@@ -458,13 +464,16 @@ class BookingAlertActivity : AppCompatActivity() {
 
     private fun stopAlertSound() {
         try {
-            mediaPlayer?.apply {
-                if (isPlaying) {
-                    stop()
-                }
-                release()
-            }
+            val player = mediaPlayer
             mediaPlayer = null
+            if (player != null) {
+                try {
+                    if (player.isPlaying) player.stop()
+                } catch (_: Exception) {
+                } finally {
+                    try { player.release() } catch (_: Exception) {}
+                }
+            }
             Log.d("BookingAlert", "🔇 Alert sound stopped")
         } catch (e: Exception) {
             Log.e("BookingAlert", "❌ Failed to stop alert sound", e)
