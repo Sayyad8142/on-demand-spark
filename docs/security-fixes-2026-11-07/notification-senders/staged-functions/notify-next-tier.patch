@@ -1,0 +1,16 @@
+--- supabase/functions/notify-next-tier/index.ts	2026-11-07 18:40:10.921974284 +0000
++++ docs/security-fixes-2026-11-07/notification-senders/staged-functions/notify-next-tier/index.ts	2026-11-07 18:41:31.453581911 +0000
+@@ -1,3 +1,4 @@
++// STAGED COPY — NOT DEPLOYED. Phase 2: calls send-fcm with the service-role key instead of the public key.
+ import { createClient } from "npm:@supabase/supabase-js@2.50.0";
+ 
+ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "https://paywwbuqycovjopryele.supabase.co";
+@@ -119,7 +120,7 @@
+       method: "POST",
+       headers: {
+         "Content-Type": "application/json",
+-        "Authorization": `Bearer ${ANON_KEY}`,
++        "Authorization": `Bearer ${SERVICE_KEY}`,
+       },
+       body: JSON.stringify({
+         workerIds,
