@@ -22,3 +22,16 @@
 - [ ] Deploy corrected ack-booking-delivery — blocked: explicit owner approval (CRITICAL-1).
 - [ ] Reject core fix — blocked: explicit owner approval (CRITICAL-2, docs/reject-fix/).
 - [ ] Next release: stop silently dropping terminal 4xx ACKs + popup Retry on failed reject (HIGH-1, §4).
+## Fix confirmed review problems (7 Nov)
+- [ ] 1 Lock down send-fcm/send-webpush — staged handoff only (auto-deploy); needs approval
+- [ ] 2 Remove private values from logs (TS + Android)
+- [ ] 3 Use community fee instead of 20%
+- [ ] 4 One shared accept lock; keep offer on network errors
+- [ ] 5 Native pop-up failure → fallback notification
+- [ ] 6 Movement tracking stop/guards; remove boot LocationTrackingService
+- [ ] 7 Push health token mismatch
+- [ ] 8 MediaPlayer, heartbeat listener, initNativePush leaks
+- [ ] 9 Fewer overlapping offer checks
+- [ ] 10 Delete unused files; clean scripts
+- [ ] 11 Database policies — staged migration only; needs approval
+- [ ] 12 Tests
