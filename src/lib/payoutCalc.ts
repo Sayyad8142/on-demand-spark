@@ -16,47 +16,67 @@ const MAX_FEE_PERCENT = 100;
 const MIN_FEE_PERCENT = 0;
 const FALLBACK_FEE_PERCENT = 0; // Safe default — must match backend fallback.
 
-// In-memory cache so cards/lists don't re-hit the network for the same community.
-const feeCache = new Map<string, number>();
+// Short-lived in-memory cache of the (small) community list so cards/lists
+// don't re-hit the network. Refreshed every few minutes so an Admin Panel
+// fee change reaches the worker without a restart.
+const FEE_CACHE_TTL_MS = 5 * 60 * 1000;
+let feeRowsCache: { rows: CommunityFeeRow[]; at: number } | null = null;
+
+export interface CommunityFeeRow {
+  value: string | null;
+  name: string | null;
+  platform_fee_percent: number | string | null;
+}
 
 /** Clamp a fee % to a sane range. */
-function clampFee(pct: number | null | undefined): number {
-  if (pct == null || Number.isNaN(Number(pct))) return FALLBACK_FEE_PERCENT;
+function clampFee(pct: number | string | null | undefined): number {
+  if (pct == null || pct === "" || Number.isNaN(Number(pct))) return FALLBACK_FEE_PERCENT;
   return Math.min(MAX_FEE_PERCENT, Math.max(MIN_FEE_PERCENT, Number(pct)));
 }
 
 /**
+ * Pure lookup that mirrors the backend payout rule: match the booking's
+ * community on `value` (case-insensitive), then on `name`; unknown → 0%.
+ */
+export function matchCommunityFeePercent(
+  rows: CommunityFeeRow[] | null | undefined,
+  community: string | null | undefined,
+): number {
+  if (!community || !rows?.length) return FALLBACK_FEE_PERCENT;
+  const key = community.trim().toLowerCase();
+  const hit =
+    rows.find((r) => (r.value ?? "").trim().toLowerCase() === key) ??
+    rows.find((r) => (r.name ?? "").trim().toLowerCase() === key);
+  return hit ? clampFee(hit.platform_fee_percent) : FALLBACK_FEE_PERCENT;
+}
+
+async function loadFeeRows(): Promise<CommunityFeeRow[]> {
+  if (feeRowsCache && Date.now() - feeRowsCache.at < FEE_CACHE_TTL_MS) return feeRowsCache.rows;
+  const { data, error } = await supabase
+    .from("communities")
+    .select("value, name, platform_fee_percent");
+  if (error || !data) return feeRowsCache?.rows ?? [];
+  const rows = data as CommunityFeeRow[];
+  feeRowsCache = { rows, at: Date.now() };
+  return rows;
+}
+
+/**
  * Resolve the live platform fee % for a community.
- * Cached after first lookup. Returns FALLBACK_FEE_PERCENT (0) on any error/miss.
+ * Returns FALLBACK_FEE_PERCENT (0) on any error/miss.
  */
 export async function getCommunityFeePercent(community: string | null | undefined): Promise<number> {
   if (!community) return FALLBACK_FEE_PERCENT;
-  if (feeCache.has(community)) return feeCache.get(community)!;
-
   try {
-    const { data, error } = await supabase
-      .from("communities")
-      .select("platform_fee_percent")
-      .or(`value.eq.${community},name.eq.${community}`)
-      .limit(1)
-      .maybeSingle();
-
-    if (error || !data) {
-      feeCache.set(community, FALLBACK_FEE_PERCENT);
-      return FALLBACK_FEE_PERCENT;
-    }
-    const pct = clampFee((data as any).platform_fee_percent);
-    feeCache.set(community, pct);
-    return pct;
+    return matchCommunityFeePercent(await loadFeeRows(), community);
   } catch {
     return FALLBACK_FEE_PERCENT;
   }
 }
 
-/** Force-refresh a community's fee (e.g. after admin updates). */
-export function invalidateCommunityFeeCache(community?: string) {
-  if (community) feeCache.delete(community);
-  else feeCache.clear();
+/** Force-refresh the fee list (e.g. after admin updates). */
+export function invalidateCommunityFeeCache(_community?: string) {
+  feeRowsCache = null;
 }
 
 export interface PayoutBreakdown {
@@ -73,7 +93,9 @@ export function buildPayoutBreakdown(
 ): PayoutBreakdown {
   const gross = !grossAmount || grossAmount <= 0 ? 0 : Math.round(grossAmount);
   const pct = clampFee(feePercent);
-  const feeAmount = Math.round((gross * pct) / 100);
+  // Same rounding as the backend payout (FLOOR): the fee never rounds up
+  // against the worker. Tips are never part of `gross`, so they stay 100%.
+  const feeAmount = Math.floor((gross * pct) / 100);
   const netPayout = Math.max(0, gross - feeAmount);
   return { gross, feePercent: pct, feeAmount, netPayout };
 }

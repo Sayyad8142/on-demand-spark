@@ -85,19 +85,19 @@ export default function Earnings() {
     // Also fetch completed bookings to surface ones missing a payout row
     const { data: completedBookings } = await supabase
       .from("bookings")
-      .select("id, price_inr, completed_at, created_at")
+      .select("id, price_inr, community, completed_at, created_at")
       .eq("worker_id", workerId)
       .eq("status", "completed")
       .order("completed_at", { ascending: false });
 
     if (!error && data) {
       const payoutBookingIds = new Set(data.map((p) => p.booking_id));
-      const estimates: PayoutRow[] = (completedBookings || [])
-        .filter((b) => !payoutBookingIds.has(b.id) && b.price_inr != null)
-        .map((b) => {
-          const gross = Number(b.price_inr) || 0;
-          const fee = Math.round(gross * 0.2);
-          const net = gross - fee;
+      const missing = (completedBookings || []).filter((b) => !payoutBookingIds.has(b.id) && b.price_inr != null);
+      // Estimates use each community's configured fee (Admin Panel), never a fixed %.
+      const breakdowns = await Promise.all(missing.map((b) => resolvePayoutBreakdown(Number(b.price_inr) || 0, b.community)));
+      const estimates: PayoutRow[] = missing
+        .map((b, i) => {
+          const { gross, feeAmount: fee, netPayout: net } = breakdowns[i];
           return {
             id: `estimate-${b.id}`,
             booking_id: b.id,
