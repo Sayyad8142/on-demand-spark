@@ -2,6 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { supabase } from '@/integrations/supabase/client';
 import { CURRENT_VERSION_NAME } from '@/config/version';
+import { evaluatePushHealth } from '@/lib/pushHealth';
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
@@ -16,6 +17,7 @@ export interface PushHealthSnapshot {
   tokenExists: boolean;
   tokenSyncedToBackend: boolean;
   tokenHealthy: boolean;
+  tokenMismatch: boolean;
   isHealthy: boolean;
 }
 
@@ -185,9 +187,23 @@ export async function syncTokenToBackend(token: string, userId: string, reason: 
   }
 }
 
+/** The phone's current FCM token from Firebase; falls back to the pending copy. Never logged. */
+export async function getCurrentNativeFcmToken(): Promise<string | null> {
+  if (!Capacitor.isNativePlatform() || !AuthBridge) return null;
+  try {
+    if (typeof AuthBridge.getCurrentFCMToken === 'function') {
+      const result = await AuthBridge.getCurrentFCMToken();
+      if (result?.token) return result.token;
+    }
+  } catch {
+    /* older build or Firebase not ready — fall back below */
+  }
+  return getPendingNativeFcmToken();
+}
+
 export async function getPushHealthSnapshot(userId: string): Promise<PushHealthSnapshot> {
   const permissionGranted = await ensurePushPermission('health-check', { requestIfMissing: false });
-  const localToken = await getPendingNativeFcmToken();
+  const localToken = await getCurrentNativeFcmToken();
 
   const { data: worker } = await supabase
     .from('workers')
@@ -197,19 +213,17 @@ export async function getPushHealthSnapshot(userId: string): Promise<PushHealthS
 
   const backendToken = worker?.fcm_token ?? null;
   const backendStatus = worker?.fcm_token_status ?? null;
-  const tokenExists = !!(localToken || backendToken);
-  const tokenSyncedToBackend = !!backendToken;
-  const tokenHealthy = tokenSyncedToBackend && backendStatus !== 'invalid';
+  const health = evaluatePushHealth({ permissionGranted, phoneToken: localToken, backendToken, backendStatus });
+  if (health.tokenMismatch) {
+    console.warn('⚠️ [PushToken] health-check: phone and server notification tokens differ');
+  }
 
   return {
     permissionGranted,
     localToken,
     backendToken,
     backendStatus,
-    tokenExists,
-    tokenSyncedToBackend,
-    tokenHealthy,
-    isHealthy: permissionGranted && tokenExists && tokenSyncedToBackend && tokenHealthy,
+    ...health,
   };
 }
 
@@ -236,7 +250,7 @@ export async function performPushRepair(userId: string, reason: string, options?
       return { success: false, error: 'Could not get FCM token', token: null };
     }
 
-    console.log(`🎯 [PushToken] ${reason}: token fetched`, `${token.substring(0, 20)}...`);
+    console.log(`🎯 [PushToken] ${reason}: token fetched (len=${token.length})`);
 
     const synced = await syncTokenToBackend(token, userId, reason);
     if (!synced) {
