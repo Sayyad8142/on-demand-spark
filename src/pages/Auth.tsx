@@ -23,9 +23,9 @@ import { CommunityPicker } from "@/components/CommunityPicker";
 
 
 // @ts-ignore - Capacitor bridge
-const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+const AuthBridge = window.Capacitor?.Plugins?.AuthBridge;
 // @ts-ignore - SMS Retriever bridge
-const SmsRetrieverPlugin = (window as any).Capacitor?.Plugins?.SmsRetrieverPlugin;
+const SmsRetrieverPlugin = window.Capacitor?.Plugins?.SmsRetrieverPlugin;
 const SERVICES = [{
   value: "maid",
   label: "auth.services.maid",

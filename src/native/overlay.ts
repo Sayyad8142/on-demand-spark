@@ -62,7 +62,7 @@ export async function openAndroidOverlaySettings(): Promise<void> {
   }
   
   // @ts-ignore - Custom plugin
-  const { OverlayPlugin } = (window as any).Capacitor?.Plugins || {};
+  const { OverlayPlugin } = window.Capacitor?.Plugins || {};
   if (OverlayPlugin?.openOverlaySettings) {
     await OverlayPlugin.openOverlaySettings();
   }

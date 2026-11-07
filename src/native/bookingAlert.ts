@@ -13,7 +13,7 @@ export async function showTestBookingAlert() {
   console.log('📱 Test booking alert requested - triggering native overlay');
   
   try {
-    const { OverlayPlugin } = (window as any).Capacitor?.Plugins || {};
+    const { OverlayPlugin } = window.Capacitor?.Plugins || {};
     
     if (!OverlayPlugin?.showBookingOverlay) {
       console.error('❌ OverlayPlugin.showBookingOverlay not available');

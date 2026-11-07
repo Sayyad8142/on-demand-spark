@@ -34,7 +34,7 @@ export default function Troubleshoot() {
       
       try {
         // @ts-ignore - Capacitor bridge
-        const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+        const AuthBridge = window.Capacitor?.Plugins?.AuthBridge;
         if (AuthBridge) {
           const result = await AuthBridge.getToken();
           const token = result?.token;
@@ -229,7 +229,7 @@ export default function Troubleshoot() {
                           if (session?.access_token) {
                             console.log('🔑 Token found');
                             // @ts-ignore - Capacitor bridge
-                            const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+                            const AuthBridge = window.Capacitor?.Plugins?.AuthBridge;
                             await AuthBridge.saveToken({ token: session.access_token });
                             
                             // Verify it was saved

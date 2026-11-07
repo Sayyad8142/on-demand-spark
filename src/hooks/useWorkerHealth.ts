@@ -22,7 +22,7 @@ import { networkState, selfHelp, slotState, type SelfHelpItem, type SlotState } 
 import { recordDiagnostic } from "@/lib/diagnosticsSync";
 
 // @ts-ignore
-const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+const AuthBridge = window.Capacitor?.Plugins?.AuthBridge;
 
 export type WorkerHealthStatus = "ready" | "warning" | "blocked";
 

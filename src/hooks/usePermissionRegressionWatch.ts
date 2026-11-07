@@ -19,7 +19,7 @@ import { triggerAutomaticPushRepair } from "@/services/pushRepairCoordinator";
 import { reportMissedBooking } from "@/lib/missedBookingDiagnostics";
 
 // @ts-ignore
-const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+const AuthBridge = window.Capacitor?.Plugins?.AuthBridge;
 
 const SNAPSHOT_KEY = "worker.perm.snapshot.v1";
 const POLL_MS = 60_000;

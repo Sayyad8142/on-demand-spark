@@ -28,7 +28,7 @@ function clearTimers() {
 
 function playWarningChirp() {
   try {
-    const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     const ctx = new Ctx();
     const osc = ctx.createOscillator();
@@ -111,7 +111,7 @@ function speakOnce(synth: SpeechSynthesis): Promise<void> {
 }
 
 async function runSpeechLoop() {
-  const synth = (window as any).speechSynthesis as SpeechSynthesis | undefined;
+  const synth = window.speechSynthesis as SpeechSynthesis | undefined;
   if (!synth || typeof SpeechSynthesisUtterance === "undefined") {
     await runFallbackAudioLoop();
     return;
@@ -207,7 +207,7 @@ export function stopCancellationVoice() {
   }
 
   try {
-    (window as any).speechSynthesis?.cancel();
+    window.speechSynthesis?.cancel();
   } catch {
     /* no-op */
   }

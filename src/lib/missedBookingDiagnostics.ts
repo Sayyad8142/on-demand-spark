@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CURRENT_VERSION_NAME } from "@/config/version";
 
 // @ts-ignore - native bridge
-const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+const AuthBridge = window.Capacitor?.Plugins?.AuthBridge;
 
 export interface MissedBookingContext {
   workerId?: string;

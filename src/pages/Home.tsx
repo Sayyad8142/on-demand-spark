@@ -44,7 +44,7 @@ import { HomeTrainingVideoSlot } from "@/components/HomeTrainingVideoSlot";
 // Movement monitoring is owned by App.tsx — no imports needed here.
 
 // @ts-ignore - Capacitor bridge
-const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+const AuthBridge = window.Capacitor?.Plugins?.AuthBridge;
 export default function Home() {
   useWorkerLanguage();
   const navigate = useNavigate();
