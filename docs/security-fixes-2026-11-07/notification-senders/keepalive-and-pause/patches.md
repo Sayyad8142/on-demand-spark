@@ -15,7 +15,7 @@ if (error) console.warn("[watchdog] notify failed", worker.id, error.message);
 import { buildKeepalivePingPayload } from "../_shared/fcm_payloads.ts";
 import { internalKeyMatches } from "../_shared/notify_auth.ts";
 // at top of handler (Stage 1 = observe only):
-const ok = await internalKeyMatches(req.headers.get("x-internal-key"), Deno.env.get("DISPATCH_INTERNAL_KEY"));
+const ok = internalKeyMatches(req.headers.get("x-internal-key"), Deno.env.get("DISPATCH_INTERNAL_KEY"));
 if (!ok) console.warn(JSON.stringify({ evt: "keepalive_unverified_caller" })); // Stage 3: return 401
 // send:
 body: JSON.stringify(buildKeepalivePingPayload(eligible, Date.now())),
