@@ -58,7 +58,10 @@ const DATA_ONLY = new Set(["BOOKING_ALERT", "BOOKING_CANCELLED", "START_OTP_REMI
 export function buildFcmMessage(token: string, p: SendFcmPayload) {
   const type = String(p.data?.type ?? "");
   const ttl = type === "START_OTP_REMINDER_CANCEL" ? "7200s" : "60s";
-  const base = { token, android: { priority: "HIGH" as const, ttl }, data: { ...p.data, title: p.title, body: p.body } };
+  // PING goes NORMAL: Google lowers an app's high-priority standing when high-priority
+  // pushes show nothing, which would slow real booking alerts.
+  const priority = type === "PING" ? ("NORMAL" as const) : ("HIGH" as const);
+  const base = { token, android: { priority, ttl }, data: { ...p.data, title: p.title, body: p.body } };
   return DATA_ONLY.has(type) ? { message: base } : { message: { ...base, notification: { title: p.title, body: p.body } } };
 }
 

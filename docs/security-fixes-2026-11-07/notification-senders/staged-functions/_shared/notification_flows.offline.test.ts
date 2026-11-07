@@ -59,6 +59,10 @@ Deno.test("worker-paused notice shows a visible notification", () => {
   const m = buildFcmMessage("tok", buildWorkerPausedPayload(W1, "stale_heartbeat", "Bookings paused", "Open the app")).message;
   assert("notification" in m);
 });
+Deno.test("ping uses normal priority so booking alerts keep high priority", () => {
+  assertEquals(buildFcmMessage("t", buildKeepalivePingPayload([W1], 1)).message.android.priority, "NORMAL");
+  assertEquals(buildFcmMessage("t", callerPayloads.bookingAlert([W1], B)).message.android.priority, "HIGH");
+});
 Deno.test("reminder cancel lives 2 h; others 60 s", () => {
   assertEquals(buildFcmMessage("t", callerPayloads.reminderCancel(W1, B)).message.android.ttl, "7200s");
   assertEquals(buildFcmMessage("t", buildKeepalivePingPayload([W1], 1)).message.android.ttl, "60s");
