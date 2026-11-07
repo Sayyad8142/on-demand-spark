@@ -34,11 +34,25 @@ const GONE_PATTERNS: RegExp[] = [
   /not offered/i,
 ];
 
+const RETRY_FIRST_PATTERNS: RegExp[] = [
+  /session/i,
+  /log ?in/i,
+  /jwt/i,
+  /token/i,
+  /network/i,
+  /fetch/i,
+  /timeout|timed out/i,
+  /connection/i,
+  /offline/i,
+];
+
 export function classifyAcceptResult(result: AcceptResultLike): AcceptOutcome {
   if (result.success) return "won";
   if (result.acceptanceClosed) return "closed";
   const msg = (result.error ?? "").trim();
   if (!msg) return "retry";
+  // Login / connection problems are never "gone", even if they say "expired".
+  if (RETRY_FIRST_PATTERNS.some((re) => re.test(msg))) return "retry";
   if (GONE_PATTERNS.some((re) => re.test(msg))) return "gone";
   return "retry";
 }
