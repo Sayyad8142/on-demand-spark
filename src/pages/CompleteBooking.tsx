@@ -640,7 +640,7 @@ export default function CompleteBooking() {
                   </div>
                   {payout.platform_fee > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">{displayText("Platform Fee (20%)")}</span>
+                      <span className="text-muted-foreground">{displayText("Platform Fee ({{percent}}%)", { percent: payout.gross_amount > 0 ? Math.round((payout.platform_fee / payout.gross_amount) * 1000) / 10 : 0 })}</span>
                       <span className="font-semibold text-destructive">−₹{payout.platform_fee}</span>
                     </div>
                   )}

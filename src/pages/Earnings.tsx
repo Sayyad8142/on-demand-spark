@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Loader2, Wallet, CheckCircle2, XCircle, Clock, RefreshCw, IndianRupee, TrendingUp, AlertCircle, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { PAYOUT_ESTIMATING_LABEL } from "@/lib/payoutStatus";
+import { resolvePayoutBreakdown } from "@/lib/payoutCalc";
 
 interface PayoutRow {
   id: string;
