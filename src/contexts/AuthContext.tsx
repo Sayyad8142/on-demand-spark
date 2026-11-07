@@ -6,7 +6,7 @@ import { triggerAutomaticPushRepair } from '@/services/pushRepairCoordinator';
 import { capacitorStorage, reloadSessionFromStorage, getStorageCacheDebug, forcePersistSession } from '@/lib/capacitorStorage';
 
 // @ts-ignore - Capacitor bridge
-const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+const AuthBridge = window.Capacitor?.Plugins?.AuthBridge;
 
 // Global mutex to prevent concurrent refresh attempts
 let isRefreshing = false;

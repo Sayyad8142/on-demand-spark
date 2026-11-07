@@ -12,9 +12,9 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { extractBankDetailsFromPassbook } from "@/lib/bankDetailsExtraction";
 
 // @ts-ignore - Capacitor bridge
-const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+const AuthBridge = window.Capacitor?.Plugins?.AuthBridge;
 // @ts-ignore - SMS Retriever bridge
-const SmsRetrieverPlugin = (window as any).Capacitor?.Plugins?.SmsRetrieverPlugin;
+const SmsRetrieverPlugin = window.Capacitor?.Plugins?.SmsRetrieverPlugin;
 
 interface OtpVerifyState {
   phone: string;

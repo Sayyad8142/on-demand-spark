@@ -1,0 +1,27 @@
+--- ../../../supabase/functions/send-webpush/index.ts	2026-11-07 18:40:10.922225449 +0000
++++ staged-functions/send-webpush/index.ts	2026-11-07 18:43:21.873152805 +0000
+@@ -1,9 +1,11 @@
++// STAGED COPY — NOT DEPLOYED. Adds the observe/enforce caller guard.
++import { guardNotify } from "../_shared/notify_guard.ts";
+ import { createClient } from "npm:@supabase/supabase-js@2";
+ import webpush from "npm:web-push@3.6.7";
+ 
+ const corsHeaders = {
+   'Access-Control-Allow-Origin': '*',
+-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
++  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-internal-key',
+ };
+ 
+ Deno.serve(async (req) => {
+@@ -13,7 +15,10 @@
+   }
+ 
+   try {
+-    const { workerIds, title, body, url } = await req.json();
++    const reqBody = await req.json();
++    const blocked = await guardNotify(req, reqBody, corsHeaders, "send-webpush");
++    if (blocked) return blocked;
++    const { workerIds, title, body, url } = reqBody;
+     
+     console.log('📨 Sending web push to workers:', workerIds);
+     

@@ -1,0 +1,26 @@
+--- ../../../supabase/functions/send-fcm/index.ts	2026-11-07 18:40:10.922172291 +0000
++++ staged-functions/send-fcm/index.ts	2026-11-07 18:42:58.246674367 +0000
+@@ -1,3 +1,5 @@
++// STAGED COPY — NOT DEPLOYED. Adds the observe/enforce caller guard.
++import { guardNotify } from "../_shared/notify_guard.ts";
+ import { createClient } from "npm:@supabase/supabase-js@2.50.0";
+ 
+ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+@@ -12,7 +14,7 @@
+ 
+ const corsHeaders = {
+   'Access-Control-Allow-Origin': '*',
+-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
++  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-internal-key',
+ };
+ 
+ // ─── Startup: validate Firebase service account & log project_id ───
+@@ -70,6 +72,8 @@
+     }
+ 
+     const payload: FCMPayload = await req.json();
++    const blocked = await guardNotify(req, payload, corsHeaders, "send-fcm");
++    if (blocked) return blocked;
+     const { workerIds, title, body, data } = payload;
+ 
+     if (!Array.isArray(workerIds) || workerIds.length === 0) {

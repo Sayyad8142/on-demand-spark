@@ -14,7 +14,7 @@ export function useAppState() {
     if (!Capacitor.isNativePlatform()) return;
 
     // @ts-ignore - Capacitor bridge
-    const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+    const AuthBridge = window.Capacitor?.Plugins?.AuthBridge;
     
     let listener: any;
     

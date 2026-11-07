@@ -125,7 +125,7 @@ export function useFCMTokenSync(userId: string | undefined) {
     // Persist user_id natively so BootReceiver / FcmBootSyncWorker /
     // MyFirebaseService can ping the backend even when JS isn't running.
     if (Capacitor.isNativePlatform()) {
-      const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+      const AuthBridge = window.Capacitor?.Plugins?.AuthBridge;
       if (AuthBridge?.saveUserId) {
         AuthBridge.saveUserId({ userId }).catch((e: unknown) =>
           console.warn('⚠️ [FCMSync] saveUserId failed', e),

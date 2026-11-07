@@ -37,7 +37,7 @@ function nativePlugin(): any | null {
 
 function webSpeak(text: string, lang: string): Promise<boolean> {
   return new Promise((resolve) => {
-    const synth = (window as any).speechSynthesis as SpeechSynthesis | undefined;
+    const synth = window.speechSynthesis as SpeechSynthesis | undefined;
     if (!synth || typeof SpeechSynthesisUtterance === "undefined") return resolve(false);
     try {
       synth.cancel();

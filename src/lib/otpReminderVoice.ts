@@ -49,7 +49,7 @@ function speakOnce(synth: SpeechSynthesis): Promise<void> {
 }
 
 async function runSpeechLoop() {
-  const synth = (window as any).speechSynthesis as SpeechSynthesis | undefined;
+  const synth = window.speechSynthesis as SpeechSynthesis | undefined;
   if (!synth || typeof SpeechSynthesisUtterance === "undefined") return;
   console.log("[OTP_REMINDER] speech_started");
   try {
@@ -123,7 +123,7 @@ export function stopOtpReminderVoice() {
   }
 
   try {
-    (window as any).speechSynthesis?.cancel();
+    window.speechSynthesis?.cancel();
   } catch {
     /* no-op */
   }

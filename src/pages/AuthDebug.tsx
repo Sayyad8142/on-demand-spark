@@ -164,7 +164,7 @@ export default function AuthDebug() {
 
       // Native diagnostics + logs (Android only)
       if (Capacitor.isNativePlatform()) {
-        const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+        const AuthBridge = window.Capacitor?.Plugins?.AuthBridge;
         if (AuthBridge?.getDiagnostics) {
           try {
             const d = await AuthBridge.getDiagnostics();

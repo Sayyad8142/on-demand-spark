@@ -7,7 +7,7 @@ export async function requestAndroidOverlay(): Promise<boolean> {
   }
   try {
     // @ts-ignore custom plugin access
-    const { OverlayPlugin } = (window as any).Capacitor?.Plugins || {};
+    const { OverlayPlugin } = window.Capacitor?.Plugins || {};
     if (OverlayPlugin?.requestPermission) {
       const out = await OverlayPlugin.requestPermission();
       return !!(out?.granted || out?.requested); // treat requested as success prompt
@@ -26,7 +26,7 @@ export async function checkPermission(): Promise<boolean> {
 
   try {
     // @ts-ignore - Custom plugin
-    const { OverlayPlugin } = (window as any).Capacitor?.Plugins || {};
+    const { OverlayPlugin } = window.Capacitor?.Plugins || {};
     if (OverlayPlugin && OverlayPlugin.checkPermission) {
       const { granted } = await OverlayPlugin.checkPermission();
       return granted;
@@ -56,7 +56,7 @@ export async function showBookingOverlay(booking: any): Promise<void> {
   
   try {
     // @ts-ignore - Custom plugin
-    const { OverlayPlugin } = (window as any).Capacitor?.Plugins || {};
+    const { OverlayPlugin } = window.Capacitor?.Plugins || {};
     console.log('🔌 OverlayPlugin:', OverlayPlugin ? 'Found' : 'Not found');
     console.log('🔌 showBookingOverlay method:', OverlayPlugin?.showBookingOverlay ? 'Available' : 'Not available');
     

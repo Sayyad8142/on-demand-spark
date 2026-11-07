@@ -17,7 +17,7 @@ export function NotificationsOffDialog({ onRetry }: Props) {
     if (Capacitor.isNativePlatform()) {
       try {
         // @ts-ignore - Capacitor bridge
-        const AppLauncher = (window as any).Capacitor?.Plugins?.AppLauncher;
+        const AppLauncher = window.Capacitor?.Plugins?.AppLauncher;
         if (AppLauncher?.openUrl) {
           await AppLauncher.openUrl({ url: "app-settings:" });
           return;

@@ -5,7 +5,7 @@ import { CURRENT_VERSION_NAME } from '@/config/version';
 import { evaluatePushHealth } from '@/lib/pushHealth';
 
 // @ts-ignore - Capacitor bridge
-const AuthBridge = (window as any).Capacitor?.Plugins?.AuthBridge;
+const AuthBridge = window.Capacitor?.Plugins?.AuthBridge;
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
