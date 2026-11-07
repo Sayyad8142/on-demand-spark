@@ -451,7 +451,11 @@ function AppInner() {
             if (bookingId) {
               console.log('🔗 Deep link accept for bookingId:', bookingId);
               const result = await tryAccept(bookingId);
-              if (!result.success) {
+              if (!result.success && result.acceptanceClosed) {
+                invalidateOffer(bookingId);
+                window.dispatchEvent(new CustomEvent('bookingAcceptanceClosed', { detail: { bookingId } }));
+                toast({ title: result.error, variant: 'destructive' });
+              } else if (!result.success) {
                 console.warn('Booking accept failed:', result.error);
               } else {
                 window.dispatchEvent(new CustomEvent('bookingAccepted', { detail: { bookingId } }));

@@ -200,6 +200,8 @@ export function useActiveJob(userId: string | undefined) {
       tryFetch();
     };
     window.addEventListener("bookingStarted", onBookingStarted);
+    // Late acceptance refused by the server — re-read state so no stale offer lingers.
+    window.addEventListener("bookingAcceptanceClosed", onBookingStarted);
 
     // Admin reassignment — clear immediately and refetch to confirm.
     const onBookingReassigned = async (event: Event) => {
@@ -228,6 +230,7 @@ export function useActiveJob(userId: string | undefined) {
     return () => {
       window.removeEventListener("bookingAccepted", onBookingAccepted);
       window.removeEventListener("bookingStarted", onBookingStarted);
+      window.removeEventListener("bookingAcceptanceClosed", onBookingStarted);
       window.removeEventListener("bookingReassigned", onBookingReassigned);
     };
   }, [fetchActiveJob]);
