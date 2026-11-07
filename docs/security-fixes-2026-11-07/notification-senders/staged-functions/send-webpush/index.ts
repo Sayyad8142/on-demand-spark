@@ -15,10 +15,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const payload = await req.json();
-    const blocked = await guardNotify(req, payload, corsHeaders, "send-webpush");
+    const reqBody = await req.json();
+    const blocked = await guardNotify(req, reqBody, corsHeaders, "send-webpush");
     if (blocked) return blocked;
-    const { workerIds, title, body, url } = payload;
+    const { workerIds, title, body, url } = reqBody;
     
     console.log('📨 Sending web push to workers:', workerIds);
     
