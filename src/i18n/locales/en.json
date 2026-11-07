@@ -399,7 +399,7 @@
     "View_Earnings": "View Earnings",
     "View_Details": "View Details",
     "Customer_Paid": "Customer Paid",
-    "Platform_Fee_20": "Platform Fee (20%)",
+    "Platform_Fee_percent": "Platform Fee ({{percent}}%)",
     "Your_Earnings": "Your Earnings",
     "Payout_Method": "Payout Method",
     "Expected_Credit": "Expected Credit",

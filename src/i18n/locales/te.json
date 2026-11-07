@@ -399,7 +399,7 @@
     "View_Earnings": "సంపాదన చూడండి",
     "View_Details": "వివరాలు చూడండి",
     "Customer_Paid": "కస్టమర్ చెల్లించారు",
-    "Platform_Fee_20": "ప్లాట్‌ఫారమ్ ఫీజు (20%)",
+    "Platform_Fee_percent": "ప్లాట్‌ఫారమ్ ఫీజు ({{percent}}%)",
     "Your_Earnings": "మీ సంపాదన",
     "Payout_Method": "చెల్లింపు పద్ధతి",
     "Expected_Credit": "ఆశించిన క్రెడిట్",
