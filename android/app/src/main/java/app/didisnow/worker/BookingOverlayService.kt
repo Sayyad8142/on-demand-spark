@@ -558,28 +558,35 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
             }
             
             // Wrap entire flow with 12s watchdog timeout
+            val acceptTappedAt = System.currentTimeMillis()
             serviceScope.launch {
                 var outcome = "unknown"
+                // A retryable failure (network / timeout / login refresh) keeps a
+                // still-valid offer open; "Server rejected: …" (taken / expired)
+                // and acceptance-closed are final and close it.
+                var retryable = false
                 try {
                     val finished = withTimeoutOrNull(12_000) {
                         updateBooking(bookingId, "accepted")
                         true
                     }
                     outcome = if (finished == true) "accept_success" else "accept_timeout"
-                    if (finished != true) {
-                        ui { Toast.makeText(this@BookingOverlayService, "Network slow. Will refresh.", Toast.LENGTH_SHORT).show() }
-                    }
+                    if (finished != true) retryable = true
                 } catch (t: Throwable) {
                     android.util.Log.e("BookingOverlay", "❌ Accept flow crashed", t)
                     outcome = "accept_exception"
+                    retryable = t.message != ACCEPTANCE_CLOSED_MSG &&
+                        !(t.message ?: "").startsWith("Server rejected:")
                     if (t.message == ACCEPTANCE_CLOSED_MSG) {
                         outcome = "acceptance_closed"
                         // Never re-show this offer; drop the queue too (closed for the day).
                         OfferQueue.markTaken(applicationContext, bookingId)
                         OfferQueue.clearAll(applicationContext, "acceptance_closed")
                     }
-                    val reason = t.message?.takeIf { it.isNotBlank() } ?: "Accept failed"
-                    ui { Toast.makeText(this@BookingOverlayService, "⚠️ $reason", Toast.LENGTH_LONG).show() }
+                    if (!retryable) {
+                        val reason = t.message?.takeIf { it.isNotBlank() } ?: "Accept failed"
+                        ui { Toast.makeText(this@BookingOverlayService, "⚠️ $reason", Toast.LENGTH_LONG).show() }
+                    }
                 } finally {
                     // Always close overlay and stop service
                     acceptInFlight = false
@@ -594,6 +601,28 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                     // Tell React layer to refresh either way (it will fetch latest state)
                     LocalBroadcastManager.getInstance(applicationContext)
                         .sendBroadcast(Intent("DIDI_BOOKING_REFRESH").apply { putExtra("booking_id", bookingId) })
+
+                    // Retryable failure while the offer window is still open:
+                    // keep the pop-up, re-enable the buttons and resume the
+                    // countdown from the real remaining time (never extended).
+                    val elapsedSec = ((System.currentTimeMillis() - acceptTappedAt) / 1000).toInt()
+                    val remaining = secondsLeft - elapsedSec
+                    if (retryable && remaining > 1 && !isShuttingDown && overlayView != null &&
+                        !OfferQueue.isTaken(applicationContext, bookingId)) {
+                        secondsLeft = remaining
+                        ui {
+                            overlayView?.findViewById<Button>(R.id.btnAccept)?.isEnabled = true
+                            overlayView?.findViewById<Button>(R.id.btnReject)?.isEnabled = true
+                            Toast.makeText(this@BookingOverlayService, "Network problem. Tap Accept again.", Toast.LENGTH_LONG).show()
+                        }
+                        countdownRunnable?.let { r -> countdownHandler?.post(r) }
+                        startBookingStatusPolling(bookingId)
+                        android.util.Log.d("BookingOverlay", "↩️ Accept retryable ($outcome) — offer kept open, ${remaining}s left")
+                        return@launch
+                    }
+                    if (retryable) {
+                        ui { Toast.makeText(this@BookingOverlayService, "Network slow. Will refresh.", Toast.LENGTH_SHORT).show() }
+                    }
                     
                     // Launch MainActivity to bring app to foreground showing the accepted booking
                     if (outcome == "accept_success") {
