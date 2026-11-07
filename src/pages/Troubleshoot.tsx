@@ -14,6 +14,9 @@ import { Capacitor } from '@capacitor/core';
 // VAPID public key from environment variable
 const VAPID_PUBLIC = import.meta.env.VITE_VAPID_PUBLIC_KEY as string;
 
+
+const TEST_BOOKING_TOOL_ENABLED = import.meta.env.DEV;
+
 export default function Troubleshoot() {
   useWorkerLanguage();
   const navigate = useNavigate();
@@ -110,6 +113,9 @@ export default function Troubleshoot() {
   };
 
   const createTestBooking = async () => {
+    // Safety: creating bookings from the Worker App is a developer-only tool.
+    // Release builds talk to the live database, so this must never run there.
+    if (!TEST_BOOKING_TOOL_ENABLED) return;
     if (!user || !worker) {
       toast({
         title: displayText("Error"),
@@ -144,7 +150,7 @@ export default function Troubleshoot() {
 
       if (error) throw error;
 
-      console.log('✅ Test booking created:', data);
+      console.log('✅ Test booking created:', data?.id);
       toast({
         title: displayText("Test Booking Created"),
         description: displayText("Modal should appear within ~1 second if you're online. Check for Web Push notification if tab is unfocused.")
@@ -327,7 +333,8 @@ export default function Troubleshoot() {
           </div>
         </Card>
 
-        {/* Test Booking */}
+        {/* Test Booking — developer builds only (would create a real booking) */}
+        {TEST_BOOKING_TOOL_ENABLED && (
         <Card className="p-6 bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900 flex items-center justify-center flex-shrink-0">
@@ -356,6 +363,7 @@ export default function Troubleshoot() {
             </div>
           </div>
         </Card>
+        )}
 
         {/* Web Push Notifications */}
         <Card className="p-6 bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
