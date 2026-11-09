@@ -17,6 +17,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { otpV2ErrorMessage, isOtpV2ClientEnabled, resolveOtpMode, V2_OTP_LENGTH, LEGACY_OTP_LENGTH } from "@/lib/otpV2";
+import { mapPayoutStatus, type PayoutDisplayState } from "@/lib/payoutDisplay";
+import { PayoutStatusBadge } from "@/components/payouts/PayoutStatusBadge";
 import { decideCompletion, TERMINAL_CODES, RETRYABLE_CODES } from "@/lib/otpCompletionFlow";
 
 interface PayoutSummary {
@@ -45,10 +47,9 @@ const resolvePayoutMethod = (p: PayoutSummary | null): "UPI Transfer" | "Bank Tr
   return "UPI Transfer";
 };
 
-const isPayoutCredited = (p: PayoutSummary | null) => {
-  const s = (p?.status ?? "").toLowerCase();
-  return s === "paid" || s === "success" || s === "completed" || s === "credited";
-};
+/** Receipt status: Paid only when the server confirms it (status paid + paid_at). */
+const receiptPayoutState = (p: PayoutSummary | null): PayoutDisplayState =>
+  p ? mapPayoutStatus(p.status, p.paid_at) : "earned";
 
 // Lightweight haptics using navigator.vibrate (works in Capacitor WebView on Android)
 const haptic = {
@@ -591,17 +592,7 @@ export default function CompleteBooking() {
 
           {/* Payout status */}
           <div className="mb-8">
-            {isPayoutCredited(payout) ? (
-              <span className="inline-flex items-center gap-1.5 text-green-600 text-sm font-semibold">
-                <Check className="w-4 h-4" />
-                {displayText("Payout credited")}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 text-blue-600 text-sm font-semibold">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                {displayText("Payout processing")}
-              </span>
-            )}
+            <PayoutStatusBadge state={receiptPayoutState(payout)} />
           </div>
 
           {/* Countdown */}
@@ -635,7 +626,7 @@ export default function CompleteBooking() {
               {payout && (
                 <>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">{displayText("Customer Paid")}</span>
+                    <span className="text-muted-foreground">{displayText("Booking Amount")}</span>
                     <span className="font-semibold">₹{payout.gross_amount}</span>
                   </div>
                   {payout.platform_fee > 0 && (
@@ -652,12 +643,9 @@ export default function CompleteBooking() {
                     <span className="text-muted-foreground">{displayText("Payout Method")}</span>
                     <span className="font-semibold">{resolvePayoutMethod(payout)}</span>
                   </div>
-                  {!isPayoutCredited(payout) && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">{displayText("Expected Credit")}</span>
-                      <span className="font-semibold">{displayText("Within 24 hours")}</span>
-                    </div>
-                  )}
+                  <p className="text-muted-foreground pt-1">
+                    {displayText("Payout status updates in Earnings once Didi Now sends it.")}
+                  </p>
                 </>
               )}
               {completedAt && (
