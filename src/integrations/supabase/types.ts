@@ -4383,6 +4383,101 @@ export type Database = {
           },
         ]
       }
+      service_request_audit: {
+        Row: {
+          admin_id: string | null
+          changed_at: string
+          id: string
+          new_notes: string | null
+          new_status: string | null
+          old_notes: string | null
+          old_status: string | null
+          service_request_id: string
+        }
+        Insert: {
+          admin_id?: string | null
+          changed_at?: string
+          id?: string
+          new_notes?: string | null
+          new_status?: string | null
+          old_notes?: string | null
+          old_status?: string | null
+          service_request_id: string
+        }
+        Update: {
+          admin_id?: string | null
+          changed_at?: string
+          id?: string
+          new_notes?: string | null
+          new_status?: string | null
+          old_notes?: string | null
+          old_status?: string | null
+          service_request_id?: string
+        }
+        Relationships: []
+      }
+      service_requests: {
+        Row: {
+          admin_notes: string | null
+          client_request_id: string
+          community: string | null
+          created_at: string
+          custom_request: string | null
+          customer_name: string | null
+          flat_no: string | null
+          id: string
+          phone: string | null
+          profile_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          services: string[]
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          client_request_id: string
+          community?: string | null
+          created_at?: string
+          custom_request?: string | null
+          customer_name?: string | null
+          flat_no?: string | null
+          id?: string
+          phone?: string | null
+          profile_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          services: string[]
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          client_request_id?: string
+          community?: string | null
+          created_at?: string
+          custom_request?: string | null
+          customer_name?: string | null
+          flat_no?: string | null
+          id?: string
+          phone?: string | null
+          profile_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          services?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_requests_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           created_at: string | null
