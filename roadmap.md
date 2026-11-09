@@ -38,3 +38,5 @@
 - [ ] Native build + phone checks — blocked: no Android build tools here
 - [~] Type shortcuts: 22 native-bridge casts replaced by one typed definition (103→76 `as any`); lint 197 pre-existing style errors
 - [ ] Hard-coded colours — blocked: swapping to theme colours changes look; needs owner OK on colour mapping
+- [x] Payout display fixes (statuses, IST totals, pagination, live refresh, receipt text, en/hi/te).
+- [ ] Connect hybrid payout cards — blocked: WORKER_APP_API_CONTRACT.md from Admin Panel.
