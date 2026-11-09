@@ -1,5 +1,7 @@
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useWorkerPayouts } from "@/hooks/useWorkerPayouts";
+import { computePayoutTotals } from "@/lib/payoutDisplay";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
@@ -102,7 +104,7 @@ export default function Profile() {
   };
 
   // Earnings data — same server records and rules as the Earnings screen.
-  const payoutWorkerId = isGuestMode ? null : (realWorker?.id ?? null);
+  const payoutWorkerId = isGuestMode ? null : (realWorker?.id ?? user?.id ?? null);
   const { payouts: workerPayouts } = useWorkerPayouts(payoutWorkerId);
   const payoutTotals = useMemo(() => computePayoutTotals(workerPayouts), [workerPayouts]);
   const [guestEarnings, setGuestEarnings] = useState({ total: 0, today: 0, month: 0 });
