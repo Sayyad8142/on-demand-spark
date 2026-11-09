@@ -152,10 +152,15 @@ export default function Earnings() {
         </div>
 
         <div className="grid grid-cols-3 gap-2 text-center">
-          <StateTotal label={displayText("Awaiting payout")} amount={totals.awaiting + totals.earnedNotRecorded + totals.onHold} icon={Clock} cls="text-warning" />
+          <StateTotal label={displayText("Awaiting payout")} amount={totals.awaiting + totals.onHold} icon={Clock} cls="text-warning" />
           <StateTotal label={displayText("Processing")} amount={totals.processing} icon={Loader2} cls="text-primary" />
           <StateTotal label={displayText("Paid")} amount={totals.paid} icon={CheckCircle2} cls="text-success" />
         </div>
+        {totals.earnedNotRecorded > 0 && (
+          <p className="text-xs text-muted-foreground text-center">
+            {displayText("Not yet recorded: ~₹{{amount}} (estimate, not in totals)", { amount: totals.earnedNotRecorded })}
+          </p>
+        )}
         {lastUpdated && (
           <p className="text-[11px] text-muted-foreground text-center">
             {displayText("Updated")} {lastUpdated.toLocaleTimeString(displayLocale(), { hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" })}

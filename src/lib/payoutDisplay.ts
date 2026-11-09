@@ -122,7 +122,7 @@ export interface PayoutTotals {
   paid: number;       // confirmed paid only
   failed: number;     // failed + reversed
   onHold: number;
-  earnedNotRecorded: number; // estimates (no payout record yet)
+  earnedNotRecorded: number; // estimates (no payout record yet) — never in today/week/month/total
 }
 
 export interface TotalsInput {
@@ -149,7 +149,8 @@ export function computePayoutTotals(rows: TotalsInput[], now: Date = new Date())
       case "earned": t.earnedNotRecorded += amt; break;
       default: t.failed += amt;
     }
-    if (!countsAsEarned(state)) continue;
+    // Only server payout records count toward totals, so every screen agrees.
+    if (state === "earned" || !countsAsEarned(state)) continue;
     t.total += amt;
     const at = new Date(r.created_at);
     if (Number.isNaN(at.getTime())) continue;
