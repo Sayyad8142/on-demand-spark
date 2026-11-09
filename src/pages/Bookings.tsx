@@ -12,10 +12,14 @@ import WorkerRankCard from "@/components/WorkerRankCard";
 import { DEMO_BOOKINGS } from "@/config/demoData";
 import { formatBookingAddress, getUnitDisplay, BookingWithAddress } from "@/lib/address";
 import { useCommunityFee } from "@/hooks/useCommunityFee";
+import { useWorkerPayouts } from "@/hooks/useWorkerPayouts";
+import { computePayoutTotals, mapPayoutStatus } from "@/lib/payoutDisplay";
+import { PayoutStatusBadge } from "@/components/payouts/PayoutStatusBadge";
 
 type Booking = BookingWithAddress & {
   payout_status?: string | null;
   payout_amount?: number | null;
+  payout_paid_at?: string | null;
   rating?: number | null;
 };
 
@@ -34,7 +38,12 @@ export default function Bookings() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
-  const [summary, setSummary] = useState({ today: 0, week: 0, jobs: 0 });
+  const [jobsCount, setJobsCount] = useState(0);
+  // Today/week earnings use the same server records and IST rules as Earnings.
+  const { payouts: workerPayouts } = useWorkerPayouts(isGuestMode ? null : workerId);
+  const payoutTotals = useMemo(() => computePayoutTotals(workerPayouts), [workerPayouts]);
+  const [guestSummary, setGuestSummary] = useState<{ today: number; week: number; jobs: number } | null>(null);
+  const summary = guestSummary ?? { today: payoutTotals.today, week: payoutTotals.week, jobs: jobsCount };
   const [refreshKey, setRefreshKey] = useState(0);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -57,7 +66,7 @@ export default function Bookings() {
   useEffect(() => {
     if (isGuestMode) {
       setBookings(DEMO_BOOKINGS as any);
-      setSummary({ today: 0, week: 0, jobs: (DEMO_BOOKINGS as any).length });
+      setGuestSummary({ today: 0, week: 0, jobs: (DEMO_BOOKINGS as any).length });
       setHasMore(false);
       setLoading(false);
       return;
@@ -88,15 +97,16 @@ export default function Bookings() {
     let enriched: Booking[] = rows as any;
     if (ids.length) {
       const [payoutsRes, ratingsRes] = await Promise.all([
-        supabase.from('worker_payouts').select('booking_id, status, payout_amount').in('booking_id', ids),
+        supabase.from('worker_payouts').select('booking_id, status, payout_amount, paid_at').in('booking_id', ids),
         supabase.from('worker_ratings').select('booking_id, rating').in('booking_id', ids),
       ]);
-      const payoutsMap = new Map(payoutsRes.data?.map(p => [p.booking_id, { status: p.status, amount: p.payout_amount }]) || []);
+      const payoutsMap = new Map(payoutsRes.data?.map(p => [p.booking_id, { status: p.status, amount: p.payout_amount, paidAt: p.paid_at }]) || []);
       const ratingsMap = new Map(ratingsRes.data?.map(r => [r.booking_id, r.rating]) || []);
       enriched = rows.map(b => ({
         ...b,
         payout_status: payoutsMap.get(b.id)?.status ?? null,
         payout_amount: payoutsMap.get(b.id)?.amount ?? null,
+        payout_paid_at: payoutsMap.get(b.id)?.paidAt ?? null,
         rating: ratingsMap.get(b.id) ?? null,
       })) as any;
     }
@@ -109,34 +119,18 @@ export default function Bookings() {
     let cancelled = false;
     (async () => {
       try {
-        const now = new Date();
-        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const startOfWeek = new Date(startOfToday.getTime() - 6 * 24 * 60 * 60 * 1000);
-
-        const [firstPage, totalCountRes, weekPayoutsRes] = await Promise.all([
+        const [firstPage, totalCountRes] = await Promise.all([
           loadPage(workerId, 0),
           supabase
             .from('bookings')
             .select('id', { count: 'exact', head: true })
             .eq('worker_id', workerId)
             .eq('status', 'completed'),
-          supabase
-            .from('worker_payouts')
-            .select('payout_amount, created_at')
-            .eq('worker_id', workerId)
-            .gte('created_at', startOfWeek.toISOString()),
         ]);
 
         if (cancelled) return;
 
-        let today = 0, week = 0;
-        for (const p of (weekPayoutsRes.data || [])) {
-          const amt = Number(p.payout_amount ?? 0);
-          const t = p.created_at ? new Date(p.created_at).getTime() : 0;
-          week += amt;
-          if (t >= startOfToday.getTime()) today += amt;
-        }
-        setSummary({ today, week, jobs: totalCountRes.count ?? 0 });
+        setJobsCount(totalCountRes.count ?? 0);
         setBookings(firstPage);
         setHasMore(firstPage.length === PAGE_SIZE);
         setPage(0);
@@ -273,8 +267,7 @@ function BookingCard({ booking }: { booking: Booking }) {
   const { breakdown } = useCommunityFee(booking.community, booking.price_inr);
   const displayAmount = booking.payout_amount ?? (booking.price_inr ? breakdown.netPayout : null);
 
-  const isPaid = booking.payout_status === 'paid';
-  const isFailed = booking.payout_status === 'failed' || booking.payout_status === 'reversed';
+  const payoutState = booking.payout_status ? mapPayoutStatus(booking.payout_status, booking.payout_paid_at) : 'earned';
 
   const when = booking.scheduled_date
     ? new Date(booking.scheduled_date)
@@ -338,7 +331,7 @@ function BookingCard({ booking }: { booking: Booking }) {
                 {displayAmount != null ? displayAmount : '—'}
               </p>
             </div>
-            <PaymentBadge isPaid={isPaid} isFailed={isFailed} />
+            <PayoutStatusBadge state={payoutState} />
           </div>
         ) : (
           <div className="bg-white/60 dark:bg-black/20 rounded-xl px-3 py-2.5 mb-3">
@@ -367,31 +360,5 @@ function BookingCard({ booking }: { booking: Booking }) {
         )}
       </div>
     </div>
-  );
-}
-
-function PaymentBadge({ isPaid, isFailed }: { isPaid: boolean; isFailed: boolean }) {
-  useWorkerLanguage();
-  if (isPaid) {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-green-600 text-white text-xs font-bold">
-        <CheckCircle2 className="w-3.5 h-3.5" />
-        {displayText("Paid")}
-      </span>
-    );
-  }
-  if (isFailed) {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-red-600 text-white text-xs font-bold">
-        <XCircle className="w-3.5 h-3.5" />
-        {displayText("Failed")}
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-amber-500 text-white text-xs font-bold">
-      <Clock className="w-3.5 h-3.5" />
-      {displayText("Pending")}
-    </span>
   );
 }
