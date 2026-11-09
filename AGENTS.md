@@ -27,3 +27,4 @@
 - Offers arrive only via booking_requests realtime, FCM and `useBookingPollingFallback` (single backup poller, also on resume/reconnect). Why: duplicate pollers waste battery and the old bookings-INSERT listener bypassed dispatch order.
 - Notification health rules live in `src/lib/pushHealth.ts`; a phone/server token mismatch is unhealthy. Why: alerts sent to a stale token silently never arrive.
 
+- Worker payout display rules (status mapping, Paid only with server `paid_at`, IST day/week/month, totals from server payout records only, reference from manual_utr/reference_id/external_reference) live as pure functions in `src/lib/payoutDisplay.ts`; every money screen reads through `useWorkerPayouts` (paginated, realtime, foreground refresh). Hybrid payout cards in `src/components/payouts/hybrid/` stay unmounted behind `HYBRID_PAYOUT_UI_ENABLED` until the Admin Panel contract arrives. Why: one rule set keeps all screens identical and the app never invents payout data.
