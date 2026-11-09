@@ -585,7 +585,7 @@ export default function CompleteBooking() {
           {/* Amount earned */}
           <div className="mb-2">
             <p className="text-5xl font-black text-foreground">
-              ₹{payout?.payout_amount ?? 0}
+              {payout ? `₹${payout.payout_amount}` : "—"}
             </p>
             <p className="text-sm text-muted-foreground mt-1">{displayText("earned")}</p>
           </div>
