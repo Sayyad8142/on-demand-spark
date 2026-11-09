@@ -101,10 +101,14 @@ export default function Profile() {
     }, 2000);
   };
 
-  // Earnings data
-  const [totalEarnings, setTotalEarnings] = useState(0);
-  const [todayEarnings, setTodayEarnings] = useState(0);
-  const [monthEarnings, setMonthEarnings] = useState(0);
+  // Earnings data — same server records and rules as the Earnings screen.
+  const payoutWorkerId = isGuestMode ? null : (realWorker?.id ?? null);
+  const { payouts: workerPayouts } = useWorkerPayouts(payoutWorkerId);
+  const payoutTotals = useMemo(() => computePayoutTotals(workerPayouts), [workerPayouts]);
+  const [guestEarnings, setGuestEarnings] = useState({ total: 0, today: 0, month: 0 });
+  const totalEarnings = isGuestMode ? guestEarnings.total : payoutTotals.total;
+  const todayEarnings = isGuestMode ? guestEarnings.today : payoutTotals.today;
+  const monthEarnings = isGuestMode ? guestEarnings.month : payoutTotals.month;
   const [completedJobs, setCompletedJobs] = useState(0);
   const [workerRating, setWorkerRating] = useState<number>(0);
   const [ratingsCount, setRatingsCount] = useState<number>(0);
@@ -157,7 +161,6 @@ export default function Profile() {
       setUpiQrUrl(worker.upi_qr_url || null);
       setSelectedServices((worker.service_types || []).filter((service: string) => SERVICE_VALUES.has(service)));
       setSelectedCommunities(worker.communities || (worker.community ? [worker.community] : []));
-      setTotalEarnings(worker.total_earnings || 0);
       setPhotoUrl(worker.photo_url || null);
     }
   }, [worker]);
@@ -165,8 +168,7 @@ export default function Profile() {
     if (isGuestMode) {
       // Set demo stats for guest mode
       setCompletedJobs(2);
-      setTotalEarnings(750);
-      setTodayEarnings(250);
+      setGuestEarnings({ total: 750, today: 250, month: 750 });
       setWorkerRating(4.8);
       setRatingsCount(127);
       setRatingBreakdown({
@@ -213,25 +215,7 @@ export default function Profile() {
         setCompletedJobs(bookingsData.length);
       }
 
-      // Use real payout data for earnings (net amounts after platform fee)
-      const {
-        data: payoutsData,
-        error: payoutsError
-      } = await supabase.from('worker_payouts').select('payout_amount, created_at').eq('worker_id', workerId);
-      if (!payoutsError && payoutsData) {
-        const total = payoutsData.reduce((sum, p) => sum + (p.payout_amount || 0), 0);
-        setTotalEarnings(total);
-
-        // Calculate today's earnings from payouts
-        const today = new Date().toISOString().split('T')[0];
-        const todayTotal = payoutsData.filter(p => p.created_at && p.created_at.startsWith(today)).reduce((sum, p) => sum + (p.payout_amount || 0), 0);
-        setTodayEarnings(todayTotal);
-
-        // Calculate this month's earnings
-        const monthPrefix = new Date().toISOString().slice(0, 7); // "YYYY-MM"
-        const monthTotal = payoutsData.filter(p => p.created_at && p.created_at.startsWith(monthPrefix)).reduce((sum, p) => sum + (p.payout_amount || 0), 0);
-        setMonthEarnings(monthTotal);
-      }
+      // Earnings totals come from useWorkerPayouts (shared rules, IST, paginated).
     };
     const fetchRating = async () => {
       const {
