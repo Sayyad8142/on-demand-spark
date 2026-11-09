@@ -108,7 +108,7 @@ export default function Earnings() {
   );
   const totals = useMemo(() => computePayoutTotals(history), [history]);
   const hasUpi = !!workerUpi && workerUpi.includes("@");
-  const initialLoading = !workerResolved || (workerId != null && loading && payouts.length === 0 && !error);
+  const initialLoading = (!!user && !workerResolved) || (workerId != null && loading && payouts.length === 0 && !error);
 
   if (initialLoading) {
     return (
