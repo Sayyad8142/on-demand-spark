@@ -13,13 +13,13 @@ const STYLE: Record<PayoutDisplayState, { icon: LucideIcon; cls: string }> = {
   reversed: { icon: RotateCcw, cls: "bg-destructive/15 text-destructive" },
 };
 
-export function PayoutStatusBadge({ state, className }: { state: PayoutDisplayState; className?: string }) {
+export function PayoutStatusBadge({ state, className, label }: { state: PayoutDisplayState; className?: string; label?: string }) {
   useWorkerLanguage();
   const { icon: Icon, cls } = STYLE[state];
   return (
     <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold", cls, className)} data-state={state}>
       <Icon className="h-3.5 w-3.5" />
-      {displayText(PAYOUT_STATE_LABEL[state])}
+      {displayText(label || PAYOUT_STATE_LABEL[state])}
     </span>
   );
 }

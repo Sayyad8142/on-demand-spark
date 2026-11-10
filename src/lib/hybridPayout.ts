@@ -1,8 +1,8 @@
 /**
  * Hybrid payout display types — PLACEHOLDER SHAPES ONLY.
  *
- * The Admin Panel has not yet supplied WORKER_APP_API_CONTRACT.md. These
- * types describe what the UI components need, not a server contract. Nothing
+ * View shapes the cards render. Filled from WORKER_APP_API_CONTRACT.md v1
+ * by src/lib/hybridPayoutApi.ts. Nothing
  * here reads production data; the components render only the props given.
  * Replace these with the real contract fields when it arrives.
  */
@@ -27,7 +27,9 @@ export interface ConsolidatedPayoutView {
   id: string;
   kind: "instant" | "daily";
   amount: number;
-  status: string;            // raw server status, mapped by mapPayoutStatus
+  status: string;            // raw server status
+  statusLabel?: string;      // server label (contract v1); shown verbatim when present
+  bookingCount?: number;     // server count; bookings list loads on demand
   paidAt: string | null;
   reference: string | null;
   failureReason: string | null;
