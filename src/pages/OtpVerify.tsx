@@ -234,6 +234,11 @@ export default function OtpVerify() {
           .eq('phone', phone)
           .maybeSingle();
 
+        if (existingWorker && !signupMayUpdateExisting(existingWorker, data.user.id)) {
+          // Phone already belongs to another login: recovery needs Didi Now support.
+          throw new Error(displayText(ACCOUNT_RECOVERY_MESSAGE));
+        }
+
         const validServices = services;
         
         // Prepare QR data fields
@@ -293,11 +298,6 @@ export default function OtpVerify() {
           : passbookPath
             ? { passbook_url: passbookPath, bank_details_source: 'passbook' as const }
             : {};
-
-        if (existingWorker && !signupMayUpdateExisting(existingWorker, data.user.id)) {
-          // Phone already belongs to another login: recovery needs Didi Now support.
-          throw new Error(displayText(ACCOUNT_RECOVERY_MESSAGE));
-        }
 
         if (existingWorker) {
           const { error: workerError } = await supabase.from('workers').upsert({
