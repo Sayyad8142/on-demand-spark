@@ -40,3 +40,4 @@
 - [ ] Hard-coded colours — blocked: swapping to theme colours changes look; needs owner OK on colour mapping
 - [x] Payout display fixes (statuses, IST totals, pagination, live refresh, receipt text, en/hi/te).
 - [x] Connect hybrid payout cards to contract v1 (switched off). Blocked to turn on: server functions not live; signed-in worker test.
+- [ ] Worker account-linkage DB fix — blocked: Admin Panel review + deployment dependencies (docs/security-fixes-2026-11-10/worker-linkage/HANDOFF.md).
