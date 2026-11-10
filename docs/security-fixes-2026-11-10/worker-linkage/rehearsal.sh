@@ -50,7 +50,7 @@ pass=0; fail=0
 ok()  { echo "PASS $1"; pass=$((pass+1)); }
 bad() { echo "FAIL $1"; fail=$((fail+1)); }
 as() { # as <uid> <phone> <sql>  → prints result, empty on error
-  $P -tA -c "begin; set local role authenticated; select set_config('request.jwt.sub','$1',true); select set_config('request.jwt.phone','$2',true); $3; commit;" 2>&1 | tail -n1; }
+  $P -tA -c "begin; set local role authenticated; select set_config('request.jwt.sub','$1',true); select set_config('request.jwt.phone','$2',true); $3; commit;" 2>&1 | tail -n1 || true; }
 expect_ok()   { out=$(as "$2" "$3" "$4"); [[ "$out" != *ERROR* ]] && [[ "$out" == *"$5"* ]] && ok "$1" || bad "$1 → $out"; }
 expect_err()  { out=$(as "$2" "$3" "$4"); [[ "$out" == *"$5"* ]] && ok "$1" || bad "$1 → $out"; }
 sql() { $P -tA -c "$1"; }
