@@ -113,7 +113,7 @@ expect_ok  "38 admin app role can still edit non-identity fields" $ADM "" "updat
 expect_err "39 admin app role cannot edit phone directly"    $ADM "" "update workers set phone='+919111111111' where id='$C'" "WORKER_IDENTITY_LOCKED: phone"
 # Legacy null user_id self-link
 sql "insert into auth.users values ('ffffffff-0000-0000-0000-00000000000f','+919000000006'); insert into workers(id,user_id,phone,full_name) values ('ffffffff-0000-0000-0000-00000000000f',null,'+919000000006','F'); update workers set user_id=null where id='ffffffff-0000-0000-0000-00000000000f'"
-expect_ok  "40 legacy null user_id: owner sees nothing before link" ffffffff-0000-0000-0000-00000000000f +919000000006 "select count(*) from workers" "0"
+expect_ok  "40 legacy null user_id: same login self-links" ffffffff-0000-0000-0000-00000000000f +919000000006 "select ensure_worker_profile()->>'user_id'" "ffffffff-0000-0000-0000-00000000000f"
 
 # Rollback restores the old behaviour
 $P -f "$DIR/rollback.sql" >/dev/null

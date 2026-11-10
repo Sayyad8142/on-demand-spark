@@ -108,6 +108,12 @@ begin
     select row_to_json(w)::jsonb into v_worker from public.workers w where id = v_worker_id;
     return v_worker;
   end if;
+  -- Legacy row created for this same login but never linked: safe to link (same uid, not a phone match).
+  update public.workers set user_id = v_uid::text where id = v_uid and user_id is null returning id into v_worker_id;
+  if v_worker_id is not null then
+    select row_to_json(w)::jsonb into v_worker from public.workers w where id = v_worker_id;
+    return v_worker;
+  end if;
   v_phone10 := right(regexp_replace(coalesce(auth.jwt()->>'phone', auth.jwt()->>'phone_number', ''), '\D', '', 'g'), 10);
   if v_phone10 <> '' then
     select id into v_worker_id from public.workers
