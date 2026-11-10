@@ -261,7 +261,6 @@ export default function UpiQrUpload({
     const { error: updateError } = await supabase
       .from("workers")
       .update({
-        user_id: user.id,
         upi_id: upiId,
         upi_qr_url: publicUrl,
         upi_qr_payload: payload,
@@ -376,7 +375,6 @@ export default function UpiQrUpload({
         const { error } = await supabase
           .from("workers")
           .update({
-            user_id: user.id,
             upi_qr_url: null,
             upi_qr_payload: null,
             upi_qr_uploaded_at: null,

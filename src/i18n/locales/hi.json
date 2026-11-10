@@ -1048,6 +1048,7 @@
     "Manual_payment_being_verified": "मैन्युअल भुगतान की जाँच हो रही है",
     "Payouts_are_being_sent_manually_by_Didi_Now_Your_earnings_are_recorded": "डिडी नाउ अभी भुगतान खुद भेज रहा है। आपकी कमाई दर्ज है।",
     "Preparing_payout": "भुगतान तैयार हो रहा है",
-    "Failed_will_be_checked_before_retry": "असफल — दोबारा भेजने से पहले जाँच होगी"
+    "Failed_will_be_checked_before_retry": "असफल — दोबारा भेजने से पहले जाँच होगी",
+    "This_phone_number_is_already_linked_to_another_Didi_Now_account_Please_contact_Didi_Now_support_to_recover_your_account": "यह फ़ोन नंबर पहले से किसी दूसरे डिडी नाउ खाते से जुड़ा है। अपना खाता वापस पाने के लिए डिडी नाउ सपोर्ट से संपर्क करें।"
   }
 }

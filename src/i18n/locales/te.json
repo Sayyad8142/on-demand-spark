@@ -1048,6 +1048,7 @@
     "Manual_payment_being_verified": "మాన్యువల్ చెల్లింపు ధృవీకరిస్తున్నారు",
     "Payouts_are_being_sent_manually_by_Didi_Now_Your_earnings_are_recorded": "డిడి నౌ ప్రస్తుతం చెల్లింపులను స్వయంగా పంపుతోంది. మీ సంపాదన నమోదైంది.",
     "Preparing_payout": "చెల్లింపు సిద్ధమవుతోంది",
-    "Failed_will_be_checked_before_retry": "విఫలమైంది — మళ్లీ పంపే ముందు తనిఖీ చేస్తాం"
+    "Failed_will_be_checked_before_retry": "విఫలమైంది — మళ్లీ పంపే ముందు తనిఖీ చేస్తాం",
+    "This_phone_number_is_already_linked_to_another_Didi_Now_account_Please_contact_Didi_Now_support_to_recover_your_account": "ఈ ఫోన్ నంబర్ ఇప్పటికే మరో డిడి నౌ ఖాతాకు లింక్ అయి ఉంది. మీ ఖాతాను తిరిగి పొందడానికి డిడి నౌ సపోర్ట్‌ను సంప్రదించండి."
   }
 }

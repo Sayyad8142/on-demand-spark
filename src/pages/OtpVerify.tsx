@@ -1,4 +1,6 @@
+import { displayText } from "@/i18n/display";
 import { useState, useEffect, useRef } from "react";
+import { signupMayUpdateExisting, ACCOUNT_RECOVERY_MESSAGE } from "@/lib/workerLinkage";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -202,20 +204,8 @@ export default function OtpVerify() {
       if (!data.user) throw new Error("No user returned");
 
       if (state.mode === 'signin') {
-        // Sign In flow
-        const { data: existingWorker, error: workerCheckError } = await supabase
-          .from('workers')
-          .select('*')
-          .eq('phone', phone)
-          .maybeSingle();
-
-        if (workerCheckError) {
-          console.error('Error checking worker:', workerCheckError);
-        }
-
-        if (existingWorker) {
-          await supabase.from('workers').update({ id: data.user.id }).eq('phone', phone);
-        }
+        // Sign In flow: the server alone links this login to a worker record.
+        // Never re-point a worker record from the phone (account takeover risk).
       } else if (state.mode === 'signup' && state.signUpData) {
         // Sign Up flow
         const { fullName, upiId, community, services, qrData, bankDetails, passbookFile } = state.signUpData;
@@ -243,6 +233,11 @@ export default function OtpVerify() {
           .select('*')
           .eq('phone', phone)
           .maybeSingle();
+
+        if (existingWorker && !signupMayUpdateExisting(existingWorker, data.user.id)) {
+          // Phone already belongs to another login: recovery needs Didi Now support.
+          throw new Error(displayText(ACCOUNT_RECOVERY_MESSAGE));
+        }
 
         const validServices = services;
         
