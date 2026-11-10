@@ -1,3 +1,5 @@
+import { displayText } from "@/i18n/display";
+import { isAccountRecoveryRequired, ACCOUNT_RECOVERY_MESSAGE } from "@/lib/workerLinkage";
 import { buildAvailabilityRequest } from "@/lib/availabilityRequest";
 import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,8 +32,8 @@ async function fetchWorkerData(userId: string): Promise<Worker | null> {
     data = legacyResult.data;
     error = legacyResult.error;
 
-    if (data && !data.user_id) {
-      console.log('🔗 Linking worker to auth user:', userId);
+    if (data && !data.user_id && data.id === userId) {
+      // Same login (id === uid) — only case the server allows self-linking.
       await supabase.from('workers').update({ user_id: userId }).eq('id', data.id);
       const { data: updatedData } = await supabase
         .from('workers')
@@ -46,7 +48,10 @@ async function fetchWorkerData(userId: string): Promise<Worker | null> {
   if (!data && !error && ensuredForUser !== userId) {
     ensuredForUser = userId;
     console.log('🛠️ No worker row found; attempting to auto-create via ensure_worker_profile()');
-    const { error: ensureError } = await supabase.rpc('ensure_worker_profile');
+    const { data: ensured, error: ensureError } = await supabase.rpc('ensure_worker_profile');
+    if (!ensureError && isAccountRecoveryRequired(ensured)) {
+      throw new Error(displayText(ACCOUNT_RECOVERY_MESSAGE));
+    }
     if (!ensureError) {
       const retry = await supabase
         .from('workers')
