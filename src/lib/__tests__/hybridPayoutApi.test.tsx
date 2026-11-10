@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import fs from "fs";
 import path from "path";
-import i18n from "@/i18n";
+import i18n from "@/i18n/config";
 import {
   createHybridPayoutClient, contractStatusState, fetchAllCursorPages, historyToConsolidated, historyToManual,
   parseSummary, clampLimit, HybridPayoutError, type RpcFn,
