@@ -1045,6 +1045,9 @@
     "Daily_payout": "Daily payout",
     "count_bookings": "{{count}} bookings",
     "Amounts_are_being_checked_by_Didi_Now": "Amounts are being checked by Didi Now",
-    "Manual_payment_being_verified": "Manual payment being verified"
+    "Manual_payment_being_verified": "Manual payment being verified",
+    "Payouts_are_being_sent_manually_by_Didi_Now_Your_earnings_are_recorded": "Payouts are being sent manually by Didi Now. Your earnings are recorded.",
+    "Preparing_payout": "Preparing payout",
+    "Failed_will_be_checked_before_retry": "Failed — will be checked before retry"
   }
 }

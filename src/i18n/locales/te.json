@@ -1045,6 +1045,9 @@
     "Daily_payout": "రోజువారీ చెల్లింపు",
     "count_bookings": "{{count}} బుకింగ్‌లు",
     "Amounts_are_being_checked_by_Didi_Now": "Didi Now మొత్తాలను తనిఖీ చేస్తోంది",
-    "Manual_payment_being_verified": "మాన్యువల్ చెల్లింపు ధృవీకరిస్తున్నారు"
+    "Manual_payment_being_verified": "మాన్యువల్ చెల్లింపు ధృవీకరిస్తున్నారు",
+    "Payouts_are_being_sent_manually_by_Didi_Now_Your_earnings_are_recorded": "డిడి నౌ ప్రస్తుతం చెల్లింపులను స్వయంగా పంపుతోంది. మీ సంపాదన నమోదైంది.",
+    "Preparing_payout": "చెల్లింపు సిద్ధమవుతోంది",
+    "Failed_will_be_checked_before_retry": "విఫలమైంది — మళ్లీ పంపే ముందు తనిఖీ చేస్తాం"
   }
 }
