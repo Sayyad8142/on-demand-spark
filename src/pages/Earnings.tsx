@@ -13,6 +13,8 @@ import { useWorkerPayouts } from "@/hooks/useWorkerPayouts";
 import { computePayoutTotals, mapPayoutStatus, payoutReference, isManualPayout, type PayoutRecord } from "@/lib/payoutDisplay";
 import { PayoutStatusBadge } from "@/components/payouts/PayoutStatusBadge";
 import { PayoutLoadError } from "@/components/payouts/PayoutLoadError";
+import { HybridPayoutSection } from "@/components/payouts/hybrid/HybridPayoutSection";
+import { HYBRID_PAYOUT_UI_ENABLED } from "@/lib/hybridPayout";
 
 const HISTORY_PAGE = 20;
 
@@ -144,6 +146,8 @@ export default function Earnings() {
             </CardContent>
           </Card>
         )}
+
+        {HYBRID_PAYOUT_UI_ENABLED && workerId && <HybridPayoutSection />}
 
         <div className="grid grid-cols-3 gap-3">
           <SummaryCard label={displayText("Today")} amount={totals.today} icon={IndianRupee} />

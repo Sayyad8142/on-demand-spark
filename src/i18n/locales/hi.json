@@ -1045,6 +1045,9 @@
     "Daily_payout": "रोज़ का भुगतान",
     "count_bookings": "{{count}} बुकिंग",
     "Amounts_are_being_checked_by_Didi_Now": "Didi Now रकम की जाँच कर रहा है",
-    "Manual_payment_being_verified": "मैन्युअल भुगतान की जाँच हो रही है"
+    "Manual_payment_being_verified": "मैन्युअल भुगतान की जाँच हो रही है",
+    "Payouts_are_being_sent_manually_by_Didi_Now_Your_earnings_are_recorded": "डिडी नाउ अभी भुगतान खुद भेज रहा है। आपकी कमाई दर्ज है।",
+    "Preparing_payout": "भुगतान तैयार हो रहा है",
+    "Failed_will_be_checked_before_retry": "असफल — दोबारा भेजने से पहले जाँच होगी"
   }
 }

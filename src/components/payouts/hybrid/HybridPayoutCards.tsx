@@ -8,7 +8,7 @@ import { ChevronDown, Zap, CalendarClock, Clock, ShieldCheck } from "lucide-reac
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { displayText, displayLocale, useWorkerLanguage } from "@/i18n/display";
-import { mapPayoutStatus } from "@/lib/payoutDisplay";
+import { contractStatusState } from "@/lib/hybridPayoutApi";
 import { PayoutStatusBadge } from "@/components/payouts/PayoutStatusBadge";
 import {
   normalizeInstantProgress, instantSlotsExhausted, consolidatedMatches,
@@ -64,25 +64,26 @@ export function PendingEarningsCard({ today, awaiting, processing, paid }: { tod
   );
 }
 
-export function ConsolidatedPayoutItem({ payout }: { payout: ConsolidatedPayoutView }) {
+export function ConsolidatedPayoutItem({ payout, onOpen }: { payout: ConsolidatedPayoutView; onOpen?: () => void }) {
   useWorkerLanguage();
   const [open, setOpen] = useState(false);
-  const state = mapPayoutStatus(payout.status, payout.paidAt);
+  const state = contractStatusState(payout.status, payout.paidAt);
+  const count = payout.bookingCount ?? payout.bookings.length;
   return (
     <Card>
       <CardContent className="p-3 space-y-2">
-        <button type="button" className="flex w-full items-center justify-between" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <button type="button" className="flex w-full items-center justify-between" onClick={() => { if (!open) onOpen?.(); setOpen((o) => !o); }} aria-expanded={open}>
           <span className="text-left">
             <span className="block text-lg font-bold">₹{payout.amount}</span>
             <span className="text-xs text-muted-foreground">
-              {payout.kind === "daily" ? displayText("Daily payout") : displayText("Instant payout")} · {displayText("{{count}} bookings", { count: payout.bookings.length })}
+              {payout.kind === "daily" ? displayText("Daily payout") : displayText("Instant payout")} · {displayText("{{count}} bookings", { count })}
             </span>
           </span>
-          <span className="flex items-center gap-1"><PayoutStatusBadge state={state} /><ChevronDown className={`h-4 w-4 transition ${open ? "rotate-180" : ""}`} /></span>
+          <span className="flex items-center gap-1"><PayoutStatusBadge state={state} label={payout.statusLabel} /><ChevronDown className={`h-4 w-4 transition ${open ? "rotate-180" : ""}`} /></span>
         </button>
         {state === "paid" && payout.reference && <p className="text-xs text-muted-foreground">{displayText("Reference No.")} {payout.reference}</p>}
         {(state === "failed" || state === "reversed") && payout.failureReason && <p className="text-xs text-destructive">{displayText("Reason:")} {payout.failureReason}</p>}
-        {!consolidatedMatches(payout) && <p className="text-xs text-warning">{displayText("Amounts are being checked by Didi Now")}</p>}
+        {payout.bookings.length > 0 && !consolidatedMatches(payout) && <p className="text-xs text-warning">{displayText("Amounts are being checked by Didi Now")}</p>}
         {open && (
           <ul className="space-y-1 border-t pt-2 text-xs">
             {payout.bookings.map((b) => (
