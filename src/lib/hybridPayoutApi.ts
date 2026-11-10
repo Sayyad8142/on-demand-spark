@@ -149,7 +149,7 @@ export function mapRpcError(err: { message?: string; code?: string }): HybridPay
   return new HybridPayoutError("network", "request failed");
 }
 
-export const clampLimit = (n: number | undefined) => Math.min(50, Math.max(1, Math.floor(Number(n) || 20)));
+export const clampLimit = (n: number | undefined) => (typeof n === "number" && Number.isFinite(n) ? Math.min(50, Math.max(1, Math.floor(n))) : 20);
 
 export function createHybridPayoutClient(rpc: RpcFn = defaultRpc, enabled: boolean = HYBRID_PAYOUT_UI_ENABLED) {
   const call = async <T>(name: string, args: Record<string, unknown> | undefined, parse: (raw: unknown) => T): Promise<T> => {

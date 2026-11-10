@@ -139,7 +139,7 @@ describe("hybrid payout section", () => {
     expect(screen.getByText("₹1350")).toBeTruthy();
     fireEvent.click(screen.getByText("Show more"));
     await screen.findByTestId("manual-payout");
-    fireEvent.click(screen.getByText("₹1350").closest("button")!);
+    fireEvent.click(screen.getAllByText("₹1350")[0].closest("button")!);
     await waitFor(() => expect(screen.getByText("₹500")).toBeTruthy());
   });
 
