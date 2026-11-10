@@ -150,7 +150,7 @@ begin
   if exists (select 1 from public.workers where user_id = r.requesting_auth_uid::text) then
     raise exception 'ACCOUNT_ALREADY_LINKED';
   end if;
-  if exists (select 1 from public.bookings b where b.worker_id = w.id and b.status in ('accepted','assigned','in_progress','started')) then
+  if exists (select 1 from public.bookings b where b.worker_id = w.id and coalesce(b.status,'') not in ('completed','cancelled')) then
     raise exception 'ACTIVE_BOOKING';
   end if;
   update public.workers set user_id = r.requesting_auth_uid::text, fcm_token = null, fcm_token_status = 'missing', is_available = false where id = w.id;
