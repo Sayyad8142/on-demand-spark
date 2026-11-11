@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { WORKER_BOOKING_COLUMNS } from "@/lib/workerBookingColumns";
 import { Database } from "@/integrations/supabase/types";
 import { ACTIVE_WORK_STATUSES } from "@/lib/workSafety";
+import { endedBookingIdFromRefetch, endedBookingIdFromUpdate, releaseNativeBookingLock } from "@/lib/bookingEndRelease";
 import { isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 
 // Customer completion code is never loaded by the Worker App.
@@ -21,6 +22,8 @@ export function useActiveJob(userId: string | undefined) {
   const [workerId, setWorkerId] = useState<string | null>(null);
   // True only once we really know whether there is an active job (used to defer updates).
   const [checked, setChecked] = useState(false);
+  // Last booking the SERVER confirmed as my active work (used only to release the phone's local alert lock).
+  const confirmedActiveIdRef = useRef<string | null>(null);
 
   // Resolve the worker's id from their user_id (or legacy id match)
   useEffect(() => {
@@ -95,6 +98,9 @@ export function useActiveJob(userId: string | undefined) {
 
       if (error) throw error;
 
+      releaseNativeBookingLock(endedBookingIdFromRefetch(confirmedActiveIdRef.current, data, true));
+      confirmedActiveIdRef.current = data?.id ?? null;
+
       console.log(
         "📦 Active job fetched:",
         data ? `Found booking ${data.id}, flat: ${data.flat_no}` : "No active job"
@@ -139,6 +145,13 @@ export function useActiveJob(userId: string | undefined) {
         (payload) => {
           const booking = payload.new as Booking;
           console.log("📡 Realtime booking update:", booking.id, "status:", booking.status);
+          const endedId = endedBookingIdFromUpdate(booking, workerId);
+          if (endedId) {
+            releaseNativeBookingLock(endedId);
+            if (confirmedActiveIdRef.current === endedId) confirmedActiveIdRef.current = null;
+          } else if (booking.worker_id === workerId) {
+            confirmedActiveIdRef.current = booking.id;
+          }
           if (booking.status === "assigned" && isBeforeScheduledDispatchWindow(booking)) {
             logScheduledOfferDecision(booking, "realtime", false);
             setActiveJob(null);
