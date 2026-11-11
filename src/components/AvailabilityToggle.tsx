@@ -56,8 +56,8 @@ export function AvailabilityToggle({
   const guide = useAvailabilityGuide({
     texts: HOME_AVAILABILITY_GUIDE,
     onResult: (r) => {
-      if (r === "fallback_english") toast({ title: displayText("Your language voice is not on this phone. Playing in English.") });
-      if (r === "unavailable") toast({ title: t("availability.voiceUnavailable", "Voice is not available on this phone.") });
+      if (r === "fallback_english") toast({ title: t("availability.voiceEnglishOnly") });
+      if (r === "unavailable") toast({ title: t("availability.voiceUnavailable") });
     },
   });
 
