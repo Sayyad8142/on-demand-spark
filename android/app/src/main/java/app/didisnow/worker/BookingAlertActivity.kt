@@ -107,7 +107,7 @@ class BookingAlertActivity : AppCompatActivity() {
             finish()
             return
         }
-        if (offerRecord != null && OfferQueue.isExpired(offerRecord)) {
+        if (offerRecord != null && (OfferQueue.isExpired(offerRecord) || OfferQueue.isRetired(applicationContext, offerRecord))) {
             Log.w("BookingAlert", "⏱️ Offer expired — not showing: $bookingId")
             OfferQueue.remove(applicationContext, bookingId, intent.getStringExtra("booking_request_id"))
             OfferQueue.cancelNotification(applicationContext, bookingId)
@@ -332,7 +332,7 @@ class BookingAlertActivity : AppCompatActivity() {
         super.onNewIntent(newIntent)
         val next = OfferQueue.offerFromIntent(newIntent) ?: return
         if (BookingOfferLifecycle.matches(ackBookingId, OfferQueue.bookingIdOf(next)) ||
-            OfferQueue.isExpired(next) || OfferQueue.isLocallyBusy(applicationContext) ||
+            OfferQueue.isExpired(next) || OfferQueue.isRetired(applicationContext, next) || OfferQueue.isLocallyBusy(applicationContext) ||
             OfferQueue.isTaken(applicationContext, OfferQueue.bookingIdOf(next))) return
         OfferQueue.enqueue(applicationContext, next)
         // singleTop may reuse this Activity when retireOffer launches the queue

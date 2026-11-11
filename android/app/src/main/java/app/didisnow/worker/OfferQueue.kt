@@ -35,6 +35,7 @@ object OfferQueue {
     private const val KEY_ACCEPTING_AT = "accepting_started_at"
     private const val KEY_ACCEPTED_ID = "accepted_booking_id"
     private const val KEY_ACCEPTED_AT = "accepted_at"
+    private const val KEY_RETIRED = "retired_offers_v1"
 
     /** How long one acceptance attempt may hold the single-flight claim. */
     private const val ACCEPT_CLAIM_TTL_MS = 20_000L
@@ -281,6 +282,7 @@ object OfferQueue {
     fun enqueue(ctx: Context, offer: JSONObject): Boolean {
         val key = keyOf(offer)
         val bookingId = bookingIdOf(offer)
+        if (isRetired(ctx, offer) || isExpired(offer)) return false
         if (isTaken(ctx, bookingId)) {
             Log.d(TAG, "🚫 offer not queued — booking already assigned elsewhere: $bookingId")
             cancelNotification(ctx, bookingId)
@@ -312,6 +314,9 @@ object OfferQueue {
             (!bookingId.isNullOrBlank() && bookingIdOf(it) == bookingId) ||
                 (!requestId.isNullOrBlank() && it.optString("booking_request_id") == requestId)
         }
+        val retired = readRetired(ctx)
+        items.filter { it !in kept }.forEach { retired.put(keyOf(it), System.currentTimeMillis()) }
+        prefs(ctx).edit().putString(KEY_RETIRED, retired.toString()).apply()
         if (kept.size != items.size) {
             write(ctx, kept)
             Log.d(TAG, "➖ removed offer booking_id=$bookingId remaining=${kept.size}")
@@ -321,6 +326,22 @@ object OfferQueue {
     @Synchronized
     fun find(ctx: Context, bookingId: String): JSONObject? =
         read(ctx).firstOrNull { bookingIdOf(it) == bookingId }
+
+    // Remember retired OFFER identities, not booking IDs: a later server offer
+    // with a different request id remains independent. Bounded replay cache.
+    private fun readRetired(ctx: Context): JSONObject {
+        val raw = try { JSONObject(prefs(ctx).getString(KEY_RETIRED, "{}") ?: "{}") }
+            catch (_: Exception) { JSONObject() }
+        val clean = JSONObject()
+        val now = System.currentTimeMillis()
+        raw.keys().forEach { key ->
+            if (now - raw.optLong(key) < TAKEN_TTL_MS) clean.put(key, raw.optLong(key))
+        }
+        return clean
+    }
+
+    @Synchronized
+    fun isRetired(ctx: Context, offer: JSONObject): Boolean = readRetired(ctx).has(keyOf(offer))
 
     /** The offer currently displayed (kept in the queue for crash recovery). */
     @Synchronized

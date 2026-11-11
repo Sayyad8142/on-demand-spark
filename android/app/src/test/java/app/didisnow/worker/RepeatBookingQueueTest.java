@@ -96,4 +96,23 @@ public class RepeatBookingQueueTest {
         queue.releaseEndedBooking(ctx, "second");
         assertFalse(queue.isAcceptInFlight(ctx, "second"));
     }
+
+    @Test public void retiredDuplicateCannotReopenAfterDismissal() {
+        JSONObject first = offer("first", "request-1", 60);
+        assertTrue(queue.enqueue(ctx, first));
+        queue.remove(ctx, "first", "request-1");
+        assertTrue(queue.isRetired(ctx, first));
+        assertFalse(queue.enqueue(ctx, offer("first", "request-1", 60)));
+    }
+
+    @Test public void differentServerOfferIdentityRemainsIndependent() {
+        queue.enqueue(ctx, offer("first", "request-1", 60));
+        queue.remove(ctx, "first", "request-1");
+        assertTrue(queue.enqueue(ctx, offer("first", "request-2", 60)));
+    }
+
+    @Test public void expiredArrivalCannotEnterQueue() {
+        assertFalse(queue.enqueue(ctx, offer("expired", "request-expired", -1)));
+        assertFalse(queue.contains(ctx, "expired"));
+    }
 }

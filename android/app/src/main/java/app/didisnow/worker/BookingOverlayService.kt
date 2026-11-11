@@ -249,7 +249,7 @@ class BookingOverlayService : Service() {
 
                     // Never show an offer whose original backend TTL already ran out.
                     val incomingOffer = OfferQueue.offerFromIntent(intent)
-                    if (incomingOffer != null && OfferQueue.isExpired(incomingOffer)) {
+                    if (incomingOffer != null && (OfferQueue.isExpired(incomingOffer) || OfferQueue.isRetired(applicationContext, incomingOffer))) {
                         android.util.Log.w("BookingOverlay", "⏱️ Offer already expired on arrival: $bookingId")
                         OfferQueue.remove(applicationContext, bookingId, currentBookingRequestId)
                         OfferQueue.cancelNotification(applicationContext, bookingId)
