@@ -3,6 +3,16 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+// Release signing comes ONLY from outside the repo: android/keystore.properties (git-ignored)
+// or environment variables DIDI_KEYSTORE_FILE / DIDI_KEYSTORE_PASSWORD / DIDI_KEY_ALIAS / DIDI_KEY_PASSWORD.
+// Without them the release build is left unsigned (never signed with a debug key).
+def keystoreProps = new Properties()
+def keystorePropsFile = rootProject.file("keystore.properties")
+if (keystorePropsFile.exists()) { keystorePropsFile.withInputStream { keystoreProps.load(it) } }
+def signingValue = { String prop, String env -> keystoreProps.getProperty(prop) ?: System.getenv(env) }
+def releaseStoreFile = signingValue("storeFile", "DIDI_KEYSTORE_FILE")
+def hasReleaseSigning = releaseStoreFile && file(releaseStoreFile).exists()
+
 android {
     namespace "app.didisnow.worker"
     compileSdk 36
@@ -32,8 +42,20 @@ android {
         }
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword signingValue("storePassword", "DIDI_KEYSTORE_PASSWORD")
+                keyAlias signingValue("keyAlias", "DIDI_KEY_ALIAS")
+                keyPassword signingValue("keyPassword", "DIDI_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (hasReleaseSigning) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

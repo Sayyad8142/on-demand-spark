@@ -14,7 +14,10 @@
     "android:build:win": "bun run build && npx cap sync android && bun run android:verify-permissions && cd android && gradlew.bat assembleRelease",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "android:release-check": "bash scripts/android-release-check.sh",
+    "android:aab": "bash scripts/android-build-aab.sh",
+    "ota:check-native": "bash scripts/check-ota-rules.sh"
   },
   "dependencies": {
     "@capacitor-community/text-to-speech": "6.1.0",
