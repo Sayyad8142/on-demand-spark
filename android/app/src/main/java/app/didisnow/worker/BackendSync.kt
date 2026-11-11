@@ -617,7 +617,9 @@ object BackendSync {
             return false
         }
         val body = JSONObject().apply {
-            if (jwt == null) put("worker_id", workerId)
+            // Live receiver still requires worker_id (returns 400 without it); always send our own id
+            // until the staged identity guard is deployed. The login JWT is still sent when fresh.
+            put("worker_id", workerId)
             put("auth_mode", if (jwt != null) "session" else "legacy_worker_id")
             put("app_state", appState)
             put("battery_level", batteryLevel(ctx))

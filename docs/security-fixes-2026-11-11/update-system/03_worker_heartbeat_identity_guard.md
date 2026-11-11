@@ -32,3 +32,8 @@ Set `HEARTBEAT_ID_MODE=observe` (or redeploy previous function version). App nee
 ## Dispatch impact
 Stage 1–2: none. Stage 3 could stop heartbeats from phones whose login has expired in the
 background, which may change reachability scores → needs separate dispatch approval.
+
+## 2026-11-11 correction
+The DEPLOYED receiver differs from the repo copy: it returns 400 `worker_id required` when the body
+has no worker_id. Apps therefore send their own worker_id again (plus the login JWT). Removing
+worker_id from apps must wait until the guarded receiver is deployed.

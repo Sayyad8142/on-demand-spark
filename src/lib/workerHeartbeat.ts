@@ -89,10 +89,13 @@ export async function sendWorkerHeartbeat(
       loadInstalledVersion(),
     ]);
 
-    // Identity comes ONLY from the signed-in session (supabase-js sends the login JWT).
-    // No worker_id is sent, so this call can never name or change another worker.
+    // The login JWT is always sent (supabase-js). The live receiver still requires
+    // worker_id and answers 400 without it, so we send the signed-in worker's OWN id
+    // until the staged identity guard (docs/security-fixes-2026-11-11/update-system/03)
+    // is deployed. Dropping it early made every web check-in fail.
     const { data, error } = await supabase.functions.invoke("worker-heartbeat", {
       body: {
+        worker_id: workerIdOrUserId,
         fcm_token: fcmToken ?? undefined,
         app_state: reason,
         app_version: installed.version,
