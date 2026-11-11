@@ -1,6 +1,7 @@
-import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
+import { displayText, useWorkerLanguage } from "@/i18n/display";
 import { Card } from "@/components/ui/card";
-import { Trophy, Star } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Info, Star, Trophy } from "lucide-react";
 
 interface HomePerformanceCardProps {
   priorityScore?: number | null;
@@ -8,62 +9,63 @@ interface HomePerformanceCardProps {
   totalRatings?: number | null;
 }
 
-function scoreColor(score: number) {
-  if (score > 70) return { text: "text-emerald-700", iconBg: "bg-emerald-500", bar: "bg-emerald-500", track: "bg-emerald-100" };
-  if (score >= 40) return { text: "text-amber-700", iconBg: "bg-amber-500", bar: "bg-amber-500", track: "bg-amber-100" };
-  return { text: "text-red-700", iconBg: "bg-red-500", bar: "bg-red-500", track: "bg-red-100" };
-}
-
-function ratingColor(r: number) {
-  if (r >= 4.5) return { text: "text-emerald-700", iconBg: "bg-emerald-500", bar: "bg-emerald-500", track: "bg-emerald-100" };
-  if (r >= 4.0) return { text: "text-amber-700", iconBg: "bg-amber-500", bar: "bg-amber-500", track: "bg-amber-100" };
-  return { text: "text-red-700", iconBg: "bg-red-500", bar: "bg-red-500", track: "bg-red-100" };
+function InfoTip({ label, text }: { label: string; text: string }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button type="button" aria-label={label} className="-m-2 p-2 text-muted-foreground">
+          <Info className="h-4 w-4" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 text-sm leading-relaxed">{text}</PopoverContent>
+    </Popover>
+  );
 }
 
 export default function HomePerformanceCard({ priorityScore, rating, totalRatings }: HomePerformanceCardProps) {
   useWorkerLanguage();
+  // Values are shown exactly as before: score clamped 0–100, rating 5.0 for new workers.
   const score = Math.max(0, Math.min(100, Math.round(priorityScore ?? 0)));
   const hasRatings = (totalRatings ?? 0) > 0 && (rating ?? 0) > 0;
   const rate = hasRatings ? Number(rating) : 5;
-  const sc = scoreColor(score);
-  const rc = ratingColor(rate);
-  const ratePct = Math.max(0, Math.min(100, (rate / 5) * 100));
 
   return (
-    <Card className="px-3 py-2 rounded-xl">
-      <div className="flex items-center divide-x divide-border">
-        <div className="flex-1 flex items-center gap-2 pr-3">
-          <div className={`w-6 h-6 rounded-full ${sc.iconBg} flex items-center justify-center shrink-0`}>
-            <Trophy className="w-3 h-3 text-white" />
+    <div className="grid grid-cols-2 gap-2">
+      <Card className="p-3 rounded-2xl">
+        <div className="flex items-center justify-between gap-1">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Trophy className="h-4 w-4 text-primary" />
+            </span>
+            <span className="text-xs font-semibold text-muted-foreground leading-tight">{displayText("Your Work Priority")}</span>
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-baseline justify-between gap-1">
-              <p className="text-[11px] font-semibold text-muted-foreground">{displayText("Priority")}</p>
-              <p className={`text-xs font-bold ${sc.text}`}>
-                {score}<span className="text-muted-foreground font-medium">/100</span>
-              </p>
-            </div>
-            <div className={`mt-0.5 h-[3px] w-full rounded-full ${sc.track} overflow-hidden`}>
-              <div className={`h-full ${sc.bar} rounded-full transition-all`} style={{ width: `${score}%` }} />
-            </div>
-          </div>
+          <InfoTip label={displayText("About work priority")} text={displayText("Score out of 100. Higher priority means you receive booking offers before others.")} />
         </div>
+        <p className="mt-2 text-2xl font-bold text-foreground">
+          {score}<span className="text-sm font-medium text-muted-foreground">/100</span>
+        </p>
+        <div className="mt-1 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+          <div className="h-full rounded-full bg-primary" style={{ width: `${score}%` }} />
+        </div>
+      </Card>
 
-        <div className="flex-1 flex items-center gap-2 pl-3">
-          <div className={`w-6 h-6 rounded-full ${rc.iconBg} flex items-center justify-center shrink-0`}>
-            <Star className="w-3 h-3 text-white fill-current" />
+      <Card className="p-3 rounded-2xl">
+        <div className="flex items-center justify-between gap-1">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Star className="h-4 w-4 text-primary fill-current" />
+            </span>
+            <span className="text-xs font-semibold text-muted-foreground leading-tight">{displayText("Your Rating")}</span>
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-baseline justify-between gap-1">
-              <p className="text-[11px] font-semibold text-muted-foreground">{displayText("Rating")}</p>
-              <p className={`text-xs font-bold ${rc.text}`}>{rate.toFixed(1)} ★</p>
-            </div>
-            <div className={`mt-0.5 h-[3px] w-full rounded-full ${rc.track} overflow-hidden`}>
-              <div className={`h-full ${rc.bar} rounded-full transition-all`} style={{ width: `${ratePct}%` }} />
-            </div>
-          </div>
+          <InfoTip label={displayText("About your rating")} text={displayText("Average of the stars customers gave you after bookings. New workers start at 5.0.")} />
         </div>
-      </div>
-    </Card>
+        <p className="mt-2 text-2xl font-bold text-foreground">
+          {rate.toFixed(1)} <span className="text-primary">★</span>
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {hasRatings ? displayText("{{count}} ratings", { count: totalRatings ?? 0 }) : displayText("No ratings yet")}
+        </p>
+      </Card>
+    </div>
   );
 }

@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import i18n from "@/i18n/config";
-import { createGuidePlayer, defaultGuideEngines, type GuideResult, type GuideState, type SpeechEngine } from "@/lib/availabilityVoice";
+import { createGuidePlayer, defaultGuideEngines, type GuideLang, type GuideResult, type GuideState, type SpeechEngine } from "@/lib/availabilityVoice";
 
 /** One spoken-help player per screen. Stops when the screen closes or the app goes to the background. Never plays by itself. */
-export function useAvailabilityGuide(opts: { engines?: SpeechEngine[]; onResult?: (r: GuideResult) => void } = {}) {
+export function useAvailabilityGuide(opts: { engines?: SpeechEngine[]; onResult?: (r: GuideResult) => void; texts?: Record<GuideLang, string> } = {}) {
   const [state, setState] = useState<GuideState>("idle");
   const playerRef = useRef<ReturnType<typeof createGuidePlayer> | null>(null);
   const onResultRef = useRef(opts.onResult);
   onResultRef.current = opts.onResult;
-  if (!playerRef.current) playerRef.current = createGuidePlayer(opts.engines ?? defaultGuideEngines(), setState);
+  if (!playerRef.current) playerRef.current = createGuidePlayer(opts.engines ?? defaultGuideEngines(), setState, opts.texts);
 
   useEffect(() => {
     const player = playerRef.current!;

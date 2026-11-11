@@ -15,6 +15,7 @@ import { useStartupHealthAudit } from "@/hooks/useStartupHealthAudit";
 import { WorkerHealthBadge } from "@/components/WorkerHealthBadge";
 import HomePerformanceCard from "@/components/HomePerformanceCard";
 import WorkerLeaderboardCard from "@/components/WorkerLeaderboardCard";
+import HomeTodayCard from "@/components/HomeTodayCard";
 
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
@@ -285,6 +286,7 @@ export default function Home() {
               }}
               hasAvailabilitySlots={onboarding.hasAvailabilitySlots}
               onNoSlots={() => navigate('/availability')}
+              bookingReady={payoutReady}
             />
           </div>
         </div>
@@ -292,7 +294,7 @@ export default function Home() {
 
 
       {/* Main Content with top padding for fixed header */}
-      <div className={`p-4 space-y-4 pb-32 ${isGuestMode ? "pt-4" : activeJob ? "pt-[max(env(safe-area-inset-top,0px),24px)]" : "pt-28"}`}>
+      <div className={`p-4 space-y-4 pb-32 ${isGuestMode ? "pt-4" : activeJob ? "pt-[max(env(safe-area-inset-top,0px),24px)]" : "pt-32"}`}>
 
       {/* Worker Health badge — unified status from all signals */}
       {!isGuestMode && worker && workerHealth.status !== "ready" && (
@@ -320,6 +322,8 @@ export default function Home() {
           totalRatings={(worker as any)?.total_ratings}
         />
       )}
+
+      {!isGuestMode && worker && !activeJob && <HomeTodayCard workerId={worker.id} />}
 
       <HomeTrainingVideoSlot isGuest={isGuestMode} hasActiveJob={!!activeJob} hasWorker={!!worker} />
 
