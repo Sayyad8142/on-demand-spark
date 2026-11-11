@@ -66,5 +66,6 @@
 - [ ] Complete real FCM sender + cold-start/session binding + device checks — blocked: sender approval/connection and new Android build/device; push stays OFF.
 
 ## Test notification sender — audit and preparation only (11 Nov)
-- [ ] Prepare isolated sender rules and sender-specific offline tests after verified backup.
-- [ ] Report security protections, delivery evidence and Android blockers; do not deploy or enable sending.
+- [x] Prepare isolated sender core under docs and 25 sender-specific offline tests after checksum-verified backup; all 467 tests pass.
+- [x] Report security protections, delivery evidence and Android blockers in sender/AUDIT.md; no runtime/native changes, deployment or sending.
+- [ ] Implement approved sender/journal adapters and native session/cold-start/dedupe/preemption blockers — awaiting explicit approval; Android tests need signed build and device; sending stays OFF.

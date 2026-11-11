@@ -1,0 +1,2 @@
+# Sender preparation
+- Keep sender logic here as offline dependency-injected preparation, with no runtime entry point, credentials or production endpoint calls until approved. Why: durable deduplication, verified identity and native session safety must be reviewed before delivery is enabled.
