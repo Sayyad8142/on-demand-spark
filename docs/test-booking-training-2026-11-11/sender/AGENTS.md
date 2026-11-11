@@ -1,2 +1,2 @@
-# Sender preparation
-- Keep sender logic here as offline dependency-injected preparation, with no runtime entry point, credentials or production endpoint calls until approved. Why: durable deduplication, verified identity and native session safety must be reviewed before delivery is enabled.
+# Sender staging
+- Keep the practice sender staged here (core, adapters, entry, SQL) and never under `supabase/functions/` or applied to the database until the owner approves deployment; it must refuse unless `PRACTICE_PUSH_SENDER=on`. Why: saving a function file auto-deploys it, and delivery must pass device tests first.
