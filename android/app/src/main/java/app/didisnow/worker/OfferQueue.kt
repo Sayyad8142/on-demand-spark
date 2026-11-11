@@ -398,6 +398,26 @@ object OfferQueue {
         prefs(ctx).edit().remove(KEY_BUSY_UNTIL).apply()
     }
 
+    /** Called only for server BOOKING_CANCELLED / BOOKING_REASSIGNED messages.
+     * An old cancellation must never release a newer accepted booking's lock.
+     */
+    @Synchronized
+    fun releaseEndedBooking(ctx: Context, bookingId: String?) {
+        if (bookingId.isNullOrBlank()) return
+        val store = prefs(ctx)
+        if (BookingOfferLifecycle.matches(store.getString(KEY_ACCEPTED_ID, null), bookingId)) {
+            store.edit().remove(KEY_BUSY_UNTIL).remove(KEY_ACCEPTED_ID).remove(KEY_ACCEPTED_AT).apply()
+            Log.d(TAG, "🔓 Server ended accepted booking; local suppression released booking_id=$bookingId")
+        }
+        endAcceptance(ctx, bookingId)
+        remove(ctx, bookingId)
+        val activeKey = store.getString(KEY_ACTIVE, null)
+        if (activeKey == "bkg:$bookingId" || activeKey != null && read(ctx).none { keyOf(it) == activeKey }) {
+            store.edit().remove(KEY_ACTIVE).apply()
+        }
+        cancelNotification(ctx, bookingId)
+    }
+
     fun isLocallyBusy(ctx: Context): Boolean =
         prefs(ctx).getLong(KEY_BUSY_UNTIL, 0L) > System.currentTimeMillis()
 

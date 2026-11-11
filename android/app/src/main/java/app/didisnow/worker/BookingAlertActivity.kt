@@ -45,6 +45,20 @@ class BookingAlertActivity : AppCompatActivity() {
     private var popupAcked = false
     private var offerRetired = false
 
+    private val endedReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (BookingOfferLifecycle.matches(ackBookingId, intent?.getStringExtra("booking_id"))) {
+                countdownHandler?.let { handler ->
+                    if (::countdownRunnable.isInitialized) handler.removeCallbacks(countdownRunnable)
+                }
+                stopAlertSound()
+                stopVibration()
+                retireOffer(accepted = false)
+                finish()
+            }
+        }
+    }
+
     /** Single-flight guard: only ONE acceptance attempt per booking. */
     @Volatile
     private var acceptInFlight = false
@@ -65,6 +79,8 @@ class BookingAlertActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
+            .registerReceiver(endedReceiver, android.content.IntentFilter("DIDI_BOOKING_ENDED"))
 
         val bookingId = intent.getStringExtra("booking_id") ?: ""
         val bookingType = intent.getStringExtra("booking_type") ?: "instant"
@@ -421,10 +437,11 @@ class BookingAlertActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).unregisterReceiver(endedReceiver)
         // Dismissed/closed legitimately — still drain the queue.
         retireOffer(accepted = false)
         statusCheckRunnable?.let { statusCheckHandler?.removeCallbacks(it) }
-        countdownHandler?.removeCallbacks(countdownRunnable)
+        if (::countdownRunnable.isInitialized) countdownHandler?.removeCallbacks(countdownRunnable)
         stopAlertSound()
 
         stopVibration()

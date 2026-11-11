@@ -69,6 +69,21 @@ class BookingOverlayService : Service() {
     
     // Track the startId so we can call stopSelfResult() with it
     private var startIdForStop: Int = 0
+
+    private val endedReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val bookingId = intent?.getStringExtra("booking_id")
+            if (BookingOfferLifecycle.matches(currentBookingId, bookingId)) {
+                finishAndStop("server_booking_ended")
+            }
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        LocalBroadcastManager.getInstance(this).registerReceiver(endedReceiver,
+            android.content.IntentFilter("DIDI_BOOKING_ENDED"))
+    }
     
     // Track ALL windows we add, so we can remove them all in cleanup
     private val addedWindows = mutableListOf<View>()
@@ -156,7 +171,10 @@ class BookingOverlayService : Service() {
             android.util.Log.w("BookingOverlay", "⚠️ Overlay already showing; incoming offer left in FIFO queue")
             return START_NOT_STICKY
         }
-        OverlaySingleton.isShowing = true
+        // Idle is not a visible alert. A shutdown instance may receive a new
+        // start before onDestroy: discard old per-offer state before reuse.
+        if (isShuttingDown) resetForNextOffer()
+        OverlaySingleton.isShowing = mode == "show"
         
         try {
             // No foreground service needed for overlay
@@ -1382,6 +1400,9 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
         windowManager = null
         currentBookingId = null
         currentBookingRequestId = null
+        currentAckToken = null
+        currentAccessToken = null
+        offerDeadline = 0L
         offerSecondsLeft = OfferTimer.DEFAULT_TTL_SECONDS
         addedWindows.clear()
     }
@@ -1511,6 +1532,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
 
     override fun onDestroy() {
         android.util.Log.d("BookingOverlay", "🧹 onDestroy called")
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(endedReceiver)
         
         // Reset singleton FIRST in case of crash or forced destroy
         OverlaySingleton.isShowing = false

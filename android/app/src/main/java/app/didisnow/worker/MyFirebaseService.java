@@ -109,6 +109,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
         String bookingId = data.get("bookingId");
         if (bookingId == null || bookingId.isEmpty()) bookingId = data.get("booking_id");
         Log.w(TAG, "🚨 BOOKING_CANCELLED received for booking_id=" + bookingId);
+        releaseEndedBooking(bookingId);
         showCancellationNotification(bookingId);
         broadcastCancellationToWebView(bookingId);
         launchCancellationActivity(bookingId);
@@ -119,6 +120,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
         String bookingId = data.get("bookingId");
         if (bookingId == null || bookingId.isEmpty()) bookingId = data.get("booking_id");
         Log.w(TAG, "[BOOKING_REASSIGNED_RECEIVED] booking_id=" + bookingId);
+        releaseEndedBooking(bookingId);
         // Not a new offer, not a cancellation — silent local cleanup only.
         // No notification, no overlay, no sound. Persist + broadcast so the
         // WebView (if alive) can clear active-job state immediately, and pick
@@ -566,6 +568,14 @@ public class MyFirebaseService extends FirebaseMessagingService {
     } catch (Exception e) {
       Log.e(TAG, "❌ Failed to broadcast cancellation", e);
     }
+  }
+
+  private void releaseEndedBooking(String bookingId) {
+    if (bookingId == null || bookingId.isEmpty()) return;
+    OfferQueue.INSTANCE.releaseEndedBooking(getApplicationContext(), bookingId);
+    Intent ended = new Intent("DIDI_BOOKING_ENDED");
+    ended.putExtra("booking_id", bookingId);
+    LocalBroadcastManager.getInstance(this).sendBroadcast(ended);
   }
 
   private void launchCancellationActivity(String bookingId) {
