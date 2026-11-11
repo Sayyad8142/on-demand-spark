@@ -660,6 +660,13 @@ public class MyFirebaseService extends FirebaseMessagingService {
       .setAutoCancel(true)
       .setContentIntent(pendingIntent);
 
+    // An offer notification disappears when the server offer window closes,
+    // so an expired booking is never left on screen as actionable.
+    if (offerSource != null) {
+      long left = OfferTimer.INSTANCE.remainingSecondsFrom(offerSource);
+      if (left > 0) builder.setTimeoutAfter(left * 1000L);
+    }
+
     NotificationManager notificationManager = getSystemService(NotificationManager.class);
     if (notificationManager != null) {
       try {

@@ -9,16 +9,14 @@ import {
   dismissAlert,
   invalidateOffer,
   markAlertOpened,
-  markAlertRendered,
   markAcceptedByMe,
   isOwnAcceptance,
   pruneShownBookings,
 } from "@/services/bookingAlertCoordinator";
-import { isVillaCommunity } from "@/lib/communityTypes";
 import { classifyAcceptResult, canRetryAccept } from "@/lib/acceptOutcome";
 import { claimDeviceAcceptance, releaseDeviceAcceptance } from "@/lib/deviceAcceptLock";
 import { postBookingAlertFallback } from "@/lib/bookingAlertFallback";
-import { formatVillaLabel } from "@/lib/address";
+import { buildNativeOverlayPayload, isAlertExpired } from "@/lib/nativeOverlayPayload";
 
 /**
  * Unified booking alert hook that:
@@ -46,52 +44,35 @@ export function useUnifiedBookingAlerts(
   useEffect(() => {
     const unsub = onNewAlert((alert) => {
       console.log("🔔 [UnifiedAlerts] New alert from coordinator:", alert.bookingId);
+      // Never surface an offer whose server window already closed.
+      if (isAlertExpired(alert)) {
+        console.log("⏱️ [UnifiedAlerts] Offer already expired, not shown:", alert.bookingId);
+        return;
+      }
       setPending(alert);
       markAlertOpened(alert.bookingId, alert.bookingRequestId);
 
-      // Trigger native Android overlay if available. The native pop-up sends
-      // its own popup_shown ACK once it renders. If it cannot open (call
-      // rejected, plugin missing), the in-app alert renders here and a backup
-      // notification is posted so the worker still hears the offer.
-      const showInApp = () => markAlertRendered(alert.bookingId, alert.bookingRequestId);
+      // Trigger the native Android pop-up. The native pop-up sends its own
+      // popup_shown ACK only once it is really on screen. Home has no in-app
+      // offer card, so this path must never claim popup_shown itself; when the
+      // pop-up cannot open, a backup notification is posted instead.
       const plugin = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android"
         ? (window as unknown as { Capacitor?: { Plugins?: { OverlayPlugin?: NativeOverlayTrigger } } })
             .Capacitor?.Plugins?.OverlayPlugin ?? null
         : null;
-      if (plugin?.showBookingOverlay) {
-        const bookingJson = JSON.stringify({
-          id: alert.bookingId,
-          booking_request_id: alert.bookingRequestId,
-          cust_name: alert.custName,
-          community: alert.community,
-          service_type: alert.serviceType,
-          flat_no: alert.flatNo,
-          // Villa-aware display info (presentation only)
-          is_villa: isVillaCommunity(alert.community),
-          unit_label: isVillaCommunity(alert.community)
-            ? formatVillaLabel(alert.flatNo)
-            : `Flat #${alert.flatNo}`,
-          price_inr: alert.priceInr,
-          booking_type: alert.bookingType,
-          scheduled_date: alert.scheduledDate,
-          scheduled_time: alert.scheduledTime,
-          prealert_sent: alert.prealertSent === true,
-        });
+      const bookingJson = buildNativeOverlayPayload(alert);
+      if (plugin?.showBookingOverlay && bookingJson) {
         console.log("🚀 Triggering native overlay from coordinator");
         Promise.resolve()
           .then(() => plugin.showBookingOverlay({ booking: bookingJson }))
           .catch((err: unknown) => {
             console.error("❌ Native overlay trigger failed:", err instanceof Error ? err.message : err);
-            showInApp();
             void postBookingAlertFallback(alert);
           });
-      } else {
-        showInApp();
       }
 
       toast({ title: "New booking available" });
     });
-
 
     return unsub;
   }, []);

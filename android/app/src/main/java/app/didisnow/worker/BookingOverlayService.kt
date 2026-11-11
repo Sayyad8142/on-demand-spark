@@ -331,6 +331,20 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                     // Store booking ID for status polling
                     currentBookingId = bookingId
                     
+                    // No "display over other apps" permission (optional by policy):
+                    // open the full-screen booking screen instead of a silent toast.
+                    // Android allows this while the app is open; in the background
+                    // the high-priority booking notification remains the path.
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+                        !android.provider.Settings.canDrawOverlays(this)) {
+                        android.util.Log.w("BookingOverlay", "🚫 No overlay permission — opening booking screen for $bookingId")
+                        BackendSync.ackFailureAsync(applicationContext, bookingId, "overlay_blocked", currentBookingRequestId, currentAckToken)
+                        OverlaySingleton.isShowing = false
+                        fallbackToActivity(intent)
+                        stopSelf()
+                        return START_NOT_STICKY
+                    }
+
                     try {
                         showOverlay(bookingId, customer, community, serviceType, flatNo, price, buildingName)
                     } catch (e: Exception) {

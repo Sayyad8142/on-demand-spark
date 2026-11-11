@@ -33,10 +33,15 @@
                     android:textColor="#1A1A1A"
                     android:layout_alignParentStart="true"
                     android:layout_centerVertical="true"
+                    android:layout_toStartOf="@+id/countdownBox"
+                    android:layout_marginEnd="12dp"
+                    android:maxLines="2"
+                    android:ellipsize="end"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content" />
 
                 <RelativeLayout
+                    android:id="@+id/countdownBox"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
                     android:layout_width="80dp"
@@ -56,12 +61,17 @@
                         android:id="@+id/countdown"
                         android:text="28s"
                         android:textSize="20sp"
+                        android:maxLines="1"
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="12sp"
+                        android:autoSizeMaxTextSize="20sp"
+                        android:padding="10dp"
                         android:textStyle="bold"
                         android:textColor="#22C55E"
                         android:gravity="center"
                         android:layout_centerInParent="true"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
                 </RelativeLayout>
             </RelativeLayout>
 
