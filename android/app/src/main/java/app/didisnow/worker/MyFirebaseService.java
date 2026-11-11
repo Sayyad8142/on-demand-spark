@@ -65,12 +65,9 @@ public class MyFirebaseService extends FirebaseMessagingService {
     }, "fcm-recv-ping").start();
 
     
-    // Log the FULL data payload for debugging
+    // Never log signed tokens or private booking payloads.
     Map<String, String> data = message.getData();
-    Log.d(TAG, "📦 FULL DATA PAYLOAD:");
-    for (Map.Entry<String, String> entry : data.entrySet()) {
-      Log.d(TAG, "   " + entry.getKey() + " = " + entry.getValue());
-    }
+    Log.d(TAG, "Payload keys: " + data.keySet());
     
     if (message.getNotification() != null) {
       Log.d(TAG, "📬 Notification payload present: " + message.getNotification().getTitle() + " - " + message.getNotification().getBody());
@@ -315,12 +312,13 @@ public class MyFirebaseService extends FirebaseMessagingService {
           Log.e(TAG, "OfferQueue enqueue failed", e);
         }
 
-        showBookingNotification(bookingId, bookingType, serviceIntent);
-
         if (alreadyQueued) {
           Log.d(TAG, "↩️ Duplicate BOOKING_ALERT for " + bookingId + " — already queued, no second popup");
           return;
         }
+
+        showBookingNotification(bookingId, bookingType, serviceIntent);
+        if (OfferTimer.INSTANCE.remainingSecondsFrom(serviceIntent) <= 0) return;
 
         // Check overlay permission
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -435,6 +433,10 @@ public class MyFirebaseService extends FirebaseMessagingService {
                                             long expiresAtSec, long sentAtSec, int ttlSeconds,
                                             String buildingName) {
     Log.d(TAG, "🚀 Launching BookingAlertActivity as fallback for " + bookingType + " booking");
+    if (!MainActivity.canOpenBookingActivity(this)) {
+      Log.d(TAG, "Background/locked: notification tap opens the booking alert");
+      return;
+    }
 
     try {
       Intent activityIntent = new Intent(this, BookingAlertActivity.class);
@@ -520,6 +522,8 @@ public class MyFirebaseService extends FirebaseMessagingService {
   }
   
   private void createNotificationChannel() {
+    BookingNotifications.ensureChannel(this);
+    /* Channel settings are centralized; existing worker choices are preserved.
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       CharSequence name = "Booking Alerts";
       String description = "Urgent booking notifications";
