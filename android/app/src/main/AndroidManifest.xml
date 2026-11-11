@@ -48,6 +48,11 @@
 
         </activity>
 
+        <!-- Isolated practice UI: no real booking actions or full-screen intents. -->
+        <activity android:name=".PracticeAlertActivity" android:exported="false"
+            android:excludeFromRecents="true" android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+        <service android:name=".PracticeAlertService" android:exported="false" />
+
         <!-- Booking Alert Activity (Full-screen booking alerts) -->
         <activity
             android:name=".BookingAlertActivity"

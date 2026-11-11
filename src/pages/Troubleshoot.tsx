@@ -15,7 +15,7 @@ import { Capacitor } from '@capacitor/core';
 const VAPID_PUBLIC = import.meta.env.VITE_VAPID_PUBLIC_KEY as string;
 
 
-const TEST_BOOKING_TOOL_ENABLED = import.meta.env.DEV;
+
 
 export default function Troubleshoot() {
   useWorkerLanguage();
@@ -24,7 +24,6 @@ export default function Troubleshoot() {
   const { worker } = useWorkerProfile(user?.id);
   const { toast } = useToast();
   const [enabling, setEnabling] = useState(false);
-  const [testing, setTesting] = useState(false);
   const [tokenStatus, setTokenStatus] = useState<{saved: boolean, preview?: string} | null>(null);
 
   // Check if JWT is saved (Android only)
@@ -109,61 +108,6 @@ export default function Troubleshoot() {
       });
     } finally {
       setEnabling(false);
-    }
-  };
-
-  const createTestBooking = async () => {
-    // Safety: creating bookings from the Worker App is a developer-only tool.
-    // Release builds talk to the live database, so this must never run there.
-    if (!TEST_BOOKING_TOOL_ENABLED) return;
-    if (!user || !worker) {
-      toast({
-        title: displayText("Error"),
-        description: displayText("Worker profile not found"),
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      setTesting(true);
-
-      // Get first service type from worker
-      const serviceType = worker.service_types?.[0] || 'maid';
-      const community = worker.community || 'prestige-high-fields';
-
-      const { data, error } = await supabase
-        .from('bookings')
-        .insert({
-          user_id: user.id,
-          status: 'pending',
-          service_type: serviceType,
-          booking_type: 'instant',
-          community: community,
-          flat_no: 'Test-101',
-          cust_name: 'Test Customer',
-          cust_phone: '9999999999',
-          price_inr: 500,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      console.log('✅ Test booking created:', data?.id);
-      toast({
-        title: displayText("Test Booking Created"),
-        description: displayText("Modal should appear within ~1 second if you're online. Check for Web Push notification if tab is unfocused.")
-      });
-    } catch (error: any) {
-      console.error('❌ Failed to create test booking:', error);
-      toast({
-        title: displayText("Error"),
-        description: error.message || "Failed to create test booking",
-        variant: "destructive"
-      });
-    } finally {
-      setTesting(false);
     }
   };
 
@@ -332,38 +276,6 @@ export default function Troubleshoot() {
             </div>
           </div>
         </Card>
-
-        {/* Test Booking — developer builds only (would create a real booking) */}
-        {TEST_BOOKING_TOOL_ENABLED && (
-        <Card className="p-6 bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900 flex items-center justify-center flex-shrink-0">
-              <TestTube className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold mb-1 text-orange-900 dark:text-orange-100">{displayText("Test Booking Alert")}</h3>
-              <p className="text-sm text-orange-700 dark:text-orange-300 mb-3">
-                {displayText("Create a test booking to verify notification system works")}
-              </p>
-              <Button 
-                onClick={createTestBooking} 
-                disabled={testing || !worker}
-                className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-              >
-                {testing ? displayText("Creating...") : displayText("Create Test Booking")}
-              </Button>
-              <div className="mt-3 p-3 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                <p className="text-xs font-medium mb-2 text-orange-900 dark:text-orange-100">{displayText("What to verify:")}</p>
-                <ul className="text-xs text-orange-700 dark:text-orange-300 space-y-1">
-                  <li>{displayText("✓ Modal appears within ~1 second when you're Online")}</li>
-                  <li>{displayText("✓ Web Push notification appears if tab is unfocused")}</li>
-                  <li>{displayText("✓ Sound plays (if enabled)")}</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </Card>
-        )}
 
         {/* Web Push Notifications */}
         <Card className="p-6 bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
