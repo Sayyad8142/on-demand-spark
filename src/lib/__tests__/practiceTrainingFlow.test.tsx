@@ -7,7 +7,10 @@ vi.mock('@/hooks/usePracticeSafety', () => ({ usePracticeSafety: () => safety })
 vi.mock('@/i18n/practice', () => ({ practiceText: (key: string) => key }));
 import TestBooking from '@/pages/TestBooking';
 describe('practice screen flow', () => {
-  beforeEach(() => { safety.safe = true; safety.checking = false; safety.refresh.mockResolvedValue(true); });
+  beforeEach(() => {
+    vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
+    safety.safe = true; safety.checking = false; safety.refresh.mockResolvedValue(true);
+  });
   it('accept, wrong/correct start OTP, wrong/correct completion OTP, repeat', async () => {
     render(<MemoryRouter><TestBooking /></MemoryRouter>);
     fireEvent.click(screen.getByRole('button', { name: 'local' }));
