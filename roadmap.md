@@ -68,4 +68,6 @@
 ## Test notification sender — audit and preparation only (11 Nov)
 - [x] Prepare isolated sender core under docs and 25 sender-specific offline tests after checksum-verified backup; all 467 tests pass.
 - [x] Report security protections, delivery evidence and Android blockers in sender/AUDIT.md; no runtime/native changes, deployment or sending.
-- [ ] Implement approved sender/journal adapters and native session/cold-start/dedupe/preemption blockers — awaiting explicit approval; Android tests need signed build and device; sending stays OFF.
+- [x] Implement approved sender/journal adapters (staged) and native session/cold-start/dedupe/preemption (source); 495 tests pass; device checklist written.
+- [ ] Apply journal SQL + deploy sender + enable switch — blocked: owner approval.
+- [ ] Android compile + device checklist — blocked: signed build and test phone (no Android tools here).
