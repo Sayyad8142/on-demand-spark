@@ -3,11 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { ACTIVE_WORK_STATUSES } from '@/lib/workSafety';
 // Read only. Do not use profile auto-heal or any booking mutation in training.
 export function usePracticeSafety(userId: string | undefined, guest: boolean) {
-  const [safe, setSafe] = useState(guest);
-  const [checking, setChecking] = useState(!guest);
+  const localGuest = guest && !userId;
+  const [safe, setSafe] = useState(localGuest);
+  const [checking, setChecking] = useState(!localGuest);
   const [worker, setWorker] = useState<{ id: string; fcm_token_status: string | null; fcm_token: string | null } | null>(null);
   const refresh = useCallback(async (): Promise<boolean> => {
-    if (guest) { setSafe(true); setChecking(false); return true; }
+    if (localGuest) { setSafe(true); setChecking(false); return true; }
     if (!userId) { setSafe(false); setChecking(false); return false; }
     try {
       const columns = 'id, fcm_token_status, fcm_token';
@@ -25,17 +26,17 @@ export function usePracticeSafety(userId: string | undefined, guest: boolean) {
       setSafe(idle); return idle;
     } catch { setSafe(false); return false; }
     finally { setChecking(false); }
-  }, [userId, guest]);
+  }, [userId, localGuest]);
   useEffect(() => {
     void refresh();
-    const timer = window.setInterval(() => { void refresh(); }, 5000);
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void refresh(); }, 5000);
     const foreground = () => { if (document.visibilityState === 'visible') void refresh(); };
     document.addEventListener('visibilitychange', foreground);
-    if (!userId || guest) return () => { clearInterval(timer); document.removeEventListener('visibilitychange', foreground); };
+    if (!userId || localGuest) return () => { clearInterval(timer); document.removeEventListener('visibilitychange', foreground); };
     const channel = supabase.channel(`practice-safety-${crypto.randomUUID()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => { void refresh(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_requests' }, () => { void refresh(); }).subscribe();
     return () => { clearInterval(timer); document.removeEventListener('visibilitychange', foreground); void supabase.removeChannel(channel); };
-  }, [refresh, guest, userId]);
+  }, [refresh, localGuest, userId]);
   return { safe, checking, worker, refresh };
 }

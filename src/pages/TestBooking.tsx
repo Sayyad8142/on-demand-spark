@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Capacitor } from '@capacitor/core';
@@ -23,6 +23,7 @@ export default function TestBooking() {
   const [otp, setOtp] = useState('');
   const [notice, setNotice] = useState('');
   const [starting, setStarting] = useState(false);
+  const actionLock = useRef(false);
   const text = practiceText;
   const seconds = practiceSeconds(state.expiresAt, now);
   useEffect(() => {
@@ -46,11 +47,16 @@ export default function TestBooking() {
   }, [state.step]);
   useEffect(() => () => { if (Capacitor.getPlatform() === 'android') void PracticeNotifications.cancel().catch(() => undefined); }, []);
   const act = async (action: Parameters<typeof dispatch>[0]) => {
-    if (!(await safety.refresh())) { dispatch({ type: 'blocked' }); return; }
-    dispatch(action); setOtp('');
+    if (actionLock.current) return;
+    actionLock.current = true;
+    try {
+      if (!(await safety.refresh())) { dispatch({ type: 'blocked' }); return; }
+      dispatch(action); setOtp('');
+    } finally { actionLock.current = false; }
   };
   const begin = async (push: boolean) => {
-    if (starting) return;
+    if (actionLock.current) return;
+    actionLock.current = true;
     setStarting(true); setNotice('');
     try {
       if (!(await safety.refresh())) { dispatch({ type: 'blocked' }); return; }
@@ -60,7 +66,7 @@ export default function TestBooking() {
       if ('reason' in result) { dispatch({ type: 'failed_send' }); setNotice(text(result.reason)); }
       else dispatch({ type: 'sent' });
     } catch (error) { dispatch({ type: 'failed_send' }); setNotice(error instanceof Error ? error.message : text('sendError')); }
-    finally { setStarting(false); }
+    finally { setStarting(false); actionLock.current = false; }
   };
   const again = () => {
     if (Capacitor.getPlatform() === 'android') void PracticeNotifications.cancel().catch(() => undefined);

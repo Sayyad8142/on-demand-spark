@@ -27,6 +27,7 @@ describe('isolated practice rules', () => {
     expect(practiceTransition(s, { type: 'verify', code: '1234' }).step).toBe('start_otp');
   });
   it('expires at zero without restarting, including after background time', () => {
+    expect(practiceSeconds(60100, 0)).toBe(60);
     expect(practiceSeconds(60000, 65000)).toBe(0);
     expect(practiceTransition(alert(), { type: 'tick', now: 65000 }).step).toBe('expired');
     expect(practiceTransition(alert(), { type: 'accept', now: 60000 }).step).toBe('expired');
@@ -50,6 +51,12 @@ describe('isolated practice rules', () => {
     const s = practiceTransition(newPractice('practice-1', 0), { type: 'sending', now: 0 });
     const result = practiceTransition(s, { type: 'device', id: 'practice-1', received: true, overlay: false, now: 10 });
     expect(result.checks).toMatchObject({ sent: 'not_verified', received: 'passed', overlay: 'not_verified' });
+  });
+  it('late send response cannot overwrite native acceptance', () => {
+    const s = practiceTransition(newPractice('practice-1', 0), { type: 'sending', now: 0 });
+    const accepted = practiceTransition(s, { type: 'device', id: 'practice-1', received: true, overlay: true, outcome: 'accepted', now: 10 });
+    expect(practiceTransition(accepted, { type: 'sent' }).step).toBe('accepted');
+    expect(practiceTransition(accepted, { type: 'sent' }).checks.sent).toBe('passed');
   });
   it('repeated sending action does not start a second session', () => {
     const s = practiceTransition(newPractice('practice-1', 0), { type: 'sending', now: 0 });
