@@ -65,9 +65,9 @@ class PracticeAlertView(private val ctx: Context, private val id: String, privat
     private fun tick() {
         if (stopped) return
         if (OfferQueue.isLocallyBusy(ctx) || OfferQueue.hasLiveOffer(ctx)) { PracticeSession.outcome(ctx, "blocked"); close(); return }
-        if (!PracticeSession.matches(ctx, id)) { close(); return }
         val seconds = ((PracticeSession.expiry(ctx) - System.currentTimeMillis() + 999) / 1000).coerceAtLeast(0).toInt()
         if (seconds <= 0) { PracticeSession.outcome(ctx, "expired"); close(); return }
+        if (!PracticeSession.matches(ctx, id)) { close(); return }
         view.findViewById<TextView>(R.id.countdown).text = "${seconds}s"
         view.findViewById<ProgressBar>(R.id.countdownCircle).progress = seconds
         handler.postDelayed({ tick() }, 250)
