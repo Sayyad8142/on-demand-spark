@@ -34,4 +34,4 @@
 - Reported app version/build comes from `src/lib/installedVersion.ts`; heartbeats send the login JWT plus own worker_id. `worker-heartbeat` is recovered production code + watch-only audit (backup in `docs/security-fixes-2026-11-11/update-system/heartbeat-watch-only/`); never deploy the old copy. Why: it drops reachability, token repair and missed-offer recovery.
 - Home display rules: `src/lib/homeSummary.ts`; Home cards are read-only, hide failing parts. Why: no unconfirmed readiness/money.
 - Practice bookings: local states in `practiceBooking.ts`; push off (`PRACTICE_PUSH_ENABLED`) until approved; sender rules: `docs/test-booking-training-2026-11-11/sender/AGENTS.md`. Native practice messages skip BackendSync/OfferQueue and yield to real offers. Why: practice must never touch real bookings or payments.
-- Offer→pop-up data: `src/lib/nativeOverlayPayload.ts` only; popup_shown only from a visible screen. Why: no fake timers/claims.
+- Offer→pop-up data: `src/lib/nativeOverlayPayload.ts` only; popup_shown only when visible. Why: no fake timers/claims.
