@@ -35,3 +35,4 @@
 - Home display rules: `src/lib/homeSummary.ts`; Home cards only read data and hide failing parts. Why: never show unconfirmed readiness or money.
 
 - Practice bookings: local states in `practiceBooking.ts`; push stays off (`PRACTICE_PUSH_ENABLED`) pending approval; sender staging rules live in `docs/test-booking-training-2026-11-11/sender/AGENTS.md`. Native practice messages exit before BackendSync/OfferQueue, bind to the native login, and yield to any real booking message. Why: practice must never touch real bookings, availability, telemetry or payments.
+- In-app offer → native pop-up data is built only by `src/lib/nativeOverlayPayload.ts` (server expiry + offer id, expired = not shown); only a screen that is really visible may send popup_shown. Why: a fresh 60 s timer or a claimed-but-unseen popup misleads workers and dispatch diagnostics.
