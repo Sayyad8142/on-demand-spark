@@ -244,6 +244,15 @@ public class OverlayPlugin extends Plugin {
             intent.putExtra("community", b.optString("community", ""));
             intent.putExtra("flat_no", b.optString("flat_no", ""));
             intent.putExtra("price_inr", b.optInt("price_inr", 0));
+            // Same offer identity + server expiry as the FCM path, so the pop-up
+            // countdown shows the real time left and ACKs target this offer.
+            String reqId = b.optString("booking_request_id", "");
+            if (!reqId.isEmpty()) intent.putExtra("booking_request_id", reqId);
+            long expiresAt = b.optLong("expires_at", 0L);
+            if (expiresAt > 0L) intent.putExtra("expires_at", expiresAt);
+            String ackToken = b.optString("ack_token", "");
+            if (!ackToken.isEmpty()) intent.putExtra("ack_token", ackToken);
+            intent.putExtra("actionable", "true");
 
             ctx.startService(intent);
             call.resolve();
