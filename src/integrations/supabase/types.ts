@@ -5827,6 +5827,39 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_app_events: {
+        Row: {
+          app_version: string | null
+          build_number: number | null
+          created_at: string
+          detail: string | null
+          event: string
+          id: string
+          occurred_at: string
+          worker_id: string
+        }
+        Insert: {
+          app_version?: string | null
+          build_number?: number | null
+          created_at?: string
+          detail?: string | null
+          event: string
+          id?: string
+          occurred_at: string
+          worker_id: string
+        }
+        Update: {
+          app_version?: string | null
+          build_number?: number | null
+          created_at?: string
+          detail?: string | null
+          event?: string
+          id?: string
+          occurred_at?: string
+          worker_id?: string
+        }
+        Relationships: []
+      }
       worker_archive: {
         Row: {
           archived_at: string
@@ -9679,6 +9712,16 @@ export type Database = {
         }[]
       }
       admin_worker_status_one: { Args: { p_worker_id: string }; Returns: Json }
+      admin_worker_version_fleet: {
+        Args: never
+        Returns: {
+          app_version: string
+          available_workers: number
+          build_number: string
+          last_seen: string
+          workers: number
+        }[]
+      }
       approve_worker_payout: {
         Args: { p_admin_notes?: string; p_payout_id: string }
         Returns: Json
@@ -11033,6 +11076,16 @@ export type Database = {
           p_to_status: string
         }
         Returns: string
+      }
+      log_worker_app_event: {
+        Args: {
+          p_app_version: string
+          p_at: string
+          p_build: number
+          p_detail: string
+          p_event: string
+        }
+        Returns: undefined
       }
       maid_total_price: {
         Args: {
