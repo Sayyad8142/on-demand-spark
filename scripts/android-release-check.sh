@@ -11,7 +11,7 @@ CODE=$(grep -Eo 'versionCode [0-9]+' "$G" | awk '{print $2}')
 NAME=$(grep -Eo 'versionName "[^"]+"' "$G" | cut -d'"' -f2)
 TARGET=$(grep -Eo 'targetSdk [0-9]+' "$G" | awk '{print $2}')
 CFG_CODE=$(grep -Eo 'CURRENT_VERSION_CODE *= *[0-9]+' src/config/version.ts | grep -Eo '[0-9]+$')
-CFG_NAME=$(grep -Eo 'CURRENT_VERSION_NAME *= *"[^"]+"' src/config/version.ts | cut -d'"' -f2)
+CFG_NAME=$(grep -Eo "CURRENT_VERSION_NAME *= *['\"][^'\"]+" src/config/version.ts | grep -Eo "[^'\"]+$")
 fail=0
 echo "Gradle: $NAME ($CODE), targetSdk $TARGET | app config: $CFG_NAME ($CFG_CODE)"
 [ "$CODE" = "$CFG_CODE" ] && [ "$NAME" = "$CFG_NAME" ] || { echo "FAIL version mismatch between Gradle and src/config/version.ts"; fail=1; }
