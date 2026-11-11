@@ -77,8 +77,8 @@
 - [x] Verify relocated entry and local training in mobile guest preview; 73 practice tests pass, build OK, no browser runtime errors. Real push remains OFF; approval, staged journal/sender activation and Android compile/device checks still required; authenticated testing unavailable for external Supabase.
 
 ## Approved booking-alert continuation (prompt 85) — preview/test only
-- [ ] Compile Android and resolve compiler errors; preserve version, do not publish an APK.
-- [ ] Verify foreground alert without overlay permission; supported background notification fallback, server countdown, non-overlapping title/timer, visible-only acknowledgments, sound/vibration and dedupe.
-- [ ] Investigate 10.0.02 HTTP 401 without changing or calling the live receiver with test events.
-- [ ] Run all 501 existing tests plus focused regressions and report device-test readiness.
+- [x] Compile Android: debug build successful, generated plugin paths corrected; version unchanged, no APK published; oversized generated outputs removed.
+- [x] Implement foreground Activity path, supported background notification fallback, fixed server deadline, visible-only acknowledgments and shared sound/vibration/dedupe; native visual/interaction verification remains device-blocked.
+- [x] Investigate 10.0.02 HTTP 401 via source/prior evidence only; exact live root cause blocked by missing receiver download and installed APK comparison.
+- [x] All 501 existing tests + 8 native tests passed; TypeScript check passed; results in docs/booking-alerts-audit-2026-11-11/PROMPT-85-RESULTS.md.
 - [ ] Real Android device verification — blocked: test phone/emulator; only isolated test bookings allowed.
