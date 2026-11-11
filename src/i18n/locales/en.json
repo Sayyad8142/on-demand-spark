@@ -1062,6 +1062,9 @@
     "Top_Rated": "⭐ Top Rated",
     "Ranked_by_earnings_from_completed_bookings_today": "Ranked by earnings from completed bookings today.",
     "Ranked_by_average_customer_rating_More_reviews_wins_a_tie": "Ranked by average customer rating. More reviews wins a tie.",
-    "reviews": "reviews"
+    "reviews": "reviews",
+    "Automatic_updates_are_switched_off": "Automatic updates are switched off.",
+    "Update_will_install_after_your_current_job": "Update will install after your current job.",
+    "Web_bundle": "Web bundle:"
   }
 }

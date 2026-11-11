@@ -144,12 +144,12 @@ export default function Settings() {
   // Never applies during an offer, an active booking or the OTP screens (same rules as the
   // automatic check); with delivery switched off it only reports the installed version.
   const handleCheckOtaUpdate = async () => {
-    if (!OTA_DELIVERY_ENABLED) { setOtaStatus('ota_switched_off'); return; }
+    if (!OTA_DELIVERY_ENABLED) { setOtaStatus('Automatic updates are switched off.'); return; }
     setOtaChecking(true);
     setOtaStatus('Checking...');
     try {
       const d = await runOtaCycle(getWorkState);
-      setOtaStatus(d.action === 'wait' ? 'update_after_job' : d.action === 'apply' ? 'Update applied! Reloading...' : 'You are up to date ✓');
+      setOtaStatus(d.action === 'wait' ? 'Update will install after your current job.' : d.action === 'apply' ? 'Update applied! Reloading...' : 'You are up to date ✓');
       setCurrentBundleVersion(await getCurrentBundleVersion());
     } catch {
       setOtaStatus('Check failed');

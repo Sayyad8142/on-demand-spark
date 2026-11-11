@@ -1062,6 +1062,9 @@
     "Top_Rated": "⭐ టాప్ రేటింగ్",
     "Ranked_by_earnings_from_completed_bookings_today": "ఈరోజు పూర్తైన బుకింగ్‌ల సంపాదన ప్రకారం ర్యాంక్.",
     "Ranked_by_average_customer_rating_More_reviews_wins_a_tie": "కస్టమర్ల సగటు రేటింగ్ ప్రకారం ర్యాంక్. సమానమైతే ఎక్కువ రివ్యూలు ఉన్నవారు ముందు.",
-    "reviews": "రివ్యూలు"
+    "reviews": "రివ్యూలు",
+    "Automatic_updates_are_switched_off": "ఆటోమేటిక్ అప్‌డేట్‌లు ఆఫ్‌లో ఉన్నాయి.",
+    "Update_will_install_after_your_current_job": "మీ ప్రస్తుత పని పూర్తయ్యాక అప్‌డేట్ ఇన్‌స్టాల్ అవుతుంది.",
+    "Web_bundle": "వెబ్ బండిల్:"
   }
 }
