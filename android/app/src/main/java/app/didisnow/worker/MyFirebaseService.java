@@ -41,8 +41,12 @@ public class MyFirebaseService extends FirebaseMessagingService {
       PracticePushReceiver.receive(getApplicationContext(), message.getData());
       return;
     }
-    // Any real message makes an open practice alert yield immediately (never throws).
-    PracticeSession.preempt(getApplicationContext());
+    // Any real booking-related message makes an open practice alert yield immediately
+    // (keep-alive pings excluded; never throws, never changes the real message handling).
+    String practiceCheckType = message.getData().get("type");
+    if (!"PING".equals(practiceCheckType) && !"START_OTP_REMINDER_CANCEL".equals(practiceCheckType)) {
+      PracticeSession.preempt(getApplicationContext());
+    }
 
     Log.d(TAG, "═══════════════════════════════════════════════════════════");
     Log.d(TAG, "📩 FCM MESSAGE RECEIVED");
