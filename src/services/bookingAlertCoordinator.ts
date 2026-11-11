@@ -311,7 +311,7 @@ export async function sendDeliveryAck(
         worker_id: worker.id,
         received_on_device: true,
         app_state: document.visibilityState === "visible" ? "foreground" : "background",
-        app_version: String((await import("@/config/version")).CURRENT_VERSION_CODE),
+        app_version: (await import("@/lib/installedVersion")).getInstalledVersionSync().version,
         booking_request_id: alert.bookingRequestId || null,
         received_at: eventType === "received" ? now : null,
         opened_at: eventType === "opened" ? now : null,

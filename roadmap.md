@@ -45,3 +45,15 @@
 - [x] New labels (en/hi/te), bigger day buttons; save/load unchanged (screen test checks identical save data).
 - [x] Speaker button beside heading and welcome note; app language, female voice where available, English fallback, no overlap, stops on leave.
 - [ ] Hear it on a real Android/iPhone — needs a new native build (voice add-on); older installs use browser speech or show "voice not available".
+## Update system fixes (11 Nov) — preview only, nothing published, forced updates stay off
+- [x] 1 OTA: never during offer/booking/OTP, wait for booking load, SHA-256 required, HTTPS allow-list, safe ZIP, failed-bundle memory, delivery switched off
+- [x] 2 Real installed version/build/platform in heartbeat, FCM sync, delivery receipts; local version history
+- [x] 3 Heartbeat: app stops sending worker id; phone sends login; staged server guard (observe → enforce) + tests
+- [x] 4 Update prompts deferred for every active-work step incl. in_progress and OTP screens
+- [x] 5 Notification reliability review (token re-registration, channels, permissions)
+- [x] 6 Staged observe-only outdated-build monitoring (SQL + rehearsal)
+- [x] 7 Release AAB script, signing from outside the repo, version/SDK check
+- [x] 8 Startup/crash + update event recording (local), en/hi/te messages
+- [x] 9 Tests + final report
+- [ ] Device test of OTA install/rollback + signed AAB build — needs Android SDK/phone (not in this workspace)
+- [ ] Apply staged SQL + heartbeat guard — needs owner approval

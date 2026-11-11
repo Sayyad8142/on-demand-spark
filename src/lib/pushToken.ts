@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core';
+import { getInstalledVersionSync } from "@/lib/installedVersion";
 import { PushNotifications } from '@capacitor/push-notifications';
 import { supabase } from '@/integrations/supabase/client';
-import { CURRENT_VERSION_NAME } from '@/config/version';
 import { evaluatePushHealth } from '@/lib/pushHealth';
 
 // @ts-ignore - Capacitor bridge
@@ -154,7 +154,7 @@ export async function syncTokenToBackend(token: string, userId: string, reason: 
         // notification_health, no_ack_count or fail history here. Only real
         // device ACKs / server health checks may change those.
         last_app_opened_at: now,
-        app_version: CURRENT_VERSION_NAME,
+        app_version: getInstalledVersionSync().version,
         updated_at: now,
       })
       .eq('user_id', userId)

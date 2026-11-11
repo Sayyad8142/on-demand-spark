@@ -2,10 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { WORKER_BOOKING_COLUMNS } from "@/lib/workerBookingColumns";
 import { Database } from "@/integrations/supabase/types";
+import { ACTIVE_WORK_STATUSES } from "@/lib/workSafety";
 import { isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 
 // Customer completion code is never loaded by the Worker App.
 type Booking = Omit<Database["public"]["Tables"]["bookings"]["Row"], "completion_otp">;
+
+/** Every step of active work, including in_progress (shared with the update safety rules). */
+const ACTIVE_JOB_STATUSES = ACTIVE_WORK_STATUSES;
 
 /**
  * Fetches the active job for the authenticated worker.
@@ -15,15 +19,19 @@ export function useActiveJob(userId: string | undefined) {
   const [activeJob, setActiveJob] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [workerId, setWorkerId] = useState<string | null>(null);
+  // True only once we really know whether there is an active job (used to defer updates).
+  const [checked, setChecked] = useState(false);
 
   // Resolve the worker's id from their user_id (or legacy id match)
   useEffect(() => {
     let cancelled = false;
 
     const resolveWorkerId = async () => {
+      setChecked(false);
       if (!userId) {
         setWorkerId(null);
         setLoading(false);
+        setChecked(true);
         return;
       }
 
@@ -49,6 +57,7 @@ export function useActiveJob(userId: string | undefined) {
           const resolvedId = data?.id ?? null;
           console.log("🔍 useActiveJob resolved worker_id:", resolvedId);
           setWorkerId(resolvedId);
+          if (!resolvedId) setChecked(true);
         }
       } catch (err) {
         console.error("❌ Failed to resolve worker id:", err);
@@ -79,7 +88,7 @@ export function useActiveJob(userId: string | undefined) {
         .from("bookings")
         .select(WORKER_BOOKING_COLUMNS)
         .eq("worker_id", workerId)
-        .in("status", ["assigned", "accepted", "on_the_way", "started"])
+        .in("status", [...ACTIVE_JOB_STATUSES])
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -94,11 +103,13 @@ export function useActiveJob(userId: string | undefined) {
         logScheduledOfferDecision(data, "query", false);
         console.log("📅 Future scheduled assignment hidden from active job card:", data.id);
         setActiveJob(null);
+        setChecked(true);
         return;
       }
 
       if (data) logScheduledOfferDecision(data, "query", true);
       setActiveJob(data);
+      setChecked(true);
     } catch (error) {
       console.error("❌ Error fetching active job:", error);
     } finally {
@@ -133,7 +144,7 @@ export function useActiveJob(userId: string | undefined) {
             setActiveJob(null);
             return;
           }
-          if (["assigned", "accepted", "on_the_way", "started"].includes(booking.status)) {
+          if ((ACTIVE_JOB_STATUSES as readonly string[]).includes(booking.status)) {
             logScheduledOfferDecision(booking, "realtime", true);
             setActiveJob(booking);
           } else if (booking.status === "cancelled") {
@@ -155,7 +166,7 @@ export function useActiveJob(userId: string | undefined) {
         (payload) => {
           const booking = payload.new as Booking;
           console.log("📡 Realtime booking insert:", booking.id, "status:", booking.status);
-          if (["assigned", "accepted", "on_the_way", "started"].includes(booking.status)) {
+          if ((ACTIVE_JOB_STATUSES as readonly string[]).includes(booking.status)) {
             setActiveJob(booking);
           }
         }
@@ -291,5 +302,5 @@ export function useActiveJob(userId: string | undefined) {
     }
   };
 
-  return { activeJob, loading, updateJobStatus, refetch: fetchActiveJob };
+  return { activeJob, loading, checked, updateJobStatus, refetch: fetchActiveJob };
 }

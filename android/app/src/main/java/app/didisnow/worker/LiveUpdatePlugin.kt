@@ -1,301 +1,298 @@
 package app.didisnow.worker
 
+import android.content.Context
 import android.util.Log
+import com.getcapacitor.JSArray
+import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
-import com.getcapacitor.JSObject
-import kotlinx.coroutines.*
-import java.io.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import org.json.JSONArray
+import java.io.BufferedInputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 import java.util.zip.ZipInputStream
 
 /**
- * Native Capacitor plugin for OTA Live Updates — "DidiLiveUpdate"
+ * OTA Live Updates — "DidiLiveUpdate" (hardened).
  *
- * - Downloads a zip bundle from a URL
- * - Verifies SHA-256 integrity (if hash provided)
- * - Extracts to internal storage
- * - Swaps Capacitor WebView via setServerBasePath + reload
- * - Boot-health marker for automatic rollback
+ * Every rule is enforced here; values from JS are never trusted:
+ *  - URL: HTTPS, the project's public ota-bundles bucket only, no redirects.
+ *  - SHA-256 and exact size are REQUIRED; download is capped.
+ *  - ZIP: no path escape, entry-count and unpacked-size caps, must contain index.html.
+ *  - downloadAndStage only prepares files; activateStaged switches the screen and is
+ *    refused while a booking offer is showing/queued or an Accept is in flight.
+ *  - A bundle that does not confirm a good start is rolled back by MainActivity and
+ *    recorded in failed_versions; failed versions are never installed again.
  */
 @CapacitorPlugin(name = "DidiLiveUpdate")
 class LiveUpdatePlugin : Plugin() {
 
     companion object {
         private const val TAG = "DidiLiveUpdate"
-        private const val BUNDLES_DIR = "ota_bundles"
-        private const val PREFS_NAME = "didi_live_update_prefs"
-        private const val PREF_ACTIVE_PATH = "active_bundle_path"
-        private const val PREF_ACTIVE_VERSION = "active_bundle_version"
-        private const val PREF_PENDING_VERSION = "pending_bundle_version"
-        private const val PREF_BOOT_CONFIRMED = "boot_confirmed"
+        const val PREFS_NAME = "didi_live_update_prefs"
+        const val BUNDLES_DIR = "ota_bundles"
+        const val STAGING_DIR = "ota_staging"
+        const val PREF_ACTIVE_PATH = "active_bundle_path"
+        const val PREF_ACTIVE_VERSION = "active_bundle_version"
+        const val PREF_PENDING_VERSION = "pending_bundle_version"
+        const val PREF_BOOT_CONFIRMED = "boot_confirmed"
+        const val PREF_STAGED_VERSION = "staged_bundle_version"
+        const val PREF_STAGED_PATH = "staged_bundle_path"
+        const val PREF_FAILED_VERSIONS = "failed_versions"
+        const val PREF_LAST_ROLLBACK = "last_rollback_reason"
+
+        fun isApprovedUrl(raw: String?) = OtaRules.isApprovedUrl(raw)
+        fun isSafeVersion(v: String?) = OtaRules.isSafeVersion(v)
+        fun isValidSha(v: String?) = OtaRules.isValidSha(v)
+        private const val MAX_ZIP_BYTES = OtaRules.MAX_ZIP_BYTES
+        private const val MAX_UNPACKED_BYTES = OtaRules.MAX_UNPACKED_BYTES
+        private const val MAX_ENTRIES = OtaRules.MAX_ENTRIES
+
+        fun failedVersions(ctx: Context): MutableSet<String> {
+            val raw = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString(PREF_FAILED_VERSIONS, "[]")
+            return try {
+                val arr = JSONArray(raw)
+                (0 until arr.length()).map { arr.getString(it) }.toMutableSet()
+            } catch (_: Exception) { mutableSetOf() }
+        }
+
+        fun addFailedVersion(ctx: Context, version: String, reason: String) {
+            val set = failedVersions(ctx).apply { add(version) }
+            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putString(PREF_FAILED_VERSIONS, JSONArray(set.toList().takeLast(20)).toString())
+                .putString(PREF_LAST_ROLLBACK, "$version:$reason")
+                .apply()
+        }
     }
 
-    /**
-     * Download a zip bundle, verify SHA-256, extract, and set as active bundle.
-     * JS call: DidiLiveUpdatePlugin.downloadAndApply({ url, version, sha256? })
-     */
+    private fun prefs() = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    /** JS: downloadAndStage({ url, version, sha256, sizeBytes }). Never reloads. */
     @PluginMethod
-    fun downloadAndApply(call: PluginCall) {
-        val url = call.getString("url") ?: run {
-            call.resolve(errorResult("Missing 'url' parameter"))
-            return
-        }
-        val version = call.getString("version") ?: run {
-            call.resolve(errorResult("Missing 'version' parameter"))
-            return
-        }
-        val expectedSha256 = call.getString("sha256") // nullable — skip check if null
+    fun downloadAndStage(call: PluginCall) {
+        val url = call.getString("url")
+        val version = call.getString("version")
+        val sha = call.getString("sha256")
+        val size = call.getDouble("sizeBytes")?.toLong() ?: -1L
 
-        Log.d(TAG, "📦 Starting download: version=$version url=$url sha256=${expectedSha256?.take(12)}...")
+        if (!isSafeVersion(version)) return call.resolve(errorResult("bad_version"))
+        if (!isApprovedUrl(url)) return call.resolve(errorResult("bad_url"))
+        if (!isValidSha(sha)) return call.resolve(errorResult("missing_sha256"))
+        if (!OtaRules.isValidSize(size)) return call.resolve(errorResult("bad_size"))
+        if (failedVersions(context).contains(version)) return call.resolve(errorResult("previously_failed"))
 
+        Log.d(TAG, "📦 stage v=$version size=$size")
         CoroutineScope(Dispatchers.IO).launch {
+            val stagingRoot = File(context.filesDir, STAGING_DIR)
+            val target = File(stagingRoot, version!!)
+            val zip = File(context.cacheDir, "ota_$version.zip")
             try {
-                val bundleDir = File(context.filesDir, "$BUNDLES_DIR/$version")
-
-                // Clean up if this version dir already exists (retry scenario)
-                if (bundleDir.exists()) {
-                    bundleDir.deleteRecursively()
-                }
-                bundleDir.mkdirs()
-
-                // Download the zip
-                val zipFile = File(context.cacheDir, "bundle_$version.zip")
-                downloadFile(url, zipFile)
-                Log.d(TAG, "📦 Downloaded zip: ${zipFile.length()} bytes")
-
-                // SHA-256 integrity check
-                if (!expectedSha256.isNullOrEmpty()) {
-                    val actualSha256 = computeSha256(zipFile)
-                    if (!actualSha256.equals(expectedSha256, ignoreCase = true)) {
-                        zipFile.delete()
-                        bundleDir.deleteRecursively()
-                        val msg = "SHA-256 mismatch: expected=${expectedSha256.take(12)}… actual=${actualSha256.take(12)}…"
-                        Log.e(TAG, "📦 $msg")
-                        call.resolve(errorResult(msg))
-                        return@launch
-                    }
-                    Log.d(TAG, "📦 SHA-256 verified ✓")
-                }
-
-                // Extract the zip
-                extractZip(zipFile, bundleDir)
-                Log.d(TAG, "📦 Extracted to: ${bundleDir.absolutePath}")
-
-                // Clean up zip
-                zipFile.delete()
-
-                // Verify extraction has an index.html
-                val indexFile = findIndexHtml(bundleDir)
-                if (indexFile == null) {
-                    bundleDir.deleteRecursively()
-                    call.resolve(errorResult("Invalid bundle: no index.html found"))
-                    return@launch
-                }
-
-                // The serve path is the directory containing index.html
-                val servePath = indexFile.parentFile?.absolutePath ?: bundleDir.absolutePath
-
-                // Save as pending bundle (not confirmed until React boots successfully)
-                val prefs = context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
-                prefs.edit()
-                    .putString(PREF_ACTIVE_PATH, servePath)
-                    .putString(PREF_ACTIVE_VERSION, version)
-                    .putString(PREF_PENDING_VERSION, version)
-                    .putBoolean(PREF_BOOT_CONFIRMED, false)
+                stagingRoot.deleteRecursively()
+                target.mkdirs()
+                download(url!!, zip, size)
+                val actual = sha256(zip)
+                if (!actual.equals(sha, ignoreCase = true)) throw SecurityException("sha256_mismatch")
+                extractSafely(zip, target)
+                val index = findIndexHtml(target) ?: throw SecurityException("no_index_html")
+                prefs().edit()
+                    .putString(PREF_STAGED_VERSION, version)
+                    .putString(PREF_STAGED_PATH, index.parentFile!!.absolutePath)
                     .apply()
-
-                // Set the server base path on the bridge (Capacitor-supported API)
-                activity.runOnUiThread {
-                    try {
-                        bridge?.serverBasePath = servePath
-                        Log.d(TAG, "📦 Server base path set to: $servePath")
-                    } catch (e: Exception) {
-                        Log.e(TAG, "📦 Failed to set server path", e)
-                    }
+                call.resolve(JSObject().put("success", true))
+            } catch (e: Exception) {
+                target.deleteRecursively()
+                val msg = when (e) {
+                    is SecurityException -> e.message ?: "security"
+                    is java.net.SocketTimeoutException -> "network_timeout"
+                    is IOException -> e.message?.takeIf { it.startsWith("http_") || it.startsWith("size_") } ?: "network"
+                    else -> "error"
                 }
-
-                // Clean up old bundles (keep only current)
-                cleanOldBundles(version)
-
-                val result = JSObject()
-                result.put("success", true)
-                result.put("path", servePath)
-                call.resolve(result)
-
-            } catch (e: Exception) {
-                Log.e(TAG, "📦 Download/apply failed", e)
-                call.resolve(errorResult(e.message ?: "Unknown error"))
+                Log.w(TAG, "📦 stage failed v=$version reason=$msg")
+                call.resolve(errorResult(msg))
+            } finally {
+                zip.delete()
             }
         }
     }
 
-    /**
-     * Reload the WebView using Capacitor's bridge.reload() (no direct loadUrl).
-     */
+    /** Switch to the staged bundle. Refused while an offer is live or an Accept is in flight. */
     @PluginMethod
-    fun reload(call: PluginCall) {
-        activity.runOnUiThread {
-            try {
-                bridge?.reload()
-                Log.d(TAG, "📦 WebView reloaded via bridge.reload()")
-            } catch (e: Exception) {
-                Log.e(TAG, "📦 Reload failed", e)
-            }
+    fun activateStaged(call: PluginCall) {
+        val p = prefs()
+        val version = p.getString(PREF_STAGED_VERSION, null)
+        val stagedPath = p.getString(PREF_STAGED_PATH, null)
+        if (version == null || stagedPath == null) return call.resolve(errorResult("nothing_staged"))
+        if (OfferQueue.hasLiveOffer(context) || OfferQueue.isLocallyBusy(context)) {
+            Log.d(TAG, "📦 activation deferred: offer live / phone busy")
+            return call.resolve(errorResult("busy"))
         }
-        call.resolve()
+        try {
+            val stagingVersionDir = File(File(context.filesDir, STAGING_DIR), version)
+            val finalDir = File(File(context.filesDir, BUNDLES_DIR), version)
+            finalDir.deleteRecursively()
+            finalDir.parentFile?.mkdirs()
+            if (!stagingVersionDir.renameTo(finalDir)) throw IOException("move_failed")
+            val rel = File(stagedPath).relativeTo(stagingVersionDir).path
+            val servePath = if (rel.isEmpty()) finalDir.absolutePath else File(finalDir, rel).absolutePath
+            if (!File(servePath, "index.html").exists()) throw IOException("no_index_html")
+
+            p.edit()
+                .putString(PREF_ACTIVE_PATH, servePath)
+                .putString(PREF_ACTIVE_VERSION, version)
+                .putString(PREF_PENDING_VERSION, version)
+                .putBoolean(PREF_BOOT_CONFIRMED, false)
+                .remove(PREF_STAGED_VERSION)
+                .remove(PREF_STAGED_PATH)
+                .commit()
+            cleanOldBundles(version)
+            activity.runOnUiThread {
+                try { bridge?.serverBasePath = servePath } catch (e: Exception) { Log.e(TAG, "📦 set path failed", e) }
+            }
+            call.resolve(JSObject().put("success", true))
+        } catch (e: Exception) {
+            Log.w(TAG, "📦 activation failed: ${e.message}")
+            call.resolve(errorResult(e.message ?: "activation_failed"))
+        }
     }
 
-    /**
-     * Confirm boot was successful — clears pending state.
-     * Called from JS after React mounts successfully.
-     */
+    /** Called from JS after React mounted: the bundle started fine. */
     @PluginMethod
     fun confirmBoot(call: PluginCall) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
-        prefs.edit()
+        prefs().edit()
             .remove(PREF_PENDING_VERSION)
+            .remove(PREF_LAST_ROLLBACK)
             .putBoolean(PREF_BOOT_CONFIRMED, true)
             .apply()
-        Log.d(TAG, "📦 Boot confirmed ✓")
         call.resolve()
     }
 
-    /**
-     * Reset to the built-in bundle (shipped with APK)
-     */
+    @PluginMethod
+    fun getStatus(call: PluginCall) {
+        val p = prefs()
+        call.resolve(JSObject().apply {
+            put("activeVersion", p.getString(PREF_ACTIVE_VERSION, null))
+            put("pendingVersion", p.getString(PREF_PENDING_VERSION, null))
+            put("stagedVersion", p.getString(PREF_STAGED_VERSION, null))
+            put("failedVersions", JSArray(failedVersions(context).toList()))
+            put("lastRollbackReason", p.getString(PREF_LAST_ROLLBACK, null))
+        })
+    }
+
+    /** Back to the APK's built-in bundle. Keeps the failed-version history. */
     @PluginMethod
     fun reset(call: PluginCall) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
-        prefs.edit().clear().apply()
-
-        // Delete all downloaded bundles
-        val bundlesRoot = File(context.filesDir, BUNDLES_DIR)
-        if (bundlesRoot.exists()) {
-            bundlesRoot.deleteRecursively()
-        }
-
+        val failed = prefs().getString(PREF_FAILED_VERSIONS, "[]")
+        prefs().edit().clear().putString(PREF_FAILED_VERSIONS, failed).apply()
+        File(context.filesDir, BUNDLES_DIR).deleteRecursively()
+        File(context.filesDir, STAGING_DIR).deleteRecursively()
+        context.getSharedPreferences("CapWebViewSettings", Context.MODE_PRIVATE).edit().remove("serverBasePath").apply()
         activity.runOnUiThread {
-            try {
-                bridge?.serverBasePath = null
-                bridge?.reload()
-                Log.d(TAG, "📦 Reset to built-in bundle")
-            } catch (e: Exception) {
-                Log.e(TAG, "📦 Reset failed", e)
-            }
+            try { bridge?.serverBasePath = null; bridge?.reload() } catch (e: Exception) { Log.e(TAG, "📦 reset failed", e) }
         }
         call.resolve()
     }
 
-    /**
-     * Get the current active bundle path
-     */
     @PluginMethod
     fun getCurrentPath(call: PluginCall) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
-        val path = prefs.getString(PREF_ACTIVE_PATH, "") ?: ""
-        val result = JSObject()
-        result.put("path", path)
-        call.resolve(result)
+        call.resolve(JSObject().put("path", prefs().getString(PREF_ACTIVE_PATH, "") ?: ""))
     }
 
-    // ── Helper methods ──
+    // ── helpers ──
 
-    private fun downloadFile(urlString: String, outputFile: File) {
-        val url = URL(urlString)
-        val connection = url.openConnection() as HttpURLConnection
-        connection.connectTimeout = 30_000
-        connection.readTimeout = 60_000
-        connection.requestMethod = "GET"
-
+    private fun download(urlString: String, out: File, expectedSize: Long) {
+        val c = (URL(urlString).openConnection() as HttpURLConnection).apply {
+            instanceFollowRedirects = false
+            connectTimeout = 30_000
+            readTimeout = 60_000
+            requestMethod = "GET"
+        }
         try {
-            connection.connect()
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) {
-                throw IOException("HTTP ${connection.responseCode}: ${connection.responseMessage}")
-            }
-
-            connection.inputStream.use { input ->
-                FileOutputStream(outputFile).use { output ->
-                    input.copyTo(output, bufferSize = 8192)
+            c.connect()
+            if (c.responseCode != HttpURLConnection.HTTP_OK) throw IOException("http_${c.responseCode}")
+            val declared = c.contentLengthLong
+            if (declared > MAX_ZIP_BYTES || (declared > 0 && declared != expectedSize)) throw IOException("size_mismatch")
+            var total = 0L
+            c.inputStream.use { input ->
+                FileOutputStream(out).use { o ->
+                    val buf = ByteArray(8192)
+                    while (true) {
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        total += n
+                        if (total > MAX_ZIP_BYTES || total > expectedSize) throw IOException("size_exceeded")
+                        o.write(buf, 0, n)
+                    }
                 }
             }
+            if (total != expectedSize) throw IOException("size_mismatch")
         } finally {
-            connection.disconnect()
+            c.disconnect()
         }
     }
 
-    private fun computeSha256(file: File): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        FileInputStream(file).use { fis ->
-            val buffer = ByteArray(8192)
-            var bytesRead: Int
-            while (fis.read(buffer).also { bytesRead = it } != -1) {
-                digest.update(buffer, 0, bytesRead)
-            }
+    private fun sha256(file: File): String {
+        val d = MessageDigest.getInstance("SHA-256")
+        FileInputStream(file).use { s ->
+            val buf = ByteArray(8192)
+            while (true) { val n = s.read(buf); if (n < 0) break; d.update(buf, 0, n) }
         }
-        return digest.digest().joinToString("") { "%02x".format(it) }
+        return d.digest().joinToString("") { "%02x".format(it) }
     }
 
-    private fun extractZip(zipFile: File, targetDir: File) {
-        ZipInputStream(BufferedInputStream(FileInputStream(zipFile))).use { zis ->
-            var entry = zis.nextEntry
-            while (entry != null) {
-                val outFile = File(targetDir, entry.name)
-
-                // Security: prevent zip slip
-                if (!outFile.canonicalPath.startsWith(targetDir.canonicalPath)) {
-                    throw SecurityException("Zip entry outside target dir: ${entry.name}")
-                }
-
-                if (entry.isDirectory) {
+    private fun extractSafely(zip: File, target: File) {
+        val targetCanon = target.canonicalPath
+        var entries = 0
+        var unpacked = 0L
+        ZipInputStream(BufferedInputStream(FileInputStream(zip))).use { zis ->
+            var e = zis.nextEntry
+            while (e != null) {
+                if (++entries > MAX_ENTRIES) throw SecurityException("too_many_entries")
+                val name = e.name
+                if (!OtaRules.isAcceptableEntryName(name)) throw SecurityException("bad_entry")
+                val outFile = File(target, name)
+                if (!OtaRules.isInside(targetCanon, outFile.canonicalPath, File.separator)) throw SecurityException("zip_slip")
+                if (e.isDirectory) {
                     outFile.mkdirs()
                 } else {
                     outFile.parentFile?.mkdirs()
-                    FileOutputStream(outFile).use { fos ->
-                        zis.copyTo(fos, bufferSize = 8192)
+                    FileOutputStream(outFile).use { o ->
+                        val buf = ByteArray(8192)
+                        while (true) {
+                            val n = zis.read(buf)
+                            if (n < 0) break
+                            unpacked += n
+                            if (unpacked > MAX_UNPACKED_BYTES) throw SecurityException("too_large_unpacked")
+                            o.write(buf, 0, n)
+                        }
                     }
                 }
                 zis.closeEntry()
-                entry = zis.nextEntry
+                e = zis.nextEntry
             }
         }
     }
 
-    /**
-     * Recursively find index.html in the extracted bundle.
-     * Handles both flat (index.html at root) and nested (dist/index.html) structures.
-     */
     private fun findIndexHtml(dir: File): File? {
-        val direct = File(dir, "index.html")
-        if (direct.exists()) return direct
-
+        File(dir, "index.html").takeIf { it.isFile }?.let { return it }
         dir.listFiles()?.forEach { child ->
-            if (child.isDirectory) {
-                val nested = File(child, "index.html")
-                if (nested.exists()) return nested
-            }
+            if (child.isDirectory) File(child, "index.html").takeIf { it.isFile }?.let { return it }
         }
         return null
     }
 
     private fun cleanOldBundles(keepVersion: String) {
-        val bundlesRoot = File(context.filesDir, BUNDLES_DIR)
-        bundlesRoot.listFiles()?.forEach { dir ->
-            if (dir.isDirectory && dir.name != keepVersion) {
-                Log.d(TAG, "📦 Cleaning old bundle: ${dir.name}")
-                dir.deleteRecursively()
-            }
-        }
+        File(context.filesDir, BUNDLES_DIR).listFiles()?.forEach { if (it.isDirectory && it.name != keepVersion) it.deleteRecursively() }
     }
 
-    private fun errorResult(message: String): JSObject {
-        val result = JSObject()
-        result.put("success", false)
-        result.put("error", message)
-        return result
-    }
+    private fun errorResult(message: String): JSObject = JSObject().put("success", false).put("error", message)
 }

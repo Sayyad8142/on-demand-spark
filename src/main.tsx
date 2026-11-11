@@ -25,6 +25,9 @@ const bootstrap = async () => {
     console.error('❌ Storage initialization failed:', e);
   }
   
+  // Crash capture + real installed version (local only, never blocks start-up).
+  import("./lib/bootTelemetry").then(({ startBootTelemetry }) => startBootTelemetry()).catch(() => {});
+
   // Step 2: Now dynamically import i18n (may depend on storage)
   const { default: i18n, restoreWorkerLanguage } = await import("./i18n/config");
   

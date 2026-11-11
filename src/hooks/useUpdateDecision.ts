@@ -3,6 +3,8 @@ import { App as CapApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
 import { CURRENT_VERSION_CODE } from "@/config/version";
+import { loadInstalledVersion } from "@/lib/installedVersion";
+import { logAppHealth } from "@/lib/appHealthLog";
 import { decideUpdate, makeSnooze, parseUpdateAnswer, type SoftSnooze, type UpdateAnswer } from "@/lib/updateDecision";
 
 const SNOOZE_KEY = "worker_soft_update_snooze_v3";
@@ -12,17 +14,19 @@ function readSnooze(): SoftSnooze | null {
 }
 
 async function installedBuild(): Promise<number> {
-  if (Capacitor.isNativePlatform()) {
-    try { const n = Number((await CapApp.getInfo()).build); if (Number.isInteger(n) && n > 0) return n; } catch {}
-  }
-  return CURRENT_VERSION_CODE;
+  const v = await loadInstalledVersion();
+  return v.build ?? CURRENT_VERSION_CODE;
 }
 
 /**
  * Asks the Admin Panel RPC on start and on every resume (no throttle, so returning
  * from Google Play rechecks immediately). Display only: never changes availability.
  */
-export function useUpdateDecision(activeBookingStatus: string | null | undefined, bookingAlertOpen = false) {
+export function useUpdateDecision(
+  activeBookingStatus: string | null | undefined,
+  bookingAlertOpen = false,
+  work: { bookingLoaded?: boolean; pathname?: string | null } = {},
+) {
   const [answer, setAnswer] = useState<UpdateAnswer | null>(null);
   const [build, setBuild] = useState<number>(CURRENT_VERSION_CODE);
   const [snooze, setSnooze] = useState<SoftSnooze | null>(readSnooze);
@@ -47,11 +51,20 @@ export function useUpdateDecision(activeBookingStatus: string | null | undefined
     return () => { document.removeEventListener("visibilitychange", onVis); remove?.(); };
   }, [refresh]);
 
-  const mode = decideUpdate({ answer, activeBookingStatus, bookingAlertOpen, snooze, now: Date.now() });
+  const mode = decideUpdate({
+    answer, activeBookingStatus, bookingAlertOpen, bookingLoaded: work.bookingLoaded, pathname: work.pathname, snooze, now: Date.now(),
+  });
+
+  // Local update telemetry: one entry per change of what the worker sees.
+  useEffect(() => {
+    if (mode === "soft" || mode === "force") logAppHealth("update_prompt_shown", mode);
+    else if (mode === "force_deferred") logAppHealth("update_deferred");
+  }, [mode]);
 
   const later = useCallback(() => {
     const s = makeSnooze(answer?.latestBuild ?? build + 1, Date.now());
     try { localStorage.setItem(SNOOZE_KEY, JSON.stringify(s)); } catch {}
+    logAppHealth("update_later");
     setSnooze(s);
   }, [answer?.latestBuild, build]);
 

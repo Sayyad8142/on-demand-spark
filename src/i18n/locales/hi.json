@@ -1062,6 +1062,9 @@
     "Top_Rated": "⭐ टॉप रेटिंग",
     "Ranked_by_earnings_from_completed_bookings_today": "आज पूरी हुई बुकिंग की कमाई के अनुसार रैंक।",
     "Ranked_by_average_customer_rating_More_reviews_wins_a_tie": "ग्राहकों की औसत रेटिंग के अनुसार रैंक। बराबरी पर ज़्यादा रिव्यू वाला आगे।",
-    "reviews": "रिव्यू"
+    "reviews": "रिव्यू",
+    "Automatic_updates_are_switched_off": "ऑटोमैटिक अपडेट बंद हैं।",
+    "Update_will_install_after_your_current_job": "अपडेट आपका मौजूदा काम पूरा होने के बाद लगेगा।",
+    "Web_bundle": "वेब बंडल:"
   }
 }

@@ -137,11 +137,14 @@ export function useFCMTokenSync(userId: string | undefined) {
     // build the worker is on. Best-effort; never blocks.
     (async () => {
       try {
-        const { CURRENT_VERSION_NAME } = await import('@/config/version');
+        const { loadInstalledVersion } = await import('@/lib/installedVersion');
+        const v = await loadInstalledVersion();
         await supabase
           .from('workers')
           .update({
-            app_version: CURRENT_VERSION_NAME,
+            app_version: v.version,
+            // Real installed build from the phone (null on web preview → leave unchanged).
+            ...(v.source === 'native' && v.build !== null ? { build_number: String(v.build), app_platform: v.platform } : {}),
             last_app_opened_at: new Date().toISOString(),
           })
           .eq('user_id', userId);

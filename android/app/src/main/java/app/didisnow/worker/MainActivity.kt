@@ -227,21 +227,23 @@ class MainActivity : BridgeActivity() {
             if (!pendingVersion.isNullOrEmpty() && !bootConfirmed) {
                 android.util.Log.w("MainActivity", "📦 OTA: Boot NOT confirmed for $pendingVersion — ROLLING BACK")
                 
-                // Clear OTA state
-                prefs.edit().clear().apply()
+                // Remember the failed version (never installed again) and clear OTA state,
+                // keeping the failed-version history.
+                LiveUpdatePlugin.addFailedVersion(this, pendingVersion, "boot_not_confirmed")
+                val failed = prefs.getString(LiveUpdatePlugin.PREF_FAILED_VERSIONS, "[]")
+                val reason = prefs.getString(LiveUpdatePlugin.PREF_LAST_ROLLBACK, null)
+                prefs.edit().clear()
+                    .putString(LiveUpdatePlugin.PREF_FAILED_VERSIONS, failed)
+                    .putString(LiveUpdatePlugin.PREF_LAST_ROLLBACK, reason)
+                    .commit()
                 
-                // Delete all downloaded bundles
-                val bundlesRoot = java.io.File(filesDir, "ota_bundles")
-                if (bundlesRoot.exists()) {
-                    bundlesRoot.deleteRecursively()
-                }
+                // Delete all downloaded / staged bundles
+                java.io.File(filesDir, LiveUpdatePlugin.BUNDLES_DIR).deleteRecursively()
+                java.io.File(filesDir, LiveUpdatePlugin.STAGING_DIR).deleteRecursively()
                 
                 // Clear CapWebViewSettings so Capacitor loads from built-in
                 val capPrefs = getSharedPreferences("CapWebViewSettings", Context.MODE_PRIVATE)
                 capPrefs.edit().remove("serverBasePath").apply()
-                
-                // Store the failed version in Capacitor Preferences so JS side skips it
-                // (Capacitor Preferences are stored in a different SharedPreferences file)
                 android.util.Log.w("MainActivity", "📦 OTA: Rolled back to built-in bundle")
                 return
             }
@@ -256,8 +258,9 @@ class MainActivity : BridgeActivity() {
                     capPrefs.edit().putString("serverBasePath", activePath).apply()
                     android.util.Log.d("MainActivity", "📦 OTA: Restored bundle path: $activePath")
                 } else {
-                    // Bundle corrupted/missing → clear and use built-in
-                    prefs.edit().clear().apply()
+                    // Bundle corrupted/missing → clear (keep failed history) and use built-in
+                    val failed = prefs.getString(LiveUpdatePlugin.PREF_FAILED_VERSIONS, "[]")
+                    prefs.edit().clear().putString(LiveUpdatePlugin.PREF_FAILED_VERSIONS, failed).apply()
                     val capPrefs = getSharedPreferences("CapWebViewSettings", Context.MODE_PRIVATE)
                     capPrefs.edit().remove("serverBasePath").apply()
                     android.util.Log.w("MainActivity", "📦 OTA: Bundle path invalid, cleared → using built-in")

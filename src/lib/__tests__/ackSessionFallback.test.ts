@@ -15,7 +15,7 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 vi.mock("@capacitor/core", () => ({ Capacitor: { getPlatform: () => "android", isNativePlatform: () => true } }));
-vi.mock("@/config/version", () => ({ CURRENT_VERSION_NAME: "test" }));
+vi.mock("@/config/version", () => ({ CURRENT_VERSION_NAME: "test", CURRENT_VERSION_CODE: 1 }));
 
 import { ackBookingDelivery, canonicalAckEvent, jwtUsable, resetAckCache, sessionFallbackAllowed } from "@/lib/bookingAck";
 
