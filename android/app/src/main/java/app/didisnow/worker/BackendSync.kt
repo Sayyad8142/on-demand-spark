@@ -276,6 +276,8 @@ object BackendSync {
             put("app_version", appVersion(ctx))
             put("native_app_version", appVersion(ctx))
             put("native_version_code", nativeVersionCode(ctx))
+            put("build_number", nativeVersionCode(ctx))
+            put("app_platform", "android")
             put("attempt", attempt)
             put("device_info", JSONObject().apply {
                 put("oem", "${Build.MANUFACTURER}/${Build.MODEL}")
@@ -531,6 +533,14 @@ object BackendSync {
 
     private const val HEARTBEAT_ENDPOINT = "$SUPABASE_URL/functions/v1/worker-heartbeat"
 
+    /**
+     * Keep the legacy anon + worker_id heartbeat when no fresh login is stored.
+     * Turn OFF only after the staged server identity guard is live (see
+     * docs/security-fixes-2026-11-11/update-system/), otherwise phones whose login
+     * expired in the background would stop reporting and look unreachable.
+     */
+    private const val HEARTBEAT_LEGACY_ID_FALLBACK = true
+
     private fun batteryLevel(ctx: Context): Int {
         return try {
             val bm = ctx.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
@@ -596,8 +606,19 @@ object BackendSync {
         val fcmToken = prefs.getString("last_known_fcm_token", null)
             ?: prefs.getString("pending_fcm_token", null)
 
+        // Identity: the worker's own login (fresh session JWT) whenever available — then
+        // no worker_id is sent and the server resolves the worker from the login.
+        // Only when no fresh login exists (app closed > 1 h, screen-off) do we fall back to
+        // the legacy anon + worker_id form, so background heartbeats and dispatch
+        // reachability keep working until the staged server guard is approved.
+        val jwt = sessionJwt(ctx)
+        if (jwt == null && !HEARTBEAT_LEGACY_ID_FALLBACK) {
+            WorkerLog.add(ctx, "HEARTBEAT", "skip — no fresh login")
+            return false
+        }
         val body = JSONObject().apply {
-            put("worker_id", workerId)
+            if (jwt == null) put("worker_id", workerId)
+            put("auth_mode", if (jwt != null) "session" else "legacy_worker_id")
             put("app_state", appState)
             put("battery_level", batteryLevel(ctx))
             put("network_type", networkType(ctx))
@@ -627,13 +648,13 @@ object BackendSync {
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json")
                 setRequestProperty("apikey", ANON_KEY)
-                setRequestProperty("Authorization", "Bearer $ANON_KEY")
+                setRequestProperty("Authorization", "Bearer ${jwt ?: ANON_KEY}")
             }
             conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             val code = conn.responseCode
             conn.disconnect()
             val ok = code in 200..299
-            WorkerLog.add(ctx, "HEARTBEAT", "state=$appState token=${fcmToken != null} → http=$code")
+            WorkerLog.add(ctx, "HEARTBEAT", "state=$appState auth=${if (jwt != null) "session" else "legacy"} token=${fcmToken != null} → http=$code")
             ok
         } catch (e: Exception) {
             WorkerLog.add(ctx, "HEARTBEAT", "state=$appState FAILED: ${e.message}")
