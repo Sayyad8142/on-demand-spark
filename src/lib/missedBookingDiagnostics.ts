@@ -9,6 +9,7 @@
  */
 
 import { Capacitor } from "@capacitor/core";
+import { getInstalledVersionSync } from "@/lib/installedVersion";
 import { supabase } from "@/integrations/supabase/client";
 import { CURRENT_VERSION_NAME } from "@/config/version";
 
@@ -35,7 +36,8 @@ async function captureDeviceContext() {
   const ctx: Record<string, unknown> = {
     platform: Capacitor.getPlatform(),
     network_online: typeof navigator !== "undefined" ? navigator.onLine : null,
-    app_version: CURRENT_VERSION_NAME,
+    app_version: getInstalledVersionSync().version,
+    app_build: getInstalledVersionSync().build,
     app_state: typeof document !== "undefined" ? document.visibilityState : "unknown",
   };
 

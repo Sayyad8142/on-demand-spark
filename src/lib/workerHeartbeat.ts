@@ -12,7 +12,7 @@
 
 import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
-import { CURRENT_VERSION_NAME } from "@/config/version";
+import { loadInstalledVersion } from "@/lib/installedVersion";
 
 // @ts-ignore - native bridge
 const AuthBridge = window.Capacitor?.Plugins?.AuthBridge;
@@ -79,17 +79,22 @@ export async function sendWorkerHeartbeat(
   inFlight = true;
 
   try {
-    const [fcmToken, deviceInfo] = await Promise.all([
+    const [fcmToken, deviceInfo, installed] = await Promise.all([
       getNativeFcmToken(),
       getDeviceInfo(),
+      loadInstalledVersion(),
     ]);
 
+    // Identity comes ONLY from the signed-in session (supabase-js sends the login JWT).
+    // No worker_id is sent, so this call can never name or change another worker.
     const { data, error } = await supabase.functions.invoke("worker-heartbeat", {
       body: {
-        worker_id: workerIdOrUserId,
         fcm_token: fcmToken ?? undefined,
         app_state: reason,
-        app_version: CURRENT_VERSION_NAME,
+        app_version: installed.version,
+        build_number: installed.build ?? undefined,
+        app_platform: installed.platform,
+        version_source: installed.source,
         device_info: deviceInfo,
       },
     });

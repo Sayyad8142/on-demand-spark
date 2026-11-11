@@ -24,6 +24,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { getInstalledVersionSync } from "@/lib/installedVersion";
 import { Capacitor } from "@capacitor/core";
 import { CURRENT_VERSION_NAME } from "@/config/version";
 
@@ -171,12 +172,13 @@ export function buildAckBody(args: {
     ...(args.workerId ? { worker_id: args.workerId } : {}),
     event_type: args.event,
     app_state: args.appState ?? appState(),
-    app_version: args.appVersion ?? CURRENT_VERSION_NAME,
+    app_version: args.appVersion ?? getInstalledVersionSync().version,
     ...(token ? { [ACK_TOKEN_BODY_KEY]: token } : {}),
     device_info: args.deviceInfo ?? {
       platform: Capacitor.getPlatform(),
       native: Capacitor.isNativePlatform(),
       source: "webview",
+      app_build: getInstalledVersionSync().build,
     },
   };
 }
@@ -208,7 +210,7 @@ export function buildLegacyAckBody(args: {
     booking_id: args.bookingId,
     worker_id: args.workerId,
     event_type: legacy,
-    app_version: args.appVersion ?? CURRENT_VERSION_NAME,
+    app_version: args.appVersion ?? getInstalledVersionSync().version,
   };
 }
 
