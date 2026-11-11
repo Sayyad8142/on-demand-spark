@@ -18,9 +18,7 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
-import java.net.URI
 import java.net.URL
-import java.net.URLDecoder
 import java.security.MessageDigest
 import java.util.zip.ZipInputStream
 
@@ -53,30 +51,12 @@ class LiveUpdatePlugin : Plugin() {
         const val PREF_FAILED_VERSIONS = "failed_versions"
         const val PREF_LAST_ROLLBACK = "last_rollback_reason"
 
-        const val APPROVED_HOST = "paywwbuqycovjopryele.supabase.co"
-        const val APPROVED_PATH_PREFIX = "/storage/v1/object/public/ota-bundles/"
-        const val MAX_ZIP_BYTES = 30L * 1024 * 1024
-        const val MAX_UNPACKED_BYTES = 80L * 1024 * 1024
-        const val MAX_ENTRIES = 3000
-
-        private val VERSION_RE = Regex("^\\d{1,4}(\\.\\d{1,4}){0,3}$")
-        private val SHA_RE = Regex("^[a-fA-F0-9]{64}$")
-
-        /** Pure: mirrors isApprovedBundleUrl() in src/lib/otaSafety.ts. */
-        fun isApprovedUrl(raw: String?): Boolean {
-            if (raw == null || raw.length > 1000) return false
-            return try {
-                val u = URI(raw)
-                if (u.scheme != "https" || u.host != APPROVED_HOST || u.port != -1 || u.userInfo != null) return false
-                val path = u.rawPath ?: return false
-                if (!path.startsWith(APPROVED_PATH_PREFIX)) return false
-                val rest = URLDecoder.decode(path.removePrefix(APPROVED_PATH_PREFIX), "UTF-8")
-                rest.isNotEmpty() && rest.endsWith(".zip") && rest.split("/").none { it == ".." || it == "." }
-            } catch (_: Exception) { false }
-        }
-
-        fun isSafeVersion(v: String?): Boolean = v != null && VERSION_RE.matches(v)
-        fun isValidSha(v: String?): Boolean = v != null && SHA_RE.matches(v)
+        fun isApprovedUrl(raw: String?) = OtaRules.isApprovedUrl(raw)
+        fun isSafeVersion(v: String?) = OtaRules.isSafeVersion(v)
+        fun isValidSha(v: String?) = OtaRules.isValidSha(v)
+        private const val MAX_ZIP_BYTES = OtaRules.MAX_ZIP_BYTES
+        private const val MAX_UNPACKED_BYTES = OtaRules.MAX_UNPACKED_BYTES
+        private const val MAX_ENTRIES = OtaRules.MAX_ENTRIES
 
         fun failedVersions(ctx: Context): MutableSet<String> {
             val raw = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString(PREF_FAILED_VERSIONS, "[]")
@@ -108,7 +88,7 @@ class LiveUpdatePlugin : Plugin() {
         if (!isSafeVersion(version)) return call.resolve(errorResult("bad_version"))
         if (!isApprovedUrl(url)) return call.resolve(errorResult("bad_url"))
         if (!isValidSha(sha)) return call.resolve(errorResult("missing_sha256"))
-        if (size <= 0 || size > MAX_ZIP_BYTES) return call.resolve(errorResult("bad_size"))
+        if (!OtaRules.isValidSize(size)) return call.resolve(errorResult("bad_size"))
         if (failedVersions(context).contains(version)) return call.resolve(errorResult("previously_failed"))
 
         Log.d(TAG, "📦 stage v=$version size=$size")
@@ -270,7 +250,7 @@ class LiveUpdatePlugin : Plugin() {
     }
 
     private fun extractSafely(zip: File, target: File) {
-        val root = target.canonicalPath + File.separator
+        val targetCanon = target.canonicalPath
         var entries = 0
         var unpacked = 0L
         ZipInputStream(BufferedInputStream(FileInputStream(zip))).use { zis ->
@@ -278,11 +258,9 @@ class LiveUpdatePlugin : Plugin() {
             while (e != null) {
                 if (++entries > MAX_ENTRIES) throw SecurityException("too_many_entries")
                 val name = e.name
-                if (name.startsWith("/") || name.contains('\\') || name.contains('\u0000')) throw SecurityException("bad_entry")
+                if (!OtaRules.isAcceptableEntryName(name)) throw SecurityException("bad_entry")
                 val outFile = File(target, name)
-                val canon = outFile.canonicalPath
-                // Must stay strictly inside target (separator-terminated prefix: blocks "/t" vs "/tx").
-                if (canon != target.canonicalPath && !canon.startsWith(root)) throw SecurityException("zip_slip")
+                if (!OtaRules.isInside(targetCanon, outFile.canonicalPath, File.separator)) throw SecurityException("zip_slip")
                 if (e.isDirectory) {
                     outFile.mkdirs()
                 } else {
