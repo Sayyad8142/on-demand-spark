@@ -453,7 +453,7 @@
     "Distribution_of_your": "మీ రేటింగ్ల పంపిణీ",
     "rating": "రేటింగ్",
     "All_Reviews": "అన్ని సమీక్షలు (",
-    "No_reviews_yet": "ఇంకా సమీక్షలు లేవు",
+    "No_reviews_yet": "ఇంకా రివ్యూలు లేవు",
     "Flat": "ఫ్లాట్",
     "Booking_Alerts_Setup": "బుకింగ్ అలర్ట్‌ల సెటప్",
     "Ensure_you_never_miss_a_booking": "మీరు బుకింగ్‌ను ఎప్పటికీ కోల్పోకుండా చూసుకోండి",
@@ -1049,6 +1049,12 @@
     "Payouts_are_being_sent_manually_by_Didi_Now_Your_earnings_are_recorded": "డిడి నౌ ప్రస్తుతం చెల్లింపులను స్వయంగా పంపుతోంది. మీ సంపాదన నమోదైంది.",
     "Preparing_payout": "చెల్లింపు సిద్ధమవుతోంది",
     "Failed_will_be_checked_before_retry": "విఫలమైంది — మళ్లీ పంపే ముందు తనిఖీ చేస్తాం",
-    "This_phone_number_is_already_linked_to_another_Didi_Now_account_Please_contact_Didi_Now_support_to_recover_your_account": "ఈ ఫోన్ నంబర్ ఇప్పటికే మరో డిడి నౌ ఖాతాకు లింక్ అయి ఉంది. మీ ఖాతాను తిరిగి పొందడానికి డిడి నౌ సపోర్ట్‌ను సంప్రదించండి."
+    "This_phone_number_is_already_linked_to_another_Didi_Now_account_Please_contact_Didi_Now_support_to_recover_your_account": "ఈ ఫోన్ నంబర్ ఇప్పటికే మరో డిడి నౌ ఖాతాకు లింక్ అయి ఉంది. మీ ఖాతాను తిరిగి పొందడానికి డిడి నౌ సపోర్ట్‌ను సంప్రదించండి.",
+    "Top_Workers": "🏆 టాప్ వర్కర్లు",
+    "Top_Earners": "💰 ఎక్కువ సంపాదన",
+    "Top_Rated": "⭐ టాప్ రేటింగ్",
+    "Ranked_by_earnings_from_completed_bookings_today": "ఈరోజు పూర్తైన బుకింగ్‌ల సంపాదన ప్రకారం ర్యాంక్.",
+    "Ranked_by_average_customer_rating_More_reviews_wins_a_tie": "కస్టమర్ల సగటు రేటింగ్ ప్రకారం ర్యాంక్. సమానమైతే ఎక్కువ రివ్యూలు ఉన్నవారు ముందు.",
+    "reviews": "రివ్యూలు"
   }
 }

@@ -3040,6 +3040,48 @@ export type Database = {
           },
         ]
       }
+      hybrid_payout_settings: {
+        Row: {
+          auto_retry_enabled: boolean
+          backlog_auto_processing_enabled: boolean
+          bank_execution_enabled: boolean
+          daily_settlement_prep_enabled: boolean
+          hybrid_mode: string
+          id: number
+          manual_recording_enabled: boolean
+          provider_test_transfer_enabled: boolean
+          settlement_cutoff_time: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          auto_retry_enabled?: boolean
+          backlog_auto_processing_enabled?: boolean
+          bank_execution_enabled?: boolean
+          daily_settlement_prep_enabled?: boolean
+          hybrid_mode?: string
+          id?: number
+          manual_recording_enabled?: boolean
+          provider_test_transfer_enabled?: boolean
+          settlement_cutoff_time?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          auto_retry_enabled?: boolean
+          backlog_auto_processing_enabled?: boolean
+          bank_execution_enabled?: boolean
+          daily_settlement_prep_enabled?: boolean
+          hybrid_mode?: string
+          id?: number
+          manual_recording_enabled?: boolean
+          provider_test_transfer_enabled?: boolean
+          settlement_cutoff_time?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           amount_inr: number
@@ -3417,6 +3459,65 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      manual_payout_records: {
+        Row: {
+          amount_inr: number
+          confirmed_at: string | null
+          confirmed_by: string | null
+          evidence: Json
+          id: string
+          method: string
+          paid_on: string
+          payout_id: string
+          recorded_at: string
+          recorded_by: string
+          rejected_reason: string | null
+          status: string
+          utr: string
+          worker_id: string
+        }
+        Insert: {
+          amount_inr: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          evidence: Json
+          id?: string
+          method: string
+          paid_on: string
+          payout_id: string
+          recorded_at?: string
+          recorded_by: string
+          rejected_reason?: string | null
+          status?: string
+          utr: string
+          worker_id: string
+        }
+        Update: {
+          amount_inr?: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          evidence?: Json
+          id?: string
+          method?: string
+          paid_on?: string
+          payout_id?: string
+          recorded_at?: string
+          recorded_by?: string
+          rejected_reason?: string | null
+          status?: string
+          utr?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manual_payout_records_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: true
+            referencedRelation: "worker_payouts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notification_delivery_events: {
         Row: {
@@ -3799,6 +3900,36 @@ export type Database = {
         }
         Relationships: []
       }
+      payout_ledger_events: {
+        Row: {
+          actor: string | null
+          created_at: string
+          details: Json
+          entity_id: string | null
+          entity_type: string
+          event_type: string
+          id: number
+        }
+        Insert: {
+          actor?: string | null
+          created_at?: string
+          details?: Json
+          entity_id?: string | null
+          entity_type: string
+          event_type: string
+          id?: number
+        }
+        Update: {
+          actor?: string | null
+          created_at?: string
+          details?: Json
+          entity_id?: string | null
+          entity_type?: string
+          event_type?: string
+          id?: number
+        }
+        Relationships: []
+      }
       payout_provider_config: {
         Row: {
           active_payout_provider: string
@@ -3846,6 +3977,56 @@ export type Database = {
           upi_provider?: string
         }
         Relationships: []
+      }
+      payout_recovery_cases: {
+        Row: {
+          amount_inr: number
+          booking_id: string
+          created_at: string
+          earning_id: string | null
+          id: string
+          notes: string | null
+          owner: string | null
+          reason: string
+          resolved_at: string | null
+          status: string
+          worker_id: string
+        }
+        Insert: {
+          amount_inr: number
+          booking_id: string
+          created_at?: string
+          earning_id?: string | null
+          id?: string
+          notes?: string | null
+          owner?: string | null
+          reason: string
+          resolved_at?: string | null
+          status?: string
+          worker_id: string
+        }
+        Update: {
+          amount_inr?: number
+          booking_id?: string
+          created_at?: string
+          earning_id?: string | null
+          id?: string
+          notes?: string | null
+          owner?: string | null
+          reason?: string
+          resolved_at?: string | null
+          status?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payout_recovery_cases_earning_id_fkey"
+            columns: ["earning_id"]
+            isOneToOne: false
+            referencedRelation: "worker_earnings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payout_webhook_events: {
         Row: {
@@ -4529,6 +4710,48 @@ export type Database = {
           operating_start_time?: string
           scheduled_dispatch_minutes?: number
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      settlement_batches: {
+        Row: {
+          batch_date: string
+          created_at: string
+          cutoff_at: string
+          earning_count: number
+          id: string
+          prepared_at: string | null
+          run_count: number
+          status: string
+          total_inr: number
+          updated_at: string
+          worker_count: number
+        }
+        Insert: {
+          batch_date: string
+          created_at?: string
+          cutoff_at: string
+          earning_count?: number
+          id?: string
+          prepared_at?: string | null
+          run_count?: number
+          status?: string
+          total_inr?: number
+          updated_at?: string
+          worker_count?: number
+        }
+        Update: {
+          batch_date?: string
+          created_at?: string
+          cutoff_at?: string
+          earning_count?: number
+          id?: string
+          prepared_at?: string | null
+          run_count?: number
+          status?: string
+          total_inr?: number
+          updated_at?: string
+          worker_count?: number
         }
         Relationships: []
       }
@@ -5976,6 +6199,65 @@ export type Database = {
           },
         ]
       }
+      worker_earnings: {
+        Row: {
+          booking_id: string
+          completed_at: string
+          created_at: string
+          earning_inr: number
+          id: string
+          instant_slot_no: number | null
+          legacy_payout_id: string | null
+          payout_path: string
+          platform_fee_inr: number
+          service_earning_inr: number
+          status: string
+          tip_inr: number
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          booking_id: string
+          completed_at: string
+          created_at?: string
+          earning_inr: number
+          id?: string
+          instant_slot_no?: number | null
+          legacy_payout_id?: string | null
+          payout_path: string
+          platform_fee_inr?: number
+          service_earning_inr?: number
+          status?: string
+          tip_inr?: number
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          booking_id?: string
+          completed_at?: string
+          created_at?: string
+          earning_inr?: number
+          id?: string
+          instant_slot_no?: number | null
+          legacy_payout_id?: string | null
+          payout_path?: string
+          platform_fee_inr?: number
+          service_earning_inr?: number
+          status?: string
+          tip_inr?: number
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_earnings_legacy_payout_id_fkey"
+            columns: ["legacy_payout_id"]
+            isOneToOne: true
+            referencedRelation: "worker_payouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_emergency_pause: {
         Row: {
           id: string
@@ -6078,6 +6360,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      worker_field_guard_events: {
+        Row: {
+          auth_uid: string | null
+          created_at: string
+          fields: string[]
+          id: number
+          mode: string
+          op: string
+          reverted: boolean
+          worker_id: string | null
+        }
+        Insert: {
+          auth_uid?: string | null
+          created_at?: string
+          fields: string[]
+          id?: number
+          mode: string
+          op: string
+          reverted: boolean
+          worker_id?: string | null
+        }
+        Update: {
+          auth_uid?: string | null
+          created_at?: string
+          fields?: string[]
+          id?: number
+          mode?: string
+          op?: string
+          reverted?: boolean
+          worker_id?: string | null
+        }
+        Relationships: []
       }
       worker_fix_followups: {
         Row: {
@@ -6515,6 +6830,92 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_payout_attempt_outcomes: {
+        Row: {
+          attempt_id: string
+          evidence: Json
+          id: string
+          outcome: string
+          provider: string | null
+          provider_confirmed_not_paid: boolean
+          provider_reference: string | null
+          recorded_at: string
+          recorded_by: string | null
+        }
+        Insert: {
+          attempt_id: string
+          evidence?: Json
+          id?: string
+          outcome: string
+          provider?: string | null
+          provider_confirmed_not_paid?: boolean
+          provider_reference?: string | null
+          recorded_at?: string
+          recorded_by?: string | null
+        }
+        Update: {
+          attempt_id?: string
+          evidence?: Json
+          id?: string
+          outcome?: string
+          provider?: string | null
+          provider_confirmed_not_paid?: boolean
+          provider_reference?: string | null
+          recorded_at?: string
+          recorded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_payout_attempt_outcomes_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payout_attempt_latest"
+            referencedColumns: ["attempt_id"]
+          },
+          {
+            foreignKeyName: "worker_payout_attempt_outcomes_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payout_attempts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_payout_attempts: {
+        Row: {
+          attempt_no: number
+          id: string
+          idempotency_key: string
+          payout_id: string
+          requested_at: string
+          source: string
+        }
+        Insert: {
+          attempt_no: number
+          id?: string
+          idempotency_key: string
+          payout_id: string
+          requested_at?: string
+          source: string
+        }
+        Update: {
+          attempt_no?: number
+          id?: string
+          idempotency_key?: string
+          payout_id?: string
+          requested_at?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_payout_attempts_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_payout_audit_log: {
         Row: {
           action: string
@@ -6652,12 +7053,85 @@ export type Database = {
           },
         ]
       }
+      worker_payout_items: {
+        Row: {
+          active: boolean
+          amount_inr: number
+          created_at: string
+          deactivated_at: string | null
+          deactivated_reason: string | null
+          earning_id: string
+          id: string
+          payout_id: string
+        }
+        Insert: {
+          active?: boolean
+          amount_inr: number
+          created_at?: string
+          deactivated_at?: string | null
+          deactivated_reason?: string | null
+          earning_id: string
+          id?: string
+          payout_id: string
+        }
+        Update: {
+          active?: boolean
+          amount_inr?: number
+          created_at?: string
+          deactivated_at?: string | null
+          deactivated_reason?: string | null
+          earning_id?: string
+          id?: string
+          payout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_payout_items_earning_id_fkey"
+            columns: ["earning_id"]
+            isOneToOne: false
+            referencedRelation: "worker_earnings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_payout_items_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_payout_milestones: {
+        Row: {
+          initialized_from_history: number
+          instant_slots_allocated: number
+          instant_slots_settled: number
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          initialized_from_history?: number
+          instant_slots_allocated?: number
+          instant_slots_settled?: number
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          initialized_from_history?: number
+          instant_slots_allocated?: number
+          instant_slots_settled?: number
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: []
+      }
       worker_payouts: {
         Row: {
           admin_notes: string | null
           approved_at: string | null
           auto_retry_enabled: boolean
-          booking_id: string
+          batch_id: string | null
+          booking_id: string | null
           created_at: string
           currency: string
           external_reference: string | null
@@ -6679,6 +7153,7 @@ export type Database = {
           payout_amount: number
           payout_method: string | null
           payout_source: string
+          payout_type: string
           platform_fee: number
           processed_at: string | null
           processed_by_admin_id: string | null
@@ -6699,7 +7174,8 @@ export type Database = {
           admin_notes?: string | null
           approved_at?: string | null
           auto_retry_enabled?: boolean
-          booking_id: string
+          batch_id?: string | null
+          booking_id?: string | null
           created_at?: string
           currency?: string
           external_reference?: string | null
@@ -6721,6 +7197,7 @@ export type Database = {
           payout_amount: number
           payout_method?: string | null
           payout_source?: string
+          payout_type?: string
           platform_fee?: number
           processed_at?: string | null
           processed_by_admin_id?: string | null
@@ -6741,7 +7218,8 @@ export type Database = {
           admin_notes?: string | null
           approved_at?: string | null
           auto_retry_enabled?: boolean
-          booking_id?: string
+          batch_id?: string | null
+          booking_id?: string | null
           created_at?: string
           currency?: string
           external_reference?: string | null
@@ -6763,6 +7241,7 @@ export type Database = {
           payout_amount?: number
           payout_method?: string | null
           payout_source?: string
+          payout_type?: string
           platform_fee?: number
           processed_at?: string | null
           processed_by_admin_id?: string | null
@@ -6780,6 +7259,13 @@ export type Database = {
           worker_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "worker_payouts_batch_fk"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "settlement_batches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "worker_payouts_booking_id_fkey"
             columns: ["booking_id"]
@@ -7734,6 +8220,25 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_payout_attempt_latest: {
+        Row: {
+          attempt_id: string | null
+          attempt_no: number | null
+          outcome: string | null
+          payout_id: string | null
+          provider_confirmed_not_paid: boolean | null
+          recorded_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_payout_attempts_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_rating_stats: {
         Row: {
           avg_rating: number | null
@@ -7844,6 +8349,7 @@ export type Database = {
         Args: { p_booking_id: string; p_note: string }
         Returns: undefined
       }
+      _earning_label: { Args: { s: string }; Returns: string }
       _get_int_setting: {
         Args: { default_val: number; k: string }
         Returns: number
@@ -7857,6 +8363,9 @@ export type Database = {
         Args: { p_booking_id: string; p_channel: string; p_worker_id: string }
         Returns: undefined
       }
+      _my_worker_id: { Args: never; Returns: string }
+      _payout_label: { Args: { s: string }; Returns: string }
+      _payout_retry_safe: { Args: { _payout_id: string }; Returns: boolean }
       _refund_booking_tip: { Args: { p_booking_id: string }; Returns: number }
       _reject_booking_request_core: {
         Args: { p_booking_id: string; p_worker_id: string }
@@ -7878,6 +8387,17 @@ export type Database = {
       }
       _tip_booking_open: { Args: { p_booking_id: string }; Returns: boolean }
       _woc_sla_minutes: { Args: { p_esc: string }; Returns: number }
+      _worker_guard_log: {
+        Args: {
+          p_fields: string[]
+          p_mode: string
+          p_op: string
+          p_reverted: boolean
+          p_worker_id: string
+        }
+        Returns: undefined
+      }
+      _worker_guard_mode: { Args: never; Returns: string }
       abandon_booking_tip: { Args: { p_tip_payment_id: string }; Returns: Json }
       academy_dashboard_stats: { Args: never; Returns: Json }
       accept_booking: { Args: { p_booking_id: string }; Returns: Json }
@@ -8086,6 +8606,10 @@ export type Database = {
         Args: { p_booking_id: string; p_otp: string }
         Returns: Json
       }
+      admin_confirm_manual_payout: {
+        Args: { _confirm_utr: string; _payout_id: string }
+        Returns: boolean
+      }
       admin_confirm_store_version: {
         Args: {
           _app: string
@@ -8221,6 +8745,15 @@ export type Database = {
           web_version: string
         }[]
       }
+      admin_hybrid_audit: { Args: { _limit?: number }; Returns: Json }
+      admin_hybrid_batches: { Args: { _limit?: number }; Returns: Json }
+      admin_hybrid_overview: { Args: never; Returns: Json }
+      admin_hybrid_queue: { Args: never; Returns: Json }
+      admin_hybrid_worker_detail: {
+        Args: { _worker_id: string }
+        Returns: Json
+      }
+      admin_hybrid_workers: { Args: { _mode?: string }; Returns: Json }
       admin_instant_dispatch_funnel: {
         Args: { p_booking_id: string }
         Returns: Json
@@ -8374,9 +8907,33 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_record_legacy_payout_attempt: {
+        Args: {
+          _evidence: Json
+          _payout_id: string
+          _provider_reference: string
+        }
+        Returns: string
+      }
+      admin_record_manual_payout: {
+        Args: {
+          _amount_inr: number
+          _earning_ids: string[]
+          _evidence: Json
+          _method: string
+          _paid_on: string
+          _utr: string
+          _worker_id: string
+        }
+        Returns: string
+      }
       admin_recreate_cancelled_booking: {
         Args: { p_booking_id: string }
         Returns: Json
+      }
+      admin_reject_manual_payout: {
+        Args: { _payout_id: string; _reason: string }
+        Returns: boolean
       }
       admin_reject_worker_bank: {
         Args: { _reason: string; _worker_id: string }
@@ -8597,6 +9154,28 @@ export type Database = {
       admin_update_case_status: {
         Args: { p_case: string; p_note: string; p_status: string }
         Returns: undefined
+      }
+      admin_update_hybrid_settings: {
+        Args: { _patch: Json }
+        Returns: {
+          auto_retry_enabled: boolean
+          backlog_auto_processing_enabled: boolean
+          bank_execution_enabled: boolean
+          daily_settlement_prep_enabled: boolean
+          hybrid_mode: string
+          id: number
+          manual_recording_enabled: boolean
+          provider_test_transfer_enabled: boolean
+          settlement_cutoff_time: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "hybrid_payout_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       admin_upsert_worker:
         | {
@@ -9290,6 +9869,14 @@ export type Database = {
         Returns: number
       }
       check_payout_eligibility: { Args: { p_payout_id: string }; Returns: Json }
+      claim_payout_for_initiation: {
+        Args: { _payout_id: string; _source: string }
+        Returns: {
+          attempt_id: string
+          attempt_no: number
+          idempotency_key: string
+        }[]
+      }
       cleanup_old_booking_requests: { Args: never; Returns: undefined }
       cleanup_old_heartbeats: { Args: never; Returns: number }
       cleanup_old_presence_snapshots: { Args: never; Returns: number }
@@ -9777,7 +10364,17 @@ export type Database = {
           request_count: number
         }[]
       }
+      get_my_earnings: {
+        Args: { p_cursor?: string; p_limit?: number; p_status?: string }
+        Returns: Json
+      }
       get_my_payout_breakdown: { Args: { p_booking_id: string }; Returns: Json }
+      get_my_payout_detail: { Args: { p_payout_id: string }; Returns: Json }
+      get_my_payout_history: {
+        Args: { p_cursor?: string; p_limit?: number }
+        Returns: Json
+      }
+      get_my_payout_summary: { Args: never; Returns: Json }
       get_my_start_otp: { Args: { p_booking_id: string }; Returns: Json }
       get_my_wallet_balance: {
         Args: never
@@ -10354,6 +10951,10 @@ export type Database = {
         Args: { curlopt: string; value: string }
         Returns: boolean
       }
+      hybrid_handle_booking_refund: {
+        Args: { _booking_id: string; _reason: string }
+        Returns: string
+      }
       increment_worker_failure: {
         Args: { _cooldown_until: string; _worker_id: string }
         Returns: undefined
@@ -10502,6 +11103,15 @@ export type Database = {
         Returns: string
       }
       payment_wallet_issues_summary: { Args: never; Returns: Json }
+      payout_bank_execution_allowed: { Args: never; Returns: boolean }
+      payout_missing_records: {
+        Args: { _since?: string }
+        Returns: {
+          booking_id: string
+          completed_at: string
+          worker_id: string
+        }[]
+      }
       pending_sla_minutes: { Args: never; Returns: number }
       pg_advisory_unlock_booking: {
         Args: { p_booking_id: string }
@@ -10513,6 +11123,8 @@ export type Database = {
         Returns: boolean
       }
       pg_try_advisory_lock_dispatch: { Args: never; Returns: boolean }
+      prepare_daily_settlement: { Args: { _batch_date: string }; Returns: Json }
+      prepare_due_daily_settlement: { Args: never; Returns: Json }
       preview_worker_update_impact: {
         Args: { p_min_version_name: string }
         Returns: {
@@ -10588,6 +11200,17 @@ export type Database = {
         }
         Returns: Json
       }
+      record_payout_attempt_outcome: {
+        Args: {
+          _attempt_id: string
+          _confirmed_not_paid: boolean
+          _evidence: Json
+          _outcome: string
+          _provider: string
+          _provider_reference: string
+        }
+        Returns: string
+      }
       record_verified_app_open: { Args: never; Returns: Json }
       redispatch_booking: { Args: { p_booking_id: string }; Returns: undefined }
       refresh_community_hourly_availability: { Args: never; Returns: undefined }
@@ -10616,6 +11239,10 @@ export type Database = {
       reject_booking_request: {
         Args: { p_booking_id: string; p_worker_id: string }
         Returns: Json
+      }
+      release_failed_payout_for_retry: {
+        Args: { _payout_id: string; _reason: string }
+        Returns: boolean
       }
       release_worker_payout: {
         Args: { p_admin_notes?: string; p_payout_id: string }
@@ -10724,6 +11351,7 @@ export type Database = {
         }
         Returns: Json
       }
+      settlement_cutoff: { Args: { _batch_date: string }; Returns: string }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       simple_assign_to_next_worker: {
@@ -11030,6 +11658,7 @@ export type Database = {
         Args: { p_worker_id: string }
         Returns: boolean
       }
+      worker_core_protected_columns: { Args: never; Returns: string[] }
       worker_has_booking_slot: {
         Args: { p_booking_id: string; p_worker_id: string }
         Returns: boolean
@@ -11043,6 +11672,7 @@ export type Database = {
         Returns: boolean
       }
       worker_phone_exists: { Args: { _phone: string }; Returns: boolean }
+      worker_protected_columns: { Args: never; Returns: string[] }
       worker_respond_to_booking: {
         Args: {
           p_assignment_id: string
