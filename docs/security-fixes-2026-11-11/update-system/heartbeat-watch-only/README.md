@@ -33,3 +33,7 @@ Fast: set `HEARTBEAT_AUDIT=off` (audit code idle). Full: copy `live-backup/index
 ## Notes
 - All 44 workers have `id == user_id`, so apps sending either id match the live `.eq('id')` lookup.
 - Pre-existing: `usePostBootVerification` calls heartbeat without worker_id → live answers 400 (harmless retry path, not fixed here).
+
+## DEPLOYED 2026-11-11 04:09 UTC (watch-only)
+Function folder now = live baseline + audit (`supabase/functions/worker-heartbeat/`). Old project copy kept only as `project-copy-never-deploy.ts`.
+First 6 min: 27 audited check-ins, 0 errors; session_match 4 workers, legacy_anon 11 workers, mismatch/invalid/no_header 0. Workers checking in (10 min) 9 → 15; available 15 (unchanged).
