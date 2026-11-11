@@ -64,3 +64,7 @@
 - [x] Prepare separate native receiver/alert and approval-gated notification service handoff; no deployment.
 - [x] Run regression and training tests; verify browser practice flow.
 - [ ] Complete real FCM sender + cold-start/session binding + device checks — blocked: sender approval/connection and new Android build/device; push stays OFF.
+
+## Test notification sender — audit and preparation only (11 Nov)
+- [ ] Prepare isolated sender rules and sender-specific offline tests after verified backup.
+- [ ] Report security protections, delivery evidence and Android blockers; do not deploy or enable sending.
