@@ -41,3 +41,7 @@
 - [x] Payout display fixes (statuses, IST totals, pagination, live refresh, receipt text, en/hi/te).
 - [x] Connect hybrid payout cards to contract v1 (switched off). Blocked to turn on: server functions not live; signed-in worker test.
 - [ ] Worker account-linkage DB fix — blocked: Admin Panel review + deployment dependencies (docs/security-fixes-2026-11-10/worker-linkage/HANDOFF.md).
+## Availability screen: simple words + voice help (11 Nov)
+- [x] New labels (en/hi/te), bigger day buttons; save/load unchanged (screen test checks identical save data).
+- [x] Speaker button beside heading and welcome note; app language, female voice where available, English fallback, no overlap, stops on leave.
+- [ ] Hear it on a real Android/iPhone — needs a new native build (voice add-on); older installs use browser speech or show "voice not available".

@@ -191,16 +191,16 @@
     "settings": "Settings"
   },
   "availability": {
-    "title": "Set Your Available Time Slots",
+    "title": "When Can You Work?",
     "selectDays": "Select days of the week",
-    "selectAll": "Select All",
-    "clear": "Clear",
+    "selectAll": "Full Day",
+    "clear": "Remove All",
     "allWeek": "All Week",
-    "copyToAll": "Copy to all days",
+    "copyToAll": "Same for Every Day",
     "selectTimeSlots": "Select time slots for {{day}}",
     "selectedTimeSlots": "Selected time slots for {{day}}:",
     "noSlotsSelected": "No slots selected",
-    "saveAvailability": "Save Availability",
+    "saveAvailability": "Save My Working Time",
     "saving": "Saving...",
     "saved": "Availability saved",
     "savedDesc": "Your free time slots have been updated",
@@ -225,7 +225,14 @@
       "fri": "FRI",
       "sat": "SAT",
       "sun": "SUN"
-    }
+    },
+    "timesSelected_one": "{{count}} Time Selected",
+    "timesSelected_other": "{{count}} Times Selected",
+    "voiceListen": "Listen to instructions",
+    "voiceStop": "Stop voice",
+    "voiceLoading": "Getting voice ready",
+    "voiceUnavailable": "Voice is not available on this phone.",
+    "voiceEnglishOnly": "Your language voice is not on this phone, so the help was spoken in English."
   },
   "common": {
     "loading": "Loading...",
