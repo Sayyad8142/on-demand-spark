@@ -100,23 +100,29 @@ object PracticeSession {
             p.getString("outcome", "").isNullOrEmpty() && !p.getString("userId", "").isNullOrEmpty() && p.getString("userId", "") == nativeUser(ctx)
     }
     /** Atomic first-receipt claim: duplicate FCM deliveries return false and never replay sound. */
-    fun claimReceipt(ctx: Context, id: String, expiresAt: Long): Boolean = synchronized(lock) {
-        if (!matches(ctx, id) || prefs(ctx).getLong("expiresAt", 0) != expiresAt) return false
-        if (prefs(ctx).getLong("receivedAt", 0) > 0) return false
-        prefs(ctx).edit().putBoolean("received", true).putLong("receivedAt", System.currentTimeMillis()).commit()
+    fun claimReceipt(ctx: Context, id: String, expiresAt: Long): Boolean {
+        synchronized(lock) {
+            if (!matches(ctx, id) || prefs(ctx).getLong("expiresAt", 0) != expiresAt) return false
+            if (prefs(ctx).getLong("receivedAt", 0) > 0) return false
+            return prefs(ctx).edit().putBoolean("received", true).putLong("receivedAt", System.currentTimeMillis()).commit()
+        }
     }
     fun expiry(ctx: Context): Long = prefs(ctx).getLong("expiresAt", 0)
     fun id(ctx: Context): String = prefs(ctx).getString("id", "") ?: ""
-    fun markOverlay(ctx: Context, id: String) = synchronized(lock) {
-        if (id(ctx) == id) prefs(ctx).edit().putBoolean("overlay", true).putLong("overlayAt", System.currentTimeMillis()).commit()
+    fun markOverlay(ctx: Context, id: String) {
+        synchronized(lock) {
+            if (id(ctx) == id) prefs(ctx).edit().putBoolean("overlay", true).putLong("overlayAt", System.currentTimeMillis()).commit()
+        }
     }
     /** First outcome wins. */
-    fun outcome(ctx: Context, id: String, value: String): Boolean = synchronized(lock) {
-        val p = prefs(ctx)
-        if (p.getString("id", "") != id || !p.getString("outcome", "").isNullOrEmpty()) return false
-        val e = p.edit().putString("outcome", value)
-        if (value == "accepted") e.putLong("acceptedAt", System.currentTimeMillis())
-        e.commit()
+    fun outcome(ctx: Context, id: String, value: String): Boolean {
+        synchronized(lock) {
+            val p = prefs(ctx)
+            if (p.getString("id", "") != id || !p.getString("outcome", "").isNullOrEmpty()) return false
+            val e = p.edit().putString("outcome", value)
+            if (value == "accepted") e.putLong("acceptedAt", System.currentTimeMillis())
+            return e.commit()
+        }
     }
     fun state(ctx: Context): JSObject {
         val p = prefs(ctx)
