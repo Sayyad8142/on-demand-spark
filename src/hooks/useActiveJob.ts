@@ -127,7 +127,7 @@ export function useActiveJob(userId: string | undefined) {
     if (!workerId) return;
 
     const channel = supabase
-      .channel(`active-job-updates:${workerId}`)
+      .channel(`active-job-updates:${workerId}:${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         {
