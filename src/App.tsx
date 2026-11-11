@@ -183,6 +183,8 @@ function NativeNavigationHandler() {
       if (target === "home") {
         console.log("🏠 Navigating to home screen", bookingId ? `with booking ${bookingId}` : "");
         navigate("/home");
+      } else if (target === "test-booking") {
+        navigate("/test-booking");
       } else if (target === "bookings" || target === "booking_requests") {
         console.log("📋 Navigating to bookings screen", bookingId ? `with booking ${bookingId}` : "");
         navigate("/bookings");

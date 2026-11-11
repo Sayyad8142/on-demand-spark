@@ -9,7 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/useAuth';
 import { usePracticeSafety } from '@/hooks/usePracticeSafety';
 import { newPractice, PRACTICE_BOOKING, PRACTICE_CHECKS, practiceSeconds, practiceTransition } from '@/lib/practiceBooking';
-import { PracticeNotifications, sendPracticePush } from '@/lib/practiceNotification';
+import { PracticeNotifications, sendPracticePush, shouldRestorePractice } from '@/lib/practiceNotification';
 import { practiceText } from '@/i18n/practice';
 
 export default function TestBooking() {
@@ -46,6 +46,22 @@ export default function TestBooking() {
     return () => clearInterval(timer);
   }, [state.step]);
   useEffect(() => () => { if (Capacitor.getPlatform() === 'android') void PracticeNotifications.cancel().catch(() => undefined); }, []);
+  // Cold start from the native practice alert's Accept: restore only for the same login,
+  // only after the real-work check passes, then clear the native session.
+  const restored = useRef(false);
+  useEffect(() => {
+    if (restored.current || Capacitor.getPlatform() !== 'android' || safety.checking || !user?.id) return;
+    restored.current = true;
+    void (async () => {
+      try {
+        const native = await PracticeNotifications.getState();
+        if (!shouldRestorePractice(native, user.id, Date.now())) return;
+        if (!(await safety.refresh())) { dispatch({ type: 'blocked' }); return; }
+        dispatch({ type: 'restore', id: native.id, received: native.received, overlay: native.overlay });
+      } catch { /* No restore without native evidence. */ }
+      finally { void PracticeNotifications.cancel().catch(() => undefined); }
+    })();
+  }, [safety, user?.id]);
   const act = async (action: Parameters<typeof dispatch>[0]) => {
     if (actionLock.current) return;
     actionLock.current = true;
@@ -62,7 +78,7 @@ export default function TestBooking() {
       if (!(await safety.refresh())) { dispatch({ type: 'blocked' }); return; }
       if (!push) { dispatch({ type: 'local_alert', now: Date.now() }); return; }
       dispatch({ type: 'sending', now: Date.now() });
-      const result = await sendPracticePush({ id: state.id, expiresAt: Date.now() + 60000, hasToken: !!safety.worker?.fcm_token, tokenStatus: safety.worker?.fcm_token_status ?? null });
+      const result = await sendPracticePush({ id: state.id, expiresAt: Date.now() + 60000, userId: user?.id, hasToken: !!safety.worker?.fcm_token, tokenStatus: safety.worker?.fcm_token_status ?? null });
       if ('reason' in result) { dispatch({ type: 'failed_send' }); setNotice(text(result.reason)); }
       else dispatch({ type: 'sent' });
     } catch (error) { dispatch({ type: 'failed_send' }); setNotice(error instanceof Error ? error.message : text('sendError')); }

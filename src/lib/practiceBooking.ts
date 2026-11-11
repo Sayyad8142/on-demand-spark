@@ -9,7 +9,8 @@ export function newPractice(id: string, now: number): PracticeState {
   return { id, step: 'intro', expiresAt: now + PRACTICE_BOOKING.ttlSeconds * 1000, checks: Object.fromEntries(PRACTICE_CHECKS.map(k => [k, 'not_verified'])) as Record<PracticeCheck, CheckResult>, wrongOtp: false };
 }
 export function practiceSeconds(expiresAt: number, now: number): number { return Math.min(PRACTICE_BOOKING.ttlSeconds, Math.max(0, Math.ceil((expiresAt - now) / 1000))); }
-export type PracticeAction = { type: 'reset'; id: string; now: number } | { type: 'local_alert' | 'sending'; now: number } | { type: 'sent' | 'failed_send' | 'blocked' } | { type: 'accept' | 'reject' | 'tick'; now: number } | { type: 'start_otp' | 'complete_otp' } | { type: 'verify'; code: string } | { type: 'device'; id: string; received: boolean; overlay: boolean; outcome?: string; now: number };
+export type PracticeAction = { type: 'reset'; id: string; now: number } | { type: 'local_alert' | 'sending'; now: number } | { type: 'sent' | 'failed_send' | 'blocked' } | { type: 'accept' | 'reject' | 'tick'; now: number } | { type: 'start_otp' | 'complete_otp' } | { type: 'verify'; code: string } | { type: 'device'; id: string; received: boolean; overlay: boolean; outcome?: string; now: number }
+  | { type: 'restore'; id: string; received: boolean; overlay: boolean };
 export function practiceTransition(s: PracticeState, a: PracticeAction): PracticeState {
   if (a.type === 'reset') return newPractice(a.id, a.now);
   if (a.type === 'blocked') return { ...s, step: 'blocked', wrongOtp: false };
@@ -31,6 +32,11 @@ export function practiceTransition(s: PracticeState, a: PracticeAction): Practic
     const key = start ? 'startOtp' : 'completeOtp';
     if (a.code !== PRACTICE_BOOKING.otp) return { ...s, wrongOtp: true, checks: check(key, 'failed') };
     return { ...s, step: start ? 'in_progress' : 'completed', wrongOtp: false, checks: { ...s.checks, [key]: 'passed', [start ? 'started' : 'completed']: 'passed' } };
+  }
+  // Native Accept while the app was closed: continue that same practice from Accepted.
+  // Receipt implies the provider accepted the send; otherwise "sent" stays Not Verified.
+  if (a.type === 'restore' && s.step === 'intro' && a.id.startsWith('practice-')) {
+    return { ...newPractice(a.id, 0), step: 'accepted', checks: { ...newPractice(a.id, 0).checks, sent: a.received ? 'passed' : 'not_verified', received: a.received ? 'passed' : 'not_verified', overlay: a.overlay ? 'passed' : 'not_verified', accepted: 'passed' } };
   }
   if (a.type === 'device' && a.id === s.id && ['sending', 'waiting'].includes(s.step)) {
     const checks = { ...s.checks, received: a.received ? 'passed' as const : s.checks.received, overlay: a.overlay ? 'passed' as const : s.checks.overlay };

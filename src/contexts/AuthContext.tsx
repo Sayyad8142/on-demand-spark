@@ -289,6 +289,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     try { (await import('@/lib/bookingAck')).resetAckCache(); } catch { /* ignore */ }
     try { (await import('@/lib/diagnosticsSync')).clearDiagnostics(); } catch { /* ignore */ }
+    try { await (await import('@/lib/practiceNotification')).clearPracticeSession(); } catch { /* ignore */ }
     try { await supabase.auth.signOut(); } catch (error) { console.error('❌ Sign out error:', error); }
     await clearSessionCompletely();
   }, [clearSessionCompletely, session]);
