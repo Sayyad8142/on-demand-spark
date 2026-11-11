@@ -52,7 +52,7 @@ describe("Availability screen: simpler words + voice help", () => {
   it("shows the new labels and saves exactly the same data as before", async () => {
     renderScreen();
     await screen.findByText("When Can You Work?");
-    fireEvent.click(screen.getAllByRole("button")[1]);
+    fireEvent.click(screen.getByText("MON"));
     expect(screen.getByText("2 Times Selected")).toBeTruthy();
     fireEvent.click(screen.getByText("Full Day"));
     expect(screen.getByText("24 Times Selected")).toBeTruthy();
