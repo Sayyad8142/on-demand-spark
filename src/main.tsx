@@ -69,14 +69,15 @@ bootstrap().catch((error) => {
   // Show error UI
   const root = document.getElementById("root");
   if (root) {
+    // Worker-facing: no URLs or technical details (those stay in the console log above).
     root.innerHTML = `
-      <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center;">
+      <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; text-align: center; font-family: system-ui, sans-serif;">
         <div>
-          <h1 style="color: #e11d48; margin-bottom: 16px;">App Failed to Start</h1>
-          <p style="color: #6b7280; margin-bottom: 16px;">Please try closing and reopening the app.</p>
-          <pre style="background: #f3f4f6; padding: 12px; border-radius: 8px; font-size: 12px; overflow: auto; text-align: left;">${error?.message || error}</pre>
+          <h1 style="font-size: 20px; font-weight: 700; margin-bottom: 20px;">Something went wrong. Please try again.</h1>
+          <button id="startup-retry" type="button" style="min-height: 48px; padding: 0 28px; border-radius: 12px; border: 0; background: #e11d48; color: #fff; font-size: 16px; font-weight: 700;">Try Again</button>
         </div>
       </div>
     `;
+    document.getElementById("startup-retry")?.addEventListener("click", () => window.location.reload());
   }
 });
