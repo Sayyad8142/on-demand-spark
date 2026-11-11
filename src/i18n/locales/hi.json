@@ -453,7 +453,7 @@
     "Distribution_of_your": "आपका वितरण",
     "rating": "रेटिंग",
     "All_Reviews": "सभी समीक्षाएं (",
-    "No_reviews_yet": "अभी तक कोई समीक्षा नहीं",
+    "No_reviews_yet": "अभी कोई रिव्यू नहीं",
     "Flat": "फ्लैट",
     "Booking_Alerts_Setup": "बुकिंग अलर्ट सेटअप",
     "Ensure_you_never_miss_a_booking": "सुनिश्चित करें कि आप कभी भी बुकिंग न चूकें",
@@ -1049,6 +1049,12 @@
     "Payouts_are_being_sent_manually_by_Didi_Now_Your_earnings_are_recorded": "डिडी नाउ अभी भुगतान खुद भेज रहा है। आपकी कमाई दर्ज है।",
     "Preparing_payout": "भुगतान तैयार हो रहा है",
     "Failed_will_be_checked_before_retry": "असफल — दोबारा भेजने से पहले जाँच होगी",
-    "This_phone_number_is_already_linked_to_another_Didi_Now_account_Please_contact_Didi_Now_support_to_recover_your_account": "यह फ़ोन नंबर पहले से किसी दूसरे डिडी नाउ खाते से जुड़ा है। अपना खाता वापस पाने के लिए डिडी नाउ सपोर्ट से संपर्क करें।"
+    "This_phone_number_is_already_linked_to_another_Didi_Now_account_Please_contact_Didi_Now_support_to_recover_your_account": "यह फ़ोन नंबर पहले से किसी दूसरे डिडी नाउ खाते से जुड़ा है। अपना खाता वापस पाने के लिए डिडी नाउ सपोर्ट से संपर्क करें।",
+    "Top_Workers": "🏆 टॉप वर्कर",
+    "Top_Earners": "💰 सबसे ज़्यादा कमाई",
+    "Top_Rated": "⭐ टॉप रेटिंग",
+    "Ranked_by_earnings_from_completed_bookings_today": "आज पूरी हुई बुकिंग की कमाई के अनुसार रैंक।",
+    "Ranked_by_average_customer_rating_More_reviews_wins_a_tie": "ग्राहकों की औसत रेटिंग के अनुसार रैंक। बराबरी पर ज़्यादा रिव्यू वाला आगे।",
+    "reviews": "रिव्यू"
   }
 }

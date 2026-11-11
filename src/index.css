@@ -257,3 +257,8 @@ html.alert-overlay-active body {
   0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 hsl(var(--destructive) / 0.55); }
   50% { transform: scale(1.08); box-shadow: 0 0 0 14px hsl(var(--destructive) / 0); }
 }
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
