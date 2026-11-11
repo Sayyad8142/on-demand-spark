@@ -71,3 +71,7 @@
 - [x] Implement approved sender/journal adapters (staged) and native session/cold-start/dedupe/preemption (source); 495 tests pass; device checklist written.
 - [ ] Apply journal SQL + deploy sender + enable switch — blocked: owner approval.
 - [ ] Android compile + device checklist — blocked: signed build and test phone (no Android tools here).
+
+## Test Booking entry and APK readiness (11 Nov)
+- [x] Move Test Booking from Home into Profile's Account Actions; keep practice-page real-work checks and notification switches unchanged.
+- [x] Verify relocated entry and local training in mobile guest preview; 73 practice tests pass, build OK, no browser runtime errors. Real push remains OFF; approval, staged journal/sender activation and Android compile/device checks still required; authenticated testing unavailable for external Supabase.
