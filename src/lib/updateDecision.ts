@@ -12,8 +12,10 @@ export const WORKER_PLAY_STORE_URL = `https://play.google.com/store/apps/details
 /** Snooze for "Later": until a newer build is published, or this long at most. */
 export const SOFT_SNOOZE_MS = 3 * 24 * 60 * 60 * 1000;
 
+import { ACTIVE_WORK_STATUSES, workBlockReason } from "@/lib/workSafety";
+
 /** Booking statuses during which mandatory blocking is deferred. */
-export const ACTIVE_BOOKING_STATUSES = ["assigned", "accepted", "on_the_way", "started", "in_progress"] as const;
+export const ACTIVE_BOOKING_STATUSES = ACTIVE_WORK_STATUSES;
 
 export type ServerDecision = "none" | "soft" | "force";
 
@@ -79,14 +81,18 @@ export function decideUpdate(args: {
   answer: UpdateAnswer | null;
   activeBookingStatus?: string | null;
   bookingAlertOpen?: boolean;
+  /** False until the active-booking lookup finished; unknown counts as busy. Defaults to true for old callers. */
+  bookingLoaded?: boolean;
+  /** Current screen; Start/End OTP screens are never interrupted. */
+  pathname?: string | null;
   snooze?: SoftSnooze | null;
   now: number;
 }): UpdateMode {
-  const { answer, activeBookingStatus, bookingAlertOpen = false, snooze = null, now } = args;
+  const { answer, activeBookingStatus, bookingAlertOpen = false, bookingLoaded = true, pathname = null, snooze = null, now } = args;
   if (!answer) return "none"; // offline / no answer yet: never block
-  const busy = hasActiveBooking(activeBookingStatus);
-  if (answer.decision === "force") return busy || bookingAlertOpen ? "force_deferred" : "force";
-  if (answer.decision === "soft" && !busy && !bookingAlertOpen && !isSoftSnoozed(snooze, answer.latestBuild, now)) return "soft";
+  const busy = workBlockReason({ bookingLoaded, activeBookingStatus, offerVisible: bookingAlertOpen, pathname }) !== null;
+  if (answer.decision === "force") return busy ? "force_deferred" : "force";
+  if (answer.decision === "soft" && !busy && !isSoftSnoozed(snooze, answer.latestBuild, now)) return "soft";
   return "none";
 }
 
