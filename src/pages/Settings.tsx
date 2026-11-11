@@ -21,7 +21,10 @@ import {
 import { usePushRegister } from "@/hooks/usePushRegister";
 import { supabase } from "@/integrations/supabase/client";
 import { SimulatedOverlayModal } from "@/components/SimulatedOverlayModal";
-import { checkForUpdate, downloadAndApplyUpdate, getCurrentBundleVersion, type UpdateCheckResult } from "@/lib/liveUpdate";
+import { getCurrentBundleVersion, runOtaCycle } from "@/lib/liveUpdate";
+import { OTA_DELIVERY_ENABLED } from "@/lib/otaSafety";
+import { getWorkState } from "@/lib/workStateStore";
+import { loadInstalledVersion, versionLabel } from "@/lib/installedVersion";
 
 export default function Settings() {
   useWorkerLanguage();
@@ -39,9 +42,8 @@ export default function Settings() {
   const [simulatedBooking, setSimulatedBooking] = useState<any>(null);
   const [otaStatus, setOtaStatus] = useState<string>('');
   const [otaChecking, setOtaChecking] = useState(false);
-  const [otaUpdating, setOtaUpdating] = useState(false);
-  const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
   const [currentBundleVersion, setCurrentBundleVersion] = useState<string>('');
+  const [installedLabel, setInstalledLabel] = useState<string>('');
   const isNative = Capacitor.isNativePlatform();
 
   useEffect(() => {
@@ -51,6 +53,7 @@ export default function Settings() {
     }
     // Load current bundle version
     getCurrentBundleVersion().then(v => setCurrentBundleVersion(v));
+    loadInstalledVersion().then(v => setInstalledLabel(versionLabel(v)));
   }, [user?.id, checkRegistrationStatus]);
 
   const checkStatus = async () => {
@@ -138,36 +141,20 @@ export default function Settings() {
       console.error('Push registration error:', error);
     }
   };
+  // Never applies during an offer, an active booking or the OTP screens (same rules as the
+  // automatic check); with delivery switched off it only reports the installed version.
   const handleCheckOtaUpdate = async () => {
+    if (!OTA_DELIVERY_ENABLED) { setOtaStatus('ota_switched_off'); return; }
     setOtaChecking(true);
     setOtaStatus('Checking...');
     try {
-      const result = await checkForUpdate();
-      setOtaResult(result);
-      setCurrentBundleVersion(result.currentVersion);
-      if (result.updateAvailable) {
-        setOtaStatus(`Update ${result.latestVersion} available!`);
-      } else {
-        setOtaStatus('You are up to date ✓');
-      }
-    } catch (err) {
+      const d = await runOtaCycle(getWorkState);
+      setOtaStatus(d.action === 'wait' ? 'update_after_job' : d.action === 'apply' ? 'Update applied! Reloading...' : 'You are up to date ✓');
+      setCurrentBundleVersion(await getCurrentBundleVersion());
+    } catch {
       setOtaStatus('Check failed');
     } finally {
       setOtaChecking(false);
-    }
-  };
-
-  const handleApplyOtaUpdate = async () => {
-    if (!otaResult?.bundleInfo) return;
-    setOtaUpdating(true);
-    const success = await downloadAndApplyUpdate(otaResult.bundleInfo, setOtaStatus);
-    if (!success) {
-      setOtaUpdating(false);
-      toast({
-        title: displayText("Update failed"),
-        description: displayText("Could not apply update. Try again later."),
-        variant: "destructive"
-      });
     }
   };
 
@@ -407,10 +394,8 @@ export default function Settings() {
               </p>
               
               <div className="text-xs font-mono bg-muted p-3 rounded mb-3 space-y-1">
-                <div><strong>{displayText("Current version:")}</strong> {currentBundleVersion || '...'}</div>
-                {otaResult?.latestVersion && (
-                  <div><strong>{displayText("Latest available:")}</strong> {otaResult.latestVersion}</div>
-                )}
+                <div><strong>{displayText("Current version:")}</strong> {installedLabel || '...'}</div>
+                <div><strong>{displayText("Web bundle:")}</strong> {currentBundleVersion || '...'}</div>
                 {otaStatus && (
                   <div className="mt-1 font-sans font-medium">{displayText(otaStatus)}</div>
                 )}
@@ -419,7 +404,7 @@ export default function Settings() {
               <div className="space-y-2">
                 <Button
                   onClick={handleCheckOtaUpdate}
-                  disabled={otaChecking || otaUpdating}
+                  disabled={otaChecking}
                   variant="outline"
                   className="w-full"
                 >
@@ -436,25 +421,6 @@ export default function Settings() {
                   )}
                 </Button>
 
-                {otaResult?.updateAvailable && (
-                  <Button
-                    onClick={handleApplyOtaUpdate}
-                    disabled={otaUpdating}
-                    className="w-full"
-                  >
-                    {otaUpdating ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        {displayText("Updating...")}
-                      </>
-                    ) : (
-                      <>
-                        <Download className="w-4 h-4 mr-2" />
-                        {displayText("Update to")} {otaResult.latestVersion}
-                      </>
-                    )}
-                  </Button>
-                )}
               </div>
             </div>
           </div>
