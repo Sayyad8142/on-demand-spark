@@ -56,7 +56,7 @@ export interface SpeechEngine {
   stop(): void | Promise<void>;
 }
 
-export function createGuidePlayer(engines: SpeechEngine[], onState: (s: GuideState) => void) {
+export function createGuidePlayer(engines: SpeechEngine[], onState: (s: GuideState) => void, texts: Record<GuideLang, string> = AVAILABILITY_GUIDE) {
   let session = 0;
   let state: GuideState = "idle";
   let active: SpeechEngine | null = null;
@@ -95,12 +95,12 @@ export function createGuidePlayer(engines: SpeechEngine[], onState: (s: GuideSta
     const id = ++session;
     set("loading");
     const lang = guideLanguage(langInput);
-    const first = await attempt(id, AVAILABILITY_GUIDE[lang], GUIDE_LOCALE[lang]);
+    const first = await attempt(id, texts[lang], GUIDE_LOCALE[lang]);
     let result: GuideResult;
     if (first === "stopped") return "stopped";
     if (first) result = "spoken";
     else if (lang !== "en") {
-      const en = await attempt(id, AVAILABILITY_GUIDE.en, GUIDE_LOCALE.en);
+      const en = await attempt(id, texts.en, GUIDE_LOCALE.en);
       if (en === "stopped") return "stopped";
       result = en ? "fallback_english" : "unavailable";
     } else result = "unavailable";
