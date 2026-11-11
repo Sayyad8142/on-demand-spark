@@ -8,7 +8,6 @@ import {
   onNewAlert,
   dismissAlert,
   invalidateOffer,
-  markAlertOpened,
   markAcceptedByMe,
   isOwnAcceptance,
   pruneShownBookings,
@@ -50,7 +49,7 @@ export function useUnifiedBookingAlerts(
         return;
       }
       setPending(alert);
-      markAlertOpened(alert.bookingId, alert.bookingRequestId);
+      // A listener receiving data does not prove the alert was visible.
 
       // Trigger the native Android pop-up. The native pop-up sends its own
       // popup_shown ACK only once it is really on screen. Home has no in-app

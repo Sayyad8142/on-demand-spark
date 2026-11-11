@@ -8,6 +8,7 @@ const h = vi.hoisted(() => ({
   invalidateOffer: vi.fn(),
   dismissAlert: vi.fn(),
   markAlertRendered: vi.fn(),
+  markAlertOpened: vi.fn(),
   postFallback: vi.fn(async () => true),
   native: { isNative: false, platform: "web" },
 }));
@@ -26,7 +27,7 @@ vi.mock("@/services/bookingAlertCoordinator", () => ({
   onNewAlert: (fn: (a: Record<string, unknown>) => void) => { h.listener = fn; return () => { h.listener = null; }; },
   dismissAlert: h.dismissAlert,
   invalidateOffer: h.invalidateOffer,
-  markAlertOpened: vi.fn(),
+  markAlertOpened: h.markAlertOpened,
   markAlertRendered: h.markAlertRendered,
   markAcceptedByMe: vi.fn((id: string) => h.accepting.delete(id)),
   isOwnAcceptance: () => false,
@@ -112,6 +113,7 @@ describe("useUnifiedBookingAlerts — pop-up fallback", () => {
     await waitFor(() => expect(h.postFallback).toHaveBeenCalledTimes(1));
     // Home has no in-app offer card, so nothing was displayed — never report it.
     expect(h.markAlertRendered).not.toHaveBeenCalled();
+    expect(h.markAlertOpened).not.toHaveBeenCalled();
   });
 
   it("when the pop-up opens normally, no backup notification is posted", async () => {
