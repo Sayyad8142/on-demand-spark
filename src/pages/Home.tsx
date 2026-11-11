@@ -15,7 +15,6 @@ import { useStartupHealthAudit } from "@/hooks/useStartupHealthAudit";
 import { WorkerHealthBadge } from "@/components/WorkerHealthBadge";
 import HomePerformanceCard from "@/components/HomePerformanceCard";
 import WorkerLeaderboardCard from "@/components/WorkerLeaderboardCard";
-import HomeTodayCard from "@/components/HomeTodayCard";
 
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
@@ -323,7 +322,6 @@ export default function Home() {
         />
       )}
 
-      {!isGuestMode && worker && !activeJob && <HomeTodayCard workerId={worker.id} />}
 
       <HomeTrainingVideoSlot isGuest={isGuestMode} hasActiveJob={!!activeJob} hasWorker={!!worker} />
 
