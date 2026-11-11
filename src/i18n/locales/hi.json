@@ -191,16 +191,16 @@
     "settings": "सेटिंग्स"
   },
   "availability": {
-    "title": "अपने उपलब्ध समय स्लॉट सेट करें",
+    "title": "आप कब काम कर सकती हैं?",
     "selectDays": "सप्ताह के दिन चुनें",
-    "selectAll": "सभी चुनें",
-    "clear": "साफ़ करें",
+    "selectAll": "पूरा दिन",
+    "clear": "सब हटाएँ",
     "allWeek": "पूरा सप्ताह",
-    "copyToAll": "सभी दिनों में कॉपी करें",
+    "copyToAll": "हर दिन यही",
     "selectTimeSlots": "{{day}} के लिए समय स्लॉट चुनें",
     "selectedTimeSlots": "{{day}} के लिए चुने गए समय स्लॉट:",
     "noSlotsSelected": "कोई स्लॉट नहीं चुना गया",
-    "saveAvailability": "उपलब्धता सहेजें",
+    "saveAvailability": "मेरा काम का समय सेव करें",
     "saving": "सहेजा जा रहा है...",
     "saved": "उपलब्धता सहेजी गई",
     "savedDesc": "आपके खाली समय स्लॉट अपडेट हो गए हैं",
@@ -225,7 +225,14 @@
       "fri": "शुक्र",
       "sat": "शनि",
       "sun": "रवि"
-    }
+    },
+    "timesSelected_one": "{{count}} समय चुना गया",
+    "timesSelected_other": "{{count}} समय चुने गए",
+    "voiceListen": "निर्देश सुनें",
+    "voiceStop": "आवाज़ रोकें",
+    "voiceLoading": "आवाज़ तैयार हो रही है",
+    "voiceUnavailable": "इस फ़ोन पर आवाज़ उपलब्ध नहीं है।",
+    "voiceEnglishOnly": "इस फ़ोन पर हिंदी आवाज़ नहीं है, इसलिए मदद अंग्रेज़ी में सुनाई गई।"
   },
   "common": {
     "loading": "लोड हो रहा है...",
