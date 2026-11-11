@@ -7,7 +7,8 @@ const spoken: string[] = [];
 let finishSpeech: (() => void) | null = null;
 const stopSpy = vi.fn();
 
-vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ user: { id: "w1" } }) }));
+const authValue = { user: { id: "w1" } };
+vi.mock("@/hooks/useAuth", () => ({ useAuth: () => authValue }));
 vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast: vi.fn() }) }));
 vi.mock("@/components/BottomNav", () => ({ default: () => null }));
 vi.mock("@/integrations/supabase/client", () => {
@@ -46,13 +47,12 @@ describe("Availability screen: simpler words + voice help", () => {
   beforeEach(async () => {
     upserts.length = 0; spoken.length = 0; stopSpy.mockClear();
     await i18n.changeLanguage("en");
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    vi.setSystemTime(new Date("2026-11-09T06:00:00Z")); // a Monday → Monday tab opens
   });
 
   it("shows the new labels and saves exactly the same data as before", async () => {
     renderScreen();
     await screen.findByText("When Can You Work?");
+    fireEvent.click(screen.getByText("Mon"));
     expect(screen.getByText("2 Times Selected")).toBeTruthy();
     fireEvent.click(screen.getByText("Full Day"));
     expect(screen.getByText("24 Times Selected")).toBeTruthy();
