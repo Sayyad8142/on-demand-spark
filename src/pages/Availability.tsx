@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "react-i18next";
 import BottomNav from "@/components/BottomNav";
+import GuideSpeakerButton from "@/components/availability/GuideSpeakerButton";
+import { useAvailabilityGuide } from "@/hooks/useAvailabilityGuide";
 type DayKey = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 type Slot = {
   label: string;
@@ -64,6 +66,12 @@ export default function Availability() {
     user
   } = useAuth();
   const { t } = useTranslation();
+  const guide = useAvailabilityGuide({
+    onResult: (r) => {
+      if (r === "unavailable") toast({ description: t("availability.voiceUnavailable") });
+      else if (r === "fallback_english") toast({ description: t("availability.voiceEnglishOnly") });
+    },
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [weekData, setWeekData] = useState<Record<DayKey, Slot[]>>(generateInitialWeekData());
@@ -335,11 +343,14 @@ export default function Availability() {
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* Header */}
       <header className="px-5 pt-5 pb-3">
-        <h1 className="text-[20px] font-semibold tracking-tight text-foreground leading-tight">
-          {t('availability.title')}
-        </h1>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-[22px] font-semibold tracking-tight text-foreground leading-tight">
+            {t('availability.title')}
+          </h1>
+          <GuideSpeakerButton state={guide.state} onPress={guide.toggle} />
+        </div>
         <p className="text-[12px] text-muted-foreground mt-1 font-medium">
-          <span style={{ color: GREEN }} className="font-semibold">{displayText('{{count}} slots', { count: selectedCount })}</span>
+          <span style={{ color: GREEN }} className="font-semibold">{t('availability.timesSelected', { count: selectedCount })}</span>
           <span className="mx-1.5 text-muted-foreground/50">·</span>
           {getDayName(activeDay)}
         </p>
@@ -351,9 +362,12 @@ export default function Availability() {
             className="rounded-2xl px-3.5 py-2.5 border"
             style={{ backgroundColor: GREEN_SOFT_BG, borderColor: GREEN_SOFT_BORDER }}
           >
-            <p className="text-[12px] text-foreground/80 leading-snug">
-              {displayText("Welcome to Didi Now! Please select your working hours to start receiving bookings.")}
-            </p>
+            <div className="flex items-center gap-3">
+              <p className="flex-1 text-[13px] text-foreground/80 leading-snug">
+                {displayText("Welcome to Didi Now! Please select your working hours to start receiving bookings.")}
+              </p>
+              <GuideSpeakerButton state={guide.state} onPress={guide.toggle} />
+            </div>
           </div>
         </div>
       )}
@@ -396,7 +410,7 @@ export default function Availability() {
         <div className="flex gap-2">
           <button
             onClick={() => selectAllDay(activeDay)}
-            className="flex-1 h-9 rounded-xl text-[12px] font-medium flex items-center justify-center gap-1.5 active:scale-95 transition border"
+            className="flex-1 h-11 rounded-xl text-[13px] font-semibold leading-tight px-1 flex items-center justify-center gap-1.5 active:scale-95 transition border"
             style={{
               backgroundColor: GREEN_SOFT_BG,
               color: GREEN,
@@ -408,13 +422,13 @@ export default function Availability() {
           </button>
           <button
             onClick={() => clearDay(activeDay)}
-            className="flex-1 h-9 rounded-xl text-[12px] font-medium transition active:scale-95 border border-border bg-background text-muted-foreground hover:text-foreground"
+            className="flex-1 h-11 rounded-xl text-[13px] font-semibold leading-tight px-1 transition active:scale-95 border border-border bg-background text-muted-foreground hover:text-foreground"
           >
             {t('availability.clear')}
           </button>
           <button
             onClick={() => copyToAllDays(activeDay)}
-            className="flex-1 h-9 rounded-xl text-[12px] font-medium transition active:scale-95 border border-border bg-background text-muted-foreground hover:text-foreground"
+            className="flex-1 h-11 rounded-xl text-[13px] font-semibold leading-tight px-1 transition active:scale-95 border border-border bg-background text-muted-foreground hover:text-foreground"
           >
             {t('availability.copyToAll')}
           </button>
@@ -463,7 +477,7 @@ export default function Availability() {
         <button
           onClick={saveAvailability}
           disabled={saving}
-          className="w-full h-12 rounded-2xl text-[14px] font-semibold text-white active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center"
+          className="w-full h-12 rounded-2xl text-[15px] font-semibold text-white active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center"
           style={{ backgroundColor: GREEN, boxShadow: `0 6px 16px ${GREEN}40` }}
         >
           {saving ? t('availability.saving') : t('availability.saveAvailability')}
