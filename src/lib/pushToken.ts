@@ -2,7 +2,6 @@ import { Capacitor } from '@capacitor/core';
 import { getInstalledVersionSync } from "@/lib/installedVersion";
 import { PushNotifications } from '@capacitor/push-notifications';
 import { supabase } from '@/integrations/supabase/client';
-import { CURRENT_VERSION_NAME } from '@/config/version';
 import { evaluatePushHealth } from '@/lib/pushHealth';
 
 // @ts-ignore - Capacitor bridge

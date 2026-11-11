@@ -11,7 +11,6 @@
 import { Capacitor } from "@capacitor/core";
 import { getInstalledVersionSync } from "@/lib/installedVersion";
 import { supabase } from "@/integrations/supabase/client";
-import { CURRENT_VERSION_NAME } from "@/config/version";
 
 // @ts-ignore - native bridge
 const AuthBridge = window.Capacitor?.Plugins?.AuthBridge;

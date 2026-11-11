@@ -26,7 +26,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getInstalledVersionSync } from "@/lib/installedVersion";
 import { Capacitor } from "@capacitor/core";
-import { CURRENT_VERSION_NAME } from "@/config/version";
 
 
 export type AckEvent =
