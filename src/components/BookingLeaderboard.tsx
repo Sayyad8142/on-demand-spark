@@ -1,5 +1,6 @@
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { rankLeaderboard, summarizeReviews, LEADERBOARD_TABS, type LeaderboardTab, type ReviewStats, type RankedWorker } from "@/lib/leaderboardRanking";
 import { Card } from "@/components/ui/card";
 import { Trophy, Star, Zap, IndianRupee, TrendingUp, HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +36,10 @@ export default function BookingLeaderboard() {
   const [data, setData] = useState<LeaderboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<LeaderboardTab>("top");
+  const [slideDir, setSlideDir] = useState<"left" | "right">("left");
+  const [reviews, setReviews] = useState<Map<string, ReviewStats>>(new Map());
+  const touchX = useRef<number | null>(null);
 
   const fetchLeaderboard = async () => {
     try {
@@ -42,6 +47,12 @@ export default function BookingLeaderboard() {
       if (invokeError) throw invokeError;
       setData(result);
       setError(null);
+      const ids = (result?.leaderboard ?? []).map((l: LeaderboardEntry) => l.id);
+      if (ids.length) {
+        const { data: rows, error: rErr } = await supabase
+          .from("worker_ratings").select("worker_id, rating").in("worker_id", ids).limit(5000);
+        if (!rErr && rows) setReviews(summarizeReviews(rows as { worker_id: string | null; rating: number | null }[]));
+      }
     } catch (err: any) {
       console.error("Error fetching leaderboard:", err);
       setError(err.message || "Failed to load leaderboard");
@@ -54,12 +65,42 @@ export default function BookingLeaderboard() {
     fetchLeaderboard();
   }, []);
 
+  const switchTab = (next: LeaderboardTab) => {
+    if (next === tab) return;
+    setSlideDir(LEADERBOARD_TABS.indexOf(next) > LEADERBOARD_TABS.indexOf(tab) ? "left" : "right");
+    setTab(next);
+    fetchLeaderboard();
+  };
+
+  const ranked = useMemo(
+    () => (data ? rankLeaderboard(data.leaderboard, tab, reviews) : []),
+    [data, tab, reviews],
+  );
+
   if (loading) return <LeaderboardSkeleton />;
   if (error || !data) return null;
 
-  const me = data.leaderboard.find(l => l.isMe);
-  const top3 = data.leaderboard.slice(0, 3);
-  const others = data.leaderboard.slice(3); // Continue showing all workers
+  const me = ranked.find(l => l.isMe);
+  const top3 = ranked.slice(0, 3);
+  const others = ranked.slice(3);
+  const tabLabels: Record<LeaderboardTab, string> = {
+    top: displayText("🏆 Top Workers"),
+    earners: displayText("💰 Top Earners"),
+    rated: displayText("⭐ Top Rated"),
+  };
+  const tabHelp: Record<LeaderboardTab, string> = {
+    top: displayText("Workers in your community ranked by Priority Score, Rating, and Performance."),
+    earners: displayText("Ranked by earnings from completed bookings today."),
+    rated: displayText("Ranked by average customer rating. More reviews wins a tie."),
+  };
+  const onTouchEnd = (x: number) => {
+    if (touchX.current === null) return;
+    const dx = x - touchX.current;
+    touchX.current = null;
+    if (Math.abs(dx) < 50) return;
+    const i = LEADERBOARD_TABS.indexOf(tab) + (dx < 0 ? 1 : -1);
+    if (i >= 0 && i < LEADERBOARD_TABS.length) switchTab(LEADERBOARD_TABS[i]);
+  };
 
   return (
     <div className="space-y-4">
@@ -70,7 +111,7 @@ export default function BookingLeaderboard() {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-primary" />
-                <h3 className="font-bold text-sm">{displayText("Your Rank — #")}{me.rank}</h3>
+                <h3 className="font-bold text-sm">{displayText("Your Rank — #")}{me.displayRank}</h3>
               </div>
               <LevelBadge level={me.level} />
             </div>
@@ -121,31 +162,43 @@ export default function BookingLeaderboard() {
         </Card>
       )}
 
-      {/* Today's Top Workers */}
       <div className="space-y-2">
+        <div role="tablist" className="flex gap-1 p-1 rounded-full bg-muted overflow-x-auto no-scrollbar snap-x">
+          {LEADERBOARD_TABS.map((t) => (
+            <button
+              key={t}
+              role="tab"
+              aria-selected={tab === t}
+              onClick={() => switchTab(t)}
+              className={`flex-1 shrink-0 snap-start whitespace-nowrap px-3 py-2 rounded-full text-xs font-bold transition-all duration-300 ${tab === t ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground"}`}
+            >
+              {tabLabels[t]}
+            </button>
+          ))}
+        </div>
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-sm font-bold flex items-center gap-1.5">
-            {displayText("🏆 Today's Top Workers")}
-          </h2>
+          <p className="text-[10px] text-muted-foreground">{tabHelp[tab]}</p>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
                 <HelpCircle className="w-3.5 h-3.5 text-muted-foreground" />
               </TooltipTrigger>
-              <TooltipContent className="text-[10px] max-w-[200px]">
-                {displayText("Workers in your community ranked by Priority Score, Rating, and Performance.")}
-              </TooltipContent>
+              <TooltipContent className="text-[10px] max-w-[200px]">{tabHelp[tab]}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
 
-        <div className="space-y-2">
+        <div
+          key={tab}
+          onTouchStart={(e) => { touchX.current = e.touches[0].clientX; }}
+          onTouchEnd={(e) => onTouchEnd(e.changedTouches[0].clientX)}
+          className={`space-y-2 animate-in fade-in duration-300 ${slideDir === "left" ? "slide-in-from-right-8" : "slide-in-from-left-8"}`}
+        >
           {top3.map((w, i) => (
-            <WorkerRow key={w.id} worker={w} medal={i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"} />
+            <WorkerRow key={w.id} worker={w} tab={tab} medal={i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"} />
           ))}
-          
           {others.map((w) => (
-            <WorkerRow key={w.id} worker={w} />
+            <WorkerRow key={w.id} worker={w} tab={tab} />
           ))}
         </div>
       </div>
@@ -153,13 +206,13 @@ export default function BookingLeaderboard() {
   );
 }
 
-function WorkerRow({ worker, medal }: { worker: LeaderboardEntry; medal?: string }) {
+function WorkerRow({ worker, medal, tab }: { worker: RankedWorker<LeaderboardEntry>; medal?: string; tab: LeaderboardTab }) {
   useWorkerLanguage();
   return (
     <div className={`flex items-center justify-between p-2.5 rounded-xl border ${worker.isMe ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800' : 'bg-card border-border'} shadow-sm`}>
       <div className="flex items-center gap-3">
         <span className="text-base w-6 text-center font-bold">
-          {medal || `#${worker.rank}`}
+          {medal || `#${worker.displayRank}`}
         </span>
 <div className="w-9 h-9 rounded-full bg-muted overflow-hidden shrink-0">
           {worker.photo_url ? (
@@ -185,21 +238,45 @@ function WorkerRow({ worker, medal }: { worker: LeaderboardEntry; medal?: string
           <div className="flex items-center gap-2 mt-0.5 opacity-80">
             <div className="flex items-center gap-0.5">
               <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-              <span className="text-[10px] font-bold">{worker.rating.toFixed(1)}</span>
+              <span className="text-[10px] font-bold">{(tab === "rated" && worker.reviewAverage !== null ? worker.reviewAverage : worker.rating).toFixed(1)}</span>
             </div>
-            <div className="flex items-center gap-0.5">
-              <Zap className="w-2.5 h-2.5 fill-primary text-primary" />
-              <span className="text-[10px] font-bold">Prio {worker.priority_score}</span>
-            </div>
+            {tab === "top" && (
+              <div className="flex items-center gap-0.5">
+                <Zap className="w-2.5 h-2.5 fill-primary text-primary" />
+                <span className="text-[10px] font-bold">Prio {worker.priority_score}</span>
+              </div>
+            )}
+            {tab === "earners" && (
+              <span className="text-[10px] font-bold">{worker.jobsToday} {displayText("Jobs")}</span>
+            )}
           </div>
         </div>
       </div>
       <div className="text-right">
-        <p className="text-[10px] font-bold text-foreground leading-none">{worker.jobsToday} {displayText("Jobs")}</p>
-        <p className="text-[11px] font-extrabold text-green-600 flex items-center justify-end mt-0.5">
-          <IndianRupee className="w-2.5 h-2.5" />
-          {worker.earningsToday}
-        </p>
+        {tab === "rated" ? (
+          <>
+            <p className="text-sm font-extrabold flex items-center justify-end gap-0.5">
+              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+              {worker.reviewAverage !== null ? worker.reviewAverage.toFixed(1) : "—"}
+            </p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              {worker.reviewCount > 0 ? `${worker.reviewCount} ${displayText("reviews")}` : displayText("No reviews yet")}
+            </p>
+          </>
+        ) : tab === "earners" ? (
+          <p className="text-sm font-extrabold text-green-600 flex items-center justify-end">
+            <IndianRupee className="w-3 h-3" />
+            {worker.earningsToday}
+          </p>
+        ) : (
+          <>
+            <p className="text-[10px] font-bold text-foreground leading-none">{worker.jobsToday} {displayText("Jobs")}</p>
+            <p className="text-[11px] font-extrabold text-green-600 flex items-center justify-end mt-0.5">
+              <IndianRupee className="w-2.5 h-2.5" />
+              {worker.earningsToday}
+            </p>
+          </>
+        )}
       </div>
     </div>
   );
