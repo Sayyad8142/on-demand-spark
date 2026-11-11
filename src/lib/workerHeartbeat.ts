@@ -79,6 +79,10 @@ export async function sendWorkerHeartbeat(
   inFlight = true;
 
   try {
+    // No login → nothing to prove identity with; skip instead of sending an anonymous call.
+    const { data: sess } = await supabase.auth.getSession();
+    if (!sess?.session?.access_token) return;
+
     const [fcmToken, deviceInfo, installed] = await Promise.all([
       getNativeFcmToken(),
       getDeviceInfo(),
