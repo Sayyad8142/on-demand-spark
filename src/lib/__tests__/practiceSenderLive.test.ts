@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { createLiveAdapters, googleAccessToken, PRACTICE_ACTIVE_WORK_STATUSES, redact, sha256Hex, type AdapterConfig } from '../../../docs/test-booking-training-2026-11-11/sender/staged/adapters';
