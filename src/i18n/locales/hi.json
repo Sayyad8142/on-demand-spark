@@ -1088,6 +1088,7 @@
     "Jobs_done_today": "आज पूरे किए काम",
     "Upcoming_jobs": "आने वाले काम",
     "Next_Booking": "अगली बुकिंग",
-    "No_bookings_assigned_yet": "अभी कोई बुकिंग नहीं मिली है।"
+    "No_bookings_assigned_yet": "अभी कोई बुकिंग नहीं मिली है।",
+    "Tomorrow": "कल"
   }
 }
