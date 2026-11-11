@@ -2,9 +2,10 @@
 
 ## Repeat booking alerts (11 Nov) — preview only
 - [x] Read requirements and create checksum-verified source backup.
-- [ ] Audit cancellation/busy guard, repeat presentation, expiry and duplicate lifecycle.
-- [ ] Prepare smallest native fix and run repeat-offer regressions, existing tests and Android compilation.
-- [ ] Report evidence and remaining isolated real-phone checks; no live actions/deployment.
+- [x] Audit cancellation/busy guard, repeat presentation, expiry and duplicate lifecycle; distinct offer receipt verified, phone cause remains unconfirmed.
+- [x] Prepare native cleanup/reuse/replay fix; 501 frontend + 24 native tests passed, TypeScript and Android Kotlin/Java compilation passed; generated output removed.
+- [x] Report evidence and isolated real-phone checklist in docs/repeat-booking-alerts-2026-11-11/REPORT.md; no live actions/deployment.
+- [ ] Verify repeated alert display/actions/audio/ACK on isolated Android phone — blocked: no device/isolated services or live receiver source supplied.
 
 ## Signup Step 2
 - [x] Simplify payout selection into visual QR-upload and manual UPI choices; preserve existing validation and bank fallback.
