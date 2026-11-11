@@ -1,4 +1,5 @@
 import { Download, PhoneCall } from "lucide-react";
+import { logAppHealth } from "@/lib/appHealthLog";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/didi-partner-logo.png";
 import { displayText, useWorkerLanguage } from "@/i18n/display";
@@ -25,7 +26,7 @@ const ForceUpdateScreen = ({ installedBuild, minBuild, storeUrl = WORKER_PLAY_ST
         </div>
       </div>
       <div className="space-y-3">
-        <Button size="lg" className="h-14 w-full text-base font-extrabold" onClick={() => window.open(storeUrl, "_blank")}>
+        <Button size="lg" className="h-14 w-full text-base font-extrabold" onClick={() => { logAppHealth("update_tapped", "force"); window.open(storeUrl, "_blank"); }}>
           <Download className="mr-2 h-5 w-5" /> {displayText("Update Now")}
         </Button>
         <a href={`tel:${SUPPORT_PHONE}`} className="flex items-center justify-center gap-2 text-sm text-muted-foreground">

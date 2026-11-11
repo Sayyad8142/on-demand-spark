@@ -5,7 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -37,11 +37,14 @@ import {
 // requestLocationPermissions intentionally not imported — see startup effect note below.
 import { isSetupBlockingV2, shouldShowBatteryPrompt, snoozeBattery, clearAccountSetupState, shouldRequestActivity } from "@/lib/setupGate";
 import { toast as sonnerToast } from "sonner";
-import { initOtaCheck, markOtaBootSuccess, type UpdateCheckResult } from "@/lib/liveUpdate";
+import { markOtaBootSuccess, runOtaCycle } from "@/lib/liveUpdate";
+import { OTA_DELIVERY_ENABLED } from "@/lib/otaSafety";
+import { isSafeToInterrupt } from "@/lib/workSafety";
+import { getWorkState, setWorkState } from "@/lib/workStateStore";
+import { logAppHealth } from "@/lib/appHealthLog";
 import { startCancellationVoice, stopCancellationVoice } from "@/lib/cancellationVoice";
 import { startOtpReminderVoice, stopOtpReminderVoice } from "@/lib/otpReminderVoice";
 import { useOtpReminderEscalation, logOtpReminderEvent } from "@/hooks/useOtpReminderEscalation";
-import { OtaMandatoryModal } from "@/components/OtaMandatoryModal";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import Auth from "./pages/Auth";
 import OtpVerify from "./pages/OtpVerify";
@@ -159,6 +162,13 @@ function RootRedirect() {
 }
 
 
+/** Reports the current screen to AppInner (which sits outside the router) for update safety. */
+function RoutePathReporter({ onPath }: { onPath: (p: string) => void }) {
+  const { pathname } = useLocation();
+  useEffect(() => { onPath(pathname); }, [pathname, onPath]);
+  return null;
+}
+
 // Component to handle native navigation events (must be inside BrowserRouter)
 function NativeNavigationHandler() {
   const navigate = useNavigate();
@@ -203,7 +213,7 @@ function AppInner() {
   usePostBootVerification(session?.user?.id, worker?.id);
   // Pass 3: watch for permission regressions (notification/overlay/battery) and auto-repair.
   usePermissionRegressionWatch(session?.user?.id, worker?.id, !!worker?.is_available);
-  const [otaResult, setOtaResult] = useState<UpdateCheckResult | null>(null);
+  const [currentPath, setCurrentPath] = useState<string>(() => (typeof window !== "undefined" ? window.location.pathname : "/"));
   const [showPermissionOnboarding, setShowPermissionOnboarding] = useState(false);
   const overlayDeclinedRef = useRef(false);
   const [showBatteryWarning, setShowBatteryWarning] = useState(false);
@@ -265,19 +275,11 @@ function AppInner() {
     }
   }, [session?.user?.id]);
 
-  // OTA: confirm boot success + check for updates on startup
+  // OTA: confirm this start succeeded (clears the pending marker / records a native rollback).
+  // Bundle checks run only when delivery is switched on, and only at a safe moment (see below).
   useEffect(() => {
-    if (Capacitor.isNativePlatform()) {
-      // First confirm this boot succeeded (clears pending marker)
-      markOtaBootSuccess().then(() => {
-        // Then check for new updates
-        initOtaCheck().then(result => {
-          if (result?.isMandatory) {
-            setOtaResult(result);
-          }
-        });
-      });
-    }
+    logAppHealth("app_mounted");
+    if (Capacitor.isNativePlatform()) void markOtaBootSuccess();
   }, []);
 
   // Android app-launch permissions. Only runtime prompts open automatically.
@@ -382,10 +384,21 @@ function AppInner() {
   // Single source of truth for start/stop. Runs whenever the worker has an
   // active booking in [accepted, on_the_way, started]. Stops as soon as the
   // booking transitions to a terminal state (completed/cancelled/none).
-  const { activeJob: trackedJob } = useActiveJob(session?.user?.id);
-  // Single centralized update decision (Admin Panel builds; deferred during active booking).
+  const { activeJob: trackedJob, checked: activeJobChecked } = useActiveJob(session?.user?.id);
+  // Single centralized update decision (Admin Panel builds; deferred during any active work).
   const bookingOfferVisible = useBookingOfferVisible();
-  const update = useUpdateDecision(trackedJob?.status, bookingOfferVisible);
+  const bookingLoaded = !session?.user?.id || activeJobChecked;
+  const update = useUpdateDecision(trackedJob?.status, bookingOfferVisible, { bookingLoaded, pathname: currentPath });
+  useEffect(() => {
+    setWorkState({ bookingLoaded, activeBookingStatus: trackedJob?.status ?? null, offerVisible: bookingOfferVisible, pathname: currentPath });
+  }, [bookingLoaded, trackedJob?.status, bookingOfferVisible, currentPath]);
+  // OTA (off by default): try only when the worker is idle; re-check happens inside the cycle.
+  const otaSafeNow = isSafeToInterrupt({ bookingLoaded, activeBookingStatus: trackedJob?.status, offerVisible: bookingOfferVisible, pathname: currentPath });
+  useEffect(() => {
+    if (!OTA_DELIVERY_ENABLED || !otaSafeNow || !Capacitor.isNativePlatform()) return;
+    const t = setTimeout(() => { void runOtaCycle(getWorkState); }, 5000);
+    return () => clearTimeout(t);
+  }, [otaSafeNow]);
   useEffect(() => {
     if (!worker?.id) return;
     const status = trackedJob?.status;
@@ -678,16 +691,12 @@ function AppInner() {
     );
   }
 
-  // If mandatory OTA update is required, show OTA modal over the app
-  const showOtaMandatory = otaResult?.isMandatory && otaResult?.bundleInfo;
-
   return (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      {showOtaMandatory && <OtaMandatoryModal bundleInfo={otaResult.bundleInfo!} />}
       {update.mode === "force_deferred" && !bookingOfferVisible && <UpdateAfterJobBanner />}
-      <SoftUpdateSheet open={update.mode === "soft" && !showOtaMandatory && !bookingOfferVisible} onLater={update.later} storeUrl={update.answer?.storeUrl} />
+      <SoftUpdateSheet open={update.mode === "soft" && !bookingOfferVisible} onLater={update.later} storeUrl={update.answer?.storeUrl} />
       {showBatteryWarning && session?.user?.id && (
         <div className="fixed inset-0 z-[90]">
           <BatteryOnboarding
@@ -758,6 +767,7 @@ function AppInner() {
       )}
       <BrowserRouter>
         <NativeNavigationHandler />
+        <RoutePathReporter onPath={setCurrentPath} />
         <StartOtpReminderManager userId={session?.user?.id} />
         <OtpPendingBanner bookings={otpPendingBookings} />
         <Routes>
