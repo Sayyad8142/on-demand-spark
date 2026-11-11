@@ -102,7 +102,7 @@ describe("useUnifiedBookingAlerts — Accept", () => {
 });
 
 describe("useUnifiedBookingAlerts — pop-up fallback", () => {
-  it("when the Android pop-up fails to open, the in-app alert and backup notification are shown", async () => {
+  it("when the Android pop-up fails to open, a backup notification is posted and popup_shown is NOT claimed", async () => {
     h.native.isNative = true;
     h.native.platform = "android";
     const showBookingOverlay = vi.fn(async () => { throw new Error("startForegroundService not allowed"); });
@@ -110,7 +110,8 @@ describe("useUnifiedBookingAlerts — pop-up fallback", () => {
     renderHook(() => useUnifiedBookingAlerts("u1", true, () => true, "w1"));
     offer("b5");
     await waitFor(() => expect(h.postFallback).toHaveBeenCalledTimes(1));
-    expect(h.markAlertRendered).toHaveBeenCalledWith("b5", "r-b5");
+    // Home has no in-app offer card, so nothing was displayed — never report it.
+    expect(h.markAlertRendered).not.toHaveBeenCalled();
   });
 
   it("when the pop-up opens normally, no backup notification is posted", async () => {
@@ -123,5 +124,31 @@ describe("useUnifiedBookingAlerts — pop-up fallback", () => {
     await waitFor(() => expect(showBookingOverlay).toHaveBeenCalledTimes(1));
     await new Promise((r) => setTimeout(r, 10));
     expect(h.postFallback).not.toHaveBeenCalled();
+  });
+
+  it("passes the real offer id and server expiry to the pop-up so its countdown is correct", async () => {
+    h.native.isNative = true;
+    h.native.platform = "android";
+    const showBookingOverlay = vi.fn(async (_: { booking: string }) => {});
+    (window as unknown as { Capacitor: unknown }).Capacitor = { Plugins: { OverlayPlugin: { showBookingOverlay } } };
+    renderHook(() => useUnifiedBookingAlerts("u1", true, () => true, "w1"));
+    const timeoutAt = new Date(Date.now() + 42_000).toISOString();
+    offer("b7", timeoutAt);
+    await waitFor(() => expect(showBookingOverlay).toHaveBeenCalledTimes(1));
+    const sent = JSON.parse(showBookingOverlay.mock.calls[0][0].booking);
+    expect(sent.booking_request_id).toBe("r-b7");
+    expect(sent.expires_at).toBe(Math.floor(Date.parse(timeoutAt) / 1000));
+  });
+
+  it("an offer that already expired opens no pop-up and stays closed", async () => {
+    h.native.isNative = true;
+    h.native.platform = "android";
+    const showBookingOverlay = vi.fn(async () => {});
+    (window as unknown as { Capacitor: unknown }).Capacitor = { Plugins: { OverlayPlugin: { showBookingOverlay } } };
+    const { result } = renderHook(() => useUnifiedBookingAlerts("u1", true, () => true, "w1"));
+    offer("b8", new Date(Date.now() - 1_000).toISOString());
+    await new Promise((r) => setTimeout(r, 10));
+    expect(showBookingOverlay).not.toHaveBeenCalled();
+    expect(result.current.pending).toBeNull();
   });
 });
