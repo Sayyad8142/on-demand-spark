@@ -57,3 +57,10 @@
 - [x] 9 Tests + final report
 - [ ] Device test of OTA install/rollback + signed AAB build — needs Android SDK/phone (not in this workspace)
 - [ ] Apply staged SQL + heartbeat guard — needs owner approval
+
+## Preview-only Test Booking training (11 Nov)
+- [x] Audit existing flow and verify backup checksums before edits.
+- [ ] Implement isolated preview training, OTP stages, timeout, checklist, Home entry and disable unsafe developer tool.
+- [ ] Prepare separate native receiver/alert and approval-gated notification service handoff; no deployment.
+- [ ] Run regression and training tests; verify browser practice flow.
+- [ ] Real FCM/device checks — blocked: approved notification service and new Android build/device.
