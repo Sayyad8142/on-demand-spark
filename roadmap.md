@@ -89,3 +89,8 @@
 - [x] Investigate 10.0.02 HTTP 401 via source/prior evidence only; exact live root cause blocked by missing receiver download and installed APK comparison.
 - [x] All 501 existing tests + 8 native tests passed; TypeScript check passed; results in docs/booking-alerts-audit-2026-11-11/PROMPT-85-RESULTS.md.
 - [ ] Real Android device verification — blocked: test phone/emulator; only isolated test bookings allowed.
+
+## Prompt 86 — repeat-alert final verification
+- [x] Completed booking releases phone alert lock (new fix) + tests
+- [x] All automated tests + Android compile
+- [ ] Real-phone consecutive-offer checks — blocked: test phone needed
