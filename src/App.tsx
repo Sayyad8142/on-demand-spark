@@ -193,10 +193,25 @@ function NativeNavigationHandler() {
     
     window.addEventListener("nativeNavigation", handleNativeNavigation as EventListener);
     window.addEventListener("native:navigate", handleNativeNavigation as EventListener);
+
+    // Cold start: the native event can fire before this listener exists, so also
+    // ask the practice plugin directly. The Test Booking screen re-validates login and work.
+    const checkPractice = async () => {
+      if (Capacitor.getPlatform() !== "android" || document.visibilityState !== "visible") return;
+      if (window.location.pathname === "/test-booking") return;
+      try {
+        const { PracticeNotifications } = await import("@/lib/practiceNotification");
+        const st = await PracticeNotifications.getState();
+        if (st?.outcome === "accepted" && typeof st.acceptedAt === "number" && Date.now() - st.acceptedAt <= 600000) navigate("/test-booking");
+      } catch { /* older app without plugin */ }
+    };
+    void checkPractice();
+    document.addEventListener("visibilitychange", checkPractice);
     
     return () => {
       window.removeEventListener("nativeNavigation", handleNativeNavigation as EventListener);
       window.removeEventListener("native:navigate", handleNativeNavigation as EventListener);
+      document.removeEventListener("visibilitychange", checkPractice);
     };
   }, [navigate]);
   
