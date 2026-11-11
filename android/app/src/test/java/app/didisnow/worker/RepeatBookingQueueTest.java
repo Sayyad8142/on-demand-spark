@@ -115,4 +115,50 @@ public class RepeatBookingQueueTest {
         assertFalse(queue.enqueue(ctx, offer("expired", "request-expired", -1)));
         assertFalse(queue.contains(ctx, "expired"));
     }
+    @Test public void completedAcceptedBookingReleasesLockForNextOffer() {
+        JSONObject first = offer("done", "request-1", 60);
+        assertTrue(queue.enqueue(ctx, first));
+        queue.setActive(ctx, first);
+        queue.remove(ctx, "done", "request-1");
+        queue.markAcceptedByMe(ctx, "done");
+        queue.markLocallyBusy(ctx);
+        queue.clearAll(ctx, "worker_accepted");
+        // Server-read completion (OverlayPlugin.releaseEndedBooking) arrives within the 10-minute window.
+        queue.releaseEndedBooking(ctx, "done");
+        assertFalse(queue.isLocallyBusy(ctx));
+        assertTrue(queue.enqueue(ctx, offer("next", "request-2", 60)));
+        assertEquals("next", queue.bookingIdOf(queue.nextValid(ctx)));
+        // The already-handled offer stays blocked as a duplicate.
+        assertFalse(queue.enqueue(ctx, offer("done", "request-1", 60)));
+    }
+
+    @Test public void threeConsecutiveOffersEachOpenAfterTheLastEnds() {
+        for (int i = 1; i <= 3; i++) {
+            String id = "b" + i;
+            JSONObject o = offer(id, "r" + i, 60);
+            assertTrue(id, queue.enqueue(ctx, o));
+            assertEquals(id, queue.bookingIdOf(queue.nextValid(ctx)));
+            queue.setActive(ctx, o);
+            queue.remove(ctx, id, "r" + i);
+            queue.markAcceptedByMe(ctx, id);
+            queue.markLocallyBusy(ctx);
+            assertFalse(id, queue.enqueue(ctx, offer(id, "r" + i, 60)));
+            queue.releaseEndedBooking(ctx, id);
+            assertFalse(id, queue.isLocallyBusy(ctx));
+        }
+    }
+
+    @Test public void repeatedReleaseIsHarmlessAndNeverTouchesOtherBookings() {
+        queue.markAcceptedByMe(ctx, "mine");
+        queue.markLocallyBusy(ctx);
+        queue.releaseEndedBooking(ctx, "mine");
+        queue.releaseEndedBooking(ctx, "mine");
+        queue.releaseEndedBooking(ctx, "");
+        queue.releaseEndedBooking(ctx, null);
+        assertFalse(queue.isLocallyBusy(ctx));
+        JSONObject other = offer("other", "request-o", 60);
+        assertTrue(queue.enqueue(ctx, other));
+        queue.releaseEndedBooking(ctx, "mine");
+        assertTrue(queue.contains(ctx, "other"));
+    }
 }
