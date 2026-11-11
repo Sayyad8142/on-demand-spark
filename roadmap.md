@@ -74,4 +74,4 @@
 
 ## Test Booking entry and APK readiness (11 Nov)
 - [x] Move Test Booking from Home into Profile's Account Actions; keep practice-page real-work checks and notification switches unchanged.
-- [ ] Verify relocated entry and local training; report notification activation and Android testing blockers.
+- [x] Verify relocated entry and local training in mobile guest preview; 73 practice tests pass, build OK, no browser runtime errors. Real push remains OFF; approval, staged journal/sender activation and Android compile/device checks still required; authenticated testing unavailable for external Supabase.
