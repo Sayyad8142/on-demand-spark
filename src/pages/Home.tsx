@@ -1,4 +1,3 @@
-import { practiceText } from "@/i18n/practice";
 import { shouldRedirectToSetup } from "@/lib/availabilityGate";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect } from "react";
@@ -325,11 +324,6 @@ export default function Home() {
 
 
       <HomeTrainingVideoSlot isGuest={isGuestMode} hasActiveJob={!!activeJob} hasWorker={!!worker} />
-
-      <Button variant="outline" className="w-full min-h-12 border-primary text-primary" disabled={!isGuestMode && (workerLoading || !!activeJob || !!pending)} onClick={() => navigate('/test-booking')}>
-        <Bell className="h-4 w-4 mr-2" />{practiceText('homeButton')}
-      </Button>
-
 
       {!isGuestMode && worker && !activeJob && (
         <WorkerLeaderboardCard 

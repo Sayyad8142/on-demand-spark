@@ -1,3 +1,4 @@
+import { practiceText } from "@/i18n/practice";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useWorkerPayouts } from "@/hooks/useWorkerPayouts";
@@ -12,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X, Pencil, Languages, Star, Briefcase, Wallet, Settings, MessageSquare, BarChart3, Camera, Upload, Clock, ChevronRight, Shield, FileText, HelpCircle, Phone, QrCode, CreditCard } from "lucide-react";
+import { ArrowLeft, User, Loader2, Trash2, LogOut, ChevronDown, X, Pencil, Languages, Star, Briefcase, Wallet, Settings, MessageSquare, BarChart3, Camera, Upload, Clock, ChevronRight, Shield, FileText, HelpCircle, Phone, QrCode, CreditCard, FlaskConical } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
@@ -546,7 +547,7 @@ export default function Profile() {
           {/* Account Settings Icon */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" aria-label={displayText("Account Actions")}>
                 <Settings className="w-5 h-5" />
               </Button>
             </DropdownMenuTrigger>
@@ -555,6 +556,10 @@ export default function Profile() {
               <DropdownMenuSeparator />
               
               <div className="p-1 space-y-1">
+                <Button onClick={() => navigate('/test-booking')} variant="ghost" className="w-full justify-start text-sm h-10">
+                  <FlaskConical className="w-4 h-4 mr-2" />
+                  {practiceText('homeButton')}
+                </Button>
                 <Button onClick={() => navigate('/contact-support')} variant="ghost" className="w-full justify-start text-sm h-10">
                   <HelpCircle className="w-4 h-4 mr-2" />
                   {displayText("Contact & Support")}
