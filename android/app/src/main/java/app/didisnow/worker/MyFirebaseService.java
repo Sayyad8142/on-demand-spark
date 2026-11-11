@@ -36,6 +36,12 @@ public class MyFirebaseService extends FirebaseMessagingService {
 
   @Override
   public void onMessageReceived(RemoteMessage message) {
+    // Practice messages MUST exit before logging payloads, heartbeat, ACKs or live offer routing.
+    if ("PRACTICE_BOOKING".equals(message.getData().get("type"))) {
+      PracticePushReceiver.receive(getApplicationContext(), message.getData());
+      return;
+    }
+
     Log.d(TAG, "═══════════════════════════════════════════════════════════");
     Log.d(TAG, "📩 FCM MESSAGE RECEIVED");
     Log.d(TAG, "═══════════════════════════════════════════════════════════");

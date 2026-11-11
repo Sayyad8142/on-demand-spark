@@ -60,6 +60,7 @@ class MainActivity : BridgeActivity() {
         // BridgeActivity loads the WebView/bridge inside super.onCreate(), so
         // registering after super makes JS see custom plugins as "not implemented".
         registerPlugin(ForegroundServicePlugin::class.java)
+        registerPlugin(PracticeNotificationsPlugin::class.java)
         registerPlugin(OverlayPlugin::class.java)
         registerPlugin(AuthBridge::class.java)
         registerPlugin(SmsRetrieverPlugin::class.java)
