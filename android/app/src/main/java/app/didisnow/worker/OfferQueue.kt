@@ -419,7 +419,7 @@ object OfferQueue {
         prefs(ctx).edit().remove(KEY_BUSY_UNTIL).apply()
     }
 
-    /** Called only for server BOOKING_CANCELLED / BOOKING_REASSIGNED messages.
+    /** Called when the server ends a booking for this worker: BOOKING_CANCELLED / BOOKING_REASSIGNED push, or a server-read completion/cancellation via OverlayPlugin.releaseEndedBooking.
      * An old cancellation must never release a newer accepted booking's lock.
      */
     @Synchronized

@@ -320,6 +320,21 @@ public class OverlayPlugin extends Plugin {
         call.resolve();
     }
 
+    /**
+     * The server says this booking ended for this worker (completed / cancelled /
+     * no longer assigned). Releases ONLY the phone's local alert suppression for
+     * the matching accepted booking. Never contacts the backend, never changes
+     * the assignment or dispatch eligibility.
+     */
+    @PluginMethod
+    public void releaseEndedBooking(PluginCall call) {
+        String bookingId = call.getString("bookingId", "");
+        if (bookingId != null && !bookingId.isEmpty()) {
+            OfferQueue.INSTANCE.releaseEndedBooking(getContext(), bookingId);
+        }
+        call.resolve();
+    }
+
     @PluginMethod
     public void hideOverlay(PluginCall call) {
         try {
