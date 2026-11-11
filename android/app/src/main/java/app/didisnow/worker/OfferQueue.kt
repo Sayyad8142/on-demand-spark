@@ -377,6 +377,16 @@ object OfferQueue {
         if (items.isNotEmpty()) Log.d(TAG, "🧹 cleared ${items.size} queued offers ($reason)")
     }
 
+    /**
+     * Read-only: true while any offer is on screen or still waiting and unexpired.
+     * Used to refuse OTA activation (never changes the queue).
+     */
+    @Synchronized
+    fun hasLiveOffer(ctx: Context): Boolean {
+        if (prefs(ctx).getString(KEY_ACTIVE, null) != null) return true
+        return read(ctx).any { !isExpired(it) && !isTaken(ctx, bookingIdOf(it)) }
+    }
+
     // -------------------------------------------------------------- busy state
 
     fun markLocallyBusy(ctx: Context) {
