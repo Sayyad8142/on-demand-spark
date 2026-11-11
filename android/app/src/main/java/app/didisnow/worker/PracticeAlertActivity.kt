@@ -30,7 +30,7 @@ class PracticeAlertView(private val ctx: Context, private val id: String, privat
     private var vibrator: Vibrator? = null
     private var stopped = false
     fun show() {
-        if (!PracticeSession.matches(ctx, id) || OfferQueue.isLocallyBusy(ctx) || OfferQueue.hasLiveOffer(ctx)) { close(); return }
+        if (!PracticeSession.matches(ctx, id) || PracticeSession.realWorkSuspected(ctx)) { PracticeSession.outcome(ctx, id, "blocked"); close(); return }
         view.findViewById<TextView>(R.id.alertTitle).text = "TEST BOOKING"
         view.findViewById<TextView>(R.id.alertService).text = "Maid"
         view.findViewById<TextView>(R.id.alertServiceSubtitle).text = "Dishwashing • Practice Only"
@@ -39,15 +39,16 @@ class PracticeAlertView(private val ctx: Context, private val id: String, privat
         view.findViewById<TextView>(R.id.alertTower).text = "001"
         view.findViewById<TextView>(R.id.alertCommunity).text = "TEST BOOKING — Practice Only"
         view.findViewById<Button>(R.id.btnAccept).setOnClickListener {
-            if (PracticeSession.matches(ctx, id) && !OfferQueue.isLocallyBusy(ctx) && !OfferQueue.hasLiveOffer(ctx)) {
-                PracticeSession.outcome(ctx, "accepted")
-                // Return to the already prepared practice screen, not a real booking route.
-                ctx.startActivity(Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
-            } else PracticeSession.outcome(ctx, "blocked")
+            if (PracticeSession.matches(ctx, id) && !PracticeSession.realWorkSuspected(ctx) && PracticeSession.outcome(ctx, id, "accepted")) {
+                // Opens only the practice screen; never a real booking route or RPC.
+                ctx.startActivity(Intent(ctx, MainActivity::class.java).putExtra("navigate_to", "test-booking")
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP))
+            } else PracticeSession.outcome(ctx, id, "blocked")
             close()
         }
-        view.findViewById<Button>(R.id.btnReject).setOnClickListener { PracticeSession.outcome(ctx, "rejected"); close() }
-        PracticeSession.mark(ctx, "overlay")
+        view.findViewById<Button>(R.id.btnReject).setOnClickListener { PracticeSession.outcome(ctx, id, "rejected"); close() }
+        // Evidence only once the view is really attached to a window.
+        view.post { if (view.isAttachedToWindow && !stopped) PracticeSession.markOverlay(ctx, id) }
         try {
             val p = MediaPlayer()
             try {
@@ -64,9 +65,9 @@ class PracticeAlertView(private val ctx: Context, private val id: String, privat
     }
     private fun tick() {
         if (stopped) return
-        if (OfferQueue.isLocallyBusy(ctx) || OfferQueue.hasLiveOffer(ctx)) { PracticeSession.outcome(ctx, "blocked"); close(); return }
+        if (PracticeSession.realWorkSuspected(ctx)) { PracticeSession.outcome(ctx, id, "blocked"); close(); return }
         val seconds = ((PracticeSession.expiry(ctx) - System.currentTimeMillis() + 999) / 1000).coerceAtLeast(0).toInt()
-        if (seconds <= 0) { PracticeSession.outcome(ctx, "expired"); close(); return }
+        if (seconds <= 0) { PracticeSession.outcome(ctx, id, "expired"); close(); return }
         if (!PracticeSession.matches(ctx, id)) { close(); return }
         view.findViewById<TextView>(R.id.countdown).text = "${seconds}s"
         view.findViewById<ProgressBar>(R.id.countdownCircle).progress = seconds
@@ -77,14 +78,20 @@ class PracticeAlertView(private val ctx: Context, private val id: String, privat
         val p = player; player = null
         try { p?.stop() } catch (_: Exception) {} finally { p?.release() }
         vibrator?.cancel(); vibrator = null
-        (ctx.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager).cancel(812340)
+        (ctx.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager).cancel(PracticeSession.NOTIFICATION_ID)
     }
 }
 
 class PracticeAlertActivity : AppCompatActivity() {
+    companion object { const val ACTION_CLOSE = "app.didisnow.worker.PRACTICE_CLOSE" }
     private var alert: PracticeAlertView? = null
+    private val closer = object : android.content.BroadcastReceiver() {
+        override fun onReceive(c: Context?, i: Intent?) { finish() }
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val filter = android.content.IntentFilter(ACTION_CLOSE)
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(closer, filter, Context.RECEIVER_NOT_EXPORTED) else registerReceiver(closer, filter)
         stopService(Intent(this, PracticeAlertService::class.java))
         val id = intent.getStringExtra("practice_id") ?: ""
         if (!PracticeSession.matches(this, id)) { finish(); return }
@@ -92,7 +99,7 @@ class PracticeAlertActivity : AppCompatActivity() {
         setContentView(alert?.view)
         alert?.show()
     }
-    override fun onDestroy() { alert?.stop(); super.onDestroy() }
+    override fun onDestroy() { try { unregisterReceiver(closer) } catch (_: Exception) {}; alert?.stop(); super.onDestroy() }
 }
 class PracticeAlertService : Service() {
     private var alert: PracticeAlertView? = null
