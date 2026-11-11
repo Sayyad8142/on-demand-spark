@@ -281,9 +281,8 @@ class LiveUpdatePlugin : Plugin() {
                 if (name.startsWith("/") || name.contains('\\') || name.contains('\u0000')) throw SecurityException("bad_entry")
                 val outFile = File(target, name)
                 val canon = outFile.canonicalPath
-                if (!(canon + if (e.isDirectory) File.separator else "").startsWith(root) && canon != target.canonicalPath) {
-                    throw SecurityException("zip_slip")
-                }
+                // Must stay strictly inside target (separator-terminated prefix: blocks "/t" vs "/tx").
+                if (canon != target.canonicalPath && !canon.startsWith(root)) throw SecurityException("zip_slip")
                 if (e.isDirectory) {
                     outFile.mkdirs()
                 } else {
