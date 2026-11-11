@@ -65,6 +65,7 @@ class BookingOverlayService : Service() {
     private var currentAckToken: String? = null
     // Authoritative offer countdown (seconds) resolved from the FCM payload.
     private var offerSecondsLeft: Int = OfferTimer.DEFAULT_TTL_SECONDS
+    private var offerDeadline: Long = 0L
     
     // Track the startId so we can call stopSelfResult() with it
     private var startIdForStop: Int = 0
@@ -111,7 +112,7 @@ class BookingOverlayService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         android.util.Log.d("BookingOverlay", "🚀 BookingOverlayService.onStartCommand called")
-        android.util.Log.d("BookingOverlay", "📦 Intent extras: ${intent?.extras}")
+        android.util.Log.d("BookingOverlay", "Intent received (private payload not logged)")
         
         // Save startId for proper cleanup
         startIdForStop = startId
@@ -186,7 +187,8 @@ class BookingOverlayService : Service() {
                     val flatNo = intent?.getStringExtra("flat_no") ?: ""
                     val buildingName = (intent?.getStringExtra("building_name") ?: "").trim()
                     val price = intent?.getIntExtra("price_inr", 0) ?: 0
-                    offerSecondsLeft = OfferTimer.remainingSecondsFrom(intent)
+                    offerDeadline = OfferTimer.deadlineFrom(intent)
+                    offerSecondsLeft = OfferTimer.remainingUntil(offerDeadline)
                     
                     // Try to get access token from Intent first (passed from web)
                     var accessToken = intent?.getStringExtra("ACCESS_TOKEN")
@@ -480,12 +482,13 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
         // Prepare countdown handler (will start after view is added)
         val countdownText = overlayView?.findViewById<TextView>(R.id.countdown)
         val countdownCircle = overlayView?.findViewById<android.widget.ProgressBar>(R.id.countdownCircle)
-        var secondsLeft = offerSecondsLeft
+        var secondsLeft = OfferTimer.remainingUntil(offerDeadline)
         val totalSeconds = maxOf(secondsLeft, OfferTimer.DEFAULT_TTL_SECONDS)
         countdownCircle?.max = totalSeconds
         countdownHandler = Handler(mainLooper)
         countdownRunnable = object : Runnable {
             override fun run() {
+                secondsLeft = OfferTimer.remainingUntil(offerDeadline)
                 if (isShuttingDown || overlayView == null) {
                     android.util.Log.d("BookingOverlay", "🧹 Countdown cancelled - service shutting down")
                     return
@@ -504,7 +507,6 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                         countdownText?.setTextColor(textColor)
                     }
                     android.util.Log.d("BookingOverlay", "⏱️ Countdown: ${secondsLeft}s")
-                    secondsLeft--
                     countdownHandler?.postDelayed(this, 1000)
                 } else {
                     android.util.Log.d("BookingOverlay", "⏱️ Countdown expired - auto closing")
@@ -745,9 +747,19 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
             overlayView?.let { addedWindows.add(it) }
             android.util.Log.d("BookingOverlay", "✅ Overlay added successfully! Starting countdown and status monitoring...")
 
-            // 📨 ACK popup_shown — overlay is actually on screen now.
-            android.util.Log.d("BookingOverlay", "📨 [ACK] Sending popup_shown for booking_id=$bookingId req=$currentBookingRequestId")
-            BackendSync.ackDeliveryAsync(applicationContext, bookingId, "popup_shown", currentBookingRequestId, currentAckToken)
+            // Only acknowledge after the window has drawn a visible frame.
+            overlayView?.viewTreeObserver?.addOnDrawListener(object : android.view.ViewTreeObserver.OnDrawListener {
+                private var acked = false
+                override fun onDraw() {
+                    val view = overlayView ?: return
+                    if (!acked && AlertPresentationRules.mayAcknowledge(view.isAttachedToWindow,
+                            view.isShown, true, isShuttingDown, OfferTimer.remainingUntil(offerDeadline))) {
+                        acked = true
+                        view.post { if (!isShuttingDown && view.isShown) BackendSync.ackDeliveryAsync(
+                            applicationContext, bookingId, "popup_shown", currentBookingRequestId, currentAckToken) }
+                    }
+                }
+            })
 
 
             // Start countdown AFTER view is added to window
@@ -1477,6 +1489,8 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
 
     private fun fallbackToActivity(intent: Intent?) {
         android.util.Log.d("BookingOverlay", "🔄 Falling back to BookingAlertActivity")
+        BookingNotifications.post(this, intent?.getStringExtra("booking_id"), intent)
+        if (!MainActivity.canOpenBookingActivity(this)) return
         try {
             val activityIntent = Intent(this, BookingAlertActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)

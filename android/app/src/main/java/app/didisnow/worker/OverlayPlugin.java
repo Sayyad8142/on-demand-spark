@@ -243,6 +243,7 @@ public class OverlayPlugin extends Plugin {
             intent.putExtra("customer_name", b.optString("cust_name", ""));
             intent.putExtra("community", b.optString("community", ""));
             intent.putExtra("flat_no", b.optString("flat_no", ""));
+            intent.putExtra("building_name", b.optString("building_name", ""));
             intent.putExtra("price_inr", b.optInt("price_inr", 0));
             // Same offer identity + server expiry as the FCM path, so the pop-up
             // countdown shows the real time left and ACKs target this offer.
@@ -254,8 +255,26 @@ public class OverlayPlugin extends Plugin {
             if (!ackToken.isEmpty()) intent.putExtra("ack_token", ackToken);
             intent.putExtra("actionable", "true");
 
-            ctx.startService(intent);
-            call.resolve();
+            BookingNotifications.post(ctx, b.optString("id", ""), intent);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(ctx)) {
+                // Start from the resumed Activity, not a background Service.
+                if (getActivity() != null && MainActivity.canOpenBookingActivity(ctx)) {
+                    Intent activityIntent = new Intent(getActivity(), BookingAlertActivity.class);
+                    activityIntent.putExtras(intent);
+                    getActivity().runOnUiThread(() -> {
+                        try {
+                            if (!MainActivity.canOpenBookingActivity(ctx)) { call.resolve(); return; }
+                            getActivity().startActivity(activityIntent);
+                            call.resolve();
+                        } catch (Exception e) { call.reject("Show booking error: " + e.getMessage()); }
+                    });
+                } else {
+                    call.resolve(); // Background: tray tap is the supported path.
+                }
+            } else {
+                ctx.startService(intent);
+                call.resolve();
+            }
         } catch (Exception e) {
             call.reject("Show overlay error: " + e.getMessage());
         }
