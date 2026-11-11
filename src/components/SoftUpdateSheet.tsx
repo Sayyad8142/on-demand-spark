@@ -3,6 +3,7 @@ import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from "@/compone
 import { Button } from "@/components/ui/button";
 import { displayText, useWorkerLanguage } from "@/i18n/display";
 import { WORKER_PLAY_STORE_URL } from "@/lib/updateDecision";
+import { logAppHealth } from "@/lib/appHealthLog";
 
 interface Props { open: boolean; onLater: () => void; storeUrl?: string }
 
@@ -17,7 +18,7 @@ export function SoftUpdateSheet({ open, onLater, storeUrl = WORKER_PLAY_STORE_UR
         <DrawerTitle className="text-center text-2xl font-extrabold">{displayText("A New Update Is Available!")}</DrawerTitle>
         <DrawerDescription className="mt-2 text-center text-base">{displayText("soft_update_body")}</DrawerDescription>
         <div className="mt-auto space-y-3 pt-8">
-          <Button size="lg" className="h-14 w-full text-base font-bold" onClick={() => window.open(storeUrl, "_blank")}>
+          <Button size="lg" className="h-14 w-full text-base font-bold" onClick={() => { logAppHealth("update_tapped", "soft"); window.open(storeUrl, "_blank"); }}>
             <Download className="mr-2 h-5 w-5" /> {displayText("Update Now")}
           </Button>
           <Button size="lg" variant="outline" className="h-12 w-full" onClick={onLater}>{displayText("Later")}</Button>
