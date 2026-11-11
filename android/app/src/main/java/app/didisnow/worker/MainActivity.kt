@@ -36,6 +36,13 @@ class ForegroundServicePlugin : Plugin() {
 }
 
 class MainActivity : BridgeActivity() {
+    companion object {
+        @Volatile private var foreground = false
+        @JvmStatic fun canOpenBookingActivity(ctx: Context): Boolean {
+            val locked = (ctx.getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager)?.isKeyguardLocked ?: true
+            return AlertPresentationRules.mayOpenActivity(foreground, locked)
+        }
+    }
     private val inAppUpdateManager by lazy { InAppUpdateManager(this) }
 
     private val cancellationReceiver = object : BroadcastReceiver() {
@@ -99,6 +106,7 @@ class MainActivity : BridgeActivity() {
 
     override fun onResume() {
         super.onResume()
+        foreground = true
         LocalBroadcastManager.getInstance(this).registerReceiver(
             cancellationReceiver,
             IntentFilter("BOOKING_CANCELLED_ALERT")
@@ -122,6 +130,7 @@ class MainActivity : BridgeActivity() {
     }
 
     override fun onPause() {
+        foreground = false
         LocalBroadcastManager.getInstance(this).unregisterReceiver(cancellationReceiver)
         LocalBroadcastManager.getInstance(this).unregisterReceiver(reassignedReceiver)
         super.onPause()

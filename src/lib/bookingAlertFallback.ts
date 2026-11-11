@@ -27,7 +27,7 @@ export async function postBookingAlertFallback(alert: {
         {
           id: fallbackNotificationId(alert.bookingId),
           title: "New Booking",
-          body: "Tap to open",
+          body: "New Booking",
           channelId: BOOKING_FALLBACK_CHANNEL,
           extra: { kind: "booking_alert_fallback", bookingId: alert.bookingId, bookingRequestId: alert.bookingRequestId ?? null },
         },

@@ -35,6 +35,7 @@ class BookingAlertActivity : AppCompatActivity() {
     private lateinit var countdownRunnable: Runnable
     private var secondsLeft = OfferTimer.DEFAULT_TTL_SECONDS
     private var totalSeconds = OfferTimer.DEFAULT_TTL_SECONDS
+    private var offerDeadline = 0L
     private var mediaPlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
     private var ackBookingId: String? = null
@@ -177,12 +178,14 @@ class BookingAlertActivity : AppCompatActivity() {
 
         // Countdown derived from the authoritative backend offer expiry
         // (expires_at / sent_at + ttl_seconds), fallback 60s = worker_ttl_seconds.
-        secondsLeft = OfferTimer.remainingSecondsFrom(intent)
+        offerDeadline = OfferTimer.deadlineFrom(intent)
+        secondsLeft = OfferTimer.remainingUntil(offerDeadline)
         totalSeconds = maxOf(secondsLeft, OfferTimer.DEFAULT_TTL_SECONDS)
         countdownCircle.max = totalSeconds
         countdownHandler = Handler(Looper.getMainLooper())
         countdownRunnable = object : Runnable {
             override fun run() {
+                secondsLeft = OfferTimer.remainingUntil(offerDeadline)
                 if (secondsLeft > 0) {
                     countdownText.text = "${secondsLeft}s"
                     countdownCircle.progress = secondsLeft
@@ -208,7 +211,6 @@ class BookingAlertActivity : AppCompatActivity() {
                     }
                     
                     Log.d("BookingAlert", "⏱️ Countdown: ${secondsLeft}s")
-                    secondsLeft--
                     countdownHandler?.postDelayed(this, 1000)
                 } else {
                     Log.d("BookingAlert", "⏱️ Countdown finished - auto closing")
@@ -297,14 +299,16 @@ class BookingAlertActivity : AppCompatActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        // 📨 ACK popup_shown — the alert is genuinely visible to the worker now.
-        // Guarded locally + in BackendSync so it is sent exactly once per offer.
-        if (!popupAcked && !ackBookingId.isNullOrBlank()) {
-            popupAcked = true
-            Log.d("BookingAlert", "📨 [ACK] popup_shown (activity visible) booking_id=$ackBookingId")
-            BackendSync.ackDeliveryAsync(applicationContext, ackBookingId, "popup_shown", ackRequestId, ackToken)
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        val view = window.decorView
+        view.post {
+            if (!popupAcked && !ackBookingId.isNullOrBlank() &&
+                AlertPresentationRules.mayAcknowledge(view.isAttachedToWindow, view.isShown,
+                    hasWindowFocus(), isFinishing || isDestroyed, OfferTimer.remainingUntil(offerDeadline))) {
+                popupAcked = true
+                BackendSync.ackDeliveryAsync(applicationContext, ackBookingId, "popup_shown", ackRequestId, ackToken)
+            }
         }
     }
 

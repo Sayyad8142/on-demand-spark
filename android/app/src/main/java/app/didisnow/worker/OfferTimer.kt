@@ -17,7 +17,15 @@ import android.util.Log
  */
 object OfferTimer {
     const val DEFAULT_TTL_SECONDS = 60
-    private const val MIN_SECONDS = 5
+    fun deadlineFrom(intent: Intent?): Long = AlertPresentationRules.deadline(
+        intent?.getLongExtra("expires_at", 0L) ?: 0L,
+        intent?.getLongExtra("sent_at", 0L) ?: 0L,
+        intent?.getIntExtra("ttl_seconds", DEFAULT_TTL_SECONDS) ?: DEFAULT_TTL_SECONDS,
+        System.currentTimeMillis() / 1000
+    )
+
+    fun remainingUntil(deadline: Long): Int =
+        AlertPresentationRules.remaining(deadline, System.currentTimeMillis() / 1000)
 
     /** Reads expiry hints from an Intent and returns the seconds to display. */
     fun remainingSecondsFrom(intent: Intent?): Int {
@@ -31,19 +39,8 @@ object OfferTimer {
 
     fun remainingSeconds(expiresAtEpochSec: Long, sentAtEpochSec: Long, ttlSeconds: Int): Int {
         val now = System.currentTimeMillis() / 1000
-        val computed: Int = when {
-            expiresAtEpochSec > 0 -> (expiresAtEpochSec - now).toInt()
-            sentAtEpochSec > 0 -> (sentAtEpochSec + ttlSeconds - now).toInt()
-            else -> {
-                Log.w("OfferTimer", "⏱️ No expiry in payload — falling back to ${ttlSeconds}s")
-                ttlSeconds
-            }
-        }
-        val clamped = computed.coerceIn(MIN_SECONDS, ttlSeconds)
-        Log.d(
-            "OfferTimer",
-            "⏱️ expires_at=$expiresAtEpochSec sent_at=$sentAtEpochSec ttl=$ttlSeconds → ${clamped}s"
+        return AlertPresentationRules.remaining(
+            AlertPresentationRules.deadline(expiresAtEpochSec, sentAtEpochSec, ttlSeconds, now), now
         )
-        return clamped
     }
 }

@@ -76,4 +76,9 @@
 - [x] Move Test Booking from Home into Profile's Account Actions; keep practice-page real-work checks and notification switches unchanged.
 - [x] Verify relocated entry and local training in mobile guest preview; 73 practice tests pass, build OK, no browser runtime errors. Real push remains OFF; approval, staged journal/sender activation and Android compile/device checks still required; authenticated testing unavailable for external Supabase.
 
-- [ ] Booking alerts fix (d2d1dacc): prepared in preview — waiting on approval, live confirmation-receiver code download, and real Android phone tests
+## Approved booking-alert continuation (prompt 85) — preview/test only
+- [x] Compile Android: debug build successful, generated plugin paths corrected; version unchanged, no APK published; oversized generated outputs removed.
+- [x] Implement foreground Activity path, supported background notification fallback, fixed server deadline, visible-only acknowledgments and shared sound/vibration/dedupe; native visual/interaction verification remains device-blocked.
+- [x] Investigate 10.0.02 HTTP 401 via source/prior evidence only; exact live root cause blocked by missing receiver download and installed APK comparison.
+- [x] All 501 existing tests + 8 native tests passed; TypeScript check passed; results in docs/booking-alerts-audit-2026-11-11/PROMPT-85-RESULTS.md.
+- [ ] Real Android device verification — blocked: test phone/emulator; only isolated test bookings allowed.

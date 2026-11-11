@@ -65,12 +65,9 @@ public class MyFirebaseService extends FirebaseMessagingService {
     }, "fcm-recv-ping").start();
 
     
-    // Log the FULL data payload for debugging
+    // Never log signed tokens or private booking payloads.
     Map<String, String> data = message.getData();
-    Log.d(TAG, "📦 FULL DATA PAYLOAD:");
-    for (Map.Entry<String, String> entry : data.entrySet()) {
-      Log.d(TAG, "   " + entry.getKey() + " = " + entry.getValue());
-    }
+    Log.d(TAG, "Payload keys: " + data.keySet());
     
     if (message.getNotification() != null) {
       Log.d(TAG, "📬 Notification payload present: " + message.getNotification().getTitle() + " - " + message.getNotification().getBody());
@@ -315,12 +312,13 @@ public class MyFirebaseService extends FirebaseMessagingService {
           Log.e(TAG, "OfferQueue enqueue failed", e);
         }
 
-        showBookingNotification(bookingId, bookingType, serviceIntent);
-
         if (alreadyQueued) {
           Log.d(TAG, "↩️ Duplicate BOOKING_ALERT for " + bookingId + " — already queued, no second popup");
           return;
         }
+
+        showBookingNotification(bookingId, bookingType, serviceIntent);
+        if (OfferTimer.INSTANCE.remainingSecondsFrom(serviceIntent) <= 0) return;
 
         // Check overlay permission
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -435,6 +433,10 @@ public class MyFirebaseService extends FirebaseMessagingService {
                                             long expiresAtSec, long sentAtSec, int ttlSeconds,
                                             String buildingName) {
     Log.d(TAG, "🚀 Launching BookingAlertActivity as fallback for " + bookingType + " booking");
+    if (!MainActivity.canOpenBookingActivity(this)) {
+      Log.d(TAG, "Background/locked: notification tap opens the booking alert");
+      return;
+    }
 
     try {
       Intent activityIntent = new Intent(this, BookingAlertActivity.class);
@@ -520,22 +522,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
   }
   
   private void createNotificationChannel() {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      CharSequence name = "Booking Alerts";
-      String description = "Urgent booking notifications";
-      int importance = NotificationManager.IMPORTANCE_HIGH;
-      NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
-      channel.setDescription(description);
-      channel.setLockscreenVisibility(NotificationCompat.VISIBILITY_PUBLIC);
-      channel.enableVibration(true);
-      channel.setBypassDnd(true);
-      
-      NotificationManager notificationManager = getSystemService(NotificationManager.class);
-      if (notificationManager != null) {
-        notificationManager.createNotificationChannel(channel);
-        Log.d(TAG, "✅ Notification channel created with HIGH importance");
-      }
-    }
+    BookingNotifications.ensureChannel(this);
   }
 
   private void createCancellationNotificationChannel() {
@@ -620,62 +607,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
   }
 
   private void showBookingNotification(String bookingId, String bookingType, Intent offerSource) {
-    createNotificationChannel();
-
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-        ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-      Log.w(TAG, "🔕 Booking notification not shown: POST_NOTIFICATIONS denied. booking_id=" + bookingId);
-      return;
-    }
-
-    // Actionable offers deep-link back into the offer UI for THAT booking
-    // (validated for expiry/assignment before anything is shown). Purely
-    // informational notifications keep opening the Bookings tab.
-    Intent intent;
-    if (offerSource != null) {
-      intent = new Intent(this, BookingAlertActivity.class);
-      intent.putExtras(offerSource);
-      intent.putExtra("from_notification", true);
-    } else {
-      intent = new Intent(this, MainActivity.class);
-      intent.putExtra("navigate_to", "bookings");
-      intent.putExtra("booking_id", bookingId);
-    }
-    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-
-    PendingIntent pendingIntent = PendingIntent.getActivity(
-      this,
-      bookingId != null ? bookingId.hashCode() : NOTIFICATION_ID,
-      intent,
-      PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-    );
-
-    NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-      .setSmallIcon(R.drawable.ic_notification)
-      .setContentTitle("New Booking")
-      .setContentText("New Booking")
-      .setPriority(NotificationCompat.PRIORITY_HIGH)
-      .setCategory(NotificationCompat.CATEGORY_REMINDER)
-      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-      .setAutoCancel(true)
-      .setContentIntent(pendingIntent);
-
-    // An offer notification disappears when the server offer window closes,
-    // so an expired booking is never left on screen as actionable.
-    if (offerSource != null) {
-      long left = OfferTimer.INSTANCE.remainingSecondsFrom(offerSource);
-      if (left > 0) builder.setTimeoutAfter(left * 1000L);
-    }
-
-    NotificationManager notificationManager = getSystemService(NotificationManager.class);
-    if (notificationManager != null) {
-      try {
-        notificationManager.notify(bookingId != null ? bookingId.hashCode() : NOTIFICATION_ID, builder.build());
-        Log.d(TAG, "✅ Booking tray notification shown. booking_id=" + bookingId + ", booking_type=" + bookingType);
-      } catch (SecurityException e) {
-        Log.w(TAG, "🔕 Booking notification blocked by Android permission. booking_id=" + bookingId, e);
-      }
-    }
+    BookingNotifications.post(this, bookingId, offerSource);
   }
 
   private void showCancellationNotification(String bookingId) {
