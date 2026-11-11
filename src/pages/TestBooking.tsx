@@ -55,14 +55,17 @@ export default function TestBooking() {
     try {
       if (!(await safety.refresh())) { dispatch({ type: 'blocked' }); return; }
       if (!push) { dispatch({ type: 'local_alert', now: Date.now() }); return; }
-      dispatch({ type: 'sending' });
+      dispatch({ type: 'sending', now: Date.now() });
       const result = await sendPracticePush({ id: state.id, expiresAt: Date.now() + 60000, hasToken: !!safety.worker?.fcm_token, tokenStatus: safety.worker?.fcm_token_status ?? null });
-      if (result.sent) dispatch({ type: 'sent' });
-      else { dispatch({ type: 'failed_send' }); setNotice(text(result.reason)); }
+      if ('reason' in result) { dispatch({ type: 'failed_send' }); setNotice(text(result.reason)); }
+      else dispatch({ type: 'sent' });
     } catch (error) { dispatch({ type: 'failed_send' }); setNotice(error instanceof Error ? error.message : text('sendError')); }
     finally { setStarting(false); }
   };
-  const again = () => { navigate('/test-booking', { replace: true }); window.location.reload(); };
+  const again = () => {
+    if (Capacitor.getPlatform() === 'android') void PracticeNotifications.cancel().catch(() => undefined);
+    dispatch({ type: 'reset', id: `practice-${crypto.randomUUID()}`, now: Date.now() }); setOtp(''); setNotice('');
+  };
   const details = ['accepted', 'start_otp', 'in_progress', 'complete_otp'].includes(state.step);
   return <div className="min-h-screen bg-background pb-12">
     <header className="border-b border-border safe-area-pt"><div className="max-w-lg mx-auto flex items-center gap-3 px-4 py-4">
