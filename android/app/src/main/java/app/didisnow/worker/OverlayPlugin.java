@@ -255,6 +255,14 @@ public class OverlayPlugin extends Plugin {
             if (!ackToken.isEmpty()) intent.putExtra("ack_token", ackToken);
             intent.putExtra("actionable", "true");
 
+            JSONObject offer = OfferQueue.INSTANCE.offerFromIntent(intent);
+            if (offer == null || OfferQueue.INSTANCE.isExpired(offer) ||
+                OfferQueue.INSTANCE.isRetired(ctx, offer) || OfferQueue.INSTANCE.isLocallyBusy(ctx) ||
+                OfferQueue.INSTANCE.isTaken(ctx, b.optString("id", ""))) {
+                call.resolve();
+                return;
+            }
+
             BookingNotifications.post(ctx, b.optString("id", ""), intent);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(ctx)) {
                 // Start from the resumed Activity, not a background Service.

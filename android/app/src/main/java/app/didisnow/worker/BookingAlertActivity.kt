@@ -45,6 +45,20 @@ class BookingAlertActivity : AppCompatActivity() {
     private var popupAcked = false
     private var offerRetired = false
 
+    private val endedReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (BookingOfferLifecycle.matches(ackBookingId, intent?.getStringExtra("booking_id"))) {
+                countdownHandler?.let { handler ->
+                    if (::countdownRunnable.isInitialized) handler.removeCallbacks(countdownRunnable)
+                }
+                stopAlertSound()
+                stopVibration()
+                retireOffer(accepted = false)
+                finish()
+            }
+        }
+    }
+
     /** Single-flight guard: only ONE acceptance attempt per booking. */
     @Volatile
     private var acceptInFlight = false
@@ -65,6 +79,8 @@ class BookingAlertActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
+            .registerReceiver(endedReceiver, android.content.IntentFilter("DIDI_BOOKING_ENDED"))
 
         val bookingId = intent.getStringExtra("booking_id") ?: ""
         val bookingType = intent.getStringExtra("booking_type") ?: "instant"
@@ -91,7 +107,7 @@ class BookingAlertActivity : AppCompatActivity() {
             finish()
             return
         }
-        if (offerRecord != null && OfferQueue.isExpired(offerRecord)) {
+        if (offerRecord != null && (OfferQueue.isExpired(offerRecord) || OfferQueue.isRetired(applicationContext, offerRecord))) {
             Log.w("BookingAlert", "⏱️ Offer expired — not showing: $bookingId")
             OfferQueue.remove(applicationContext, bookingId, intent.getStringExtra("booking_request_id"))
             OfferQueue.cancelNotification(applicationContext, bookingId)
@@ -312,6 +328,22 @@ class BookingAlertActivity : AppCompatActivity() {
         }
     }
 
+    override fun onNewIntent(newIntent: Intent) {
+        super.onNewIntent(newIntent)
+        val next = OfferQueue.offerFromIntent(newIntent) ?: return
+        if (BookingOfferLifecycle.matches(ackBookingId, OfferQueue.bookingIdOf(next)) ||
+            OfferQueue.isExpired(next) || OfferQueue.isRetired(applicationContext, next) || OfferQueue.isLocallyBusy(applicationContext) ||
+            OfferQueue.isTaken(applicationContext, OfferQueue.bookingIdOf(next))) return
+        OfferQueue.enqueue(applicationContext, next)
+        // singleTop may reuse this Activity when retireOffer launches the queue
+        // head. A live first offer keeps the second queued; a retired first offer
+        // recreates with fresh listeners/countdown/ACK identity, not old closures.
+        if (offerRetired) {
+            setIntent(newIntent)
+            recreate()
+        }
+    }
+
     /**
      * Retires the offer shown by this screen and drains the FIFO queue.
      * Accepted -> worker is locally busy, every queued offer is dropped.
@@ -421,10 +453,11 @@ class BookingAlertActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).unregisterReceiver(endedReceiver)
         // Dismissed/closed legitimately — still drain the queue.
         retireOffer(accepted = false)
         statusCheckRunnable?.let { statusCheckHandler?.removeCallbacks(it) }
-        countdownHandler?.removeCallbacks(countdownRunnable)
+        if (::countdownRunnable.isInitialized) countdownHandler?.removeCallbacks(countdownRunnable)
         stopAlertSound()
 
         stopVibration()
