@@ -18,7 +18,7 @@ function adapters(): PracticeSenderAdapters {
 }
 describe('practice sender preparation (mocked; no live delivery)', () => {
   it('keeps the existing app sending switch off', async () => {
-    expect(await sendPracticePush({ id, expiresAt: now + 60000, hasToken: true, tokenStatus: 'active' })).toEqual({ sent: false, reason: 'approval' });
+    expect(await sendPracticePush({ userId: 'own-user', id, expiresAt: now + 60000, hasToken: true, tokenStatus: 'active' })).toEqual({ sent: false, reason: 'approval' });
   });
   it('disabled server plan performs no authentication or send', async () => {
     const a = adapters(); a.enabled = false;
