@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const plugin = { prepare: vi.fn(), getState: vi.fn(), cancel: vi.fn(async () => undefined) };
-const invoke = vi.fn();
+const { plugin, invoke } = vi.hoisted(() => ({ plugin: { prepare: vi.fn(), getState: vi.fn(), cancel: vi.fn(async () => undefined) }, invoke: vi.fn() }));
 vi.mock('@capacitor/core', () => ({ Capacitor: { getPlatform: () => 'android' }, registerPlugin: () => plugin }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: { functions: { invoke: (...a: unknown[]) => invoke(...a) } } }));
 vi.mock('@supabase/supabase-js', () => ({ FunctionsHttpError: class FunctionsHttpError extends Error { context: { text: () => Promise<string> }; constructor(body: string) { super('x'); this.context = { text: async () => body }; } } }));
