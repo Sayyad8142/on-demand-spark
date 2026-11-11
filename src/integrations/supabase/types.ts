@@ -447,6 +447,48 @@ export type Database = {
         }
         Relationships: []
       }
+      app_client_events: {
+        Row: {
+          app: string
+          app_version: string | null
+          build: number | null
+          details: Json
+          event: string
+          id: string
+          occurred_at: string
+          platform: string
+          received_at: string
+          subject_hash: string
+          verified: boolean
+        }
+        Insert: {
+          app: string
+          app_version?: string | null
+          build?: number | null
+          details?: Json
+          event: string
+          id?: string
+          occurred_at?: string
+          platform: string
+          received_at?: string
+          subject_hash: string
+          verified?: boolean
+        }
+        Update: {
+          app?: string
+          app_version?: string | null
+          build?: number | null
+          details?: Json
+          event?: string
+          id?: string
+          occurred_at?: string
+          platform?: string
+          received_at?: string
+          subject_hash?: string
+          verified?: boolean
+        }
+        Relationships: []
+      }
       app_config: {
         Row: {
           bookings_paused: boolean
@@ -647,6 +689,60 @@ export type Database = {
           store_verified_method?: string | null
           store_verified_version?: string | null
           title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      app_update_force_approvals: {
+        Row: {
+          app: string
+          consumed_at: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          latest_build: number
+          latest_version: string
+          min_build: number
+          platform: string
+          reason: string
+          requested_at: string
+          requested_by: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          app: string
+          consumed_at?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          latest_build: number
+          latest_version: string
+          min_build: number
+          platform: string
+          reason?: string
+          requested_at?: string
+          requested_by?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          app?: string
+          consumed_at?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          latest_build?: number
+          latest_version?: string
+          min_build?: number
+          platform?: string
+          reason?: string
+          requested_at?: string
+          requested_by?: string
+          status?: string
           updated_at?: string
         }
         Relationships: []
@@ -5860,6 +5956,39 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_app_version_history: {
+        Row: {
+          changed_at: string
+          id: string
+          new_build: string | null
+          new_version: string | null
+          old_build: string | null
+          old_version: string | null
+          source: string
+          worker_id: string
+        }
+        Insert: {
+          changed_at?: string
+          id?: string
+          new_build?: string | null
+          new_version?: string | null
+          old_build?: string | null
+          old_version?: string | null
+          source?: string
+          worker_id: string
+        }
+        Update: {
+          changed_at?: string
+          id?: string
+          new_build?: string | null
+          new_version?: string | null
+          old_build?: string | null
+          old_version?: string | null
+          source?: string
+          worker_id?: string
+        }
+        Relationships: []
+      }
       worker_archive: {
         Row: {
           archived_at: string
@@ -8459,6 +8588,10 @@ export type Database = {
           worker_phone: string
         }[]
       }
+      admin_app_version_summary: {
+        Args: { _app: string; _days?: number }
+        Returns: Json
+      }
       admin_approve_worker_registration: {
         Args: { p_photo_url?: string; p_request_id: string }
         Returns: undefined
@@ -8694,6 +8827,32 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_decide_force_update: {
+        Args: { _approve: boolean; _request_id: string }
+        Returns: {
+          app: string
+          consumed_at: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          latest_build: number
+          latest_version: string
+          min_build: number
+          platform: string
+          reason: string
+          requested_at: string
+          requested_by: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "app_update_force_approvals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_delete_community: {
         Args: { p_community_id: string; p_detach_customer_addresses?: boolean }
         Returns: Json
@@ -8749,6 +8908,10 @@ export type Database = {
       admin_emergency_manual_assign: {
         Args: { p_admin_id?: string; p_booking_id: string; p_worker_id: string }
         Returns: Json
+      }
+      admin_emergency_pause_update_prompts: {
+        Args: { _reason: string }
+        Returns: number
       }
       admin_emergency_undo_pauses: {
         Args: { p_admin_id?: string }
@@ -8924,6 +9087,15 @@ export type Database = {
         Args: { p_force?: boolean; p_worker_id: string }
         Returns: Json
       }
+      admin_preview_min_build_impact: {
+        Args: {
+          _app: string
+          _min_build: number
+          _min_version?: string
+          _platform: string
+        }
+        Returns: Json
+      }
       admin_process_case_reminders: { Args: never; Returns: number }
       admin_push_health_daily_metrics: {
         Args: { p_day?: string }
@@ -8979,6 +9151,32 @@ export type Database = {
       admin_release_start_otp: {
         Args: { p_booking_id: string; p_reason?: string }
         Returns: Json
+      }
+      admin_request_force_update: {
+        Args: { _app: string; _platform: string; _reason: string }
+        Returns: {
+          app: string
+          consumed_at: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          latest_build: number
+          latest_version: string
+          min_build: number
+          platform: string
+          reason: string
+          requested_at: string
+          requested_by: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "app_update_force_approvals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       admin_reset_start_otp: { Args: { p_booking_id: string }; Returns: Json }
       admin_resolve_case: {
