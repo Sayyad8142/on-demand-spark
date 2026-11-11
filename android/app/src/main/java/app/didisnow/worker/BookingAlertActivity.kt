@@ -328,6 +328,22 @@ class BookingAlertActivity : AppCompatActivity() {
         }
     }
 
+    override fun onNewIntent(newIntent: Intent) {
+        super.onNewIntent(newIntent)
+        val next = OfferQueue.offerFromIntent(newIntent) ?: return
+        if (BookingOfferLifecycle.matches(ackBookingId, OfferQueue.bookingIdOf(next)) ||
+            OfferQueue.isExpired(next) || OfferQueue.isLocallyBusy(applicationContext) ||
+            OfferQueue.isTaken(applicationContext, OfferQueue.bookingIdOf(next))) return
+        OfferQueue.enqueue(applicationContext, next)
+        // singleTop may reuse this Activity when retireOffer launches the queue
+        // head. A live first offer keeps the second queued; a retired first offer
+        // recreates with fresh listeners/countdown/ACK identity, not old closures.
+        if (offerRetired) {
+            setIntent(newIntent)
+            recreate()
+        }
+    }
+
     /**
      * Retires the offer shown by this screen and drains the FIFO queue.
      * Accepted -> worker is locally busy, every queued offer is dropped.
