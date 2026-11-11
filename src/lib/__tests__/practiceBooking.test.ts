@@ -68,7 +68,7 @@ describe('isolated practice rules', () => {
   });
   it('no notification service calls while deployment is unapproved', async () => {
     const invoke = vi.spyOn(supabase.functions, 'invoke');
-    expect(await sendPracticePush({ id: 'practice-1', expiresAt: 60000, hasToken: true, tokenStatus: 'active' })).toEqual({ sent: false, reason: 'approval' });
+    expect(await sendPracticePush({ userId: "user-1", id: 'practice-1', expiresAt: 60000, hasToken: true, tokenStatus: 'active' })).toEqual({ sent: false, reason: 'approval' });
     expect(invoke).not.toHaveBeenCalled(); invoke.mockRestore();
   });
 });

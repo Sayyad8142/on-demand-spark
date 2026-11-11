@@ -1,5 +1,5 @@
-/** Preparation only: no Deno entry point, credentials, database SDK or fetch.
- * Adapters must be approved and implemented separately. Never import into the app.
+/** Pure decision core (no I/O). Live adapters: adapters.ts; entry: send-practice-notification/.
+ * Staged only; never import into the app runtime.
  */
 export interface PracticeRequest { practice_id: string; expires_at: number; device_token_sha256: string }
 export interface OwnDevice {

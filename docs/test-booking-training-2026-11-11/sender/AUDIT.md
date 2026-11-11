@@ -1,3 +1,27 @@
+# Test Booking sender — implementation status (11 Nov, approved build-out)
+
+**Implemented and tested offline; NOT deployed, NOT enabled, nothing sent.** `PRACTICE_PUSH_ENABLED=false` in the app; the staged server refuses unless `PRACTICE_PUSH_SENDER=on`.
+
+| Area | Status | Where |
+|---|---|---|
+| Sender core (own device only, idle twice, claim, no resend) | PASS (tests) | `staged/senderCore.ts` |
+| Live adapters: login via Auth `/user`, worker by verified user_id only (exactly one), active-job + offer reads, FCM HTTP v1 via existing service account, 8 s timeout, redacted errors | PASS (mocked network) | `staged/adapters.ts` |
+| Entry + request handling (CORS, size limit, extra fields refused, no secrets logged) | PASS (tests) | `staged/send-practice-notification/` |
+| Durable journal: one outstanding attempt per login, advisory lock, server-only grants, rollback | Written, NOT applied | `staged/sql/` |
+| App: sends only id + expiry + phone token fingerprint; shows server reason; logout clears session | PASS (tests) | `src/lib/practiceNotification.ts` |
+| Phone: session bound to native login + token fingerprint; channel/permission check; atomic first-receipt (duplicate FCM ignored); token change ends session; overlay evidence only after attach; first outcome wins | SOURCE ONLY | `android/.../Practice*.kt` |
+| Real booking priority: any non-ping FCM closes practice instantly | SOURCE ONLY | `MyFirebaseService.java` |
+| Accept on closed app → opens practice details for same login (≤10 min) | PASS (tests) / SOURCE native | `App.tsx`, `TestBooking.tsx` |
+| Android compile, sound, vibration, background/closed delivery | NOT VERIFIED | `DEVICE_TEST_CHECKLIST.md` |
+
+Tests: `bun run test` → 42 files / 495 passed (28 new). Backup: `../backup/sender-implementation-before-2026-11-11.zip` (18 files, SHA-256 manifest verified).
+
+Known limits: the phone's busy flag is time-windowed, so protection against a real job that started in the last 60 s relies on the server's two checks plus the 60 s expiry; force-stopped apps may not receive FCM until reopened.
+
+---
+
+# Earlier audit (kept for reference)
+
 # Real Test Booking sender — audit and preparation only
 
 ## Decision

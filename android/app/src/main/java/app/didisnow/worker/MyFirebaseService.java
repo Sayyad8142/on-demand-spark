@@ -41,6 +41,12 @@ public class MyFirebaseService extends FirebaseMessagingService {
       PracticePushReceiver.receive(getApplicationContext(), message.getData());
       return;
     }
+    // Any real booking-related message makes an open practice alert yield immediately
+    // (keep-alive pings excluded; never throws, never changes the real message handling).
+    String practiceCheckType = message.getData().get("type");
+    if (!"PING".equals(practiceCheckType) && !"START_OTP_REMINDER_CANCEL".equals(practiceCheckType)) {
+      PracticeSession.preempt(getApplicationContext());
+    }
 
     Log.d(TAG, "═══════════════════════════════════════════════════════════");
     Log.d(TAG, "📩 FCM MESSAGE RECEIVED");
@@ -480,6 +486,8 @@ public class MyFirebaseService extends FirebaseMessagingService {
   public void onNewToken(final String token) {
     Log.d(TAG, "🔑 New FCM token received (len=" + token.length() + ")");
     WorkerLog.INSTANCE.add(getApplicationContext(), "TOKEN", "onNewToken len=" + token.length());
+    // A practice session is bound to the previous token; end it.
+    PracticeSession.onTokenChanged(getApplicationContext());
 
     // 1. Persist locally so JS layer can pick up on next app open.
     try {
