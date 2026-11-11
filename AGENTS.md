@@ -35,3 +35,4 @@
 - Home display rules: `src/lib/homeSummary.ts`; Home cards are read-only, hide failing parts. Why: no unconfirmed readiness/money.
 - Practice bookings: local states in `practiceBooking.ts`; push off (`PRACTICE_PUSH_ENABLED`) until approved; sender rules: `docs/test-booking-training-2026-11-11/sender/AGENTS.md`. Native practice messages skip BackendSync/OfferQueue and yield to real offers. Why: practice must never touch real bookings or payments.
 - Alerts: nativeOverlayPayload + AlertPresentationRules + BookingNotifications; expiry/visible-only ACK. Why: no false claims.
+- The native 10-minute alert lock is released only when the server ends the matching booking (cancel/reassign push, or a server-read completion/cancellation via `src/lib/bookingEndRelease.ts` → `OverlayPlugin.releaseEndedBooking`); release is local-only. Why: a finished booking must never block the next offer, and the phone must never change assignment or dispatch.
