@@ -1,257 +1,143 @@
 /**
- * OTA Live Update System (hardened)
- * 
- * Downloads and applies new React/Vite bundles from Supabase Storage
- * without requiring a Play Store update.
- * 
- * Safety features:
- * - SHA-256 integrity check before extraction
- * - Boot health marker with automatic rollback
- * - Failed version tracking to avoid retry loops
- * - Graceful fallback to built-in bundle
- * 
- * What updates OTA: React components, Tailwind styles, JS logic, assets
- * What still needs Play Store: Native Kotlin/Java plugins, AndroidManifest, Gradle deps
+ * OTA Live Update (hardened, delivery OFF by default — see OTA_DELIVERY_ENABLED).
+ *
+ * Rules (src/lib/otaSafety.ts + native LiveUpdatePlugin):
+ * - Only HTTPS from the project's ota-bundles bucket; SHA-256 and size are required.
+ * - Download goes to a staging folder; the screen is only switched when the worker is idle
+ *   (no offer, no active booking, not on Start/End OTP, bookings loaded).
+ * - "Mandatory" bundles never block the screen (forced updates stay off).
+ * - A bundle that does not confirm a good start is rolled back and remembered as failed.
+ *
+ * What updates OTA: React components, styles, JS logic, assets.
+ * What still needs Play Store: native Kotlin/Java, AndroidManifest, Gradle deps.
  */
-
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { supabase } from '@/integrations/supabase/client';
 import { OTA_CONFIG } from '@/config/ota';
+import { decideOta, OTA_DELIVERY_ENABLED, type OtaBundleRow, type OtaDecision } from '@/lib/otaSafety';
+import type { WorkState } from '@/lib/workSafety';
+import { logAppHealth } from '@/lib/appHealthLog';
 
-export interface BundleInfo {
-  id: string;
-  app_id: string;
-  platform: string;
-  channel: string;
-  version: string;
-  bundle_url: string;
-  is_mandatory: boolean;
-  message: string | null;
-  sha256: string | null;
-  size_bytes: number | null;
-  created_at: string;
-}
+const PREF_FAILED_LIST = 'ota_failed_versions_v2';
 
-export interface UpdateCheckResult {
-  updateAvailable: boolean;
-  currentVersion: string;
-  latestVersion: string | null;
-  bundleInfo: BundleInfo | null;
-  isMandatory: boolean;
-}
-
-/**
- * Get the currently installed OTA bundle version
- */
 export async function getCurrentBundleVersion(): Promise<string> {
   const { value } = await Preferences.get({ key: OTA_CONFIG.PREF_BUNDLE_VERSION });
   return value || OTA_CONFIG.BUNDLE_VERSION;
 }
 
-/**
- * Check Supabase for available updates
- */
-export async function checkForUpdate(): Promise<UpdateCheckResult> {
-  const currentVersion = await getCurrentBundleVersion();
-
-  try {
-    const { data, error } = await supabase
-      .from('app_bundles')
-      .select('*')
-      .eq('app_id', OTA_CONFIG.APP_ID)
-      .eq('platform', OTA_CONFIG.PLATFORM)
-      .eq('channel', OTA_CONFIG.CHANNEL)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error || !data) {
-      console.log('📦 OTA: No bundles found or error:', error?.message);
-      return {
-        updateAvailable: false,
-        currentVersion,
-        latestVersion: null,
-        bundleInfo: null,
-        isMandatory: false,
-      };
-    }
-
-    const latestVersion = data.version;
-    const updateAvailable = isNewerVersion(latestVersion, currentVersion);
-
-    // Check if this version previously failed
-    const { value: failedVersion } = await Preferences.get({ key: OTA_CONFIG.PREF_FAILED_VERSION });
-    if (failedVersion === latestVersion) {
-      console.log('📦 OTA: Skipping version', latestVersion, '— previously failed');
-      return {
-        updateAvailable: false,
-        currentVersion,
-        latestVersion,
-        bundleInfo: data as BundleInfo,
-        isMandatory: false,
-      };
-    }
-
-    console.log(`📦 OTA: Current=${currentVersion}, Latest=${latestVersion}, Update=${updateAvailable}`);
-
-    return {
-      updateAvailable,
-      currentVersion,
-      latestVersion,
-      bundleInfo: data as BundleInfo,
-      isMandatory: updateAvailable && data.is_mandatory,
-    };
-  } catch (err) {
-    console.error('📦 OTA: Check failed:', err);
-    return {
-      updateAvailable: false,
-      currentVersion,
-      latestVersion: null,
-      bundleInfo: null,
-      isMandatory: false,
-    };
-  }
+async function nativePlugin() {
+  return (await import('@/native/liveUpdateBridge')).DidiLiveUpdatePlugin;
 }
 
-/**
- * Download and apply a bundle update using the native DidiLiveUpdate plugin.
- * The native side handles SHA-256 verification if sha256 is provided.
- */
-export async function downloadAndApplyUpdate(
-  bundleInfo: BundleInfo,
-  onProgress?: (status: string) => void
-): Promise<boolean> {
-  if (!Capacitor.isNativePlatform()) {
-    console.log('📦 OTA: Skipping on web platform');
-    return false;
-  }
-
+/** Versions that failed here before (JS list + native rollback list). */
+export async function getFailedVersions(): Promise<string[]> {
+  const out = new Set<string>();
   try {
-    onProgress?.('Downloading update...');
-    console.log('📦 OTA: Downloading bundle', bundleInfo.version, 'from', bundleInfo.bundle_url);
+    const { value } = await Preferences.get({ key: PREF_FAILED_LIST });
+    const arr = JSON.parse(value || '[]');
+    if (Array.isArray(arr)) arr.forEach((v) => typeof v === 'string' && out.add(v));
+    const legacy = (await Preferences.get({ key: OTA_CONFIG.PREF_FAILED_VERSION })).value;
+    if (legacy) out.add(legacy);
+  } catch { /* ignore */ }
+  if (Capacitor.isNativePlatform()) {
+    try { ((await (await nativePlugin()).getStatus()).failedVersions ?? []).forEach((v) => out.add(v)); } catch { /* old native build */ }
+  }
+  return [...out];
+}
 
-    const { DidiLiveUpdatePlugin } = await import('@/native/liveUpdateBridge');
-    
-    const result = await DidiLiveUpdatePlugin.downloadAndApply({
-      url: bundleInfo.bundle_url,
-      version: bundleInfo.version,
-      sha256: bundleInfo.sha256 || undefined,
+async function rememberFailed(version: string) {
+  const list = new Set(await getFailedVersions());
+  list.add(version);
+  await Preferences.set({ key: PREF_FAILED_LIST, value: JSON.stringify([...list].slice(-20)) });
+}
+
+export async function fetchLatestBundle(): Promise<OtaBundleRow | null> {
+  const { data, error } = await supabase
+    .from('app_bundles')
+    .select('version, bundle_url, sha256, size_bytes, is_mandatory')
+    .eq('app_id', OTA_CONFIG.APP_ID)
+    .eq('platform', OTA_CONFIG.PLATFORM)
+    .eq('channel', OTA_CONFIG.CHANNEL)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as OtaBundleRow;
+}
+
+let busy = false;
+
+/**
+ * One OTA check. `getWork` is re-read right before switching, so an offer that arrives
+ * during the download keeps the old screen. Returns the decision taken.
+ */
+export async function runOtaCycle(getWork: () => WorkState, enabled = OTA_DELIVERY_ENABLED): Promise<OtaDecision> {
+  if (!enabled || !Capacitor.isNativePlatform()) return { action: 'none', why: 'disabled' };
+  if (busy) return { action: 'wait' };
+  busy = true;
+  try {
+    const [bundle, currentVersion, failedVersions] = await Promise.all([
+      fetchLatestBundle().catch(() => null), getCurrentBundleVersion(), getFailedVersions(),
+    ]);
+    const decision = decideOta({ enabled, bundle, currentVersion, failedVersions, work: getWork() });
+    if (decision.action === 'reject') logAppHealth('ota_rejected', decision.reasons.join(','));
+    if (decision.action === 'wait') logAppHealth('ota_waiting');
+    if (decision.action !== 'apply' || !bundle) return decision;
+
+    const plugin = await nativePlugin();
+    const staged = await plugin.downloadAndStage({
+      url: bundle.bundle_url, version: bundle.version, sha256: bundle.sha256!, sizeBytes: bundle.size_bytes!,
     });
-
-    if (!result.success) {
-      console.error('📦 OTA: Native download/apply failed:', result.error);
-      onProgress?.('Update failed: ' + (result.error || 'unknown'));
-      await Preferences.set({ key: OTA_CONFIG.PREF_FAILED_VERSION, value: bundleInfo.version });
-      return false;
+    if (!staged.success) {
+      logAppHealth('ota_download_failed', staged.error);
+      // Integrity/safety failures are remembered; plain network failures are retried later.
+      if (staged.error && !/network|timeout|http_5/i.test(staged.error)) await rememberFailed(bundle.version);
+      return { action: 'reject', reasons: [] };
     }
-
-    // Set pending version for boot health check — NOT confirmed until React loads
-    await Preferences.set({ key: OTA_CONFIG.PREF_PENDING_VERSION, value: bundleInfo.version });
-    await Preferences.set({ key: OTA_CONFIG.PREF_BUNDLE_PATH, value: result.path || '' });
-    // Clear any previous failure flag
-    await Preferences.remove({ key: OTA_CONFIG.PREF_FAILED_VERSION });
-
-    onProgress?.('Update applied! Reloading...');
-    console.log('📦 OTA: Bundle applied, pending boot confirmation, reloading...');
-
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Reload the WebView via setServerBasePath + reload (no direct loadUrl)
-    await DidiLiveUpdatePlugin.reload();
-
-    return true;
+    // Re-check: an offer or booking may have arrived during the download.
+    const again = decideOta({ enabled, bundle, currentVersion, failedVersions, work: getWork() });
+    if (again.action !== 'apply') return again;
+    await Preferences.set({ key: OTA_CONFIG.PREF_PENDING_VERSION, value: bundle.version });
+    const act = await plugin.activateStaged();
+    if (!act.success) { await Preferences.remove({ key: OTA_CONFIG.PREF_PENDING_VERSION }); return { action: 'wait' }; }
+    logAppHealth('ota_applied', bundle.version);
+    return again;
   } catch (err) {
-    console.error('📦 OTA: Download/apply error:', err);
-    onProgress?.('Update failed');
-    await Preferences.set({ key: OTA_CONFIG.PREF_FAILED_VERSION, value: bundleInfo.version });
-    return false;
+    logAppHealth('ota_download_failed', err);
+    return { action: 'none', why: 'no_bundle' };
+  } finally {
+    busy = false;
   }
 }
 
 /**
- * Called by App.tsx after React successfully mounts.
- * Confirms the OTA boot was successful and promotes pending → confirmed version.
- * If pending version exists but React crashed before calling this, the native side
- * will roll back on next launch.
+ * Called after React mounts. Confirms a pending bundle started fine, and records a
+ * native rollback (bundle that crashed) so it is never retried.
  */
 export async function markOtaBootSuccess(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
-
   try {
+    const plugin = await nativePlugin();
+    try {
+      const st = await plugin.getStatus();
+      if (st.lastRollbackReason) logAppHealth('ota_rolled_back', st.lastRollbackReason);
+    } catch { /* old native build */ }
     const { value: pendingVersion } = await Preferences.get({ key: OTA_CONFIG.PREF_PENDING_VERSION });
-    
     if (pendingVersion) {
-      // Promote pending → confirmed
       await Preferences.set({ key: OTA_CONFIG.PREF_BUNDLE_VERSION, value: pendingVersion });
       await Preferences.remove({ key: OTA_CONFIG.PREF_PENDING_VERSION });
-      
-      // Tell native side boot is confirmed
-      const { DidiLiveUpdatePlugin } = await import('@/native/liveUpdateBridge');
-      await DidiLiveUpdatePlugin.confirmBoot();
-      
-      console.log('📦 OTA: Boot confirmed for version', pendingVersion);
     }
-  } catch (err) {
-    console.error('📦 OTA: markOtaBootSuccess error:', err);
-  }
+    await plugin.confirmBoot();
+  } catch { /* never block startup */ }
 }
 
-/**
- * Reset to the built-in bundle (shipped with APK)
- */
 export async function resetToBuiltInBundle(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
-
   try {
-    const { DidiLiveUpdatePlugin } = await import('@/native/liveUpdateBridge');
-    await DidiLiveUpdatePlugin.reset();
-    await Preferences.remove({ key: OTA_CONFIG.PREF_BUNDLE_VERSION });
-    await Preferences.remove({ key: OTA_CONFIG.PREF_BUNDLE_PATH });
-    await Preferences.remove({ key: OTA_CONFIG.PREF_FAILED_VERSION });
-    await Preferences.remove({ key: OTA_CONFIG.PREF_PENDING_VERSION });
-    console.log('📦 OTA: Reset to built-in bundle');
-  } catch (err) {
-    console.error('📦 OTA: Reset failed:', err);
-  }
-}
-
-/**
- * Run OTA check on app startup (non-blocking for non-mandatory updates)
- */
-export async function initOtaCheck(): Promise<UpdateCheckResult | null> {
-  if (!Capacitor.isNativePlatform()) return null;
-
-  try {
-    const result = await checkForUpdate();
-    
-    if (result.updateAvailable && !result.isMandatory) {
-      // Non-mandatory: auto-download in background
-      console.log('📦 OTA: Non-mandatory update available, downloading in background...');
-      downloadAndApplyUpdate(result.bundleInfo!).catch(err => {
-        console.error('📦 OTA: Background update failed:', err);
-      });
+    await (await nativePlugin()).reset();
+    for (const key of [OTA_CONFIG.PREF_BUNDLE_VERSION, OTA_CONFIG.PREF_BUNDLE_PATH, OTA_CONFIG.PREF_PENDING_VERSION]) {
+      await Preferences.remove({ key });
     }
-    
-    return result;
-  } catch (err) {
-    console.error('📦 OTA: Init check failed:', err);
-    return null;
-  }
-}
-
-/**
- * Compare semantic versions: returns true if versionA > versionB
- */
-function isNewerVersion(versionA: string, versionB: string): boolean {
-  const partsA = versionA.split('.').map(Number);
-  const partsB = versionB.split('.').map(Number);
-  
-  for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
-    const a = partsA[i] || 0;
-    const b = partsB[i] || 0;
-    if (a > b) return true;
-    if (a < b) return false;
-  }
-  return false;
+  } catch { /* ignore */ }
 }
