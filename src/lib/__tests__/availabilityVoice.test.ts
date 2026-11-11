@@ -118,7 +118,7 @@ describe("availability voice help", () => {
     expect(en.availability.timesSelected_other).toBe("{{count}} Times Selected");
     for (const loc of [hi, te]) {
       for (const k of ["title", "selectAll", "clear", "copyToAll", "saveAvailability", "timesSelected_one", "timesSelected_other", "voiceListen", "voiceStop", "voiceLoading", "voiceUnavailable"]) {
-        expect((loc.availability as Record<string, string>)[k]).toBeTruthy();
+        expect((loc.availability as unknown as Record<string, string>)[k]).toBeTruthy();
       }
     }
   });
