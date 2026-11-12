@@ -1103,6 +1103,15 @@
     "Jobs_done_today": "Jobs done today",
     "Upcoming_jobs": "Upcoming jobs",
     "Next_Booking": "Next Booking",
-    "No_bookings_assigned_yet": "No bookings assigned yet."
+    "No_bookings_assigned_yet": "No bookings assigned yet.",
+    "Your_community_leaderboard_reflects_scores_and_performance_not_a_booking_queue": "Your community leaderboard reflects scores and performance, not a booking queue.",
+    "See_when_you_re_in_line_for_upcoming_booking_offers": "See when you're in line for upcoming booking offers.",
+    "Coming_Soon": "Coming Soon",
+    "We_re_preparing_this_feature_to_help_you_understand_your_booking_opportunities": "We're preparing this feature to help you understand your booking opportunities.",
+    "See_your_community_leaderboard_score": "See your community leaderboard score.",
+    "Congratulations_You_re_currently_first_on_this_community_leaderboard": "👑 Congratulations! You're currently first on this community leaderboard.",
+    "Keep_building_your_performance": ". Keep building your performance.",
+    "Leaderboard_rank_does_not_show_your_place_in_a_booking_queue": "Leaderboard rank does not show your place in a booking queue.",
+    "Score_Level": "Score Level:"
   }
 }

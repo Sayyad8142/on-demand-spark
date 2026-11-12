@@ -1,7 +1,8 @@
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { rankLeaderboard, summarizeReviews, LEADERBOARD_TABS, type LeaderboardTab, type ReviewStats, type RankedWorker } from "@/lib/leaderboardRanking";
+import { rankLeaderboard, summarizeReviews, RANKING_PAGE_TABS, type RankingPageTab, type ReviewStats, type RankedWorker } from "@/lib/leaderboardRanking";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Trophy, Star, Zap, IndianRupee, TrendingUp, HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,7 +37,7 @@ export default function BookingLeaderboard() {
   const [data, setData] = useState<LeaderboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<LeaderboardTab>("top");
+  const [tab, setTab] = useState<RankingPageTab>("top");
   const [slideDir, setSlideDir] = useState<"left" | "right">("left");
   const [reviews, setReviews] = useState<Map<string, ReviewStats>>(new Map());
   const touchX = useRef<number | null>(null);
@@ -65,15 +66,15 @@ export default function BookingLeaderboard() {
     fetchLeaderboard();
   }, []);
 
-  const switchTab = (next: LeaderboardTab) => {
+  const switchTab = (next: RankingPageTab) => {
     if (next === tab) return;
-    setSlideDir(LEADERBOARD_TABS.indexOf(next) > LEADERBOARD_TABS.indexOf(tab) ? "left" : "right");
+    setSlideDir(RANKING_PAGE_TABS.indexOf(next) > RANKING_PAGE_TABS.indexOf(tab) ? "left" : "right");
     setTab(next);
-    fetchLeaderboard();
+    if (next !== "next") fetchLeaderboard();
   };
 
   const ranked = useMemo(
-    () => (data ? rankLeaderboard(data.leaderboard, tab, reviews) : []),
+    () => (data ? rankLeaderboard(data.leaderboard, tab === "next" ? "top" : tab, reviews) : []),
     [data, tab, reviews],
   );
 
@@ -83,23 +84,23 @@ export default function BookingLeaderboard() {
   const me = ranked.find(l => l.isMe);
   const top3 = ranked.slice(0, 3);
   const others = ranked.slice(3);
-  const tabLabels: Record<LeaderboardTab, string> = {
+  const tabLabels: Record<RankingPageTab, string> = {
     top: displayText("🏆 Top Workers"),
     earners: displayText("💰 Top Earners"),
-    rated: displayText("⭐ Top Rated"),
+    next: `⚡ ${displayText("Next Booking")}`,
   };
-  const tabHelp: Record<LeaderboardTab, string> = {
+  const tabHelp: Record<RankingPageTab, string> = {
     top: displayText("Workers in your community ranked by Priority Score, Rating, and Performance."),
     earners: displayText("Ranked by earnings from completed bookings today."),
-    rated: displayText("Ranked by average customer rating. More reviews wins a tie."),
+    next: displayText("See when you're in line for upcoming booking offers."),
   };
   const onTouchEnd = (x: number) => {
     if (touchX.current === null) return;
     const dx = x - touchX.current;
     touchX.current = null;
     if (Math.abs(dx) < 50) return;
-    const i = LEADERBOARD_TABS.indexOf(tab) + (dx < 0 ? 1 : -1);
-    if (i >= 0 && i < LEADERBOARD_TABS.length) switchTab(LEADERBOARD_TABS[i]);
+    const i = RANKING_PAGE_TABS.indexOf(tab) + (dx < 0 ? 1 : -1);
+    if (i >= 0 && i < RANKING_PAGE_TABS.length) switchTab(RANKING_PAGE_TABS[i]);
   };
 
   return (
@@ -156,7 +157,7 @@ export default function BookingLeaderboard() {
             </div>
 
             <p className="text-[10px] text-muted-foreground italic text-center">
-              {displayText("\"Higher performance can improve your booking priority.\"")}
+              {displayText("Your community leaderboard reflects scores and performance, not a booking queue.")}
             </p>
           </div>
         </Card>
@@ -164,16 +165,17 @@ export default function BookingLeaderboard() {
 
       <div className="space-y-2">
         <div role="tablist" className="flex gap-1 p-1 rounded-full bg-muted overflow-x-auto no-scrollbar snap-x">
-          {LEADERBOARD_TABS.map((t) => (
-            <button
+          {RANKING_PAGE_TABS.map((t) => (
+            <Button
+              variant="ghost"
               key={t}
               role="tab"
               aria-selected={tab === t}
               onClick={() => switchTab(t)}
-              className={`flex-1 shrink-0 snap-start whitespace-nowrap px-3 py-2 rounded-full text-xs font-bold transition-all duration-300 ${tab === t ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground"}`}
+              className={`h-auto min-h-10 flex-1 shrink-0 snap-start whitespace-nowrap px-3 py-2 rounded-full text-xs font-bold transition-all duration-300 motion-reduce:transition-none ${tab === t ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground shadow" : "text-muted-foreground"}`}
             >
               {tabLabels[t]}
-            </button>
+            </Button>
           ))}
         </div>
         <div className="flex items-center justify-between px-1">
@@ -190,23 +192,36 @@ export default function BookingLeaderboard() {
 
         <div
           key={tab}
+          role="tabpanel"
           onTouchStart={(e) => { touchX.current = e.touches[0].clientX; }}
           onTouchEnd={(e) => onTouchEnd(e.changedTouches[0].clientX)}
-          className={`space-y-2 animate-in fade-in duration-300 ${slideDir === "left" ? "slide-in-from-right-8" : "slide-in-from-left-8"}`}
+          className={`space-y-2 animate-in fade-in duration-300 motion-reduce:animate-none ${slideDir === "left" ? "slide-in-from-right-8" : "slide-in-from-left-8"}`}
         >
+          {tab === "next" ? (
+            <section className="flex min-h-72 flex-col items-center justify-center px-4 py-8 text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Zap className="h-7 w-7" aria-hidden="true" />
+              </div>
+              <h2 className="text-xl font-bold text-foreground">⚡ {displayText("Next Booking")}</h2>
+              <p className="mt-2 max-w-sm text-sm text-muted-foreground">{tabHelp.next}</p>
+              <span className="mt-5 text-xs font-bold uppercase text-primary">{displayText("Coming Soon")}</span>
+              <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">{displayText("We're preparing this feature to help you understand your booking opportunities.")}</p>
+            </section>
+          ) : <>
           {top3.map((w, i) => (
             <WorkerRow key={w.id} worker={w} tab={tab} medal={i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"} />
           ))}
           {others.map((w) => (
             <WorkerRow key={w.id} worker={w} tab={tab} />
           ))}
+          </>}
         </div>
       </div>
     </div>
   );
 }
 
-function WorkerRow({ worker, medal, tab }: { worker: RankedWorker<LeaderboardEntry>; medal?: string; tab: LeaderboardTab }) {
+function WorkerRow({ worker, medal, tab }: { worker: RankedWorker<LeaderboardEntry>; medal?: string; tab: "top" | "earners" }) {
   useWorkerLanguage();
   return (
     <div className={`flex items-center justify-between p-2.5 rounded-xl border ${worker.isMe ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800' : 'bg-card border-border'} shadow-sm`}>
@@ -238,7 +253,7 @@ function WorkerRow({ worker, medal, tab }: { worker: RankedWorker<LeaderboardEnt
           <div className="flex items-center gap-2 mt-0.5 opacity-80">
             <div className="flex items-center gap-0.5">
               <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-              <span className="text-[10px] font-bold">{(tab === "rated" && worker.reviewAverage !== null ? worker.reviewAverage : worker.rating).toFixed(1)}</span>
+              <span className="text-[10px] font-bold">{worker.rating.toFixed(1)}</span>
             </div>
             {tab === "top" && (
               <div className="flex items-center gap-0.5">
@@ -253,17 +268,7 @@ function WorkerRow({ worker, medal, tab }: { worker: RankedWorker<LeaderboardEnt
         </div>
       </div>
       <div className="text-right">
-        {tab === "rated" ? (
-          <>
-            <p className="text-sm font-extrabold flex items-center justify-end gap-0.5">
-              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-              {worker.reviewAverage !== null ? worker.reviewAverage.toFixed(1) : "—"}
-            </p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              {worker.reviewCount > 0 ? `${worker.reviewCount} ${displayText("reviews")}` : displayText("No reviews yet")}
-            </p>
-          </>
-        ) : tab === "earners" ? (
+        {tab === "earners" ? (
           <p className="text-sm font-extrabold text-green-600 flex items-center justify-end">
             <IndianRupee className="w-3 h-3" />
             {worker.earningsToday}

@@ -1103,6 +1103,15 @@
     "Upcoming_jobs": "రాబోయే పనులు",
     "Next_Booking": "తదుపరి బుకింగ్",
     "No_bookings_assigned_yet": "ఇంకా బుకింగ్‌లు కేటాయించలేదు.",
-    "Tomorrow": "రేపు"
+    "Tomorrow": "రేపు",
+    "Your_community_leaderboard_reflects_scores_and_performance_not_a_booking_queue": "మీ కమ్యూనిటీ ర్యాంకింగ్ స్కోర్లు, పనితీరును చూపిస్తుంది; బుకింగ్ క్యూను కాదు.",
+    "See_when_you_re_in_line_for_upcoming_booking_offers": "రాబోయే బుకింగ్ ఆఫర్లలో మీ వంతు గురించి తెలుసుకోండి.",
+    "Coming_Soon": "త్వరలో వస్తుంది",
+    "We_re_preparing_this_feature_to_help_you_understand_your_booking_opportunities": "మీ బుకింగ్ అవకాశాలను అర్థం చేసుకోవడంలో సహాయపడేందుకు ఈ సదుపాయాన్ని సిద్ధం చేస్తున్నాం.",
+    "See_your_community_leaderboard_score": "మీ కమ్యూనిటీ ర్యాంకింగ్‌లో మీ స్కోర్ చూడండి.",
+    "Congratulations_You_re_currently_first_on_this_community_leaderboard": "👑 అభినందనలు! మీరు ప్రస్తుతం మీ కమ్యూనిటీ ర్యాంకింగ్‌లో మొదటి స్థానంలో ఉన్నారు.",
+    "Keep_building_your_performance": ". మీ పనితీరును మెరుగుపరచుకుంటూ ఉండండి.",
+    "Leaderboard_rank_does_not_show_your_place_in_a_booking_queue": "ర్యాంకింగ్ బుకింగ్ క్యూలో మీ స్థానాన్ని చూపించదు.",
+    "Score_Level": "స్కోర్ స్థాయి:"
   }
 }

@@ -1,0 +1,214 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Trophy, Star, TrendingUp, TrendingDown, CheckCircle2, XCircle, AlertTriangle, Clock, ChevronRight } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { formatBookingAddress } from "@/lib/address";
+import { priorityBadge } from "@/lib/priorityBadge";
+
+interface PriorityScoreCardProps {
+  worker: {
+    id?: string;
+    priority_score?: number | null;
+    rating?: number | null;
+    admin_override_rating?: number | null;
+    total_ratings?: number | null;
+    total_bookings_completed?: number | null;
+  } | null;
+}
+
+// Penalty weights (must mirror recompute_priority_score_v2)
+const PENALTY = {
+  worker_cancelled: 10,
+  no_movement: 15,
+  worker_no_show: 20,
+  complaint: 10,
+} as const;
+
+type FaultEvent = {
+  id: string;
+  reason_code: string;
+  created_at: string;
+};
+
+const BADGE_STYLE = {
+  excellent: { emoji: "🥇", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
+  very_good: { emoji: "🥈", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/30" },
+  good: { emoji: "🥉", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/30" },
+  needs_improvement: { emoji: "⚠️", color: "text-orange-600 dark:text-orange-400", bg: "bg-orange-50 dark:bg-orange-950/30" },
+  low: { emoji: "⚠️", color: "text-red-600 dark:text-red-400", bg: "bg-red-50 dark:bg-red-950/30" },
+} as const;
+
+function rankFromScore(score: number) {
+  const b = priorityBadge(score);
+  return { label: displayText(b.label), ...BADGE_STYLE[b.level] };
+}
+
+function tierLabelFromScore(score: number) {
+  if (score >= 75) return displayText("Top Performer");
+  if (score >= 50) return displayText("Strong Score");
+  if (score >= 25) return displayText("Building Up");
+  return displayText("Getting Started");
+}
+
+function reasonMeta(code: string) {
+  switch (code) {
+    case "worker_no_show":
+      return { label: displayText("No Show"), penalty: PENALTY.worker_no_show, icon: XCircle };
+    case "worker_cancelled":
+      return { label: displayText("Cancelled After Accept"), penalty: PENALTY.worker_cancelled, icon: XCircle };
+    case "no_movement":
+      return { label: displayText("No Movement"), penalty: PENALTY.no_movement, icon: AlertTriangle };
+    case "complaint":
+      return { label: displayText("Customer Complaint"), penalty: PENALTY.complaint, icon: AlertTriangle };
+    default:
+      return { label: code.replace(/_/g, " "), penalty: 0, icon: AlertTriangle };
+  }
+}
+
+function formatWhen(iso: string) {
+  const d = new Date(iso);
+  const diffMs = Date.now() - d.getTime();
+  const day = 24 * 60 * 60 * 1000;
+  if (diffMs < day) return "Today " + d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  if (diffMs < 2 * day) return "Yesterday";
+  if (diffMs < 7 * day) return `${Math.floor(diffMs / day)} days ago`;
+  return d.toLocaleDateString([], { day: "numeric", month: "short" });
+}
+
+export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
+  useWorkerLanguage();
+  const score = Math.round((worker?.priority_score ?? 0) * 10) / 10;
+  const effectiveRating = worker?.admin_override_rating ?? worker?.rating ?? 0;
+  const totalRatings = worker?.total_ratings ?? 0;
+  const completedCount = worker?.total_bookings_completed ?? 0;
+
+  const rank = rankFromScore(score);
+  const tier = tierLabelFromScore(score);
+
+  const [faults, setFaults] = useState<FaultEvent[]>([]);
+  const [recentCompleted, setRecentCompleted] = useState<{ id: string; completed_at: string; flat_no: string | null; community: string | null }[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  useEffect(() => {
+    if (!worker?.id) return;
+    let cancelled = false;
+    (async () => {
+      const [{ data: faultRows }, { data: bookingRows }] = await Promise.all([
+        supabase
+          .from("worker_fault_events")
+          .select("id, reason_code, created_at")
+          .eq("worker_id", worker.id)
+          .order("created_at", { ascending: false })
+          .limit(50),
+        supabase
+          .from("bookings")
+          .select("id, completed_at, flat_no, community")
+          .eq("worker_id", worker.id)
+          .eq("status", "completed")
+          .not("completed_at", "is", null)
+          .order("completed_at", { ascending: false })
+          .limit(10),
+      ]);
+      if (cancelled) return;
+      setFaults((faultRows ?? []) as FaultEvent[]);
+      setRecentCompleted((bookingRows ?? []) as any);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [worker?.id]);
+
+  // Breakdown counters
+  const penaltyCounts = faults.reduce<Record<string, number>>((acc, f) => {
+    acc[f.reason_code] = (acc[f.reason_code] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const breakdown: { label: string; value: number; positive: boolean }[] = [
+    { label: displayText("Base score"), value: 50, positive: true },
+    { label: displayText("Completed Jobs"), value: completedCount, positive: true },
+  ];
+  Object.entries(penaltyCounts).forEach(([code, count]) => {
+    const meta = reasonMeta(code);
+    if (meta.penalty > 0) {
+      breakdown.push({
+        label: `${meta.label} ×${count}`,
+        value: -(meta.penalty * count),
+        positive: false,
+      });
+    }
+  });
+  const ratingBonus = effectiveRating >= 4.8 && totalRatings >= 5 ? 5 : 0;
+  if (ratingBonus > 0) {
+    breakdown.push({ label: displayText("High Rating Bonus"), value: ratingBonus, positive: true });
+  }
+
+  // Merged timeline for modal
+  const timeline = [
+    ...faults.map((f) => {
+      const m = reasonMeta(f.reason_code);
+      return { id: f.id, when: f.created_at, label: m.label, points: -m.penalty, positive: false };
+    }),
+    ...recentCompleted.map((b) => ({
+      id: b.id,
+      when: b.completed_at,
+      label: displayText("Completed Booking"),
+      sublabel: formatBookingAddress(b as any),
+      points: 1,
+      positive: true,
+    })),
+  ].sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime()) as Array<{ id: string; when: string; label: string; sublabel?: string; points: number; positive: boolean }>;
+
+  return (
+    <Card className="border-0 shadow-lg overflow-hidden">
+      {/* Header */}
+      <CardHeader className="pb-3 bg-gradient-to-br from-primary/10 to-primary/5">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Trophy className="w-5 h-5 text-primary" />
+          {displayText("Priority Score")}
+        </CardTitle>
+      </CardHeader>
+
+      <CardContent className="pt-4 space-y-4">
+        {/* Score */}
+        <div>
+          <div className="flex items-end justify-between mb-1">
+            <div className="flex items-baseline gap-1">
+              <span className="text-5xl font-extrabold text-primary leading-none">{score}</span>
+              <span className="text-sm text-muted-foreground">/ 100</span>
+            </div>
+            <div className="flex items-center gap-0.5">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Star
+                  key={i}
+                  className={`w-3.5 h-3.5 ${
+                    i <= Math.round(effectiveRating)
+                      ? "fill-amber-400 text-amber-400"
+                      : "text-muted-foreground/30"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+          <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-2">{tier}</p>
+          <Progress value={Math.min(score, 100)} className="h-2" />
+          <div className={`mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${rank.bg} ${rank.color}`}>
+            <span>{rank.emoji}</span>
+            <span>{displayText("Booking Priority Rank:")} {rank.label}</span>
+          </div>
+        </div>
+
+      </CardContent>
+    </Card>
+  );
+}
+
