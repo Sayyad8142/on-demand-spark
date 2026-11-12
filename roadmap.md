@@ -153,3 +153,9 @@
 ## Prompt 96 — secure endpoint verification only
 - [x] Audit and harden staged authentication, bounded input, SDK CORS, privacy, NULL-status busy exclusion and read timeouts; no deployment.
 - [x] Isolated Deno compilation and 29 security tests pass; 38 app ranking tests pass; conditional deployment-only GO documented.
+
+## Prompt 97 — approved ranking endpoint deployment only
+- [x] Confirm exact production target and function; rerun Deno check and 29 security tests; verify frontend flag remains OFF and preview diagnostics are clean.
+- [x] Read-only endpoint probes returned 404; record unmet pre-deployment safeguards in docs/live-next-booking-2026-11-12/PROMPT-97-STATUS.md.
+- [ ] Deploy only worker-availability-ranking — blocked: no management listing/source/configuration backup capability or authoritative managed credential-presence verification available; no function files copied into auto-deploying directory.
+- [ ] Verify hosted authentication, community/service isolation, privacy, IST ranking and error handling — blocked: endpoint not deployed; external unmanaged worker session unavailable. Frontend activation and APK publication remain unapproved.
