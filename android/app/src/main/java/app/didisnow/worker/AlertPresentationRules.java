@@ -13,6 +13,10 @@ public final class AlertPresentationRules {
         return (int) Math.min(600L, Math.max(0L, deadline - now));
     }
 
+    public static boolean mayAccept(long originalDeadline, long now, boolean closed) {
+        return !closed && originalDeadline > 0 && now < originalDeadline;
+    }
+
     public static boolean mayOpenActivity(boolean foreground, boolean locked) {
         return foreground && !locked;
     }

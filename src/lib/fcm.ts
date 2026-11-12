@@ -10,6 +10,7 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import { processIncomingBooking } from '@/services/bookingAlertCoordinator';
 import { logScheduledOfferDecision } from '@/lib/scheduledBookingGuards';
+import { parseFcmOffer } from '@/lib/fcmOffer';
 import { extractAckToken, rememberAckToken } from '@/lib/bookingAck';
 
 let fcmInitialized = false;
@@ -27,124 +28,45 @@ export async function initFCM() {
   
   console.log('🔔 Initializing FCM notification handlers...');
   
-  // Handle notification received (foreground) — route through coordinator
-  PushNotifications.addListener('pushNotificationReceived', async (notification) => {
-    console.log('🔔 Foreground notification:', { type: notification.data?.type, bookingId: notification.data?.bookingId || notification.data?.booking_id });
-    const data = notification.data || {};
-    const bookingId = data.bookingId || data.booking_id;
-    const bookingRequestId = data.booking_request_id || data.bookingRequestId;
-    // Phase 1C: echo-only signed ack token — never generated or modified here.
-    const ackToken = extractAckToken(data);
-    if (ackToken) rememberAckToken({ bookingId, bookingRequestId, ackToken });
-
-    // Short-circuit: admin reassignment — not a new offer.
+  // Both receive surfaces use the same absolute-deadline contract.
+  const route = async (data: Record<string, unknown>, tapped: boolean) => {
+    const bookingId = typeof data.bookingId === 'string' ? data.bookingId
+      : typeof data.booking_id === 'string' ? data.booking_id : undefined;
     if (data.type === 'BOOKING_REASSIGNED') {
       const { handleBookingReassigned } = await import('@/lib/bookingReassign');
-      handleBookingReassigned(bookingId, 'fcm');
+      handleBookingReassigned(bookingId, tapped ? 'fcm-tap' : 'fcm');
       return;
     }
-
-    if (bookingId) {
-      const scheduleInfo = {
-        bookingId,
-        bookingType: data.booking_type || data.bookingType,
-        scheduledDate: data.scheduled_date || data.scheduledDate,
-        scheduledTime: data.scheduled_time || data.scheduledTime,
-        prealertSent: data.prealert_sent === true || data.prealert_sent === 'true' || data.prealertSent === true || data.prealertSent === 'true',
-      };
-      // Backend is authoritative: a BOOKING_ALERT push is an actionable offer
-      // (instant or scheduled) unless it explicitly says actionable=false.
-      const isActionableOffer = String(data.actionable ?? 'true') !== 'false';
-      if (!isActionableOffer) {
-        logScheduledOfferDecision(scheduleInfo, 'fcm', false);
-        console.log('🔕 FCM informational booking notification ignored (actionable=false):', bookingId);
-        return;
+    if (data.type === 'BOOKING_CANCELLED') {
+      if (bookingId) {
+        const { dismissAlert } = await import('@/services/bookingAlertCoordinator');
+        dismissAlert(bookingId);
+        window.dispatchEvent(new CustomEvent('bookingCancelledAlert', {
+          detail: { bookingId, source: tapped ? 'fcm-tap' : 'fcm' },
+        }));
       }
-      logScheduledOfferDecision(scheduleInfo, 'fcm', true);
-
-
-
-      console.log('📬 Foreground booking alert via FCM:', bookingId);
-
-      // ACK the FCM delivery immediately (fire-and-forget)
+      return;
+    }
+    const offer = parseFcmOffer(data);
+    if (!offer) return; // Includes unknown, informational, expired or undated messages.
+    const ackToken = extractAckToken(data) ?? undefined;
+    if (ackToken) rememberAckToken({ ...offer, ackToken });
+    logScheduledOfferDecision(offer, 'fcm', true);
+    if (!tapped) {
       import('@/lib/bookingAck').then(({ ackBookingDelivery }) =>
-        ackBookingDelivery({ bookingId, bookingRequestId, ackToken, event: 'push_received' })
+        ackBookingDelivery({ ...offer, ackToken, event: 'push_received' })
       ).catch(() => {});
-
-      // Start FCM ack timeout tracker — if popup never shows, report missed
       import('@/lib/fcmAckTracker').then(({ trackFcmOffer }) =>
-        trackFcmOffer(bookingId, bookingRequestId)
+        trackFcmOffer(offer.bookingId, offer.bookingRequestId)
       ).catch(() => {});
-
-      await processIncomingBooking({
-        bookingId,
-        bookingRequestId,
-        custName: data.cust_name || data.custName || 'Customer',
-        community: data.community || '',
-        serviceType: data.service_type || data.serviceType || '',
-        flatNo: data.flat_no || data.flatNo || '',
-        priceInr: parseInt(data.price_inr || data.priceInr || '0', 10),
-        bookingType: scheduleInfo.bookingType,
-        scheduledDate: scheduleInfo.scheduledDate,
-        scheduledTime: scheduleInfo.scheduledTime,
-        prealertSent: scheduleInfo.prealertSent,
-        ackToken,
-        source: 'fcm',
-      });
     }
-  });
-  
-  // Handle notification clicked — route through coordinator
-  PushNotifications.addListener('pushNotificationActionPerformed', async (notification) => {
-    console.log('🔔 Notification clicked:', { type: notification.notification?.data?.type, actionId: notification.actionId });
-    const data = notification.notification.data || {};
-    const bookingId = data.bookingId || data.booking_id;
-    const bookingRequestId = data.booking_request_id || data.bookingRequestId;
-    // Phase 1C: echo-only signed ack token — never generated or modified here.
-    const ackToken = extractAckToken(data);
-    if (ackToken) rememberAckToken({ bookingId, bookingRequestId, ackToken });
+    await processIncomingBooking({ ...offer, ackToken });
+  };
+  PushNotifications.addListener('pushNotificationReceived', notification =>
+    route(notification.data || {}, false));
+  PushNotifications.addListener('pushNotificationActionPerformed', notification =>
+    route(notification.notification.data || {}, true));
 
-    if (data.type === 'BOOKING_REASSIGNED') {
-      const { handleBookingReassigned } = await import('@/lib/bookingReassign');
-      handleBookingReassigned(bookingId, 'fcm-tap');
-      return;
-    }
-
-    if (bookingId) {
-      const scheduleInfo = {
-        bookingId,
-        bookingType: data.booking_type || data.bookingType,
-        scheduledDate: data.scheduled_date || data.scheduledDate,
-        scheduledTime: data.scheduled_time || data.scheduledTime,
-        prealertSent: data.prealert_sent === true || data.prealert_sent === 'true' || data.prealertSent === true || data.prealertSent === 'true',
-      };
-      if (String(data.actionable ?? 'true') === 'false') {
-        logScheduledOfferDecision(scheduleInfo, 'fcm', false);
-        console.log('🔕 FCM informational booking notification tap ignored (actionable=false):', bookingId);
-        return;
-      }
-      logScheduledOfferDecision(scheduleInfo, 'fcm', true);
-
-
-      console.log('📬 Booking alert clicked:', bookingId);
-      await processIncomingBooking({
-        bookingId,
-        bookingRequestId,
-        custName: data.cust_name || data.custName || 'Customer',
-        community: data.community || '',
-        serviceType: data.service_type || data.serviceType || '',
-        flatNo: data.flat_no || data.flatNo || '',
-        priceInr: parseInt(data.price_inr || data.priceInr || '0', 10),
-        bookingType: scheduleInfo.bookingType,
-        scheduledDate: scheduleInfo.scheduledDate,
-        scheduledTime: scheduleInfo.scheduledTime,
-        prealertSent: scheduleInfo.prealertSent,
-        ackToken,
-        source: 'fcm',
-      });
-    }
-  });
-  
   fcmInitialized = true;
   console.log('✅ FCM notification handlers initialized');
 }
