@@ -1,0 +1,18 @@
+[
+  {
+    "check": "validate missing login",
+    "status": 401,
+    "body": {
+      "sent": false,
+      "reason": "login_required"
+    }
+  },
+  {
+    "check": "validate fake login",
+    "status": 401,
+    "body": {
+      "sent": false,
+      "reason": "login_required"
+    }
+  }
+]
