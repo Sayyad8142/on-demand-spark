@@ -1,5 +1,5 @@
 /** Request handling for the staged practice sender. Not deployed. */
-import { preparePracticeSend, type PracticeSenderAdapters } from '../senderCore.ts';
+import { preparePracticeSend, type PracticeSenderAdapters } from './senderCore.ts';
 
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

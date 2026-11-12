@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { createLiveAdapters, googleAccessToken, PRACTICE_ACTIVE_WORK_STATUSES, redact, sha256Hex, type AdapterConfig } from '../../../docs/test-booking-training-2026-11-11/sender/staged/adapters';
+import { createLiveAdapters, googleAccessToken, PRACTICE_ACTIVE_WORK_STATUSES, redact, sha256Hex, type AdapterConfig } from '../../../docs/test-booking-training-2026-11-11/sender/staged/send-practice-notification/adapters';
 import { handlePracticeRequest } from '../../../docs/test-booking-training-2026-11-11/sender/staged/send-practice-notification/handler';
-import { preparePracticeSend } from '../../../docs/test-booking-training-2026-11-11/sender/staged/senderCore';
+import { preparePracticeSend } from '../../../docs/test-booking-training-2026-11-11/sender/staged/send-practice-notification/senderCore';
 import { ACTIVE_WORK_STATUSES } from '../workSafety';
 
 const NOW = 1794391800000;

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { parsePracticeRequest, preparePracticeSend, type PracticeSenderAdapters } from '../../../docs/test-booking-training-2026-11-11/sender/staged/senderCore';
+import { parsePracticeRequest, preparePracticeSend, type PracticeSenderAdapters } from '../../../docs/test-booking-training-2026-11-11/sender/staged/send-practice-notification/senderCore';
 import { sendPracticePush } from '../practiceNotification';
 
 const now = 1794391800000;

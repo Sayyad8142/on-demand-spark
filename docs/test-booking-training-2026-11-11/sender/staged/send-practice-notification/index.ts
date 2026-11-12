@@ -2,7 +2,7 @@
  * Stays refusing (503 approval_required) unless the PRACTICE_PUSH_SENDER secret equals "on".
  * Requires verify_jwt = true in config.toml for this function.
  */
-import { createLiveAdapters, type ServiceAccount } from '../adapters.ts';
+import { createLiveAdapters, type ServiceAccount } from './adapters.ts';
 import { handlePracticeRequest } from './handler.ts';
 
 function serviceAccount(): ServiceAccount | null {

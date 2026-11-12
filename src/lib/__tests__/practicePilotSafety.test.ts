@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createLiveAdapters, sha256Hex } from '../../../docs/test-booking-training-2026-11-11/sender/staged/adapters';
-import { preparePracticeSend } from '../../../docs/test-booking-training-2026-11-11/sender/staged/senderCore';
+import { createLiveAdapters, sha256Hex } from '../../../docs/test-booking-training-2026-11-11/sender/staged/send-practice-notification/adapters';
+import { preparePracticeSend } from '../../../docs/test-booking-training-2026-11-11/sender/staged/send-practice-notification/senderCore';
 import { newPractice, practiceTransition } from '../practiceBooking';
 
 const userId = '11111111-2222-4333-8444-555555555555';
