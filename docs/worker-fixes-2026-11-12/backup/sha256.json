@@ -18,5 +18,6 @@
   "roadmap.md": "73f53bea48be5b85d133ce84e5d77c907fc0efe003f5328e6a6d5f0fd19dc2c3",
   "src/i18n/locales/en.json": "d317ad2bfc8c2be3ce4054721e1be48cf7417723ed0d2f1a788732607bd7c4f0",
   "src/i18n/locales/hi.json": "721aeeed41480d19903a950e4d23d813776f4ac79a68f85757ad47259a75ff1f",
-  "src/i18n/locales/te.json": "09f03d940458c3beb2f9ec24a46477b1487d2e56c072c9df7b0e883a0b6ff380"
+  "src/i18n/locales/te.json": "09f03d940458c3beb2f9ec24a46477b1487d2e56c072c9df7b0e883a0b6ff380",
+  "src/lib/__tests__/movementStop.test.ts": "0cac1ac23204397e9d0bf39cc655d8b10d3e127fb61753b5c7a592cf8a31f3ba"
 }
