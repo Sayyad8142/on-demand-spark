@@ -30,7 +30,7 @@ export function useActiveJob(userId: string | undefined) {
     queryFn: async ({ signal }) => {
       const result = await supabase.from("bookings").select(WORKER_BOOKING_COLUMNS)
         .eq("worker_id", workerId ?? "").in("status", [...ACTIVE_WORK_STATUSES])
-        .order("created_at", { ascending: false }).limit(1).maybeSingle().abortSignal(signal);
+        .order("created_at", { ascending: false }).limit(1).abortSignal(signal).maybeSingle();
       if (result.error) throw result.error;
       if (signal.aborted) throw new Error("Cancelled booking refresh");
       const previous = client.getQueryData<Booking | null>(key);
