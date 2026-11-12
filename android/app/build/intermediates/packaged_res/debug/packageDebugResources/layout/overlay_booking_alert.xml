@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF"
+    android:fitsSystemWindows="true"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <!-- Card container with elevation -->
+        <LinearLayout
+            android:orientation="vertical"
+            android:background="@android:color/white"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:elevation="12dp">
+
+            <!-- Service Image with rounded corners effect -->
+            <ImageView
+                android:id="@+id/serviceImage"
+                android:layout_width="match_parent"
+                android:layout_height="240dp"
+                android:scaleType="centerCrop"
+                android:src="@drawable/service_maid"
+                android:contentDescription="Service Image"/>
+
+            <!-- Content Section -->
+            <LinearLayout
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <!-- Header with Title, Siren Icon and Timer -->
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp">
+
+                    <!-- Siren Icon (Blinking) -->
+                    <ImageView
+                        android:id="@+id/sirenIcon"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/ic_siren"
+                        android:layout_marginEnd="8dp"
+                        android:contentDescription="Alert Siren"/>
+
+                    <!-- Title -->
+                    <TextView
+                        android:id="@+id/title"
+                        android:text="New Booking"
+                        android:textColor="#1E293B"
+                        android:textSize="32sp"
+                        android:textStyle="bold"
+                        android:maxLines="2"
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="18sp"
+                        android:autoSizeMaxTextSize="32sp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"/>
+
+                    <!-- Countdown Timer with Circle (Bigger) -->
+                    <RelativeLayout
+                        android:layout_width="96dp"
+                        android:layout_height="96dp">
+
+                        <ProgressBar
+                            android:id="@+id/countdownCircle"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:max="60"
+                            android:progress="30"
+                            android:progressDrawable="@drawable/circular_progress"
+                            android:indeterminate="false"/>
+
+                        <TextView
+                            android:id="@+id/countdown"
+                            android:text="30s"
+                            android:textColor="#22C55E"
+                            android:textSize="28sp"
+                            android:textStyle="bold"
+                            android:gravity="center"
+                            android:maxLines="1"
+                            android:autoSizeTextType="uniform"
+                            android:autoSizeMinTextSize="14sp"
+                            android:autoSizeMaxTextSize="28sp"
+                            android:padding="14dp"
+                            android:layout_centerInParent="true"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"/>
+                    </RelativeLayout>
+                </LinearLayout>
+
+                <!-- Service Type (Centered, Shorter) -->
+                <TextView
+                    android:id="@+id/subtitle"
+                    android:text="maid"
+                    android:textColor="#3B82F6"
+                    android:textSize="32sp"
+                    android:textStyle="bold"
+                    android:gravity="center"
+                    android:layout_marginBottom="20dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"/>
+
+                <!-- Price + Tower Row -->
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:gravity="center_vertical">
+
+                    <!-- Price Section (Left) -->
+                    <LinearLayout
+                        android:orientation="vertical"
+                        android:background="@android:color/transparent"
+                        android:padding="20dp"
+                        android:gravity="center"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:id="@+id/price"
+                            android:text="₹200"
+                            android:textColor="#10B981"
+                            android:textSize="42sp"
+                            android:textStyle="bold"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"/>
+                    </LinearLayout>
+
+                    <!-- Tower Number Section (Right) -->
+                    <LinearLayout
+                        android:orientation="horizontal"
+                        android:background="@android:color/transparent"
+                        android:padding="20dp"
+                        android:gravity="center"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent">
+
+                        <TextView
+                            android:id="@+id/towerNoLabel"
+                            android:text="🏢 Tower: "
+                            android:textColor="#64748B"
+                            android:textSize="16sp"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"/>
+
+                        <TextView
+                            android:id="@+id/towerNo"
+                            android:text="9"
+                            android:textColor="#1E293B"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"/>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Community Section (Hidden) -->
+                <TextView
+                    android:id="@+id/community"
+                    android:visibility="gone"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"/>
+
+                <!-- Hidden fields for data -->
+                <TextView
+                    android:id="@+id/customerName"
+                    android:visibility="gone"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"/>
+
+                <TextView
+                    android:id="@+id/flatNo"
+                    android:visibility="gone"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"/>
+
+                <!-- Action Buttons -->
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp">
+
+                    <Button
+                        android:id="@+id/btnReject"
+                        android:text="REJECT"
+                        android:textColor="@android:color/white"
+                        android:background="@drawable/btn_outline_red"
+                        android:elevation="4dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:paddingVertical="18dp"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"/>
+
+                    <Button
+                        android:id="@+id/btnAccept"
+                        android:text="ACCEPT"
+                        android:textColor="@android:color/white"
+                        android:background="@drawable/btn_filled_green"
+                        android:elevation="4dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:paddingVertical="18dp"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"/>
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>
