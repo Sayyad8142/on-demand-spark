@@ -101,3 +101,8 @@
 - [x] Fix uncertain-send evidence, retry, foreground practice alert and visible-only evidence.
 - [x] 519 app + 33 native tests pass; Android compile successful; 8 local SQL assertions pass; report/phone checklist prepared.
 - [ ] Controlled FCM-to-phone practice completion — blocked: separate deployment/sending approval, approved account/device and real Android phone.
+
+## Prompt 87 — controlled-test readiness review
+- [x] Review sender/native isolation, rerun 519 app tests, check prior 33 native-test/compile evidence and live prerequisites read-only.
+- [x] Record NO-GO blockers and exact proposed deployment/switch sequence in sender/PROMPT-87-READINESS.md; no activation.
+- [ ] Activate one-device test — blocked: sender packaging/transport/auth review, native race checks, explicit worker/device selection and separate approval.
