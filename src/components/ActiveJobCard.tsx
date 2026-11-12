@@ -18,7 +18,8 @@ import {
   type ResolvedOtpMode,
 } from "@/lib/otpV2";
 import { startOtpCardAction } from "@/lib/startOtp";
-import { cardIndicator } from "@/lib/startOtpReminder";
+import { bookingCharges, startOtpCountdown, countdownLabel } from "@/lib/bookingCardDetails";
+import { isActiveWorkStatus } from "@/lib/workSafety";
 
 import serviceDishWashing from "@/assets/service-dish-washing.webp";
 import serviceFloorCleaning from "@/assets/service-floor-cleaning.webp";
@@ -54,6 +55,15 @@ export default function ActiveJobCard({
 }: ActiveJobCardProps) {
   useWorkerLanguage();
   const [remainingSeconds, setRemainingSeconds] = useState<number>(0);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [booking.id]);
+  const startSeconds = startOtpCountdown({
+    id: booking.id, status: booking.status, start_otp_required: booking.start_otp_required ?? null,
+    started_at: booking.started_at, accepted_at: booking.accepted_at, assigned_at: booking.assigned_at,
+  }, now);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [taskPrices, setTaskPrices] = useState<Record<string, number>>({});
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -177,7 +187,7 @@ export default function ActiveJobCard({
   const [speakFailed, setSpeakFailed] = useState(false);
 
   // Don't show for completed or cancelled bookings
-  if (!['assigned', 'accepted', 'on_the_way', 'started'].includes(booking.status)) {
+  if (!isActiveWorkStatus(booking.status)) {
     console.log('🚫 ActiveJobCard: Not showing card, status is:', booking.status);
     return null;
   }
@@ -222,7 +232,7 @@ export default function ActiveJobCard({
             <p className="text-center text-sm font-bold text-[#D6B88A] mb-1 relative z-10">{booking.community}</p>
           }
           <div className={`text-center relative z-10 flex items-center justify-center gap-2 ${isVilla ? '' : 'mb-4'}`}>
-            <p className="flat-number-text font-extrabold text-3xl tracking-wide uppercase">
+            <p className="flat-number-text min-w-0 break-words font-extrabold text-3xl uppercase">
               {isVilla ? unit.label.replace(/^Villa\b/, displayText('Villa')) : displayText('Flat {{number}}', { number: booking.flat_no ?? '' })}
             </p>
             <button
@@ -284,21 +294,16 @@ export default function ActiveJobCard({
             <div className="px-4 py-3 space-y-1.5">
               {/* Breakup chips row */}
               {(() => {
-                const surge = booking.slot_surge_amount || 0;
-                const extra = (booking.dish_intensity_extra_inr || 0) + (booking.surcharge_amount || 0);
-                const glassPartition = booking.glass_partition_fee || 0;
-                const chips: { icon: typeof Utensils; label: string; amount: number }[] = [];
-                if (surge > 0) chips.push({ icon: Zap, label: displayText("Surge"), amount: surge });
-                if (extra > 0) chips.push({ icon: PlusCircle, label: displayText("Extra"), amount: extra });
-                if (glassPartition > 0) chips.push({ icon: Sparkles, label: displayText("Glass Partition"), amount: glassPartition });
+                const icons = { dishes: Utensils, surge: Zap, surcharge: PlusCircle, glass: Sparkles };
+                const chips = bookingCharges(booking).map((c) => ({ ...c, icon: icons[c.kind] }));
                 return chips.length >= 1 ? (
                   <div className="flex flex-wrap items-center gap-1.5">
                     {chips.map((chip) => {
                       const Icon = chip.icon;
                       return (
-                        <span key={chip.label} className="inline-flex items-center gap-1 bg-muted text-muted-foreground text-xs font-medium px-2 py-0.5 rounded-full">
-                          <Icon className="w-3 h-3" />
-                          {chip.label} ₹{chip.amount}
+                        <span key={chip.kind} className="inline-flex max-w-full items-center gap-1.5 bg-muted text-muted-foreground text-sm font-medium px-2 py-1 rounded-md">
+                          <Icon className="w-4 h-4 shrink-0" />
+                          <span className="min-w-0 break-words">{displayText(chip.label)} <span className="whitespace-nowrap">+₹{chip.amount}</span></span>
                         </span>
                       );
                     })}
@@ -337,10 +342,10 @@ export default function ActiveJobCard({
             </Button>
           ) : otpAction === "start" ? (
             <>
-            <StartOtpIndicator booking={booking as any} />
+            {startSeconds === 0 && <div role="status" className="mb-2 flex items-center justify-center gap-1.5 text-sm font-semibold text-destructive"><AlertTriangle className="w-4 h-4 shrink-0" />{displayText("Start OTP Delayed")}</div>}
             <Button
               size="lg"
-              className={`w-full h-14 text-lg font-bold shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98] ${
+              className={`w-full min-h-14 h-auto py-3 text-base font-bold shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98] ${
                 isWorkCompletedDisabled ?
                 "bg-gray-400 hover:bg-gray-400 cursor-not-allowed text-white/80" :
                 "bg-green-600 hover:bg-green-700 text-white"}`
@@ -349,8 +354,9 @@ export default function ActiveJobCard({
               disabled={isWorkCompletedDisabled}>
               {updating ? displayText("Updating...") :
                 <>
-                  <Play className="w-6 h-6 mr-2" />
-                  {displayText("Start Booking with OTP")}
+                  <Play className="w-5 h-5 mr-1 shrink-0" />
+                  <span className="min-w-0 whitespace-normal">{displayText("Start Booking with OTP")}</span>
+                  {startSeconds !== null && startSeconds > 0 && <span className="ml-1 shrink-0 tabular-nums">· {countdownLabel(startSeconds)}</span>}
                 </>
               }
             </Button>
@@ -382,23 +388,4 @@ export default function ActiveJobCard({
         onCollected={() => onRefresh?.()}
       />
     </Card>;
-}
-function StartOtpIndicator({ booking }: { booking: { status: string; start_otp_required?: boolean | null; started_at?: string | null; accepted_at?: string | null; assigned_at?: string | null; id: string } }) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const t = window.setInterval(() => setNow(Date.now()), 30_000);
-    return () => window.clearInterval(t);
-  }, []);
-  const state = cardIndicator({
-    id: booking.id, status: booking.status, start_otp_required: booking.start_otp_required ?? null,
-    started_at: booking.started_at ?? null, accepted_at: booking.accepted_at ?? null, assigned_at: booking.assigned_at ?? null,
-  }, now);
-  if (state === "none") return null;
-  const delayed = state === "delayed";
-  return (
-    <div className={`mb-2 flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold ${delayed ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
-      {delayed ? <AlertTriangle className="w-4 h-4" /> : <KeyRound className="w-4 h-4" />}
-      {displayText(delayed ? "Start OTP Delayed — Enter OTP" : "Start OTP Pending")}
-    </div>
-  );
 }

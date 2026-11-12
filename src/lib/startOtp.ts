@@ -75,7 +75,7 @@ const KNOWN = new Set<string>([
 export function startOtpMessage(code: StartOtpErrorCode): string {
   switch (code) {
     case "WRONG_CODE":
-      return "Incorrect code. Ask the customer for the 4-digit Start OTP.";
+      return "Incorrect OTP. Please check with the customer and try again.";
     case "LOCKED":
       return "Too many wrong tries. Please call support.";
     case "TOO_FAST":
