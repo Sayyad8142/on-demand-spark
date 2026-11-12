@@ -1,0 +1,12 @@
+{
+  "src/components/BookingLeaderboard.tsx": "eff10c7f7bc6a93d623111377400af50e62e02372294f3eeda20fa57b4525c07",
+  "src/components/WorkerLeaderboardCard.tsx": "dcd8a8b1b4d0a962b614d26635a04d0863c6ae19a14653c959004f40f5b30958",
+  "src/components/profile/PriorityScoreCard.tsx": "68786f696573b9e1a1da46f3a00646deac014a4343b1e35ec1601c1f1fd84954",
+  "src/lib/leaderboardRanking.ts": "76ba23e2209de346469d77379eca447cbf36d90ed782226b1f5710d579271df1",
+  "src/lib/__tests__/leaderboardRanking.test.ts": "20f2fab44a48f896238ba0310bcd3f156ae663532a732189d5a1c27bab6853f1",
+  "src/i18n/locales/en.json": "a695a2458569d2a465faf935f5964c2ed79398d47a410d6b8ef3a55629ef1d38",
+  "src/i18n/locales/hi.json": "196a41e94d167b1c44c8ec8cbc746dc07e22e9ac3052c71341e23bb644a1ce70",
+  "src/i18n/locales/te.json": "ad97d131c90cbef724c91b2c7744a7ddac7e5c6bcd1a407ec9f9d8e1f50b7f92",
+  "AGENTS.md": "3942d3f6b46e5c92a2f65410e946b2bc4a6c0c874d9f5b5241288bd28c000353",
+  "roadmap.md": "beebcba3fd82bf28ae82ffd37795b87629969130ea90d14354f2bafd16d9cdcc"
+}
