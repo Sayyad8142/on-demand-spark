@@ -203,7 +203,7 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
           <Progress value={Math.min(score, 100)} className="h-2" />
           <div className={`mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${rank.bg} ${rank.color}`}>
             <span>{rank.emoji}</span>
-            <span>{displayText("Booking Priority Rank:")} {rank.label}</span>
+            <span>{displayText("Score Level:")} {rank.label}</span>
           </div>
         </div>
 

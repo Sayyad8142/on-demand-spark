@@ -1,5 +1,10 @@
 # Worker language translation
 
+## Next Booking placeholder (12 Nov) — preview only
+- [x] Audit and checksum-backup affected files; preserve shared rating ranking.
+- [x] Replace page tab with local translated placeholder; neutralize unsupported priority claims without changing scores.
+- [ ] Verify ranking tests, languages and preview; report deployment and authenticated-test limitations.
+
 ## Repeat booking alerts (11 Nov) — preview only
 - [x] Read requirements and create checksum-verified source backup.
 - [x] Audit cancellation/busy guard, repeat presentation, expiry and duplicate lifecycle; distinct offer receipt verified, phone cause remains unconfirmed.

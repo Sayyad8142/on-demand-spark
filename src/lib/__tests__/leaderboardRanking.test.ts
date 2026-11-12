@@ -1,11 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { rankLeaderboard, summarizeReviews } from "../leaderboardRanking";
+import { rankLeaderboard, summarizeReviews, RANKING_PAGE_TABS } from "../leaderboardRanking";
 
 const w = (id: string, rank: number, earningsToday: number, jobsToday = 0) =>
   ({ id, rank, rating: 5, priority_score: 50, jobsToday, earningsToday, isMe: false });
 const list = [w("a", 1, 100), w("b", 2, 500), w("c", 3, 300)];
 
 describe("leaderboard ranking", () => {
+  it("keeps the placeholder separate from shared rating ranking", () => {
+    expect(RANKING_PAGE_TABS).toEqual(["top", "earners", "next"]);
+  });
   it("Top Workers keeps the server priority order", () => {
     expect(rankLeaderboard(list, "top", new Map()).map((x) => x.id)).toEqual(["a", "b", "c"]);
   });

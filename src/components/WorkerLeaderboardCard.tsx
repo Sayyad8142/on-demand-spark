@@ -100,7 +100,7 @@ export default function WorkerLeaderboardCard({
               {displayText("🏆 Top Worker Leaderboard")}
             </h3>
             <p className="text-[10px] text-muted-foreground">
-              {displayText("Improve your score to receive bookings earlier.")}
+              {displayText("See your community leaderboard score.")}
             </p>
           </div>
         </div>
@@ -180,7 +180,7 @@ export default function WorkerLeaderboardCard({
         <div className="pt-2">
           {isTop1 ? (
             <p className="text-[11px] font-bold text-primary text-center">
-              {displayText("👑 Congratulations! You're currently receiving booking offers before everyone else.")}
+              {displayText("👑 Congratulations! You're currently first on this community leaderboard.")}
             </p>
           ) : isTop10 ? (
             <p className="text-[11px] font-bold text-primary text-center">
@@ -188,11 +188,11 @@ export default function WorkerLeaderboardCard({
             </p>
           ) : currentUserRank ? (
             <p className="text-[11px] text-muted-foreground text-center">
-              {displayText("You are currently Rank #")}{currentUserRank}{displayText(". Reach the Top 10 to receive booking opportunities sooner.")}
+              {displayText("You are currently Rank #")}{currentUserRank}{displayText(". Keep building your performance.")}
             </p>
           ) : null}
           <p className="text-[9px] text-muted-foreground text-center mt-1">
-            {displayText("Higher priority means you receive booking offers before others.")}
+            {displayText("Leaderboard rank does not show your place in a booking queue.")}
           </p>
         </div>
       </div>
