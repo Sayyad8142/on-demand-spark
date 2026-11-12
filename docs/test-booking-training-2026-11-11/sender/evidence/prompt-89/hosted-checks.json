@@ -1,0 +1,48 @@
+[
+  {
+    "check": "OFF without login",
+    "status": 503,
+    "body": {
+      "sent": false,
+      "reason": "approval_required"
+    }
+  },
+  {
+    "check": "OFF fake login",
+    "status": 503,
+    "body": {
+      "sent": false,
+      "reason": "approval_required"
+    }
+  },
+  {
+    "check": "anonymous journal read",
+    "status": 401,
+    "body": {
+      "code": "42501",
+      "details": null,
+      "hint": null,
+      "message": "permission denied for table practice_push_attempts"
+    }
+  },
+  {
+    "check": "anonymous claim",
+    "status": 404,
+    "body": {
+      "code": "PGRST202",
+      "details": "Searched for the function public.claim_practice_push_attempt without parameters or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.",
+      "hint": null,
+      "message": "Could not find the function public.claim_practice_push_attempt without parameters in the schema cache"
+    }
+  },
+  {
+    "check": "anonymous admin report",
+    "status": 401,
+    "body": {
+      "code": "42501",
+      "details": null,
+      "hint": null,
+      "message": "permission denied for function admin_practice_push_attempts"
+    }
+  }
+]
