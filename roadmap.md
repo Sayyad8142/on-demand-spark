@@ -149,3 +149,7 @@
 - [x] Audit source authentication/live schema and RLS; back up files; stage verified-auth independent service with disabled reader.
 - [x] Implement translated ranking view and foreground-only refresh; 606 tests and preview build pass; mobile/desktop safe disabled view checked.
 - [ ] Activate secure service and verify authenticated live workers — blocked: separate backend/integration approval and authenticated test access.
+
+## Prompt 96 — secure endpoint verification only
+- [ ] Audit and harden staged authentication, input validation, privacy and reads; no deployment.
+- [ ] Run isolated Deno compilation/security tests and report deployment-only decision and gates.
