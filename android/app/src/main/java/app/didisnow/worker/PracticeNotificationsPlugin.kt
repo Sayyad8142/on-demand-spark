@@ -39,6 +39,10 @@ class PracticeNotificationsPlugin : Plugin() {
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
             val token = if (task.isSuccessful) task.result else null
             if (token.isNullOrEmpty()) { call.resolve(reply.put("reason", "token_missing")); return@addOnCompleteListener }
+            // Token retrieval is asynchronous: recheck login, expiry, work and permission.
+            if (PracticeSession.nativeUser(context) != userId || expiry <= System.currentTimeMillis() || PracticeSession.realWorkSuspected(context) || !PracticeSession.canNotify(context)) {
+                call.resolve(reply.put("reason", "busy")); return@addOnCompleteListener
+            }
             val sha = PracticeSession.sha256(token)
             PracticeSession.prepare(context, id, expiry, userId, sha)
             call.resolve(JSObject().put("ready", true).put("tokenSha256", sha))
@@ -111,7 +115,7 @@ object PracticeSession {
     fun id(ctx: Context): String = prefs(ctx).getString("id", "") ?: ""
     fun markOverlay(ctx: Context, id: String) {
         synchronized(lock) {
-            if (id(ctx) == id) prefs(ctx).edit().putBoolean("overlay", true).putLong("overlayAt", System.currentTimeMillis()).commit()
+            if (matches(ctx, id) && !realWorkSuspected(ctx)) prefs(ctx).edit().putBoolean("overlay", true).putLong("overlayAt", System.currentTimeMillis()).commit()
         }
     }
     /** First outcome wins. */

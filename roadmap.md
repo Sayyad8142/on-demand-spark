@@ -94,3 +94,10 @@
 - [x] Completed booking releases phone alert lock (new fix) + tests
 - [x] All automated tests + Android compile
 - [ ] Real-phone consecutive-offer checks — blocked: test phone needed
+
+## Test notification fix (12 Nov) — preview/staged only
+- [x] Read phone report and verify 19-file checksum backup; keep live sending OFF.
+- [x] Add single-account/device pilot gate and custom durable send limit; stage only.
+- [x] Fix uncertain-send evidence, retry, foreground practice alert and visible-only evidence.
+- [x] 519 app + 33 native tests pass; Android compile successful; 8 local SQL assertions pass; report/phone checklist prepared.
+- [ ] Controlled FCM-to-phone practice completion — blocked: separate deployment/sending approval, approved account/device and real Android phone.

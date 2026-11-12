@@ -19,7 +19,7 @@ export interface PracticeSenderAdapters {
   idle(userId: string): Promise<boolean>;
   // Durable atomic, user-scoped claim: one outstanding attempt per user, even
   // when a different practice_id is supplied. Never use a process-local Map.
-  claim(userId: string, request: PracticeRequest): Promise<'new' | 'duplicate' | 'busy'>;
+  claim(userId: string, request: PracticeRequest): Promise<'new' | 'duplicate' | 'busy' | 'rate_limited'>;
   // Practice-only journal, not workers/booking_requests/booking_offer_events.
   record(userId: string, id: string, outcome: 'provider_accepted' | 'failed' | 'unknown'): Promise<void>;
   send(message: PracticeMessage): Promise<{ ok: boolean; status: number; body: string; messageId?: string }>;
@@ -60,7 +60,7 @@ export async function preparePracticeSend(value: unknown, a: PracticeSenderAdapt
     const claim = await a.claim(session.userId, request);
     // Unknown/duplicate is not proof of sending. Status lookup may return an
     // already-recorded provider acceptance later; this core never resends.
-    if (claim !== 'new') return refuse(409, claim === 'duplicate' ? 'already_attempted' : 'attempt_in_progress');
+    if (claim !== 'new') return refuse(409, claim === 'duplicate' ? 'already_attempted' : claim === 'rate_limited' ? 'rate_limited' : 'attempt_in_progress');
     try {
       // Repeat immediately before provider submission. Receiver must also
       // recheck because real offers may arrive after this read.

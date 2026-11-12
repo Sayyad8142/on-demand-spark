@@ -39,7 +39,7 @@ function world(opts: { workers?: unknown[]; jobs?: unknown[]; offers?: unknown[]
   return { calls, fetch: f as unknown as typeof fetch };
 }
 async function config(w: ReturnType<typeof world>, over: Partial<AdapterConfig> = {}): Promise<AdapterConfig> {
-  return { enabled: true, supabaseUrl: URL0, anonKey: 'anon-key', serviceRoleKey: 'service-key', jwt: 'user-jwt', serviceAccount: (await serviceAccount()).sa, fetch: w.fetch, now: () => NOW, ...over };
+  return { enabled: true, supabaseUrl: URL0, anonKey: 'anon-key', serviceRoleKey: 'service-key', jwt: 'user-jwt', pilotUserId: USER, pilotTokenSha256: await sha256Hex(TOKEN), serviceAccount: (await serviceAccount()).sa, fetch: w.fetch, now: () => NOW, ...over };
 }
 const body = async () => ({ practice_id: ID, expires_at: NOW + 60000, device_token_sha256: await sha256Hex(TOKEN) });
 

@@ -47,8 +47,8 @@ class PracticeAlertView(private val ctx: Context, private val id: String, privat
             close()
         }
         view.findViewById<Button>(R.id.btnReject).setOnClickListener { PracticeSession.outcome(ctx, id, "rejected"); close() }
-        // Evidence only once the view is really attached to a window.
-        view.post { if (view.isAttachedToWindow && !stopped) PracticeSession.markOverlay(ctx, id) }
+        // A drawn, focused, visible window is evidence; attachment alone is not.
+        view.viewTreeObserver.addOnDrawListener { acknowledgeVisible() }
         try {
             val p = MediaPlayer()
             try {
@@ -62,6 +62,12 @@ class PracticeAlertView(private val ctx: Context, private val id: String, privat
             else { @Suppress("DEPRECATION") vibrator?.vibrate(pattern, 0) }
         } catch (_: Exception) { /* Audio is never inferred as verified. */ }
         tick()
+    }
+    fun acknowledgeVisible() {
+        val remaining = ((PracticeSession.expiry(ctx) - System.currentTimeMillis()) / 1000).coerceAtLeast(0).toInt()
+        if (AlertPresentationRules.mayAcknowledge(view.isAttachedToWindow, view.isShown && view.windowVisibility == View.VISIBLE, view.hasWindowFocus(), stopped, remaining)) {
+            PracticeSession.markOverlay(ctx, id)
+        }
     }
     private fun tick() {
         if (stopped) return
@@ -99,6 +105,7 @@ class PracticeAlertActivity : AppCompatActivity() {
         setContentView(alert?.view)
         alert?.show()
     }
+    override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); if (hasFocus) alert?.acknowledgeVisible() }
     override fun onDestroy() { try { unregisterReceiver(closer) } catch (_: Exception) {}; alert?.stop(); super.onDestroy() }
 }
 class PracticeAlertService : Service() {
@@ -107,7 +114,8 @@ class PracticeAlertService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val id = intent?.getStringExtra("practice_id") ?: ""
-        if (!PracticeSession.matches(this, id) || alert != null) { stopSelf(); return START_NOT_STICKY }
+        if (alert != null) return START_NOT_STICKY
+        if (!PracticeSession.matches(this, id)) { stopSelf(); return START_NOT_STICKY }
         try {
             // AppCompat context is needed by the existing shared layout.
             val themed = androidx.appcompat.view.ContextThemeWrapper(this, androidx.appcompat.R.style.Theme_AppCompat_Light_NoActionBar)
