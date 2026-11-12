@@ -77,7 +77,7 @@ public class PracticeSessionSafetyTest {
     }
     @Test public void tokenChangeCancelsPreparedPractice() {
         session.onTokenChanged(ctx);
-        assertEquals("cancelled", session.state(ctx).optString("outcome"));
+        assertEquals("", session.state(ctx).optString("id"));
         assertEquals("drop", session.claimReceipt(ctx, id, expiry, TOKEN));
     }
     @Test public void activeRealWorkBlocksPracticeReadiness() {
