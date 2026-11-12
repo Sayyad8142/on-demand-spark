@@ -9,13 +9,15 @@ export function newPractice(id: string, now: number): PracticeState {
   return { id, step: 'intro', expiresAt: now + PRACTICE_BOOKING.ttlSeconds * 1000, checks: Object.fromEntries(PRACTICE_CHECKS.map(k => [k, 'not_verified'])) as Record<PracticeCheck, CheckResult>, wrongOtp: false };
 }
 export function practiceSeconds(expiresAt: number, now: number): number { return Math.min(PRACTICE_BOOKING.ttlSeconds, Math.max(0, Math.ceil((expiresAt - now) / 1000))); }
-export type PracticeAction = { type: 'reset'; id: string; now: number } | { type: 'local_alert' | 'sending'; now: number } | { type: 'sent' | 'failed_send' | 'unknown_send' | 'blocked' } | { type: 'accept' | 'reject' | 'tick'; now: number } | { type: 'start_otp' | 'complete_otp' } | { type: 'verify'; code: string } | { type: 'device'; id: string; received: boolean; overlay: boolean; outcome?: string; now: number }
+export type PracticeAction = { type: 'reset'; id: string; now: number } | { type: 'local_alert' | 'sending'; now: number } | { type: 'sent' | 'failed_send' | 'unknown_send'; id?: string } | { type: 'blocked' } | { type: 'accept' | 'reject' | 'tick'; now: number } | { type: 'start_otp' | 'complete_otp' } | { type: 'verify'; code: string } | { type: 'device'; id: string; received: boolean; overlay: boolean; outcome?: string; now: number }
   | { type: 'restore'; id: string; received: boolean; overlay: boolean };
 export function practiceTransition(s: PracticeState, a: PracticeAction): PracticeState {
   if (a.type === 'reset') return newPractice(a.id, a.now);
   if (a.type === 'blocked') return { ...s, step: 'blocked', wrongOtp: false };
   if (s.step === 'blocked') return s;
   const check = (key: PracticeCheck, value: CheckResult) => ({ ...s.checks, [key]: value });
+  // A delayed reply for an earlier/reset practice must never change the current one.
+  if ((a.type === 'sent' || a.type === 'failed_send' || a.type === 'unknown_send') && a.id !== undefined && a.id !== s.id) return s;
   if (a.type === 'local_alert' && ['intro', 'expired', 'rejected'].includes(s.step)) return { ...s, step: 'alert', expiresAt: a.now + 60000 };
   if (a.type === 'sending' && s.step === 'intro') return { ...s, step: 'sending', expiresAt: a.now + 60000 };
   if (a.type === 'sent' && s.step !== 'intro') return { ...s, step: s.step === 'sending' ? 'waiting' : s.step, checks: check('sent', 'passed') };
