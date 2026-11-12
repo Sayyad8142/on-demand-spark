@@ -106,3 +106,10 @@
 - [x] Review sender/native isolation, rerun 519 app tests, check prior 33 native-test/compile evidence and live prerequisites read-only.
 - [x] Record NO-GO blockers and exact proposed deployment/switch sequence in sender/PROMPT-87-READINESS.md; no activation.
 - [ ] Activate one-device test — blocked: sender packaging/transport/auth review, native race checks, explicit worker/device selection and separate approval.
+
+## Prompt 88 — fix Test Booking notification blockers (preview/staged only)
+- [x] Verified 68-file backup; self-contained sender package, validate-only transport mode, CORS, in-code auth config.
+- [x] Practice log admin access + 30-day retention; local SQL rehearsal passes.
+- [x] Phone: device-fingerprint binding, 30 s freshness, logout/late-reply/page-reopen races fixed.
+- [x] 534 app + 38 native tests pass, Android compile OK, security scan clean for practice; report PROMPT-88-RESULTS.md.
+- [ ] Deploy (switch OFF) → validate → one-phone test — blocked: owner approval + named account/phone + real phone.

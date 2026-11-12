@@ -42,3 +42,9 @@ Before and after the whole run, record counts for that worker: bookings, booking
 25. Function logs contain no tokens, phone numbers or worker ids.
 26. Three claimed attempts in a rolling hour; a fourth is refused, even with a new practice id. Failed/unknown attempts count.
 27. Interrupt internet after submission: Sent stays Not Verified, phone receipt is still monitored, no immediate resend.
+
+## Added 12 Nov (prompt 88)
+- Before `on`: run with `PRACTICE_PUSH_SENDER=validate` — expect "not available" on the phone, journal outcome `validated`, no notification.
+- Push arriving >30 s after tapping Send must show as blocked, never as a popup.
+- Log out / switch account while waiting: a later push must not appear.
+- Leave and reopen Test Booking while waiting: the wait must continue, not reset.
