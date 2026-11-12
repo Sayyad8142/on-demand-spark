@@ -123,3 +123,9 @@
 - [ ] Firebase validate-only transport and authenticated pilot checks — blocked: approved pilot login/device/session not supplied; do not choose another account.
 - [x] Verify unchanged non-practice function hash, 534 app + 6 sender + 38 Android tests, compilation and rollback; record partial-PASS report in sender/PROMPT-89-RESULTS.md.
 - [ ] Single-phone delivery/APK release — blocked: separate owner approval and real phone; both delivery switches must remain OFF.
+
+## Prompt 94 — preview-only dispatch compatibility
+- [ ] Preserve FCM deadlines, display fields, schedule and cancellation routing after verified backups.
+- [ ] Guard native acceptance/retry against the original deadline; review signed ACK compatibility.
+- [ ] Run app/native tests and compilation; report exact changes and isolated-device prerequisites.
+- [ ] Real-device verification — blocked: isolated Android device/services unavailable; no production actions approved.

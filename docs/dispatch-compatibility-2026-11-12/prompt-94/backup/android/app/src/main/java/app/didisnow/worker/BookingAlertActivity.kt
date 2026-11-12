@@ -1,0 +1,931 @@
+package app.didisnow.worker
+
+import android.content.Context
+import android.content.Intent
+import android.graphics.Color
+import android.media.AudioAttributes
+import android.media.MediaPlayer
+import android.media.RingtoneManager
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.util.Log
+import android.view.WindowManager
+import android.widget.Button
+import android.widget.ImageView
+import android.widget.ProgressBar
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+
+@Suppress("SetTextI18n")
+class BookingAlertActivity : AppCompatActivity() {
+    private var countdownHandler: Handler? = null
+    private lateinit var countdownRunnable: Runnable
+    private var secondsLeft = OfferTimer.DEFAULT_TTL_SECONDS
+    private var totalSeconds = OfferTimer.DEFAULT_TTL_SECONDS
+    private var offerDeadline = 0L
+    private var mediaPlayer: MediaPlayer? = null
+    private var vibrator: Vibrator? = null
+    private var ackBookingId: String? = null
+    private var ackRequestId: String? = null
+    // Phase 1C: signed ack token from the launch intent — echoed unchanged.
+    private var ackToken: String? = null
+    private var popupAcked = false
+    private var offerRetired = false
+
+    private val endedReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (BookingOfferLifecycle.matches(ackBookingId, intent?.getStringExtra("booking_id"))) {
+                countdownHandler?.let { handler ->
+                    if (::countdownRunnable.isInitialized) handler.removeCallbacks(countdownRunnable)
+                }
+                stopAlertSound()
+                stopVibration()
+                retireOffer(accepted = false)
+                finish()
+            }
+        }
+    }
+
+    /** Single-flight guard: only ONE acceptance attempt per booking. */
+    @Volatile
+    private var acceptInFlight = false
+
+    // Poll that closes this alert as soon as the booking is assigned elsewhere.
+    private var statusCheckHandler: Handler? = null
+    private var statusCheckRunnable: Runnable? = null
+
+    
+    // Token refresh throttling
+    private var lastRefreshTime: Long = 0
+    private val REFRESH_THROTTLE_MS = 30_000L
+    
+    companion object {
+        private const val SUPABASE_URL = "https://paywwbuqycovjopryele.supabase.co"
+        private const val SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBheXd3YnVxeWNvdmpvcHJ5ZWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkyNjksImV4cCI6MjA3MDc0NTI2OX0.js1MaTBkjuGlaDfQjrZpZ9_G8Jy9ygNAB8KpNDiQg8o"
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
+            .registerReceiver(endedReceiver, android.content.IntentFilter("DIDI_BOOKING_ENDED"))
+
+        val bookingId = intent.getStringExtra("booking_id") ?: ""
+        val bookingType = intent.getStringExtra("booking_type") ?: "instant"
+        val prealertSent = intent.getBooleanExtra("prealert_sent", false)
+        val scheduledTime = intent.getStringExtra("scheduled_time") ?: ""
+        // The BACKEND is authoritative about whether an offer is actionable.
+        // Scheduled offers are only dispatched inside their window, so the old
+        // client-side `scheduled && !prealert_sent` gate merely suppressed valid
+        // offers whenever the flag was missing from the launch intent.
+        val actionable = intent.getStringExtra("actionable") != "false"
+        if (!actionable) {
+            Log.w("BookingAlert", "🔕 Non-actionable notification — no offer UI. booking_id=$bookingId booking_type=$bookingType scheduled_at=$scheduledTime prealert_sent=$prealertSent shown_to_worker=false")
+            finish()
+            return
+        }
+
+        // Validity gate — a tray tap must never open a dead offer.
+        val offerRecord = OfferQueue.offerFromIntent(intent)
+        if (OfferQueue.isLocallyBusy(applicationContext)) {
+            Log.w("BookingAlert", "🔒 Worker locally busy — offer not shown: $bookingId")
+            OfferQueue.remove(applicationContext, bookingId, intent.getStringExtra("booking_request_id"))
+            OfferQueue.cancelNotification(applicationContext, bookingId)
+            Toast.makeText(this, "You already have an active booking", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+        if (offerRecord != null && (OfferQueue.isExpired(offerRecord) || OfferQueue.isRetired(applicationContext, offerRecord))) {
+            Log.w("BookingAlert", "⏱️ Offer expired — not showing: $bookingId")
+            OfferQueue.remove(applicationContext, bookingId, intent.getStringExtra("booking_request_id"))
+            OfferQueue.cancelNotification(applicationContext, bookingId)
+            Toast.makeText(this, "This booking offer has expired", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+        offerRecord?.let {
+            OfferQueue.enqueue(applicationContext, it)
+            OfferQueue.setActive(applicationContext, it)
+        }
+
+
+        // Keep screen on & show over lock screen
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+            WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
+        )
+
+        setContentView(R.layout.activity_booking_alert)
+
+        // Play loud siren sound and vibrate
+        playAlertSound()
+        startVibration()
+
+        val serviceType = intent.getStringExtra("service_type") ?: ""
+        val flatNo = intent.getStringExtra("flat_no") ?: ""
+        val communityName = intent.getStringExtra("community") ?: ""
+        val isVilla = communityName.contains("villa", ignoreCase = true)
+        val priceInr = intent.getIntExtra("price_inr", 0)
+
+        // Set service details
+        val serviceText = findViewById<TextView>(R.id.alertService)
+        val serviceSubtitle = findViewById<TextView>(R.id.alertServiceSubtitle)
+        val serviceImage = findViewById<ImageView>(R.id.alertServiceImage)
+        val priceText = findViewById<TextView>(R.id.alertPrice)
+        val towerText = findViewById<TextView>(R.id.alertTower)
+        val towerLabel = findViewById<TextView>(R.id.alertTowerLabel)
+        val buildingName = (intent.getStringExtra("building_name") ?: "").trim()
+        val communityText = findViewById<TextView>(R.id.alertCommunity)
+
+        when (serviceType.lowercase()) {
+            "maid" -> {
+                serviceText.text = "Maid Service"
+                serviceSubtitle.text = "Includes: Dishes & Jhaadu/Pocha"
+                serviceImage.setImageResource(R.drawable.maid_dishes)
+            }
+            "bathroom cleaning", "bathroom" -> {
+                serviceText.text = "Bathroom Cleaning"
+                serviceSubtitle.text = "Includes: Complete Bathroom Cleaning"
+                serviceImage.setImageResource(R.drawable.ic_service_bathroom)
+            }
+            else -> {
+                serviceText.text = serviceType
+                serviceSubtitle.text = "Service details"
+                serviceImage.setImageResource(R.drawable.ic_service_default)
+            }
+        }
+
+        priceText.text = "₹$priceInr"
+        
+        // Block/Building communities: the block comes from the booking, never
+        // from flat_no digits. Tower-encoded communities keep the old behaviour.
+        val block = AddressFormat.blockLabel(buildingName)
+        val towerNo = when {
+            isVilla -> "—"
+            block != null -> block
+            flatNo.isNotBlank() -> flatNo.firstOrNull { it.isDigit() }?.toString() ?: "—"
+            else -> "—"
+        }
+        towerText.text = towerNo
+        towerLabel.text = if (block != null) "Block" else "Tower No."
+        if (isVilla) {
+            towerText.visibility = android.view.View.GONE
+        }
+        communityText.text = if (communityName.isNotBlank()) communityName else "Prestige High Fields"
+
+        val countdownText = findViewById<TextView>(R.id.countdown)
+        val countdownCircle = findViewById<ProgressBar>(R.id.countdownCircle)
+        val btnAccept = findViewById<Button>(R.id.btnAccept)
+        val btnReject = findViewById<Button>(R.id.btnReject)
+
+        // Countdown derived from the authoritative backend offer expiry
+        // (expires_at / sent_at + ttl_seconds), fallback 60s = worker_ttl_seconds.
+        offerDeadline = OfferTimer.deadlineFrom(intent)
+        secondsLeft = OfferTimer.remainingUntil(offerDeadline)
+        totalSeconds = maxOf(secondsLeft, OfferTimer.DEFAULT_TTL_SECONDS)
+        countdownCircle.max = totalSeconds
+        countdownHandler = Handler(Looper.getMainLooper())
+        countdownRunnable = object : Runnable {
+            override fun run() {
+                secondsLeft = OfferTimer.remainingUntil(offerDeadline)
+                if (secondsLeft > 0) {
+                    countdownText.text = "${secondsLeft}s"
+                    countdownCircle.progress = secondsLeft
+                    
+                    // Change countdown text and circle color based on time remaining
+                    val textColor = when {
+                        secondsLeft > totalSeconds / 2 -> "#22C55E" // Green
+                        secondsLeft > 10 -> "#F59E0B" // Orange
+                        else -> "#DC2626" // Red
+                    }
+                    countdownText.setTextColor(Color.parseColor(textColor))
+                    
+                    // Update circular progress bar color
+                    val progressDrawable = countdownCircle.progressDrawable
+                    if (progressDrawable is android.graphics.drawable.LayerDrawable) {
+                        val progressLayer = progressDrawable.findDrawableByLayerId(android.R.id.progress)
+                        if (progressLayer is android.graphics.drawable.RotateDrawable) {
+                            val shapeDrawable = progressLayer.drawable
+                            if (shapeDrawable is android.graphics.drawable.GradientDrawable) {
+                                shapeDrawable.setColor(Color.parseColor(textColor))
+                            }
+                        }
+                    }
+                    
+                    Log.d("BookingAlert", "⏱️ Countdown: ${secondsLeft}s")
+                    countdownHandler?.postDelayed(this, 1000)
+                } else {
+                    Log.d("BookingAlert", "⏱️ Countdown finished - auto closing")
+                    Toast.makeText(this@BookingAlertActivity, "Booking timed out", Toast.LENGTH_SHORT).show()
+                    BackendSync.ackDeliveryAsync(applicationContext, ackBookingId ?: bookingId, "offer_expired", ackRequestId, ackToken)
+                    retireOffer(accepted = false)
+                    finish()
+                }
+            }
+        }
+        countdownHandler?.post(countdownRunnable)
+
+        // popup_shown is acked in onResume() — onCreate can run for an alert the
+        // OS never actually renders (immediate finish, launch race, killed task).
+        ackBookingId = bookingId
+        ackRequestId = intent.getStringExtra("booking_request_id")
+        ackToken = intent.getStringExtra("ack_token")
+
+        // Another worker already got this booking (delayed/stale alert):
+        // never run a fresh countdown for it.
+        if (OfferQueue.isTaken(applicationContext, bookingId)) {
+            Log.w("BookingAlert", "🚫 Offer already assigned elsewhere — closing $bookingId")
+            countdownHandler?.removeCallbacks(countdownRunnable)
+            stopAlertSound()
+            stopVibration()
+            OfferQueue.cancelNotification(applicationContext, bookingId)
+            finish()
+            return
+        }
+
+        startBookingStatusPolling(bookingId)
+
+
+
+
+        btnAccept.setOnClickListener {
+            Log.d("BookingAlert", "✅ Accept button clicked")
+
+            if (bookingId.isBlank()) {
+                Toast.makeText(this, "No booking ID", Toast.LENGTH_SHORT).show()
+                finish()
+                return@setOnClickListener
+            }
+
+            // Double tap / competing surface: exactly one acceptance attempt.
+            if (acceptInFlight) {
+                Log.d("BookingAlert", "⚠️ Accept ignored — already in flight")
+                return@setOnClickListener
+            }
+            if (!OfferQueue.beginAcceptance(applicationContext, bookingId)) {
+                Log.d("BookingAlert", "⚠️ Accept ignored — acceptance already claimed for $bookingId")
+                return@setOnClickListener
+            }
+            acceptInFlight = true
+            BackendSync.ackDeliveryAsync(applicationContext, bookingId, "accept_tapped", ackRequestId, ackToken)
+
+            stopAlertSound()
+            stopVibration()
+            countdownHandler?.removeCallbacks(countdownRunnable)
+            // Stop the 2s offer-open poller: while OUR acceptance runs it would
+            // read booking_offer_open=false (because WE won) and falsely report
+            // "accepted by another worker".
+            statusCheckRunnable?.let { statusCheckHandler?.removeCallbacks(it) }
+
+            // Disable buttons to prevent double-click
+            btnAccept.isEnabled = false
+            btnReject.isEnabled = false
+            
+            // Call the API to accept the booking
+            updateBooking(bookingId, "accepted")
+        }
+
+        btnReject.setOnClickListener {
+            Log.d("BookingAlert", "❌ Reject button clicked")
+            BackendSync.ackDeliveryAsync(applicationContext, bookingId, "reject_tapped", ackRequestId, ackToken)
+            stopAlertSound()
+            stopVibration()
+            countdownHandler?.removeCallbacks(countdownRunnable)
+            
+            // Disable buttons to prevent double-click
+            btnAccept.isEnabled = false
+            btnReject.isEnabled = false
+            
+            // Call the API to reject the booking
+            updateBooking(bookingId, "rejected")
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        val view = window.decorView
+        view.post {
+            if (!popupAcked && !ackBookingId.isNullOrBlank() &&
+                AlertPresentationRules.mayAcknowledge(view.isAttachedToWindow, view.isShown,
+                    hasWindowFocus(), isFinishing || isDestroyed, OfferTimer.remainingUntil(offerDeadline))) {
+                popupAcked = true
+                BackendSync.ackDeliveryAsync(applicationContext, ackBookingId, "popup_shown", ackRequestId, ackToken)
+            }
+        }
+    }
+
+    override fun onNewIntent(newIntent: Intent) {
+        super.onNewIntent(newIntent)
+        val next = OfferQueue.offerFromIntent(newIntent) ?: return
+        if (BookingOfferLifecycle.matches(ackBookingId, OfferQueue.bookingIdOf(next)) ||
+            OfferQueue.isExpired(next) || OfferQueue.isRetired(applicationContext, next) || OfferQueue.isLocallyBusy(applicationContext) ||
+            OfferQueue.isTaken(applicationContext, OfferQueue.bookingIdOf(next))) return
+        OfferQueue.enqueue(applicationContext, next)
+        // singleTop may reuse this Activity when retireOffer launches the queue
+        // head. A live first offer keeps the second queued; a retired first offer
+        // recreates with fresh listeners/countdown/ACK identity, not old closures.
+        if (offerRetired) {
+            setIntent(newIntent)
+            recreate()
+        }
+    }
+
+    /**
+     * Retires the offer shown by this screen and drains the FIFO queue.
+     * Accepted -> worker is locally busy, every queued offer is dropped.
+     * Rejected/expired/dismissed -> the next STILL-VALID offer opens at once.
+     */
+    private fun retireOffer(accepted: Boolean) {
+        if (offerRetired) return
+        offerRetired = true
+        val ctx = applicationContext
+        try {
+            OfferQueue.remove(ctx, ackBookingId, ackRequestId)
+            OfferQueue.setActive(ctx, null)
+            OfferQueue.cancelNotification(ctx, ackBookingId)
+            if (accepted) {
+                OfferQueue.markLocallyBusy(ctx)
+                OfferQueue.clearAll(ctx, "worker_accepted")
+                return
+            }
+            if (OfferQueue.isLocallyBusy(ctx)) return
+            val next = OfferQueue.nextValid(ctx) ?: return
+            val canOverlay = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M ||
+                android.provider.Settings.canDrawOverlays(this)
+            if (canOverlay) {
+                startService(OfferQueue.toServiceIntent(ctx, next))
+            } else {
+                startActivity(OfferQueue.toActivityIntent(ctx, next))
+            }
+        } catch (e: Exception) {
+            Log.e("BookingAlert", "❌ Offer queue drain failed", e)
+        }
+    }
+
+    /**
+     * Every 2s asks the backend whether this offer is still open. The moment
+     * another worker is assigned, the countdown stops and the screen closes —
+     * the worker never has to press Accept to find out.
+     */
+    private fun startBookingStatusPolling(bookingId: String) {
+        if (bookingId.isBlank()) return
+        statusCheckHandler = Handler(Looper.getMainLooper())
+        statusCheckRunnable = object : Runnable {
+            override fun run() {
+                if (isFinishing || isDestroyed) return
+                if (acceptInFlight || OfferQueue.isAcceptInFlight(applicationContext, bookingId)) {
+                    Log.d("BookingAlert", "🛡️ Status poll paused — acceptance in progress for $bookingId")
+                    return
+                }
+                val self = this
+                lifecycleScope.launch {
+                    val stillOpen = withContext(Dispatchers.IO) { isOfferStillOpen(bookingId) }
+                    if (isFinishing || isDestroyed) return@launch
+                    // Acceptance may have started while the request was in flight —
+                    // our own win must never be read as a loss.
+                    if (acceptInFlight ||
+                        OfferQueue.isAcceptInFlight(applicationContext, bookingId) ||
+                        OfferQueue.isAcceptedByMe(applicationContext, bookingId)
+                    ) {
+                        Log.d("BookingAlert", "🛡️ Status poll result discarded — acceptance in progress")
+                        return@launch
+                    }
+                    if (!stillOpen) {
+                        Log.d("BookingAlert", "📢 Booking $bookingId assigned to another worker — closing")
+                        OfferQueue.markTaken(applicationContext, bookingId)
+                        countdownHandler?.removeCallbacks(countdownRunnable)
+                        stopAlertSound()
+                        stopVibration()
+                        Toast.makeText(
+                            this@BookingAlertActivity,
+                            "Booking was accepted by another worker",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        retireOffer(accepted = false)
+                        finish()
+                    } else {
+                        statusCheckHandler?.postDelayed(self, 2000)
+                    }
+                }
+            }
+        }
+        statusCheckRunnable?.let { statusCheckHandler?.postDelayed(it, 2000) }
+    }
+
+    /** Anon-key RPC — the alert screen has no reliable user JWT. */
+    private fun isOfferStillOpen(bookingId: String): Boolean {
+        return try {
+            val connection = URL("$SUPABASE_URL/rest/v1/rpc/booking_offer_open")
+                .openConnection() as HttpURLConnection
+            try {
+                connection.requestMethod = "POST"
+                connection.doOutput = true
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+                connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+                connection.setRequestProperty("Authorization", "Bearer $SUPABASE_ANON_KEY")
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.outputStream.use { it.write("""{"p_booking_id":"$bookingId"}""".toByteArray()) }
+                if (connection.responseCode != 200) return true
+                val body = connection.inputStream.bufferedReader().use { it.readText() }.trim()
+                body != "false"
+            } finally {
+                connection.disconnect()
+            }
+        } catch (e: Exception) {
+            Log.e("BookingAlert", "offer status check failed", e)
+            true // never close on a network error
+        }
+    }
+
+    override fun onDestroy() {
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).unregisterReceiver(endedReceiver)
+        // Dismissed/closed legitimately — still drain the queue.
+        retireOffer(accepted = false)
+        statusCheckRunnable?.let { statusCheckHandler?.removeCallbacks(it) }
+        if (::countdownRunnable.isInitialized) countdownHandler?.removeCallbacks(countdownRunnable)
+        stopAlertSound()
+
+        stopVibration()
+        super.onDestroy()
+    }
+
+    private fun playAlertSound() {
+        try {
+            // Stop any existing sound
+            stopAlertSound()
+            
+            // Use the custom loud ringtone from raw resources. Local first so a
+            // failed prepare()/start() never leaks the player.
+            val player = MediaPlayer()
+            try {
+                player.setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .build()
+                )
+                player.setDataSource(
+                    this@BookingAlertActivity,
+                    android.net.Uri.parse("android.resource://${packageName}/${R.raw.new_loud_ringtone}")
+                )
+                player.isLooping = true
+                player.setVolume(1.0f, 1.0f)
+                player.prepare()
+                player.start()
+                mediaPlayer = player
+            } catch (e: Exception) {
+                try { player.release() } catch (_: Exception) {}
+                throw e
+            }
+            
+            Log.d("BookingAlert", "🔊 Custom alert sound started")
+        } catch (e: Exception) {
+            Log.e("BookingAlert", "❌ Failed to play custom alert sound", e)
+        }
+    }
+
+    private fun stopAlertSound() {
+        try {
+            val player = mediaPlayer
+            mediaPlayer = null
+            if (player != null) {
+                try {
+                    if (player.isPlaying) player.stop()
+                } catch (_: Exception) {
+                } finally {
+                    try { player.release() } catch (_: Exception) {}
+                }
+            }
+            Log.d("BookingAlert", "🔇 Alert sound stopped")
+        } catch (e: Exception) {
+            Log.e("BookingAlert", "❌ Failed to stop alert sound", e)
+        }
+    }
+    
+    private fun startVibration() {
+        try {
+            vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            
+            // Create a strong vibration pattern: [delay, vibrate, pause, vibrate, ...]
+            // Pattern: wait 0ms, vibrate 1000ms, pause 500ms, repeat
+            val pattern = longArrayOf(0, 1000, 500, 1000, 500)
+            
+            vibrator?.let {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    // For Android O and above, use VibrationEffect
+                    val vibrationEffect = VibrationEffect.createWaveform(pattern, 0) // 0 = repeat from start
+                    it.vibrate(vibrationEffect)
+                } else {
+                    // For older versions
+                    @Suppress("DEPRECATION")
+                    it.vibrate(pattern, 0)
+                }
+                Log.d("BookingAlert", "📳 Vibration started")
+            }
+        } catch (e: Exception) {
+            Log.e("BookingAlert", "❌ Failed to start vibration", e)
+        }
+    }
+    
+    private fun stopVibration() {
+        try {
+            vibrator?.cancel()
+            vibrator = null
+            Log.d("BookingAlert", "📳 Vibration stopped")
+        } catch (e: Exception) {
+            Log.e("BookingAlert", "❌ Failed to stop vibration", e)
+        }
+    }
+    
+    /**
+     * Save session to ALL storage keys - keeps native and web in sync.
+     * This prevents "already_used" refresh token errors.
+     */
+    private fun saveSessionToAllStores(
+        accessToken: String,
+        refreshToken: String,
+        expiresIn: Int,
+        user: JSONObject?
+    ) {
+        val prefs = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
+        val expiresAt = (System.currentTimeMillis() / 1000) + expiresIn
+        
+        // 1. Native format for didi_session (used by overlay/activity)
+        val nativeSession = JSONObject().apply {
+            put("accessToken", accessToken)
+            put("refreshToken", refreshToken)
+            put("expiresIn", expiresIn)
+            if (user != null) put("user", user)
+        }
+        
+        // 2. Supabase JS format for didi-worker-session (used by web layer)
+        val webSession = JSONObject().apply {
+            put("access_token", accessToken)
+            put("refresh_token", refreshToken)
+            put("expires_at", expiresAt)
+            put("expires_in", expiresIn)
+            put("token_type", "bearer")
+            if (user != null) put("user", user)
+        }
+        
+        prefs.edit()
+            .putString("didi_session", nativeSession.toString())
+            .putString("didi-worker-session", webSession.toString())
+            .apply()
+        
+        // Also update worker_prefs for legacy access
+        getSharedPreferences("worker_prefs", MODE_PRIVATE)
+            .edit()
+            .putString("supabase_jwt", accessToken)
+            .apply()
+        
+        Log.d("BookingAlert", "💾 Session synced to both stores")
+    }
+    
+    /**
+     * Refresh the access token using the refresh token
+     * Returns the new access token, or null if refresh failed
+     */
+    private fun refreshAccessToken(): String? {
+        val now = System.currentTimeMillis()
+        if (now - lastRefreshTime < REFRESH_THROTTLE_MS) {
+            Log.d("BookingAlert", "⏳ Refresh throttled")
+            val sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
+                .getString("didi_session", null)
+            if (!sessionJson.isNullOrEmpty()) {
+                try { return org.json.JSONObject(sessionJson).optString("accessToken", "") } catch (e: Exception) { return null }
+            }
+            return null
+        }
+        
+        try {
+            val prefs = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
+            val sessionJson = prefs.getString("didi_session", null)
+            
+            if (sessionJson.isNullOrEmpty()) {
+                Log.e("BookingAlert", "❌ No session found for refresh")
+                return null
+            }
+            
+            val session = org.json.JSONObject(sessionJson)
+            val refreshToken = session.optString("refreshToken", "")
+            
+            if (refreshToken.isEmpty()) {
+                Log.e("BookingAlert", "❌ No refresh token in session")
+                return null
+            }
+            
+            Log.d("BookingAlert", "🔄 Refreshing access token...")
+            
+            val url = URL("$SUPABASE_URL/auth/v1/token?grant_type=refresh_token")
+            val connection = url.openConnection() as HttpURLConnection
+            
+            try {
+                connection.requestMethod = "POST"
+                connection.connectTimeout = 10000
+                connection.readTimeout = 10000
+                connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.doOutput = true
+                
+                val payload = """{"refresh_token":"$refreshToken"}"""
+                connection.outputStream.use { os ->
+                    os.write(payload.toByteArray())
+                }
+                
+                val responseCode = connection.responseCode
+                Log.d("BookingAlert", "🔄 Refresh response code: $responseCode")
+                
+                if (responseCode in 200..299) {
+                    val responseBody = connection.inputStream.bufferedReader().use { it.readText() }
+                    val newSession = org.json.JSONObject(responseBody)
+                    
+                    val newAccessToken = newSession.optString("access_token", "")
+                    val newRefreshToken = newSession.optString("refresh_token", refreshToken)
+                    val expiresIn = newSession.optInt("expires_in", 3600)
+                    
+                    if (newAccessToken.isNotEmpty()) {
+                        // Save to ALL storage keys to keep web + native in sync
+                        saveSessionToAllStores(
+                            newAccessToken, 
+                            newRefreshToken, 
+                            expiresIn, 
+                            if (session.has("user")) session.optJSONObject("user") else null
+                        )
+                        
+                        lastRefreshTime = System.currentTimeMillis()
+                        Log.d("BookingAlert", "✅ [NATIVE] Token refreshed -> wrote didi_session + didi-worker-session")
+                        return newAccessToken
+                    }
+                } else {
+                    val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
+                    Log.e("BookingAlert", "❌ Token refresh failed: $responseCode - $errorBody")
+                }
+            } finally {
+                connection.disconnect()
+            }
+        } catch (e: Exception) {
+            Log.e("BookingAlert", "❌ Token refresh exception", e)
+        }
+        
+        return null
+    }
+    
+    /** POST reject_booking_offer; returns (httpCode, body). */
+    private fun postRejectOffer(bookingId: String, jwt: String): Pair<Int, String> {
+        val conn = URL("$SUPABASE_URL/rest/v1/rpc/reject_booking_offer").openConnection() as HttpURLConnection
+        return try {
+            conn.requestMethod = "POST"
+            conn.connectTimeout = 8000
+            conn.readTimeout = 8000
+            conn.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+            conn.setRequestProperty("Authorization", "Bearer $jwt")
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.doOutput = true
+            conn.outputStream.use { it.write("""{"p_booking_id":"$bookingId"}""".toByteArray()) }
+            val code = conn.responseCode
+            val body = (if (code in 200..299) conn.inputStream else conn.errorStream)
+                ?.bufferedReader()?.use { it.readText() } ?: ""
+            code to body
+        } finally {
+            conn.disconnect()
+        }
+    }
+
+    private fun updateBooking(bookingId: String, action: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Log.d("BookingAlert", "📤 Updating booking $bookingId with action: $action")
+                
+                // First, try to get JWT from worker_prefs
+                var jwt = getSharedPreferences("worker_prefs", MODE_PRIVATE)
+                    .getString("supabase_jwt", null)
+                
+                // If not found, try CapacitorStorage
+                if (jwt.isNullOrEmpty()) {
+                    val sessionJson = getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
+                        .getString("didi_session", null)
+                    if (!sessionJson.isNullOrEmpty()) {
+                        try {
+                            val session = JSONObject(sessionJson)
+                            jwt = session.optString("accessToken", "")
+                        } catch (e: Exception) {
+                            Log.e("BookingAlert", "❌ Failed to parse session", e)
+                        }
+                    }
+                }
+                
+                Log.d("BookingAlert", "🔑 JWT token present: ${!jwt.isNullOrEmpty()}")
+                
+                // Always try to refresh the token first - it might be expired
+                Log.d("BookingAlert", "🔄 Proactively refreshing token...")
+                val refreshedToken = refreshAccessToken()
+                if (!refreshedToken.isNullOrEmpty()) {
+                    jwt = refreshedToken
+                    Log.d("BookingAlert", "✅ Using refreshed token")
+                }
+                
+                if (jwt.isNullOrEmpty()) {
+                    Log.w("BookingAlert", "⚠️ No Supabase JWT - cannot proceed")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@BookingAlertActivity,
+                            "❌ Not authenticated - Please log in",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        finish()
+                    }
+                    return@launch
+                }
+                
+                if (action == "accepted") {
+                    // Call try_accept_booking RPC
+                    val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/try_accept_booking")
+                    val connection = rpcUrl.openConnection() as HttpURLConnection
+                    
+                    connection.requestMethod = "POST"
+                    connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
+                    connection.setRequestProperty("Authorization", "Bearer $jwt")
+                    connection.setRequestProperty("Content-Type", "application/json")
+                    connection.doOutput = true
+
+                    val jsonPayload = """{"p_booking_id":"$bookingId"}"""
+                    connection.outputStream.use { os ->
+                        os.write(jsonPayload.toByteArray())
+                    }
+
+                    val responseCode = connection.responseCode
+                    Log.d("BookingAlert", "📡 RPC Response Code: $responseCode")
+                    
+                    val responseBody = if (responseCode in 200..299) {
+                        connection.inputStream.bufferedReader().use { it.readText() }
+                    } else {
+                        connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
+                    }
+                    connection.disconnect()
+
+                    Log.d("BookingAlert", "📄 RPC Response Body: $responseBody")
+
+                    withContext(Dispatchers.Main) {
+                        var keepScreenOpen = false
+                        if (responseCode in 200..299) {
+                            try {
+                                val jsonResponse = JSONObject(responseBody)
+                                val success = jsonResponse.optBoolean("success", false)
+
+                                if (success) {
+                                    // Backend confirmed WE won this booking.
+                                    OfferQueue.markAcceptedByMe(applicationContext, bookingId)
+                                    Toast.makeText(
+                                        this@BookingAlertActivity,
+                                        "✅ Booking accepted successfully!",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    Log.d("BookingAlert", "✅ Booking accepted successfully")
+                                    // Backend confirmed — worker is busy: drop every queued offer.
+                                    retireOffer(accepted = true)
+                                } else {
+                                    // Explicit backend answer: somebody else won / no longer open.
+                                    val errorMsg = jsonResponse.optString(
+                                        "error",
+                                        jsonResponse.optString("message", "Booking unavailable")
+                                    )
+                                    // Release the claim first, otherwise markTaken
+                                    // is (correctly) ignored as our own acceptance.
+                                    acceptInFlight = false
+                                    OfferQueue.endAcceptance(applicationContext, bookingId)
+                                    OfferQueue.markTaken(applicationContext, bookingId)
+                                    Toast.makeText(
+                                        this@BookingAlertActivity,
+                                        "⚠️ $errorMsg",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                    Log.w("BookingAlert", "⚠️ Accept failed: $errorMsg | raw=$responseBody")
+                                }
+                            } catch (e: Exception) {
+                                // Unknown/unparseable answer — do NOT guess a loss.
+                                Log.e("BookingAlert", "❌ Error parsing response", e)
+                                Toast.makeText(
+                                    this@BookingAlertActivity,
+                                    "Couldn't confirm. Please check your bookings.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        } else if (responseBody.contains("BOOKING_ACCEPTANCE_CLOSED:")) {
+                            // Outside operating hours (P0001). Close for good — no retry.
+                            acceptInFlight = false
+                            OfferQueue.endAcceptance(applicationContext, bookingId)
+                            OfferQueue.markTaken(applicationContext, bookingId)
+                            OfferQueue.clearAll(applicationContext, "acceptance_closed")
+                            retireOffer(accepted = false)
+                            Toast.makeText(
+                                this@BookingAlertActivity,
+                                ACCEPTANCE_CLOSED_MSG,
+                                Toast.LENGTH_LONG
+                            ).show()
+                            Log.w("BookingAlert", "⛔ Acceptance closed (operating hours)")
+                        } else {
+                            // Network / server error — NOT a loss. Let her retry.
+                            keepScreenOpen = true
+                            Toast.makeText(
+                                this@BookingAlertActivity,
+                                "Network problem. Please try again.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            Log.e("BookingAlert", "❌ HTTP Error: $responseCode - $responseBody")
+                        }
+
+                        acceptInFlight = false
+                        OfferQueue.endAcceptance(applicationContext, bookingId)
+
+                        if (keepScreenOpen && !isFinishing && !isDestroyed) {
+                            findViewById<Button>(R.id.btnAccept)?.isEnabled = true
+                            findViewById<Button>(R.id.btnReject)?.isEnabled = true
+                            startBookingStatusPolling(bookingId)
+                        } else {
+                            finish()
+                        }
+                    }
+                } else if (action == "rejected") {
+                    // reject_booking_offer: worker resolved from the session server-side;
+                    // expired / already-assigned offers are refused. Confirmed-only success.
+                    var (code, body) = postRejectOffer(bookingId, jwt!!)
+                    if (code == 401 || code == 403) {
+                        Log.w("BookingAlert", "🔐 Reject got $code — refreshing session and retrying once")
+                        val fresh = refreshAccessToken()
+                        if (!fresh.isNullOrEmpty()) {
+                            val retry = postRejectOffer(bookingId, fresh)
+                            code = retry.first; body = retry.second
+                        }
+                    }
+                    val json = try { JSONObject(body.ifEmpty { "{}" }) } catch (_: Exception) { JSONObject() }
+                    val confirmed = code in 200..299 && json.optBoolean("success", false) && json.optBoolean("confirmed", false)
+                    val err = json.optString("error", if (code == 401 || code == 403) "session-expired" else "HTTP $code")
+                    val offerGone = err in setOf("offer-expired", "booking-already-accepted", "offer-closed", "request-not-found")
+                    withContext(Dispatchers.Main) {
+                        when {
+                            confirmed -> {
+                                val msg = if (json.optBoolean("should_notify", false)) "Booking offered to next available workers" else "Booking rejected"
+                                Toast.makeText(this@BookingAlertActivity, msg, Toast.LENGTH_SHORT).show()
+                                Log.d("BookingAlert", "✅ Reject confirmed by backend")
+                                retireOffer(accepted = false)
+                                finish()
+                            }
+                            offerGone -> {
+                                val msg = if (err == "offer-expired") "This offer has expired" else "This booking is no longer available"
+                                Toast.makeText(this@BookingAlertActivity, msg, Toast.LENGTH_SHORT).show()
+                                retireOffer(accepted = false)
+                                finish()
+                            }
+                            else -> {
+                                // Not confirmed (session / network / server) — keep the offer open.
+                                Log.w("BookingAlert", "⚠️ Reject not confirmed: $err")
+                                val msg = if (err == "session-expired") "Please open the app and log in to reject" else "Couldn't reject. Please try again."
+                                Toast.makeText(this@BookingAlertActivity, msg, Toast.LENGTH_LONG).show()
+                                if (!isFinishing && !isDestroyed) {
+                                    findViewById<Button>(R.id.btnAccept)?.isEnabled = true
+                                    findViewById<Button>(R.id.btnReject)?.isEnabled = true
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("BookingAlert", "❌ Error updating booking", e)
+                // Network failure is NOT "another worker accepted" — release the
+                // claim so she can try again, and keep the offer open.
+                acceptInFlight = false
+                OfferQueue.endAcceptance(applicationContext, bookingId)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@BookingAlertActivity,
+                        "Network problem. Please try again.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    if (action == "accepted" && !isFinishing && !isDestroyed) {
+                        findViewById<Button>(R.id.btnAccept)?.isEnabled = true
+                        findViewById<Button>(R.id.btnReject)?.isEnabled = true
+                        startBookingStatusPolling(bookingId)
+                    } else {
+                        finish()
+                    }
+                }
+            }
+        }
+    }
+}
