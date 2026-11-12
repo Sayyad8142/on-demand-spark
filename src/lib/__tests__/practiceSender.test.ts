@@ -76,7 +76,7 @@ describe('practice sender preparation (mocked; no live delivery)', () => {
     const a = adapters();
     expect(await preparePracticeSend(request, a)).toEqual({ status: 200, body: { sent: true, practice_id: id } });
     expect(a.ownDevice).toHaveBeenCalledWith('own-user');
-    expect(a.send).toHaveBeenCalledExactlyOnceWith({ message: { token: 'fake-device-token', android: { priority: 'HIGH', ttl: '60s' }, data: { type: 'PRACTICE_BOOKING', practice_id: id, expires_at: String(now + 60000) } } });
+    expect(a.send).toHaveBeenCalledExactlyOnceWith({ message: { token: 'fake-device-token', android: { priority: 'HIGH', ttl: '60s' }, data: { type: 'PRACTICE_BOOKING', practice_id: id, expires_at: String(now + 60000), token_sha256: fingerprint, checked_at: String(now) } } });
     expect(a.record).toHaveBeenCalledWith('own-user', id, 'provider_accepted');
   });
   it('preserves provider failure status without claiming delivery', async () => {
