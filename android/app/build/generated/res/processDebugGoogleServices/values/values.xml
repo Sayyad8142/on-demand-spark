@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="gcm_defaultSenderId" translatable="false">993479758920</string>
-    <string name="google_api_key" translatable="false">AIzaSyB5BxScrhv7MjYmKbY3DILVvei7NOjft0Q</string>
-    <string name="google_app_id" translatable="false">1:993479758920:android:c7bcf1f203ef4e0df6747d</string>
-    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyB5BxScrhv7MjYmKbY3DILVvei7NOjft0Q</string>
-    <string name="google_storage_bucket" translatable="false">didi-now-worker-7b4cb.firebasestorage.app</string>
-    <string name="project_id" translatable="false">didi-now-worker-7b4cb</string>
-</resources>
