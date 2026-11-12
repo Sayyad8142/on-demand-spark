@@ -10,6 +10,7 @@ export function useNextBooking(account: string | undefined, community: string, s
     let disposed = false, nativeActive = true, sequence = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let removeNative: (() => void) | undefined;
+    let removeRealtime: (() => void) | undefined;
     const visible = () => document.visibilityState !== "hidden" && nativeActive;
     const clear = () => { if (timer) clearTimeout(timer); timer = undefined; };
     const refresh = async () => {
@@ -25,6 +26,7 @@ export function useNextBooking(account: string | undefined, community: string, s
       try {
         const { data: auth } = await supabase.auth.getSession();
         if (auth.session?.user.id !== account) throw Error("signed_out");
+        if (disposed || request !== sequence || !visible()) return;
         const { data, error } = await supabase.functions.invoke("worker-availability-ranking", {
           body: { community: community || undefined, service: service || undefined },
           headers: { Authorization: `Bearer ${auth.session.access_token}` },
@@ -52,14 +54,22 @@ export function useNextBooking(account: string | undefined, community: string, s
     document.addEventListener("visibilitychange", visibility);
     window.addEventListener("online", visibility);
     window.addEventListener("availabilityChanged", visibility);
-    // Current app also announces successful availability changes through this event.
     window.addEventListener("workerAvailabilityChanged", visibility);
+    // Own-worker RLS read only, never broader worker access or schedule loading.
+    void supabase.from("workers").select("id").eq("user_id", account).maybeSingle().then(({ data, error }) => {
+      if (disposed || error || !data?.id) return;
+      const channel = supabase.channel(`next-availability-${Math.random().toString(36).slice(2)}`)
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "workers", filter: `id=eq.${data.id}` }, visibility)
+        .on("postgres_changes", { event: "*", schema: "public", table: "worker_availability", filter: `worker_id=eq.${data.id}` }, visibility)
+        .subscribe();
+      removeRealtime = () => { void supabase.removeChannel(channel); };
+    });
     import("@capacitor/app").then(({ App }) => App.addListener("appStateChange", ({ isActive }) => {
       nativeActive = isActive; visibility();
     })).then(handle => { if (disposed) void handle.remove(); else removeNative = () => { void handle.remove(); }; }).catch(() => undefined);
     void refresh();
     return () => {
-      disposed = true; ++sequence; clear(); removeNative?.();
+      disposed = true; ++sequence; clear(); removeNative?.(); removeRealtime?.();
       document.removeEventListener("visibilitychange", visibility);
       window.removeEventListener("online", visibility);
       window.removeEventListener("availabilityChanged", visibility);

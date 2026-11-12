@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({ invoke: vi.fn(), session: vi.fn(), native: null as null | ((s: { isActive: boolean }) => void) }));
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { auth: { getSession: h.session }, functions: { invoke: h.invoke } } }));
+vi.mock("@/integrations/supabase/client", () => ({ supabase: { auth: { getSession: h.session }, functions: { invoke: h.invoke }, from: () => { const q = { select: () => q, eq: () => q, maybeSingle: async () => ({ data: null, error: null }) }; return q; } } }));
 vi.mock("@capacitor/app", () => ({ App: { addListener: async (_: string, cb: typeof h.native) => { h.native = cb; return { remove: vi.fn() }; } } }));
 import { useNextBooking } from "../useNextBooking";
 const now = Date.parse("2026-11-12T08:40:00Z");
