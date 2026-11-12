@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Trophy, Star, Zap, IndianRupee, TrendingUp, HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import NextBookingRanking from "@/components/NextBookingRanking";
 import {
   Tooltip,
   TooltipContent,
@@ -78,9 +79,6 @@ export default function BookingLeaderboard() {
     [data, tab, reviews],
   );
 
-  if (loading) return <LeaderboardSkeleton />;
-  if (error || !data) return null;
-
   const me = ranked.find(l => l.isMe);
   const top3 = ranked.slice(0, 3);
   const others = ranked.slice(3);
@@ -92,7 +90,7 @@ export default function BookingLeaderboard() {
   const tabHelp: Record<RankingPageTab, string> = {
     top: displayText("Workers in your community ranked by Priority Score, Rating, and Performance."),
     earners: displayText("Ranked by earnings from completed bookings today."),
-    next: displayText("See when you're in line for upcoming booking offers."),
+    next: displayText("Available worker ranking only — not the next booking order."),
   };
   const onTouchEnd = (x: number) => {
     if (touchX.current === null) return;
@@ -106,7 +104,7 @@ export default function BookingLeaderboard() {
   return (
     <div className="space-y-4">
       {/* Your Rank Card */}
-      {me && (
+      {tab !== "next" && me && (
         <Card className="overflow-hidden border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-background shadow-md">
           <div className="p-4">
             <div className="flex items-center justify-between mb-3">
@@ -198,16 +196,8 @@ export default function BookingLeaderboard() {
           className={`space-y-2 animate-in fade-in duration-300 motion-reduce:animate-none ${slideDir === "left" ? "slide-in-from-right-8" : "slide-in-from-left-8"}`}
         >
           {tab === "next" ? (
-            <section className="flex min-h-72 flex-col items-center justify-center px-4 py-8 text-center">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Zap className="h-7 w-7" aria-hidden="true" />
-              </div>
-              <h2 className="text-xl font-bold text-foreground">⚡ {displayText("Next Booking")}</h2>
-              <p className="mt-2 max-w-sm text-sm text-muted-foreground">{tabHelp.next}</p>
-              <span className="mt-5 text-xs font-bold uppercase text-primary">{displayText("Coming Soon")}</span>
-              <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">{displayText("We're preparing this feature to help you understand your booking opportunities.")}</p>
-            </section>
-          ) : <>
+            <NextBookingRanking />
+          ) : loading ? <LeaderboardSkeleton /> : error || !data ? <p role="status" className="py-8 text-center text-sm text-muted-foreground">{displayText("Unable to Verify")}</p> : <>
           {top3.map((w, i) => (
             <WorkerRow key={w.id} worker={w} tab={tab} medal={i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"} />
           ))}
