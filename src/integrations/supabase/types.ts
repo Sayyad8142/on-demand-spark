@@ -4225,6 +4225,39 @@ export type Database = {
         }
         Relationships: []
       }
+      practice_push_attempts: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          outcome: string
+          practice_id: string
+          token_sha256: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          outcome?: string
+          practice_id: string
+          token_sha256: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          outcome?: string
+          practice_id?: string
+          token_sha256?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pricing: {
         Row: {
           active: boolean
@@ -9087,6 +9120,18 @@ export type Database = {
         Args: { p_force?: boolean; p_worker_id: string }
         Returns: Json
       }
+      admin_practice_push_attempts: {
+        Args: { p_limit?: number }
+        Returns: {
+          created_at: string
+          expires_at: string
+          outcome: string
+          practice_id: string
+          token_hint: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
       admin_preview_min_build_impact: {
         Args: {
           _app: string
@@ -10117,6 +10162,15 @@ export type Database = {
           attempt_no: number
           idempotency_key: string
         }[]
+      }
+      claim_practice_push_attempt: {
+        Args: {
+          p_expires_at: string
+          p_practice_id: string
+          p_token_sha256: string
+          p_user_id: string
+        }
+        Returns: string
       }
       cleanup_old_booking_requests: { Args: never; Returns: undefined }
       cleanup_old_heartbeats: { Args: never; Returns: number }
@@ -11461,6 +11515,10 @@ export type Database = {
           _provider_reference: string
         }
         Returns: string
+      }
+      record_practice_push_outcome: {
+        Args: { p_outcome: string; p_practice_id: string; p_user_id: string }
+        Returns: undefined
       }
       record_verified_app_open: { Args: never; Returns: Json }
       redispatch_booking: { Args: { p_booking_id: string }; Returns: undefined }
