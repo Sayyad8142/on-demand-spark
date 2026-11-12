@@ -159,3 +159,8 @@
 - [x] Read-only endpoint probes returned 404; record unmet pre-deployment safeguards in docs/live-next-booking-2026-11-12/PROMPT-97-STATUS.md.
 - [ ] Deploy only worker-availability-ranking — blocked: no management listing/source/configuration backup capability or authoritative managed credential-presence verification available; no function files copied into auto-deploying directory.
 - [ ] Verify hosted authentication, community/service isolation, privacy, IST ranking and error handling — blocked: endpoint not deployed; external unmanaged worker session unavailable. Frontend activation and APK publication remain unapproved.
+
+## Prompt 98 — read-only deployment prerequisites
+- [x] Check available management tools, attempt authenticated function listing, inspect managed-secret names and rerun staged Deno compilation/security tests; no production changes.
+- [ ] Establish authoritative function existence/version and runtime credential presence — blocked: Supabase CLI has no management access token; available gateway tools have no function list/download or runtime-presence read.
+- [ ] Reconfirm deployment-only scope after prerequisites are verified — blocked: prerequisites remain unresolved; live ranking stays OFF.
