@@ -30,12 +30,11 @@ import {
   checkOverlayState,
   checkBookingChannel,
   checkActivityState,
-  requestActivity,
   requestBatteryExemption,
   requestNotificationPermission,
 } from "@/lib/permissions";
 // requestLocationPermissions intentionally not imported — see startup effect note below.
-import { isSetupBlockingV2, shouldShowBatteryPrompt, snoozeBattery, clearAccountSetupState, shouldRequestActivity } from "@/lib/setupGate";
+import { isSetupBlockingV2, shouldShowBatteryPrompt, snoozeBattery, clearAccountSetupState, shouldOfferActivitySetup } from "@/lib/setupGate";
 import { toast as sonnerToast } from "sonner";
 import { markOtaBootSuccess, runOtaCycle } from "@/lib/liveUpdate";
 import { OTA_DELIVERY_ENABLED } from "@/lib/otaSafety";
@@ -272,7 +271,7 @@ function AppInner() {
 
     setPermissionCheckLoading(true);
     try {
-      const [notif, overlay, battery, channel] = await Promise.all([checkNotificationPermission(), checkOverlayState(), checkBatteryState(), checkBookingChannel()]);
+      const [notif, overlay, battery, channel, activity] = await Promise.all([checkNotificationPermission(), checkOverlayState(), checkBatteryState(), checkBookingChannel(), checkActivityState()]);
       const batteryMissing = battery.status !== "granted" && battery.status !== "not_required";
       setShowBatteryWarning(shouldShowBatteryPrompt({ missing: batteryMissing, userId, store: window.localStorage }));
 
@@ -280,7 +279,7 @@ function AppInner() {
 
       // Real status every time. Alerts + booking channel required; popups optional once the
       // worker taps "Continue with notifications" (memory-only for this session).
-      if (isSetupBlockingV2({ notifications: notif.status, overlay: overlay.status, channel, overlayDeclined: overlayDeclinedRef.current })) {
+      if (isSetupBlockingV2({ notifications: notif.status, overlay: overlay.status, channel, overlayDeclined: overlayDeclinedRef.current }) || shouldOfferActivitySetup(activity.status, activityAskedRef.current === userId)) {
         setShowPermissionOnboarding(true);
       } else if (allowHide) {
         setShowPermissionOnboarding(false);
@@ -322,7 +321,7 @@ function AppInner() {
           console.log("[Permissions] notification permission requested");
           // Only prompts when Android can still show it; blocked state is handled on the setup screen.
           await requestNotificationPermission();
-          // Physical activity is requested later, only when a booking needs movement tracking.
+          // Optional movement permission is explained and requested only inside onboarding.
           flow.runtimeRequested = true;
         }
 
@@ -427,23 +426,13 @@ function AppInner() {
     }
     console.log("[Movement] booking accepted");
     const workerId = worker.id;
-    const jobId = trackedJob!.id;
+    if (!trackedJob) return;
+    const jobId = trackedJob.id;
     // If the booking ends / changes (or the worker logs out) while the
     // permission prompt is still open, this run must not start tracking.
     let cancelled = false;
     // Runs after acceptance already succeeded — never blocks Accept. Denial = movement features off.
     void (async () => {
-      try {
-        const uid = session?.user?.id ?? workerId;
-        const activity = await checkActivityState();
-        if (shouldRequestActivity(activity.status, activityAskedRef.current === uid)) {
-          activityAskedRef.current = uid;
-          sonnerToast(displayText("Movement access helps confirm you reached the flat. You can still do the job if you say no."));
-          await requestActivity();
-        }
-      } catch (e) {
-        console.warn("[Movement] activity permission check failed", e);
-      }
       if (cancelled) return;
       await startMovementMonitoring(jobId, workerId);
     })().catch((error) => {
@@ -701,6 +690,7 @@ function AppInner() {
         <Toaster />
         <Sonner />
         <PermissionOnboarding
+          onActivityHandled={() => { activityAskedRef.current = session.user.id; }}
           onComplete={() => checkAndroidSettingsPermissions({ allowHide: true })}
           onContinueWithoutPopups={() => { overlayDeclinedRef.current = true; checkAndroidSettingsPermissions({ allowHide: true }); }}
         />
@@ -721,7 +711,7 @@ function AppInner() {
               // Opening Settings is not success: the real setting is re-checked when the worker returns.
               await requestBatteryExemption();
             }}
-            onSkip={() => {
+            onContinue={() => {
               try { snoozeBattery(window.localStorage, session.user.id); } catch { /* ignore */ }
               setShowBatteryWarning(false);
             }}
