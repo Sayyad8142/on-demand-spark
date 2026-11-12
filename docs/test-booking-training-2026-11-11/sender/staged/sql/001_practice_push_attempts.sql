@@ -30,6 +30,12 @@ BEGIN
   IF EXISTS (SELECT 1 FROM practice_push_attempts WHERE user_id = p_user_id AND expires_at > now()) THEN
     RETURN 'busy';
   END IF;
+  -- Approved custom limit: at most 3 claimed attempts in a rolling hour.
+  -- All outcomes consume quota; the same user lock serializes concurrent claims.
+  IF (SELECT count(*) FROM practice_push_attempts WHERE user_id = p_user_id
+      AND created_at > now() - interval '1 hour') >= 3 THEN
+    RETURN 'rate_limited';
+  END IF;
   INSERT INTO practice_push_attempts (user_id, practice_id, token_sha256, expires_at)
   VALUES (p_user_id, p_practice_id, p_token_sha256, p_expires_at);
   RETURN 'new';

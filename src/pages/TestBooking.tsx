@@ -79,9 +79,9 @@ export default function TestBooking() {
       if (!push) { dispatch({ type: 'local_alert', now: Date.now() }); return; }
       dispatch({ type: 'sending', now: Date.now() });
       const result = await sendPracticePush({ id: state.id, expiresAt: Date.now() + 60000, userId: user?.id, hasToken: !!safety.worker?.fcm_token, tokenStatus: safety.worker?.fcm_token_status ?? null });
-      if ('reason' in result) { dispatch({ type: 'failed_send' }); setNotice(text(result.reason)); }
+      if ('reason' in result) { dispatch({ type: result.reason === 'delivery_unknown' ? 'unknown_send' : 'failed_send' }); setNotice(text(result.reason)); }
       else dispatch({ type: 'sent' });
-    } catch (error) { dispatch({ type: 'failed_send' }); setNotice(error instanceof Error ? error.message : text('sendError')); }
+    } catch (error) { dispatch({ type: 'unknown_send' }); setNotice(text('delivery_unknown')); }
     finally { setStarting(false); actionLock.current = false; }
   };
   const again = () => {
@@ -99,11 +99,11 @@ export default function TestBooking() {
       {state.step === 'intro' && <section className="space-y-4">
         <h2 className="font-semibold text-xl">{text('ready')}</h2>
         <Button className="w-full min-h-12" disabled={starting || safety.checking || !safety.safe} onClick={() => void begin(true)}><Bell className="h-4 w-4 mr-2" />{text('send')}</Button>
-        {notice && <p role="alert" className="text-sm text-destructive break-words">{notice}</p>}
+        {notice && <><p role="alert" className="text-sm text-destructive break-words">{notice}</p><Button variant="outline" onClick={again}><RotateCcw className="h-4 w-4 mr-2" />{text('again')}</Button></>}
         {(!safety.safe || safety.checking) && <p className="text-sm text-muted-foreground">{text(safety.checking ? 'checking' : 'busy')}</p>}
         <Button variant="outline" className="w-full min-h-12" disabled={starting || safety.checking || !safety.safe} onClick={() => void begin(false)}>{text('local')}</Button>
       </section>}
-      {['sending', 'waiting'].includes(state.step) && <section className="space-y-4"><h2 className="text-xl font-semibold">{text('waiting')}</h2><p className="text-sm text-muted-foreground">{text('receiptWait')}</p><p className="text-2xl font-semibold">{seconds}s</p></section>}
+      {['sending', 'waiting'].includes(state.step) && <section className="space-y-4"><h2 className="text-xl font-semibold">{text('waiting')}</h2><p className="text-sm text-muted-foreground">{text('receiptWait')}</p><p className="text-2xl font-semibold">{seconds}s</p>{notice && <p role="alert" className="text-sm text-destructive">{notice}</p>}</section>}
       {state.step === 'alert' && <section className="border border-border rounded-lg overflow-hidden" aria-label={text('alert')}>
         <div className="p-4 flex justify-between items-center border-b border-border"><h2 className="font-bold text-lg">{text('title')}</h2><span className="font-semibold tabular-nums">{seconds}s</span></div>
         <div className="p-5 space-y-4"><h3 className="font-bold text-xl">{text('maid')}</h3><p>{text('dishwashing')}</p>

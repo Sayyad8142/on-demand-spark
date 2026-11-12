@@ -12,11 +12,12 @@ interface PracticePlugin {
 }
 export const PracticeNotifications = registerPlugin<PracticePlugin>('PracticeNotifications');
 export type PracticePushFailure = 'approval' | 'android' | 'token_missing' | 'token_invalid' | 'offline' | 'permission' | 'busy' | 'native_missing'
-  | 'login_required' | 'account_mismatch' | 'device_mismatch' | 'attempt_in_progress' | 'delivery_unknown' | 'sendError';
+  | 'rate_limited' | 'login_required' | 'account_mismatch' | 'device_mismatch' | 'attempt_in_progress' | 'delivery_unknown' | 'sendError';
 
 /** Server refusal reasons (staged sender contract) → display keys. Unknown → generic. */
 export function practiceFailureFromServer(reason: unknown): PracticePushFailure {
   switch (reason) {
+    case 'rate_limited': return 'rate_limited';
     case 'approval_required': return 'approval';
     case 'login_required': return 'login_required';
     case 'token_missing': return 'token_missing';
@@ -51,22 +52,24 @@ export async function sendPracticePush(input: { id: string; expiresAt: number; u
     return { sent: false, reason: 'native_missing' };
   }
   // Only these three fields: the server derives worker and device from the login.
-  const { data, error } = await supabase.functions.invoke('send-practice-notification', {
+  let reply;
+  try { reply = await supabase.functions.invoke('send-practice-notification', {
     body: { practice_id: input.id, expires_at: input.expiresAt, device_token_sha256: tokenSha256 },
-  });
+  }); } catch { return { sent: false, reason: 'delivery_unknown' }; }
+  const { data, error } = reply;
   if (error) {
     let reason: unknown;
     if (error instanceof FunctionsHttpError) {
       try { reason = JSON.parse(await error.context.text())?.reason; } catch { reason = undefined; }
     }
-    const failure = practiceFailureFromServer(reason);
+    const failure = error instanceof FunctionsHttpError ? practiceFailureFromServer(reason) : 'delivery_unknown';
     // An uncertain attempt may still arrive; keep the native session so receipt can be matched.
     if (failure !== 'delivery_unknown') await PracticeNotifications.cancel().catch(() => undefined);
     return { sent: false, reason: failure };
   }
   if (data?.sent !== true || data?.practice_id !== input.id) {
-    await PracticeNotifications.cancel().catch(() => undefined);
-    return { sent: false, reason: 'sendError' };
+    // A malformed reply does not prove the provider did not accept the message.
+    return { sent: false, reason: 'delivery_unknown' };
   }
   return { sent: true };
 }

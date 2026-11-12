@@ -15,6 +15,9 @@ export interface AdapterConfig {
   anonKey: string;
   serviceRoleKey: string;
   jwt: string | null;
+  // Empty pilot configuration refuses everyone. Both values are server-only.
+  pilotUserId?: string;
+  pilotTokenSha256?: string;
   serviceAccount: ServiceAccount | null;
   fetch: typeof fetch;
   now?: () => number;
@@ -93,13 +96,16 @@ export function createLiveAdapters(c: AdapterConfig): PracticeSenderAdapters {
       if (!res.ok) return null;
       const user = await res.json().catch(() => null) as { id?: unknown } | null;
       if (!user || typeof user.id !== 'string' || !user.id) return null;
+      if (user.id !== c.pilotUserId || !/^[0-9a-f]{64}$/.test(c.pilotTokenSha256 ?? '')) return null;
       verifiedUser = user.id;
       return { userId: user.id };
     },
     async ownDevice(userId): Promise<OwnDevice | null> {
       const w = await worker(userId);
       if (!w?.fcm_token) return null;
-      return { token: w.fcm_token, tokenSha256: await sha256Hex(w.fcm_token), status: w.fcm_token_status, platform: w.fcm_token_platform };
+      const tokenSha256 = await sha256Hex(w.fcm_token);
+      if (tokenSha256 !== c.pilotTokenSha256) return null;
+      return { token: w.fcm_token, tokenSha256, status: w.fcm_token_status, platform: w.fcm_token_platform };
     },
     async idle(userId) {
       const w = await worker(userId);
@@ -116,7 +122,7 @@ export function createLiveAdapters(c: AdapterConfig): PracticeSenderAdapters {
         p_user_id: userId, p_practice_id: request.practice_id,
         p_expires_at: new Date(request.expires_at).toISOString(), p_token_sha256: request.device_token_sha256,
       });
-      return out === 'new' || out === 'duplicate' || out === 'busy' ? out : 'busy';
+      return out === 'new' || out === 'duplicate' || out === 'busy' || out === 'rate_limited' ? out : 'busy';
     },
     async record(userId, id, outcome) {
       await rpc('record_practice_push_outcome', { p_user_id: userId, p_practice_id: id, p_outcome: outcome });

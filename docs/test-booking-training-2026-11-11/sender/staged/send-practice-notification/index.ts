@@ -18,6 +18,8 @@ Deno.serve(req => handlePracticeRequest(req, jwt => createLiveAdapters({
   anonKey: Deno.env.get('SUPABASE_ANON_KEY') ?? '',
   serviceRoleKey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   jwt,
+  pilotUserId: Deno.env.get('PRACTICE_PILOT_USER_ID'),
+  pilotTokenSha256: Deno.env.get('PRACTICE_PILOT_TOKEN_SHA256'),
   serviceAccount: serviceAccount(),
   fetch,
 })));
