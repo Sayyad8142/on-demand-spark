@@ -1,0 +1,6 @@
+# STAGED ONLY — add to supabase/config.toml together with the function, after approval.
+# Matches every other function in this project. The gateway JWT check is not relied on:
+# the function verifies EVERY request in code with Supabase Auth (/auth/v1/user) and then
+# requires the server-approved pilot login + device fingerprint. Never remove that check.
+[functions.send-practice-notification]
+verify_jwt = false

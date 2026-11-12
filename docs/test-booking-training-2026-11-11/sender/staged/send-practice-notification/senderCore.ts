@@ -10,6 +10,8 @@ export interface OwnDevice {
 }
 export interface PracticeSenderAdapters {
   enabled: boolean;
+  // Transport check: FCM validates auth + message but delivers nothing (validate_only).
+  validateOnly?: boolean;
   now(): number;
   // Must call Supabase Auth getUser(jwt), not decode a JWT or trust an anon key.
   authenticate(): Promise<{ userId: string } | null>;
@@ -21,14 +23,17 @@ export interface PracticeSenderAdapters {
   // when a different practice_id is supplied. Never use a process-local Map.
   claim(userId: string, request: PracticeRequest): Promise<'new' | 'duplicate' | 'busy' | 'rate_limited'>;
   // Practice-only journal, not workers/booking_requests/booking_offer_events.
-  record(userId: string, id: string, outcome: 'provider_accepted' | 'failed' | 'unknown'): Promise<void>;
+  record(userId: string, id: string, outcome: 'provider_accepted' | 'validated' | 'failed' | 'unknown'): Promise<void>;
   send(message: PracticeMessage): Promise<{ ok: boolean; status: number; body: string; messageId?: string }>;
 }
 export interface PracticeMessage {
+  validate_only?: true;
   message: {
     token: string;
     android: { priority: 'HIGH'; ttl: string };
-    data: { type: 'PRACTICE_BOOKING'; practice_id: string; expires_at: string };
+    // token_sha256 binds the push to the phone that prepared it; checked_at is the
+    // server time of the last real-work check (receiver refuses stale ones).
+    data: { type: 'PRACTICE_BOOKING'; practice_id: string; expires_at: string; token_sha256: string; checked_at: string };
   };
 }
 export interface SenderResult { status: number; body: { sent: boolean; practice_id?: string; reason?: string; provider_status?: number; details?: string } }
@@ -73,16 +78,19 @@ export async function preparePracticeSend(value: unknown, a: PracticeSenderAdapt
         await a.record(session.userId, request.practice_id, 'failed');
         return refuse(409, 'device_changed');
       }
-      const remaining = request.expires_at - a.now();
+      const checkedAt = a.now();
+      const remaining = request.expires_at - checkedAt;
       if (remaining <= 0) {
         await a.record(session.userId, request.practice_id, 'failed');
         return refuse(410, 'expired');
       }
-      const result = await a.send({ message: {
+      const message: PracticeMessage = { message: {
         token: currentDevice.token,
-        android: { priority: 'HIGH', ttl: `${Math.min(60, Math.floor(remaining / 1000))}s` },
-        data: { type: 'PRACTICE_BOOKING', practice_id: request.practice_id, expires_at: String(request.expires_at) },
-      } });
+        android: { priority: 'HIGH', ttl: `${Math.max(1, Math.min(60, Math.floor(remaining / 1000)))}s` },
+        data: { type: 'PRACTICE_BOOKING', practice_id: request.practice_id, expires_at: String(request.expires_at), token_sha256: currentDevice.tokenSha256, checked_at: String(checkedAt) },
+      } };
+      if (a.validateOnly) message.validate_only = true;
+      const result = await a.send(message);
       if (!result.ok) {
         await a.record(session.userId, request.practice_id, 'failed');
         return { status: result.status, body: { sent: false, reason: 'provider_failed', provider_status: result.status, details: result.body } };
@@ -90,6 +98,10 @@ export async function preparePracticeSend(value: unknown, a: PracticeSenderAdapt
       if (!result.messageId) {
         await a.record(session.userId, request.practice_id, 'unknown');
         return refuse(502, 'provider_unconfirmed');
+      }
+      if (a.validateOnly) {
+        await a.record(session.userId, request.practice_id, 'validated');
+        return { status: 200, body: { sent: false, practice_id: request.practice_id, reason: 'validated_only' } };
       }
       await a.record(session.userId, request.practice_id, 'provider_accepted');
       return { status: 200, body: { sent: true, practice_id: request.practice_id } };

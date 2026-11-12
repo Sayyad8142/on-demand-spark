@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { createLiveAdapters, googleAccessToken, PRACTICE_ACTIVE_WORK_STATUSES, redact, sha256Hex, type AdapterConfig } from '../../../docs/test-booking-training-2026-11-11/sender/staged/adapters';
+import { createLiveAdapters, googleAccessToken, PRACTICE_ACTIVE_WORK_STATUSES, redact, sha256Hex, type AdapterConfig } from '../../../docs/test-booking-training-2026-11-11/sender/staged/send-practice-notification/adapters';
 import { handlePracticeRequest } from '../../../docs/test-booking-training-2026-11-11/sender/staged/send-practice-notification/handler';
-import { preparePracticeSend } from '../../../docs/test-booking-training-2026-11-11/sender/staged/senderCore';
+import { preparePracticeSend } from '../../../docs/test-booking-training-2026-11-11/sender/staged/send-practice-notification/senderCore';
 import { ACTIVE_WORK_STATUSES } from '../workSafety';
 
 const NOW = 1794391800000;
@@ -57,8 +57,8 @@ describe('practice sender live adapters (mocked network; nothing sent)', () => {
     const msg = JSON.parse(fcm[0].body!).message;
     expect(msg.token).toBe(TOKEN);
     expect(msg.notification).toBeUndefined();
-    expect(Object.keys(msg.data).sort()).toEqual(['expires_at', 'practice_id', 'type']);
-    expect(msg.data).toEqual({ type: 'PRACTICE_BOOKING', practice_id: ID, expires_at: String(NOW + 60000) });
+    expect(Object.keys(msg.data).sort()).toEqual(['checked_at', 'expires_at', 'practice_id', 'token_sha256', 'type']);
+    expect(msg.data).toEqual({ type: 'PRACTICE_BOOKING', practice_id: ID, expires_at: String(NOW + 60000), token_sha256: await sha256Hex(TOKEN), checked_at: String(NOW) });
     expect(msg.android).toEqual({ priority: 'HIGH', ttl: '60s' });
     // Worker lookup is by verified login only — never by id= or phone.
     const lookups = w.calls.filter(c => c.url.includes('/rest/v1/workers?'));

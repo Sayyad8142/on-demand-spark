@@ -27,6 +27,7 @@ export function practiceFailureFromServer(reason: unknown): PracticePushFailure 
     case 'real_work_active': case 'safety_check_unavailable': return 'busy';
     case 'already_attempted': case 'attempt_in_progress': return 'attempt_in_progress';
     case 'delivery_unknown': case 'provider_unconfirmed': return 'delivery_unknown';
+    case 'validated_only': return 'approval';
     default: return 'sendError';
   }
 }
@@ -67,6 +68,11 @@ export async function sendPracticePush(input: { id: string; expiresAt: number; u
     if (failure !== 'delivery_unknown') await PracticeNotifications.cancel().catch(() => undefined);
     return { sent: false, reason: failure };
   }
+  // Transport-check mode: the provider validated the message but delivered nothing.
+  if (data?.sent === false && data?.reason === 'validated_only' && data?.practice_id === input.id) {
+    await PracticeNotifications.cancel().catch(() => undefined);
+    return { sent: false, reason: 'approval' };
+  }
   if (data?.sent !== true || data?.practice_id !== input.id) {
     // A malformed reply does not prove the provider did not accept the message.
     return { sent: false, reason: 'delivery_unknown' };
@@ -79,6 +85,12 @@ export function shouldRestorePractice(state: PracticeDeviceState | null, userId:
   if (!state || !userId || state.outcome !== 'accepted' || !state.id?.startsWith('practice-')) return false;
   if (state.userId !== userId) return false;
   return typeof state.acceptedAt === 'number' && now - state.acceptedAt >= 0 && now - state.acceptedAt <= 10 * 60 * 1000;
+}
+
+/** On page open, only a finished native session (it has an outcome) may be consumed/cleared.
+ * A session without an outcome is a send waiting for its push and must be left alone. */
+export function shouldClearRestoredSession(state: PracticeDeviceState | null): boolean {
+  return !!state && typeof state.id === 'string' && state.id.startsWith('practice-') && typeof state.outcome === 'string' && state.outcome.length > 0;
 }
 
 /** Clears any native practice session; safe to call on logout or account switch. */

@@ -1,9 +1,9 @@
 /** Request handling for the staged practice sender. Not deployed. */
-import { preparePracticeSend, type PracticeSenderAdapters } from '../senderCore.ts';
+import { preparePracticeSend, type PracticeSenderAdapters } from './senderCore.ts';
 
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
