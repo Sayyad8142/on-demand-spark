@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.getcapacitor.community.tts.AvailabilityTtsTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-12T08:20:35" hostname="sandbox-pool-5bcf77797c-stnhh" time="0.115">
+  <properties/>
+  <testcase name="hindiAvailabilityInstructions" classname="com.getcapacitor.community.tts.AvailabilityTtsTest" time="0.065"/>
+  <testcase name="teluguAvailabilityInstructions" classname="com.getcapacitor.community.tts.AvailabilityTtsTest" time="0.031"/>
+  <testcase name="englishAvailabilityInstructions" classname="com.getcapacitor.community.tts.AvailabilityTtsTest" time="0.019"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

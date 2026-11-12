@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="app.didisnow.worker.AlertPresentationRulesTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-12T08:18:18" hostname="sandbox-pool-5bcf77797c-stnhh" time="0.009">
+<testsuite name="app.didisnow.worker.AlertPresentationRulesTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-12T08:20:31" hostname="sandbox-pool-5bcf77797c-stnhh" time="0.014">
   <properties/>
-  <testcase name="expiredOffersStayAtZeroNotFive" classname="app.didisnow.worker.AlertPresentationRulesTest" time="0.006"/>
+  <testcase name="expiredOffersStayAtZeroNotFive" classname="app.didisnow.worker.AlertPresentationRulesTest" time="0.011"/>
   <testcase name="realExpiryWinsOverFreshSixtySeconds" classname="app.didisnow.worker.AlertPresentationRulesTest" time="0.0"/>
   <testcase name="invisibleOrClosingPopupNeverAcknowledges" classname="app.didisnow.worker.AlertPresentationRulesTest" time="0.0"/>
   <testcase name="sleepingOrDelayedTimerDoesNotDrift" classname="app.didisnow.worker.AlertPresentationRulesTest" time="0.0"/>
-  <testcase name="foregroundWithoutOverlayCanOpenActivity" classname="app.didisnow.worker.AlertPresentationRulesTest" time="0.001"/>
-  <testcase name="backgroundAndLockedUseTrayOnly" classname="app.didisnow.worker.AlertPresentationRulesTest" time="0.0"/>
+  <testcase name="foregroundWithoutOverlayCanOpenActivity" classname="app.didisnow.worker.AlertPresentationRulesTest" time="0.0"/>
+  <testcase name="backgroundAndLockedUseTrayOnly" classname="app.didisnow.worker.AlertPresentationRulesTest" time="0.001"/>
   <testcase name="sentTimeKeepsOriginalDeadline" classname="app.didisnow.worker.AlertPresentationRulesTest" time="0.0"/>
   <testcase name="lastSecondIsNotExtended" classname="app.didisnow.worker.AlertPresentationRulesTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>
