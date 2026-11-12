@@ -144,3 +144,8 @@
 - [x] Run 571 app / 45 native tests; compile Android; report evidence and remaining limitations.
 - [ ] Apply and verify staged unlimited-retry server change — blocked: separate production approval; live cumulative lock remains.
 - [ ] Signed-in end-to-end / physical Android checks — blocked: external unmanaged session, unavailable real phone; browser only reached loading screen.
+
+## Live Next Booking — preview preparation (12 Nov)
+- [x] Audit source authentication/live schema and RLS; back up files; stage verified-auth independent service with disabled reader.
+- [x] Implement translated ranking view and foreground-only refresh; 606 tests and preview build pass; mobile/desktop safe disabled view checked.
+- [ ] Activate secure service and verify authenticated live workers — blocked: separate backend/integration approval and authenticated test access.
