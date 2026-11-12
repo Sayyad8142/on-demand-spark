@@ -146,6 +146,6 @@
 - [ ] Signed-in end-to-end / physical Android checks — blocked: external unmanaged session, unavailable real phone; browser only reached loading screen.
 
 ## Live Next Booking — preview preparation (12 Nov)
-- [ ] Audit data access, back up affected files, prepare independent server-filtered contract and disabled reader.
-- [ ] Implement translated ranking view and foreground-only refresh; test rules and privacy.
+- [x] Audit source authentication/live schema and RLS; back up files; stage verified-auth independent service with disabled reader.
+- [x] Implement translated ranking view and foreground-only refresh; 606 tests and preview build pass; mobile/desktop safe disabled view checked.
 - [ ] Activate secure service and verify authenticated live workers — blocked: separate backend/integration approval and authenticated test access.
