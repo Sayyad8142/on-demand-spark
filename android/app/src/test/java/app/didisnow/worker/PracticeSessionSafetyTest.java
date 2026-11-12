@@ -81,7 +81,7 @@ public class PracticeSessionSafetyTest {
         assertEquals("drop", session.claimReceipt(ctx, id, expiry, TOKEN));
     }
     @Test public void activeRealWorkBlocksPracticeReadiness() {
-        OfferQueue.INSTANCE.markLocallyBusy(ctx, "real-booking-1");
+        OfferQueue.INSTANCE.markLocallyBusy(ctx);
         assertTrue(session.realWorkSuspected(ctx));
     }
 }

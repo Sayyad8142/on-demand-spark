@@ -95,7 +95,7 @@ object PracticeSession {
     /** A practice push must arrive within this window after the phone prepared it (phone clock only,
      * so server/phone clock skew cannot widen it). Bounds the gap after the server's last real-work check. */
     const val MAX_RECEIPT_DELAY_MS = 30_000L
-    fun prepare(ctx: Context, id: String, expiry: Long, userId: String, tokenSha: String, now: Long = System.currentTimeMillis()) {
+    @JvmOverloads fun prepare(ctx: Context, id: String, expiry: Long, userId: String, tokenSha: String, now: Long = System.currentTimeMillis()) {
         cancel(ctx)
         prefs(ctx).edit().clear().putString("id", id).putLong("expiresAt", expiry).putLong("preparedAt", now)
             .putString("userId", userId).putString("tokenSha", tokenSha).commit()
@@ -109,7 +109,7 @@ object PracticeSession {
     /** Atomic first-receipt claim. Returns "ok" once; "drop" for another session/login/duplicate
      * (silent, never replays sound); "wrong_device" when the push was addressed to a different
      * token than this phone prepared; "stale" when it arrived too late. Callers block on the last two. */
-    fun claimReceipt(ctx: Context, id: String, expiresAt: Long, tokenSha: String?, now: Long = System.currentTimeMillis()): String {
+    @JvmOverloads fun claimReceipt(ctx: Context, id: String, expiresAt: Long, tokenSha: String?, now: Long = System.currentTimeMillis()): String {
         synchronized(lock) {
             val p = prefs(ctx)
             if (!matches(ctx, id) || p.getLong("expiresAt", 0) != expiresAt) return "drop"
