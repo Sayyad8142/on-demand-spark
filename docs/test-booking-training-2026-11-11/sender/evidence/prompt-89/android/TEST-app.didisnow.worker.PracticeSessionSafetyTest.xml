@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.didisnow.worker.PracticeSessionSafetyTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-12T05:08:56" hostname="sandbox-pool-66db5fbb9f-rpqdg" time="2.559">
+  <properties/>
+  <testcase name="realOfferPreemptsPracticeWithoutWritingRealQueue" classname="app.didisnow.worker.PracticeSessionSafetyTest" time="2.196"/>
+  <testcase name="changedAccountCannotReceiveOldPractice" classname="app.didisnow.worker.PracticeSessionSafetyTest" time="0.058"/>
+  <testcase name="firstOutcomeWinsAndDoesNotAssignRealWork" classname="app.didisnow.worker.PracticeSessionSafetyTest" time="0.039"/>
+  <testcase name="expiredPracticeCannotClaimDisplayEvidence" classname="app.didisnow.worker.PracticeSessionSafetyTest" time="0.037"/>
+  <testcase name="activeRealWorkBlocksPracticeReadiness" classname="app.didisnow.worker.PracticeSessionSafetyTest" time="0.054"/>
+  <testcase name="receiptIsDedupedAcrossRepeatedPushes" classname="app.didisnow.worker.PracticeSessionSafetyTest" time="0.029"/>
+  <testcase name="logoutOrCancelDropsDelayedPush" classname="app.didisnow.worker.PracticeSessionSafetyTest" time="0.032"/>
+  <testcase name="tokenChangeCancelsPreparedPractice" classname="app.didisnow.worker.PracticeSessionSafetyTest" time="0.025"/>
+  <testcase name="wrongExpiryOrIdCannotClaimReceipt" classname="app.didisnow.worker.PracticeSessionSafetyTest" time="0.035"/>
+  <testcase name="latePushAfterServerCheckWindowIsStale" classname="app.didisnow.worker.PracticeSessionSafetyTest" time="0.027"/>
+  <testcase name="pushForAnotherDeviceTokenIsBlockedNotShown" classname="app.didisnow.worker.PracticeSessionSafetyTest" time="0.024"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=app.didisnow.worker.PRACTICE_CLOSE pkg=app.didisnow.worker }; Matching wrappers: []
+Intent = Intent { act=app.didisnow.worker.PRACTICE_CLOSE pkg=app.didisnow.worker }; Matching wrappers: []
+Intent = Intent { act=app.didisnow.worker.PRACTICE_CLOSE pkg=app.didisnow.worker }; Matching wrappers: []
+Intent = Intent { act=app.didisnow.worker.PRACTICE_CLOSE pkg=app.didisnow.worker }; Matching wrappers: []
+Intent = Intent { act=app.didisnow.worker.PRACTICE_CLOSE pkg=app.didisnow.worker }; Matching wrappers: []
+Intent = Intent { act=app.didisnow.worker.PRACTICE_CLOSE pkg=app.didisnow.worker }; Matching wrappers: []
+Intent = Intent { act=app.didisnow.worker.PRACTICE_CLOSE pkg=app.didisnow.worker }; Matching wrappers: []
+Intent = Intent { act=app.didisnow.worker.PRACTICE_CLOSE pkg=app.didisnow.worker }; Matching wrappers: []
+Intent = Intent { act=app.didisnow.worker.PRACTICE_CLOSE pkg=app.didisnow.worker }; Matching wrappers: []
+Intent = Intent { act=app.didisnow.worker.PRACTICE_CLOSE pkg=app.didisnow.worker }; Matching wrappers: []
+Intent = Intent { act=app.didisnow.worker.PRACTICE_CLOSE pkg=app.didisnow.worker }; Matching wrappers: []
+Intent = Intent { act=app.didisnow.worker.PRACTICE_CLOSE pkg=app.didisnow.worker }; Matching wrappers: []
+Intent = Intent { act=app.didisnow.worker.PRACTICE_CLOSE pkg=app.didisnow.worker }; Matching wrappers: []
+Intent = Intent { act=app.didisnow.worker.PRACTICE_CLOSE pkg=app.didisnow.worker }; Matching wrappers: []
+Intent = Intent { act=app.didisnow.worker.PRACTICE_CLOSE pkg=app.didisnow.worker }; Matching wrappers: []
+Intent = Intent { act=app.didisnow.worker.PRACTICE_CLOSE pkg=app.didisnow.worker }; Matching wrappers: []
+Intent = Intent { act=app.didisnow.worker.PRACTICE_CLOSE pkg=app.didisnow.worker }; Matching wrappers: []
+]]></system-err>
+</testsuite>

@@ -113,3 +113,13 @@
 - [x] Phone: device-fingerprint binding, 30 s freshness, logout/late-reply/page-reopen races fixed.
 - [x] 534 app + 38 native tests pass, Android compile OK, security scan clean for practice; report PROMPT-88-RESULTS.md.
 - [ ] Deploy (switch OFF) → validate → one-phone test — blocked: owner approval + named account/phone + real phone.
+
+## Prompt 89 — approved preparation, delivery prohibited
+- [x] Check reported hook error: hosted preview succeeded; named React imports already present.
+- [x] Preserve verified 73-file source backup under sender/backups/prompt-89; confirm sender previously absent.
+- [x] Set server switch explicitly OFF and apply reviewed isolated journal migration.
+- [ ] Review migration security flags without weakening worker isolation.
+- [ ] Deploy only the isolated sender; verify hosted OFF refusal and authentication safeguards.
+- [ ] Firebase validate-only check — blocked: approved pilot login/device not supplied; do not choose another account.
+- [ ] Verify production isolation, regression checks and rollback; record PASS/FAIL report.
+- [ ] Single-phone delivery/APK release — blocked: separate owner approval and real phone; both delivery switches must remain OFF.
