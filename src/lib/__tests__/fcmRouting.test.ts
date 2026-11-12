@@ -24,7 +24,7 @@ it('both actual FCM listeners preserve the same deadline and signed token withou
   vi.setSystemTime(new Date('2026-11-12T07:00:55Z'));
   await state.listeners.get('pushNotificationActionPerformed')?.({ notification: { data } });
   expect(state.process).toHaveBeenCalledTimes(2);
-  for (const [offer] of state.process.mock.calls) expect(offer).toMatchObject({ bookingId: 'b', bookingRequestId: 'r', timeoutAt: data.expires_at, custName: 'Alice', priceInr: 200, ackToken: 'opaque-server-token' });
+  for (const [offer] of state.process.mock.calls) expect(offer).toMatchObject({ bookingId: 'b', bookingRequestId: 'r', timeoutAt: new Date(data.expires_at).toISOString(), custName: 'Alice', priceInr: 200, ackToken: 'opaque-server-token' });
   vi.setSystemTime(new Date('2026-11-12T07:01:00Z'));
   await state.listeners.get('pushNotificationActionPerformed')?.({ notification: { data } });
   expect(state.process).toHaveBeenCalledTimes(2);
