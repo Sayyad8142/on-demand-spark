@@ -8,5 +8,6 @@
   "src/i18n/locales/hi.json": "196a41e94d167b1c44c8ec8cbc746dc07e22e9ac3052c71341e23bb644a1ce70",
   "src/i18n/locales/te.json": "ad97d131c90cbef724c91b2c7744a7ddac7e5c6bcd1a407ec9f9d8e1f50b7f92",
   "AGENTS.md": "3942d3f6b46e5c92a2f65410e946b2bc4a6c0c874d9f5b5241288bd28c000353",
-  "roadmap.md": "beebcba3fd82bf28ae82ffd37795b87629969130ea90d14354f2bafd16d9cdcc"
+  "roadmap.md": "beebcba3fd82bf28ae82ffd37795b87629969130ea90d14354f2bafd16d9cdcc",
+  "src/pages/ContactSupport.tsx": "0112ceae8d5f1a8e8a4ef407b0fcf73c124610c0a661489b8bfd29703d30ceee"
 }
