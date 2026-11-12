@@ -50,7 +50,7 @@ describe('practice push client (mocked phone and server)', () => {
   it('a reply for a different practice id is not success', async () => {
     plugin.prepare.mockResolvedValue({ ready: true, tokenSha256: SHA });
     invoke.mockResolvedValue({ data: { sent: true, practice_id: 'practice-other' }, error: null });
-    expect(await sendPracticePush(input, true)).toEqual({ sent: false, reason: 'sendError' });
+    expect(await sendPracticePush(input, true)).toEqual({ sent: false, reason: 'delivery_unknown' });
   });
   it('maps every server refusal to a worker message', () => {
     expect(practiceFailureFromServer('real_work_active')).toBe('busy');

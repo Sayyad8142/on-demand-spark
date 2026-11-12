@@ -30,7 +30,10 @@ object PracticePushReceiver {
             .setSound(sound).setVibrate(longArrayOf(0, 1000, 500)).setContentIntent(tap).setAutoCancel(true).setTimeoutAfter(remaining).build())
         // No full-screen intent or new mandatory permissions. Optional overlay
         // uses the same layout; without overlay permission the worker taps the tray.
-        if (Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(ctx)) {
+        if (MainActivity.canOpenBookingActivity(ctx)) {
+            try { ctx.startActivity(Intent(ctx, PracticeAlertActivity::class.java).putExtra("practice_id", id).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            catch (_: Exception) { /* Notification tap remains available. */ }
+        } else if (Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(ctx)) {
             try { ctx.startService(Intent(ctx, PracticeAlertService::class.java).putExtra("practice_id", id)) }
             catch (_: Exception) { /* Tray remains; overlay stays Not Verified. */ }
         }
