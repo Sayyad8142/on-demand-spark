@@ -76,7 +76,8 @@ public class MyFirebaseService extends FirebaseMessagingService {
     }
     
     String type = data.get("type");
-    String bookingType = data.get("booking_type"); // "instant" or "scheduled"
+    String bookingType = data.get("offer_booking_type");
+    if (bookingType == null || bookingType.isEmpty()) bookingType = data.get("booking_type"); // "instant" or "scheduled"
     Log.d(TAG, "🏷️ Message type: " + type);
     Log.d(TAG, "🏷️ Booking type: " + bookingType);
 
@@ -153,6 +154,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
         }
         
         String customer = data.get("customer");
+        if (customer == null || customer.isEmpty()) customer = data.get("cust_name");
         String community = data.get("community");
         String serviceType = data.get("serviceType");
         if (serviceType == null || serviceType.isEmpty()) {
@@ -233,6 +235,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
 
         // booking_request_id may be supplied per-worker by backend for unambiguous ACK
         String bookingRequestId = data.get("booking_request_id");
+        if (bookingRequestId == null || bookingRequestId.isEmpty()) bookingRequestId = data.get("bookingRequestId");
         if (bookingRequestId != null && bookingRequestId.isEmpty()) bookingRequestId = null;
 
         // Phase 1C: signed ack token — echoed unchanged in every ACK body.
@@ -287,6 +290,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
         serviceIntent.putExtra("building_name", buildingName);
         serviceIntent.putExtra("price_inr", price);
         serviceIntent.putExtra("scheduled_time", scheduledTime != null ? scheduledTime : "");
+        serviceIntent.putExtra("scheduled_date", scheduledDate != null ? scheduledDate : "");
         serviceIntent.putExtra("expires_at", expiresAtSec);
         serviceIntent.putExtra("sent_at", sentAtSec);
         serviceIntent.putExtra("ttl_seconds", ttlSeconds);
@@ -329,7 +333,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
             // Tell backend exactly why the popup will not appear via overlay
             BackendSync.INSTANCE.ackFailureAsync(getApplicationContext(), bookingId, "overlay_blocked", bookingRequestId, ackToken);
             // Try to show BookingAlertActivity as fallback
-            launchBookingAlertActivity(bookingId, customer, community, serviceType, flatNo, price, bookingType, scheduledTime, prealertSent, bookingRequestId, ackToken, expiresAtSec, sentAtSec, ttlSeconds, buildingName);
+            launchBookingAlertActivity(bookingId, customer, community, serviceType, flatNo, price, bookingType, scheduledTime, prealertSent, bookingRequestId, ackToken, expiresAtSec, sentAtSec, ttlSeconds, buildingName, scheduledDate);
             return;
           } else {
             Log.d(TAG, "✅ Overlay permission granted");
@@ -369,7 +373,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
         } catch (Exception se) {
           Log.e(TAG, "❌ startService failed, falling back to BookingAlertActivity", se);
           BackendSync.INSTANCE.ackFailureAsync(getApplicationContext(), bookingId, "popup_failed", bookingRequestId, ackToken);
-          launchBookingAlertActivity(bookingId, customer, community, serviceType, location, price, bookingType, scheduledTime, prealertSent, bookingRequestId, ackToken, expiresAtSec, sentAtSec, ttlSeconds, buildingName);
+          launchBookingAlertActivity(bookingId, customer, community, serviceType, flatNo, price, bookingType, scheduledTime, prealertSent, bookingRequestId, ackToken, expiresAtSec, sentAtSec, ttlSeconds, buildingName, scheduledDate);
         }
 
       } else {
@@ -433,7 +437,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
                                             String bookingRequestId,
                                             String ackToken,
                                             long expiresAtSec, long sentAtSec, int ttlSeconds,
-                                            String buildingName) {
+                                            String buildingName, String scheduledDate) {
     Log.d(TAG, "🚀 Launching BookingAlertActivity as fallback for " + bookingType + " booking");
     if (!MainActivity.canOpenBookingActivity(this)) {
       Log.d(TAG, "Background/locked: notification tap opens the booking alert");
@@ -456,6 +460,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
       activityIntent.putExtra("building_name", buildingName != null ? buildingName : "");
       activityIntent.putExtra("price_inr", price);
       activityIntent.putExtra("scheduled_time", scheduledTime != null ? scheduledTime : "");
+      activityIntent.putExtra("scheduled_date", scheduledDate != null ? scheduledDate : "");
       activityIntent.putExtra("expires_at", expiresAtSec);
       activityIntent.putExtra("sent_at", sentAtSec);
       activityIntent.putExtra("ttl_seconds", ttlSeconds);

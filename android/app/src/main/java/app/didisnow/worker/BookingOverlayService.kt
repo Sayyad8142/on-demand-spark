@@ -553,6 +553,11 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                 return@setOnClickListener
             }
             
+            if (!AlertPresentationRules.mayAccept(offerDeadline, System.currentTimeMillis() / 1000, isShuttingDown)) {
+                finishAndStop("offer_expired_before_accept")
+                return@setOnClickListener
+            }
+
             // Device-wide single flight: only ONE acceptance attempt per booking,
             // across overlay / full-screen activity / web UI.
             if (!OfferQueue.beginAcceptance(applicationContext, bookingId)) {
@@ -592,7 +597,6 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
             }
             
             // Wrap entire flow with 12s watchdog timeout
-            val acceptTappedAt = System.currentTimeMillis()
             serviceScope.launch {
                 var outcome = "unknown"
                 // A retryable failure (network / timeout / login refresh) keeps a
@@ -639,9 +643,8 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                     // Retryable failure while the offer window is still open:
                     // keep the pop-up, re-enable the buttons and resume the
                     // countdown from the real remaining time (never extended).
-                    val elapsedSec = ((System.currentTimeMillis() - acceptTappedAt) / 1000).toInt()
-                    val remaining = secondsLeft - elapsedSec
-                    if (retryable && remaining > 1 && !isShuttingDown && overlayView != null &&
+                    val remaining = OfferTimer.remainingUntil(offerDeadline)
+                    if (retryable && remaining > 0 && !isShuttingDown && overlayView != null &&
                         !OfferQueue.isTaken(applicationContext, bookingId)) {
                         secondsLeft = remaining
                         ui {
@@ -1134,6 +1137,9 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
             android.util.Log.d("BookingOverlay", "✅ Using token: present=${!jwt.isNullOrEmpty()}")
             
             if (action == "accepted") {
+                if (!AlertPresentationRules.mayAccept(offerDeadline, System.currentTimeMillis() / 1000, isShuttingDown)) {
+                    throw IllegalStateException("Server rejected: offer-expired")
+                }
                 // Call try_accept_booking RPC with user JWT
                 val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/try_accept_booking")
                 val connection = rpcUrl.openConnection() as HttpURLConnection
@@ -1149,6 +1155,9 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
 
                     val jsonPayload = """{"p_booking_id":"$bookingId"}"""
                     connection.outputStream.use { os ->
+                        if (!AlertPresentationRules.mayAccept(offerDeadline, System.currentTimeMillis() / 1000, isShuttingDown)) {
+                            throw IllegalStateException("Server rejected: offer-expired")
+                        }
                         os.write(jsonPayload.toByteArray())
                     }
 

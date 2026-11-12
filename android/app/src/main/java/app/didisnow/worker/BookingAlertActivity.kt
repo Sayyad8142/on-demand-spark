@@ -271,6 +271,11 @@ class BookingAlertActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
+            if (!offerMayAccept()) {
+                closeExpiredOffer()
+                return@setOnClickListener
+            }
+
             // Double tap / competing surface: exactly one acceptance attempt.
             if (acceptInFlight) {
                 Log.d("BookingAlert", "⚠️ Accept ignored — already in flight")
@@ -707,6 +712,28 @@ class BookingAlertActivity : AppCompatActivity() {
         }
     }
 
+    private fun offerMayAccept(): Boolean = AlertPresentationRules.mayAccept(
+        offerDeadline, System.currentTimeMillis() / 1000,
+        offerRetired || isFinishing || isDestroyed || OfferQueue.isTaken(applicationContext, ackBookingId)
+    )
+
+    private fun closeExpiredOffer() {
+        acceptInFlight = false
+        OfferQueue.endAcceptance(applicationContext, ackBookingId)
+        retireOffer(accepted = false)
+        finish()
+    }
+
+    private fun resumeValidOffer(bookingId: String) {
+        if (!offerMayAccept()) { closeExpiredOffer(); return }
+        secondsLeft = OfferTimer.remainingUntil(offerDeadline)
+        findViewById<Button>(R.id.btnAccept)?.isEnabled = true
+        findViewById<Button>(R.id.btnReject)?.isEnabled = true
+        countdownHandler?.removeCallbacks(countdownRunnable)
+        countdownHandler?.post(countdownRunnable)
+        startBookingStatusPolling(bookingId)
+    }
+
     private fun updateBooking(bookingId: String, action: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -754,19 +781,32 @@ class BookingAlertActivity : AppCompatActivity() {
                 }
                 
                 if (action == "accepted") {
+                    // Refresh may consume the last seconds: never send an expired Accept.
+                    if (!offerMayAccept()) {
+                        withContext(Dispatchers.Main) { closeExpiredOffer() }
+                        return@launch
+                    }
                     // Call try_accept_booking RPC
                     val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/try_accept_booking")
                     val connection = rpcUrl.openConnection() as HttpURLConnection
                     
                     connection.requestMethod = "POST"
+                    connection.connectTimeout = 8000
+                    connection.readTimeout = 8000
                     connection.setRequestProperty("apikey", SUPABASE_ANON_KEY)
                     connection.setRequestProperty("Authorization", "Bearer $jwt")
                     connection.setRequestProperty("Content-Type", "application/json")
                     connection.doOutput = true
 
                     val jsonPayload = """{"p_booking_id":"$bookingId"}"""
-                    connection.outputStream.use { os ->
-                        os.write(jsonPayload.toByteArray())
+                    try {
+                        connection.outputStream.use { os ->
+                            if (!offerMayAccept()) throw IllegalStateException("Offer expired")
+                            os.write(jsonPayload.toByteArray())
+                        }
+                    } catch (e: Exception) {
+                        connection.disconnect()
+                        throw e
                     }
 
                     val responseCode = connection.responseCode
@@ -854,9 +894,7 @@ class BookingAlertActivity : AppCompatActivity() {
                         OfferQueue.endAcceptance(applicationContext, bookingId)
 
                         if (keepScreenOpen && !isFinishing && !isDestroyed) {
-                            findViewById<Button>(R.id.btnAccept)?.isEnabled = true
-                            findViewById<Button>(R.id.btnReject)?.isEnabled = true
-                            startBookingStatusPolling(bookingId)
+                            resumeValidOffer(bookingId)
                         } else {
                             finish()
                         }
@@ -898,8 +936,7 @@ class BookingAlertActivity : AppCompatActivity() {
                                 val msg = if (err == "session-expired") "Please open the app and log in to reject" else "Couldn't reject. Please try again."
                                 Toast.makeText(this@BookingAlertActivity, msg, Toast.LENGTH_LONG).show()
                                 if (!isFinishing && !isDestroyed) {
-                                    findViewById<Button>(R.id.btnAccept)?.isEnabled = true
-                                    findViewById<Button>(R.id.btnReject)?.isEnabled = true
+                                    resumeValidOffer(bookingId)
                                 }
                             }
                         }
@@ -918,9 +955,7 @@ class BookingAlertActivity : AppCompatActivity() {
                         Toast.LENGTH_LONG
                     ).show()
                     if (action == "accepted" && !isFinishing && !isDestroyed) {
-                        findViewById<Button>(R.id.btnAccept)?.isEnabled = true
-                        findViewById<Button>(R.id.btnReject)?.isEnabled = true
-                        startBookingStatusPolling(bookingId)
+                        resumeValidOffer(bookingId)
                     } else {
                         finish()
                     }
