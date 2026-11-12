@@ -1,0 +1,404 @@
+import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Check, Phone, Volume2, Utensils, Zap, PlusCircle, Sparkles, CookingPot, KeyRound, Banknote, CreditCard, AlertTriangle, Play } from "lucide-react";
+import { BookingWithAddress } from "@/lib/address";
+import { getUnitDisplay } from "@/lib/address";
+import { useCommunityFee } from "@/hooks/useCommunityFee";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "react-i18next";
+import {
+  isOtpV2ClientEnabled,
+  getCachedOtpMode,
+  resolveOtpMode,
+  getOtpCardAction,
+  type ResolvedOtpMode,
+} from "@/lib/otpV2";
+import { startOtpCardAction } from "@/lib/startOtp";
+import { cardIndicator } from "@/lib/startOtpReminder";
+
+import serviceDishWashing from "@/assets/service-dish-washing.webp";
+import serviceFloorCleaning from "@/assets/service-floor-cleaning.webp";
+import serviceBathroomCleaning from "@/assets/service-bathroom-toilet-cleaning.jpg";
+import { announceFlat, buildFlatAnnouncement } from "@/lib/flatVoice";
+import PaymentCollectionModal from "@/components/PaymentCollectionModal";
+
+const TASK_CONFIG: Record<string, {label: string; img: string; icon: typeof Utensils}> = {
+  dish_washing: { label: "Dish Washing", img: serviceDishWashing, icon: Utensils },
+  floor_cleaning: { label: "Jhadu Pocha", img: serviceFloorCleaning, icon: Sparkles }
+};
+
+const SERVICE_TASKS: Record<string, {label: string;img: string;}[]> = {
+  bathroom_cleaning: [{ label: "Bathroom Cleaning", img: serviceBathroomCleaning }]
+};
+
+type Booking = BookingWithAddress;
+interface ActiveJobCardProps {
+  booking: Booking;
+  onStatusUpdate: (newStatus: string) => Promise<void>;
+  updating: boolean;
+  onRefresh?: () => void;
+}
+
+const MANAGER_PHONE = "8008180018";
+const COOLDOWN_MINUTES = 15;
+
+export default function ActiveJobCard({
+  booking,
+  onStatusUpdate,
+  updating,
+  onRefresh
+}: ActiveJobCardProps) {
+  useWorkerLanguage();
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(0);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [taskPrices, setTaskPrices] = useState<Record<string, number>>({});
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  
+  const { i18n } = useTranslation();
+  const navigate = useNavigate();
+  const { breakdown: payoutBreakdown } = useCommunityFee(booking.community, booking.price_inr);
+
+  // OTP mode (display only — never authorizes anything). Resolved by the
+  // backend; unknown mode shows a safe, non-actionable state.
+  const v2Enabled = isOtpV2ClientEnabled();
+  const [otpMode, setOtpMode] = useState<ResolvedOtpMode | "resolving">(
+    () => getCachedOtpMode(booking.id) ?? "resolving",
+  );
+  const [modeAttempt, setModeAttempt] = useState(0);
+  useEffect(() => {
+    if (!v2Enabled) return;
+    let cancelled = false;
+    setOtpMode(getCachedOtpMode(booking.id) ?? "resolving");
+    resolveOtpMode(booking.id).then((m) => { if (!cancelled) setOtpMode(m); });
+    return () => { cancelled = true; };
+  }, [v2Enabled, booking.id, booking.status, modeAttempt]);
+  // 4-digit Start OTP: decided per booking by the server flag. Unflagged
+  // bookings keep the legacy End OTP flow exactly.
+  const otpAction = (booking as { start_otp_required?: boolean | null }).start_otp_required === true
+    ? startOtpCardAction(booking.status)
+    : getOtpCardAction({ v2Enabled, mode: otpMode, status: booking.status });
+
+  // Fetch per-task prices
+  useEffect(() => {
+    if (!booking.maid_tasks || booking.maid_tasks.length === 0) return;
+    const flatSize = booking.flat_size || '2BHK';
+    const community = booking.community || '';
+
+    const fetchPrices = async () => {
+      // Try community-specific first, fallback to default
+      const { data } = await supabase.
+      from('maid_pricing_tasks').
+      select('task, price_inr').
+      eq('flat_size', flatSize).
+      eq('active', true).
+      in('community', [community, '']);
+
+      if (data) {
+        const prices: Record<string, number> = {};
+        // Community-specific overrides default
+        data.forEach((row) => {
+          if (!prices[row.task] || row.task) {
+            prices[row.task] = row.price_inr;
+          }
+        });
+        // Prefer community-specific
+        data.forEach((row) => {
+          if ((row as any).community === community && community) {
+            prices[row.task] = row.price_inr;
+          }
+        });
+        setTaskPrices(prices);
+      }
+    };
+    fetchPrices();
+  }, [booking.maid_tasks, booking.flat_size, booking.community]);
+
+  // Build tasks list
+  const tasks = useMemo(() => {
+    const result: {label: string;img: string;price?: number;}[] = [];
+    if (booking.maid_tasks && booking.maid_tasks.length > 0) {
+      booking.maid_tasks.forEach((t) => {
+        const cfg = TASK_CONFIG[t];
+        if (cfg) result.push({ ...cfg, price: taskPrices[t] });
+      });
+    } else if (booking.service_type && SERVICE_TASKS[booking.service_type]) {
+      result.push(...SERVICE_TASKS[booking.service_type].map((s) => ({
+        ...s,
+        price: booking.price_inr ?? undefined
+      })));
+    }
+    return result;
+  }, [booking.maid_tasks, booking.service_type, booking.price_inr, taskPrices]);
+
+  // Auto-slide every 3s
+  useEffect(() => {
+    if (tasks.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % tasks.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [tasks.length]);
+
+  // Calculate initial remaining time based on accepted_at timestamp
+  const cooldownEndTime = useMemo(() => {
+    if (booking.accepted_at) {
+      const acceptedTime = new Date(booking.accepted_at).getTime();
+      return acceptedTime + COOLDOWN_MINUTES * 60 * 1000;
+    }
+    return null;
+  }, [booking.accepted_at]);
+
+  useEffect(() => {
+    if (!cooldownEndTime) {
+      setRemainingSeconds(0);
+      return;
+    }
+
+    const updateRemaining = () => {
+      const now = Date.now();
+      const diff = Math.max(0, Math.ceil((cooldownEndTime - now) / 1000));
+      setRemainingSeconds(diff);
+    };
+
+    updateRemaining();
+    const interval = setInterval(updateRemaining, 1000);
+
+    return () => clearInterval(interval);
+  }, [cooldownEndTime]);
+
+
+  // Hooks must run on every render (before any early return), otherwise the
+  // card crashes when the booking moves to completed/cancelled while shown.
+  const [speaking, setSpeaking] = useState(false);
+  const [speakFailed, setSpeakFailed] = useState(false);
+
+  // Don't show for completed or cancelled bookings
+  if (!['assigned', 'accepted', 'on_the_way', 'started'].includes(booking.status)) {
+    console.log('🚫 ActiveJobCard: Not showing card, status is:', booking.status);
+    return null;
+  }
+  console.log('✅ ActiveJobCard: Showing card, status is:', booking.status);
+
+  const unit = getUnitDisplay(booking as any);
+  const isVilla = unit.isVilla;
+  const phfParsed = unit.phf;
+  const isBlock = unit.towerLabel === 'BLOCK';
+
+  const speakFlatNo = async () => {
+    if (speaking) return;
+    const flat = booking.flat_no ?? "";
+    const { text, lang } = buildFlatAnnouncement(flat, { villa: isVilla, lang: i18n.language });
+    setSpeaking(true);
+    setSpeakFailed(false);
+    const ok = await announceFlat(text, lang);
+    setSpeaking(false);
+    if (!ok) setSpeakFailed(true);
+  };
+
+  const isWorkCompletedDisabled = updating;
+
+  const formatCountdown = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const formatLastUpdated = (iso: string | null) => {
+    if (!iso) return "Never";
+    const seconds = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+    if (seconds < 60) return `${seconds} sec ago`;
+    return `${Math.floor(seconds / 60)} min ago`;
+  };
+
+  return <Card className="shadow-lg overflow-hidden border-0">
+      <div className="space-y-3 py-0 px-0 my-0 mx-0">
+        {/* 1. Unit Display - Wooden Door Style (villa-aware) */}
+        <div className="flat-door-style p-5">
+          {isVilla && booking.community &&
+            <p className="text-center text-sm font-bold text-[#D6B88A] mb-1 relative z-10">{booking.community}</p>
+          }
+          <div className={`text-center relative z-10 flex items-center justify-center gap-2 ${isVilla ? '' : 'mb-4'}`}>
+            <p className="flat-number-text font-extrabold text-3xl tracking-wide uppercase">
+              {isVilla ? unit.label.replace(/^Villa\b/, displayText('Villa')) : displayText('Flat {{number}}', { number: booking.flat_no ?? '' })}
+            </p>
+            <button
+              onClick={speakFlatNo}
+              className={`p-2 rounded-full transition-colors active:scale-90 ml-2 ${speaking ? 'bg-[#5A3423] ring-2 ring-[#D6B88A] animate-pulse' : speakFailed ? 'bg-destructive/70' : 'bg-[#5A3423]/60 hover:bg-[#5A3423]'}`}
+              aria-busy={speaking}
+              aria-label={displayText("Speak flat number")}>
+              <Volume2 className="w-5 h-5 text-[#D6B88A]" />
+            </button>
+          </div>
+          {phfParsed &&
+            <div className="grid grid-cols-3 gap-3 relative z-10">
+              <div className="text-center">
+                <p className="text-[10px] font-bold text-[#D6B88A] mb-2 tracking-wider">{displayText(unit.towerLabel)}</p>
+                <div className="bg-[#5A3423] rounded-xl py-4 shadow-inner border-2 border-[#D6B88A]/50">
+                  <p className="text-3xl font-extrabold flat-number-text">{phfParsed.tower}</p>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] font-bold text-[#D6B88A] mb-2 tracking-wider">{displayText("FLOOR")}</p>
+                <div className="bg-[#5A3423] rounded-xl py-4 shadow-inner border-2 border-[#D6B88A]/50">
+                  <p className="text-3xl font-extrabold flat-number-text">{phfParsed.floor}</p>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] font-bold text-[#D6B88A] mb-2 tracking-wider">{displayText("DOOR")}</p>
+                <div className="bg-[#5A3423] rounded-xl py-4 shadow-inner border-2 border-[#D6B88A]/50">
+                  <p className="text-3xl font-extrabold flat-number-text">{phfParsed.door}</p>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+
+        {/* 2. Work Tasks + Earnings — Combined Card */}
+        <div className="mx-3 rounded-2xl overflow-hidden shadow-md border border-border bg-card">
+          {tasks.length > 0 &&
+            <div className="relative">
+              <div
+                className="flex transition-transform duration-500 ease-in-out"
+                style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
+                {tasks.map((task) =>
+                  <div key={task.label} className="w-full flex-shrink-0 relative">
+                    <img src={task.img} alt={displayText(task.label)} className="w-full h-28 object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                    <div className="absolute bottom-0 right-0 p-3">
+                      {task.price != null && task.price > 0 &&
+                        <span className="bg-white/20 backdrop-blur-sm text-white font-bold text-base px-3 py-1 rounded-lg">
+                          ₹{task.price}
+                        </span>
+                      }
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          }
+          {booking.price_inr != null && booking.price_inr > 0 &&
+            <div className="px-4 py-3 space-y-1.5">
+              {/* Breakup chips row */}
+              {(() => {
+                const surge = booking.slot_surge_amount || 0;
+                const extra = (booking.dish_intensity_extra_inr || 0) + (booking.surcharge_amount || 0);
+                const glassPartition = booking.glass_partition_fee || 0;
+                const chips: { icon: typeof Utensils; label: string; amount: number }[] = [];
+                if (surge > 0) chips.push({ icon: Zap, label: displayText("Surge"), amount: surge });
+                if (extra > 0) chips.push({ icon: PlusCircle, label: displayText("Extra"), amount: extra });
+                if (glassPartition > 0) chips.push({ icon: Sparkles, label: displayText("Glass Partition"), amount: glassPartition });
+                return chips.length >= 1 ? (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {chips.map((chip) => {
+                      const Icon = chip.icon;
+                      return (
+                        <span key={chip.label} className="inline-flex items-center gap-1 bg-muted text-muted-foreground text-xs font-medium px-2 py-0.5 rounded-full">
+                          <Icon className="w-3 h-3" />
+                          {chip.label} ₹{chip.amount}
+                        </span>
+                      );
+                    })}
+                  </div>
+                ) : null;
+              })()}
+              {/* Earnings — worker net only */}
+              <div className="pt-1">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-muted-foreground">{displayText("You Earn")}</p>
+                  <p className="font-bold text-green-500 text-xl">₹{payoutBreakdown.netPayout}</p>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+
+        {/* OTP action: legacy → Complete from any active status; V2 → Start, then Complete; unknown → safe state */}
+        <div className="px-3 pb-3">
+          {otpAction === "complete" ? (
+            <Button
+              size="lg"
+              className={`w-full h-14 text-lg font-bold shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98] ${
+                isWorkCompletedDisabled ?
+                "bg-gray-400 hover:bg-gray-400 cursor-not-allowed text-white/80" :
+                "bg-red-500 hover:bg-red-600 text-white"}`
+              }
+              onClick={() => navigate(`/complete-booking/${booking.id}`)}
+              disabled={isWorkCompletedDisabled}>
+              {updating ? displayText("Updating...") :
+                <>
+                  <KeyRound className="w-6 h-6 mr-2" />
+                  {displayText(v2Enabled && otpMode === "v2" ? "End Booking with OTP" : "Complete with OTP")}
+                </>
+              }
+            </Button>
+          ) : otpAction === "start" ? (
+            <>
+            <StartOtpIndicator booking={booking as any} />
+            <Button
+              size="lg"
+              className={`w-full h-14 text-lg font-bold shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98] ${
+                isWorkCompletedDisabled ?
+                "bg-gray-400 hover:bg-gray-400 cursor-not-allowed text-white/80" :
+                "bg-green-600 hover:bg-green-700 text-white"}`
+              }
+              onClick={() => navigate(`/start-booking/${booking.id}`)}
+              disabled={isWorkCompletedDisabled}>
+              {updating ? displayText("Updating...") :
+                <>
+                  <Play className="w-6 h-6 mr-2" />
+                  {displayText("Start Booking with OTP")}
+                </>
+              }
+            </Button>
+            </>
+          ) : otpAction === "resolving" ? (
+            <Button size="lg" disabled className="w-full h-14 text-base font-semibold rounded-xl">
+              {displayText("Checking booking…")}
+            </Button>
+          ) : otpAction === "unavailable" ? (
+            <Button
+              size="lg"
+              variant="outline"
+              className="w-full h-14 text-base font-semibold rounded-xl"
+              onClick={() => setModeAttempt((n) => n + 1)}>
+              <AlertTriangle className="w-5 h-5 mr-2" />
+              {displayText("Booking code check unavailable — tap to retry")}
+            </Button>
+          ) : null}
+        </div>
+
+      </div>
+
+      {/* Payment Collection Modal */}
+      <PaymentCollectionModal
+        open={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        bookingId={booking.id}
+        amount={booking.price_inr || 0}
+        onCollected={() => onRefresh?.()}
+      />
+    </Card>;
+}
+function StartOtpIndicator({ booking }: { booking: { status: string; start_otp_required?: boolean | null; started_at?: string | null; accepted_at?: string | null; assigned_at?: string | null; id: string } }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(t);
+  }, []);
+  const state = cardIndicator({
+    id: booking.id, status: booking.status, start_otp_required: booking.start_otp_required ?? null,
+    started_at: booking.started_at ?? null, accepted_at: booking.accepted_at ?? null, assigned_at: booking.assigned_at ?? null,
+  }, now);
+  if (state === "none") return null;
+  const delayed = state === "delayed";
+  return (
+    <div className={`mb-2 flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold ${delayed ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
+      {delayed ? <AlertTriangle className="w-4 h-4" /> : <KeyRound className="w-4 h-4" />}
+      {displayText(delayed ? "Start OTP Delayed — Enter OTP" : "Start OTP Pending")}
+    </div>
+  );
+}

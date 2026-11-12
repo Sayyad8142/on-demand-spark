@@ -128,5 +128,14 @@
 - [x] Preserve FCM deadlines, display fields, schedule and cancellation routing after verified backups.
 - [x] Guard native acceptance/retry against the original deadline; review signed ACK compatibility.
 - [x] Run app tests (553 pass) and pure Java tests (12 pass); attempt Android checks and report exact blockers.
-- [ ] Full Android compilation/Robolectric suite — blocked: unavailable Android SDK and unresolved Gradle plugin dependencies.
+- [x] Full Android compilation/Robolectric suite — verified during combined fixes: Android compilation and 45 native tests passed.
 - [ ] Real-device verification — blocked: isolated Android device/services unavailable; no production actions approved.
+
+## Combined worker fixes (12 Nov) — preview/staged only
+- [x] Inspect relevant source, read live Start OTP verifier, verify file backups.
+- [x] Remove retry-count display; stage safe unlimited-retry verifier without production changes.
+- [x] Shared cached active booking, immediate refresh, separate real charges, 10-minute server-time countdown.
+- [x] Integrate optional activity onboarding, safe battery continuation, repair native speech lifecycle.
+- [x] Run 571 app / 45 native tests; compile Android; report evidence and remaining limitations.
+- [ ] Apply and verify staged unlimited-retry server change — blocked: separate production approval; live cumulative lock remains.
+- [ ] Signed-in end-to-end / physical Android checks — blocked: external unmanaged session, unavailable real phone; browser only reached loading screen.

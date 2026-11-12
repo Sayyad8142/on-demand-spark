@@ -63,7 +63,6 @@ export default function StartBooking() {
   // Flagged + startable → stay; flagged + started → End OTP screen;
   // unflagged → original lifecycle (V2 gateway only if that client is on).
   const [startRequired, setStartRequired] = useState(false);
-  const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -145,10 +144,7 @@ export default function StartBooking() {
           navigate(`/complete-booking/${bookingId}`, { replace: true });
           return;
         }
-        if (c === "WRONG_CODE" && typeof failure.attemptsLeft === "number") {
-          setAttemptsLeft(failure.attemptsLeft);
-          fail("wrong_otp", startOtpMessage(c), true);
-        } else if (c === "WRONG_CODE" || c === "INVALID_FORMAT") fail("wrong_otp", startOtpMessage(c), true);
+        if (c === "WRONG_CODE" || c === "INVALID_FORMAT") fail("wrong_otp", startOtpMessage(c), true);
         else if (c === "LOCKED") fail("locked", startOtpMessage(c));
         else if (c === "NOT_ASSIGNED" || c === "BOOKING_NOT_FOUND" || c === "INVALID_STATUS") {
           fail("terminal", startOtpMessage(c));
@@ -176,7 +172,7 @@ export default function StartBooking() {
         return;
       }
       if (code === "INCORRECT_OTP") {
-        fail("wrong_otp", result.message || otpV2ErrorMessage(code), true);
+        fail("wrong_otp", startOtpMessage("WRONG_CODE"), true);
       } else if (code === "LOCKED" || code === "LIFETIME_LOCKED") {
         fail("locked", result.message || otpV2ErrorMessage(code));
       } else if (TERMINAL_CODES.includes(code)) {
@@ -280,9 +276,6 @@ export default function StartBooking() {
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <p className="font-medium">
               {displayText(error)}
-              {errorKind === "wrong_otp" && attemptsLeft !== null && (
-                <> {displayText("Tries left: {{count}}", { count: attemptsLeft })}</>
-              )}
             </p>
             {errorKind === "network" && (
               <button

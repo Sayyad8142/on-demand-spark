@@ -116,11 +116,24 @@ export function createGuidePlayer(engines: SpeechEngine[], onState: (s: GuideSta
 export function nativeSpeechEngine(): SpeechEngine | null {
   if (!Capacitor.isNativePlatform() || !Capacitor.isPluginAvailable("TextToSpeech")) return null;
   const load = () => import("@capacitor-community/text-to-speech").then((m) => m.TextToSpeech);
+  return createNativeSpeechEngine(load);
+}
+
+type NativeTts = Pick<typeof import("@capacitor-community/text-to-speech").TextToSpeech, "getSupportedVoices" | "isLanguageSupported" | "speak" | "stop">;
+/** The Android plugin initializes asynchronously and drops callbacks on stop. */
+export function createNativeSpeechEngine(load: () => Promise<NativeTts>): SpeechEngine {
+  let finishStopped: (() => void) | null = null;
   return {
     async isSupported(locale) {
       const tts = await load();
-      const { supported } = await tts.isLanguageSupported({ lang: locale });
-      return !!supported;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        try {
+          const { voices } = await tts.getSupportedVoices();
+          if (voices?.length) return !!(await tts.isLanguageSupported({ lang: locale })).supported;
+        } catch { /* Android service is not initialized yet. */ }
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      return !!(await tts.isLanguageSupported({ lang: locale })).supported;
     },
     async speak(text, locale) {
       const tts = await load();
@@ -130,9 +143,28 @@ export function nativeSpeechEngine(): SpeechEngine | null {
         const idx = pickVoiceIndex(voices ?? [], locale);
         if (idx >= 0) voice = idx;
       } catch { /* default voice */ }
-      await tts.speak({ text, lang: locale, rate: GUIDE_RATE, pitch: 1.05, volume: 1, voice, category: "playback", queueStrategy: 0 });
+      await new Promise<void>((resolve, reject) => {
+        let done = false;
+        const settle = (error?: Error) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          finishStopped = null;
+          if (error) reject(error); else resolve();
+        };
+        const timer = setTimeout(() => {
+          void tts.stop().catch(() => {});
+          settle(new Error("Speech did not finish"));
+        }, 60_000);
+        finishStopped = () => settle();
+        void tts.speak({ text, lang: locale, rate: GUIDE_RATE, pitch: 1.05, volume: 1, voice, category: "playback", queueStrategy: 0 })
+          .then(() => settle(), () => settle(new Error("Native speech failed")));
+      });
     },
-    stop() { return load().then((tts) => tts.stop()).catch(() => {}); },
+    stop() {
+      finishStopped?.();
+      return load().then((tts) => tts.stop()).catch(() => {});
+    },
   };
 }
 

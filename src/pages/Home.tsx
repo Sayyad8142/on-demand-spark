@@ -57,7 +57,7 @@ export default function Home() {
   
   // Use demo data in guest mode, real data otherwise
   const { worker: realWorker, loading: workerLoading, updateAvailability, refetch: refetchWorker } = useWorkerProfile(user?.id);
-  const { activeJob: realActiveJob, updateJobStatus, refetch: refetchActiveJob } = useActiveJob(user?.id);
+  const { activeJob: realActiveJob, loading: bookingLoading, updateJobStatus, refetch: refetchActiveJob } = useActiveJob(user?.id);
   
   const worker = isGuestMode ? DEMO_WORKER : realWorker;
   const activeJob = isGuestMode ? null : realActiveJob;
@@ -214,7 +214,8 @@ export default function Home() {
     }
 
     setUpdating(true);
-    await updateJobStatus(activeJob?.id, status);
+    if (!activeJob) return;
+    await updateJobStatus(activeJob.id, status);
     await refetchWorker();
     setUpdating(false);
   };
@@ -408,6 +409,7 @@ export default function Home() {
           </div>
         </Card>}
 
+      {!isGuestMode && bookingLoading && !activeJob && <div role="status" className="mt-6 flex min-h-40 items-center justify-center gap-2 rounded-lg bg-muted text-muted-foreground"><RefreshCw className="h-5 w-5 animate-spin" />{displayText("Loading booking…")}</div>}
       {activeJob && <div className="pt-6 sm:pt-8"><ActiveJobCard booking={activeJob} onStatusUpdate={handleStatusUpdate} updating={updating} onRefresh={refetchActiveJob} /></div>}
       
       {/* Guest Mode Logout Button - Big Red */}

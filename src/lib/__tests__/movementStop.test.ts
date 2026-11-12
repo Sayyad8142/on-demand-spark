@@ -4,7 +4,7 @@ const h = vi.hoisted(() => {
   let releasePermission!: (v: { granted: boolean }) => void;
   const plugin = {
     checkSupport: vi.fn(async () => ({ supported: true, sensorType: "step_counter" })),
-    checkPermission: vi.fn(async () => ({ granted: true })),
+    checkPermission: vi.fn(() => new Promise<{ granted: boolean }>((r) => { releasePermission = r; })),
     requestPermission: vi.fn(() => new Promise<{ granted: boolean }>((r) => { releasePermission = r; })),
     startMonitoring: vi.fn(async () => ({ status: "ok", bookingId: "b1" })),
     stopMonitoring: vi.fn(async () => {}),
@@ -40,11 +40,11 @@ import { startMovementMonitoring, stopMovementMonitoring } from "@/lib/stepMonit
 beforeEach(() => vi.clearAllMocks());
 
 describe("movement checks stop for good", () => {
-  it("a stop while the permission prompt is open prevents tracking from starting later", async () => {
+  it("a stop while the permission check is pending prevents tracking from starting later", async () => {
     const start = startMovementMonitoring("b1", "w1");
     await new Promise((r) => setTimeout(r, 0));
     await stopMovementMonitoring(); // booking ended / reassigned / logout
-    h.release(true); // permission answered afterwards
+    h.release(true); // permission check answered afterwards
     await start;
     expect(h.plugin.startMonitoring).not.toHaveBeenCalled();
     expect(h.plugin.addListener).not.toHaveBeenCalled();

@@ -350,7 +350,7 @@ export async function startMovementMonitoring(bookingId: string, workerId: strin
       return;
     }
 
-    const { granted } = await plugin.requestPermission();
+    const { granted } = await plugin.checkPermission();
     if (isStale()) return;
     console.log("[Movement] permission status", { granted });
     setStatus({ permissionGranted: granted });
@@ -622,7 +622,7 @@ export async function startPassiveMovementMonitoring(workerId: string): Promise<
       setPassive({ status: "Sensor Unsupported", warning: "Step sensor not available on this device" });
       return;
     }
-    const { granted } = await plugin.requestPermission();
+    const { granted } = await plugin.checkPermission();
     setPassive({ permissionGranted: granted });
     console.log(`[Passive] ACTIVITY_RECOGNITION granted=${granted}`);
     if (!granted) {

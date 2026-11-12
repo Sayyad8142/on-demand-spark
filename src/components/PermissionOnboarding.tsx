@@ -15,6 +15,7 @@ import {
   openNotificationSettings,
   checkBookingChannel,
   openBookingChannelSettings,
+  requestActivity,
 } from "@/lib/permissions";
 import type { ChannelHealth } from "@/lib/setupGate";
 import { notificationAction } from "@/lib/setupGate";
@@ -23,11 +24,12 @@ interface PermissionOnboardingProps {
   onComplete: () => void;
   /** Popups are optional: worker keeps booking notifications without the popup. */
   onContinueWithoutPopups?: () => void;
+  onActivityHandled?: () => void;
 }
 
-type StepId = "notifications" | "overlay";
+type StepId = "notifications" | "overlay" | "activity";
 
-const STEP_IDS: StepId[] = ["notifications", "overlay"];
+const STEP_IDS: StepId[] = ["notifications", "overlay", "activity"];
 
 const STEP_META: Record<
   StepId,
@@ -38,6 +40,7 @@ const STEP_META: Record<
     title: "Turn On Booking Alerts",
     doneText: "Booking Alerts Enabled",
   },
+  activity: { emoji: "🚶", title: "Physical Activity Permission", doneText: "Physical Activity Enabled" },
   overlay: {
     emoji: "📱",
     title: "Show Booking Popups",
@@ -48,11 +51,14 @@ const STEP_META: Record<
 export default function PermissionOnboarding({
   onComplete,
   onContinueWithoutPopups,
+  onActivityHandled,
 }: PermissionOnboardingProps) {
   useWorkerLanguage();
   const [states, setStates] = useState<PermissionState[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<StepId | null>(null);
+  const [activityHandled, setActivityHandled] = useState(false);
+  const [popupsSkipped, setPopupsSkipped] = useState(false);
   const [channel, setChannel] = useState<ChannelHealth>("unknown");
 
   const refresh = useCallback(async () => {
@@ -91,7 +97,7 @@ export default function PermissionOnboarding({
     const status = getStatus(id);
     const ok = status === "granted" || status === "not_required";
     if (id === "notifications") return ok && channel !== "blocked" && channel !== "app_disabled";
-    return ok;
+    return ok || (id === "activity" && activityHandled) || (id === "overlay" && popupsSkipped);
   };
 
   const grantedCount = STEP_IDS.filter(isGranted).length;
@@ -114,6 +120,12 @@ export default function PermissionOnboarding({
           } else {
             await requestNotificationPermission();
           }
+        } else if (id === "activity") {
+          const actual = await checkAllPermissions();
+          const state = actual.find(s => s.id === "activity");
+          if (state?.status !== "granted" && state?.status !== "not_required") await requestActivity();
+          setActivityHandled(true);
+          onActivityHandled?.();
         } else {
           await requestOverlay();
         }
@@ -124,7 +136,7 @@ export default function PermissionOnboarding({
         setTimeout(refresh, 800);
       }
     },
-    [refresh, busyId, states, channel]
+    [refresh, busyId, states, channel, onActivityHandled]
   );
 
   const progressPct = (grantedCount / STEP_IDS.length) * 100;
@@ -140,9 +152,8 @@ export default function PermissionOnboarding({
           {displayText("You can now receive bookings.")}
         </p>
         <Button
-          className="w-full max-w-sm h-16 text-lg font-bold text-white hover:opacity-90 mt-10"
-          style={{ backgroundColor: "#ff007a" }}
-          onClick={onComplete}
+          className="w-full max-w-sm min-h-16 h-auto py-4 text-lg font-bold hover:opacity-90 mt-10"
+          onClick={() => { if (popupsSkipped) onContinueWithoutPopups?.(); else onComplete(); }}
         >
           {displayText("START RECEIVING BOOKINGS")}
         </Button>
@@ -157,7 +168,7 @@ export default function PermissionOnboarding({
           {displayText("Get Ready for Bookings")}
         </h1>
         <p className="text-base text-muted-foreground mt-2">
-          {displayText("2 Steps Required")}
+          {displayText("Booking permissions")}
         </p>
 
         <div className="mt-6">
@@ -176,10 +187,9 @@ export default function PermissionOnboarding({
           </div>
           <div className="h-4 w-full rounded-full bg-muted overflow-hidden">
             <div
-              className="h-full rounded-full transition-all duration-500"
+              className="h-full rounded-full bg-primary transition-all duration-500"
               style={{
                 width: `${progressPct}%`,
-                backgroundColor: "#ff007a",
               }}
             />
           </div>
@@ -201,7 +211,7 @@ export default function PermissionOnboarding({
               busy={busyId === id}
               blocked={id === "notifications" && (getStatus(id) === "denied" || channel === "blocked")}
               onEnable={() => handleEnable(id)}
-              onSkip={id === "overlay" && isGranted("notifications") ? onContinueWithoutPopups : undefined}
+              onSkip={id === "overlay" && isGranted("notifications") ? () => setPopupsSkipped(true) : id === "activity" ? () => { setActivityHandled(true); onActivityHandled?.(); } : undefined}
             />
           ))
         )}
@@ -232,16 +242,16 @@ function StepCard({
   return (
     <Card
       className={cn(
-        "p-6 rounded-2xl border-2 transition-all",
+        "p-4 rounded-lg border-2 transition-all",
         granted
           ? "border-green-300 bg-green-50/40 dark:bg-green-950/10"
-          : "border-gray-200"
+          : "border-border"
       )}
     >
-      <div className="flex items-center gap-5">
+      <div className="flex items-start gap-3">
         <div
           className={cn(
-            "shrink-0 w-20 h-20 rounded-2xl flex items-center justify-center text-4xl",
+            "shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center text-2xl",
             granted ? "bg-green-100" : "bg-pink-50"
           )}
         >
@@ -258,6 +268,7 @@ function StepCard({
           <h3 className="text-xl font-bold leading-tight mt-1">
             {displayText(meta.title)}
           </h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{displayText(id === "activity" ? "Helps verify you’ve started travelling after accepting a job. We never track your location. This is optional." : id === "overlay" ? "Show booking alerts over other apps. This is optional." : "Allow notifications so you get booking alerts instantly.")}</p>
           <div className="mt-2">
             {granted ? (
               <span className="inline-flex items-center gap-1.5 text-base font-semibold text-green-700">
@@ -266,9 +277,9 @@ function StepCard({
             ) : (
               <span
                 className="inline-flex items-center gap-1.5 text-base font-semibold"
-                style={{ color: "#ff007a" }}
+                
               >
-                {displayText("⚠️ Required")}
+                {displayText(id === "notifications" ? "⚠️ Required" : "Optional")}
               </span>
             )}
           </div>
@@ -283,8 +294,7 @@ function StepCard({
             </p>
           )}
           <Button
-            className="w-full h-14 text-lg font-bold text-white hover:opacity-90"
-            style={{ backgroundColor: "#ff007a" }}
+            className="w-full min-h-14 h-auto py-3 text-lg font-bold hover:opacity-90"
             onClick={onEnable}
             disabled={busy}
           >
@@ -295,8 +305,8 @@ function StepCard({
             )}
           </Button>
           {onSkip && (
-            <Button variant="outline" className="w-full h-12 mt-3 text-base font-semibold" onClick={onSkip} disabled={busy}>
-              {displayText("Continue with notifications")}
+            <Button variant="outline" className="w-full min-h-12 h-auto py-3 mt-3 whitespace-normal text-base font-semibold" onClick={onSkip} disabled={busy}>
+              {displayText(id === "activity" ? "Continue without movement access" : "Continue with notifications")}
             </Button>
           )}
         </div>

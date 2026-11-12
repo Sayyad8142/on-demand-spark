@@ -1,0 +1,23 @@
+{
+  "src/hooks/useActiveJob.ts": "0fe2310b78ebe8025085cb931e26d80526f20d371414eea5b74a2e0cacd16c7f",
+  "src/pages/Home.tsx": "8532af53c570f9183f4f7c30a865231f040e1e9c19bffa392bb9f4cb528a55d5",
+  "src/components/ActiveJobCard.tsx": "f9c8fad9302f7fc9aab227bfc1a6a5a6358098b25980b3f1012647611c877414",
+  "src/pages/StartBooking.tsx": "8747d88c500018fbaf533e535a92a8b93dcf45e034f75ddc919a518ff806f124",
+  "src/lib/startOtp.ts": "95469cde948ea7c437e9f0a0d27d760c691e33cc97e730370d7dbf90c79c8a6e",
+  "src/lib/startOtpReminder.ts": "5e9379cbccfefbcde6310d66f6054ea309a11521f02a4eb58159462778309e29",
+  "src/App.tsx": "466bed9f28564ca02fb7be1e949afd4964c5665e80ad5cfc475c365ddeb96ad7",
+  "src/components/PermissionOnboarding.tsx": "d58bc76e5739e210d79e3641177de947bbd068e05cbee376caef8197af5effd4",
+  "src/pages/BatteryOnboarding.tsx": "75e7837021618b4d61081e06a594bca4eae8470a027fa00e4976156b7ccaeff1",
+  "src/lib/setupGate.ts": "56c9bfe4aff268b6cfebe1a172eaa6dfdd2909c9f700479625171644d3e3ab7b",
+  "src/lib/stepMonitoring.ts": "85fd831df88c0f2ff918c8e3832fdf89511684d42b51d003b8bac445e7157bc1",
+  "src/lib/availabilityVoice.ts": "dc6dad11548c2896ce507c8ead16745fc7d758161973b08c62703af84b8c81dd",
+  "src/hooks/useAvailabilityGuide.ts": "465fa9767ab8eef3ccc6f2767fd64b3eeebef25d5c8253f02ac37c633986db7d",
+  "src/lib/__tests__/startOtp.test.ts": "af583a8c598da7a473b9c86b842fc98a97b63a81918993978829e1ee1ea4e3e1",
+  "src/lib/AGENTS.md": "ca350f6abb738e554b3921f7f20c293cd803b7af9e8e10065f35fee44369adea",
+  "AGENTS.md": "9911244550206bdb7caaca97c3cc00690cae5de5211f8549dca411316481efc0",
+  "roadmap.md": "73f53bea48be5b85d133ce84e5d77c907fc0efe003f5328e6a6d5f0fd19dc2c3",
+  "src/i18n/locales/en.json": "d317ad2bfc8c2be3ce4054721e1be48cf7417723ed0d2f1a788732607bd7c4f0",
+  "src/i18n/locales/hi.json": "721aeeed41480d19903a950e4d23d813776f4ac79a68f85757ad47259a75ff1f",
+  "src/i18n/locales/te.json": "09f03d940458c3beb2f9ec24a46477b1487d2e56c072c9df7b0e883a0b6ff380",
+  "src/lib/__tests__/movementStop.test.ts": "0cac1ac23204397e9d0bf39cc655d8b10d3e127fb61753b5c7a592cf8a31f3ba"
+}

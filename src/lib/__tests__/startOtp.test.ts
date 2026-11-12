@@ -69,6 +69,13 @@ describe("Start OTP button visibility", () => {
 });
 
 describe("verify_start_otp RPC", () => {
+  it("mistakes do not impose a client attempt cap; the server still decides success", async () => {
+    rpc.mockResolvedValue(ok({ success: false, code: "WRONG_CODE" }));
+    for (let attempt = 0; attempt < 8; attempt++) expect(await verifyStartOtp(B, "1111")).toEqual({ ok: false, code: "WRONG_CODE" });
+    rpc.mockResolvedValue(ok({ success: true }));
+    expect(await verifyStartOtp(B, OTP)).toEqual({ ok: true, alreadyStarted: false });
+    expect(rpc).toHaveBeenCalledTimes(9);
+  });
   it("calls only the RPC with booking id + otp (no worker id, no edge function)", async () => {
     rpc.mockResolvedValue(ok({ success: true }));
     expect(await verifyStartOtp(B, OTP)).toEqual({ ok: true, alreadyStarted: false });

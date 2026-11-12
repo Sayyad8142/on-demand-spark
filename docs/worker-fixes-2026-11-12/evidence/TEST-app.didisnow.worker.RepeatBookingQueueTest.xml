@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.didisnow.worker.RepeatBookingQueueTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-11-12T08:20:35" hostname="sandbox-pool-5bcf77797c-stnhh" time="0.489">
+  <properties/>
+  <testcase name="completedAcceptedBookingReleasesLockForNextOffer" classname="app.didisnow.worker.RepeatBookingQueueTest" time="0.078"/>
+  <testcase name="oldCancellationDoesNotReleaseSecondAcceptedBooking" classname="app.didisnow.worker.RepeatBookingQueueTest" time="0.029"/>
+  <testcase name="expiredOfferIsNeverActionable" classname="app.didisnow.worker.RepeatBookingQueueTest" time="0.021"/>
+  <testcase name="differentServerOfferIdentityRemainsIndependent" classname="app.didisnow.worker.RepeatBookingQueueTest" time="0.027"/>
+  <testcase name="rejectThenSecondOffer" classname="app.didisnow.worker.RepeatBookingQueueTest" time="0.031"/>
+  <testcase name="cancellationReleasesOnlyMatchingAcceptanceClaim" classname="app.didisnow.worker.RepeatBookingQueueTest" time="0.026"/>
+  <testcase name="threeConsecutiveOffersEachOpenAfterTheLastEnds" classname="app.didisnow.worker.RepeatBookingQueueTest" time="0.057"/>
+  <testcase name="expiredArrivalCannotEnterQueue" classname="app.didisnow.worker.RepeatBookingQueueTest" time="0.034"/>
+  <testcase name="timeoutThenSecondOffer" classname="app.didisnow.worker.RepeatBookingQueueTest" time="0.029"/>
+  <testcase name="duplicateSameOfferIsNotQueuedTwice" classname="app.didisnow.worker.RepeatBookingQueueTest" time="0.019"/>
+  <testcase name="retiredDuplicateCannotReopenAfterDismissal" classname="app.didisnow.worker.RepeatBookingQueueTest" time="0.021"/>
+  <testcase name="acceptCancelThenSecondOfferIsNotBusyOrDuplicate" classname="app.didisnow.worker.RepeatBookingQueueTest" time="0.03"/>
+  <testcase name="repeatedReleaseIsHarmlessAndNeverTouchesOtherBookings" classname="app.didisnow.worker.RepeatBookingQueueTest" time="0.028"/>
+  <testcase name="dismissedThenSecondOffer" classname="app.didisnow.worker.RepeatBookingQueueTest" time="0.028"/>
+  <testcase name="cancellationDoesNotDeleteSecondVisibleOffer" classname="app.didisnow.worker.RepeatBookingQueueTest" time="0.029"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
