@@ -39,7 +39,7 @@ const FAQ_ITEMS = [
   },
   {
     question: "How are ratings calculated?",
-    answer: "Customers rate you after each completed service on a scale of 1-5 stars. Your average rating is displayed on your profile and affects your booking priority."
+    answer: "Customers rate you after each completed service on a scale of 1-5 stars. Your average rating is displayed on your profile."
   },
   {
     question: "What if I'm running late?",
