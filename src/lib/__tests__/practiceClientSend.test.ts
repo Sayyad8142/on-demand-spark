@@ -52,6 +52,24 @@ describe('practice push client (mocked phone and server)', () => {
     invoke.mockResolvedValue({ data: { sent: true, practice_id: 'practice-other' }, error: null });
     expect(await sendPracticePush(input, true)).toEqual({ sent: false, reason: 'delivery_unknown' });
   });
+  it('a transport exception keeps receipt matching alive and never claims failure', async () => {
+    plugin.prepare.mockResolvedValue({ ready: true, tokenSha256: SHA });
+    invoke.mockRejectedValue(new Error('connection interrupted'));
+    expect(await sendPracticePush(input, true)).toEqual({ sent: false, reason: 'delivery_unknown' });
+    expect(plugin.cancel).not.toHaveBeenCalled();
+    expect(invoke).toHaveBeenCalledTimes(1);
+  });
+  it('an unconfirmed transport response keeps the session ready for late receipt', async () => {
+    plugin.prepare.mockResolvedValue({ ready: true, tokenSha256: SHA });
+    invoke.mockResolvedValue({ data: null, error: new Error('failed to fetch') });
+    expect(await sendPracticePush(input, true)).toEqual({ sent: false, reason: 'delivery_unknown' });
+    expect(plugin.cancel).not.toHaveBeenCalled();
+  });
+  it('denied phone permission prevents any sender call', async () => {
+    plugin.prepare.mockResolvedValue({ ready: false, reason: 'permission' });
+    expect(await sendPracticePush(input, true)).toEqual({ sent: false, reason: 'permission' });
+    expect(invoke).not.toHaveBeenCalled();
+  });
   it('maps every server refusal to a worker message', () => {
     expect(practiceFailureFromServer('real_work_active')).toBe('busy');
     expect(practiceFailureFromServer('already_attempted')).toBe('attempt_in_progress');
