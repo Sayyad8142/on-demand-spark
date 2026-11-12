@@ -1,0 +1,839 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { displayText, useWorkerLanguage } from "@/i18n/display";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Button } from "@/components/ui/button";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
+import { App as CapApp } from "@capacitor/app";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
+import { useAutoPushRepair } from "@/hooks/useAutoPushRepair";
+import { usePostBootVerification } from "@/hooks/usePostBootVerification";
+import { usePermissionRegressionWatch } from "@/hooks/usePermissionRegressionWatch";
+import { useFCMTokenSync } from "@/hooks/useFCMTokenSync";
+import { useAppState } from "@/hooks/useAppState";
+import { useWorkerHeartbeat } from "@/hooks/useWorkerHeartbeat";
+import { useUpdateDecision } from "@/hooks/useUpdateDecision";
+import { useBookingOfferVisible } from "@/hooks/useBookingOfferVisible";
+import { SoftUpdateSheet, UpdateAfterJobBanner } from "@/components/SoftUpdateSheet";
+import { initNativePush } from "@/native/push";
+import { tryAccept } from "@/lib/bookingActions";
+import { invalidateOffer, markAcceptedByMe } from "@/services/bookingAlertCoordinator";
+import { classifyAcceptResult } from "@/lib/acceptOutcome";
+import { claimDeviceAcceptance, releaseDeviceAcceptance } from "@/lib/deviceAcceptLock";
+import {
+  checkBatteryState,
+  checkNotificationPermission,
+  checkOverlayState,
+  checkBookingChannel,
+  checkActivityState,
+  requestActivity,
+  requestBatteryExemption,
+  requestNotificationPermission,
+} from "@/lib/permissions";
+// requestLocationPermissions intentionally not imported — see startup effect note below.
+import { isSetupBlockingV2, shouldShowBatteryPrompt, snoozeBattery, clearAccountSetupState, shouldRequestActivity } from "@/lib/setupGate";
+import { toast as sonnerToast } from "sonner";
+import { markOtaBootSuccess, runOtaCycle } from "@/lib/liveUpdate";
+import { OTA_DELIVERY_ENABLED } from "@/lib/otaSafety";
+import { isSafeToInterrupt } from "@/lib/workSafety";
+import { getWorkState, setWorkState } from "@/lib/workStateStore";
+import { logAppHealth } from "@/lib/appHealthLog";
+import { startCancellationVoice, stopCancellationVoice } from "@/lib/cancellationVoice";
+import { startOtpReminderVoice, stopOtpReminderVoice } from "@/lib/otpReminderVoice";
+import { useOtpReminderEscalation, logOtpReminderEvent } from "@/hooks/useOtpReminderEscalation";
+import { useWorkerProfile } from "@/hooks/useWorkerProfile";
+import Auth from "./pages/Auth";
+import OtpVerify from "./pages/OtpVerify";
+import Home from "./pages/Home";
+import Bookings from "./pages/Bookings";
+import Leaderboard from "./pages/Leaderboard";
+import TestBooking from "./pages/TestBooking";
+import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
+import Troubleshoot from "./pages/Troubleshoot";
+import VerifyPush from "./pages/VerifyPush";
+import DevCacheReset from "./pages/DevCacheReset";
+import NotFound from "./pages/NotFound";
+import Availability from "./pages/Availability";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import ContactSupport from "./pages/ContactSupport";
+import ForceUpdateScreen from "./pages/ForceUpdateScreen";
+import CustomerReviews from "./pages/CustomerReviews";
+import AdminUploadQr from "./pages/AdminUploadQr";
+import AdminTokenHealth from "./pages/AdminTokenHealth";
+import AdminPriorityShadow from "./pages/AdminPriorityShadow";
+import AdminDispatchTelemetry from "./pages/AdminDispatchTelemetry";
+import AuthDebug from "./pages/AuthDebug";
+import Earnings from "./pages/Earnings";
+import WorkerBlocked from "./pages/WorkerBlocked";
+import DeviceReadiness from "./pages/DeviceReadiness";
+import BookingDiagnostics from "./pages/BookingDiagnostics";
+import CompleteBooking from "./pages/CompleteBooking";
+import StartBooking from "./pages/StartBooking";
+import ReconnectReminder from "./pages/ReconnectReminder";
+import StartOtpReminderManager from "@/components/StartOtpReminderManager";
+import AccountDetails from "./pages/AccountDetails";
+import BatteryOnboarding from "./pages/BatteryOnboarding";
+import BottomNav from "./components/BottomNav";
+import PermissionOnboarding from "./components/PermissionOnboarding";
+import OtpPendingBanner from "./components/OtpPendingBanner";
+import {
+  startMovementMonitoring,
+  stopMovementMonitoring,
+  startPassiveMovementMonitoring,
+  stopPassiveMovementMonitoring,
+  isPassiveMonitoringActive,
+} from "@/lib/stepMonitoring";
+import { useActiveJob } from "@/hooks/useActiveJob";
+
+const queryClient = new QueryClient();
+
+function StartupSplash({ label = "Loading..." }: { label?: string }) {
+  useWorkerLanguage();
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+        <p className="text-muted-foreground">{displayText(label)}</p>
+      </div>
+    </div>
+  );
+}
+
+function ProtectedRoute({ children, showNav = false }: { children: React.ReactNode; showNav?: boolean }) {
+  const { user, session, loading } = useAuth();
+  const isGuestMode = localStorage.getItem('guest_mode') === 'true';
+
+  // Auth still restoring — never show login flash.
+  if (loading) {
+    console.log('[AUTH_ROUTE_REDIRECT] ProtectedRoute waiting on auth init');
+    return <StartupSplash label="Loading session..." />;
+  }
+
+  // Allow guest mode access to /home only
+  if (!user && !session && !isGuestMode) {
+    console.log('[AUTH_ROUTE_REDIRECT] ProtectedRoute → /auth (no session)');
+    return <Navigate to="/auth" replace />;
+  }
+
+  return (
+    <>
+      <div className={showNav ? "pb-16" : ""}>
+        {children}
+      </div>
+      {showNav && <BottomNav />}
+    </>
+  );
+}
+
+/** Wrapper for /auth — keeps splash visible during session restore so the
+ *  Login screen never flashes when a valid session is being re-hydrated. */
+function PublicAuthRoute({ children }: { children: React.ReactNode }) {
+  const { user, session, loading } = useAuth();
+  const isGuestMode = typeof window !== 'undefined' && localStorage.getItem('guest_mode') === 'true';
+  if (loading) {
+    console.log('[AUTH_ROUTE_REDIRECT] /auth waiting on auth init');
+    return <StartupSplash label="Restoring session..." />;
+  }
+  if (user || session || isGuestMode) {
+    console.log('[AUTH_ROUTE_REDIRECT] /auth → /home (already authenticated)');
+    return <Navigate to="/home" replace />;
+  }
+  return <>{children}</>;
+}
+
+/** Root "/" — decide based on auth state, never redirect to /auth blindly. */
+function RootRedirect() {
+  const { user, session, loading } = useAuth();
+  const isGuestMode = typeof window !== 'undefined' && localStorage.getItem('guest_mode') === 'true';
+  if (loading) {
+    console.log('[AUTH_ROUTE_REDIRECT] / waiting on auth init');
+    return <StartupSplash label="Starting..." />;
+  }
+  if (user || session || isGuestMode) {
+    return <Navigate to="/home" replace />;
+  }
+  return <Navigate to="/auth" replace />;
+}
+
+
+/** Reports the current screen to AppInner (which sits outside the router) for update safety. */
+function RoutePathReporter({ onPath }: { onPath: (p: string) => void }) {
+  const { pathname } = useLocation();
+  useEffect(() => { onPath(pathname); }, [pathname, onPath]);
+  return null;
+}
+
+// Component to handle native navigation events (must be inside BrowserRouter)
+function NativeNavigationHandler() {
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    const handleNativeNavigation = (event: CustomEvent) => {
+      console.log("📱 Native navigation event received:", event.detail);
+      
+      const { navigateTo, screen, bookingId } = event.detail || {};
+      const target = navigateTo || screen;
+      
+      if (target === "home") {
+        console.log("🏠 Navigating to home screen", bookingId ? `with booking ${bookingId}` : "");
+        navigate("/home");
+      } else if (target === "test-booking") {
+        navigate("/test-booking");
+      } else if (target === "bookings" || target === "booking_requests") {
+        console.log("📋 Navigating to bookings screen", bookingId ? `with booking ${bookingId}` : "");
+        navigate("/bookings");
+      }
+    };
+    
+    window.addEventListener("nativeNavigation", handleNativeNavigation as EventListener);
+    window.addEventListener("native:navigate", handleNativeNavigation as EventListener);
+
+    // Cold start: the native event can fire before this listener exists, so also
+    // ask the practice plugin directly. The Test Booking screen re-validates login and work.
+    const checkPractice = async () => {
+      if (Capacitor.getPlatform() !== "android" || document.visibilityState !== "visible") return;
+      if (window.location.pathname === "/test-booking") return;
+      try {
+        const { PracticeNotifications } = await import("@/lib/practiceNotification");
+        const st = await PracticeNotifications.getState();
+        if (st?.outcome === "accepted" && typeof st.acceptedAt === "number" && Date.now() - st.acceptedAt <= 600000) navigate("/test-booking");
+      } catch { /* older app without plugin */ }
+    };
+    void checkPractice();
+    document.addEventListener("visibilitychange", checkPractice);
+    
+    return () => {
+      window.removeEventListener("nativeNavigation", handleNativeNavigation as EventListener);
+      window.removeEventListener("native:navigate", handleNativeNavigation as EventListener);
+      document.removeEventListener("visibilitychange", checkPractice);
+    };
+  }, [navigate]);
+  
+  return null;
+}
+
+function AppInner() {
+  const { session } = useAuth();
+  useAppState(); // Refresh JWT when app comes to foreground
+  useFCMTokenSync(session?.user?.id); // Sync any natively-persisted FCM token to backend
+  useAutoPushRepair(session?.user?.id); // Auto-heal push token on login, open, and resume
+  const { worker, loading: workerLoading } = useWorkerProfile(session?.user?.id);
+  // Global always-on worker heartbeat (works regardless of online toggle).
+  useWorkerHeartbeat(worker?.id ?? session?.user?.id);
+  // Pass 3: verify recovery actually succeeded after boot/app-update.
+  usePostBootVerification(session?.user?.id, worker?.id);
+  // Pass 3: watch for permission regressions (notification/overlay/battery) and auto-repair.
+  usePermissionRegressionWatch(session?.user?.id, worker?.id, !!worker?.is_available);
+  const [currentPath, setCurrentPath] = useState<string>(() => (typeof window !== "undefined" ? window.location.pathname : "/"));
+  const [showPermissionOnboarding, setShowPermissionOnboarding] = useState(false);
+  const overlayDeclinedRef = useRef(false);
+  const [showBatteryWarning, setShowBatteryWarning] = useState(false);
+  const [permissionCheckLoading, setPermissionCheckLoading] = useState(false);
+  const [cancellationAlert, setCancellationAlert] = useState<{ bookingId?: string } | null>(null);
+  const [otpReminderAlert, setOtpReminderAlert] = useState<{ bookingId: string; count: number } | null>(null);
+  const cancellationAudioRef = useRef<HTMLAudioElement | null>(null);
+  const cancellationTimeoutRef = useRef<number | null>(null);
+  const notificationWarningShownRef = useRef(false);
+  const androidPermissionFlowRef = useRef({
+    running: false,
+    runtimeRequested: false,
+    completed: false,
+  });
+
+
+
+  // Account switch: reset per-session launch flow and clear the previous account's setup state.
+  const lastUserIdRef = useRef<string | null>(null);
+  const activityAskedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const uid = session?.user?.id ?? null;
+    if (lastUserIdRef.current && lastUserIdRef.current !== uid) {
+      try { clearAccountSetupState(window.localStorage, lastUserIdRef.current); } catch { /* ignore */ }
+      androidPermissionFlowRef.current = { running: false, runtimeRequested: false, completed: false };
+      activityAskedRef.current = null;
+      overlayDeclinedRef.current = false;
+    }
+    lastUserIdRef.current = uid;
+  }, [session?.user?.id]);
+
+  const checkAndroidSettingsPermissions = useCallback(async ({ allowHide }: { allowHide: boolean }) => {
+    const userId = session?.user?.id;
+    if (!userId || !Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
+      setShowPermissionOnboarding(false);
+      setPermissionCheckLoading(false);
+      return;
+    }
+
+    setPermissionCheckLoading(true);
+    try {
+      const [notif, overlay, battery, channel] = await Promise.all([checkNotificationPermission(), checkOverlayState(), checkBatteryState(), checkBookingChannel()]);
+      const batteryMissing = battery.status !== "granted" && battery.status !== "not_required";
+      setShowBatteryWarning(shouldShowBatteryPrompt({ missing: batteryMissing, userId, store: window.localStorage }));
+
+      console.log(`[Permissions] onboarding check notifications=${notif.status} overlay=${overlay.status} battery=${battery.status}`);
+
+      // Real status every time. Alerts + booking channel required; popups optional once the
+      // worker taps "Continue with notifications" (memory-only for this session).
+      if (isSetupBlockingV2({ notifications: notif.status, overlay: overlay.status, channel, overlayDeclined: overlayDeclinedRef.current })) {
+        setShowPermissionOnboarding(true);
+      } else if (allowHide) {
+        setShowPermissionOnboarding(false);
+      }
+    } catch (error) {
+      console.error("[Permissions] onboarding permission check failed", error);
+    } finally {
+      setPermissionCheckLoading(false);
+    }
+  }, [session?.user?.id]);
+
+  // OTA: confirm this start succeeded (clears the pending marker / records a native rollback).
+  // Bundle checks run only when delivery is switched on, and only at a safe moment (see below).
+  useEffect(() => {
+    logAppHealth("app_mounted");
+    if (Capacitor.isNativePlatform()) void markOtaBootSuccess();
+  }, []);
+
+  // Android app-launch permissions. Only runtime prompts open automatically.
+  // Settings-based permissions (overlay/battery) are handled by PermissionOnboarding
+  // so workers explicitly tap Enable and understand what Android Settings screen opened.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
+      return;
+    }
+
+    let cancelled = false;
+
+    const runStartupPermissionFlow = async () => {
+      const userId = session?.user?.id;
+      if (!userId) return;
+      const flow = androidPermissionFlowRef.current;
+      if (cancelled || flow.running || flow.completed) return;
+
+      flow.running = true;
+      try {
+        console.log("[Permissions] Android app-launch flow started");
+        if (!flow.runtimeRequested) {
+          console.log("[Permissions] notification permission requested");
+          // Only prompts when Android can still show it; blocked state is handled on the setup screen.
+          await requestNotificationPermission();
+          // Physical activity is requested later, only when a booking needs movement tracking.
+          flow.runtimeRequested = true;
+        }
+
+        const overlay = await checkOverlayState();
+        console.log(`[Permissions] opening overlay settings deferred to onboarding: ${overlay.status}`);
+
+        const battery = await checkBatteryState();
+        console.log(`[Permissions] opening battery optimization settings deferred to onboarding: ${battery.status}`);
+
+        if (!cancelled && (
+          (overlay.status !== "granted" && overlay.status !== "not_required") ||
+          (battery.status !== "granted" && battery.status !== "not_required")
+        )) {
+          await checkAndroidSettingsPermissions({ allowHide: false });
+        }
+
+        flow.completed = true;
+        console.log("[Permissions] Android app-launch flow completed");
+      } finally {
+        flow.running = false;
+      }
+    };
+
+    runStartupPermissionFlow()
+      .then(() => undefined)
+      .catch((error) => {
+        if (!cancelled) console.error("[Permissions] Android app-launch permission flow failed", error);
+      });
+
+    const appStateSub = CapApp.addListener("appStateChange", ({ isActive }) => {
+      if (!isActive || cancelled) return;
+      window.setTimeout(() => {
+        runStartupPermissionFlow().catch((error) => {
+          if (!cancelled) console.error("[Permissions] Android resumed permission flow failed", error);
+        });
+      }, 700);
+    });
+
+    return () => {
+      cancelled = true;
+      appStateSub.then((sub) => sub.remove());
+    };
+  }, [checkAndroidSettingsPermissions, session?.user?.id]);
+
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId || !Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
+      setShowPermissionOnboarding(false);
+      setPermissionCheckLoading(false);
+      return;
+    }
+
+    checkAndroidSettingsPermissions({ allowHide: false });
+
+    const appStateSub = CapApp.addListener("appStateChange", ({ isActive }) => {
+      if (!isActive) return;
+      window.setTimeout(() => {
+        checkAndroidSettingsPermissions({ allowHide: true });
+      }, 700);
+    });
+
+    return () => {
+      appStateSub.then((sub) => sub.remove());
+    };
+  }, [checkAndroidSettingsPermissions, session?.user?.id]);
+
+  // ── Passive movement tracking DISABLED ──
+  // Step/movement tracking now runs ONLY after a booking is accepted.
+  // The active-job effect below owns the lifecycle globally so it survives
+  // navigation between Home / Profile / Bookings / Availability.
+  useEffect(() => {
+    void stopPassiveMovementMonitoring();
+  }, [worker?.id]);
+
+  // ── Booking-driven movement tracking (global, survives navigation) ──
+  // Single source of truth for start/stop. Runs whenever the worker has an
+  // active booking in [accepted, on_the_way, started]. Stops as soon as the
+  // booking transitions to a terminal state (completed/cancelled/none).
+  const { activeJob: trackedJob, checked: activeJobChecked } = useActiveJob(session?.user?.id);
+  // Single centralized update decision (Admin Panel builds; deferred during any active work).
+  const bookingOfferVisible = useBookingOfferVisible();
+  const bookingLoaded = !session?.user?.id || activeJobChecked;
+  const update = useUpdateDecision(trackedJob?.status, bookingOfferVisible, { bookingLoaded, pathname: currentPath });
+  useEffect(() => {
+    setWorkState({ bookingLoaded, activeBookingStatus: trackedJob?.status ?? null, offerVisible: bookingOfferVisible, pathname: currentPath });
+  }, [bookingLoaded, trackedJob?.status, bookingOfferVisible, currentPath]);
+  // OTA (off by default): try only when the worker is idle; re-check happens inside the cycle.
+  const otaSafeNow = isSafeToInterrupt({ bookingLoaded, activeBookingStatus: trackedJob?.status, offerVisible: bookingOfferVisible, pathname: currentPath });
+  useEffect(() => {
+    if (!OTA_DELIVERY_ENABLED || !otaSafeNow || !Capacitor.isNativePlatform()) return;
+    const t = setTimeout(() => { void runOtaCycle(getWorkState); }, 5000);
+    return () => clearTimeout(t);
+  }, [otaSafeNow]);
+  useEffect(() => {
+    if (!worker?.id) return;
+    const status = trackedJob?.status;
+    const shouldTrack = !!trackedJob?.id && ["assigned", "accepted", "on_the_way", "started"].includes(status ?? "");
+    if (!shouldTrack) {
+      console.log(`[Movement] stopped because booking ended (status=${status ?? "none"})`);
+      void stopMovementMonitoring();
+      return;
+    }
+    console.log("[Movement] booking accepted");
+    const workerId = worker.id;
+    const jobId = trackedJob!.id;
+    // If the booking ends / changes (or the worker logs out) while the
+    // permission prompt is still open, this run must not start tracking.
+    let cancelled = false;
+    // Runs after acceptance already succeeded — never blocks Accept. Denial = movement features off.
+    void (async () => {
+      try {
+        const uid = session?.user?.id ?? workerId;
+        const activity = await checkActivityState();
+        if (shouldRequestActivity(activity.status, activityAskedRef.current === uid)) {
+          activityAskedRef.current = uid;
+          sonnerToast(displayText("Movement access helps confirm you reached the flat. You can still do the job if you say no."));
+          await requestActivity();
+        }
+      } catch (e) {
+        console.warn("[Movement] activity permission check failed", e);
+      }
+      if (cancelled) return;
+      await startMovementMonitoring(jobId, workerId);
+    })().catch((error) => {
+      console.error("[Movement] active-job start failed", error);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [worker?.id, trackedJob?.id, trackedJob?.status]);
+
+  // Logout / lost session: stop any movement check immediately.
+  useEffect(() => {
+    if (session?.user?.id) return;
+    void stopMovementMonitoring();
+    void stopPassiveMovementMonitoring();
+  }, [session?.user?.id]);
+
+
+  // Initialize native push notifications when we have a session.
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+    if (!Capacitor.isNativePlatform()) return;
+    console.log("🔔 Initializing native push");
+    // Never let a push setup failure become an unhandled rejection.
+    Promise.resolve()
+      .then(() => initNativePush(userId))
+      .catch((e) => console.warn("initNativePush failed", e instanceof Error ? e.message : e));
+    // Foreground booking-alert routing + push_received ACK.
+    // (Previously never initialized, so foreground FCM booking payloads were dropped.)
+    import("@/lib/fcm")
+      .then(({ initFCM }) => initFCM())
+      .catch((e) => console.warn("initFCM failed", e));
+  }, [session?.user?.id]);
+
+
+  // Movement tracking is owned exclusively by the global active-job effect above.
+  // No additional listeners — they previously caused redundant start/stop races
+  // that tore down the native step-event listener mid-session.
+
+  // Handle deep links for booking acceptance
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    
+    const sub = CapApp.addListener('appUrlOpen', async (data) => {
+      try {
+        // Block deep-link actions if worker is blocked
+        if (worker?.is_blocked) {
+          console.log('🚫 Deep link blocked: worker is blocked');
+          return;
+        }
+        const url = new URL(data.url);
+          if (url.protocol === 'didinow:' && url.hostname === 'accept') {
+            const bookingId = url.searchParams.get('bookingId') || '';
+            if (bookingId) {
+              console.log('🔗 Deep link accept for bookingId:', bookingId);
+              // Same single-flight claim as the pop-up and the in-app card.
+              if (!(await claimDeviceAcceptance(bookingId))) return;
+              const result = await tryAccept(bookingId).catch(() => ({ success: false, error: 'network' } as const));
+              const outcome = classifyAcceptResult(result);
+              await releaseDeviceAcceptance(bookingId, outcome === 'won');
+              if (outcome === 'closed') {
+                invalidateOffer(bookingId);
+                window.dispatchEvent(new CustomEvent('bookingAcceptanceClosed', { detail: { bookingId } }));
+                sonnerToast.error(result.error);
+              } else if (outcome === 'gone') {
+                invalidateOffer(bookingId);
+                console.warn('Booking accept failed:', result.error);
+              } else if (outcome === 'retry') {
+                // Offer left open — the worker can tap Accept again while it is valid.
+                console.warn('Booking accept failed (retryable):', result.error);
+              } else {
+                markAcceptedByMe(bookingId);
+                window.dispatchEvent(new CustomEvent('bookingAccepted', { detail: { bookingId } }));
+              }
+            }
+          }
+      } catch (e) {
+        console.error('appUrlOpen parse error', e);
+      }
+    });
+    return () => { sub.then(s => s.remove()); };
+  }, [worker?.is_blocked]);
+
+  const closeCancellationPopup = useCallback(() => {
+    if (cancellationTimeoutRef.current) {
+      window.clearTimeout(cancellationTimeoutRef.current);
+      cancellationTimeoutRef.current = null;
+    }
+    stopCancellationVoice();
+    setCancellationAlert(null);
+  }, []);
+
+  const forceStopCancellationAlert = useCallback(() => {
+    if (cancellationTimeoutRef.current) {
+      window.clearTimeout(cancellationTimeoutRef.current);
+      cancellationTimeoutRef.current = null;
+    }
+    if (cancellationAudioRef.current) {
+      cancellationAudioRef.current.pause();
+      cancellationAudioRef.current.currentTime = 0;
+      cancellationAudioRef.current = null;
+    }
+    stopCancellationVoice();
+    setCancellationAlert(null);
+  }, []);
+
+  const showCancellationAlert = useCallback((bookingId?: string) => {
+    // On native Android, the red full-screen BookingCancellationActivity already
+    // handles the cancellation UI (and its own alarm/vibration) — skip the web
+    // popup + voice to avoid showing two different screens one after another.
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
+      console.log("[CancellationAlert] native platform — red native screen handles UI, skipping web popup", bookingId);
+      return;
+    }
+    setCancellationAlert((prev) => {
+      // Dedupe: same booking already showing → ignore.
+      if (prev && prev.bookingId === bookingId) return prev;
+      return { bookingId };
+    });
+    if (cancellationTimeoutRef.current) window.clearTimeout(cancellationTimeoutRef.current);
+    startCancellationVoice();
+    // Safety: auto-close popup after 45s even if worker doesn't tap OK.
+    cancellationTimeoutRef.current = window.setTimeout(closeCancellationPopup, 45000);
+  }, [closeCancellationPopup]);
+
+  useEffect(() => {
+    const onBookingCancelled = (event: Event) => {
+      const bookingId = (event as CustomEvent)?.detail?.bookingId;
+      showCancellationAlert(bookingId);
+    };
+    const onBookingAccepted = () => {
+      // A new booking was accepted — silence cancellation voice + close popup.
+      forceStopCancellationAlert();
+    };
+    window.addEventListener("bookingCancelledAlert", onBookingCancelled);
+    window.addEventListener("bookingAccepted", onBookingAccepted);
+    return () => {
+      window.removeEventListener("bookingCancelledAlert", onBookingCancelled);
+      window.removeEventListener("bookingAccepted", onBookingAccepted);
+      forceStopCancellationAlert();
+    };
+  }, [showCancellationAlert, forceStopCancellationAlert]);
+
+  // OTP completion reminder escalation (60 min after accept, every 10 min).
+  const { pendingBookings: otpPendingBookings } = useOtpReminderEscalation(session?.user?.id);
+  useEffect(() => {
+    const onOtpReminder = (event: Event) => {
+      const detail = (event as CustomEvent)?.detail || {};
+      const bookingId = detail.bookingId as string | undefined;
+      const count = (detail.count as number | undefined) ?? 1;
+      if (!bookingId) return;
+      setOtpReminderAlert({ bookingId, count });
+      startOtpReminderVoice();
+    };
+    window.addEventListener("otpReminderAlert", onOtpReminder);
+    return () => {
+      window.removeEventListener("otpReminderAlert", onOtpReminder);
+      stopOtpReminderVoice();
+    };
+  }, []);
+
+  const closeOtpReminder = useCallback(
+    (acknowledgedVia: "ok" | "enter_otp" | "auto_open") => {
+      const current = otpReminderAlert;
+      stopOtpReminderVoice();
+      setOtpReminderAlert(null);
+      if (current?.bookingId) {
+        void logOtpReminderEvent(current.bookingId, "otp_reminder_acknowledged", {
+          via: acknowledgedVia,
+          count: current.count,
+        });
+      }
+      // Reminder #1 (count=1): OK just closes.
+      // Reminder #2 (count=2): OK also navigates to the OTP screen.
+      // Reminder #3+ (count>=3): auto-opens after the voice finishes.
+      const shouldNavigate =
+        acknowledgedVia !== "ok" || (current?.count ?? 0) >= 2;
+      if (shouldNavigate && current?.bookingId) {
+        window.location.assign(`/complete-booking/${current.bookingId}?focusOtp=1`);
+      }
+    },
+    [otpReminderAlert]
+  );
+
+  // Reminder #3+: auto-open the OTP screen once the voice finishes (~13s).
+  useEffect(() => {
+    if (!otpReminderAlert || otpReminderAlert.count < 3) return;
+    const t = window.setTimeout(() => {
+      closeOtpReminder("auto_open");
+    }, 13000);
+    return () => window.clearTimeout(t);
+  }, [otpReminderAlert, closeOtpReminder]);
+
+  // Listen for push notification messages
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "BOOKING_ALERT" && event.data?.bookingId) {
+        console.log("Received BOOKING_ALERT message:", event.data.bookingId);
+        // The booking alert modal will be triggered by the existing useBookingAlerts hook
+        // which listens to the bookings table and shows the modal automatically
+      } else if (event.data?.type === "BOOKING_CANCELLED") {
+        showCancellationAlert(event.data?.bookingId || event.data?.booking_id);
+      } else if (event.data?.type === "BOOKING_REASSIGNED") {
+        import("@/lib/bookingReassign").then(({ handleBookingReassigned }) =>
+          handleBookingReassigned(event.data?.bookingId || event.data?.booking_id, "postMessage")
+        );
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [showCancellationAlert]);
+
+  // If Play Store update is required, show force update screen (HARD BLOCK)
+  if (update.mode === "force") {
+    return (
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <ForceUpdateScreen installedBuild={update.installedBuild} minBuild={update.answer?.minBuild ?? null} storeUrl={update.answer?.storeUrl} />
+      </TooltipProvider>
+    );
+  }
+
+  // If worker is blocked, show blocked screen (after loading completes)
+  if (!workerLoading && session?.user?.id && worker?.is_blocked === true) {
+    return (
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <WorkerBlocked reason={worker?.blocked_reason} />
+      </TooltipProvider>
+    );
+  }
+
+  if (session?.user?.id && permissionCheckLoading && !showPermissionOnboarding) {
+    return (
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="text-muted-foreground">Checking permissions...</p>
+          </div>
+        </div>
+      </TooltipProvider>
+    );
+  }
+
+  if (session?.user?.id && showPermissionOnboarding) {
+    return (
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <PermissionOnboarding
+          onComplete={() => checkAndroidSettingsPermissions({ allowHide: true })}
+          onContinueWithoutPopups={() => { overlayDeclinedRef.current = true; checkAndroidSettingsPermissions({ allowHide: true }); }}
+        />
+      </TooltipProvider>
+    );
+  }
+
+  return (
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      {update.mode === "force_deferred" && !bookingOfferVisible && <UpdateAfterJobBanner />}
+      <SoftUpdateSheet open={update.mode === "soft" && !bookingOfferVisible} onLater={update.later} storeUrl={update.answer?.storeUrl} />
+      {showBatteryWarning && session?.user?.id && (
+        <div className="fixed inset-0 z-[90]">
+          <BatteryOnboarding
+            onFixNow={async () => {
+              // Opening Settings is not success: the real setting is re-checked when the worker returns.
+              await requestBatteryExemption();
+            }}
+            onSkip={() => {
+              try { snoozeBattery(window.localStorage, session.user.id); } catch { /* ignore */ }
+              setShowBatteryWarning(false);
+            }}
+          />
+        </div>
+      )}
+      {cancellationAlert && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 p-5 animate-fade-in">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-8 text-center shadow-2xl">
+            <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-foreground">Booking Cancelled</h2>
+            <p className="mt-3 text-lg font-semibold text-foreground">Do not go to the flat</p>
+            <p className="mt-2 text-sm text-muted-foreground">Your booking was cancelled.</p>
+            <button
+              className="mt-8 w-full rounded-xl bg-primary py-4 text-lg font-bold text-primary-foreground active:scale-[0.98] transition-transform"
+              onClick={closeCancellationPopup}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+      {otpReminderAlert && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-background/95 p-5 animate-fade-in">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-7 text-center shadow-2xl">
+            <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-foreground">⚠ OTP Pending</h2>
+            <p className="mt-3 text-base text-foreground">
+              This booking was accepted more than 60 minutes ago and the customer OTP has not been entered.
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Please collect the OTP from the customer and complete the booking.
+            </p>
+            <button
+              className="mt-7 w-full rounded-xl bg-primary py-4 text-lg font-bold text-primary-foreground active:scale-[0.98] transition-transform"
+              onClick={() => closeOtpReminder("enter_otp")}
+            >
+              Enter OTP Now
+            </button>
+            <button
+              className="mt-3 w-full rounded-xl border border-border bg-card py-3 text-base font-semibold text-foreground active:scale-[0.98] transition-transform"
+              onClick={() => closeOtpReminder("ok")}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+      <BrowserRouter>
+        <NativeNavigationHandler />
+        <RoutePathReporter onPath={setCurrentPath} />
+        <StartOtpReminderManager userId={session?.user?.id} />
+        <OtpPendingBanner bookings={otpPendingBookings} />
+        <Routes>
+          <Route path="/auth" element={<PublicAuthRoute><Auth /></PublicAuthRoute>} />
+          <Route path="/otp-verify" element={<OtpVerify />} />
+          <Route path="/home" element={<ProtectedRoute showNav={true}><Home /></ProtectedRoute>} />
+          <Route path="/bookings" element={<ProtectedRoute showNav={true}><Bookings /></ProtectedRoute>} />
+          <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute showNav={true}><Profile /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/troubleshoot" element={<ProtectedRoute><Troubleshoot /></ProtectedRoute>} />
+          <Route path="/availability" element={<ProtectedRoute><Availability /></ProtectedRoute>} />
+          <Route path="/verify-push" element={<ProtectedRoute><VerifyPush /></ProtectedRoute>} />
+          <Route path="/dev-cache-reset" element={<ProtectedRoute><DevCacheReset /></ProtectedRoute>} />
+          <Route path="/earnings" element={<ProtectedRoute><Earnings /></ProtectedRoute>} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
+          <Route path="/contact-support" element={<ProtectedRoute><ContactSupport /></ProtectedRoute>} />
+          <Route path="/customer-reviews" element={<ProtectedRoute><CustomerReviews /></ProtectedRoute>} />
+          <Route path="/admin-upload-qr" element={<AdminUploadQr />} />
+          <Route path="/admin-token-health" element={<AdminTokenHealth />} />
+          <Route path="/admin-priority-shadow" element={<AdminPriorityShadow />} />
+          <Route path="/admin-dispatch-telemetry" element={<AdminDispatchTelemetry />} />
+          <Route path="/auth-debug" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
+          <Route path="/support-diagnostics" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
+          <Route path="/device-readiness" element={<ProtectedRoute><DeviceReadiness /></ProtectedRoute>} />
+          <Route path="/booking-diagnostics" element={<ProtectedRoute><BookingDiagnostics /></ProtectedRoute>} />
+          <Route path="/diagnostics" element={<ProtectedRoute><BookingDiagnostics /></ProtectedRoute>} />
+          <Route path="/complete-booking/:bookingId" element={<ProtectedRoute><CompleteBooking /></ProtectedRoute>} />
+          <Route path="/reconnect" element={<ProtectedRoute><ReconnectReminder /></ProtectedRoute>} />
+          <Route path="/start-booking/:bookingId" element={<ProtectedRoute><StartBooking /></ProtectedRoute>} />
+          <Route path="/account-details" element={<ProtectedRoute><AccountDetails /></ProtectedRoute>} />
+          <Route path="/test-booking" element={<ProtectedRoute><TestBooking /></ProtectedRoute>} />
+          <Route path="/" element={<RootRedirect />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
+  );
+}
+
+const App = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <AppInner />
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+};
+
+export default App;

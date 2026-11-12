@@ -130,3 +130,10 @@
 - [x] Run app tests (553 pass) and pure Java tests (12 pass); attempt Android checks and report exact blockers.
 - [ ] Full Android compilation/Robolectric suite — blocked: unavailable Android SDK and unresolved Gradle plugin dependencies.
 - [ ] Real-device verification — blocked: isolated Android device/services unavailable; no production actions approved.
+
+## Combined worker fixes (12 Nov) — preview/staged only
+- [x] Inspect relevant source, read live Start OTP verifier, verify file backups.
+- [ ] Remove retry-count display; stage safe unlimited-retry verifier without production changes.
+- [ ] Shared cached active booking, immediate refresh, separate real charges, 10-minute server-time countdown.
+- [ ] Integrate optional activity onboarding, safe battery continuation, repair native speech lifecycle.
+- [ ] Run app/native tests, compile Android, verify available browser flows, report phone/backend blockers.
