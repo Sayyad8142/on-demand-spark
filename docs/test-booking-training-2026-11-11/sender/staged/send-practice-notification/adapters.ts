@@ -11,6 +11,7 @@ export const FCM_TIMEOUT_MS = 8000;
 export interface ServiceAccount { project_id: string; client_email: string; private_key: string }
 export interface AdapterConfig {
   enabled: boolean;
+  validateOnly?: boolean;
   supabaseUrl: string;
   anonKey: string;
   serviceRoleKey: string;
@@ -89,6 +90,7 @@ export function createLiveAdapters(c: AdapterConfig): PracticeSenderAdapters {
 
   return {
     enabled: c.enabled,
+    validateOnly: c.validateOnly === true,
     now,
     async authenticate() {
       if (!c.jwt || c.jwt === c.anonKey) return null;

@@ -1,6 +1,7 @@
-/** STAGED ONLY — copy to supabase/functions/send-practice-notification/ only after explicit approval.
- * Stays refusing (503 approval_required) unless the PRACTICE_PUSH_SENDER secret equals "on".
- * Requires verify_jwt = true in config.toml for this function.
+/** STAGED ONLY — self-contained: copy this whole folder to supabase/functions/send-practice-notification/
+ * only after explicit approval. PRACTICE_PUSH_SENDER: unset/anything else = refuse all (503),
+ * "validate" = FCM validate_only transport check (delivers nothing), "on" = deliver to the pilot only.
+ * Identity: every request is verified in code against Supabase Auth (/auth/v1/user); see config.toml.snippet.
  */
 import { createLiveAdapters, type ServiceAccount } from './adapters.ts';
 import { handlePracticeRequest } from './handler.ts';
@@ -13,7 +14,8 @@ function serviceAccount(): ServiceAccount | null {
 }
 
 Deno.serve(req => handlePracticeRequest(req, jwt => createLiveAdapters({
-  enabled: Deno.env.get('PRACTICE_PUSH_SENDER') === 'on',
+  enabled: ['on', 'validate'].includes(Deno.env.get('PRACTICE_PUSH_SENDER') ?? ''),
+  validateOnly: Deno.env.get('PRACTICE_PUSH_SENDER') === 'validate',
   supabaseUrl: Deno.env.get('SUPABASE_URL') ?? '',
   anonKey: Deno.env.get('SUPABASE_ANON_KEY') ?? '',
   serviceRoleKey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
