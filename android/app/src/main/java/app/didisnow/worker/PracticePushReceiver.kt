@@ -14,8 +14,13 @@ object PracticePushReceiver {
     @JvmStatic fun receive(ctx: Context, data: Map<String, String>) {
         val id = data["practice_id"] ?: return
         val expiresAt = data["expires_at"]?.toLongOrNull() ?: return
-        // Wrong id/login/expiry or a duplicate FCM delivery → silent drop.
-        if (!PracticeSession.claimReceipt(ctx, id, expiresAt)) return
+        // Wrong id/login/expiry or a duplicate FCM delivery → silent drop. A push bound to a
+        // different device token, or one arriving too late after the server's work check → blocked.
+        when (PracticeSession.claimReceipt(ctx, id, expiresAt, data["token_sha256"])) {
+            "ok" -> Unit
+            "wrong_device", "stale" -> { PracticeSession.outcome(ctx, id, "blocked"); return }
+            else -> return
+        }
         if (PracticeSession.realWorkSuspected(ctx) || !PracticeSession.canNotify(ctx)) {
             PracticeSession.outcome(ctx, id, "blocked")
             return

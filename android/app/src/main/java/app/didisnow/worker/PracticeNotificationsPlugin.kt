@@ -92,9 +92,12 @@ object PracticeSession {
         return true
     }
 
-    fun prepare(ctx: Context, id: String, expiry: Long, userId: String, tokenSha: String) {
+    /** A practice push must arrive within this window after the phone prepared it (phone clock only,
+     * so server/phone clock skew cannot widen it). Bounds the gap after the server's last real-work check. */
+    const val MAX_RECEIPT_DELAY_MS = 30_000L
+    fun prepare(ctx: Context, id: String, expiry: Long, userId: String, tokenSha: String, now: Long = System.currentTimeMillis()) {
         cancel(ctx)
-        prefs(ctx).edit().clear().putString("id", id).putLong("expiresAt", expiry)
+        prefs(ctx).edit().clear().putString("id", id).putLong("expiresAt", expiry).putLong("preparedAt", now)
             .putString("userId", userId).putString("tokenSha", tokenSha).commit()
     }
     /** Same id, unexpired, no outcome yet, and still the same native login. */
@@ -103,12 +106,19 @@ object PracticeSession {
         return id.startsWith("practice-") && p.getString("id", "") == id && p.getLong("expiresAt", 0) > System.currentTimeMillis() &&
             p.getString("outcome", "").isNullOrEmpty() && !p.getString("userId", "").isNullOrEmpty() && p.getString("userId", "") == nativeUser(ctx)
     }
-    /** Atomic first-receipt claim: duplicate FCM deliveries return false and never replay sound. */
-    fun claimReceipt(ctx: Context, id: String, expiresAt: Long): Boolean {
+    /** Atomic first-receipt claim. Returns "ok" once; "drop" for another session/login/duplicate
+     * (silent, never replays sound); "wrong_device" when the push was addressed to a different
+     * token than this phone prepared; "stale" when it arrived too late. Callers block on the last two. */
+    fun claimReceipt(ctx: Context, id: String, expiresAt: Long, tokenSha: String?, now: Long = System.currentTimeMillis()): String {
         synchronized(lock) {
-            if (!matches(ctx, id) || prefs(ctx).getLong("expiresAt", 0) != expiresAt) return false
-            if (prefs(ctx).getLong("receivedAt", 0) > 0) return false
-            return prefs(ctx).edit().putBoolean("received", true).putLong("receivedAt", System.currentTimeMillis()).commit()
+            val p = prefs(ctx)
+            if (!matches(ctx, id) || p.getLong("expiresAt", 0) != expiresAt) return "drop"
+            if (p.getLong("receivedAt", 0) > 0) return "drop"
+            val bound = p.getString("tokenSha", "") ?: ""
+            if (tokenSha.isNullOrEmpty() || bound.isEmpty() || bound != tokenSha) return "wrong_device"
+            val preparedAt = p.getLong("preparedAt", 0)
+            if (preparedAt <= 0 || now < preparedAt || now - preparedAt > MAX_RECEIPT_DELAY_MS) return "stale"
+            return if (p.edit().putBoolean("received", true).putLong("receivedAt", now).commit()) "ok" else "drop"
         }
     }
     fun expiry(ctx: Context): Long = prefs(ctx).getLong("expiresAt", 0)
