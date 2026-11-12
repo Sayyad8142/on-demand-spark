@@ -1103,6 +1103,15 @@
     "Upcoming_jobs": "आने वाले काम",
     "Next_Booking": "अगली बुकिंग",
     "No_bookings_assigned_yet": "अभी कोई बुकिंग नहीं मिली है।",
-    "Tomorrow": "कल"
+    "Tomorrow": "कल",
+    "Your_community_leaderboard_reflects_scores_and_performance_not_a_booking_queue": "आपके समुदाय की रैंकिंग स्कोर और प्रदर्शन दिखाती है, बुकिंग की कतार नहीं।",
+    "See_when_you_re_in_line_for_upcoming_booking_offers": "आने वाले बुकिंग ऑफ़र के लिए अपनी बारी के बारे में जानें।",
+    "Coming_Soon": "जल्द आ रहा है",
+    "We_re_preparing_this_feature_to_help_you_understand_your_booking_opportunities": "आपके बुकिंग अवसरों को समझने में मदद के लिए हम यह सुविधा तैयार कर रहे हैं।",
+    "See_your_community_leaderboard_score": "अपने समुदाय की रैंकिंग में अपना स्कोर देखें।",
+    "Congratulations_You_re_currently_first_on_this_community_leaderboard": "👑 बधाई हो! आप अभी अपने समुदाय की रैंकिंग में पहले स्थान पर हैं।",
+    "Keep_building_your_performance": "। अपना प्रदर्शन बेहतर करते रहें।",
+    "Leaderboard_rank_does_not_show_your_place_in_a_booking_queue": "रैंकिंग बुकिंग की कतार में आपकी जगह नहीं दिखाती।",
+    "Score_Level": "स्कोर स्तर:"
   }
 }
