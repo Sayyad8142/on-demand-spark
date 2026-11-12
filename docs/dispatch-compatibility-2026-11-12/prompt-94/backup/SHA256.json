@@ -6,5 +6,6 @@
   "android/app/src/main/java/app/didisnow/worker/BookingOverlayService.kt": "767a47b4ccc26aadd90f61939b2cc0d3570a38c38a14a0d5dd35fe565a75f03f",
   "android/app/src/main/java/app/didisnow/worker/AlertPresentationRules.java": "304a7f3e1ad97e4e349c4c46e7896c656d92741faec4a0e7d9e1a5918bcd1482",
   "android/app/src/main/java/app/didisnow/worker/MyFirebaseService.java": "bc4275b7631c8760c9de1a42c710bd31bd5616bbc030c7010990e853a59d6c1d",
-  "android/app/src/main/java/app/didisnow/worker/OfferQueue.kt": "eb31ab2e36184ffe7e5c486650498ec5e6b6c610b5c230aae6229c8ef08d0c29"
+  "android/app/src/main/java/app/didisnow/worker/OfferQueue.kt": "eb31ab2e36184ffe7e5c486650498ec5e6b6c610b5c230aae6229c8ef08d0c29",
+  "android/app/src/main/java/app/didisnow/worker/OverlayPlugin.java": "600ce074edf71954ce64d69e52f910e36cf8820696a3a5426bb60cb1039126a7"
 }
