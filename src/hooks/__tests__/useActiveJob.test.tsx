@@ -42,12 +42,12 @@ describe("shared Home booking cache", () => {
     const hook = renderHook(() => useActiveJob("u1"), { wrapper });
     await waitFor(() => expect(hook.result.current.checked).toBe(true));
     await act(async () => { h.listener?.({ eventType: "UPDATE", new: { ...booking, completion_otp: "secret" } }); });
-    expect(hook.result.current.activeJob?.status).toBe("accepted");
+    await waitFor(() => expect(hook.result.current.activeJob?.status).toBe("accepted"));
     expect(hook.result.current.activeJob).not.toHaveProperty("completion_otp");
     await act(async () => { h.listener?.({ eventType: "UPDATE", new: { ...booking, status: "started" } }); });
-    expect(hook.result.current.activeJob?.status).toBe("started");
+    await waitFor(() => expect(hook.result.current.activeJob?.status).toBe("started"));
     await act(async () => { window.dispatchEvent(new CustomEvent("bookingCompleted", { detail: { bookingId: "b1" } })); });
-    expect(hook.result.current.activeJob).toBeNull();
+    await waitFor(() => expect(hook.result.current.activeJob).toBeNull());
     hook.unmount(); client.clear();
   });
   it("an account switch never exposes another account's cached card", async () => {
