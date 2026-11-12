@@ -1112,6 +1112,16 @@
     "Congratulations_You_re_currently_first_on_this_community_leaderboard": "👑 అభినందనలు! మీరు ప్రస్తుతం మీ కమ్యూనిటీ ర్యాంకింగ్‌లో మొదటి స్థానంలో ఉన్నారు.",
     "Keep_building_your_performance": ". మీ పనితీరును మెరుగుపరచుకుంటూ ఉండండి.",
     "Leaderboard_rank_does_not_show_your_place_in_a_booking_queue": "ర్యాంకింగ్ బుకింగ్ క్యూలో మీ స్థానాన్ని చూపించదు.",
-    "Score_Level": "స్కోర్ స్థాయి:"
+    "Score_Level": "స్కోర్ స్థాయి:",
+    "Available_worker_ranking_only_not_the_next_booking_order": "ఇది అందుబాటులో ఉన్న వర్కర్ల ర్యాంకింగ్ మాత్రమే — తదుపరి బుకింగ్ క్రమం కాదు.",
+    "Availability_OFF": "అందుబాటు ఆఫ్",
+    "Busy": "పనిలో ఉన్నారు",
+    "No_Working_Slot": "ఈ సమయంలో పని స్లాట్ లేదు",
+    "Inactive": "క్రియారహితం",
+    "Unable_to_Verify": "ధృవీకరించలేకపోయాము",
+    "No_available_workers_for_this_slot": "ఈ స్లాట్‌లో వర్కర్లు అందుబాటులో లేరు.",
+    "Checking_availability": "అందుబాటును తనిఖీ చేస్తున్నాము…",
+    "Last_updated": "చివరి నవీకరణ",
+    "Customer_rating": "కస్టమర్ రేటింగ్"
   }
 }

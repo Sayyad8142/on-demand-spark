@@ -1112,6 +1112,16 @@
     "Congratulations_You_re_currently_first_on_this_community_leaderboard": "👑 Congratulations! You're currently first on this community leaderboard.",
     "Keep_building_your_performance": ". Keep building your performance.",
     "Leaderboard_rank_does_not_show_your_place_in_a_booking_queue": "Leaderboard rank does not show your place in a booking queue.",
-    "Score_Level": "Score Level:"
+    "Score_Level": "Score Level:",
+    "Available_worker_ranking_only_not_the_next_booking_order": "Available worker ranking only — not the next booking order.",
+    "Availability_OFF": "Availability OFF",
+    "Busy": "Busy",
+    "No_Working_Slot": "No Working Slot",
+    "Inactive": "Inactive",
+    "Unable_to_Verify": "Unable to Verify",
+    "No_available_workers_for_this_slot": "No available workers for this slot.",
+    "Checking_availability": "Checking availability…",
+    "Last_updated": "Last updated",
+    "Customer_rating": "Customer rating"
   }
 }

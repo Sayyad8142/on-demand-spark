@@ -1112,6 +1112,16 @@
     "Congratulations_You_re_currently_first_on_this_community_leaderboard": "👑 बधाई हो! आप अभी अपने समुदाय की रैंकिंग में पहले स्थान पर हैं।",
     "Keep_building_your_performance": "। अपना प्रदर्शन बेहतर करते रहें।",
     "Leaderboard_rank_does_not_show_your_place_in_a_booking_queue": "रैंकिंग बुकिंग की कतार में आपकी जगह नहीं दिखाती।",
-    "Score_Level": "स्कोर स्तर:"
+    "Score_Level": "स्कोर स्तर:",
+    "Available_worker_ranking_only_not_the_next_booking_order": "यह केवल उपलब्ध वर्करों की रैंकिंग है — अगली बुकिंग का क्रम नहीं।",
+    "Availability_OFF": "उपलब्धता बंद",
+    "Busy": "काम में व्यस्त",
+    "No_Working_Slot": "इस समय काम का स्लॉट नहीं है",
+    "Inactive": "निष्क्रिय",
+    "Unable_to_Verify": "जाँच नहीं हो सकी",
+    "No_available_workers_for_this_slot": "इस समय स्लॉट में कोई वर्कर उपलब्ध नहीं है।",
+    "Checking_availability": "उपलब्धता जाँची जा रही है…",
+    "Last_updated": "अंतिम अपडेट",
+    "Customer_rating": "ग्राहक रेटिंग"
   }
 }
