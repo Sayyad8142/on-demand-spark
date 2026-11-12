@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.didisnow.worker.OfferAcceptanceDeadlineTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-12T08:18:18" hostname="sandbox-pool-5bcf77797c-stnhh" time="0.001">
+  <properties/>
+  <testcase name="acceptAllowedOnlyBeforeAbsoluteExpiry" classname="app.didisnow.worker.OfferAcceptanceDeadlineTest" time="0.0"/>
+  <testcase name="refreshCannotExtendDeadline" classname="app.didisnow.worker.OfferAcceptanceDeadlineTest" time="0.0"/>
+  <testcase name="retryResumesOnlyRemainingOriginalSeconds" classname="app.didisnow.worker.OfferAcceptanceDeadlineTest" time="0.0"/>
+  <testcase name="missingDeadlineOrClosedSurfaceCannotAccept" classname="app.didisnow.worker.OfferAcceptanceDeadlineTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
