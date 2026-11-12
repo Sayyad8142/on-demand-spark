@@ -8,3 +8,5 @@
 - Booking add-ons and Start OTP countdown use bookingCardDetails; the deadline shares server acceptance/assignment time with reminders and never blocks OTP. Why: reopening must not restart the timer or invent charges.
 - Activity permission requests belong only to optional onboarding; movement monitoring checks permission without prompting. Battery continuation appears after an attempted settings return, never as a grant. Why: optional permissions must not trap or surprise workers.
 - Native availability speech waits for engine initialization and settles stopped calls with a bounded completion timeout. Why: the Android dependency discards completion callbacks on stop.
+
+- Next Booking accepts only an activation-gated privacy-safe contract; its verified-session server adapter is staged under docs independently of dispatch. Why: public ranking must never reuse phone/fallback identities or authorize booking actions.

@@ -149,3 +149,7 @@
 - [x] Audit source authentication/live schema and RLS; back up files; stage verified-auth independent service with disabled reader.
 - [x] Implement translated ranking view and foreground-only refresh; 606 tests and preview build pass; mobile/desktop safe disabled view checked.
 - [ ] Activate secure service and verify authenticated live workers — blocked: separate backend/integration approval and authenticated test access.
+
+## Prompt 96 — secure endpoint verification only
+- [x] Audit and harden staged authentication, bounded input, SDK CORS, privacy, NULL-status busy exclusion and read timeouts; no deployment.
+- [x] Isolated Deno compilation and 29 security tests pass; 38 app ranking tests pass; conditional deployment-only GO documented.
