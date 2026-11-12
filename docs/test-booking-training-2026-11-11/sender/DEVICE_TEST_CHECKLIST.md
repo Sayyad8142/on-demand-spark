@@ -2,6 +2,8 @@
 
 Run only after approval of: (1) applying `staged/sql/001_practice_push_attempts.sql`, (2) deploying `staged/send-practice-notification/` with `verify_jwt = true` and `PRACTICE_PUSH_SENDER=on`, (3) a signed APK built from this source with `PRACTICE_PUSH_ENABLED = true` installed on **one test phone** logged in as **one test worker**.
 
+Also require server-only PRACTICE_PILOT_USER_ID and PRACTICE_PILOT_TOKEN_SHA256 for the one approved login/device. Missing/mismatched configuration refuses sending.
+
 Before and after the whole run, record counts for that worker: bookings, booking_requests, booking_offer_events, worker availability rows, payouts. **They must be identical.** Mark each line PASS / FAIL / NOT RUN.
 
 ## Foreground (app open on Test Booking)
@@ -13,7 +15,7 @@ Before and after the whole run, record counts for that worker: bookings, booking
 6. Checklist shows Passed for sent/received/overlay/accepted/start/started/complete/completed.
 
 ## Background (app minimised, screen on)
-7. Send, press Home within 2 s. Pop-up + sound appear over the launcher.
+7. Send, press Home within 2 s. With optional overlay permission: verify pop-up + sound. Without it: verify tray notification, then tap to open the alert. Android background/locked launch restrictions still apply.
 8. Accept → the app opens directly on the practice Booking Details (not Bookings, not Home).
 
 ## Closed app (swiped away from recents)
@@ -38,3 +40,5 @@ Before and after the whole run, record counts for that worker: bookings, booking
 23. Database counts from the top are unchanged.
 24. `practice_push_attempts` has one row per send with outcome provider_accepted/failed/unknown.
 25. Function logs contain no tokens, phone numbers or worker ids.
+26. Three claimed attempts in a rolling hour; a fourth is refused, even with a new practice id. Failed/unknown attempts count.
+27. Interrupt internet after submission: Sent stays Not Verified, phone receipt is still monitored, no immediate resend.
