@@ -118,8 +118,8 @@
 - [x] Check reported hook error: hosted preview succeeded; named React imports already present.
 - [x] Preserve verified 73-file source backup under sender/backups/prompt-89; confirm sender previously absent.
 - [x] Set server switch explicitly OFF and apply reviewed isolated journal migration.
-- [ ] Review migration security flags without weakening worker isolation.
-- [ ] Deploy only the isolated sender; verify hosted OFF refusal and authentication safeguards.
-- [ ] Firebase validate-only check — blocked: approved pilot login/device not supplied; do not choose another account.
-- [ ] Verify production isolation, regression checks and rollback; record PASS/FAIL report.
+- [x] Review migration security flags: intentional default-deny table and role-checked admin report; worker isolation unchanged.
+- [x] Deploy only the isolated sender; hosted OFF returns 503; validate-mode missing/fake login returns 401; restore OFF.
+- [ ] Firebase validate-only transport and authenticated pilot checks — blocked: approved pilot login/device/session not supplied; do not choose another account.
+- [x] Verify unchanged non-practice function hash, 534 app + 6 sender + 38 Android tests, compilation and rollback; record partial-PASS report in sender/PROMPT-89-RESULTS.md.
 - [ ] Single-phone delivery/APK release — blocked: separate owner approval and real phone; both delivery switches must remain OFF.
