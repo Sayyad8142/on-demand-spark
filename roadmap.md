@@ -125,7 +125,8 @@
 - [ ] Single-phone delivery/APK release — blocked: separate owner approval and real phone; both delivery switches must remain OFF.
 
 ## Prompt 94 — preview-only dispatch compatibility
-- [ ] Preserve FCM deadlines, display fields, schedule and cancellation routing after verified backups.
-- [ ] Guard native acceptance/retry against the original deadline; review signed ACK compatibility.
-- [ ] Run app/native tests and compilation; report exact changes and isolated-device prerequisites.
+- [x] Preserve FCM deadlines, display fields, schedule and cancellation routing after verified backups.
+- [x] Guard native acceptance/retry against the original deadline; review signed ACK compatibility.
+- [x] Run app tests (553 pass) and pure Java tests (12 pass); attempt Android checks and report exact blockers.
+- [ ] Full Android compilation/Robolectric suite — blocked: unavailable Android SDK and unresolved Gradle plugin dependencies.
 - [ ] Real-device verification — blocked: isolated Android device/services unavailable; no production actions approved.
