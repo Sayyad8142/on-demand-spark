@@ -97,8 +97,10 @@ describe('session races in the app', () => {
 });
 
 describe('practice can never reach production booking services', () => {
-  const native = ['PracticePushReceiver.kt', 'PracticeNotificationsPlugin.kt', 'PracticeAlertActivity.kt'].map(f => read(`android/app/src/main/java/app/didisnow/worker/${f}`)).join('\n');
-  const app = [read('src/lib/practiceBooking.ts'), read('src/pages/TestBooking.tsx')].join('\n');
+  // Comments may name the systems practice avoids; only code is checked.
+  const code = (t: string) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  const native = code(['PracticePushReceiver.kt', 'PracticeNotificationsPlugin.kt', 'PracticeAlertActivity.kt'].map(f => read(`android/app/src/main/java/app/didisnow/worker/${f}`)).join('\n'));
+  const app = code([read('src/lib/practiceBooking.ts'), read('src/pages/TestBooking.tsx')].join('\n'));
   it('native practice code has no network, booking sync, offer claims or delivery confirmations', () => {
     for (const banned of ['BackendSync', 'claimAcceptance', 'markLocallyBusy', 'HttpURLConnection', 'OkHttp', 'supabase', 'accept_booking', 'reject_booking', 'ack-booking-delivery', 'booking_requests', 'verify_start_otp']) expect(native, banned).not.toContain(banned);
   });
