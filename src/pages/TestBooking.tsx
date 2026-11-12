@@ -9,7 +9,8 @@ import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/useAuth';
 import { usePracticeSafety } from '@/hooks/usePracticeSafety';
 import { newPractice, PRACTICE_BOOKING, PRACTICE_CHECKS, practiceSeconds, practiceTransition } from '@/lib/practiceBooking';
-import { PracticeNotifications, sendPracticePush, shouldClearRestoredSession, shouldRestorePractice } from '@/lib/practiceNotification';
+import { PRACTICE_PUSH_ENABLED, PracticeNotifications, sendPracticePush, shouldClearRestoredSession, shouldRestorePractice } from '@/lib/practiceNotification';
+import { practiceSendAllowed } from '@/lib/practiceTestBuild';
 import { practiceText } from '@/i18n/practice';
 
 export default function TestBooking() {
@@ -83,7 +84,7 @@ export default function TestBooking() {
       if (!push) { dispatch({ type: 'local_alert', now: Date.now() }); return; }
       dispatch({ type: 'sending', now: Date.now() });
       const id = state.id;
-      const result = await sendPracticePush({ id, expiresAt: Date.now() + 60000, userId: user?.id, hasToken: !!safety.worker?.fcm_token, tokenStatus: safety.worker?.fcm_token_status ?? null });
+      const result = await sendPracticePush({ id, expiresAt: Date.now() + 60000, userId: user?.id, hasToken: !!safety.worker?.fcm_token, tokenStatus: safety.worker?.fcm_token_status ?? null }, practiceSendAllowed(user?.id, PRACTICE_PUSH_ENABLED));
       // Ignore a late reply if the practice was reset, left or replaced meanwhile.
       if (!mounted.current) return;
       if ('reason' in result) { dispatch({ type: result.reason === 'delivery_unknown' ? 'unknown_send' : 'failed_send', id }); setNotice(text(result.reason)); }
