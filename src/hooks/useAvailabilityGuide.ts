@@ -11,7 +11,8 @@ export function useAvailabilityGuide(opts: { engines?: SpeechEngine[]; onResult?
   if (!playerRef.current) playerRef.current = createGuidePlayer(opts.engines ?? defaultGuideEngines(), setState, opts.texts);
 
   useEffect(() => {
-    const player = playerRef.current!;
+    const player = playerRef.current;
+    if (!player) return;
     const onHide = () => { if (document.visibilityState === "hidden") player.stop(); };
     document.addEventListener("visibilitychange", onHide);
     return () => {
@@ -21,7 +22,7 @@ export function useAvailabilityGuide(opts: { engines?: SpeechEngine[]; onResult?
   }, []);
 
   const toggle = useCallback(() => {
-    void playerRef.current!.play(i18n.language).then((r) => onResultRef.current?.(r));
+    void playerRef.current?.play(i18n.language).then((r) => onResultRef.current?.(r));
   }, []);
 
   return { state, toggle };

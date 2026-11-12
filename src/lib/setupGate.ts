@@ -48,6 +48,16 @@ export function shouldRequestActivity(status: SetupPermissionStatus | undefined,
   return status === "missing" || status === "unknown";
 }
 
+/** Optional movement setup is offered once, inside onboarding, never after accepting a job. */
+export function shouldOfferActivitySetup(status: SetupPermissionStatus | undefined, handled: boolean): boolean {
+  return !handled && !isSatisfied(status);
+}
+
+/** Safe continuation exists only after returning from an attempted settings request. */
+export function batteryCanContinue(status: SetupPermissionStatus, returnedFromSettings: boolean): boolean {
+  return returnedFromSettings && !isSatisfied(status);
+}
+
 // ---------- Repeated taps ----------
 /** Ignores calls while a previous call is still running. */
 export function singleFlight<T>(fn: () => Promise<T>): () => Promise<T | undefined> {
