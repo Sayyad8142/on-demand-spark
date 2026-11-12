@@ -68,6 +68,11 @@ export async function sendPracticePush(input: { id: string; expiresAt: number; u
     if (failure !== 'delivery_unknown') await PracticeNotifications.cancel().catch(() => undefined);
     return { sent: false, reason: failure };
   }
+  // Transport-check mode: the provider validated the message but delivered nothing.
+  if (data?.sent === false && data?.reason === 'validated_only' && data?.practice_id === input.id) {
+    await PracticeNotifications.cancel().catch(() => undefined);
+    return { sent: false, reason: 'approval' };
+  }
   if (data?.sent !== true || data?.practice_id !== input.id) {
     // A malformed reply does not prove the provider did not accept the message.
     return { sent: false, reason: 'delivery_unknown' };
