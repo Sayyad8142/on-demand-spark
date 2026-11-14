@@ -1,7 +1,7 @@
 /**
  * Start OTP voice reminder — pure rules (no side effects).
  *
- * Reminders: 10 min after acceptance, then every 5 min, last one at 120 min.
+ * Native alarm milestones: 10 and 15 minutes, continuous from 20 minutes.
  * Only the server's `started_at` (set by verify_start_otp) counts as verified;
  * typed-but-unverified codes never stop reminders. Display/notification only —
  * never changes booking, OTP, dispatch, payment or availability data.
@@ -10,7 +10,7 @@ import { START_ALLOWED_STATUSES } from "@/lib/startOtp";
 
 export const START_OTP_REMINDER_FIRST_MIN = 10;
 export const START_OTP_REMINDER_INTERVAL_MIN = 5;
-export const START_OTP_REMINDER_STOP_MIN = 120;
+export const START_OTP_CONTINUOUS_MIN = 20;
 export const START_OTP_ADMIN_FOLLOW_UP_MIN = 20;
 export const START_OTP_ADMIN_URGENT_MIN = 120;
 export const START_OTP_REMINDER_CHANNEL = "start_otp_reminder_v1";
@@ -29,9 +29,9 @@ export type StartOtpReminderBooking = {
   assigned_at?: string | null;
 };
 
-/** Acceptance time in ms (accepted_at, else assigned_at for admin assignment). */
+/** The alarm clock starts only at server-confirmed acceptance. */
 export function acceptanceMs(b: StartOtpReminderBooking): number | null {
-  const raw = b.accepted_at ?? b.assigned_at ?? null;
+  const raw = b.accepted_at ?? null;
   if (!raw) return null;
   const t = new Date(raw).getTime();
   return Number.isFinite(t) && t > 0 ? t : null;
@@ -45,11 +45,9 @@ export function isReminderEligible(b: StartOtpReminderBooking, workerId: string 
   return acceptanceMs(b) !== null;
 }
 
-/** All reminder offsets in minutes: 10, 15, …, 120 (23 reminders). */
+/** One-shot milestones, not a repeated notification schedule. */
 export function reminderOffsetsMin(): number[] {
-  const out: number[] = [];
-  for (let m = START_OTP_REMINDER_FIRST_MIN; m <= START_OTP_REMINDER_STOP_MIN; m += START_OTP_REMINDER_INTERVAL_MIN) out.push(m);
-  return out;
+  return [10, 15, 20];
 }
 
 export type PlannedReminder = { id: number; index: number; at: number };
@@ -72,7 +70,8 @@ export function reminderNotificationId(bookingId: string, index: number): number
 /** Future reminders only (past ones are never back-filled). */
 export function planReminders(b: StartOtpReminderBooking, workerId: string | null | undefined, nowMs: number): PlannedReminder[] {
   if (!isReminderEligible(b, workerId)) return [];
-  const accepted = acceptanceMs(b)!;
+  const accepted = acceptanceMs(b);
+  if (accepted === null) return [];
   return reminderOffsetsMin()
     .map((m, index) => ({ id: reminderNotificationId(b.id, index), index, at: accepted + m * MIN }))
     .filter((r) => r.at > nowMs + 1000);
@@ -82,7 +81,8 @@ export type StartOtpIndicator = "none" | "pending" | "delayed";
 
 export function startOtpIndicator(b: StartOtpReminderBooking, workerId: string | null | undefined, nowMs: number): StartOtpIndicator {
   if (!isReminderEligible(b, workerId)) return "none";
-  return nowMs - acceptanceMs(b)! >= START_OTP_REMINDER_FIRST_MIN * MIN ? "delayed" : "pending";
+  const accepted = acceptanceMs(b);
+  return accepted !== null && nowMs - accepted >= START_OTP_REMINDER_FIRST_MIN * MIN ? "delayed" : "pending";
 }
 
 /** Same as startOtpIndicator but without a worker check (card already shows the worker's own booking). */

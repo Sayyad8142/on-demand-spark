@@ -11,6 +11,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { completionReminderAllowed } from "@/lib/startOtpAlarm";
 
 const ACTIVE_STATUSES = [
   "accepted",
@@ -122,7 +123,7 @@ export function useOtpReminderEscalation(userId: string | undefined) {
       try {
         const { data, error } = await supabase
           .from("bookings")
-          .select("id, status, accepted_at, otp_verified_at")
+          .select("id, status, accepted_at, otp_verified_at,start_otp_required,started_at")
           .eq("worker_id", workerId)
           .in("status", ACTIVE_STATUSES)
           .limit(20);
@@ -139,6 +140,7 @@ export function useOtpReminderEscalation(userId: string | undefined) {
 
         for (const b of data) {
           activeIds.add(b.id);
+          if (!completionReminderAllowed(b.start_otp_required, b.started_at)) continue;
           const accepted = b.accepted_at ? new Date(b.accepted_at).getTime() : 0;
           if (!accepted) continue;
 

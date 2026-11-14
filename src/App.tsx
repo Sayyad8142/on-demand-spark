@@ -589,8 +589,11 @@ function AppInner() {
       startOtpReminderVoice();
     };
     window.addEventListener("otpReminderAlert", onOtpReminder);
+    const onStartAlarm = () => { stopOtpReminderVoice(); setOtpReminderAlert(null); };
+    window.addEventListener("startOtpAlarmPending", onStartAlarm);
     return () => {
       window.removeEventListener("otpReminderAlert", onOtpReminder);
+      window.removeEventListener("startOtpAlarmPending", onStartAlarm);
       stopOtpReminderVoice();
     };
   }, []);

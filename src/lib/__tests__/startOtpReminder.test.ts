@@ -12,21 +12,21 @@ const base = {
 };
 
 describe("start OTP reminder schedule", () => {
-  it("first at 10 min, every 5 min, last at 120 min", () => {
+  it("milestones at 10, 15 and 20 minutes", () => {
     const o = reminderOffsetsMin();
     expect(o[0]).toBe(10);
     expect(o[1]).toBe(15);
-    expect(o[o.length - 1]).toBe(120);
-    expect(o.length).toBe(23);
+    expect(o[o.length - 1]).toBe(20);
+    expect(o.length).toBe(3);
   });
-  it("plans all 23 right after acceptance", () => {
+  it("plans three milestones right after acceptance", () => {
     const p = planReminders(base, "w-1", T0);
-    expect(p.length).toBe(23);
+    expect(p.length).toBe(3);
     expect(p[0].at).toBe(T0 + 10 * MIN);
   });
   it("skips past reminders after reopening at 32 min", () => {
     const p = planReminders(base, "w-1", T0 + 32 * MIN);
-    expect(p[0].at).toBe(T0 + 35 * MIN);
+    expect(p).toEqual([]);
   });
   it("nothing after 2 hours", () => {
     expect(planReminders(base, "w-1", T0 + 121 * MIN)).toEqual([]);
