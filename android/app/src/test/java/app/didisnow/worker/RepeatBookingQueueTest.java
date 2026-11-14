@@ -15,6 +15,29 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 28, manifest = Config.NONE)
 public class RepeatBookingQueueTest {
+    @Test public void oneDeviceClaimAcrossDifferentBookings() {
+        assertTrue(queue.beginAcceptance(ctx, "first"));
+        assertFalse(queue.beginAcceptance(ctx, "second"));
+        queue.endAcceptance(ctx, "second");
+        assertFalse(queue.beginAcceptance(ctx, "second"));
+        queue.endAcceptance(ctx, "first");
+        assertTrue(queue.beginAcceptance(ctx, "second"));
+    }
+    @Test public void sameRowNewDeadlineIsNotRetiredDuplicate() {
+        JSONObject first = offer("same", "same-row", 60);
+        assertTrue(queue.enqueue(ctx, first));
+        queue.remove(ctx, "same", "same-row");
+        assertTrue(queue.enqueue(ctx, offer("same", "same-row", 120)));
+        assertFalse(queue.enqueue(ctx, first));
+    }
+    @Test public void expiredRememberedRowDoesNotBlockNewGeneration() throws Exception {
+        JSONObject old = offer("same", "same-row", 60);
+        assertTrue(queue.enqueue(ctx, old));
+        old.put("expires_at", System.currentTimeMillis() / 1000 - 1);
+        ctx.getSharedPreferences("booking_offer_queue", Context.MODE_PRIVATE).edit()
+            .putString("queue_v1", new org.json.JSONArray().put(old).toString()).commit();
+        assertTrue(queue.enqueue(ctx, offer("same", "same-row", 60)));
+    }
     private Context ctx;
     private final OfferQueue queue = OfferQueue.INSTANCE;
 
@@ -86,7 +109,7 @@ public class RepeatBookingQueueTest {
         queue.setActive(ctx, second);
         queue.releaseEndedBooking(ctx, "first");
         assertTrue(queue.contains(ctx, "second"));
-        assertEquals("req:request-2", ctx.getSharedPreferences("booking_offer_queue", Context.MODE_PRIVATE).getString("active_key", null));
+        assertEquals(queue.keyOf(second), ctx.getSharedPreferences("booking_offer_queue", Context.MODE_PRIVATE).getString("active_key", null));
     }
 
     @Test public void cancellationReleasesOnlyMatchingAcceptanceClaim() {

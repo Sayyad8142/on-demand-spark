@@ -8,14 +8,14 @@ vi.mock("@/lib/scheduledBookingGuards", () => ({
   logScheduledOfferDecision: () => {},
 }));
 vi.mock("@/integrations/supabase/client", () => {
-  const q: any = { select: () => q, eq: () => q, gt: () => q, maybeSingle: async () => ({ data: null }) };
+  const q: any = { select: () => q, eq: vi.fn(() => q), gt: () => q, maybeSingle: async () => ({ data: state.table === "workers" ? { id: "own-worker" } : state.table === "booking_requests" ? state.offer : null, error: state.table === "booking_requests" ? state.readError : null }) };
   return {
     supabase: {
       auth: {
         getSession: async () => ({ data: { session: state.session }, error: null }),
         refreshSession: vi.fn(async () => state.refreshResult ?? { error: null }),
       },
-      from: () => q,
+      from: (table: string) => { state.table = table; state.query = q; return q; },
       rpc: vi.fn(async (name: string, args: any) => state.rpc(name, args)),
       functions: { invoke: vi.fn(async () => ({})) },
     },
@@ -29,12 +29,45 @@ const future = () => Math.floor(Date.now() / 1000) + 3600;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  state.session = { expires_at: future() };
+  state.session = { expires_at: future(), user: { id: "own-login" } };
+  state.offer = { id: "own-request", status: "pending", timeout_at: new Date(Date.now() + 60_000).toISOString() };
+  state.readError = null;
   state.refreshResult = undefined;
   state.rpc = async () => ({ data: { success: true, confirmed: true }, error: null });
 });
 
 describe("Worker App accept/reject identity handling", () => {
+  it("preflight is restricted to the logged-in worker, not the caller worker", async () => {
+    await tryAccept("b1", "attacker");
+    expect(state.query.eq).toHaveBeenCalledWith("user_id", "own-login");
+    expect(state.query.eq).toHaveBeenCalledWith("worker_id", "own-worker");
+    expect(state.query.eq).not.toHaveBeenCalledWith("worker_id", "attacker");
+  });
+  it("missing own offer blocks Accept", async () => {
+    state.offer = null;
+    expect(await tryAccept("b1")).toEqual({ success: false, error: "not-offered" });
+    expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+  it("authoritative deadline blocks an expired Accept", async () => {
+    state.offer.timeout_at = new Date(Date.now() - 1000).toISOString();
+    expect((await tryAccept("b1")).error).toBe("offer-expired");
+    expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+  it("closed own row cannot pass preflight", async () => {
+    state.offer.status = "timed_out";
+    expect((await tryAccept("b1")).error).toBe("not-offered");
+    expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+  it("read failure is retryable and never sends Accept", async () => {
+    state.readError = { message: "network" };
+    expect((await tryAccept("b1")).error).toBe("Unable to check offer. Please try again.");
+    expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+  it("confirmed rejection never calls a dispatcher even when server requests escalation", async () => {
+    state.rpc = async () => ({ data: { success: true, confirmed: true, should_notify: true, next_tier: 2 }, error: null });
+    expect(await rejectBooking("b1")).toEqual({ success: true, shouldNotify: false });
+    expect(supabase.functions.invoke).not.toHaveBeenCalled();
+  });
   it("1. own offer: sends only the booking id, never a worker id", async () => {
     const r = await tryAccept("b1", "attacker-worker-id");
     expect(r.success).toBe(true);
@@ -53,7 +86,7 @@ describe("Worker App accept/reject identity handling", () => {
   });
 
   it("4/5. expiring session is refreshed before accepting", async () => {
-    state.session = { expires_at: Math.floor(Date.now() / 1000) + 30 };
+    state.session = { expires_at: Math.floor(Date.now() / 1000) + 30, user: { id: "own-login" } };
     await tryAccept("b1");
     expect(supabase.auth.refreshSession).toHaveBeenCalledTimes(1);
     expect(supabase.rpc).toHaveBeenCalled();

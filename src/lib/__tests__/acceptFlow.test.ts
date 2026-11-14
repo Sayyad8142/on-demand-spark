@@ -37,6 +37,12 @@ function useNativePlugin(plugin: Record<string, unknown>) {
 }
 
 describe("accept outcome rules", () => {
+  it.each(["offer-expired", "already-assigned", "not-offered", "duplicate offer"])("stable server refusal %s closes the offer", (error) => {
+    expect(classifyAcceptResult({ success: false, error })).toBe("gone");
+  });
+  it("stable acceptance-closed is final", () => {
+    expect(classifyAcceptResult({ success: false, error: "acceptance-closed" })).toBe("closed");
+  });
   it("server confirmed → won", () => {
     expect(classifyAcceptResult({ success: true })).toBe("won");
   });
@@ -62,6 +68,15 @@ describe("accept outcome rules", () => {
 });
 
 describe("one Accept per booking on the phone", () => {
+  it("a different booking cannot claim while any Accept is in flight", async () => {
+    expect(await claimDeviceAcceptance("first")).toBe(true);
+    expect(await claimDeviceAcceptance("second")).toBe(false);
+    await releaseDeviceAcceptance("second", false);
+    expect(await claimDeviceAcceptance("second")).toBe(false);
+    await releaseDeviceAcceptance("first", false);
+    expect(await claimDeviceAcceptance("second")).toBe(true);
+    await releaseDeviceAcceptance("second", false);
+  });
   it("a second tap while the first is running is ignored; after release it can retry", async () => {
     expect(await claimDeviceAcceptance("b-dup")).toBe(true);
     expect(await claimDeviceAcceptance("b-dup")).toBe(false);
