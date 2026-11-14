@@ -786,6 +786,18 @@ class BookingAlertActivity : AppCompatActivity() {
                         withContext(Dispatchers.Main) { closeExpiredOffer() }
                         return@launch
                     }
+                    try {
+                        offerDeadline = minOf(offerDeadline, OwnOfferPreflight.deadline(SUPABASE_URL, SUPABASE_ANON_KEY, jwt, bookingId))
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            acceptInFlight = false
+                            OfferQueue.endAcceptance(applicationContext, bookingId)
+                            Toast.makeText(this@BookingAlertActivity, e.message ?: "Couldn't check offer. Please retry.", Toast.LENGTH_LONG).show()
+                            if (OfferAcceptRules.outcome(e.message) == "retry") resumeValidOffer(bookingId)
+                            else { retireOffer(accepted = false); finish() }
+                        }
+                        return@launch
+                    }
                     // Call try_accept_booking RPC
                     val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/try_accept_booking")
                     val connection = rpcUrl.openConnection() as HttpURLConnection
@@ -849,7 +861,13 @@ class BookingAlertActivity : AppCompatActivity() {
                                     // is (correctly) ignored as our own acceptance.
                                     acceptInFlight = false
                                     OfferQueue.endAcceptance(applicationContext, bookingId)
-                                    OfferQueue.markTaken(applicationContext, bookingId)
+                                    val decision = OfferAcceptRules.outcome(errorMsg)
+                                    keepScreenOpen = decision == "retry"
+                                    if (!keepScreenOpen) {
+                                        OfferQueue.markTaken(applicationContext, bookingId)
+                                        if (decision == "closed") OfferQueue.clearAll(applicationContext, "acceptance_closed")
+                                        retireOffer(accepted = false)
+                                    }
                                     Toast.makeText(
                                         this@BookingAlertActivity,
                                         "⚠️ $errorMsg",
@@ -859,6 +877,7 @@ class BookingAlertActivity : AppCompatActivity() {
                                 }
                             } catch (e: Exception) {
                                 // Unknown/unparseable answer — do NOT guess a loss.
+                                keepScreenOpen = true
                                 Log.e("BookingAlert", "❌ Error parsing response", e)
                                 Toast.makeText(
                                     this@BookingAlertActivity,
@@ -881,7 +900,16 @@ class BookingAlertActivity : AppCompatActivity() {
                             Log.w("BookingAlert", "⛔ Acceptance closed (operating hours)")
                         } else {
                             // Network / server error — NOT a loss. Let her retry.
-                            keepScreenOpen = true
+                            val errorText = try {
+                                val json = JSONObject(responseBody)
+                                json.optString("message", json.optString("error", "HTTP $responseCode"))
+                            } catch (_: Exception) { "HTTP $responseCode" }
+                            val decision = if (responseCode == 401 || responseCode == 403 || responseCode >= 500) "retry" else OfferAcceptRules.outcome(errorText)
+                            keepScreenOpen = decision == "retry"
+                            if (!keepScreenOpen) {
+                                if (decision == "closed") OfferQueue.clearAll(applicationContext, "acceptance_closed")
+                                retireOffer(accepted = false)
+                            }
                             Toast.makeText(
                                 this@BookingAlertActivity,
                                 "Network problem. Please try again.",
@@ -902,7 +930,7 @@ class BookingAlertActivity : AppCompatActivity() {
                 } else if (action == "rejected") {
                     // reject_booking_offer: worker resolved from the session server-side;
                     // expired / already-assigned offers are refused. Confirmed-only success.
-                    var (code, body) = postRejectOffer(bookingId, jwt!!)
+                    var (code, body) = postRejectOffer(bookingId, jwt)
                     if (code == 401 || code == 403) {
                         Log.w("BookingAlert", "🔐 Reject got $code — refreshing session and retrying once")
                         val fresh = refreshAccessToken()
