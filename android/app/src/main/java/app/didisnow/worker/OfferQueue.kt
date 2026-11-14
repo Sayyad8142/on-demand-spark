@@ -55,8 +55,11 @@ object OfferQueue {
 
     fun keyOf(offer: JSONObject): String {
         val req = offer.optString("booking_request_id", "")
-        if (req.isNotBlank()) return "req:$req"
-        return "bkg:${offer.optString("booking_id", "")}"
+        val expires = offer.optLong("expires_at", 0L)
+        val sent = offer.optLong("sent_at", 0L)
+        val deadline = if (expires > 0L) expires else if (sent > 0L) sent + offer.optInt("ttl_seconds", 60) else 0L
+        val identity = if (req.isNotBlank()) "req:$req" else "bkg:${offer.optString("booking_id", "")}"
+        return "$identity:$deadline"
     }
 
     fun bookingIdOf(offer: JSONObject): String = offer.optString("booking_id", "")
@@ -230,7 +233,7 @@ object OfferQueue {
     @Synchronized
     fun beginAcceptance(ctx: Context, bookingId: String?): Boolean {
         if (bookingId.isNullOrBlank()) return false
-        if (isAcceptInFlight(ctx, bookingId)) {
+        if (isAcceptInFlight(ctx, null)) {
             Log.d(TAG, "↩️ acceptance already in flight booking_id=$bookingId")
             return false
         }
@@ -290,7 +293,7 @@ object OfferQueue {
             cancelNotification(ctx, bookingId)
             return false
         }
-        val items = read(ctx)
+        val items = read(ctx).filterNot { isExpired(it) }.toMutableList()
         val duplicate = items.any {
             keyOf(it) == key || (bookingId.isNotBlank() && bookingIdOf(it) == bookingId)
         }

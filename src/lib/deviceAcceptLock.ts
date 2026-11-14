@@ -2,7 +2,7 @@ import { Capacitor } from "@capacitor/core";
 import { beginAcceptance, endAcceptance } from "@/services/bookingAlertCoordinator";
 
 /**
- * One acceptance attempt per booking on this phone, shared by every surface:
+ * One acceptance attempt at a time on this phone, shared by every surface:
  * the in-app booking card (JS), the Android pop-up over other apps and the
  * full-screen locked-phone alert (native `OfferQueue` claim).
  *

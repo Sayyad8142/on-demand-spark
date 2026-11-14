@@ -8,6 +8,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { offerGenerationKey } from "@/lib/offerGeneration";
 import {
   canShowWorkerBookingOffer,
   isBeforeScheduledDispatchWindow,
@@ -97,7 +98,7 @@ const acceptedByMeBookingIds = new Set<string>();
  * Returns false when an attempt is already running (double tap, second surface).
  */
 export function beginAcceptance(bookingId: string): boolean {
-  if (!bookingId || acceptingBookingIds.has(bookingId)) return false;
+  if (!bookingId || acceptingBookingIds.size > 0) return false;
   acceptingBookingIds.add(bookingId);
   return true;
 }
@@ -136,7 +137,6 @@ export function invalidateOffer(bookingId: string, bookingRequestId?: string) {
   invalidatedBookingIds.add(bookingId);
 
   // Block any later receive path from re-showing this booking.
-  shownBookingIds.add(bookingId);
   console.log(`🚫 [Coordinator] Offer no longer available: ${bookingId}`);
 
   dismissAlert(bookingId);
@@ -156,6 +156,9 @@ export function invalidateOffer(bookingId: string, bookingRequestId?: string) {
  */
 export async function processIncomingBooking(alert: BookingAlert): Promise<boolean> {
   const { bookingId } = alert;
+  const generation = offerGenerationKey(alert);
+  if (invalidatedBookingIds.has(bookingId) || acceptedByMeBookingIds.has(bookingId)) return false;
+  if (alert.timeoutAt && (!Number.isFinite(Date.parse(alert.timeoutAt)) || Date.parse(alert.timeoutAt) <= Date.now())) return false;
 
   // Phase 1C: remember the signed ack token so every later lifecycle ACK
   // (popup_shown / worker_seen / accept_tapped / ...) can echo it unchanged.
@@ -188,14 +191,15 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
   }
 
   // Dedup: already shown or currently showing
-  if (shownBookingIds.has(bookingId)) {
+  if (shownBookingIds.has(generation)) {
     console.log(`🔕 [Coordinator] Dedup: ${bookingId} already shown (source: ${alert.source})`);
     return false;
   }
 
   if (currentAlert?.bookingId === bookingId) {
-    console.log(`🔕 [Coordinator] Dedup: ${bookingId} currently showing`);
-    return false;
+    const previousDeadline = Date.parse(currentAlert.timeoutAt ?? "");
+    if (!Number.isFinite(previousDeadline) || previousDeadline > Date.now()) return false;
+    dismissAlert(bookingId);
   }
 
   // Check staleness: verify booking is still pending and not already accepted
@@ -237,13 +241,13 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
 
     if (booking && booking.status !== "pending") {
       console.log(`🔕 [Coordinator] Stale: ${bookingId} status=${booking.status}`);
-      shownBookingIds.add(bookingId);
+      shownBookingIds.add(generation);
       return false;
     }
 
     if (booking?.worker_id) {
       console.log(`🔕 [Coordinator] Already assigned: ${bookingId}`);
-      shownBookingIds.add(bookingId);
+      shownBookingIds.add(generation);
       return false;
     }
   } catch (e) {
@@ -252,7 +256,9 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
   }
 
   // Mark as shown
-  shownBookingIds.add(bookingId);
+  // Another receive path may have completed its checks while we awaited reads.
+  if (shownBookingIds.has(generation) || currentAlert?.bookingId === bookingId || invalidatedBookingIds.has(bookingId)) return false;
+  shownBookingIds.add(generation);
   currentAlert = alert;
 
   console.log(`🔔 [Coordinator] NEW alert: ${bookingId} (source: ${alert.source})`);

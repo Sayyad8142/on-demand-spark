@@ -1,5 +1,6 @@
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useEffect, useState } from 'react';
+import { offerSecondsLeft } from '@/lib/offerGeneration';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -12,7 +13,7 @@ interface SimulatedOverlayModalProps {
   booking: Booking | null;
   onAccept: () => void;
   onReject: () => void;
-  timeoutSec?: number;
+  timeoutAt: string;
 }
 
 export function SimulatedOverlayModal({
@@ -20,15 +21,15 @@ export function SimulatedOverlayModal({
   booking,
   onAccept,
   onReject,
-  timeoutSec = 30,
+  timeoutAt,
 }: SimulatedOverlayModalProps) {
   useWorkerLanguage();
-  const [seconds, setSeconds] = useState(timeoutSec);
+  const [seconds, setSeconds] = useState(() => offerSecondsLeft(timeoutAt));
 
   useEffect(() => {
     if (!open) return;
 
-    setSeconds(timeoutSec);
+    setSeconds(offerSecondsLeft(timeoutAt));
 
     // Play alert sound if user has interacted before
     try {
@@ -43,23 +44,21 @@ export function SimulatedOverlayModal({
       navigator.vibrate([200, 100, 200]);
     }
 
-    const interval = setInterval(() => {
-      setSeconds((s) => {
-        if (s <= 1) {
-          clearInterval(interval);
-          onReject();
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
+    let expired = false;
+    const tick = () => {
+      const remaining = offerSecondsLeft(timeoutAt);
+      setSeconds(remaining);
+      if (remaining === 0 && !expired) { expired = true; onReject(); }
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
 
     return () => clearInterval(interval);
-  }, [open, timeoutSec, onReject]);
+  }, [open, timeoutAt, onReject]);
 
   if (!booking) return null;
 
-  const progress = ((timeoutSec - seconds) / timeoutSec) * 100;
+  const progress = Math.min(100, Math.max(0, (60 - seconds) / 60 * 100));
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onReject()}>
@@ -112,7 +111,8 @@ export function SimulatedOverlayModal({
               {displayText("Reject")}
             </Button>
             <Button
-              onClick={onAccept}
+              onClick={() => { if (offerSecondsLeft(timeoutAt) > 0) onAccept(); }}
+              disabled={seconds === 0}
               size="lg"
               className="h-12 bg-green-600 hover:bg-green-700"
             >
