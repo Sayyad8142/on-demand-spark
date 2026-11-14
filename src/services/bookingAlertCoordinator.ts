@@ -269,6 +269,8 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
   // Mark as shown
   // Another receive path may have completed its checks while we awaited reads.
   if (shownBookingIds.has(generation) || currentAlert?.bookingId === bookingId || invalidatedBookingIds.has(bookingId)) return false;
+  if (alert.timeoutAt && Date.parse(alert.timeoutAt) <= Date.now()) return false;
+  if (acceptingBookingIds.size > 0 && !acceptingBookingIds.has(bookingId)) return false;
   shownBookingIds.add(generation);
   currentAlert = alert;
 

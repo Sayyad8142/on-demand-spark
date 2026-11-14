@@ -228,6 +228,7 @@ export function useUnifiedBookingAlerts(
         community: pending.community,
         flat_no: pending.flatNo,
         price_inr: pending.priceInr,
+        timeoutAt: pending.timeoutAt,
       }
     : null;
 
