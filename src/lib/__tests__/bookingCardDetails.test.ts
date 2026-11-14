@@ -15,8 +15,8 @@ describe("booking details", () => {
     expect(startOtpCountdown(pending, now + 800_000)).toBe(0);
     expect(pending.status).toBe("accepted");
   });
-  it("uses server assignment fallback and never invents missing times", () => {
-    expect(startOtpCountdown({ ...pending, accepted_at: null, assigned_at: new Date(now).toISOString() }, now)).toBe(600);
+  it("waits for acceptance and never starts a timer on assignment alone", () => {
+    expect(startOtpCountdown({ ...pending, accepted_at: null, assigned_at: new Date(now).toISOString() }, now)).toBeNull();
     expect(startOtpCountdown({ ...pending, accepted_at: null }, now)).toBeNull();
   });
   it("no timer after server start/cancel or on unflagged bookings", () => {

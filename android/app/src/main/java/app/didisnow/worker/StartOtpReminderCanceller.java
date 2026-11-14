@@ -33,6 +33,7 @@ public final class StartOtpReminderCanceller {
       if (workerUid != null && local != null && !workerUid.equals(local)) return 0;
     } catch (Exception ignored) { /* unknown local worker: booking-scoped cancel is still safe */ }
 
+    StartOtpAlarmEngine.INSTANCE.cancel(ctx, bookingId);
     SharedPreferences store = ctx.getSharedPreferences(STORE, Context.MODE_PRIVATE);
     List<Integer> ids = new ArrayList<>();
     for (Map.Entry<String, ?> e : store.getAll().entrySet()) {

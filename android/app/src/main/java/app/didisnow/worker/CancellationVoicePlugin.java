@@ -109,6 +109,14 @@ public class CancellationVoicePlugin extends Plugin {
         }
 
         String text = call.getString("text");
+        // Completion OTP speech yields to the independent Start alarm player.
+        if (text != null && text.startsWith("OTP") && StartOtpAlarmService.Companion.getActive() != null) {
+            JSObject ret = new JSObject();
+            ret.put("started", false);
+            ret.put("reason", "start_alarm_active");
+            call.resolve(ret);
+            return;
+        }
         if (text != null && !text.isEmpty()) phrase = text;
         int repeats = call.getInt("repeats", 3);
         totalRepeats = Math.max(1, repeats);

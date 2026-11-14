@@ -13,6 +13,9 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <!-- USE_FULL_SCREEN_INTENT removed for Google Play policy compliance.
          Booking alerts use SYSTEM_ALERT_WINDOW overlay + high-priority heads-up notification instead. -->
@@ -52,6 +55,14 @@
         <activity android:name=".PracticeAlertActivity" android:exported="false"
             android:excludeFromRecents="true" android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
         <service android:name=".PracticeAlertService" android:exported="false" />
+        <service android:name=".StartOtpAlarmService" android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+        <receiver android:name=".StartOtpAlarmReceiver" android:exported="false">
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <!-- Booking Alert Activity (Full-screen booking alerts) -->
         <activity

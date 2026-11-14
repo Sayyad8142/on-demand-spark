@@ -1182,6 +1182,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                         
                         if (success) {
                             android.util.Log.d("BookingOverlay", "✅ Accept success")
+                            StartOtpAlarmEngine.reconcile(applicationContext, false)
                             withContext(Dispatchers.Main) {
                                 ui {
                                     Toast.makeText(

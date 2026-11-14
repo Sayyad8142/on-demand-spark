@@ -261,6 +261,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [saveSession, saveJWT, refreshSession, clearSessionCompletely]);
 
   const signOut = useCallback(async () => {
+    // Silence native reminders before any network cleanup can delay logout.
+    try {
+      const { StartOtpAlarm, hasStartOtpAlarm } = await import('@/native/startOtpAlarm');
+      if (hasStartOtpAlarm()) await StartOtpAlarm.stopAll();
+    } catch { /* older APK: no native alarm plugin */ }
     try {
       const userId = session?.user?.id;
       if (userId) {

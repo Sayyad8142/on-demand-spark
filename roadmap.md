@@ -176,3 +176,9 @@
 - [x] Trace source/local audio/backend metadata; run 34 existing safety tests; inspect aggregate production evidence without OTPs or tokens.
 - [x] Report nominal 23-slot timeline, reboot replay, stale cancellation/audio/idle limitations and distinct completion reminders; reported root file absent, public preview renders without page errors.
 - [ ] Establish real-phone audible playback/stop reliability and hosted sender parity — blocked: physical device/installed APK evidence and authoritative hosted source unavailable; no changes or notifications approved.
+
+## Start OTP native continuous alarm (15 Nov) — implementation approved, no release/deployment
+- [x] Replace cutoff schedule with 10/15-minute clips and continuous alarm from 20 minutes.
+- [x] Implement native single-player lifecycle, server-state reconciliation, restart/account cleanup and five-minute temporary silence; boot restoration requires fresh state/user opening under Android restrictions.
+- [x] 641 app tests, final 53 targeted tests, Android Kotlin/Java compilation and 66 native tests passed; preview build OK, generated Android packages removed. Details in docs/start-otp-alarm-2026-11-15/IMPLEMENTATION.md.
+- [ ] Verify actual audio/timing/stops on isolated phone — blocked: physical phone/approved test booking unavailable; background/exact-alarm permissions, boot/force-stop and expired-session behavior need device verification. No production deploy/release approved.
