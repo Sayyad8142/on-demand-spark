@@ -3,7 +3,7 @@ package app.didisnow.worker;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.SystemClock;
-import androidx.test.core.app.ApplicationProvider;
+import org.robolectric.RuntimeEnvironment;
 import org.junit.*;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
@@ -17,7 +17,7 @@ public class StartOtpAlarmTest {
     private Context c;
     private SharedPreferences p;
     @Before public void setup() {
-        c = ApplicationProvider.getApplicationContext();
+        c = RuntimeEnvironment.getApplication();
         StartOtpAlarmEngine.INSTANCE.stopAll(c);
         p = c.getSharedPreferences("start_otp_alarm_v2", Context.MODE_PRIVATE);
     }
