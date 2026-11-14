@@ -1,9 +1,10 @@
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
+import { useWorkerRatings } from "@/hooks/useWorkerRatings";
+import { reviewBreakdown } from "@/lib/workerRatings";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ArrowLeft, Loader2, Star, MessageSquare, BarChart3 } from "lucide-react";
@@ -11,19 +12,6 @@ import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import RatingBreakdown from "@/components/RatingBreakdown";
 import { DEMO_WORKER } from "@/config/demoData";
-
-interface Review {
-  id: string;
-  rating: number;
-  comment: string | null;
-  created_at: string;
-  bookings: {
-    cust_name: string;
-    service_type: string;
-    flat_no: string;
-    community: string;
-  } | null;
-}
 
 export default function CustomerReviews() {
   useWorkerLanguage();
@@ -36,100 +24,16 @@ export default function CustomerReviews() {
   const worker = isGuestMode ? DEMO_WORKER : realWorker;
   const workerLoading = isGuestMode ? false : realWorkerLoading;
 
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [workerRating, setWorkerRating] = useState<number>(0);
-  const [ratingsCount, setRatingsCount] = useState<number>(0);
-  const [ratingBreakdown, setRatingBreakdown] = useState<{
-    5: number;
-    4: number;
-    3: number;
-    2: number;
-    1: number;
-  }>({ 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 });
-
-  useEffect(() => {
-    if (isGuestMode) {
-      // Demo data for guest mode
-      setWorkerRating(4.8);
-      setRatingsCount(127);
-      setRatingBreakdown({ 5: 100, 4: 20, 3: 5, 2: 1, 1: 1 });
-      setReviews([
-        {
-          id: 'demo-review-1',
-          rating: 5,
-          comment: 'Excellent service! Very professional and punctual.',
-          created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          bookings: {
-            cust_name: 'Priya Sharma',
-            service_type: 'maid',
-            flat_no: 'B-205',
-            community: 'downtown'
-          }
-        },
-        {
-          id: 'demo-review-2',
-          rating: 5,
-          comment: 'Great work! Highly recommended.',
-          created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          bookings: {
-            cust_name: 'Amit Patel',
-            service_type: 'bathroom_cleaning',
-            flat_no: 'C-302',
-            community: 'downtown'
-          }
-        }
-      ]);
-      setLoading(false);
-      return;
-    }
-
-    if (!user) return;
-
-    const workerId = realWorker?.id ?? user.id;
-
-    const fetchData = async () => {
-      try {
-        // Fetch rating stats
-        const { data: ratingData } = await supabase
-          .from('worker_rating_stats')
-          .select('avg_rating, ratings_count')
-          .eq('worker_id', workerId)
-          .maybeSingle();
-
-        if (ratingData) {
-          setWorkerRating(Number(ratingData.avg_rating) || 0);
-          setRatingsCount(Number(ratingData.ratings_count) || 0);
-        }
-
-        // Fetch all reviews
-        const { data: reviewsData } = await supabase
-          .from('worker_ratings')
-          .select('*, bookings(cust_name, service_type, flat_no, community)')
-          .eq('worker_id', workerId)
-          .order('created_at', { ascending: false });
-
-        if (reviewsData) {
-          setReviews(reviewsData as Review[]);
-          
-          // Calculate rating breakdown
-          const breakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-          reviewsData.forEach((review) => {
-            if (review.rating >= 1 && review.rating <= 5) {
-              breakdown[review.rating as keyof typeof breakdown]++;
-            }
-          });
-          setRatingBreakdown(breakdown);
-        }
-      } catch (error) {
-        console.error('Error fetching reviews:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [user, isGuestMode, realWorker?.id]);
+  const { summary, reviews: reviewQuery } = useWorkerRatings(isGuestMode ? null : realWorker?.id, true);
+  const demoReviews = useMemo(() => [
+    { id: 'demo-1', rating: 5, comment: 'Excellent service!', created_at: '2026-11-12', bookings: { cust_name: 'Demo Customer', service_type: 'maid', flat_no: 'B-205', community: 'Demo Community' } },
+    { id: 'demo-2', rating: 5, comment: 'Great work!', created_at: '2026-11-10', bookings: { cust_name: 'Demo Customer', service_type: 'bathroom_cleaning', flat_no: 'C-302', community: 'Demo Community' } },
+  ], []);
+  const reviews = isGuestMode ? demoReviews : reviewQuery.data ?? [];
+  const workerRating = isGuestMode ? DEMO_WORKER.rating : summary.data?.average;
+  const ratingsCount = isGuestMode ? DEMO_WORKER.total_ratings : summary.data?.count;
+  const ratingBreakdown = useMemo(() => reviewBreakdown(reviews), [reviews]);
+  const loading = !isGuestMode && (summary.isLoading || reviewQuery.isLoading);
 
   if (loading || workerLoading) {
     return (
@@ -154,7 +58,7 @@ export default function CustomerReviews() {
           <div>
             <h1 className="text-xl font-semibold">{t('profile.reviews', 'Customer Reviews')}</h1>
             <p className="text-sm text-muted-foreground">
-              {ratingsCount} {displayText("review")}{ratingsCount !== 1 ? 's' : ''} • {workerRating.toFixed(1)} {displayText("avg rating")}
+              {ratingsCount ?? '—'} {displayText("review")}{ratingsCount !== 1 ? 's' : ''} • {workerRating?.toFixed(1) ?? "—"} {displayText("avg rating")}
             </p>
           </div>
         </div>
@@ -170,14 +74,16 @@ export default function CustomerReviews() {
               {displayText("Rating Breakdown")}
             </CardTitle>
             <CardDescription>
-              {displayText("Distribution of your")} {ratingsCount} {displayText("rating")}{ratingsCount !== 1 ? 's' : ''}
+              {displayText("Distribution of your")} {reviews.length} {displayText("rating")}{reviews.length !== 1 ? 's' : ''}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <RatingBreakdown 
+            {reviews.length === 0 && (ratingsCount ?? 0) > 0 ? (
+              <p className="text-sm text-muted-foreground">{displayText("No reviews yet")}</p>
+            ) : <RatingBreakdown
               ratings={ratingBreakdown} 
-              totalRatings={ratingsCount}
-            />
+              totalRatings={reviews.length}
+            />}
           </CardContent>
         </Card>
 
@@ -190,7 +96,11 @@ export default function CustomerReviews() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {reviews.length === 0 ? (
+            {reviewQuery.isError ? (
+              <div className="py-4 text-destructive">{displayText("Unable to load reviews")}
+                <Button variant="ghost" onClick={() => void reviewQuery.refetch()}>{displayText("Try again")}</Button>
+              </div>
+            ) : reviews.length === 0 ? (
               <div className="text-center py-8">
                 <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">{displayText("No reviews yet")}</p>

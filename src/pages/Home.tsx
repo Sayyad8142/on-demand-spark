@@ -3,6 +3,7 @@ import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displ
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useWorkerRatings } from "@/hooks/useWorkerRatings";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { useUnifiedBookingAlerts } from "@/hooks/useUnifiedBookingAlerts";
 import { useActiveJob } from "@/hooks/useActiveJob";
@@ -61,6 +62,7 @@ export default function Home() {
   
   const worker = isGuestMode ? DEMO_WORKER : realWorker;
   const activeJob = isGuestMode ? null : realActiveJob;
+  const { summary: ratingSummary } = useWorkerRatings(isGuestMode ? null : realWorker?.id);
 
   const payoutReady = isGuestMode ? true : workerLoading ? true : !!(worker as any)?.payout_ready;
 
@@ -318,8 +320,8 @@ export default function Home() {
       {!isGuestMode && worker && !activeJob && (
         <HomePerformanceCard
           priorityScore={(worker as any)?.priority_score}
-          rating={(worker as any)?.admin_override_rating ?? worker?.rating}
-          totalRatings={(worker as any)?.total_ratings}
+          rating={ratingSummary.data?.average}
+          totalRatings={ratingSummary.data?.count}
         />
       )}
 

@@ -15,6 +15,8 @@ import { useCommunityFee } from "@/hooks/useCommunityFee";
 import { useWorkerPayouts } from "@/hooks/useWorkerPayouts";
 import { computePayoutTotals, mapPayoutStatus } from "@/lib/payoutDisplay";
 import { PayoutStatusBadge } from "@/components/payouts/PayoutStatusBadge";
+import { Capacitor } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
 
 type Booking = BookingWithAddress & {
   payout_status?: string | null;
@@ -98,7 +100,7 @@ export default function Bookings() {
     if (ids.length) {
       const [payoutsRes, ratingsRes] = await Promise.all([
         supabase.from('worker_payouts').select('booking_id, status, payout_amount, paid_at').in('booking_id', ids),
-        supabase.from('worker_ratings').select('booking_id, rating').in('booking_id', ids),
+        supabase.from('worker_ratings').select('booking_id, rating, bookings!inner(status)').in('booking_id', rows.filter(b => b.status === 'completed').map(b => b.id)).eq('bookings.status', 'completed'),
       ]);
       const payoutsMap = new Map(payoutsRes.data?.map(p => [p.booking_id, { status: p.status, amount: p.payout_amount, paidAt: p.paid_at }]) || []);
       const ratingsMap = new Map(ratingsRes.data?.map(r => [r.booking_id, r.rating]) || []);
@@ -159,6 +161,38 @@ export default function Bookings() {
       setLoadingMore(false);
     }
   }, [workerId, page, hasMore, loadingMore, loadPage]);
+
+  useEffect(() => {
+    if (!workerId || isGuestMode) return;
+    // Refresh feedback without resetting leaderboard/ranking or paginated booking history.
+    let disposed = false;
+    const refreshRatings = async () => {
+      const { data, error } = await supabase.from('worker_ratings')
+        .select('booking_id,rating,bookings!inner(status)')
+        .eq('worker_id', workerId).eq('bookings.status', 'completed')
+        .in('booking_id', bookings.filter(b => b.status === 'completed').map(b => b.id));
+      if (disposed || error || !data) return;
+      const ratings = new Map(data.map(r => [r.booking_id, r.rating]));
+      setBookings(previous => previous.map(b => ({ ...b, rating: b.status === 'completed' ? ratings.get(b.id) ?? null : null })));
+    };
+    const visible = () => { if (document.visibilityState === 'visible') void refreshRatings(); };
+    window.addEventListener('bookingCompleted', visible);
+    window.addEventListener('online', visible);
+    document.addEventListener('visibilitychange', visible);
+    const timer = window.setInterval(visible, 30_000);
+    let native: { remove: () => Promise<void> } | undefined;
+    if (Capacitor.isNativePlatform()) void CapApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) void refreshRatings();
+    }).then(h => { if (disposed) void h.remove(); else native = h; }).catch(() => undefined);
+    return () => {
+      disposed = true;
+      clearInterval(timer);
+      window.removeEventListener('bookingCompleted', visible);
+      window.removeEventListener('online', visible);
+      document.removeEventListener('visibilitychange', visible);
+      void native?.remove();
+    };
+  }, [workerId, isGuestMode, bookings.map(b => b.id).join(',')]);
 
   // Intersection observer for infinite scroll
   useEffect(() => {

@@ -23,11 +23,10 @@ function ratingColor(r: number) {
 export default function HomePerformanceCard({ priorityScore, rating, totalRatings }: HomePerformanceCardProps) {
   useWorkerLanguage();
   const score = Math.max(0, Math.min(100, Math.round(priorityScore ?? 0)));
-  const hasRatings = (totalRatings ?? 0) > 0 && (rating ?? 0) > 0;
-  const rate = hasRatings ? Number(rating) : 5;
+  const rate = rating ?? null;
   const sc = scoreColor(score);
-  const rc = ratingColor(rate);
-  const ratePct = Math.max(0, Math.min(100, (rate / 5) * 100));
+  const rc = ratingColor(rate ?? 0);
+  const ratePct = Math.max(0, Math.min(100, ((rate ?? 0) / 5) * 100));
 
   return (
     <Card className="px-3 py-2 rounded-xl">
@@ -56,7 +55,7 @@ export default function HomePerformanceCard({ priorityScore, rating, totalRating
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between gap-1">
               <p className="text-[11px] font-semibold text-muted-foreground">{displayText("Rating")}</p>
-              <p className={`text-xs font-bold ${rc.text}`}>{rate.toFixed(1)} ★</p>
+              <p className={`text-xs font-bold ${rc.text}`}>{rate?.toFixed(1) ?? "—"} ★ · {totalRatings ?? "—"}</p>
             </div>
             <div className={`mt-0.5 h-[3px] w-full rounded-full ${rc.track} overflow-hidden`}>
               <div className={`h-full ${rc.bar} rounded-full transition-all`} style={{ width: `${ratePct}%` }} />
