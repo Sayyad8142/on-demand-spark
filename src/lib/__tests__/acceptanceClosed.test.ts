@@ -8,14 +8,14 @@ vi.mock("@/lib/scheduledBookingGuards", () => ({
   logScheduledOfferDecision: () => {},
 }));
 vi.mock("@/integrations/supabase/client", () => {
-  const q: any = { select: () => q, eq: () => q, gt: () => q, maybeSingle: async () => ({ data: null }) };
+  const q: any = { select: () => q, eq: () => q, gt: () => q, maybeSingle: async () => ({ data: state.table === "workers" ? { id: "own-worker" } : state.table === "booking_requests" ? { id: "r1", status: "pending", timeout_at: new Date(Date.now() + 60_000).toISOString() } : null }) };
   return {
     supabase: {
       auth: {
-        getSession: async () => ({ data: { session: { expires_at: Math.floor(Date.now() / 1000) + 3600 } }, error: null }),
+        getSession: async () => ({ data: { session: { user: { id: "own-login" }, expires_at: Math.floor(Date.now() / 1000) + 3600 } }, error: null }),
         refreshSession: vi.fn(async () => ({ error: null })),
       },
-      from: () => q,
+      from: (table: string) => { state.table = table; return q; },
       rpc: vi.fn(async (name: string, args: any) => state.rpc(name, args)),
       functions: { invoke: vi.fn(async () => ({})) },
     },

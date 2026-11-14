@@ -613,9 +613,9 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                 } catch (t: Throwable) {
                     android.util.Log.e("BookingOverlay", "❌ Accept flow crashed", t)
                     outcome = "accept_exception"
-                    retryable = t.message != ACCEPTANCE_CLOSED_MSG &&
-                        !(t.message ?: "").startsWith("Server rejected:")
-                    if (t.message == ACCEPTANCE_CLOSED_MSG) {
+                    val decision = if (t.message == ACCEPTANCE_CLOSED_MSG) "closed" else OfferAcceptRules.outcome(t.message)
+                    retryable = decision == "retry"
+                    if (decision == "closed") {
                         outcome = "acceptance_closed"
                         // Never re-show this offer; drop the queue too (closed for the day).
                         OfferQueue.markTaken(applicationContext, bookingId)
@@ -1140,6 +1140,9 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                 if (!AlertPresentationRules.mayAccept(offerDeadline, System.currentTimeMillis() / 1000, isShuttingDown)) {
                     throw IllegalStateException("Server rejected: offer-expired")
                 }
+                val authoritativeDeadline = OwnOfferPreflight.deadline(SUPABASE_URL, SUPABASE_ANON_KEY, jwt, bookingId)
+                // A read may shorten the timer, never extend the original alert.
+                offerDeadline = minOf(offerDeadline, authoritativeDeadline)
                 // Call try_accept_booking RPC with user JWT
                 val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/try_accept_booking")
                 val connection = rpcUrl.openConnection() as HttpURLConnection
@@ -1220,7 +1223,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                 // Reject via reject_booking_offer: the backend resolves the worker from
                 // the session (no client-supplied worker id) and refuses expired /
                 // already-assigned offers. Success only when the backend confirms.
-                var (code, body) = postRejectOffer(bookingId, jwt!!)
+                var (code, body) = postRejectOffer(bookingId, jwt)
                 if (code == 401 || code == 403) {
                     android.util.Log.w("BookingOverlay", "🔐 Reject got $code — refreshing session and retrying once")
                     val fresh = refreshAccessToken()

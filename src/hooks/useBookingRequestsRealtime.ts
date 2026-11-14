@@ -1,7 +1,7 @@
 import { createReconnectDetector, requestOffersResync } from "@/lib/offerFreshness";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { processIncomingBooking, invalidateOffer, isOwnAcceptance } from "@/services/bookingAlertCoordinator";
+import { processIncomingBooking, invalidateOffer, retireOfferGeneration, isOwnAcceptance } from "@/services/bookingAlertCoordinator";
 import { canShowWorkerBookingOffer, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 
 /**
@@ -20,17 +20,7 @@ export function useBookingRequestsRealtime(
     console.log("📡 [BookingRequests] Setting up realtime for worker:", workerId);
 
     const isReconnect = createReconnectDetector();
-    const channel = supabase
-      .channel(`booking-requests:${workerId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "booking_requests",
-          filter: `worker_id=eq.${workerId}`,
-        },
-        async (payload) => {
+    const receive = async (payload: { new: Record<string, any> }) => {
           const req = payload.new as any;
           console.log("📡 [BookingRequests] New request:", req.id, "booking:", req.booking_id);
 
@@ -82,8 +72,10 @@ export function useBookingRequestsRealtime(
             timeoutAt: req.timeout_at,
             source: "realtime_requests",
           });
-        }
-      )
+    };
+    const channel = supabase
+      .channel(`booking-requests:${workerId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "booking_requests", filter: `worker_id=eq.${workerId}` }, receive)
       // Also listen for booking_request status changes (e.g., another worker accepted)
       .on(
         "postgres_changes",
@@ -95,6 +87,7 @@ export function useBookingRequestsRealtime(
         },
         (payload) => {
           const req = payload.new as any;
+          if (req.status === "pending") { void receive(payload); return; }
           // Another worker won the booking (status becomes lost/expired/…),
           // or this request was otherwise closed: kill the offer on this
           // device immediately — popup, countdown, queue entry and tray.
@@ -105,7 +98,8 @@ export function useBookingRequestsRealtime(
               return;
             }
             console.log("🚫 [BookingRequests] Request closed:", req.status, req.booking_id);
-            invalidateOffer(req.booking_id, req.id);
+            if (req.status === "lost") invalidateOffer(req.booking_id, req.id);
+            else retireOfferGeneration(req.booking_id, req.timeout_at);
           }
         }
       )

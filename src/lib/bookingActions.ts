@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { canShowWorkerBookingOffer, isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
+import { canShowWorkerBookingOffer, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 import { ackBookingDelivery } from "@/lib/bookingAck";
 import { isAcceptanceClosedError, ACCEPTANCE_CLOSED_MESSAGE } from "@/lib/acceptanceClosed";
 
@@ -35,7 +35,7 @@ async function ensureValidSession(): Promise<boolean> {
 
 export async function tryAccept(
   bookingId: string,
-  workerId?: string,
+  _workerId?: string,
 ): Promise<{ success: boolean; error?: string; acceptanceClosed?: boolean }> {
   // Ensure valid session before accepting
   const sessionValid = await ensureValidSession();
@@ -54,20 +54,25 @@ export async function tryAccept(
     return { success: false, error: "Scheduled booking is not open for acceptance yet." };
   }
 
-  const { data: activeRequest } = await supabase
+  // Resolve from the login, never from a caller-supplied worker id.
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user?.id) return { success: false, error: "Session expired. Please log in again." };
+  const { data: worker, error: workerError } = await supabase.from("workers")
+    .select("id").eq("user_id", session.user.id).maybeSingle();
+  if (workerError) return { success: false, error: "Unable to check offer. Please try again." };
+  if (!worker) return { success: false, error: "not-offered" };
+  const { data: activeRequest, error: requestError } = await supabase
     .from("booking_requests")
-    .select("id")
+    .select("id, status, timeout_at")
     .eq("booking_id", bookingId)
-    .eq("status", "pending")
-    .gt("timeout_at", new Date().toISOString())
+    .eq("worker_id", worker.id)
     .maybeSingle();
+  if (requestError) return { success: false, error: "Unable to check offer. Please try again." };
+  if (!activeRequest || !["pending", "sent", "queued"].includes(activeRequest.status)) return { success: false, error: "not-offered" };
+  const deadline = Date.parse(activeRequest.timeout_at ?? "");
+  if (!Number.isFinite(deadline)) return { success: false, error: "Unable to check offer. Please try again." };
+  if (deadline <= Date.now()) return { success: false, error: "offer-expired" };
 
-  if (!activeRequest) {
-    if (booking && isBeforeScheduledDispatchWindow(booking)) {
-      logScheduledOfferDecision(booking, "query", false);
-      return { success: false, error: "Scheduled booking is not open for acceptance yet." };
-    }
-  }
   
   // ACK that the worker tapped Accept (fire-and-forget, never blocks)
   ackBookingDelivery({ bookingId, event: "worker_seen" }).catch(() => {});
@@ -143,21 +148,6 @@ export async function rejectBooking(bookingId: string, _workerId?: string): Prom
     return { success: false, shouldNotify: false, offerGone, error: err };
   }
 
-  // If next tier should be notified, call the edge function
-  if (result?.should_notify && result?.next_tier) {
-    try {
-      await supabase.functions.invoke("notify-next-tier", {
-        body: {
-          booking_id: bookingId,
-          tier: result.next_tier,
-        },
-      });
-      console.log(`✅ Notified next tier ${result.next_tier}`);
-    } catch (notifyError) {
-      console.error("⚠️ Error notifying next tier:", notifyError);
-      // Don't fail the rejection if notification fails
-    }
-  }
-
-  return { success: true, shouldNotify: result?.should_notify || false };
+  // Escalation belongs exclusively to the server, not this phone.
+  return { success: true, shouldNotify: false };
 }

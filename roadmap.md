@@ -167,6 +167,7 @@
 
 ## Dispatch coordination audit (14 Nov) — read-only
 - [x] Audit new app (web + native) and live backend contract; report in docs/dispatch-coordination-2026-11-14/REPORT.md.
-- [ ] New-app corrections A1–A5 — blocked: awaiting owner approval.
+- [x] Prompt 99: prepare five approved preview-only corrections + native own-offer preflight; 627 frontend, 52 Android, 29 + 104 Deno, 148 priority, 40 handler and 34 isolated SQL tests passed; preview build OK. Report and Admin Panel contract handoff prepared; generated Android packages removed.
+- [ ] Prompt 99: coordinate final contract with Admin Panel before release — blocked: Admin Panel confirmation and real Android phone verification.
 - [ ] Backend fixes B1–B7 — owned by Admin Panel/backend; awaiting approval and hosted source parity.
 - [ ] Real Android phone tests — blocked: device and approved test bookings not supplied.

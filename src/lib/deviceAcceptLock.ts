@@ -2,7 +2,7 @@ import { Capacitor } from "@capacitor/core";
 import { beginAcceptance, endAcceptance } from "@/services/bookingAlertCoordinator";
 
 /**
- * One acceptance attempt per booking on this phone, shared by every surface:
+ * One acceptance attempt at a time on this phone, shared by every surface:
  * the in-app booking card (JS), the Android pop-up over other apps and the
  * full-screen locked-phone alert (native `OfferQueue` claim).
  *
@@ -45,7 +45,8 @@ export async function claimDeviceAcceptance(bookingId: string): Promise<boolean>
 
 /** Releases both claims. `accepted` records a confirmed win on the native side too. */
 export async function releaseDeviceAcceptance(bookingId: string, accepted = false): Promise<void> {
-  if (!accepted) endAcceptance(bookingId);
+  // The attempt is finished on either result; confirmed ownership is tracked separately.
+  endAcceptance(bookingId);
   const lock = nativeLock();
   if (!lock?.releaseAcceptance) return;
   try {

@@ -32,6 +32,7 @@ const GONE_PATTERNS: RegExp[] = [
   /closed/i,
   /not eligible/i,
   /not offered/i,
+  /duplicate/i,
 ];
 
 const RETRY_FIRST_PATTERNS: RegExp[] = [
@@ -51,6 +52,8 @@ export function classifyAcceptResult(result: AcceptResultLike): AcceptOutcome {
   if (result.acceptanceClosed) return "closed";
   const msg = (result.error ?? "").trim();
   if (!msg) return "retry";
+  if (["offer-expired", "already-assigned", "not-offered", "offer-closed", "request-not-found"].includes(msg.toLowerCase())) return "gone";
+  if (msg.toLowerCase() === "acceptance-closed") return "closed";
   // Login / connection problems are never "gone", even if they say "expired".
   if (RETRY_FIRST_PATTERNS.some((re) => re.test(msg))) return "retry";
   if (GONE_PATTERNS.some((re) => re.test(msg))) return "gone";
