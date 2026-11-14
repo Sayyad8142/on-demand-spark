@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { canShowWorkerBookingOffer, isBeforeScheduledDispatchWindow, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
+import { canShowWorkerBookingOffer, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 import { ackBookingDelivery } from "@/lib/bookingAck";
 import { isAcceptanceClosedError, ACCEPTANCE_CLOSED_MESSAGE } from "@/lib/acceptanceClosed";
 
@@ -73,12 +73,6 @@ export async function tryAccept(
   if (!Number.isFinite(deadline)) return { success: false, error: "Unable to check offer. Please try again." };
   if (deadline <= Date.now()) return { success: false, error: "offer-expired" };
 
-  if (!activeRequest) {
-    if (booking && isBeforeScheduledDispatchWindow(booking)) {
-      logScheduledOfferDecision(booking, "query", false);
-      return { success: false, error: "Scheduled booking is not open for acceptance yet." };
-    }
-  }
   
   // ACK that the worker tapped Accept (fire-and-forget, never blocks)
   ackBookingDelivery({ bookingId, event: "worker_seen" }).catch(() => {});

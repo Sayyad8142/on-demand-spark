@@ -93,10 +93,8 @@ export function retireOfferGeneration(bookingId: string, timeoutAt?: string) {
   const closedDeadline = Date.parse(timeoutAt ?? "");
   if (currentAlert?.bookingId === bookingId && Number.isFinite(closedDeadline) && currentDeadline > closedDeadline) return;
   dismissAlert(bookingId);
-  try {
-    const plugin = (window as any)?.Capacitor?.Plugins?.OverlayPlugin;
-    plugin?.hideBookingOverlay?.({ bookingId })?.catch?.(() => {});
-  } catch { /* presentation cleanup only */ }
+  // Native presentation retains its original expiry + server status poll;
+  // cancelBookingOffer would incorrectly mark this whole booking permanently taken.
 }
 
 /** Offers already invalidated — keeps this idempotent (no repeated toasts). */
