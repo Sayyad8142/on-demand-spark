@@ -5,7 +5,6 @@ import { reviewBreakdown } from "@/lib/workerRatings";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ArrowLeft, Loader2, Star, MessageSquare, BarChart3 } from "lucide-react";
@@ -13,19 +12,6 @@ import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import RatingBreakdown from "@/components/RatingBreakdown";
 import { DEMO_WORKER } from "@/config/demoData";
-
-interface Review {
-  id: string;
-  rating: number;
-  comment: string | null;
-  created_at: string;
-  bookings: {
-    cust_name: string;
-    service_type: string;
-    flat_no: string;
-    community: string;
-  } | null;
-}
 
 export default function CustomerReviews() {
   useWorkerLanguage();
@@ -39,7 +25,11 @@ export default function CustomerReviews() {
   const workerLoading = isGuestMode ? false : realWorkerLoading;
 
   const { summary, reviews: reviewQuery } = useWorkerRatings(isGuestMode ? null : realWorker?.id, true);
-  const reviews = reviewQuery.data ?? [];
+  const demoReviews = useMemo(() => [
+    { id: 'demo-1', rating: 5, comment: 'Excellent service!', created_at: '2026-11-12', bookings: { cust_name: 'Demo Customer', service_type: 'maid', flat_no: 'B-205', community: 'Demo Community' } },
+    { id: 'demo-2', rating: 5, comment: 'Great work!', created_at: '2026-11-10', bookings: { cust_name: 'Demo Customer', service_type: 'bathroom_cleaning', flat_no: 'C-302', community: 'Demo Community' } },
+  ], []);
+  const reviews = isGuestMode ? demoReviews : reviewQuery.data ?? [];
   const workerRating = isGuestMode ? DEMO_WORKER.rating : summary.data?.average;
   const ratingsCount = isGuestMode ? DEMO_WORKER.total_ratings : summary.data?.count;
   const ratingBreakdown = useMemo(() => reviewBreakdown(reviews), [reviews]);
@@ -84,14 +74,16 @@ export default function CustomerReviews() {
               {displayText("Rating Breakdown")}
             </CardTitle>
             <CardDescription>
-              {displayText("Distribution of your")} {reviews.length} {displayText("rating")}{ratingsCount !== 1 ? 's' : ''}
+              {displayText("Distribution of your")} {reviews.length} {displayText("rating")}{reviews.length !== 1 ? 's' : ''}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <RatingBreakdown 
+            {reviews.length === 0 && (ratingsCount ?? 0) > 0 ? (
+              <p className="text-sm text-muted-foreground">{displayText("No reviews yet")}</p>
+            ) : <RatingBreakdown
               ratings={ratingBreakdown} 
               totalRatings={reviews.length}
-            />
+            />}
           </CardContent>
         </Card>
 
