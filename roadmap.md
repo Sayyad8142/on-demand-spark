@@ -1,5 +1,11 @@
 # Worker language translation
 
+## Current Worker App rating fixes (15 Nov) — no deployment/publication
+- [ ] Share server rating/count reads; refresh on open, foreground, customer updates and completion.
+- [ ] Paginate completed-only reviews and prevent early feedback retrieval in Worker App screens.
+- [ ] Stage exact database privacy/ownership restrictions; applying requires deployment approval and User App/ranking compatibility verification.
+- [ ] Run rating and OTP regression tests; verify available preview states and record release blockers.
+
 ## Next Booking placeholder (12 Nov) — preview only
 - [x] Audit and checksum-backup affected files; preserve shared rating ranking.
 - [x] Replace page tab with local translated placeholder; neutralize unsupported priority claims without changing scores.
