@@ -125,7 +125,7 @@ public class RepeatBookingQueueTest {
         assertTrue(queue.enqueue(ctx, first));
         queue.remove(ctx, "first", "request-1");
         assertTrue(queue.isRetired(ctx, first));
-        assertFalse(queue.enqueue(ctx, offer("first", "request-1", 60)));
+        assertFalse(queue.enqueue(ctx, first));
     }
 
     @Test public void differentServerOfferIdentityRemainsIndependent() {
@@ -152,7 +152,7 @@ public class RepeatBookingQueueTest {
         assertTrue(queue.enqueue(ctx, offer("next", "request-2", 60)));
         assertEquals("next", queue.bookingIdOf(queue.nextValid(ctx)));
         // The already-handled offer stays blocked as a duplicate.
-        assertFalse(queue.enqueue(ctx, offer("done", "request-1", 60)));
+        assertFalse(queue.enqueue(ctx, first));
     }
 
     @Test public void threeConsecutiveOffersEachOpenAfterTheLastEnds() {
@@ -165,7 +165,7 @@ public class RepeatBookingQueueTest {
             queue.remove(ctx, id, "r" + i);
             queue.markAcceptedByMe(ctx, id);
             queue.markLocallyBusy(ctx);
-            assertFalse(id, queue.enqueue(ctx, offer(id, "r" + i, 60)));
+            assertFalse(id, queue.enqueue(ctx, o));
             queue.releaseEndedBooking(ctx, id);
             assertFalse(id, queue.isLocallyBusy(ctx));
         }

@@ -288,6 +288,7 @@ object OfferQueue {
         val key = keyOf(offer)
         val bookingId = bookingIdOf(offer)
         if (isRetired(ctx, offer) || isExpired(offer)) return false
+        if (isAcceptedByMe(ctx, bookingId)) return false
         if (isTaken(ctx, bookingId)) {
             Log.d(TAG, "🚫 offer not queued — booking already assigned elsewhere: $bookingId")
             cancelNotification(ctx, bookingId)
