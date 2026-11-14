@@ -39,7 +39,6 @@ export function useWorkerRatings(workerId: string | null | undefined, includeRev
     // No rating payload subscription: pre-completion individual feedback must not enter the phone.
     const channel = supabase.channel(`rating-refresh-${workerId}-${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'workers', filter: `id=eq.${workerId}` }, refresh)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bookings', filter: `worker_id=eq.${workerId}` }, refresh)
       .subscribe();
     return () => {
       disposed = true;

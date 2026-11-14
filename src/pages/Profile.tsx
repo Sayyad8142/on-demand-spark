@@ -1,6 +1,7 @@
 import { practiceText } from "@/i18n/practice";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useWorkerRatings } from "@/hooks/useWorkerRatings";
 import { useWorkerPayouts } from "@/hooks/useWorkerPayouts";
 import { computePayoutTotals } from "@/lib/payoutDisplay";
 import { useNavigate } from "react-router-dom";
@@ -113,22 +114,10 @@ export default function Profile() {
   const todayEarnings = isGuestMode ? guestEarnings.today : payoutTotals.today;
   const monthEarnings = isGuestMode ? guestEarnings.month : payoutTotals.month;
   const [completedJobs, setCompletedJobs] = useState(0);
-  const [workerRating, setWorkerRating] = useState<number>(0);
-  const [ratingsCount, setRatingsCount] = useState<number>(0);
-  const [reviews, setReviews] = useState<any[]>([]);
-  const [ratingBreakdown, setRatingBreakdown] = useState<{
-    5: number;
-    4: number;
-    3: number;
-    2: number;
-    1: number;
-  }>({
-    5: 0,
-    4: 0,
-    3: 0,
-    2: 0,
-    1: 0
-  });
+  const { summary: ratingSummary } = useWorkerRatings(isGuestMode ? null : realWorker?.id);
+  const workerRating = isGuestMode ? 4.8 : ratingSummary.data?.average;
+  const ratingsCount = isGuestMode ? 127 : ratingSummary.data?.count;
+
 
 
   // Fetch communities from Supabase with real-time updates
@@ -172,42 +161,11 @@ export default function Profile() {
       // Set demo stats for guest mode
       setCompletedJobs(2);
       setGuestEarnings({ total: 750, today: 250, month: 750 });
-      setWorkerRating(4.8);
-      setRatingsCount(127);
-      setRatingBreakdown({
-        5: 100,
-        4: 20,
-        3: 5,
-        2: 1,
-        1: 1
-      });
-      setReviews([{
-        id: 'demo-review-1',
-        rating: 5,
-        comment: 'Excellent service! Very professional and punctual.',
-        created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        bookings: {
-          cust_name: 'Priya Sharma',
-          service_type: 'maid',
-          flat_no: 'B-205',
-          community: 'downtown'
-        }
-      }, {
-        id: 'demo-review-2',
-        rating: 5,
-        comment: 'Great work! Highly recommended.',
-        created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-        bookings: {
-          cust_name: 'Amit Patel',
-          service_type: 'bathroom_cleaning',
-          flat_no: 'C-302',
-          community: 'downtown'
-        }
-      }]);
       return;
     }
     if (!user) return;
-    const workerId = realWorker?.id ?? user.id;
+    const workerId = realWorker?.id;
+    if (!workerId) return;
     const fetchEarnings = async () => {
       // Count completed jobs from bookings
       const {
@@ -220,49 +178,7 @@ export default function Profile() {
 
       // Earnings totals come from useWorkerPayouts (shared rules, IST, paginated).
     };
-    const fetchRating = async () => {
-      const {
-        data,
-        error
-      } = await supabase.from('worker_rating_stats').select('avg_rating, ratings_count').eq('worker_id', workerId).maybeSingle();
-      if (!error && data && Number(data.ratings_count) > 0) {
-        setWorkerRating(Number(data.avg_rating) || 0);
-        setRatingsCount(Number(data.ratings_count) || 0);
-      } else {
-        // Fallback to worker.rating from workers table (default 5.0)
-        setWorkerRating(Number(realWorker?.rating) || 5.0);
-        setRatingsCount(0);
-      }
-    };
-    const fetchReviews = async () => {
-      const {
-        data,
-        error
-      } = await supabase.from('worker_ratings').select('*, bookings(cust_name, service_type, flat_no, community)').eq('worker_id', workerId).order('created_at', {
-        ascending: false
-      });
-      if (!error && data) {
-        setReviews(data);
-
-        // Calculate rating breakdown
-        const breakdown = {
-          5: 0,
-          4: 0,
-          3: 0,
-          2: 0,
-          1: 0
-        };
-        data.forEach(review => {
-          if (review.rating >= 1 && review.rating <= 5) {
-            breakdown[review.rating as keyof typeof breakdown]++;
-          }
-        });
-        setRatingBreakdown(breakdown);
-      }
-    };
     fetchEarnings();
-    fetchRating();
-    fetchReviews();
   }, [user, isGuestMode, realWorker?.id]);
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -831,10 +747,10 @@ export default function Profile() {
                     <Star className="w-5 h-5 text-white fill-white" />
                   </div>
                   <p className="text-xl font-extrabold text-amber-600 dark:text-amber-400 text-center mb-1">
-                    {workerRating.toFixed(1)}
+                    {workerRating?.toFixed(1) ?? "—"}
                   </p>
                   <p className="text-[9px] text-muted-foreground font-semibold text-center uppercase tracking-tight leading-tight">
-                    {t('profile.rating')}
+                    {t('profile.rating')} · {ratingsCount ?? '—'}
                   </p>
                 </div>
               </div>
