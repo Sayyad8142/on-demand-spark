@@ -842,6 +842,7 @@ class BookingAlertActivity : AppCompatActivity() {
 
                                 if (success) {
                                     // Backend confirmed WE won this booking.
+                                    StartOtpAlarmEngine.reconcile(applicationContext, false)
                                     OfferQueue.markAcceptedByMe(applicationContext, bookingId)
                                     Toast.makeText(
                                         this@BookingAlertActivity,

@@ -17,10 +17,13 @@ object StartOtpAlarmEngine {
     const val NOTIFICATION = 81420
     private val executor = Executors.newSingleThreadExecutor()
     private val main = Handler(Looper.getMainLooper())
+    private var reading = false
+    private var readAgain = false
     private fun prefs(c: Context) = c.getSharedPreferences("start_otp_alarm_v2", Context.MODE_PRIVATE)
     private fun rows(c: Context) = try { JSONArray(prefs(c).getString("rows", "[]")) } catch (_: Exception) { JSONArray() }
     private fun time(s: String): Long = try {
-        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX", Locale.US).parse(s)?.time
+        val normalized = s.replace(Regex("\\.(\\d{3})\\d+"), ".$1").replace(Regex("([+-]\\d{2}):(\\d{2})$"), "$1$2")
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ", Locale.US).parse(normalized.replace("Z", "+0000"))?.time
             ?: 0L
     } catch (_: Exception) {
         try { SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX", Locale.US).parse(s)?.time ?: 0L } catch (_: Exception) { 0L }
@@ -38,6 +41,7 @@ object StartOtpAlarmEngine {
     @Synchronized fun stopAll(c: Context) {
         prefs(c).edit().clear().commit()
         cancelTimer(c)
+        main.post { StartOtpAlarmService.active?.silenceImmediately() }
         c.stopService(Intent(c, StartOtpAlarmService::class.java))
         NotificationManagerCompat.from(c).cancel(NOTIFICATION)
     }
@@ -45,9 +49,10 @@ object StartOtpAlarmEngine {
         val out = JSONArray()
         val old = rows(c)
         for (i in 0 until old.length()) if (old.getJSONObject(i).optString("id") != id) out.put(old.getJSONObject(i))
-        prefs(c).edit().putString("rows", out.toString()).apply()
-        StartOtpAlarmService.active?.stopBooking(id)
-        evaluate(c, false)
+        val stopped = prefs(c).getStringSet("stopped", emptySet())?.toMutableSet() ?: mutableSetOf()
+        stopped.add(id)
+        prefs(c).edit().putString("rows", out.toString()).putStringSet("stopped", stopped).apply()
+        main.post { StartOtpAlarmService.active?.stopBooking(id); evaluate(c, false) }
     }
     /** JS supplies only display snapshots; server time and identity are re-read here. */
     fun sync(c: Context, user: String, generation: Long) {
@@ -78,11 +83,15 @@ object StartOtpAlarmEngine {
         val user = prefs(c).getString("user", "") ?: ""
         val generation = prefs(c).getLong("generation", -1)
         if (user.isBlank()) return
+        synchronized(this) {
+            if (reading) { readAgain = true; return }
+            reading = true
+        }
         executor.execute {
             var fresh = false
             try {
                 val auth = JSONObject(read(c, "/auth/v1/user").first)
-                if (auth.optString("id") != user) return@execute
+                if (auth.optString("id") != user) { main.post { stopAll(c) }; return@execute }
                 val workers = JSONArray(read(c, "/rest/v1/workers?select=id&user_id=eq.${URLEncoder.encode(user,"UTF-8")}&limit=2").first)
                 if (workers.length() != 1) throw IllegalStateException("Worker unavailable")
                 val worker = workers.getJSONObject(0).getString("id")
@@ -93,7 +102,7 @@ object StartOtpAlarmEngine {
                     val b = data.getJSONObject(i)
                     val started = !b.isNull("started_at") && b.optString("started_at").isNotBlank()
                     val accepted = time(b.optString("accepted_at"))
-                    if (accepted > 0 && StartOtpAlarmRules.eligible(b.optString("status"), b.optBoolean("start_otp_required"), started, b.optString("worker_id"), worker)) {
+                    if (accepted > 0 && !prefs(c).getStringSet("stopped", emptySet()).orEmpty().contains(b.optString("id")) && StartOtpAlarmRules.eligible(b.optString("status"), b.optBoolean("start_otp_required"), started, b.optString("worker_id"), worker)) {
                         b.put("acceptedMs", accepted); out.put(b)
                     }
                 }
@@ -104,6 +113,12 @@ object StartOtpAlarmEngine {
                     fresh = true
                 }
             } catch (_: Exception) { /* retain known eligibility, never restore blindly */ }
+            finally {
+                synchronized(this) {
+                    reading = false
+                    if (readAgain) { readAgain = false; main.post { reconcile(c, false) } }
+                }
+            }
             main.post { if (prefs(c).getString("user", "") == user && prefs(c).getLong("generation", -1) == generation) evaluate(c, restoring && !fresh) }
         }
     }
@@ -124,7 +139,7 @@ object StartOtpAlarmEngine {
             val b = data.getJSONObject(i)
             if (selected == null || b.optLong("acceptedMs") < selected.optLong("acceptedMs")) selected = b
         }
-        if (selected == null) { cancelTimer(c); c.stopService(Intent(c, StartOtpAlarmService::class.java)); NotificationManagerCompat.from(c).cancel(NOTIFICATION); return }
+        if (selected == null) { cancelTimer(c); StartOtpAlarmService.active?.silenceImmediately(); c.stopService(Intent(c, StartOtpAlarmService::class.java)); NotificationManagerCompat.from(c).cancel(NOTIFICATION); return }
         val b = selected
         val phase = StartOtpAlarmRules.phase(b.optLong("acceptedMs"), now)
         if (prefs(c).getLong("silenceUntil", 0) > now) { arm(c, prefs(c).getLong("silenceUntil",0)-now); return }
@@ -134,6 +149,7 @@ object StartOtpAlarmEngine {
             val late = now - b.optLong("acceptedMs") - (if (phase == 1) 600000 else if (phase == 2) 900000 else 1200000)
             if (phase == 3 || late <= 90000) {
                 try {
+                    if (!NotificationManagerCompat.from(c).areNotificationsEnabled()) { fallback(c); return }
                     val intent = Intent(c, StartOtpAlarmService::class.java).putExtra("booking", b.optString("id")).putExtra("loop", phase == 3)
                     if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(intent) else c.startService(intent)
                     prefs(c).edit().putString("played", marker).apply()
@@ -144,6 +160,7 @@ object StartOtpAlarmEngine {
     }
     fun silence(c: Context) {
         prefs(c).edit().putLong("silenceUntil", serverNow(c) + 300000L).apply()
+        StartOtpAlarmService.active?.silenceImmediately()
         c.stopService(Intent(c, StartOtpAlarmService::class.java))
         arm(c, 300000)
     }
@@ -163,4 +180,10 @@ object StartOtpAlarmEngine {
             .setContentIntent(open).setOngoing(true).addAction(0, "Silence 5 minutes", pause).build()
     }
     fun fallback(c: Context) { try { NotificationManagerCompat.from(c).notify(NOTIFICATION, notification(c)) } catch (_: Exception) {} }
+    fun boot(c: Context) {
+        // elapsedRealtime is from another boot; never use it to restore stale eligibility.
+        prefs(c).edit().remove("server").remove("elapsed").apply()
+        cancelTimer(c)
+        if (rows(c).length() > 0) fallback(c)
+    }
 }

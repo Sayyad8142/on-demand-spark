@@ -12,6 +12,7 @@ class StartOtpAlarmService : Service() {
     companion object { @Volatile var active: StartOtpAlarmService? = null }
     private var player: MediaPlayer? = null
     private var booking = ""
+    private var continuous = false
     private val scheduler = Executors.newSingleThreadScheduledExecutor()
     private var network: ConnectivityManager.NetworkCallback? = null
     override fun onCreate() {
@@ -26,20 +27,23 @@ class StartOtpAlarmService : Service() {
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val id = intent?.getStringExtra("booking") ?: return START_NOT_STICKY
-        if (player != null && booking == id) return START_NOT_STICKY
+        val loop = intent.getBooleanExtra("loop", false)
+        if (player != null && booking == id && continuous == loop) return START_NOT_STICKY
         stopAudio(); booking = id
+        continuous = loop
         try {
             val mp = MediaPlayer()
             mp.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
             resources.openRawResourceFd(R.raw.start_otp_voice).use { fd -> mp.setDataSource(fd.fileDescriptor, fd.startOffset, fd.length) }
-            mp.isLooping = intent.getBooleanExtra("loop", false)
+            mp.isLooping = loop
             mp.setWakeMode(this, android.os.PowerManager.PARTIAL_WAKE_LOCK)
             mp.setOnCompletionListener { stopSelf() }; mp.setOnErrorListener { _,_,_ -> stopSelf(); true }
             mp.prepare(); player = mp; mp.start()
         } catch (_: Exception) { stopSelf(); StartOtpAlarmEngine.fallback(this) }
         return START_NOT_STICKY
     }
-    fun stopBooking(id: String) { if (booking == id) stopSelf() }
+    fun stopBooking(id: String) { if (booking == id) { stopAudio(); stopSelf() } }
+    fun silenceImmediately() { stopAudio(); stopSelf() }
     private fun stopAudio() { try { player?.stop(); player?.release() } catch (_: Exception) {} finally { player = null } }
     override fun onDestroy() {
         stopAudio(); scheduler.shutdownNow()

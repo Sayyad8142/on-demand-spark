@@ -15,7 +15,7 @@ class StartOtpAlarmReceiver : BroadcastReceiver() {
                     if (n.optJSONObject("extra")?.optString("kind") == "start_otp_reminder") store.edit().remove(key).commit()
                 } catch (_: Exception) {}
                 // Android 15 forbids media-playback FGS at boot: wait for foreground user action.
-                StartOtpAlarmEngine.fallback(c)
+                StartOtpAlarmEngine.boot(c)
             }
         }
     }

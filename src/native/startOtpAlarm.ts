@@ -6,6 +6,7 @@ type AlarmBridge = {
   sync(input: { userId: string; generation: number; workerId: string; bookings: StartOtpReminderBooking[] }): Promise<void>;
   stopAll(): Promise<void>;
   cancel(input: { bookingId: string }): Promise<void>;
+  snapshot(input: { userId: string; generation: number; workerId: string; bookings: StartOtpReminderBooking[] }): Promise<void>;
   reconcile(): Promise<void>;
 };
 export const StartOtpAlarm = registerPlugin<AlarmBridge>("StartOtpAlarm");

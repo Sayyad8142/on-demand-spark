@@ -27,7 +27,13 @@ export default function StartOtpReminderManager({ userId }: { userId: string | u
       const { data } = await supabase.from("workers").select("id").eq("user_id", userId).maybeSingle();
       if (cancelled || !data) return;
       channel = supabase.channel(`start-alarm-${data.id}-${generation}`)
-        .on("postgres_changes", { event: "*", schema: "public", table: "bookings", filter: `worker_id=eq.${data.id}` }, () => { void sync(); })
+        .on("postgres_changes", { event: "*", schema: "public", table: "bookings", filter: `worker_id=eq.${data.id}` }, payload => {
+          const row = payload.new as { id?: string; worker_id?: string; started_at?: string | null; status?: string };
+          if (row.id && (row.started_at || row.worker_id !== data.id || !["assigned", "accepted", "on_the_way"].includes(row.status ?? ""))) {
+            void StartOtpAlarm.cancel({ bookingId: row.id }).catch(() => {});
+          }
+          void sync();
+        })
         .subscribe();
     };
     const sync = async () => {
@@ -48,7 +54,7 @@ export default function StartOtpReminderManager({ userId }: { userId: string | u
       void sync();
     };
     const onChange = () => { window.dispatchEvent(new Event("startOtpAlarmPending")); void sync(); };
-    const stops = ["startOtpVerified", "bookingCancelledAlert", "bookingCompleted", "bookingReassigned"];
+    const stops = ["startOtpVerified", "bookingStarted", "bookingCancelledAlert", "bookingCompleted", "bookingReassigned"];
     stops.forEach(name => window.addEventListener(name, onStop));
     window.addEventListener("bookingAccepted", onChange);
     window.addEventListener("online", onChange);
