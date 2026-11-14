@@ -7,10 +7,24 @@ vi.mock("@/lib/bookingAck", () => ({ rememberAckToken: vi.fn(), forgetAckToken: 
 vi.mock("@/lib/fcmAckTracker", () => ({ resolveFcmOffer: vi.fn() }));
 vi.mock("@/lib/bookingAlertFallback", () => ({ clearBookingAlertFallback: vi.fn() }));
 vi.mock("@/lib/scheduledBookingGuards", () => ({ canShowWorkerBookingOffer: () => true, isBeforeScheduledDispatchWindow: () => false, logScheduledOfferDecision: vi.fn() }));
-import { processIncomingBooking, getCurrentAlert, dismissAlert, clearAlertState, onNewAlert } from "@/services/bookingAlertCoordinator";
+import { processIncomingBooking, getCurrentAlert, dismissAlert, clearAlertState, onNewAlert, retireOfferGeneration } from "@/services/bookingAlertCoordinator";
 const offer = (id: string, timeoutAt: string) => ({ bookingId: id, bookingRequestId: `r-${id}`, custName: "C", community: "x", serviceType: "maid", flatNo: "1", priceInr: 1, source: "fcm" as const, timeoutAt });
 beforeEach(() => { clearAlertState(); vi.useRealTimers(); });
 describe("coordinator generation dedupe", () => {
+  it("closed request does not permanently suppress later same-row re-offer", async () => {
+    const now = Date.now();
+    const first = offer("closed-generation", new Date(now + 10000).toISOString());
+    expect(await processIncomingBooking(first)).toBe(true);
+    retireOfferGeneration(first.bookingId, first.timeoutAt);
+    expect(await processIncomingBooking(offer(first.bookingId, new Date(now + 70000).toISOString()))).toBe(true);
+  });
+  it("delayed old closure cannot close newer generation", async () => {
+    const now = Date.now();
+    const latest = offer("delayed-close", new Date(now + 70000).toISOString());
+    expect(await processIncomingBooking(latest)).toBe(true);
+    retireOfferGeneration(latest.bookingId, new Date(now + 10000).toISOString());
+    expect(getCurrentAlert()?.timeoutAt).toBe(latest.timeoutAt);
+  });
   it("duplicate deliveries show once even when concurrent", async () => {
     const incoming = offer("duplicate", new Date(Date.now() + 60000).toISOString());
     const listener = vi.fn(); const off = onNewAlert(listener);

@@ -86,6 +86,19 @@ export function clearAlertState() {
   currentAlert = null;
 }
 
+/** Request closure is not permanent booking assignment: a later generation may be offered. */
+export function retireOfferGeneration(bookingId: string, timeoutAt?: string) {
+  if (isOwnAcceptance(bookingId)) return;
+  const currentDeadline = Date.parse(currentAlert?.timeoutAt ?? "");
+  const closedDeadline = Date.parse(timeoutAt ?? "");
+  if (currentAlert?.bookingId === bookingId && Number.isFinite(closedDeadline) && currentDeadline > closedDeadline) return;
+  dismissAlert(bookingId);
+  try {
+    const plugin = (window as any)?.Capacitor?.Plugins?.OverlayPlugin;
+    plugin?.hideBookingOverlay?.({ bookingId })?.catch?.(() => {});
+  } catch { /* presentation cleanup only */ }
+}
+
 /** Offers already invalidated — keeps this idempotent (no repeated toasts). */
 const invalidatedBookingIds = new Set<string>();
 
