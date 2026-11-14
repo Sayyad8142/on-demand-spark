@@ -164,3 +164,9 @@
 - [x] Check available management tools, attempt authenticated function listing, inspect managed-secret names and rerun staged Deno compilation/security tests; no production changes.
 - [ ] Establish authoritative function existence/version and runtime credential presence — blocked: Supabase CLI has no management access token; available gateway tools have no function list/download or runtime-presence read.
 - [ ] Reconfirm deployment-only scope after prerequisites are verified — blocked: prerequisites remain unresolved; live ranking stays OFF.
+
+## Dispatch coordination audit (14 Nov) — read-only
+- [x] Audit new app (web + native) and live backend contract; report in docs/dispatch-coordination-2026-11-14/REPORT.md.
+- [ ] New-app corrections A1–A5 — blocked: awaiting owner approval.
+- [ ] Backend fixes B1–B7 — owned by Admin Panel/backend; awaiting approval and hosted source parity.
+- [ ] Real Android phone tests — blocked: device and approved test bookings not supplied.
