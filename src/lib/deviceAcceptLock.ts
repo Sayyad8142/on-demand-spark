@@ -45,7 +45,8 @@ export async function claimDeviceAcceptance(bookingId: string): Promise<boolean>
 
 /** Releases both claims. `accepted` records a confirmed win on the native side too. */
 export async function releaseDeviceAcceptance(bookingId: string, accepted = false): Promise<void> {
-  if (!accepted) endAcceptance(bookingId);
+  // The attempt is finished on either result; confirmed ownership is tracked separately.
+  endAcceptance(bookingId);
   const lock = nativeLock();
   if (!lock?.releaseAcceptance) return;
   try {

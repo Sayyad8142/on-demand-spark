@@ -1,5 +1,9 @@
 # Architecture rules
 
+<!-- LOVABLE:BEGIN -->
+- Offer presentation uses request + deadline generations; rejection escalation is server-only, native OwnOfferPreflight reads verified-session own rows, and acceptance claims are single-flight across bookings. Why: retries must not steer dispatch, extend deadlines, or use another worker's offer.
+<!-- LOVABLE:END -->
+
 - Signup QR/manual selection is presentation-only and shares the existing UPI value, decoder and validation. Why: changing the visible option must not change payout or signup requirements.
 
 - Worker localization uses i18next resources and display-only helpers in `src/i18n/display.ts`; never translate stored IDs, RPC inputs, comparison strings or server contracts. Why: language selection must not change booking, payout or authentication behavior.
