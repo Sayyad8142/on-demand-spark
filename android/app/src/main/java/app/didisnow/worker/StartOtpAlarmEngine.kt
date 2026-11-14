@@ -54,7 +54,7 @@ object StartOtpAlarmEngine {
         prefs(c).edit().putString("rows", out.toString()).putStringSet("stopped", stopped).apply()
         main.post { StartOtpAlarmService.active?.stopBooking(id); evaluate(c, false) }
     }
-    /** JS supplies only display snapshots; server time and identity are re-read here. */
+    /** A lifecycle wakeup only; server time and identity are re-read here. */
     fun sync(c: Context, user: String, generation: Long) {
         if (prefs(c).getString("user", "") != user || prefs(c).getLong("generation", -1) != generation) return
         reconcile(c, false)
@@ -91,7 +91,10 @@ object StartOtpAlarmEngine {
             var fresh = false
             try {
                 val auth = JSONObject(read(c, "/auth/v1/user").first)
-                if (auth.optString("id") != user) { main.post { stopAll(c) }; return@execute }
+                if (auth.optString("id") != user) {
+                    main.post { if (prefs(c).getString("user", "") == user && prefs(c).getLong("generation", -1) == generation) stopAll(c) }
+                    return@execute
+                }
                 val workers = JSONArray(read(c, "/rest/v1/workers?select=id&user_id=eq.${URLEncoder.encode(user,"UTF-8")}&limit=2").first)
                 if (workers.length() != 1) throw IllegalStateException("Worker unavailable")
                 val worker = workers.getJSONObject(0).getString("id")
@@ -109,7 +112,10 @@ object StartOtpAlarmEngine {
                 synchronized(this) {
                     if (prefs(c).getString("user", "") != user || prefs(c).getLong("generation", -1) != generation) return@execute
                     if (result.second <= 0) throw IllegalStateException("Missing server clock")
-                    prefs(c).edit().putString("rows", out.toString()).putLong("server", result.second).putLong("elapsed", SystemClock.elapsedRealtime()).apply()
+                    val safe = JSONArray()
+                    val stopped = prefs(c).getStringSet("stopped", emptySet()).orEmpty()
+                    for (i in 0 until out.length()) if (!stopped.contains(out.getJSONObject(i).optString("id"))) safe.put(out.getJSONObject(i))
+                    prefs(c).edit().putString("rows", safe.toString()).putLong("server", result.second).putLong("elapsed", SystemClock.elapsedRealtime()).apply()
                     fresh = true
                 }
             } catch (_: Exception) { /* retain known eligibility, never restore blindly */ }
@@ -141,6 +147,7 @@ object StartOtpAlarmEngine {
         }
         if (selected == null) { cancelTimer(c); StartOtpAlarmService.active?.silenceImmediately(); c.stopService(Intent(c, StartOtpAlarmService::class.java)); NotificationManagerCompat.from(c).cancel(NOTIFICATION); return }
         val b = selected
+        StartOtpAlarmService.active?.stopIfDifferent(b.optString("id"))
         val phase = StartOtpAlarmRules.phase(b.optLong("acceptedMs"), now)
         if (prefs(c).getLong("silenceUntil", 0) > now) { arm(c, prefs(c).getLong("silenceUntil",0)-now); return }
         val marker = "${b.optString("id")}:${b.optLong("acceptedMs")}:$phase"

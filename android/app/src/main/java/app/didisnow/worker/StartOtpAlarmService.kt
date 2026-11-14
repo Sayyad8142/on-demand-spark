@@ -43,6 +43,7 @@ class StartOtpAlarmService : Service() {
         return START_NOT_STICKY
     }
     fun stopBooking(id: String) { if (booking == id) { stopAudio(); stopSelf() } }
+    fun stopIfDifferent(id: String) { if (booking != id) { stopAudio(); stopSelf() } }
     fun silenceImmediately() { stopAudio(); stopSelf() }
     private fun stopAudio() { try { player?.stop(); player?.release() } catch (_: Exception) {} finally { player = null } }
     override fun onDestroy() {

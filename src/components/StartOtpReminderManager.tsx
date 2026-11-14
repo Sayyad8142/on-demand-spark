@@ -43,7 +43,7 @@ export default function StartOtpReminderManager({ userId }: { userId: string | u
       try {
         do {
           queued = false;
-          await StartOtpAlarm.sync({ userId, generation, workerId: "", bookings: [] });
+          await StartOtpAlarm.sync({ userId, generation });
         } while (queued && !cancelled);
       } catch { /* native retains locally eligible state on offline reads */ }
       finally { running = false; }

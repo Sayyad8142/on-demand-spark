@@ -1,9 +1,8 @@
 import { Capacitor, registerPlugin } from "@capacitor/core";
-import type { StartOtpReminderBooking } from "@/lib/startOtpReminder";
 
 type AlarmBridge = {
   configure(input: { userId: string; generation: number; url: string; key: string }): Promise<void>;
-  sync(input: { userId: string; generation: number; workerId: string; bookings: StartOtpReminderBooking[] }): Promise<void>;
+  sync(input: { userId: string; generation: number }): Promise<void>;
   stopAll(): Promise<void>;
   cancel(input: { bookingId: string }): Promise<void>;
   reconcile(): Promise<void>;
