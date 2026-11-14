@@ -171,3 +171,8 @@
 - [ ] Prompt 99: coordinate final contract with Admin Panel before release — blocked: Admin Panel confirmation and real Android phone verification.
 - [ ] Backend fixes B1–B7 — owned by Admin Panel/backend; awaiting approval and hosted source parity.
 - [ ] Real Android phone tests — blocked: device and approved test bookings not supplied.
+
+## Start OTP voice reminder audit (14 Nov) — read-only
+- [x] Trace source/local audio/backend metadata; run 34 existing safety tests; inspect aggregate production evidence without OTPs or tokens.
+- [x] Report nominal 23-slot timeline, reboot replay, stale cancellation/audio/idle limitations and distinct completion reminders; reported root file absent, public preview renders without page errors.
+- [ ] Establish real-phone audible playback/stop reliability and hosted sender parity — blocked: physical device/installed APK evidence and authoritative hosted source unavailable; no changes or notifications approved.
