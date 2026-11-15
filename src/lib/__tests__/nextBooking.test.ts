@@ -36,3 +36,23 @@ describe("independent Next Booking eligibility", () => {
   it("rejects unavailable worker highlighted as eligible", () => expect(() => parseNextSnapshot({ ...valid(), reason: "busy" }, now)).toThrow());
   it("production activation remains OFF", () => expect(NEXT_BOOKING_LIVE_ENABLED).toBe(false));
 });
+import { describeShape, isPreviewVerificationHost, safeErrorCode, safeNumbers } from "../nextBookingDiagnostic";
+describe("Next Booking preview check", () => {
+  it("runs only on the preview host or local machine, never published or native", () => {
+    expect(isPreviewVerificationHost("id-preview--759fb1e2-47be-4ebf-9bb7-b8afd005a404.lovable.app", false)).toBe(true);
+    expect(isPreviewVerificationHost("localhost", false)).toBe(true);
+    expect(isPreviewVerificationHost("partner.didisnow.com", false)).toBe(false);
+    expect(isPreviewVerificationHost("on-demand-spark.lovable.app", false)).toBe(false);
+    expect(isPreviewVerificationHost("localhost", true)).toBe(false);
+  });
+  it("never shows string values such as names or phone numbers", () => {
+    const body = { group: 2, position: 5, me: { name: "Asha", phone: "9876543210", rank: 3 }, rows: [{ name: "Asha" }] };
+    const text = [...describeShape(body), ...safeNumbers(body)].join(" ");
+    expect(text).not.toContain("Asha"); expect(text).not.toContain("9876543210");
+    expect(safeNumbers(body)).toEqual(["group = 2", "position = 5", "me.rank = 3"]);
+  });
+  it("shows only short error codes", () => {
+    expect(safeErrorCode({ error: "unauthorized" })).toBe("unauthorized");
+    expect(safeErrorCode({ error: "token eyJabc.def failed for 9876543210" })).toBe("unreadable_error");
+  });
+});
