@@ -1,5 +1,11 @@
 # Worker language translation
 
+## Next Booking connection fix (15 Nov)
+- [x] Identify disabled integration and hosted endpoint 404; preserve activation approval gate.
+- [x] Implement explicit unavailable/session/connection states, session refresh, Retry, IST display and remove duplicated explanation.
+- [x] 667 app tests passed; preview build OK; 393×805 and 1280×1800 guest checks verified explicit disabled state, single explanation, tab switching and no overflow/page errors.
+- [ ] Verify real eligible/ineligible worker ranking — blocked: endpoint returns NOT_FOUND, production activation not approved, external unmanaged authenticated checks unavailable.
+
 ## Current Worker App rating fixes (15 Nov) — no deployment/publication
 - [x] Share server rating/count reads; refresh on open, foreground, customer updates and completion.
 - [x] Paginate completed-only reviews and prevent early feedback retrieval in Worker App screens; history ratings refresh independently of rankings.

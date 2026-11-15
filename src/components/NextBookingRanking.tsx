@@ -1,24 +1,27 @@
 import { useState } from "react";
+import "@/i18n/nextBookingMessages";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNextBooking } from "@/hooks/useNextBooking";
 import { displayText, displayLocale, serviceLabel, useWorkerLanguage } from "@/i18n/display";
 import { type NextReason } from "@/lib/nextBooking";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Star, Zap } from "lucide-react";
+import { RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const reasons: Record<NextReason, string> = {
-  available: "Available", off: "Availability OFF", busy: "Busy", no_slot: "No Working Slot", inactive: "Inactive", unable: "Unable to Verify",
+  available: "Available", off: "Turn on availability to appear in this ranking.", busy: "You are busy with a booking.", no_slot: "You have no saved working hours for this slot.", inactive: "Your worker account is inactive.", unable: "Ranking data could not be verified. Try again.",
 };
 export default function NextBookingRanking() {
   useWorkerLanguage();
   const { user } = useAuth();
   const [community, setCommunity] = useState("");
   const [service, setService] = useState("");
-  const { data, loading } = useNextBooking(user?.id, community, service);
-  const time = (value: string) => new Date(value).toLocaleTimeString(displayLocale(), { hour: "numeric", minute: "2-digit" });
+  const { data, loading, error, retry } = useNextBooking(user?.id, community, service);
+  const time = (value: string) => new Date(value).toLocaleTimeString(displayLocale(), { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit" });
+  const message = loading ? "Checking availability…" : error === "disabled" ? "Next Booking is not enabled yet." : error === "auth" ? "Please sign in again." : error === "unavailable" ? "Ranking service is not available yet." : error === "invalid" ? "Ranking data could not be verified. Try again." : "Could not connect. Try again.";
   return <section className="space-y-4 py-3" aria-busy={loading}>
     <h2 className="text-lg font-bold">⚡ {displayText("Next Booking")}</h2>
-    <p className="text-xs text-muted-foreground">{displayText("Available worker ranking only — not the next booking order.")}</p>
     {data && <>
       <div className="grid grid-cols-2 gap-2">
         <Select value={data.community} onValueChange={setCommunity}>
@@ -50,6 +53,7 @@ export default function NextBookingRanking() {
         </li>)}
       </ol>
     </>}
-    {!data && <p role="status" className="py-8 text-center text-sm text-muted-foreground">{displayText(loading ? "Checking availability…" : "Unable to Verify")}</p>}
+    {!data && <p role="status" className="py-8 text-center text-sm text-muted-foreground">{displayText(message)}</p>}
+    {!loading && (error === "connection" || error === "invalid" || data?.reason === "unable") && <div className="flex justify-center"><Button variant="outline" onClick={retry}><RefreshCw className="mr-2 h-4 w-4" />{displayText("Retry")}</Button></div>}
   </section>;
 }
