@@ -4457,6 +4457,44 @@ export type Database = {
         }
         Relationships: []
       }
+      rating_reveal_events: {
+        Row: {
+          booking_id: string
+          created_at: string
+          event: string
+          id: string
+          rating: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          event: string
+          id?: string
+          rating: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          event?: string
+          id?: string
+          rating?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rating_reveal_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rent_invoices: {
         Row: {
           amount: number
@@ -7564,6 +7602,7 @@ export type Database = {
           booking_id: string
           comment: string | null
           created_at: string
+          feedback_tags: string[]
           id: string
           rating: number
           user_id: string
@@ -7573,6 +7612,7 @@ export type Database = {
           booking_id: string
           comment?: string | null
           created_at?: string
+          feedback_tags?: string[]
           id?: string
           rating: number
           user_id: string
@@ -7582,6 +7622,7 @@ export type Database = {
           booking_id?: string
           comment?: string | null
           created_at?: string
+          feedback_tags?: string[]
           id?: string
           rating?: number
           user_id?: string
@@ -10659,6 +10700,24 @@ export type Database = {
           request_count: number
         }[]
       }
+      get_my_customer_rating_summary: {
+        Args: never
+        Returns: {
+          avg_rating: number
+          ratings_count: number
+        }[]
+      }
+      get_my_customer_reviews: {
+        Args: never
+        Returns: {
+          booking_id: string
+          comment: string
+          created_at: string
+          feedback_tags: string[]
+          id: string
+          rating: number
+        }[]
+      }
       get_my_earnings: {
         Args: { p_cursor?: string; p_limit?: number; p_status?: string }
         Returns: Json
@@ -11681,6 +11740,17 @@ export type Database = {
           started_at: string
           streak: number
         }[]
+      }
+      submit_worker_rating_verified: {
+        Args: {
+          p_booking_id: string
+          p_comment?: string
+          p_intent?: string
+          p_profile_id: string
+          p_rating?: number
+          p_tags?: string[]
+        }
+        Returns: Json
       }
       support_get_or_create_thread: {
         Args: { p_booking_id?: string }
