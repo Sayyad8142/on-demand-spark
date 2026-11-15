@@ -13,7 +13,9 @@ export const emptyDiagnostic = (signedIn: boolean): NextBookingDiagnostic => ({ 
 
 export function isPreviewVerificationHost(hostname: string, native: boolean): boolean {
   if (native) return false;
-  return /^id-preview--[a-z0-9-]+\.lovable\.app$/.test(hostname) || hostname === "localhost" || hostname === "127.0.0.1";
+  const project = "759fb1e2-47be-4ebf-9bb7-b8afd005a404";
+  return hostname === `id-preview--${project}.lovable.app` || hostname === `${project}.lovableproject.com` ||
+    hostname === "localhost" || hostname === "127.0.0.1";
 }
 export function previewVerificationEnabled(): boolean {
   if (typeof window === "undefined") return false;
