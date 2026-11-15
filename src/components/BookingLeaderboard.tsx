@@ -1,3 +1,4 @@
+import "@/i18n/nextBookingMessages";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { rankLeaderboard, summarizeReviews, RANKING_PAGE_TABS, type RankingPageTab, type ReviewStats, type RankedWorker } from "@/lib/leaderboardRanking";

@@ -1,3 +1,4 @@
+import "@/i18n/nextBookingMessages";
 import { displayText, useWorkerLanguage } from "@/i18n/display";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
