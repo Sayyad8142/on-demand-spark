@@ -1,5 +1,10 @@
 # Worker language translation
 
+## Prompt 101 — existing Next Booking function correction
+- [x] Correct the client function name to worker-next-booking without activation; hosted invalid-token POST responds 401 unauthorized (not 404).
+- [x] Reported mobile hook error not reproduced: explicit React imports, preview build OK, mobile auth page has no error overlay/page errors; 45 ranking regression tests passed.
+- [ ] Verify hosted request/response compatibility and real worker ranking — blocked: authenticated external-worker testing and hosted source unavailable; live activation remains unapproved and OFF. See PROMPT-101-CORRECTION.md.
+
 ## Prompt 100 — Next Booking backend connection
 - [x] Confirm configured production project and exact intended function; repeat hosted probe returns 404 NOT_FOUND; locate existing staged package without changing its algorithm.
 - [x] Fresh Deno compilation and 29 isolated security tests passed; exact endpoint and remaining deployment/activation gates recorded in PROMPT-100-CONNECTION.md.
