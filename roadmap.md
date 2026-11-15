@@ -217,3 +217,7 @@
 - [x] Temporary safe preview check: signed in, server answer, valid ranking data, short error code, field names and numbers only (no names, phones, ids or tokens). 48 ranking tests pass.
 - [x] Real response seen (HTTP 200, areas list); screen now reads it per community/service; temporary check panel removed.
 - [ ] See Next Group / In Line with a real number — waits on a worker who is in the line (current test worker: notifications off).
+
+## Priority score display fixes (15 Nov) — frontend only
+- [x] Profile breakdown reads server score parts; Home community card honest pointer; Leaderboard own score from own row, "—" for no reviews; wording no longer claims score decides bookings; Next Booking marked unconfirmed estimate. 675 tests pass.
+- [ ] Leaderboard server 0→50 / rating→5.0 fallback — staged in docs/priority-score-fixes-2026-11-15/BACKEND-PENDING.md, awaiting deploy approval.
