@@ -40,6 +40,8 @@ import { describeShape, isPreviewVerificationHost, safeErrorCode, safeNumbers } 
 describe("Next Booking preview check", () => {
   it("runs only on the preview host or local machine, never published or native", () => {
     expect(isPreviewVerificationHost("id-preview--759fb1e2-47be-4ebf-9bb7-b8afd005a404.lovable.app", false)).toBe(true);
+    expect(isPreviewVerificationHost("759fb1e2-47be-4ebf-9bb7-b8afd005a404.lovableproject.com", false)).toBe(true);
+    expect(isPreviewVerificationHost("other-project.lovableproject.com", false)).toBe(false);
     expect(isPreviewVerificationHost("localhost", false)).toBe(true);
     expect(isPreviewVerificationHost("partner.didisnow.com", false)).toBe(false);
     expect(isPreviewVerificationHost("on-demand-spark.lovable.app", false)).toBe(false);
