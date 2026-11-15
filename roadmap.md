@@ -1,5 +1,10 @@
 # Worker language translation
 
+## Prompt 102 — conditional real-ranking activation
+- [x] Record approval to enable read-only UI only after authenticated verification succeeds; keep all unrelated features unchanged.
+- [x] Fresh 45 ranking tests pass; preview build OK at 01:33:26 UTC; mobile preview redirects to auth with no page errors/error overlay. Reported use-mobile error not reproduced; explicit React imports already present.
+- [ ] Verify the existing endpoint contract with the current worker and enable only on success — blocked: external_unmanaged auth has no injected worker session; the session-aware function tool POST returned 401 unauthorized, not authenticated ranking data. Actual success response/parameters remain unverified; UI stays OFF. No backend deployment or publication.
+
 ## Prompt 101 — existing Next Booking function correction
 - [x] Correct the client function name to worker-next-booking without activation; hosted invalid-token POST responds 401 unauthorized (not 404).
 - [x] Reported mobile hook error not reproduced: explicit React imports, preview build OK, mobile auth page has no error overlay/page errors; 45 ranking regression tests passed.
