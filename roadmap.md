@@ -1,5 +1,9 @@
 # Worker language translation
 
+## Prompt 101 — existing Next Booking function correction
+- [ ] Correct the client function name without activation; verify the existing hosted contract where access permits.
+- [ ] Check the reported mobile hook error and run ranking regression tests; no backend changes or publication.
+
 ## Prompt 100 — Next Booking backend connection
 - [x] Confirm configured production project and exact intended function; repeat hosted probe returns 404 NOT_FOUND; locate existing staged package without changing its algorithm.
 - [x] Fresh Deno compilation and 29 isolated security tests passed; exact endpoint and remaining deployment/activation gates recorded in PROMPT-100-CONNECTION.md.
