@@ -211,3 +211,8 @@
 - [x] Implement native single-player lifecycle, server-state reconciliation, restart/account cleanup and five-minute temporary silence; boot restoration requires fresh state/user opening under Android restrictions.
 - [x] 641 app tests, final 53 targeted tests, Android Kotlin/Java compilation and 66 native tests passed; preview build OK, generated Android packages removed. Details in docs/start-otp-alarm-2026-11-15/IMPLEMENTATION.md.
 - [ ] Verify actual audio/timing/stops on isolated phone — blocked: physical phone/approved test booking unavailable; background/exact-alarm permissions, boot/force-stop and expired-session behavior need device verification. No production deploy/release approved.
+
+## Prompt 103 — authenticated Next Booking verification (preview only)
+- [x] Read-only Next Booking turned on only on the preview site (never published site, custom domain or Android app); uses the worker's own login and `worker-next-booking`.
+- [x] Temporary safe preview check: signed in, server answer, valid ranking data, short error code, field names and numbers only (no names, phones, ids or tokens). 48 ranking tests pass.
+- [ ] Real ranking verification — blocked: needs a worker to sign in on the preview and open Next Booking.

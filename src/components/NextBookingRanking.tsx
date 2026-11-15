@@ -3,7 +3,9 @@ import "@/i18n/nextBookingMessages";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNextBooking } from "@/hooks/useNextBooking";
 import { displayText, displayLocale, serviceLabel, useWorkerLanguage } from "@/i18n/display";
-import { type NextReason } from "@/lib/nextBooking";
+import { NEXT_BOOKING_LIVE_ENABLED, type NextReason } from "@/lib/nextBooking";
+import { previewVerificationEnabled } from "@/lib/nextBookingDiagnostic";
+import NextBookingDiagnosticPanel from "@/components/NextBookingDiagnosticPanel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Star, Zap } from "lucide-react";
 import { RefreshCw } from "lucide-react";
@@ -17,7 +19,8 @@ export default function NextBookingRanking() {
   const { user } = useAuth();
   const [community, setCommunity] = useState("");
   const [service, setService] = useState("");
-  const { data, loading, error, retry } = useNextBooking(user?.id, community, service);
+  const [preview] = useState(previewVerificationEnabled);
+  const { data, loading, error, retry, diagnostic } = useNextBooking(user?.id, community, service, NEXT_BOOKING_LIVE_ENABLED || preview);
   const time = (value: string) => new Date(value).toLocaleTimeString(displayLocale(), { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit" });
   const message = loading ? "Checking availability…" : error === "disabled" ? "Next Booking is not enabled yet." : error === "auth" ? "Please sign in again." : error === "unavailable" ? "Ranking service is not available yet." : error === "invalid" ? "Ranking data could not be verified. Try again." : "Could not connect. Try again.";
   return <section className="space-y-4 py-3" aria-busy={loading}>
@@ -55,5 +58,6 @@ export default function NextBookingRanking() {
     </>}
     {!data && <p role="status" className="py-8 text-center text-sm text-muted-foreground">{displayText(message)}</p>}
     {!loading && (error === "connection" || error === "invalid" || data?.reason === "unable") && <div className="flex justify-center"><Button variant="outline" onClick={retry}><RefreshCw className="mr-2 h-4 w-4" />{displayText("Retry")}</Button></div>}
+    {preview && <NextBookingDiagnosticPanel diagnostic={diagnostic} loading={loading} />}
   </section>;
 }
