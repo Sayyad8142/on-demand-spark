@@ -1,5 +1,10 @@
 # Worker language translation
 
+## Prompt 100 — Next Booking backend connection
+- [x] Confirm configured production project and exact intended function; repeat hosted probe returns 404 NOT_FOUND; locate existing staged package without changing its algorithm.
+- [x] Fresh Deno compilation and 29 isolated security tests passed; exact endpoint and remaining deployment/activation gates recorded in PROMPT-100-CONNECTION.md.
+- [ ] Connect and verify real ranking — blocked: separate deployment and activation approval required; authenticated unmanaged-worker testing unavailable.
+
 ## Next Booking connection fix (15 Nov)
 - [x] Identify disabled integration and hosted endpoint 404; preserve activation approval gate.
 - [x] Implement explicit unavailable/session/connection states, session refresh, Retry, IST display and remove duplicated explanation.
