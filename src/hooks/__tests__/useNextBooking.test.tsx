@@ -37,7 +37,7 @@ describe("Next Booking refresh safety", () => {
     h.refresh.mockResolvedValue({ data: { session: { user: { id: "u1" }, access_token: "fresh-test" } }, error: null });
     const hook = renderHook(() => useNextBooking("u1", "", "", true)); await flush();
     expect(h.refresh).toHaveBeenCalledTimes(1);
-    expect(h.invoke).toHaveBeenCalledWith("worker-availability-ranking", { body: { community: undefined, service: undefined }, headers: { Authorization: "Bearer fresh-test" } }); hook.unmount();
+    expect(h.invoke).toHaveBeenCalledWith("worker-next-booking", { body: { community: undefined, service: undefined }, headers: { Authorization: "Bearer fresh-test" } }); hook.unmount();
   });
   it("retries a 401 only once before reporting an expired login", async () => {
     h.invoke.mockResolvedValue({ data: null, error: { context: { status: 401 } } });

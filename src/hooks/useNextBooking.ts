@@ -36,7 +36,7 @@ export function useNextBooking(account: string | undefined, community: string, s
           if (refreshed.error || session?.user.id !== account) throw Error("auth");
         }
         if (disposed || request !== sequence || !visible()) return;
-        const invoke = (token: string) => supabase.functions.invoke("worker-availability-ranking", {
+        const invoke = (token: string) => supabase.functions.invoke("worker-next-booking", {
           body: { community: community || undefined, service: service || undefined },
           headers: { Authorization: `Bearer ${token}` },
         });
