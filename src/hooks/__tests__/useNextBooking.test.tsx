@@ -5,7 +5,8 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: { auth: { getSessio
 vi.mock("@capacitor/app", () => ({ App: { addListener: async (_: string, cb: typeof h.native) => { h.native = cb; return { remove: vi.fn() }; } } }));
 import { useNextBooking } from "../useNextBooking";
 const now = Date.parse("2026-11-12T08:40:00Z");
-const response = () => ({ data: { version: 1, updatedAt: new Date(Date.now()).toISOString(), slotStart: new Date(Math.floor(Date.now() / 1800000) * 1800000).toISOString(), slotEnd: new Date(Math.floor(Date.now() / 1800000) * 1800000 + 1800000).toISOString(), community: "c", service: "maid", communities: ["c"], services: ["maid"], reason: "available", rows: [{ rank: 1, name: "Test", priority: 80, rating: 4.5, isMe: true }] }, error: null });
+const area = (over = {}) => ({ community: "prestige-high-fields", service: "maid", status: "not_in_queue", groups_ahead: null, boundary_tie: false, starvation_guard: false, reason: "notifications_off", ...over });
+const response = (areas: unknown[] = [area()]) => ({ data: { ok: true, snapshot_at: new Date(Date.now()).toISOString(), estimate_only: true, ranking_mode: "longest_waiting", areas }, error: null });
 beforeEach(() => {
   vi.useFakeTimers(); vi.setSystemTime(now); h.invoke.mockReset(); h.session.mockReset(); h.refresh.mockReset(); h.native = null;
   Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
@@ -29,7 +30,7 @@ describe("Next Booking refresh safety", () => {
     h.invoke.mockResolvedValueOnce({ data: null, error: Error("offline") });
     const hook = renderHook(() => useNextBooking("u1", "", "", true)); await flush();
     expect(hook.result.current.error).toBe("connection"); act(() => hook.result.current.retry()); await flush();
-    expect(h.invoke).toHaveBeenCalledTimes(2); expect(hook.result.current.data?.rows[0].rank).toBe(1);
+    expect(h.invoke).toHaveBeenCalledTimes(2); expect(hook.result.current.data?.areas).toHaveLength(1);
     expect(hook.result.current.error).toBeNull(); hook.unmount();
   });
   it("refreshes an expired session and sends only the refreshed JWT", async () => {
@@ -52,10 +53,13 @@ describe("Next Booking refresh safety", () => {
     const hook = renderHook(() => useNextBooking("u1", "", "", true)); await flush();
     expect(h.invoke).toHaveBeenCalledTimes(1); expect(hook.result.current.error).toBe("auth"); hook.unmount();
   });
-  it.each(["off", "no_slot", "busy", "inactive"])("preserves the backend eligibility reason %s", async reason => {
-    h.invoke.mockImplementation(async () => ({ data: { ...response().data, reason, rows: [] }, error: null }));
+  it("reads the real worker-next-booking response, keeping null positions null", async () => {
+    h.invoke.mockImplementation(async () => response([area(), area({ service: "bathroom_cleaning", status: "in_queue", groups_ahead: 2, reason: null })]));
     const hook = renderHook(() => useNextBooking("u1", "", "", true)); await flush();
-    expect(hook.result.current.data?.reason).toBe(reason); expect(hook.result.current.error).toBeNull(); hook.unmount();
+    const d = hook.result.current.data!;
+    expect(d.estimateOnly).toBe(true); expect(d.rankingMode).toBe("longest_waiting");
+    expect(d.areas.map(a => [a.service, a.groupsAhead, a.reason])).toEqual([["maid", null, "notifications_off"], ["bathroom_cleaning", 2, null]]);
+    expect(hook.result.current.error).toBeNull(); hook.unmount();
   });
   it("rejects invalid data without inventing a ranking", async () => {
     h.invoke.mockResolvedValue({ data: { reason: "available", rank: 1 }, error: null });
@@ -79,7 +83,7 @@ describe("Next Booking refresh safety", () => {
     act(() => h.native?.({ isActive: true })); await flush(); expect(h.invoke).toHaveBeenCalledTimes(2); hook.unmount();
   });
   it("availability changes refresh immediately", async () => { const hook = renderHook(() => useNextBooking("u1", "", "", true)); await flush(); act(() => window.dispatchEvent(new Event("availabilityChanged"))); await flush(); expect(h.invoke).toHaveBeenCalledTimes(2); hook.unmount(); });
-  it("refreshes exactly at the new slot", async () => { vi.setSystemTime(Date.parse("2026-11-12T08:59:59Z")); const hook = renderHook(() => useNextBooking("u1", "", "", true)); await flush(); await act(async () => { await vi.advanceTimersByTimeAsync(1000); }); expect(h.invoke).toHaveBeenCalledTimes(2); expect(hook.result.current.data?.slotStart).toBe("2026-11-12T09:00:00.000Z"); hook.unmount(); });
+  it("refreshes exactly at the new slot", async () => { vi.setSystemTime(Date.parse("2026-11-12T08:59:59Z")); const hook = renderHook(() => useNextBooking("u1", "", "", true)); await flush(); await act(async () => { await vi.advanceTimersByTimeAsync(1000); }); expect(h.invoke).toHaveBeenCalledTimes(2); hook.unmount(); });
   it("clears data on network failure", async () => { const hook = renderHook(() => useNextBooking("u1", "", "", true)); await flush(); expect(hook.result.current.data).not.toBeNull(); h.invoke.mockResolvedValue({ data: null, error: Error("offline") }); await act(async () => { await vi.advanceTimersByTimeAsync(15000); }); expect(hook.result.current.data).toBeNull(); hook.unmount(); });
   it("clears account data and refuses a mismatched login", async () => { const hook = renderHook(({ account }) => useNextBooking(account, "", "", true), { initialProps: { account: "u1" } }); await flush(); hook.rerender({ account: "u2" }); expect(hook.result.current.data).toBeNull(); await flush(); expect(h.invoke).toHaveBeenCalledTimes(1); hook.unmount(); });
   it("late responses after logout never populate data", async () => { let resolve: ((v: ReturnType<typeof response>) => void) | undefined; h.invoke.mockImplementation(() => new Promise(r => { resolve = r; })); const hook = renderHook(({ account }) => useNextBooking(account, "", "", true), { initialProps: { account: "u1" as string | undefined } }); await flush(); hook.rerender({ account: undefined }); await act(async () => { resolve?.(response()); }); expect(hook.result.current.data).toBeNull(); hook.unmount(); });
