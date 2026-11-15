@@ -1,17 +1,9 @@
+import "@/i18n/nextBookingMessages";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
-import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Trophy, Star, TrendingUp, TrendingDown, CheckCircle2, XCircle, AlertTriangle, Clock, ChevronRight } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { formatBookingAddress } from "@/lib/address";
+import { Trophy, Star } from "lucide-react";
+import { parsePriorityBreakdown, type PriorityPart } from "@/lib/priorityBreakdown";
 import { priorityBadge } from "@/lib/priorityBadge";
 
 interface PriorityScoreCardProps {
@@ -22,22 +14,9 @@ interface PriorityScoreCardProps {
     admin_override_rating?: number | null;
     total_ratings?: number | null;
     total_bookings_completed?: number | null;
+    score_reason?: string | null;
   } | null;
 }
-
-// Penalty weights (must mirror recompute_priority_score_v2)
-const PENALTY = {
-  worker_cancelled: 10,
-  no_movement: 15,
-  worker_no_show: 20,
-  complaint: 10,
-} as const;
-
-type FaultEvent = {
-  id: string;
-  reason_code: string;
-  created_at: string;
-};
 
 const BADGE_STYLE = {
   excellent: { emoji: "🥇", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
@@ -59,114 +38,21 @@ function tierLabelFromScore(score: number) {
   return displayText("Getting Started");
 }
 
-function reasonMeta(code: string) {
-  switch (code) {
-    case "worker_no_show":
-      return { label: displayText("No Show"), penalty: PENALTY.worker_no_show, icon: XCircle };
-    case "worker_cancelled":
-      return { label: displayText("Cancelled After Accept"), penalty: PENALTY.worker_cancelled, icon: XCircle };
-    case "no_movement":
-      return { label: displayText("No Movement"), penalty: PENALTY.no_movement, icon: AlertTriangle };
-    case "complaint":
-      return { label: displayText("Customer Complaint"), penalty: PENALTY.complaint, icon: AlertTriangle };
-    default:
-      return { label: code.replace(/_/g, " "), penalty: 0, icon: AlertTriangle };
-  }
-}
-
-function formatWhen(iso: string) {
-  const d = new Date(iso);
-  const diffMs = Date.now() - d.getTime();
-  const day = 24 * 60 * 60 * 1000;
-  if (diffMs < day) return "Today " + d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  if (diffMs < 2 * day) return "Yesterday";
-  if (diffMs < 7 * day) return `${Math.floor(diffMs / day)} days ago`;
-  return d.toLocaleDateString([], { day: "numeric", month: "short" });
-}
-
 export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
   useWorkerLanguage();
   const score = Math.round((worker?.priority_score ?? 0) * 10) / 10;
   const effectiveRating = worker?.admin_override_rating ?? worker?.rating ?? 0;
-  const totalRatings = worker?.total_ratings ?? 0;
-  const completedCount = worker?.total_bookings_completed ?? 0;
+  const stored = typeof worker?.priority_score === "number" ? worker.priority_score : null;
+  const breakdown = parsePriorityBreakdown(worker?.score_reason, stored);
+  const partLabel: Record<PriorityPart["key"], string> = {
+    completed: displayText("Completed jobs (last 7 days)"), online: displayText("Online hours (last 7 days)"),
+    rating: displayText("Customer rating"), recent: displayText("Active in last 24 hours"),
+    topRating: displayText("Rating 4.5 or above"), connection: displayText("Connection and alert replies"),
+    penalties: displayText("Missed or not reached"),
+  };
 
   const rank = rankFromScore(score);
   const tier = tierLabelFromScore(score);
-
-  const [faults, setFaults] = useState<FaultEvent[]>([]);
-  const [recentCompleted, setRecentCompleted] = useState<{ id: string; completed_at: string; flat_no: string | null; community: string | null }[]>([]);
-  const [historyOpen, setHistoryOpen] = useState(false);
-
-  useEffect(() => {
-    if (!worker?.id) return;
-    let cancelled = false;
-    (async () => {
-      const [{ data: faultRows }, { data: bookingRows }] = await Promise.all([
-        supabase
-          .from("worker_fault_events")
-          .select("id, reason_code, created_at")
-          .eq("worker_id", worker.id)
-          .order("created_at", { ascending: false })
-          .limit(50),
-        supabase
-          .from("bookings")
-          .select("id, completed_at, flat_no, community")
-          .eq("worker_id", worker.id)
-          .eq("status", "completed")
-          .not("completed_at", "is", null)
-          .order("completed_at", { ascending: false })
-          .limit(10),
-      ]);
-      if (cancelled) return;
-      setFaults((faultRows ?? []) as FaultEvent[]);
-      setRecentCompleted((bookingRows ?? []) as any);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [worker?.id]);
-
-  // Breakdown counters
-  const penaltyCounts = faults.reduce<Record<string, number>>((acc, f) => {
-    acc[f.reason_code] = (acc[f.reason_code] ?? 0) + 1;
-    return acc;
-  }, {});
-
-  const breakdown: { label: string; value: number; positive: boolean }[] = [
-    { label: displayText("Base score"), value: 50, positive: true },
-    { label: displayText("Completed Jobs"), value: completedCount, positive: true },
-  ];
-  Object.entries(penaltyCounts).forEach(([code, count]) => {
-    const meta = reasonMeta(code);
-    if (meta.penalty > 0) {
-      breakdown.push({
-        label: `${meta.label} ×${count}`,
-        value: -(meta.penalty * count),
-        positive: false,
-      });
-    }
-  });
-  const ratingBonus = effectiveRating >= 4.8 && totalRatings >= 5 ? 5 : 0;
-  if (ratingBonus > 0) {
-    breakdown.push({ label: displayText("High Rating Bonus"), value: ratingBonus, positive: true });
-  }
-
-  // Merged timeline for modal
-  const timeline = [
-    ...faults.map((f) => {
-      const m = reasonMeta(f.reason_code);
-      return { id: f.id, when: f.created_at, label: m.label, points: -m.penalty, positive: false };
-    }),
-    ...recentCompleted.map((b) => ({
-      id: b.id,
-      when: b.completed_at,
-      label: displayText("Completed Booking"),
-      sublabel: formatBookingAddress(b as any),
-      points: 1,
-      positive: true,
-    })),
-  ].sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime()) as Array<{ id: string; when: string; label: string; sublabel?: string; points: number; positive: boolean }>;
 
   return (
     <Card className="border-0 shadow-lg overflow-hidden">
@@ -206,6 +92,22 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
             <span>{displayText("Score Level:")} {rank.label}</span>
           </div>
         </div>
+        {breakdown ? (
+          <ul className="space-y-1 text-xs" aria-label={displayText("How your score is made")}>
+            {breakdown.parts.filter(p => p.points !== 0).map(p => (
+              <li key={p.key} className="flex justify-between gap-2">
+                <span className="text-muted-foreground">{partLabel[p.key]}</span>
+                <span className={`font-semibold ${p.points < 0 ? "text-destructive" : ""}`}>{p.points > 0 ? "+" : ""}{Math.round(p.points * 10) / 10}</span>
+              </li>
+            ))}
+            <li className="flex justify-between gap-2 border-t border-border pt-1 font-bold">
+              <span>{displayText("Your score")}</span><span>{Math.round(breakdown.final * 10) / 10}</span>
+            </li>
+          </ul>
+        ) : stored !== null ? (
+          <p className="text-xs text-muted-foreground">{displayText("Score details are not available right now.")}</p>
+        ) : null}
+        <p className="text-[11px] text-muted-foreground">{displayText("Your score shows your recent performance. It does not decide the order in which booking offers are sent.")}</p>
 
       </CardContent>
     </Card>
