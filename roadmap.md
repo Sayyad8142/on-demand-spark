@@ -215,4 +215,5 @@
 ## Prompt 103 — authenticated Next Booking verification (preview only)
 - [x] Read-only Next Booking turned on only on the preview site (never published site, custom domain or Android app); uses the worker's own login and `worker-next-booking`.
 - [x] Temporary safe preview check: signed in, server answer, valid ranking data, short error code, field names and numbers only (no names, phones, ids or tokens). 48 ranking tests pass.
-- [ ] Real ranking verification — blocked: needs a worker to sign in on the preview and open Next Booking.
+- [x] Real response seen (HTTP 200, areas list); screen now reads it per community/service; temporary check panel removed.
+- [ ] See Next Group / In Line with a real number — waits on a worker who is in the line (current test worker: notifications off).

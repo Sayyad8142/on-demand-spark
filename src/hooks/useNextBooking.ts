@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { NEXT_BOOKING_LIVE_ENABLED, indiaSlot, parseNextSnapshot, type NextSnapshot } from "@/lib/nextBooking";
-import { describeShape, emptyDiagnostic, safeErrorCode, safeNumbers, type NextBookingDiagnostic } from "@/lib/nextBookingDiagnostic";
+import { NEXT_BOOKING_LIVE_ENABLED, indiaSlot } from "@/lib/nextBooking";
+import { parseWorkerNextBooking, type WorkerNextBooking as NextSnapshot } from "@/lib/workerNextBooking";
 
 export type NextBookingError = "disabled" | "auth" | "unavailable" | "connection" | "invalid";
 export function useNextBooking(account: string | undefined, community: string, service: string, enabled = NEXT_BOOKING_LIVE_ENABLED) {
   const [state, setState] = useState<{ owner?: string; scope: string; data: NextSnapshot | null; loading: boolean; error: NextBookingError | null }>({ scope: "", data: null, loading: false, error: null });
-  const [diagnostic, setDiagnostic] = useState<NextBookingDiagnostic>(emptyDiagnostic(false));
   const refreshRef = useRef<(() => Promise<void>) | undefined>();
   const retry = useCallback(() => { void refreshRef.current?.(); }, []);
   const scope = `${community}/${service}`;
@@ -31,7 +30,7 @@ export function useNextBooking(account: string | undefined, community: string, s
       try {
         const { data: auth, error: sessionError } = await supabase.auth.getSession();
         let session = auth.session;
-        if (sessionError || session?.user.id !== account) { setDiagnostic(emptyDiagnostic(false)); throw Error("auth"); }
+        if (sessionError || session?.user.id !== account) throw Error("auth");
         if (session.expires_at && session.expires_at * 1000 <= Date.now() + 30_000) {
           const refreshed = await supabase.auth.refreshSession();
           session = refreshed.data.session;
@@ -50,23 +49,12 @@ export function useNextBooking(account: string | undefined, community: string, s
           if (disposed || request !== sequence || !visible()) return;
           result = await invoke(fresh.access_token);
         }
-        const errorStatus: number | null = result.error?.context?.status ?? null;
-        let errorBody: unknown = null;
-        try { const ctx = result.error?.context; if (ctx && typeof ctx.clone === "function") errorBody = await ctx.clone().json(); } catch { errorBody = null; }
-        let contractOk = false;
-        if (!result.error) { try { parseNextSnapshot(result.data); contractOk = true; } catch { contractOk = false; } }
-        if (!disposed && request === sequence) setDiagnostic({
-          signedIn: true, httpStatus: result.error ? errorStatus : 200,
-          safeError: result.error ? safeErrorCode(errorBody) ?? (errorStatus ? null : "network_error") : safeErrorCode(result.data),
-          contract: result.error ? null : contractOk ? "valid" : "different",
-          shape: result.error ? [] : describeShape(result.data), numbers: result.error ? [] : safeNumbers(result.data),
-        });
         if (result.error) {
           const status = result.error.context?.status;
           throw Error(status === 401 || status === 403 ? "auth" : status === 404 ? "unavailable" : "connection");
         }
         let snapshot: NextSnapshot;
-        try { snapshot = parseNextSnapshot(result.data); } catch { throw Error("invalid"); }
+        try { snapshot = parseWorkerNextBooking(result.data); } catch { throw Error("invalid"); }
         if (!disposed && request === sequence && visible()) setState({ owner: account, scope, data: snapshot, loading: false, error: null });
       } catch (cause) {
         const message = cause instanceof Error ? cause.message : "connection";
@@ -113,5 +101,5 @@ export function useNextBooking(account: string | undefined, community: string, s
       window.removeEventListener("workerAvailabilityChanged", visibility);
     };
   }, [account, community, service, enabled, scope]);
-  return { diagnostic: enabled && account ? diagnostic : emptyDiagnostic(Boolean(account)), ...(state.owner === account && state.scope === scope && enabled && account ? state : { data: null, loading: false, error: !enabled ? "disabled" as const : !account ? "auth" as const : null }), retry };
+  return { ...(state.owner === account && state.scope === scope && enabled && account ? state : { data: null, loading: false, error: !enabled ? "disabled" as const : !account ? "auth" as const : null }), retry };
 }
