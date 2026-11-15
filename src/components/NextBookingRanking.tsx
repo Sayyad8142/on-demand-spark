@@ -47,7 +47,7 @@ export default function NextBookingRanking() {
         <span>{displayText("Last updated")}: {time(data.snapshotAt)}</span>
         {data.rankingMode && <span>{modeText[data.rankingMode] ? displayText(modeText[data.rankingMode]) : prettyCode(data.rankingMode)}</span>}
       </div>
-      {data.estimateOnly && <p className="text-xs font-semibold text-muted-foreground">{displayText("Estimate only — your place can change.")}</p>}
+      <p className="text-xs font-semibold text-muted-foreground">{displayText("Estimate only — your place can change.")} {displayText("Not confirmed to match the live booking order.")}</p>
       {data.areas.length === 0
         ? <p className="py-8 text-center text-sm text-muted-foreground">{displayText("You are not set up for any community or service yet.")}</p>
         : <ul className="space-y-2">{data.areas.map(a => <AreaCard key={`${a.community}/${a.service}`} area={a} />)}</ul>}
