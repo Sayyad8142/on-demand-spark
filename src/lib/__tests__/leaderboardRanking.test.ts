@@ -27,3 +27,25 @@ describe("leaderboard ranking", () => {
     expect(rankLeaderboard(extra, "rated", reviews).map((x) => x.id)).toEqual(["b", "c", "a", "d"]);
   });
 });
+
+import { parsePriorityBreakdown } from "../priorityBreakdown";
+describe("Priority score breakdown (server parts only)", () => {
+  const reason = "completed_7d=3 online_h=0 rating=5.00 accept%=100 total_req=6 not_reached=0 fault=0 no_ack=0 bucket=top pts(c/o/r/rec/b/reach/pen)=15/0/25.0/5/10/13/0 final=68";
+  it("shows the server's saved parts for the stored score", () => {
+    const b = parsePriorityBreakdown(reason, 68)!;
+    expect(b.parts.map(p => p.points)).toEqual([15, 0, 25, 5, 10, 13, -0]);
+    expect(b.final).toBe(68);
+  });
+  it("shows penalties as negative", () => {
+    const b = parsePriorityBreakdown("pts(c/o/r/rec/b/reach/pen)=10/0/21/5/0/3/13 final=26", 26)!;
+    expect(b.parts.find(p => p.key === "penalties")!.points).toBe(-13);
+  });
+  it("shows no breakdown when it does not match the stored score or is missing", () => {
+    expect(parsePriorityBreakdown(reason, 50)).toBeNull();
+    expect(parsePriorityBreakdown(null, 68)).toBeNull();
+    expect(parsePriorityBreakdown("garbage", 68)).toBeNull();
+  });
+  it("a stored score of 0 keeps 0", () => {
+    expect(parsePriorityBreakdown("pts(c/o/r/rec/b/reach/pen)=0/0/0/0/0/0/40 final=0", 0)!.final).toBe(0);
+  });
+});
