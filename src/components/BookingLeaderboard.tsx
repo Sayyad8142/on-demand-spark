@@ -42,6 +42,7 @@ export default function BookingLeaderboard() {
   const [slideDir, setSlideDir] = useState<"left" | "right">("left");
   const [reviews, setReviews] = useState<Map<string, ReviewStats>>(new Map());
   const touchX = useRef<number | null>(null);
+  const [ownScore, setOwnScore] = useState<number | null>(null);
 
   const fetchLeaderboard = async () => {
     try {
@@ -49,6 +50,12 @@ export default function BookingLeaderboard() {
       if (invokeError) throw invokeError;
       setData(result);
       setError(null);
+      // Own score straight from the worker's own row (a real 0 stays 0).
+      const mine = (result?.leaderboard ?? []).find((l: LeaderboardEntry) => l.isMe);
+      if (mine) {
+        const { data: own } = await supabase.from("workers").select("priority_score").eq("id", mine.id).maybeSingle();
+        setOwnScore(typeof own?.priority_score === "number" ? Math.round(own.priority_score) : null);
+      }
       const ids = (result?.leaderboard ?? []).map((l: LeaderboardEntry) => l.id);
       if (ids.length) {
         const { data: rows, error: rErr } = await supabase
@@ -88,9 +95,9 @@ export default function BookingLeaderboard() {
     next: `⚡ ${displayText("Next Booking")}`,
   };
   const tabHelp: Record<RankingPageTab, string> = {
-    top: displayText("Workers in your community ranked by Priority Score, Rating, and Performance."),
+    top: displayText("Priority Score shows performance. Booking offers follow the active booking rules, not this ranking."),
     earners: displayText("Ranked by earnings from completed bookings today."),
-    next: displayText("Available worker ranking only — not the next booking order."),
+    next: displayText("Estimate only — not confirmed to match the live booking order."),
   };
   const onTouchEnd = (x: number) => {
     if (touchX.current === null) return;
@@ -130,11 +137,11 @@ export default function BookingLeaderboard() {
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1">
                     <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    <span className="text-xs font-bold">{me.rating.toFixed(1)}</span>
+                    <span className="text-xs font-bold">{me.reviewCount > 0 ? me.rating.toFixed(1) : "—"}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Zap className="w-3 h-3 fill-primary text-primary" />
-                    <span className="text-xs font-bold">{me.priority_score}</span>
+                    <span className="text-xs font-bold">{ownScore ?? me.priority_score}</span>
                   </div>
                 </div>
               </div>
@@ -243,7 +250,7 @@ function WorkerRow({ worker, medal, tab }: { worker: RankedWorker<LeaderboardEnt
           <div className="flex items-center gap-2 mt-0.5 opacity-80">
             <div className="flex items-center gap-0.5">
               <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-              <span className="text-[10px] font-bold">{worker.rating.toFixed(1)}</span>
+              <span className="text-[10px] font-bold">{worker.reviewCount > 0 ? worker.rating.toFixed(1) : "—"}</span>
             </div>
             {tab === "top" && (
               <div className="flex items-center gap-0.5">
