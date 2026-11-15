@@ -1,5 +1,9 @@
 # Worker language translation
 
+## Prompt 102 — conditional real-ranking activation
+- [x] Record approval to enable read-only UI only after authenticated verification succeeds; keep all unrelated features unchanged.
+- [ ] Verify the existing endpoint contract with the current worker and enable only on success — checking available session access; no backend deployment permitted.
+
 ## Prompt 101 — existing Next Booking function correction
 - [x] Correct the client function name to worker-next-booking without activation; hosted invalid-token POST responds 401 unauthorized (not 404).
 - [x] Reported mobile hook error not reproduced: explicit React imports, preview build OK, mobile auth page has no error overlay/page errors; 45 ranking regression tests passed.
