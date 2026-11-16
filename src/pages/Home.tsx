@@ -16,6 +16,7 @@ import { useStartupHealthAudit } from "@/hooks/useStartupHealthAudit";
 import { WorkerHealthBadge } from "@/components/WorkerHealthBadge";
 import HomePerformanceCard from "@/components/HomePerformanceCard";
 import WorkerLeaderboardCard from "@/components/WorkerLeaderboardCard";
+import { previewVerificationEnabled } from "@/lib/nextBookingDiagnostic";
 
 import ActiveJobCard from "@/components/ActiveJobCard";
 import { AvailabilityToggle } from "@/components/AvailabilityToggle";
@@ -328,7 +329,7 @@ export default function Home() {
 
       <HomeTrainingVideoSlot isGuest={isGuestMode} hasActiveJob={!!activeJob} hasWorker={!!worker} />
 
-      {!isGuestMode && worker && !activeJob && (
+      {worker && !activeJob && (!isGuestMode || previewVerificationEnabled()) && (
         <WorkerLeaderboardCard 
           currentWorkerId={worker.id}
           community={worker.community || ""}
