@@ -1,5 +1,9 @@
 # Worker language translation
 
+## Prompt 107 — Home leaderboard card removal
+- [x] Remove only the Home leaderboard card and its unused imports; preserve the dedicated ranking page, other Home elements and all server data.
+- [ ] Verify mobile preview and check the reported hook error.
+
 ## Prompt 102 — conditional real-ranking activation
 - [x] Record approval to enable read-only UI only after authenticated verification succeeds; keep all unrelated features unchanged.
 - [x] Fresh 45 ranking tests pass; preview build OK at 01:33:26 UTC; mobile preview redirects to auth with no page errors/error overlay. Reported use-mobile error not reproduced; explicit React imports already present.
