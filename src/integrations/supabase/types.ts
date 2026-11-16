@@ -4495,6 +4495,33 @@ export type Database = {
           },
         ]
       }
+      reels_catalog: {
+        Row: {
+          category: string
+          created_at: string
+          display_order: number
+          id: string
+          instagram_url: string
+          is_enabled: boolean
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          display_order: number
+          id?: string
+          instagram_url: string
+          is_enabled?: boolean
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          instagram_url?: string
+          is_enabled?: boolean
+        }
+        Relationships: []
+      }
       rent_invoices: {
         Row: {
           amount: number
@@ -9238,6 +9265,7 @@ export type Database = {
         Args: { p_booking_id: string; p_reason?: string }
         Returns: Json
       }
+      admin_reorder_reels: { Args: { p_ids: string[] }; Returns: undefined }
       admin_request_force_update: {
         Args: { _app: string; _platform: string; _reason: string }
         Returns: {
