@@ -2,7 +2,7 @@
 
 ## Prompt 107 — Home leaderboard card removal
 - [x] Remove only the Home leaderboard card and its unused imports; preserve the dedicated ranking page, other Home elements and all server data.
-- [ ] Verify mobile preview and check the reported hook error.
+- [x] Mobile guest Home verified at 393×805: card absent, bottom navigation intact, no overflow or page errors; 38 regression tests pass, preview build OK. Reported hook error not reproduced; explicit React imports already present. Signed-in checks unavailable for external unmanaged authentication.
 
 ## Prompt 102 — conditional real-ranking activation
 - [x] Record approval to enable read-only UI only after authenticated verification succeeds; keep all unrelated features unchanged.
