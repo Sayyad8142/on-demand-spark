@@ -361,7 +361,7 @@ export default function Home() {
       )}
 
       {/* Push health self-heals silently. Only after 3+ failed auto-repairs do we show worker-friendly guidance. */}
-      {Capacitor.isNativePlatform() && !isGuestMode && !pushHealth.isChecking && !pushHealth.isHealthy && pushHealth.manualRepairRequired && (
+      {Capacitor.isNativePlatform() && !isGuestMode && pushHealth.permissionKnown && !pushHealth.isChecking && !pushHealth.isHealthy && pushHealth.manualRepairRequired && (
         <NotificationsOffDialog
           permissionGranted={pushHealth.permissionGranted}
           onRetry={async () => {

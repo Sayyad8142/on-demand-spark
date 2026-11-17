@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
 import { supabase } from "@/integrations/supabase/client";
+import { App } from "@capacitor/app";
+import { getPushHealthSnapshot, performPushRepair } from "@/lib/pushToken";
 
 export interface ReadinessCheck {
   label: string;
@@ -44,13 +46,16 @@ export function useDeviceReadiness(userId: string | undefined) {
 
     // 2. FCM token available
     try {
+      const nativeHealth = Capacitor.isNativePlatform() ? await getPushHealthSnapshot(userId) : null;
       const { data: worker } = await supabase
         .from("workers")
         .select("fcm_token, fcm_token_status")
         .eq("user_id", userId)
         .maybeSingle();
 
-      if (worker?.fcm_token && worker.fcm_token_status !== "invalid") {
+      if (nativeHealth && !nativeHealth.tokenHealthy) {
+        results.push({ label: "FCM Token", status: "fail", detail: "Booking alerts need to be refreshed", actionable: true });
+      } else if (worker?.fcm_token && worker.fcm_token_status !== "invalid") {
         results.push({ label: "FCM Token", status: "pass", detail: "Active token registered" });
       } else if (worker?.fcm_token_status === "invalid") {
         results.push({ label: "FCM Token", status: "fail", detail: "Token marked invalid — restart app to refresh", actionable: true });
@@ -104,11 +109,20 @@ export function useDeviceReadiness(userId: string | undefined) {
 
   useEffect(() => {
     runChecks();
+    const sub = Capacitor.isNativePlatform() ? App.addListener("appStateChange", ({ isActive }) => { if (isActive) void runChecks(); }) : null;
+    return () => { void sub?.then(handle => handle.remove()); };
   }, [runChecks]);
+
+  const repair = async () => {
+    if (!userId) return;
+    setLoading(true);
+    await performPushRepair(userId, "device-readiness-retry", { requestPermission: true });
+    await runChecks();
+  };
 
   const hasCriticalFailure = checks.some(
     (c) => c.status === "fail" && (c.label === "Notification Permission" || c.label === "FCM Token")
   );
 
-  return { checks, loading, hasCriticalFailure, refresh: runChecks };
+  return { checks, loading, hasCriticalFailure, refresh: runChecks, repair };
 }

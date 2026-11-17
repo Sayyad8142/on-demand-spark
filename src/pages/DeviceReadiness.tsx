@@ -11,7 +11,7 @@ export default function DeviceReadiness() {
   useWorkerLanguage();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { checks, loading, hasCriticalFailure, refresh } = useDeviceReadiness(user?.id);
+  const { checks, loading, hasCriticalFailure, refresh, repair } = useDeviceReadiness(user?.id);
 
   const statusIcon = (status: string) => {
     switch (status) {
@@ -75,6 +75,7 @@ export default function DeviceReadiness() {
                   <p className="text-xs text-muted-foreground mt-0.5">{check.detail}</p>
                 )}
               </div>
+              {check.actionable && (check.label === "FCM Token" || check.label === "Notification Permission") && <Button variant="outline" size="sm" disabled={loading} onClick={repair}>{displayText("Retry")}</Button>}
             </div>
           </Card>
         ))}

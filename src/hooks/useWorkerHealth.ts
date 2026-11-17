@@ -181,7 +181,7 @@ export function useWorkerHealth(
       score -= 60;
     }
 
-    if (Capacitor.isNativePlatform() && !pushHealth.isChecking && !pushHealth.permissionGranted) {
+    if (Capacitor.isNativePlatform() && pushHealth.permissionKnown !== false && !pushHealth.isChecking && !pushHealth.permissionGranted) {
       reasons.push({
         code: "notifications_denied",
         label: "Notifications are turned off — you won't hear booking alerts",
@@ -259,7 +259,7 @@ export function useWorkerHealth(
     const slots = slotState(workerFlags.slotRows ?? null);
     const help = selfHelp({
       network: networkState({ browserOnline: online, lastServerOkAt: workerFlags.lastServerOkAt ?? null }),
-      permission: !native ? "granted" : pushHealth.isChecking ? "unknown" : pushHealth.permissionGranted ? "granted" : "denied",
+      permission: !native ? "granted" : pushHealth.isChecking || pushHealth.permissionKnown === false ? "unknown" : pushHealth.permissionGranted ? "granted" : "denied",
       tokenRegistered: !native ? true : pushHealth.isChecking ? null : (pushHealth.tokenExists && pushHealth.tokenSyncedToBackend && pushHealth.tokenHealthy),
       session: "none",
       slots,
@@ -280,7 +280,7 @@ export function useWorkerHealth(
         payoutReady: workerFlags.payoutReady ?? null,
         online,
         native: Capacitor.isNativePlatform(),
-        permissionGranted: pushHealth.isChecking ? null : pushHealth.permissionGranted,
+        permissionGranted: pushHealth.isChecking || pushHealth.permissionKnown === false ? null : pushHealth.permissionGranted,
         channelOk: channel === "unknown" ? null : !(channel === "blocked" || channel === "app_disabled"),
         tokenRegistered: pushHealth.isChecking ? null : (pushHealth.tokenExists && pushHealth.tokenSyncedToBackend && pushHealth.tokenHealthy),
         lastHeartbeatAt: workerFlags.lastHeartbeatAt ?? null,
@@ -293,6 +293,7 @@ export function useWorkerHealth(
     pushHealth.tokenSyncedToBackend,
     pushHealth.tokenHealthy,
     pushHealth.isChecking,
+    pushHealth.permissionKnown,
     deviceExtras.batteryOptimized,
     deviceExtras.overlayGranted,
     workerFlags,

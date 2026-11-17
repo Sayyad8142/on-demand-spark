@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { Capacitor } from "@capacitor/core";
+import { App } from "@capacitor/app";
 import { 
   requestOverlayPermission, 
   checkOverlayPermission,
@@ -55,6 +56,14 @@ export default function Settings() {
     getCurrentBundleVersion().then(v => setCurrentBundleVersion(v));
     loadInstalledVersion().then(v => setInstalledLabel(versionLabel(v)));
   }, [user?.id, checkRegistrationStatus]);
+
+  useEffect(() => {
+    if (!isNative) return;
+    const sub = App.addListener("appStateChange", ({ isActive }) => {
+      if (isActive) { void checkStatus(); void checkRegistrationStatus(); }
+    });
+    return () => { void sub.then(handle => handle.remove()); };
+  }, [isNative, checkRegistrationStatus]);
 
   const checkStatus = async () => {
     setChecking(true);

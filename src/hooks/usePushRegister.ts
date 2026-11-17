@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 import { getPushService } from '@/services/push';
-import { syncTokenToBackend } from '@/lib/pushToken';
+import { syncTokenToBackend, getPushHealthSnapshot } from '@/lib/pushToken';
 
 export function usePushRegister() {
   const [registeredToken, setRegisteredToken] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export function usePushRegister() {
         throw new Error('Failed to get push token');
       }
 
-      console.log('✅ Token received:', token.substring(0, 20) + '...');
+      console.log('✅ Notification token received');
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -38,11 +39,13 @@ export function usePushRegister() {
       }
 
       // Single source of truth: delegate ALL token writes to syncTokenToBackend.
-      // This resets fcm_token_status='active', no_ack_count=0,
-      // notification_repair_failures=0, last_app_opened_at, app_version, etc.
+      // Token registration never claims actual notification delivery.
       const synced = await syncTokenToBackend(token, user.id, 'usePushRegister');
       if (!synced) {
         throw new Error('Failed to sync token to backend');
+      }
+      if (Capacitor.isNativePlatform() && !(await getPushHealthSnapshot(user.id)).isHealthy) {
+        throw new Error('Notification registration could not be verified');
       }
 
       console.log('✅ Token registered via syncTokenToBackend (single writer)');
@@ -59,14 +62,22 @@ export function usePushRegister() {
     }
   };
 
-  const checkRegistrationStatus = async (): Promise<{
+  const checkRegistrationStatus = useCallback(async (): Promise<{
     isRegistered: boolean;
     token: string | null;
   }> => {
+    setRegisteredToken(null);
+    setLastSyncTime(null);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         return { isRegistered: false, token: null };
+      }
+      if (Capacitor.isNativePlatform()) {
+        const health = await getPushHealthSnapshot(user.id);
+        if (!health.isHealthy) return { isRegistered: false, token: null };
+        setRegisteredToken(health.localToken);
+        return { isRegistered: true, token: health.localToken };
       }
 
       // Check workers table first (primary source)
@@ -100,7 +111,7 @@ export function usePushRegister() {
       console.error('Error checking registration status:', error);
       return { isRegistered: false, token: null };
     }
-  };
+  }, []);
 
   return {
     registerPush,

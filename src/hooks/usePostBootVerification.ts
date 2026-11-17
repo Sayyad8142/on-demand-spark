@@ -113,6 +113,7 @@ export function usePostBootVerification(userId: string | undefined | null, worke
         : true;
 
       const remaining = [
+        ...((await getPushHealthSnapshot(userId)).isHealthy ? [] : ["push_unhealthy"]),
         ...failures.filter((f) => f !== "push_unhealthy" && f !== "realtime_disconnected"),
         ...(realtimeOk2 ? [] : ["realtime_disconnected"]),
       ];

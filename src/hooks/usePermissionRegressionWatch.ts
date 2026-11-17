@@ -81,7 +81,7 @@ export function usePermissionRegressionWatch(
         if (!previous) return; // first run — just baseline
 
         const regressions: string[] = [];
-        if (previous.notification === "granted" && current.notification !== "granted") {
+        if (previous.notification === "granted" && (current.notification === "denied" || current.notification === "prompt")) {
           regressions.push("notification");
         }
         if (previous.overlay === true && current.overlay === false) {

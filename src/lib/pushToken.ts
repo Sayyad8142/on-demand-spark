@@ -36,7 +36,7 @@ export async function ensurePushPermission(reason: string, options?: { requestIf
       return permission.receive === 'granted';
     } catch (error) {
       console.warn(`⚠️ [PushToken] ${reason}: permission check failed`, error);
-      return false;
+      throw new Error('Notification permission could not be checked');
     }
   }
 
@@ -46,7 +46,7 @@ export async function ensurePushPermission(reason: string, options?: { requestIf
       return result === 'granted';
     }
 
-    return true;
+    return Notification.permission === 'granted';
   }
 
   return true;

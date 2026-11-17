@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
+import { Capacitor } from "@capacitor/core";
+import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureServiceWorker, subscribeWebPush, getCurrentSubscription, unsubscribeWebPush } from "@/push/webPush";
 
@@ -18,6 +20,7 @@ export default function VerifyPush() {
   const shortEndpoint = useMemo(() => (endpoint ? endpoint.slice(0, 36) + "..." : ""), [endpoint]);
 
   async function refreshStatus() {
+    if (Capacitor.isNativePlatform()) return;
     setPermission(typeof Notification !== "undefined" ? Notification.permission : "default");
     const sub = await getCurrentSubscription();
     setEndpoint(sub?.endpoint || "");
@@ -91,6 +94,7 @@ export default function VerifyPush() {
     }
   }
 
+  if (Capacitor.isNativePlatform()) return <Navigate to="/device-readiness" replace />;
   return (
     <div className="p-4 space-y-4">
       <h1 className="text-xl font-semibold">Verify Web Push</h1>

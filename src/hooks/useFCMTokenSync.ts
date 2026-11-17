@@ -94,13 +94,8 @@ export function useFCMTokenSync(userId: string | undefined) {
         return;
       }
 
-      // 3. Skip if same token already synced this session AND not forced
-      if (!opts?.force && syncedRef.current === token) {
-        console.log(`ℹ️ [FCMSync] ${reason}: token unchanged from last sync, skipping write`);
-        return;
-      }
-
-      console.log(`🔄 [FCMSync] ${reason}: syncing token ${token.substring(0, 20)}... to backend`);
+      // A stale/invalid server row needs repair even if the phone token is unchanged.
+      console.log(`🔄 [FCMSync] ${reason}: syncing notification token to backend`);
 
       // 4. Save to backend (workers.fcm_token + status + platform + updated_at)
       const synced = await syncTokenToBackend(token, userId, `fcm-sync-${reason}`);
@@ -109,7 +104,7 @@ export function useFCMTokenSync(userId: string | undefined) {
         return;
       }
 
-      console.log(`✅ [FCMSync] ${reason}: TOKEN_SYNC_OK worker_user_id=${userId} token_prefix=${token.substring(0, 12)} ts=${new Date().toISOString()}`);
+      console.log(`✅ [FCMSync] ${reason}: TOKEN_SYNC_OK`);
       syncedRef.current = token;
 
       await clearPendingNativeFcmToken();

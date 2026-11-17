@@ -128,7 +128,7 @@ export default function Troubleshoot() {
             <p className="text-sm text-muted-foreground">{displayText("Fix common issues")}</p>
             <div className="flex gap-2 mt-1 flex-wrap">
               <Link to="/booking-diagnostics" className="text-xs underline hover:opacity-80 font-semibold">{displayText("Booking Diagnostics")}</Link>
-              <Link to="/verify-push" className="text-xs underline hover:opacity-80">{displayText("Verify Push")}</Link>
+              <Link to={Capacitor.isNativePlatform() ? "/device-readiness" : "/verify-push"} className="text-xs underline hover:opacity-80">{displayText("Verify Push")}</Link>
               <Link to="/dev-cache-reset" className="text-xs underline hover:opacity-80">{displayText("Dev Cache Reset")}</Link>
             </div>
           </div>
@@ -278,7 +278,7 @@ export default function Troubleshoot() {
         </Card>
 
         {/* Web Push Notifications */}
-        <Card className="p-6 bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+        {!Capacitor.isNativePlatform() && <Card className="p-6 bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900 flex items-center justify-center flex-shrink-0">
               <Bell className="w-6 h-6 text-green-600 dark:text-green-400" />
@@ -300,8 +300,7 @@ export default function Troubleshoot() {
               </p>
             </div>
           </div>
-        </Card>
-
+        </Card>}
         {/* Notifications */}
         <Card className="p-6">
           <div className="flex items-start gap-4">

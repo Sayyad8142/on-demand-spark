@@ -11,6 +11,7 @@ import {
 } from '@/services/pushRepairCoordinator';
 
 export interface PushHealthState {
+  permissionKnown?: boolean;
   permissionGranted: boolean;
   tokenExists: boolean;
   tokenSyncedToBackend: boolean;
@@ -26,6 +27,7 @@ export interface PushHealthState {
 }
 
 const INITIAL_STATE: PushHealthState = {
+  permissionKnown: false,
   permissionGranted: false,
   tokenExists: false,
   tokenSyncedToBackend: false,
@@ -72,7 +74,7 @@ export function usePushHealthGuard(userId: string | undefined) {
 
     try {
       const snapshot = await getPushHealthSnapshot(userId, permissionGranted => {
-        if (accountRef.current === userId) set({ permissionGranted });
+        if (accountRef.current === userId) set({ permissionGranted, permissionKnown: true });
       });
       if (accountRef.current !== userId) return false;
 
