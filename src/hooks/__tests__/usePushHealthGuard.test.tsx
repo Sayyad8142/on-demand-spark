@@ -19,6 +19,13 @@ beforeEach(() => {
   h.snapshot.mockImplementation(async (_id, permission) => { permission?.(true); return healthy; });
 });
 describe('native notification readiness', () => {
+  it('a permission-check failure remains unknown rather than denied', async () => {
+    h.snapshot.mockRejectedValue(new Error('Notification permission could not be checked'));
+    const hook = renderHook(() => usePushHealthGuard('worker'));
+    await waitFor(() => expect(hook.result.current.isChecking).toBe(false));
+    expect(hook.result.current.permissionKnown).toBe(false);
+    expect(hook.result.current.isHealthy).toBe(false); hook.unmount();
+  });
   it('checks already-granted permission on opening', async () => {
     const hook = renderHook(() => usePushHealthGuard('worker'));
     await waitFor(() => expect(hook.result.current.isHealthy).toBe(true));

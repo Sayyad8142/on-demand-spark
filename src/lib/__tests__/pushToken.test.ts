@@ -13,6 +13,10 @@ vi.mock('@/lib/installedVersion', () => ({ getInstalledVersionSync: () => ({ ver
 import { ensurePushPermission, syncTokenToBackend, waitForNativeFcmToken } from '../pushToken';
 beforeEach(() => { vi.clearAllMocks(); h.listeners.clear(); h.permission.mockResolvedValue({ receive: 'granted' }); });
 describe('Android push registration', () => {
+  it('permission-check errors are not reported as denied permission', async () => {
+    h.permission.mockRejectedValue(new Error('bridge unavailable'));
+    await expect(ensurePushPermission('test')).rejects.toThrow('Notification permission could not be checked');
+  });
   it('reads native permission rather than browser permission', async () => {
     expect(await ensurePushPermission('test')).toBe(true); expect(h.permission).toHaveBeenCalledOnce();
   });

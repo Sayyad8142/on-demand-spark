@@ -1,7 +1,7 @@
 # Worker language translation
 
 ## Android notification repair (17 Nov) — no deployment/publication
-- [ ] Sweep sibling permission/registration screens and background jobs; document source-only server boundaries and remaining device gates.
+- [x] Sweep sibling permission/registration screens and background jobs; fix Device Readiness/Settings native readback/resume, browser-only routing, unknown permission and failed boot-repair reporting. 694 tests pass; source-only server findings and unchanged release gates in FLOW-SWEEP.md.
 - [x] Correct stale permission warnings, native Settings return checks and Retry registration/readback; preserve dispatch, deadlines and OTP.
 - [x] 689 tests pass; preview build OK and mobile auth screen has no errors; Firebase package/configuration traced; APK rebuild guide in docs/android-notification-fix-2026-11-17/REPORT.md. Native compilation blocked: no Java/Android toolchain; packaged assets require local rebuild + sync.
 - [ ] Verify installed APK permission, FCM delivery and acceptance foreground/background/locked — blocked: physical Android phone and approved booking required.
