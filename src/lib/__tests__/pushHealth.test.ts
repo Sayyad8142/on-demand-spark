@@ -4,6 +4,9 @@ import { evaluatePushHealth } from "@/lib/pushHealth";
 const base = { permissionGranted: true, phoneToken: "tok-A", backendToken: "tok-A", backendStatus: "active" };
 
 describe("notification health", () => {
+  it("Android readiness requires the phone token, not just a stored server token", () => {
+    expect(evaluatePushHealth({ ...base, phoneToken: null, requirePhoneToken: true }).isHealthy).toBe(false);
+  });
   it("same token on phone and server → healthy", () => {
     const r = evaluatePushHealth(base);
     expect(r.isHealthy).toBe(true);

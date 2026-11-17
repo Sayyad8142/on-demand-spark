@@ -1,6 +1,6 @@
 import { PushService } from './PushService';
 import { PushNotifications } from '@capacitor/push-notifications';
-import { supabase } from '@/integrations/supabase/client';
+import { syncTokenToBackend, waitForNativeFcmToken } from '@/lib/pushToken';
 
 /**
  * Native Push Service for Capacitor/Android
@@ -22,61 +22,20 @@ export class NativePushService implements PushService {
   }
 
   async getToken(): Promise<string | null> {
-    try {
-      await PushNotifications.register();
-      
-      return new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('Token registration timeout'));
-        }, 10000);
-
-        PushNotifications.addListener('registration', (token) => {
-          clearTimeout(timeout);
-          resolve(token.value);
-        });
-
-        PushNotifications.addListener('registrationError', (error) => {
-          clearTimeout(timeout);
-          reject(error);
-        });
-      });
-    } catch (error) {
-      console.error('❌ Error getting push token:', error);
-      return null;
-    }
+    return waitForNativeFcmToken({ reason: 'native-push-service' });
   }
 
   async registerToken(token: string, userId: string): Promise<void> {
-    try {
-      // Primary: workers.fcm_token with health tracking
-      await supabase.from('workers').update({
-        fcm_token: token,
-        fcm_token_status: 'active',
-        fcm_token_updated_at: new Date().toISOString(),
-        fcm_token_platform: 'android',
-        updated_at: new Date().toISOString(),
-      }).eq('user_id', userId);
-
-      // Fallback: fcm_tokens table (legacy)
-      const { error } = await supabase.from('fcm_tokens').upsert({
-        user_id: userId,
-        token: token,
-        updated_at: new Date().toISOString(),
-      });
-
-      if (error) console.warn('⚠️ fcm_tokens fallback write failed:', error);
-      console.log('✅ Native push token registered with health tracking');
-    } catch (error) {
-      console.error('❌ Error registering push token:', error);
-      throw error;
+    if (!(await syncTokenToBackend(token, userId, 'native-push-service'))) {
+      throw new Error('Failed to sync notification token');
     }
   }
 
   onMessage(handler: (payload: any) => void): () => void {
-    PushNotifications.addListener('pushNotificationReceived', handler);
+    const listener = PushNotifications.addListener('pushNotificationReceived', handler);
     
     return () => {
-      PushNotifications.removeAllListeners();
+      void listener.then(handle => handle.remove());
     };
   }
 }

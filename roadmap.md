@@ -1,5 +1,10 @@
 # Worker language translation
 
+## Android notification repair (17 Nov) — no deployment/publication
+- [x] Correct stale permission warnings, native Settings return checks and Retry registration/readback; preserve dispatch, deadlines and OTP.
+- [x] 689 tests pass; preview build OK and mobile auth screen has no errors; Firebase package/configuration traced; APK rebuild guide in docs/android-notification-fix-2026-11-17/REPORT.md. Native compilation blocked: no Java/Android toolchain; packaged assets require local rebuild + sync.
+- [ ] Verify installed APK permission, FCM delivery and acceptance foreground/background/locked — blocked: physical Android phone and approved booking required.
+
 ## Prompt 107 — Home leaderboard card removal
 - [x] Remove only the Home leaderboard card and its unused imports; preserve the dedicated ranking page, other Home elements and all server data.
 - [x] Mobile guest Home verified at 393×805: card absent, bottom navigation intact, no overflow or page errors; 38 regression tests pass, preview build OK. Reported hook error not reproduced; explicit React imports already present. Signed-in checks unavailable for external unmanaged authentication.

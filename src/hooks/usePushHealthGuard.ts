@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { getPushHealthSnapshot } from '@/lib/pushToken';
 import {
@@ -49,6 +50,8 @@ const INITIAL_STATE: PushHealthState = {
 export function usePushHealthGuard(userId: string | undefined) {
   const [state, setState] = useState<PushHealthState>(INITIAL_STATE);
   const mountedRef = useRef(true);
+  const accountRef = useRef(userId);
+  accountRef.current = userId;
   const isNative = Capacitor.isNativePlatform();
 
   const set = (patch: Partial<PushHealthState>) => {
@@ -68,7 +71,10 @@ export function usePushHealthGuard(userId: string | undefined) {
     set({ isChecking: true, lastError: null });
 
     try {
-      const snapshot = await getPushHealthSnapshot(userId);
+      const snapshot = await getPushHealthSnapshot(userId, permissionGranted => {
+        if (accountRef.current === userId) set({ permissionGranted });
+      });
+      if (accountRef.current !== userId) return false;
 
       set({
         permissionGranted: snapshot.permissionGranted,
@@ -77,7 +83,7 @@ export function usePushHealthGuard(userId: string | undefined) {
         tokenHealthy: snapshot.tokenHealthy,
         isChecking: false,
         lastCheckAt: new Date(),
-        lastError: snapshot.isHealthy ? null : state.lastError,
+        lastError: null,
       });
 
       console.log(`🛡️ [PushHealth] Check: perm=${snapshot.permissionGranted} token=${snapshot.tokenExists} synced=${snapshot.tokenSyncedToBackend} healthy=${snapshot.tokenHealthy} → ${snapshot.isHealthy ? '✅' : '❌'}`);
@@ -90,10 +96,10 @@ export function usePushHealthGuard(userId: string | undefined) {
       return snapshot.isHealthy;
     } catch (e: any) {
       console.error('❌ [PushHealth] Check failed:', e);
-      set({ isChecking: false, lastError: e.message });
+      if (accountRef.current === userId) set({ isChecking: false, lastError: e.message });
       return false;
     }
-  }, [userId, state.lastError]);
+  }, [userId, isNative]);
 
   /**
    * Full repair: request permission → re-register → get token → sync to backend
@@ -101,12 +107,10 @@ export function usePushHealthGuard(userId: string | undefined) {
   const repair = useCallback(async (): Promise<boolean> => {
     if (!userId || !isNative) return true;
     console.log('🔧 [PushHealth] Starting manual repair fallback...');
-    const ok = await triggerManualPushRepair(userId);
-    if (ok) {
-      await checkHealth({ autoRepair: false, source: 'manual-repair-success' });
-    }
-    return ok;
-  }, [userId]);
+    await triggerManualPushRepair(userId);
+    // Always read back: permission may succeed while registration/sync fails.
+    return checkHealth({ autoRepair: false, source: 'manual-repair-readback' });
+  }, [userId, isNative, checkHealth]);
 
   useEffect(() => {
     if (!userId || !isNative) {
@@ -136,8 +140,8 @@ export function usePushHealthGuard(userId: string | undefined) {
     mountedRef.current = true;
     if (!userId || !isNative) return;
 
-    // Initial check with delay for auth to settle
-    const timer = setTimeout(() => checkHealth({ autoRepair: true, source: 'push-guard-mount' }), 1200);
+    setState({ ...INITIAL_STATE });
+    void checkHealth({ autoRepair: true, source: 'push-guard-mount' });
 
     // Periodic check every 3 minutes
     const interval = setInterval(() => checkHealth({ autoRepair: true, source: 'push-guard-interval' }), 3 * 60 * 1000);
@@ -150,10 +154,16 @@ export function usePushHealthGuard(userId: string | undefined) {
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
+    const resume = App.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) void checkHealth({ autoRepair: true, source: 'push-guard-native-resume' });
+    });
+    const onOnline = () => { void checkHealth({ autoRepair: true, source: 'push-guard-reconnect' }); };
+    window.addEventListener('online', onOnline);
 
     return () => {
       mountedRef.current = false;
-      clearTimeout(timer);
+      void resume.then(handle => handle.remove());
+      window.removeEventListener('online', onOnline);
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibility);
     };

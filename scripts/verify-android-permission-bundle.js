@@ -7,8 +7,9 @@ const requiredMarkers = [
   "[Permissions] Android app-launch flow",
   "opening overlay settings deferred to onboarding",
   "opening battery optimization settings deferred to onboarding",
-  "[PermissionOnboarding] 👆 Enable tapped",
-  "[PermissionOnboarding] App resumed — re-running checkAllPermissions()",
+  "push-guard-native-resume",
+  "manual-repair-readback",
+  "Booking_alert_connection_needs_attention",
 ];
 
 if (!existsSync(assetsDir)) {

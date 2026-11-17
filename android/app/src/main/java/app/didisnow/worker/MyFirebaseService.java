@@ -493,6 +493,10 @@ public class MyFirebaseService extends FirebaseMessagingService {
 
   @Override
   public void onNewToken(final String token) {
+    super.onNewToken(token);
+    // This custom Firebase service replaces Capacitor's MessagingService.
+    // Forward rotation so the active WebView can synchronize the new token too.
+    com.capacitorjs.plugins.pushnotifications.PushNotificationsPlugin.onNewToken(token);
     Log.d(TAG, "🔑 New FCM token received (len=" + token.length() + ")");
     WorkerLog.INSTANCE.add(getApplicationContext(), "TOKEN", "onNewToken len=" + token.length());
     // A practice session is bound to the previous token; end it.

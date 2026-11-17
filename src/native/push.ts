@@ -8,16 +8,14 @@ let activeUserId: string | undefined;
 
 /**
  * initNativePush — Registers the device for push notifications and sets up
- * foreground/tap listeners. 
+ * foreground/tap listeners.
  *
- * Fix 3: Token persistence is NO LONGER done here. The `registration` listener
- * only logs for debugging. Actual token sync to backend is handled exclusively
- * by useFCMTokenSync (which reads the natively-persisted pending token).
- *
- * This avoids duplicate writes that previously existed across push.ts, fcm.ts,
- * and useFCMTokenSync.
+ * Listeners are attached before registration, even while permission is denied.
+ * Registration/rotation uses the shared session-verified token writer;
+ * the background native service and resume sync cover a sleeping WebView.
  */
 export async function initNativePush(userId?: string) {
+  if (activeUserId !== userId) lastSyncedToken = null;
   activeUserId = userId;
 
   if (!Capacitor.isNativePlatform()) {
@@ -27,32 +25,10 @@ export async function initNativePush(userId?: string) {
 
   console.log('🔔 initNativePush called for user:', userId);
 
-  let permStatus = await PushNotifications.checkPermissions();
-  console.log('📱 Current permission status:', permStatus);
-  
-  if (permStatus.receive === 'denied') {
-    console.warn('⚠️ Booking alerts are disabled. Please enable notifications to receive jobs.');
-    return;
-  }
-
-  if (permStatus.receive !== 'granted') {
-    console.log('🔐 Requesting push permissions...');
-    permStatus = await PushNotifications.requestPermissions();
-    console.log('📱 Permission result:', permStatus);
-  }
-  
-  if (permStatus.receive !== 'granted') {
-    console.warn('⚠️ Push permission not granted');
-    return;
-  }
-
-  console.log('📝 Registering for push notifications...');
-  await PushNotifications.register();
-
   if (!listenersInitialized) {
     listenersInitialized = true;
 
-    PushNotifications.addListener('registration', async (token) => {
+    await PushNotifications.addListener('registration', async (token) => {
       console.log('🎯 [push.ts] FCM token received (len=' + token.value.length + ')');
       if (activeUserId && token.value !== lastSyncedToken) {
         const synced = await syncTokenToBackend(token.value, activeUserId, 'native-registration-event');
@@ -60,11 +36,11 @@ export async function initNativePush(userId?: string) {
       }
     });
 
-    PushNotifications.addListener('registrationError', (err) => {
+    await PushNotifications.addListener('registrationError', (err) => {
       console.error('Registration error:', err);
     });
 
-    PushNotifications.addListener('pushNotificationReceived', (notification) => {
+    await PushNotifications.addListener('pushNotificationReceived', (notification) => {
       console.log('Push received (fg):', notification.data?.type ?? 'unknown');
       const data = notification.data || {};
       if (data.type === 'BOOKING_CANCELLED') {
@@ -78,8 +54,28 @@ export async function initNativePush(userId?: string) {
       }
     });
 
-    PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+    await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
       console.log('Push action:', action.actionId);
     });
   }
+  let permStatus = await PushNotifications.checkPermissions();
+  console.log('📱 Current permission status:', permStatus);
+
+  if (permStatus.receive === 'denied') {
+    console.warn('⚠️ Booking alerts are disabled. Please enable notifications to receive jobs.');
+    return;
+  }
+
+  if (permStatus.receive !== 'granted') {
+    console.log('🔐 Requesting push permissions...');
+    permStatus = await PushNotifications.requestPermissions();
+    console.log('📱 Permission result:', permStatus);
+  }
+
+  if (permStatus.receive !== 'granted') {
+    console.warn('⚠️ Push permission not granted');
+    return;
+  }
+
+  await PushNotifications.register();
 }

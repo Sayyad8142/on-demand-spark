@@ -87,7 +87,8 @@ export async function waitForNativeFcmToken({
 }): Promise<string | null> {
   if (!Capacitor.isNativePlatform()) return null;
 
-  const existingToken = await getPendingNativeFcmToken();
+  // Never let an old pending copy bypass a requested Firebase registration.
+  const existingToken = registerIfNeeded ? null : await getPendingNativeFcmToken();
   if (existingToken) {
     console.log(`✅ [PushToken] ${reason}: found pending token immediately`);
     return existingToken;
@@ -116,7 +117,8 @@ export async function waitForNativeFcmToken({
         return tokenFromEvent;
       }
 
-      const pendingToken = await getPendingNativeFcmToken();
+      if (registrationError) return null;
+      const pendingToken = registerIfNeeded ? null : await getPendingNativeFcmToken();
       if (pendingToken) {
         console.log(`✅ [PushToken] ${reason}: pending token found after register()`);
         return pendingToken;
@@ -131,7 +133,7 @@ export async function waitForNativeFcmToken({
       console.warn(`⚠️ [PushToken] ${reason}: timed out waiting for token`);
     }
 
-    return tokenFromEvent || await getPendingNativeFcmToken();
+    return tokenFromEvent || (registerIfNeeded ? null : await getPendingNativeFcmToken());
   } finally {
     await registrationHandle.remove();
     await errorHandle.remove();
@@ -140,6 +142,8 @@ export async function waitForNativeFcmToken({
 
 export async function syncTokenToBackend(token: string, userId: string, reason: string): Promise<boolean> {
   try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || user?.id !== userId || !token.trim()) return false;
     const now = new Date().toISOString();
 
     const { error: workerError, data: workerData } = await supabase
@@ -201,8 +205,9 @@ export async function getCurrentNativeFcmToken(): Promise<string | null> {
   return getPendingNativeFcmToken();
 }
 
-export async function getPushHealthSnapshot(userId: string): Promise<PushHealthSnapshot> {
+export async function getPushHealthSnapshot(userId: string, onPermission?: (granted: boolean) => void): Promise<PushHealthSnapshot> {
   const permissionGranted = await ensurePushPermission('health-check', { requestIfMissing: false });
+  onPermission?.(permissionGranted);
   const localToken = await getCurrentNativeFcmToken();
 
   const { data: worker } = await supabase
@@ -213,7 +218,7 @@ export async function getPushHealthSnapshot(userId: string): Promise<PushHealthS
 
   const backendToken = worker?.fcm_token ?? null;
   const backendStatus = worker?.fcm_token_status ?? null;
-  const health = evaluatePushHealth({ permissionGranted, phoneToken: localToken, backendToken, backendStatus });
+  const health = evaluatePushHealth({ permissionGranted, phoneToken: localToken, backendToken, backendStatus, requirePhoneToken: Capacitor.isNativePlatform() });
   if (health.tokenMismatch) {
     console.warn('⚠️ [PushToken] health-check: phone and server notification tokens differ');
   }
@@ -257,6 +262,8 @@ export async function performPushRepair(userId: string, reason: string, options?
       return { success: false, error: 'Failed to sync token to backend', token };
     }
 
+    const readback = await getPushHealthSnapshot(userId);
+    if (!readback.isHealthy) return { success: false, error: 'Notification registration could not be verified', token };
     await clearPendingNativeFcmToken();
     return { success: true, error: null, token };
   } catch (error: any) {

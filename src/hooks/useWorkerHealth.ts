@@ -181,7 +181,7 @@ export function useWorkerHealth(
       score -= 60;
     }
 
-    if (Capacitor.isNativePlatform() && !pushHealth.permissionGranted) {
+    if (Capacitor.isNativePlatform() && !pushHealth.isChecking && !pushHealth.permissionGranted) {
       reasons.push({
         code: "notifications_denied",
         label: "Notifications are turned off — you won't hear booking alerts",

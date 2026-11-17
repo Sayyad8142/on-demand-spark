@@ -194,6 +194,12 @@ export async function requestNotificationPermission(): Promise<boolean> {
 
 /** Opens this app's Android settings page so a worker can turn notifications back on. */
 export async function openNotificationSettings(): Promise<boolean> {
+  if (Capacitor.getPlatform() === "android") {
+    try {
+      const bridge = registerPlugin<{ openNotificationSettings(): Promise<{ opened: boolean }> }>("AuthBridge");
+      return (await bridge.openNotificationSettings()).opened === true;
+    } catch { /* Older APK: use the existing fallback. */ }
+  }
   return tryOpenAppSettingsFallback("notifications");
 }
 

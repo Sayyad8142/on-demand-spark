@@ -165,7 +165,7 @@ export default function Home() {
 
   // Check if notification permission is default (not granted or denied)
   useEffect(() => {
-    if (typeof Notification !== 'undefined') {
+    if (!Capacitor.isNativePlatform() && typeof Notification !== 'undefined') {
       const permission = Notification.permission;
       console.log('📱 Notification permission:', permission);
       if (permission === 'default') {
@@ -361,15 +361,16 @@ export default function Home() {
       )}
 
       {/* Push health self-heals silently. Only after 3+ failed auto-repairs do we show worker-friendly guidance. */}
-      {Capacitor.isNativePlatform() && !isGuestMode && ((worker as any)?.notification_repair_failures ?? 0) >= 3 && (
+      {Capacitor.isNativePlatform() && !isGuestMode && !pushHealth.isChecking && !pushHealth.isHealthy && pushHealth.manualRepairRequired && (
         <NotificationsOffDialog
+          permissionGranted={pushHealth.permissionGranted}
           onRetry={async () => {
             const ok = await pushHealth.repair();
             toast({
-              title: ok ? displayText("Notifications enabled") : displayText("Still unable to enable"),
+              title: ok ? displayText("Booking alerts restored") : displayText("Booking alerts still unavailable"),
               description: ok
-                ? displayText("You'll start receiving booking requests.")
-                : displayText("Please enable notifications in your phone settings."),
+                ? displayText("Checks look good. Keep the app installed and notifications on.")
+                : displayText("Please open Device Readiness to fix remaining issues."),
               variant: ok ? "default" : "destructive",
             });
             return ok;

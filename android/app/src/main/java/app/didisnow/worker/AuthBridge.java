@@ -9,6 +9,27 @@ import com.getcapacitor.JSObject;
 
 @CapacitorPlugin(name = "AuthBridge")
 public class AuthBridge extends Plugin {
+    @PluginMethod
+    public void openNotificationSettings(PluginCall call) {
+        try {
+            android.content.Intent intent;
+            if (android.os.Build.VERSION.SDK_INT >= 26) {
+                intent = new android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+                intent.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getContext().getPackageName());
+            } else {
+                intent = new android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    android.net.Uri.parse("package:" + getContext().getPackageName()));
+            }
+            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+            JSObject result = new JSObject();
+            result.put("opened", true);
+            call.resolve(result);
+        } catch (Exception e) {
+            call.reject("notification_settings_unavailable");
+        }
+    }
+
     private SharedPreferences prefs() {
         return getContext().getSharedPreferences("worker_prefs", android.content.Context.MODE_PRIVATE);
     }

@@ -12,6 +12,7 @@ export interface PushHealthInput {
   phoneToken: string | null;
   backendToken: string | null;
   backendStatus: string | null;
+  requirePhoneToken?: boolean;
 }
 
 export interface PushHealthResult {
@@ -28,7 +29,7 @@ export function evaluatePushHealth(input: PushHealthInput): PushHealthResult {
   const tokenExists = !!(phone || backend);
   const tokenMismatch = !!(phone && backend && phone !== backend);
   // A phone token the server doesn't have yet is "not synced".
-  const tokenSyncedToBackend = !!backend && !tokenMismatch;
+  const tokenSyncedToBackend = !!backend && !tokenMismatch && (!input.requirePhoneToken || !!phone);
   const tokenHealthy = tokenSyncedToBackend && input.backendStatus !== "invalid";
   return {
     tokenExists,
