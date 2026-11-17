@@ -9,9 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
 import { App as CapApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
-import { Loader2, Volume2, VolumeX } from "lucide-react";
-import { useAvailabilityGuide } from "@/hooks/useAvailabilityGuide";
-import { AVAILABILITY_VIEW_TEXT, HOME_AVAILABILITY_GUIDE, availabilityView } from "@/lib/homeSummary";
+import { Loader2 } from "lucide-react";
+import { AVAILABILITY_VIEW_TEXT, availabilityView } from "@/lib/homeSummary";
 
 interface AvailabilityToggleProps {
   workerId: string;
@@ -53,13 +52,6 @@ export function AvailabilityToggle({
   );
   const { toast } = useToast();
   const { t } = useTranslation();
-  const guide = useAvailabilityGuide({
-    texts: HOME_AVAILABILITY_GUIDE,
-    onResult: (r) => {
-      if (r === "fallback_english") toast({ title: t("availability.voiceEnglishOnly") });
-      if (r === "unavailable") toast({ title: t("availability.voiceUnavailable") });
-    },
-  });
 
   const loadAvailability = async (opts: { silent?: boolean } = {}) => {
     try {
@@ -253,14 +245,6 @@ export function AvailabilityToggle({
             <Label className="text-lg font-bold leading-tight cursor-pointer select-none text-white">
               {displayText(text.heading)}
             </Label>
-            <button
-              type="button"
-              onClick={guide.toggle}
-              aria-label={guide.state === "idle" ? displayText("Listen to help") : displayText("Stop voice")}
-              className="shrink-0 rounded-full p-1.5 text-white/90 hover:bg-white/15"
-            >
-              {guide.state === "idle" ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-            </button>
           </div>
           <p className="text-sm text-white/90 leading-snug">
             {loading ? displayText("Saving...") : displayText(text.description)}
