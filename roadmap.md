@@ -1,5 +1,14 @@
 # Worker language translation
 
+## Finalize Android 10.0.04 (104) — 18 Nov
+- [x] Keep 10.0.04/104; user reports checked production 10.0.02/102. All-track upload history is not independently verified.
+- [x] Attempted cap sync (failed: no dist); strengthened asset checker with current notification/approval/OTP markers and byte parity, covered by four tests.
+- [x] Fresh hosted approval audit; six-function policy-preserving SQL patch/backups staged under docs/play-finalize-104-2026-11-18/approval; isolated PostgreSQL suite passed. No production deployment.
+- [x] Package/Firebase/signing/notification source audit; 728 frontend tests passed; preview build OK; final report in docs/play-finalize-104-2026-11-18/FINAL-READINESS.md.
+- [ ] Actual production build/Android sync — blocked: manual project builds unavailable here and no exposed dist output; exact local npm run build + cap sync steps provided.
+- [ ] Hosted approval deployment/full dispatch coverage — blocked: separate deployment approval, remaining sender/concurrency/real-worker verification.
+- [ ] Signed AAB/native/device flow — blocked: JDK/SDK/Kotlin/upload key and phone/session unavailable; all-track code uniqueness/policy review and publication approval still required.
+
 ## Google Play 10.0.04 release preparation (18 Nov) — no publication
 - [x] User skipped Play history confirmation; prepare 10.0.04 (104) provisionally with upload blocked until highest uploaded code is confirmed lower than 104.
 - [x] Audit package/version/signing/Gradle and make Profile display the actual installed version name plus build; enforce explicit uploaded-build input in release checks.

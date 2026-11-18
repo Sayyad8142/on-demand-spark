@@ -19,8 +19,28 @@ function check(args: string[], configCode = 104) {
   return spawnSync("bash", [join(root, "scripts/android-release-check.sh"), ...args], { cwd: root, encoding: "utf8" });
 }
 
+function bundleCheck({ hasDist = true, differs = false, delayedStyles = true } = {}) {
+  const root = mkdtempSync(join(tmpdir(), "worker-bundle-"));
+  temporary.push(root);
+  const assets = join(root, "android/app/src/main/assets/public/assets");
+  mkdirSync(assets, { recursive: true });
+  const script = join(root, "check.mjs");
+  writeFileSync(script, readFileSync("scripts/verify-android-permission-bundle.js"));
+  const markers = ["[Permissions] Android app-launch flow", "opening overlay settings deferred to onboarding", "opening battery optimization settings deferred to onboarding", "push-guard-native-resume", "manual-repair-readback", "Booking_alert_connection_needs_attention", "Start_OTP_Delayed_Enter_OTP", "Waiting_for_Admin_Approval_You_can_start_receiving_bookings_once_your_account_is_approved"].join("\n");
+  writeFileSync(join(assets, "app.js"), markers);
+  writeFileSync(join(assets, "app.css"), delayedStyles ? ".booking-start-button-delayed{}" : ".old-style{}");
+  writeFileSync(join(root, "android/app/src/main/assets/public/index.html"), "current");
+  if (hasDist) {
+    mkdirSync(join(root, "dist/assets"), { recursive: true });
+    writeFileSync(join(root, "dist/index.html"), differs ? "newer" : "current");
+    writeFileSync(join(root, "dist/assets/app.js"), markers);
+    writeFileSync(join(root, "dist/assets/app.css"), delayedStyles ? ".booking-start-button-delayed{}" : ".old-style{}");
+  }
+  return spawnSync("node", [script], { cwd: root, encoding: "utf8" });
+}
+
 describe("Android release guards", () => {
-  it("prepares requested version 10.0.04 build 104 provisionally", () => {
+  it("keeps requested version 10.0.04 build 104", () => {
     expect(CURRENT_VERSION_NAME).toBe("10.0.04");
     expect(CURRENT_VERSION_CODE).toBe(104);
   });
@@ -52,5 +72,17 @@ describe("Android release guards", () => {
   });
   it("keeps production Next Booking activation disabled", () => {
     expect(NEXT_BOOKING_LIVE_ENABLED).toBe(false);
+  });
+  it("requires production assets even if packaged feature markers are present", () => {
+    expect(bundleCheck({ hasDist: false }).status).toBe(1);
+  });
+  it("refuses Android assets differing from the current production build", () => {
+    expect(bundleCheck({ differs: true }).status).toBe(1);
+  });
+  it("refuses a bundle missing the Start Booking delayed alert", () => {
+    expect(bundleCheck({ delayedStyles: false }).status).toBe(1);
+  });
+  it("accepts matching production and Android assets with all feature markers", () => {
+    expect(bundleCheck().status).toBe(0);
   });
 });
