@@ -6,8 +6,8 @@ const w = (id: string, rank: number, earningsToday: number, jobsToday = 0) =>
 const list = [w("a", 1, 100), w("b", 2, 500), w("c", 3, 300)];
 
 describe("leaderboard ranking", () => {
-  it("keeps the placeholder separate from shared rating ranking", () => {
-    expect(RANKING_PAGE_TABS).toEqual(["top", "earners", "next"]);
+  it("keeps only worker and earner navigation after Next Booking removal", () => {
+    expect(RANKING_PAGE_TABS).toEqual(["top", "earners"]);
   });
   it("Top Workers keeps the server priority order", () => {
     expect(rankLeaderboard(list, "top", new Map()).map((x) => x.id)).toEqual(["a", "b", "c"]);

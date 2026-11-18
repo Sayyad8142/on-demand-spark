@@ -2,8 +2,8 @@
 export type LeaderboardTab = "top" | "earners" | "rated";
 export const LEADERBOARD_TABS: LeaderboardTab[] = ["top", "earners", "rated"];
 // Page navigation is separate from shared review-ranking functionality.
-export type RankingPageTab = "top" | "earners" | "next";
-export const RANKING_PAGE_TABS: RankingPageTab[] = ["top", "earners", "next"];
+export type RankingPageTab = "top" | "earners";
+export const RANKING_PAGE_TABS: RankingPageTab[] = ["top", "earners"];
 
 export interface RankableWorker {
   id: string;

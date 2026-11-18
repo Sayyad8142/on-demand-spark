@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Trophy, Star, Zap, IndianRupee, TrendingUp, HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import NextBookingRanking from "@/components/NextBookingRanking";
 import {
   Tooltip,
   TooltipContent,
@@ -79,11 +78,11 @@ export default function BookingLeaderboard() {
     if (next === tab) return;
     setSlideDir(RANKING_PAGE_TABS.indexOf(next) > RANKING_PAGE_TABS.indexOf(tab) ? "left" : "right");
     setTab(next);
-    if (next !== "next") fetchLeaderboard();
+    fetchLeaderboard();
   };
 
   const ranked = useMemo(
-    () => (data ? rankLeaderboard(data.leaderboard, tab === "next" ? "top" : tab, reviews) : []),
+    () => (data ? rankLeaderboard(data.leaderboard, tab, reviews) : []),
     [data, tab, reviews],
   );
 
@@ -93,12 +92,10 @@ export default function BookingLeaderboard() {
   const tabLabels: Record<RankingPageTab, string> = {
     top: displayText("🏆 Top Workers"),
     earners: displayText("💰 Top Earners"),
-    next: `⚡ ${displayText("Next Booking")}`,
   };
   const tabHelp: Record<RankingPageTab, string> = {
     top: displayText("Priority Score shows performance. Booking offers follow the active booking rules, not this ranking."),
     earners: displayText("Ranked by earnings from completed bookings today."),
-    next: displayText("Estimate only — not confirmed to match the live booking order."),
   };
   const onTouchEnd = (x: number) => {
     if (touchX.current === null) return;
@@ -112,7 +109,7 @@ export default function BookingLeaderboard() {
   return (
     <div className="space-y-4">
       {/* Your Rank Card */}
-      {tab !== "next" && me && (
+      {me && (
         <Card className="overflow-hidden border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-background shadow-md">
           <div className="p-4">
             <div className="flex items-center justify-between mb-3">
@@ -203,9 +200,7 @@ export default function BookingLeaderboard() {
           onTouchEnd={(e) => onTouchEnd(e.changedTouches[0].clientX)}
           className={`space-y-2 animate-in fade-in duration-300 motion-reduce:animate-none ${slideDir === "left" ? "slide-in-from-right-8" : "slide-in-from-left-8"}`}
         >
-          {tab === "next" ? (
-            <NextBookingRanking />
-          ) : loading ? <LeaderboardSkeleton /> : error || !data ? <p role="status" className="py-8 text-center text-sm text-muted-foreground">{displayText("Unable to Verify")}</p> : <>
+          {loading ? <LeaderboardSkeleton /> : error || !data ? <p role="status" className="py-8 text-center text-sm text-muted-foreground">{displayText("Unable to Verify")}</p> : <>
           {top3.map((w, i) => (
             <WorkerRow key={w.id} worker={w} tab={tab} medal={i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"} />
           ))}

@@ -1,5 +1,9 @@
 # Worker language translation
 
+## Prompt 112 — remove Next Booking from app
+- [x] Remove Next Booking from ranking navigation, swipe destinations and rendered screen; preserve Top Workers/Top Earners and all booking behavior.
+- [x] 68 regression tests pass; preview build OK; mobile/desktop guest ranking has two working tabs, zero Next Booking requests, no overflow/page errors. No backend changes or publication; signed-in ranking data not verified.
+
 ## Prompt 111 — Next Booking activation readiness (no activation/deployment)
 - [x] Audit Android OFF gate, hosted 401/CORS, live eligibility/approval definitions, uniform-ranking settings and missing bundled endpoint markers.
 - [x] Hide contradictory numeric queue positions for excluded workers; 65 focused / 710 full app tests and 29 staged-alternative tests pass; preview build OK.
