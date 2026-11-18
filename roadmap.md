@@ -1,5 +1,10 @@
 # Worker language translation
 
+## Mandatory Admin approval (18 Nov) — production rollout held
+- [ ] Prepare shared-status availability lock and automatic approval refresh, without enabling availability after approval.
+- [ ] Audit/stage backend enforcement for old APK availability, dispatch and acceptance; blocker: existing-worker rollout decision (all 46 pending, 17 online under legacy exemption), hosted function parity and authenticated/device verification.
+- [ ] Run isolated rule and refresh tests; do not publish.
+
 ## Next Booking audit (18 Nov) — no deployment/publication
 - [x] Trace the explicit Android/production OFF gate and current worker-next-booking reader; hosted unauthenticated POST returns 401, CORS OPTIONS returns 200. Reported src/routes/__root.tsx is absent.
 - [x] Add manual refresh for successful snapshots/unavailable service and reject stale snapshots or unsupported services without inventing queue positions.
