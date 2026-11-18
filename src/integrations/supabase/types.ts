@@ -6087,6 +6087,51 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_approval_events: {
+        Row: {
+          actor_id: string
+          created_at: string
+          from_status: string | null
+          id: string
+          reason: string | null
+          to_status: string
+          worker_id: string
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          reason?: string | null
+          to_status: string
+          worker_id: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          reason?: string | null
+          to_status?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_approval_events_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_reliability_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_approval_events_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_archive: {
         Row: {
           archived_at: string
@@ -7977,6 +8022,10 @@ export type Database = {
           app_standby_bucket: string | null
           app_state: string | null
           app_version: string | null
+          approval_rejection_reason: string | null
+          approval_reviewed_at: string | null
+          approval_reviewed_by: string | null
+          approval_status: string
           archived_provider_snapshot: Json | null
           auto_pause_notified_at: string | null
           auto_paused_at: string | null
@@ -7986,6 +8035,7 @@ export type Database = {
           availability_last_changed_at: string | null
           availability_last_reason: string | null
           availability_last_source: string | null
+          availability_requires_approval: boolean
           availability_state: string
           bank_account_number: string | null
           bank_details_source: string | null
@@ -8136,6 +8186,10 @@ export type Database = {
           app_standby_bucket?: string | null
           app_state?: string | null
           app_version?: string | null
+          approval_rejection_reason?: string | null
+          approval_reviewed_at?: string | null
+          approval_reviewed_by?: string | null
+          approval_status?: string
           archived_provider_snapshot?: Json | null
           auto_pause_notified_at?: string | null
           auto_paused_at?: string | null
@@ -8145,6 +8199,7 @@ export type Database = {
           availability_last_changed_at?: string | null
           availability_last_reason?: string | null
           availability_last_source?: string | null
+          availability_requires_approval?: boolean
           availability_state?: string
           bank_account_number?: string | null
           bank_details_source?: string | null
@@ -8295,6 +8350,10 @@ export type Database = {
           app_standby_bucket?: string | null
           app_state?: string | null
           app_version?: string | null
+          approval_rejection_reason?: string | null
+          approval_reviewed_at?: string | null
+          approval_reviewed_by?: string | null
+          approval_status?: string
           archived_provider_snapshot?: Json | null
           auto_pause_notified_at?: string | null
           auto_paused_at?: string | null
@@ -8304,6 +8363,7 @@ export type Database = {
           availability_last_changed_at?: string | null
           availability_last_reason?: string | null
           availability_last_source?: string | null
+          availability_requires_approval?: boolean
           availability_state?: string
           bank_account_number?: string | null
           bank_details_source?: string | null
@@ -9412,6 +9472,10 @@ export type Database = {
         Args: { force?: boolean; new_version: string }
         Returns: undefined
       }
+      admin_set_worker_approval: {
+        Args: { p_decision: string; p_reason?: string; p_worker_id: string }
+        Returns: Json
+      }
       admin_set_worker_rating: {
         Args: { p_rating: number; p_worker_id: string }
         Returns: undefined
@@ -9542,6 +9606,10 @@ export type Database = {
               app_standby_bucket: string | null
               app_state: string | null
               app_version: string | null
+              approval_rejection_reason: string | null
+              approval_reviewed_at: string | null
+              approval_reviewed_by: string | null
+              approval_status: string
               archived_provider_snapshot: Json | null
               auto_pause_notified_at: string | null
               auto_paused_at: string | null
@@ -9551,6 +9619,7 @@ export type Database = {
               availability_last_changed_at: string | null
               availability_last_reason: string | null
               availability_last_source: string | null
+              availability_requires_approval: boolean
               availability_state: string
               bank_account_number: string | null
               bank_details_source: string | null
@@ -9710,6 +9779,10 @@ export type Database = {
               app_standby_bucket: string | null
               app_state: string | null
               app_version: string | null
+              approval_rejection_reason: string | null
+              approval_reviewed_at: string | null
+              approval_reviewed_by: string | null
+              approval_status: string
               archived_provider_snapshot: Json | null
               auto_pause_notified_at: string | null
               auto_paused_at: string | null
@@ -9719,6 +9792,7 @@ export type Database = {
               availability_last_changed_at: string | null
               availability_last_reason: string | null
               availability_last_source: string | null
+              availability_requires_approval: boolean
               availability_state: string
               bank_account_number: string | null
               bank_details_source: string | null
