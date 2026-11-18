@@ -70,9 +70,17 @@ describe("worker-next-booking response", () => {
     expect(d.areas[0].reason).toBe("notifications_off"); expect(areaPosition(d.areas[0])).toEqual({ kind: "none" });
   });
   it("Next Group only when the server says 0 groups ahead; In Line shows the server number", () => {
-    const a = read(real).areas[0];
+    const a = { ...read(real).areas[0], status: "in_queue", reason: null };
     expect(areaPosition({ ...a, groupsAhead: 0 })).toEqual({ kind: "next" });
     expect(areaPosition({ ...a, groupsAhead: 3 })).toEqual({ kind: "line", ahead: 3 });
+  });
+  it.each(["busy", "availability_off", "notifications_off", "pending_approval", "rejected", "suspended", "no_slot", "inactive"])("%s never displays a queue position even with contradictory groups_ahead", reason => {
+    const area = read({ ...real, areas: [{ ...real.areas[0], status: "in_queue", reason, groups_ahead: 0 }] }).areas[0];
+    expect(areaPosition(area)).toEqual({ kind: "none" });
+  });
+  it("not_in_queue never displays a queue position even when the reason is omitted", () => {
+    const area = read({ ...real, areas: [{ ...real.areas[0], reason: null, groups_ahead: 3 }] }).areas[0];
+    expect(areaPosition(area)).toEqual({ kind: "none" });
   });
   it("accepts an empty areas list but rejects ok:false and bad positions", () => {
     expect(read({ ...real, areas: [] }).areas).toEqual([]);

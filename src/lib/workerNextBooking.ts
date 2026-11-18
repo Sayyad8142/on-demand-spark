@@ -28,7 +28,9 @@ export function parseWorkerNextBooking(input: unknown, now = Date.now()): Worker
 export type AreaPosition = { kind: "next" } | { kind: "line"; ahead: number } | { kind: "none" };
 // Next Group / In Line only from a server-supplied groups_ahead.
 export function areaPosition(area: NextArea): AreaPosition {
-  if (area.groupsAhead === null) return { kind: "none" };
+  // An exclusion always wins over a contradictory numeric estimate.
+  // Display-only: never uses this decision to authorize availability or acceptance.
+  if (area.groupsAhead === null || area.status === "not_in_queue" || area.reason !== null) return { kind: "none" };
   return area.groupsAhead === 0 ? { kind: "next" } : { kind: "line", ahead: area.groupsAhead };
 }
 export const prettyCode = (v: string) => v.replace(/[-_]+/g, " ").replace(/\b\w/g, c => c.toUpperCase());

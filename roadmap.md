@@ -1,5 +1,11 @@
 # Worker language translation
 
+## Prompt 111 — Next Booking activation readiness (no activation/deployment)
+- [x] Audit Android OFF gate, hosted 401/CORS, live eligibility/approval definitions, uniform-ranking settings and missing bundled endpoint markers.
+- [x] Hide contradictory numeric queue positions for excluded workers; 65 focused / 710 full app tests and 29 staged-alternative tests pass; preview build OK.
+- [x] Report NO-GO and backend/device approval gates in docs/live-next-booking-2026-11-12/PROMPT-111-ACTIVATION-READINESS.md; integration stays OFF.
+- [ ] Authenticated hosted scenario/dispatch parity and installed APK checks — blocked: hosted source/version, external worker session, isolated backend/device and separate activation/deployment approval.
+
 ## Mandatory Admin approval (18 Nov) — not published
 - [x] Decision: existing workers keep working until Admin reviews each one; new signups wait for approval.
 - [x] On/off switch locked with waiting message for pending/rejected/suspended; re-checks at tap time; approval picked up live and on app return. Approval never turns ON automatically.
