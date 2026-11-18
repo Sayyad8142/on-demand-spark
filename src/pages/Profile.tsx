@@ -26,7 +26,7 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import BottomNav from "@/components/BottomNav";
 import UpiQrUpload from "@/components/UpiQrUpload";
-import { CURRENT_VERSION_CODE } from "@/config/version";
+import { getInstalledVersionSync, loadInstalledVersion, versionLabel } from "@/lib/installedVersion";
 
 import PriorityScoreCard from "@/components/profile/PriorityScoreCard";
 
@@ -48,6 +48,12 @@ interface Community {
 }
 export default function Profile() {
   useWorkerLanguage();
+  const [installedVersion, setInstalledVersion] = useState(getInstalledVersionSync);
+  useEffect(() => {
+    let active = true;
+    void loadInstalledVersion().then(version => { if (active) setInstalledVersion(version); });
+    return () => { active = false; };
+  }, []);
   const navigate = useNavigate();
   const {
     toast
@@ -820,7 +826,7 @@ export default function Profile() {
             className="text-xs text-center text-muted-foreground cursor-pointer select-none"
             onClick={handleVersionTap}
           >
-            {displayText("Version")} {CURRENT_VERSION_CODE}
+            {displayText("Version")} {versionLabel(installedVersion)}
           </p>
         </div>
       </main>

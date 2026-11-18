@@ -1,5 +1,12 @@
 # Worker language translation
 
+## Google Play 10.0.04 release preparation (18 Nov) — no publication
+- [x] User skipped Play history confirmation; prepare 10.0.04 (104) provisionally with upload blocked until highest uploaded code is confirmed lower than 104.
+- [x] Audit package/version/signing/Gradle and make Profile display the actual installed version name plus build; enforce explicit uploaded-build input in release checks.
+- [x] 724 tests passed; preview build OK; Profile version verified at 393/734/1280px; release guard rejects reused/unknown builds. Stale Android bundle detected; report in docs/play-release-10.0.04-2026-11-18.md.
+- [ ] Upload-history confirmation — blocked: Play Console history unavailable; 104 provisional after skipped question.
+- [ ] Signed AAB and device/hosted flow verification — blocked: stale packaged web assets, no local JDK/SDK/upload key, external worker session/physical phone unavailable, prior backend approval gap and separate publication approval. No deployment/force-update activation.
+
 ## Start Booking button redesign (18 Nov) — preview only
 - [x] Remove visible countdown, play icon and separate warning; reuse the unchanged deadline for a green/red Start OTP button with a reduced-motion-safe pulse.
 - [x] 62 OTP/reminder regressions passed; isolated actual-card browser checks passed at 320/393/480/1280px in English/Hindi/Telugu for normal/delayed/started/cancelled states; reduced motion stops the pulse. Preview build OK; reported hook error absent.
