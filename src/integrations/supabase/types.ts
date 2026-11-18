@@ -12127,6 +12127,10 @@ export type Database = {
         Args: { p_expected_source: string; p_worker_id: string }
         Returns: boolean
       }
+      worker_approval_allows_online: {
+        Args: { p_requires: boolean; p_status: string }
+        Returns: boolean
+      }
       worker_collect_payment: {
         Args: { p_booking_id: string; p_method: string }
         Returns: Json
