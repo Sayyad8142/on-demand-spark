@@ -61,24 +61,35 @@ describe("Next Booking preview check", () => {
 
 import { areaPosition, parseWorkerNextBooking } from "../workerNextBooking";
 describe("worker-next-booking response", () => {
+  const responseTime = Date.parse("2026-11-15T01:44:02.052Z");
+  const read = (input: unknown) => parseWorkerNextBooking(input, responseTime);
   const real = { ok: true, snapshot_at: "2026-11-15T01:44:02.052Z", estimate_only: true, ranking_mode: "longest_waiting",
     areas: [{ community: "prestige-high-fields", service: "maid", status: "not_in_queue", groups_ahead: null, boundary_tie: false, starvation_guard: false, reason: "notifications_off" }] };
   it("accepts the actual response and shows no position when groups_ahead is null", () => {
-    const d = parseWorkerNextBooking(real);
+    const d = read(real);
     expect(d.areas[0].reason).toBe("notifications_off"); expect(areaPosition(d.areas[0])).toEqual({ kind: "none" });
   });
   it("Next Group only when the server says 0 groups ahead; In Line shows the server number", () => {
-    const a = parseWorkerNextBooking(real).areas[0];
+    const a = read(real).areas[0];
     expect(areaPosition({ ...a, groupsAhead: 0 })).toEqual({ kind: "next" });
     expect(areaPosition({ ...a, groupsAhead: 3 })).toEqual({ kind: "line", ahead: 3 });
   });
   it("accepts an empty areas list but rejects ok:false and bad positions", () => {
-    expect(parseWorkerNextBooking({ ...real, areas: [] }).areas).toEqual([]);
-    expect(() => parseWorkerNextBooking({ ...real, ok: false })).toThrow();
-    expect(() => parseWorkerNextBooking({ ...real, areas: [{ ...real.areas[0], groups_ahead: -1 }] })).toThrow();
+    expect(read({ ...real, areas: [] }).areas).toEqual([]);
+    expect(() => read({ ...real, ok: false })).toThrow();
+    expect(() => read({ ...real, areas: [{ ...real.areas[0], groups_ahead: -1 }] })).toThrow();
   });
   it("drops unknown fields such as phone numbers", () => {
-    const d = parseWorkerNextBooking({ ...real, areas: [{ ...real.areas[0], phone: "9876543210" }] });
+    const d = read({ ...real, areas: [{ ...real.areas[0], phone: "9876543210" }] });
     expect(JSON.stringify(d)).not.toContain("9876543210");
+  });
+  it("does not show a stale queue as current", () => {
+    expect(() => parseWorkerNextBooking(real, responseTime + 20_001)).toThrow("stale_contract");
+    expect(() => parseWorkerNextBooking(real, responseTime - 5_001)).toThrow("stale_contract");
+    expect(parseWorkerNextBooking(real, responseTime + 20_000).areas).toHaveLength(1);
+  });
+  it("only accepts Maid and Bathroom Cleaning from the ranking service", () => {
+    expect(read({ ...real, areas: [{ ...real.areas[0], service: "bathroom_cleaning" }] }).areas[0].service).toBe("bathroom_cleaning");
+    expect(() => read({ ...real, areas: [{ ...real.areas[0], service: "cook" }] })).toThrow("invalid_area");
   });
 });

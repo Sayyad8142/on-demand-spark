@@ -8,13 +8,15 @@ const CODE = /^[a-z0-9][a-z0-9_-]{0,79}$/i;
 const code = (v: unknown) => typeof v === "string" && CODE.test(v);
 const record = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 // Only known fields are copied; anything else in the response is dropped.
-export function parseWorkerNextBooking(input: unknown): WorkerNextBooking {
+export function parseWorkerNextBooking(input: unknown, now = Date.now()): WorkerNextBooking {
   if (!record(input) || input.ok !== true || typeof input.estimate_only !== "boolean" || !Array.isArray(input.areas) || input.areas.length > 50) throw Error("invalid_contract");
   const snapshotAt = input.snapshot_at;
   if (typeof snapshotAt !== "string" || !Number.isFinite(Date.parse(snapshotAt))) throw Error("invalid_contract");
+  const timestamp = Date.parse(snapshotAt);
+  if (now - timestamp > 20_000 || timestamp > now + 5_000) throw Error("stale_contract");
   const rankingMode = input.ranking_mode == null ? null : code(input.ranking_mode) ? String(input.ranking_mode) : null;
   const areas = input.areas.map((a): NextArea => {
-    if (!record(a) || !code(a.community) || !code(a.service) || !code(a.status)) throw Error("invalid_area");
+    if (!record(a) || !code(a.community) || !code(a.service) || !["maid", "bathroom_cleaning"].includes(String(a.service)) || !code(a.status)) throw Error("invalid_area");
     const g = a.groups_ahead;
     if (g !== null && g !== undefined && !(typeof g === "number" && Number.isInteger(g) && g >= 0 && g < 100000)) throw Error("invalid_area");
     return { community: a.community as string, service: a.service as string, status: a.status as string,

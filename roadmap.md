@@ -1,5 +1,11 @@
 # Worker language translation
 
+## Next Booking audit (18 Nov) — no deployment/publication
+- [x] Trace the explicit Android/production OFF gate and current worker-next-booking reader; hosted unauthenticated POST returns 401, CORS OPTIONS returns 200. Reported src/routes/__root.tsx is absent.
+- [x] Add manual refresh for successful snapshots/unavailable service and reject stale snapshots or unsupported services without inventing queue positions.
+- [x] 51 ranking tests pass; preview build OK; mobile /leaderboard redirects to rendered /auth without page errors. Audit in docs/live-next-booking-2026-11-12/AUDIT-2026-11-18.md.
+- [ ] Verify real queue against hosted dispatcher and activate Android — blocked: hosted ranking/dispatcher source, authenticated external-worker scenarios, separate activation approval and installed APK/device access.
+
 ## Android notification repair (17 Nov) — no deployment/publication
 - [x] Sweep sibling permission/registration screens and background jobs; fix Device Readiness/Settings native readback/resume, browser-only routing, unknown permission and failed boot-repair reporting. 694 tests pass; source-only server findings and unchanged release gates in FLOW-SWEEP.md.
 - [x] Correct stale permission warnings, native Settings return checks and Retry registration/readback; preserve dispatch, deadlines and OTP.

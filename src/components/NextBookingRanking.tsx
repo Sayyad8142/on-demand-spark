@@ -53,6 +53,6 @@ export default function NextBookingRanking() {
         : <ul className="space-y-2">{data.areas.map(a => <AreaCard key={`${a.community}/${a.service}`} area={a} />)}</ul>}
     </>}
     {!data && <p role="status" className="py-8 text-center text-sm text-muted-foreground">{displayText(message)}</p>}
-    {!loading && (error === "connection" || error === "invalid") && <div className="flex justify-center"><Button variant="outline" onClick={retry}><RefreshCw className="mr-2 h-4 w-4" />{displayText("Retry")}</Button></div>}
+    {!loading && (data || error === "connection" || error === "invalid" || error === "unavailable") && <div className="flex justify-center"><Button variant="outline" onClick={retry}><RefreshCw className="mr-2 h-4 w-4" />{displayText(data ? "Refresh" : "Retry")}</Button></div>}
   </section>;
 }
