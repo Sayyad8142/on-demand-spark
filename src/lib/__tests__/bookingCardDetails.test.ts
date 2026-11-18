@@ -15,6 +15,19 @@ describe("booking details", () => {
     expect(startOtpCountdown(pending, now + 800_000)).toBe(0);
     expect(pending.status).toBe("accepted");
   });
+  it("delay begins exactly at the existing ten-minute threshold", () => {
+    expect(startOtpCountdown(pending, now + 599_999)).toBe(1);
+    expect(startOtpCountdown(pending, now + 600_000)).toBe(0);
+  });
+  it("server-confirmed start clears an already delayed indicator", () => {
+    expect(startOtpCountdown({ ...pending, status: "started", started_at: new Date(now + 660_000).toISOString() }, now + 700_000)).toBeNull();
+  });
+  it("cancellation clears an already delayed indicator", () => {
+    expect(startOtpCountdown({ ...pending, status: "cancelled" }, now + 700_000)).toBeNull();
+  });
+  it("completion clears an already delayed indicator", () => {
+    expect(startOtpCountdown({ ...pending, status: "completed" }, now + 700_000)).toBeNull();
+  });
   it("waits for acceptance and never starts a timer on assignment alone", () => {
     expect(startOtpCountdown({ ...pending, accepted_at: null, assigned_at: new Date(now).toISOString() }, now)).toBeNull();
     expect(startOtpCountdown({ ...pending, accepted_at: null }, now)).toBeNull();

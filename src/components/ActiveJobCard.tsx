@@ -2,7 +2,7 @@ import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displ
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Phone, Volume2, Utensils, Zap, PlusCircle, Sparkles, CookingPot, KeyRound, Banknote, CreditCard, AlertTriangle, Play } from "lucide-react";
+import { Check, Phone, Volume2, Utensils, Zap, PlusCircle, Sparkles, CookingPot, KeyRound, Banknote, CreditCard, AlertTriangle } from "lucide-react";
 import { BookingWithAddress } from "@/lib/address";
 import { getUnitDisplay } from "@/lib/address";
 import { useCommunityFee } from "@/hooks/useCommunityFee";
@@ -18,7 +18,7 @@ import {
   type ResolvedOtpMode,
 } from "@/lib/otpV2";
 import { startOtpCardAction } from "@/lib/startOtp";
-import { bookingCharges, startOtpCountdown, countdownLabel } from "@/lib/bookingCardDetails";
+import { bookingCharges, startOtpCountdown } from "@/lib/bookingCardDetails";
 import { isActiveWorkStatus } from "@/lib/workSafety";
 
 import serviceDishWashing from "@/assets/service-dish-washing.webp";
@@ -341,26 +341,22 @@ export default function ActiveJobCard({
               }
             </Button>
           ) : otpAction === "start" ? (
-            <>
-            {startSeconds === 0 && <div role="status" className="mb-2 flex items-center justify-center gap-1.5 text-sm font-semibold text-destructive"><AlertTriangle className="w-4 h-4 shrink-0" />{displayText("Start OTP Delayed")}</div>}
             <Button
               size="lg"
-              className={`w-full min-h-14 h-auto py-3 text-base font-bold shadow-lg rounded-xl transition-all duration-200 active:scale-[0.98] ${
-                isWorkCompletedDisabled ?
-                "bg-gray-400 hover:bg-gray-400 cursor-not-allowed text-white/80" :
-                "bg-green-600 hover:bg-green-700 text-white"}`
-              }
+              variant={startSeconds === 0 ? "bookingStartDelayed" : "bookingStart"}
+              className="w-full h-20 px-3 py-3 text-lg leading-snug font-bold rounded-xl whitespace-normal"
               onClick={() => navigate(`/start-booking/${booking.id}`)}
-              disabled={isWorkCompletedDisabled}>
+              disabled={isWorkCompletedDisabled}
+              aria-busy={updating}>
               {updating ? displayText("Updating...") :
                 <>
-                  <Play className="w-5 h-5 mr-1 shrink-0" />
-                  <span className="min-w-0 whitespace-normal">{displayText("Start Booking with OTP")}</span>
-                  {startSeconds !== null && startSeconds > 0 && <span className="ml-1 shrink-0 tabular-nums">· {countdownLabel(startSeconds)}</span>}
+                  {startSeconds === 0 && <AlertTriangle aria-hidden="true" />}
+                  <span className="min-w-0 break-words text-center">
+                    {displayText(startSeconds === 0 ? "Start OTP Delayed — Enter OTP" : "Start Booking with OTP")}
+                  </span>
                 </>
               }
             </Button>
-            </>
           ) : otpAction === "resolving" ? (
             <Button size="lg" disabled className="w-full h-14 text-base font-semibold rounded-xl">
               {displayText("Checking booking…")}

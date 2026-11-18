@@ -1,5 +1,10 @@
 # Worker language translation
 
+## Start Booking button redesign (18 Nov) — preview only
+- [x] Remove visible countdown, play icon and separate warning; reuse the unchanged deadline for a green/red Start OTP button with a reduced-motion-safe pulse.
+- [x] 62 OTP/reminder regressions passed; isolated actual-card browser checks passed at 320/393/480/1280px in English/Hindi/Telugu for normal/delayed/started/cancelled states; reduced motion stops the pulse. Preview build OK; reported hook error absent.
+- [ ] Real signed-in OTP flow and installed Android check — blocked: external unmanaged worker session and physical phone unavailable. No publication or backend/native alarm changes.
+
 ## Prompt 112 — remove Next Booking from app
 - [x] Remove Next Booking from ranking navigation, swipe destinations and rendered screen; preserve Top Workers/Top Earners and all booking behavior.
 - [x] 68 regression tests pass; preview build OK; mobile/desktop guest ranking has two working tabs, zero Next Booking requests, no overflow/page errors. No backend changes or publication; signed-in ranking data not verified.

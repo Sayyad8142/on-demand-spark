@@ -40,6 +40,15 @@ All colors MUST be HSL.
     --success: 142 70% 45%;
     --success-foreground: 0 0% 100%;
 
+    --booking-start: 142 76% 36%;
+    --booking-start-hover: 142 72% 29%;
+    --booking-start-foreground: 0 0% 100%;
+    --booking-start-alert: 0 78% 47%;
+    --booking-start-alert-deep: 0 74% 35%;
+    --shadow-booking-start: 0 3px 8px hsl(142 76% 36% / 0.18);
+    --shadow-booking-start-alert: 0 0 0 2px hsl(0 78% 47% / 0.22), 0 0 12px hsl(0 78% 47% / 0.2);
+    --shadow-booking-start-alert-pulse: 0 0 0 5px hsl(0 78% 47% / 0.12), 0 0 18px hsl(0 78% 47% / 0.32);
+
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
@@ -261,4 +270,38 @@ html.alert-overlay-active body {
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+/* A single, layout-stable alert; no separate timer or warning surface. */
+.booking-start-button {
+  background-color: hsl(var(--booking-start));
+  color: hsl(var(--booking-start-foreground));
+  box-shadow: var(--shadow-booking-start);
+}
+
+.booking-start-button:hover {
+  background-color: hsl(var(--booking-start-hover));
+}
+
+.booking-start-button-delayed,
+.booking-start-button-delayed:hover {
+  background-color: hsl(var(--booking-start-alert));
+  box-shadow: var(--shadow-booking-start-alert);
+}
+
+@keyframes booking-start-alert {
+  0%, 100% {
+    background-color: hsl(var(--booking-start-alert));
+    box-shadow: var(--shadow-booking-start-alert);
+  }
+  50% {
+    background-color: hsl(var(--booking-start-alert-deep));
+    box-shadow: var(--shadow-booking-start-alert-pulse);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .booking-start-button-delayed {
+    animation: booking-start-alert 2.4s ease-in-out infinite;
+  }
 }
