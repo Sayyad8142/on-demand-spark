@@ -1122,6 +1122,9 @@
     "No_available_workers_for_this_slot": "इस समय स्लॉट में कोई वर्कर उपलब्ध नहीं है।",
     "Checking_availability": "उपलब्धता जाँची जा रही है…",
     "Last_updated": "अंतिम अपडेट",
-    "Customer_rating": "ग्राहक रेटिंग"
+    "Customer_rating": "ग्राहक रेटिंग",
+    "Waiting_for_Admin_Approval_You_can_start_receiving_bookings_once_your_account_is_approved": "एडमिन की मंज़ूरी का इंतज़ार है। आपका खाता मंज़ूर होते ही आप बुकिंग प्राप्त करना शुरू कर सकते हैं।",
+    "Registration_not_approved_Please_contact_support": "पंजीकरण मंज़ूर नहीं हुआ। कृपया सपोर्ट से संपर्क करें।",
+    "Account_approved_Turn_ON_to_start_receiving_bookings": "खाता मंज़ूर हो गया। बुकिंग प्राप्त करने के लिए ON करें।"
   }
 }

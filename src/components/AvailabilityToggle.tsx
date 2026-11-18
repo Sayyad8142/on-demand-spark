@@ -11,6 +11,7 @@ import { App as CapApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { Loader2 } from "lucide-react";
 import { AVAILABILITY_VIEW_TEXT, availabilityView } from "@/lib/homeSummary";
+import { approvalState, workerApproved, APPROVAL_WAIT_MESSAGE, APPROVAL_REJECTED_MESSAGE, APPROVAL_GRANTED_MESSAGE, type ApprovalState } from "@/lib/workerApproval";
 
 interface AvailabilityToggleProps {
   workerId: string;
@@ -46,6 +47,8 @@ export function AvailabilityToggle({
   const [isAvailable, setIsAvailable] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  // Unknown until the shared backend answers; locked by default.
+  const [approval, setApproval] = useState<ApprovalState>("pending");
   const [pressed, setPressed] = useState(false);
   const [networkOnline, setNetworkOnline] = useState(
     typeof navigator !== "undefined" ? navigator.onLine : true
@@ -57,10 +60,17 @@ export function AvailabilityToggle({
     try {
       const { data, error } = await supabase
         .from("workers")
-        .select("is_available")
+        .select("is_available, approval_status, availability_requires_approval")
         .eq("id", workerId)
         .single();
       if (error) throw error;
+      const nextApproval = approvalState(data as any);
+      setApproval((prev) => {
+        if (opts.silent && prev === "pending" && nextApproval === "approved") {
+          toast({ title: displayText(APPROVAL_GRANTED_MESSAGE) });
+        }
+        return nextApproval;
+      });
       setIsAvailable((prev) => {
         const next = data?.is_available || false;
         // Notify worker if backend flipped ON automatically (e.g. after 48h auto-enable).
@@ -103,7 +113,14 @@ export function AvailabilityToggle({
       }).then((sub) => { nativeSub = sub; });
     }
 
+    // Pick up Admin approval decisions immediately (own row only, via RLS).
+    const channel = supabase
+      .channel(`worker-approval-${workerId}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "workers", filter: `id=eq.${workerId}` }, refresh)
+      .subscribe();
+
     return () => {
+      void supabase.removeChannel(channel);
       clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisible);
       if (nativeSub) nativeSub.remove();
@@ -115,6 +132,25 @@ export function AvailabilityToggle({
   const handleToggle = async () => {
     if (loading) return;
     const newValue = !isAvailable;
+
+    // HARD BLOCK: Admin approval. Re-read the shared status at tap time.
+    if (newValue) {
+      const { data: row, error: apprErr } = await supabase
+        .from("workers")
+        .select("approval_status, availability_requires_approval")
+        .eq("id", workerId)
+        .single();
+      const state = apprErr ? "pending" : approvalState(row as any);
+      setApproval(state);
+      if (apprErr || !workerApproved(row as any)) {
+        setIsAvailable(false);
+        toast({
+          title: displayText(state === "rejected" || state === "suspended" ? APPROVAL_REJECTED_MESSAGE : APPROVAL_WAIT_MESSAGE),
+          variant: "destructive",
+        });
+        return;
+      }
+    }
 
     // HARD BLOCK: cannot go online without valid saved slots. Re-read the
     // worker's saved slots from the backend at tap time (never trust a cached prop).
@@ -224,6 +260,7 @@ export function AvailabilityToggle({
     );
   }
 
+  const approvalLocked = approval !== "approved" && approval !== "legacy_pending_review";
   const view = availabilityView({
     isAvailable,
     payoutReady: bookingReady,
@@ -257,9 +294,10 @@ export function AvailabilityToggle({
             role="switch"
             aria-checked={isAvailable}
             aria-busy={loading}
-            disabled={loading}
+            disabled={loading || (approvalLocked && !isAvailable)}
+            aria-disabled={loading || (approvalLocked && !isAvailable)}
             onClick={handleToggle}
-            className="relative inline-flex items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-wait"
+            className="relative inline-flex items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
             style={{
               width: 60,
               height: 32,
@@ -283,6 +321,11 @@ export function AvailabilityToggle({
           <span className="text-xs font-bold text-white">{isAvailable ? displayText("ON") : displayText("OFF")}</span>
         </div>
       </div>
+      {approvalLocked && (
+        <p className="mt-2 rounded-lg bg-black/20 px-3 py-2 text-sm font-semibold text-white" role="status">
+          {displayText(approval === "rejected" || approval === "suspended" ? APPROVAL_REJECTED_MESSAGE : APPROVAL_WAIT_MESSAGE)}
+        </p>
+      )}
     </div>
   );
 }

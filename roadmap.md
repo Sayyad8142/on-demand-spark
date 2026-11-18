@@ -1,9 +1,10 @@
 # Worker language translation
 
-## Mandatory Admin approval (18 Nov) — production rollout held
-- [ ] Prepare shared-status availability lock and automatic approval refresh, without enabling availability after approval.
-- [ ] Audit/stage backend enforcement for old APK availability, dispatch and acceptance; blocker: existing-worker rollout decision (all 46 pending, 17 online under legacy exemption), hosted function parity and authenticated/device verification.
-- [ ] Run isolated rule and refresh tests; do not publish.
+## Mandatory Admin approval (18 Nov) — not published
+- [x] Decision: existing workers keep working until Admin reviews each one; new signups wait for approval.
+- [x] On/off switch locked with waiting message for pending/rejected/suspended; re-checks at tap time; approval picked up live and on app return. Approval never turns ON automatically.
+- [x] Shared database already forces new signups to pending and refuses ON until approved (legacy exemption for existing workers). 701 tests pass, build OK.
+- [ ] Signed-in/phone check of Signup → Approve → ON → booking — blocked: no worker session for this project's sign-in; publishing awaits confirmation.
 
 ## Next Booking audit (18 Nov) — no deployment/publication
 - [x] Trace the explicit Android/production OFF gate and current worker-next-booking reader; hosted unauthenticated POST returns 401, CORS OPTIONS returns 200. Reported src/routes/__root.tsx is absent.
