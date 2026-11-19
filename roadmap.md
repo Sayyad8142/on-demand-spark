@@ -1,5 +1,11 @@
 # Worker language translation
 
+## Prompt 113 — test sender preparation and repeated hook diagnostic
+- [x] Read attached preparation-only request; review sender, native alert, OTP/evidence paths and activation instructions. No deployment or delivery authorised.
+- [x] Current hook has explicit React imports; fresh preview build OK, mobile auth screenshot checked, zero page errors/overlays. All 732 tests pass; authenticated Android flow remains unverified.
+- [x] Corrected stale checklist JWT/global-switch instructions; activation handoff in docs/practice-activation-preparation-2026-11-19.md. No deployment, send or switch changes.
+- [ ] Controlled Android delivery — blocked: named worker/phone, hosted source/configuration verification, approved Firebase transport, separate deployment/delivery approval and signed test APK/device.
+
 ## Test Booking send repair — 19 Nov (no deployment/delivery activation)
 - [x] Try Again repeats chosen mode with fresh practice id, tap lock and fresh safety check; unknown-send waiting preserved. 87 focused / 732 full tests pass; mobile local practice uses 1234 twice, retry reopens alert, no page errors.
 - [x] Hosted sender returns 503 approval_required; no function logs returned. Isolated staged sender/native token/receipt/alert boundaries reviewed; report docs/practice-send-repair-2026-11-19.md.

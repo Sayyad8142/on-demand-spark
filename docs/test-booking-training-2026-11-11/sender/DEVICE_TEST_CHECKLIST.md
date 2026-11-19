@@ -1,6 +1,10 @@
 # Test Booking notification — Android device checklist
 
-Run only after approval of: (1) applying `staged/sql/001_practice_push_attempts.sql`, (2) deploying `staged/send-practice-notification/` with `verify_jwt = true` and `PRACTICE_PUSH_SENDER=on`, (3) a signed APK built from this source with `PRACTICE_PUSH_ENABLED = true` installed on **one test phone** logged in as **one test worker**.
+Run only after separate deployment and controlled-delivery approval. First reconcile the current hosted source/configuration and practice journal with the reviewed staging; the journal and OFF sender were previously deployed (PRIOR evidence, not fresh parity verification). Do not blindly reapply SQL.
+
+Deploy only the approved self-contained sender, initially `PRACTICE_PUSH_SENDER=off`, using `staged/config.toml.snippet` (`verify_jwt = false`; every request authenticated in code). Validate-only transport must succeed before a separately approved bounded `on` window. Keep `PRACTICE_PUSH_ENABLED=false` in normal builds; distribute an explicitly approved pilot-only signed APK to **one named test phone** logged in as **one named test worker**. The existing `pilot-validate-2026-11-12` build key/login is PRIOR validation configuration, not approval for a new delivery pilot. Reconcile its client gate with the newly approved server pilot before building; never silently reuse the prior login.
+
+19 November preparation: no accessible Firebase Messaging connector was listed. The staged adapter still uses legacy direct service-account transport; supported transport/configuration review is a blocker, not an invitation to change production `send-fcm`. No delivery has been verified by this checklist.
 
 Also require server-only PRACTICE_PILOT_USER_ID and PRACTICE_PILOT_TOKEN_SHA256 for the one approved login/device. Missing/mismatched configuration refuses sending.
 
@@ -25,7 +29,7 @@ Before and after the whole run, record counts for that worker: bookings, booking
 12. Force-stopped app (Settings → Force stop): document result. Android may block delivery until reopened — this is expected, not a failure.
 
 ## Safety
-13. Tap Send twice quickly → only one notification; second tap shows "wait one minute".
+13. Tap Send twice quickly → only one attempt; the send/retry control stays disabled during the in-flight check/send. Do not require a message that the app does not actually show.
 14. Send from a second phone logged in as the same worker within 60 s → refused; first phone unaffected.
 15. Log out right after Send → nothing appears; logging in as a different worker on the same phone shows no practice pop-up.
 16. Notifications OFF (app or "Practice bookings" channel) → Send refused with "Allow notifications".
