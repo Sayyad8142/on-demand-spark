@@ -2,7 +2,8 @@
 
 ## Prompt 114 — pilot phone answer
 - [x] Owner chose Sid's same phone; existing client gate already matches Sid, so no app code change. Sid-specific steps added to docs/practice-activation-preparation-2026-11-19.md.
-- [ ] Validate-only window — blocked: pilot APK on Sid's phone and owner approval to switch the sender to validate.
+- [x] Owner approved the validate-only window, to start on "Sid is ready".
+- [ ] Run validate-only window — blocked: pilot APK installed on Sid's phone and owner saying "Sid is ready".
 
 ## Prompt 113 — test sender preparation and repeated hook diagnostic
 - [x] Read attached preparation-only request; review sender, native alert, OTP/evidence paths and activation instructions. No deployment or delivery authorised.

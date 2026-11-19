@@ -47,3 +47,5 @@ Owner confirmed: **Sid's same Android phone** (the prompt 91/92 pilot). Conseque
 2. Owner says "Sid is ready" **and** approves the validate-only window (no delivery).
 3. Agent sets the sender to `validate`, Sid taps Send Test Notification once, agent records the outcome and restores `off` in the same turn.
 4. Only after `validated`: owner separately approves one real-delivery window; agent sets `on`, Sid runs the device checklist, agent restores `off`.
+
+**Owner approval (19 Nov, 04:43 UTC):** validate-only window approved, to run only when the owner says "Sid is ready" (pilot APK installed). Real delivery (`on`) still needs separate approval.
