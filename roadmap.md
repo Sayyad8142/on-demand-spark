@@ -1,5 +1,10 @@
 # Worker language translation
 
+## Test Booking send repair — 19 Nov (no deployment/delivery activation)
+- [x] Try Again repeats chosen mode with fresh practice id, tap lock and fresh safety check; unknown-send waiting preserved. 87 focused / 732 full tests pass; mobile local practice uses 1234 twice, retry reopens alert, no page errors.
+- [x] Hosted sender returns 503 approval_required; no function logs returned. Isolated staged sender/native token/receipt/alert boundaries reviewed; report docs/practice-send-repair-2026-11-19.md.
+- [ ] Enable and physically verify FCM — blocked by separate deployment/delivery approval, selected pilot login/device hash/config verification, current Android bundle and real phone. No production switch or backend change.
+
 ## Foreground service permissions — 19 Nov (104, no publication)
 - [x] Follow-up cross-app source sweep checked reminder manager/escalation, availability/flat/cancellation speech, boot and WorkManager jobs, practice and all plugin manifests; no additional Health/Media Playback permission origin found. Keep decision preserved; no audio/OTP redesign authorised.
 - [x] User chose to keep existing step tracking/Health permission pending a separate replacement; no heartbeat or tracking changes authorised.

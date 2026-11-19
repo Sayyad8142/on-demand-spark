@@ -25,6 +25,7 @@ export default function TestBooking() {
   const [notice, setNotice] = useState('');
   const [starting, setStarting] = useState(false);
   const actionLock = useRef(false);
+  const lastMode = useRef<'push' | 'local'>('push');
   const text = practiceText;
   const seconds = practiceSeconds(state.expiresAt, now);
   useEffect(() => {
@@ -75,15 +76,21 @@ export default function TestBooking() {
       dispatch(action); setOtp('');
     } finally { actionLock.current = false; }
   };
-  const begin = async (push: boolean) => {
+  const begin = async (push: boolean, retry = false) => {
     if (actionLock.current) return;
     actionLock.current = true;
     setStarting(true); setNotice('');
     try {
       if (!(await safety.refresh())) { dispatch({ type: 'blocked' }); return; }
+      lastMode.current = push ? 'push' : 'local';
+      const id = retry ? `practice-${crypto.randomUUID()}` : state.id;
+      if (retry) {
+        if (Capacitor.getPlatform() === 'android') await PracticeNotifications.cancel();
+        dispatch({ type: 'reset', id, now: Date.now() });
+        setOtp('');
+      }
       if (!push) { dispatch({ type: 'local_alert', now: Date.now() }); return; }
       dispatch({ type: 'sending', now: Date.now() });
-      const id = state.id;
       const result = await sendPracticePush({ id, expiresAt: Date.now() + 60000, userId: user?.id, hasToken: !!safety.worker?.fcm_token, tokenStatus: safety.worker?.fcm_token_status ?? null }, practiceSendAllowed(user?.id, PRACTICE_PUSH_ENABLED));
       // Ignore a late reply if the practice was reset, left or replaced meanwhile.
       if (!mounted.current) return;
@@ -92,10 +99,7 @@ export default function TestBooking() {
     } catch (error) { if (mounted.current) { dispatch({ type: 'unknown_send', id: state.id }); setNotice(text('delivery_unknown')); } }
     finally { setStarting(false); actionLock.current = false; }
   };
-  const again = () => {
-    if (Capacitor.getPlatform() === 'android') void PracticeNotifications.cancel().catch(() => undefined);
-    dispatch({ type: 'reset', id: `practice-${crypto.randomUUID()}`, now: Date.now() }); setOtp(''); setNotice('');
-  };
+  const again = () => { void begin(lastMode.current === 'push', true); };
   const details = ['accepted', 'start_otp', 'in_progress', 'complete_otp'].includes(state.step);
   return <div className="min-h-screen bg-background pb-12">
     <header className="border-b border-border safe-area-pt"><div className="max-w-lg mx-auto flex items-center gap-3 px-4 py-4">
@@ -107,7 +111,7 @@ export default function TestBooking() {
       {state.step === 'intro' && <section className="space-y-4">
         <h2 className="font-semibold text-xl">{text('ready')}</h2>
         <Button className="w-full min-h-12" disabled={starting || safety.checking || !safety.safe} onClick={() => void begin(true)}><Bell className="h-4 w-4 mr-2" />{text('send')}</Button>
-        {notice && <><p role="alert" className="text-sm text-destructive break-words">{notice}</p><Button variant="outline" onClick={again}><RotateCcw className="h-4 w-4 mr-2" />{text('again')}</Button></>}
+        {notice && <><p role="alert" className="text-sm text-destructive break-words">{notice}</p><Button variant="outline" disabled={starting || safety.checking || !safety.safe} onClick={again}><RotateCcw className="h-4 w-4 mr-2" />{text('again')}</Button></>}
         {(!safety.safe || safety.checking) && <p className="text-sm text-muted-foreground">{text(safety.checking ? 'checking' : 'busy')}</p>}
         <Button variant="outline" className="w-full min-h-12" disabled={starting || safety.checking || !safety.safe} onClick={() => void begin(false)}>{text('local')}</Button>
       </section>}
@@ -135,7 +139,7 @@ export default function TestBooking() {
         {state.step === 'completed' ? <CheckCircle2 className="h-14 w-14 text-primary mx-auto" /> : <CircleHelp className="h-12 w-12 text-muted-foreground mx-auto" />}
         <h2 className="text-2xl font-bold">{text(state.step === 'completed' ? 'success' : state.step)}</h2>
         <p className="text-sm text-muted-foreground">{text(state.step === 'completed' ? 'successBody' : state.step === 'blocked' ? 'busy' : 'retryBody')}</p>
-        <Button className="w-full min-h-12" onClick={() => navigate('/home')}>{text('home')}</Button><Button variant="outline" className="w-full min-h-12" onClick={again}><RotateCcw className="h-4 w-4 mr-2" />{text('again')}</Button>
+        <Button className="w-full min-h-12" onClick={() => navigate('/home')}>{text('home')}</Button><Button variant="outline" className="w-full min-h-12" disabled={starting || safety.checking || !safety.safe} onClick={again}><RotateCcw className="h-4 w-4 mr-2" />{text('again')}</Button>
       </section>}
       <section className="border-t border-border pt-5"><h2 className="font-semibold mb-3">{text('checks')}</h2><ul className="divide-y divide-border">{PRACTICE_CHECKS.map(key => {
         const result = state.checks[key]; const Icon = result === 'passed' ? CheckCircle2 : result === 'failed' ? XCircle : CircleHelp;
