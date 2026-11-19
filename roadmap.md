@@ -1,6 +1,7 @@
 # Worker language translation
 
 ## Foreground service permissions — 19 Nov (104, no publication)
+- [x] Follow-up cross-app source sweep checked reminder manager/escalation, availability/flat/cancellation speech, boot and WorkManager jobs, practice and all plugin manifests; no additional Health/Media Playback permission origin found. Keep decision preserved; no audio/OTP redesign authorised.
 - [x] User chose to keep existing step tracking/Health permission pending a separate replacement; no heartbeat or tracking changes authorised.
 - [x] App and all eight installed Capacitor plugin manifests audited; both permissions originate in app manifest, not plugin source. Media Playback retained for continuous Start OTP; official Play user-initiation requirement documented as unresolved.
 - [ ] Final merged manifest/release AAB verification — blocked by missing production dist, JDK/SDK/signing; provide exact local checks without claiming readiness.
