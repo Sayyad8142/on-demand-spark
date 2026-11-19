@@ -1,5 +1,13 @@
 # Worker language translation
 
+## Android release blocker review — 19 Nov (104, no publishing)
+- [x] Reconfirmed Vite's production output defaults to Capacitor webDir dist; dependencies already installed. No source build failure was established: this workspace prohibits manual project builds and does not expose dist.
+- [x] Re-ran all 728 frontend tests and isolated PostgreSQL approval assertions; version/release guard against user-reported 102 passes. Firebase package matches; identity/signing/backend untouched.
+- [x] Added final Windows Android Studio build, sync, signing and AAB verification instructions in docs/play-release-104-2026-11-19.md.
+- [ ] Production web build and Capacitor sync — blocked by workspace build restriction; do not sync stale or missing dist.
+- [ ] Approval enforcement deployment — blocked by separate approval and hosted sender/concurrency verification; required before claiming mandatory approval is release-safe.
+- [ ] Signed verified AAB and phone upgrade tests — blocked by missing JDK 21/Android SDK/upload key/device; no AAB generated or published.
+
 ## Finalize Android 10.0.04 (104) — 18 Nov
 - [x] Keep 10.0.04/104; user reports checked production 10.0.02/102. All-track upload history is not independently verified.
 - [x] Attempted cap sync (failed: no dist); strengthened asset checker with current notification/approval/OTP markers and byte parity, covered by four tests.
