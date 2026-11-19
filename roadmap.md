@@ -1,5 +1,10 @@
 # Worker language translation
 
+## Foreground service permissions — 19 Nov (104, no publication)
+- [x] User chose to keep existing step tracking/Health permission pending a separate replacement; no heartbeat or tracking changes authorised.
+- [x] App and all eight installed Capacitor plugin manifests audited; both permissions originate in app manifest, not plugin source. Media Playback retained for continuous Start OTP; official Play user-initiation requirement documented as unresolved.
+- [ ] Final merged manifest/release AAB verification — blocked by missing production dist, JDK/SDK/signing; provide exact local checks without claiming readiness.
+
 ## Android release blocker review — 19 Nov (104, no publishing)
 - [x] Swept shell/npm/Windows/CI/Android Studio/direct Gradle packaging paths; added missing CI and Gradle bundle checks and stale-extra-file refusal; OTA left unchanged/outside this release request.
 - [x] Reconfirmed Vite's production output defaults to Capacitor webDir dist; dependencies already installed. No source build failure was established: this workspace prohibits manual project builds and does not expose dist.
