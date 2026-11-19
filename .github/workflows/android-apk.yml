@@ -43,6 +43,9 @@ jobs:
           fi
           npx cap sync android
 
+      - name: Verify current Android web assets
+        run: npm run android:verify-permissions
+
       - name: Inject google-services.json (optional)
         if: ${{ env.GOOGLE_SERVICES_JSON != '' }}
         run: |

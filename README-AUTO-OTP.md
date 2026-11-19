@@ -32,7 +32,8 @@ When you request an OTP on the sign-in or sign-up page, the app will automatical
 4. **Build and sync:**
    ```bash
    npm run build
-   npx cap sync
+   npx cap sync android
+   npm run android:verify-permissions
    ```
 
 5. **Run on device/emulator:**
@@ -84,7 +85,9 @@ If you see compilation errors after syncing:
 cd android
 ./gradlew clean
 cd ..
+npm run build
 npx cap sync android
+npm run android:verify-permissions
 ```
 
 ## Future Enhancements

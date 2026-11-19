@@ -107,6 +107,16 @@ dependencies {
 // Capacitor-generated dependencies
 apply from: 'capacitor.build.gradle'
 
+// Android Studio and direct Gradle builds must not bypass the same bundle
+// check used by command-line release scripts. Never build or sync implicitly.
+def verifyWorkerWebAssets = tasks.register('verifyWorkerWebAssets', Exec) {
+    workingDir rootProject.projectDir.parentFile
+    commandLine 'node', 'scripts/verify-android-permission-bundle.js'
+}
+tasks.named('preBuild').configure {
+    dependsOn verifyWorkerWebAssets
+}
+
 try {
     def servicesJSON = file('google-services.json')
     if (servicesJSON.text) {

@@ -1,6 +1,7 @@
 # Worker language translation
 
 ## Android release blocker review — 19 Nov (104, no publishing)
+- [x] Swept shell/npm/Windows/CI/Android Studio/direct Gradle packaging paths; added missing CI and Gradle bundle checks and stale-extra-file refusal; OTA left unchanged/outside this release request.
 - [x] Reconfirmed Vite's production output defaults to Capacitor webDir dist; dependencies already installed. No source build failure was established: this workspace prohibits manual project builds and does not expose dist.
 - [x] Re-ran all 728 frontend tests and isolated PostgreSQL approval assertions; version/release guard against user-reported 102 passes. Firebase package matches; identity/signing/backend untouched.
 - [x] Added final Windows Android Studio build, sync, signing and AAB verification instructions in docs/play-release-104-2026-11-19.md.

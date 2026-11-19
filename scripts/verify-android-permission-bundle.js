@@ -61,4 +61,15 @@ for (const file of files(distDir)) {
   }
 }
 
+// Capacitor creates these two bridge files outside Vite. Everything else must
+// belong to dist; stale chunks/service workers must not survive a release sync.
+const capacitorBridgeFiles = new Set(['cordova.js', 'cordova_plugins.js']);
+for (const file of files(publicDir)) {
+  const name = relative(publicDir, file);
+  if (!capacitorBridgeFiles.has(name) && !existsSync(join(distDir, name))) {
+    console.error(`[verify-android-permission-bundle] Extra stale Android asset: ${name}. Run: npx cap sync android`);
+    process.exit(1);
+  }
+}
+
 console.log("[verify-android-permission-bundle] OK: notification/approval/OTP markers present and Android matches the current production dist.");
