@@ -32,3 +32,18 @@ After approved native changes, update the local project from the connected repos
 - 732 frontend tests passed across 66 files. These include mocked sender/device isolation, 1234 practice OTP, retry and evidence rules; they do not prove FCM delivery.
 - Preview build log: `build OK` at 04:36:37 UTC. Mobile browser 393×805 opened `/home`, redirected to `/auth`, zero page errors, zero error overlays, reported diagnostic absent; screenshot inspected. No signed-in or native flow was verified.
 - Physical-phone receipt, sound/vibration, background/locked alerts, authenticated hosted transport, current hosted source/config parity and signed pilot APK remain NOT VERIFIED.
+
+## Pilot decision — 19 November 2026 (owner answer)
+
+Owner confirmed: **Sid's same Android phone** (the prompt 91/92 pilot). Consequences:
+
+- SOURCE: the existing client gate already matches Sid — build key `pilot-validate-2026-11-12` plus Sid's login (8e03deed…). No app code change is needed for this pilot; normal web/Play/OTA builds stay OFF.
+- PRIOR (not freshly verified): server pilot login and device fingerprint (28da92ed…) were set for Sid. If Sid uninstalled/reinstalled the app or his notification registration rotated since then, the sender will refuse with `device_mismatch` and the fingerprint must be updated under a separate approval.
+- A new pilot APK **is** required on Sid's phone: build with `VITE_PRACTICE_TEST_BUILD=pilot-validate-2026-11-12 npm run build`, `npx cap sync android`, signed with the release key, installed as an update (never uninstall first). Do not upload it to Play or OTA.
+- Server side needs no new code if hosted sender parity is confirmed; only the sender switch changes (`off` → `validate` → `off`, later a separately approved `on` window).
+
+### Next steps for Sid
+1. Owner builds and installs the pilot APK on Sid's phone as an update.
+2. Owner says "Sid is ready" **and** approves the validate-only window (no delivery).
+3. Agent sets the sender to `validate`, Sid taps Send Test Notification once, agent records the outcome and restores `off` in the same turn.
+4. Only after `validated`: owner separately approves one real-delivery window; agent sets `on`, Sid runs the device checklist, agent restores `off`.

@@ -1,5 +1,9 @@
 # Worker language translation
 
+## Prompt 114 — pilot phone answer
+- [x] Owner chose Sid's same phone; existing client gate already matches Sid, so no app code change. Sid-specific steps added to docs/practice-activation-preparation-2026-11-19.md.
+- [ ] Validate-only window — blocked: pilot APK on Sid's phone and owner approval to switch the sender to validate.
+
 ## Prompt 113 — test sender preparation and repeated hook diagnostic
 - [x] Read attached preparation-only request; review sender, native alert, OTP/evidence paths and activation instructions. No deployment or delivery authorised.
 - [x] Current hook has explicit React imports; fresh preview build OK, mobile auth screenshot checked, zero page errors/overlays. All 732 tests pass; authenticated Android flow remains unverified.
