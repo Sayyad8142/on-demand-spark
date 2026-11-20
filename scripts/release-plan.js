@@ -11,6 +11,8 @@
  *     (values shown by the Admin Publishing Manager release; never lowers the current build)
  *   DIDI_RELEASE_REPORT_KEY=drk_... node scripts/release-plan.js --send-phase <2|3> --status <running|passed|failed> --evidence "<text>"
  *     (posts to the Admin `app-release-report` function; the key stays in the environment, never the repo or app)
+ *   DIDI_RELEASE_REPORT_KEY=drk_... node scripts/release-plan.js --fetch-approved [--write]
+ *     (GET the Admin-approved version/build and apply it exactly; never computed locally)
  */
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -79,6 +81,58 @@ export function buildPhaseRequest({ baseUrl, anonKey, reportKey, phase, status, 
       body: JSON.stringify({ phase, status, evidence: text, repo_version: versions.name, repo_build: versions.code }),
     },
   };
+}
+
+/** GET request for the Admin-approved release (same endpoint and key as the reports). */
+export function buildApprovedRequest({ baseUrl, anonKey, reportKey }) {
+  if (!REPORT_KEY_PATTERN.test(String(reportKey ?? ""))) throw new Error("DIDI_RELEASE_REPORT_KEY missing or malformed");
+  if (!/^https:\/\//.test(String(baseUrl ?? "")) || !anonKey) throw new Error("backend URL and publishable key are required");
+  return {
+    url: `${baseUrl.replace(/\/$/, "")}/functions/v1/${REPORT_FUNCTION}`,
+    init: { method: "GET", headers: { apikey: anonKey, "x-release-key": reportKey } },
+  };
+}
+
+const pick = (o, keys) => { for (const k of keys) if (o && o[k] !== undefined && o[k] !== null) return o[k]; return undefined; };
+
+/** Strictly reads Admin's answer. Anything unexpected → refused; nothing is guessed. */
+export function parseApprovedResponse(body) {
+  let data;
+  try { data = typeof body === "string" ? JSON.parse(body) : body; } catch { return { ok: false, reason: "response is not JSON" }; }
+  if (!data || typeof data !== "object") return { ok: false, reason: "empty response" };
+  if (data.error) return { ok: false, reason: String(data.error).slice(0, 200) };
+  const r = data.release && typeof data.release === "object" ? data.release : data;
+  const app = pick(r, ["app"]); const platform = pick(r, ["platform"]);
+  if (app !== undefined && app !== "worker") return { ok: false, reason: `release is for app "${app}", not worker` };
+  if (platform !== undefined && platform !== "android") return { ok: false, reason: `release is for platform "${platform}", not android` };
+  const name = pick(r, ["version", "version_name", "approved_version"]);
+  const code = pick(r, ["build", "build_number", "version_code", "approved_build"]);
+  if (typeof name !== "string" || !/^\d+\.\d+(\.\d+)?$/.test(name)) return { ok: false, reason: "approved version missing or malformed" };
+  if (!Number.isInteger(code) || !isCode(code)) return { ok: false, reason: "approved build missing or not a whole number" };
+  return { ok: true, approvedName: name, approvedCode: code };
+}
+
+export async function fetchApproved(argv, root, fetchImpl = fetch, env = process.env) {
+  const versions = readVersions(root);
+  if (!versions.consistent) { console.error("FAIL Gradle and src/config/version.ts disagree"); return 1; }
+  const file = readEnvFile(root);
+  try {
+    const req = buildApprovedRequest({
+      baseUrl: env.VITE_SUPABASE_URL || file.VITE_SUPABASE_URL,
+      anonKey: env.VITE_SUPABASE_PUBLISHABLE_KEY || file.VITE_SUPABASE_PUBLISHABLE_KEY,
+      reportKey: env.DIDI_RELEASE_REPORT_KEY,
+    });
+    const res = await fetchImpl(req.url, req.init);
+    const text = await res.text();
+    if (!res.ok) { console.error(JSON.stringify({ ok: false, http: res.status, response: text.slice(0, 300) })); return 1; }
+    const parsed = parseApprovedResponse(text);
+    if (!parsed.ok) { console.error(`FAIL ${parsed.reason}`); return 1; }
+    const plan = planFromApproved({ currentCode: versions.code, currentName: versions.name, ...parsed });
+    let wrote = false;
+    if (plan.status === "planned" && argv.includes("--write")) wrote = applyVersions(root, plan);
+    console.log(JSON.stringify({ approved: parsed, plan, wrote }));
+    return plan.status === "planned" || plan.status === "already_prepared" ? 0 : 1;
+  } catch (e) { console.error(`FAIL ${e.message}`); return 1; }
 }
 
 function readEnvFile(root) {
@@ -182,6 +236,7 @@ export function main(argv = process.argv.slice(2), root = process.cwd()) {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const argv = process.argv.slice(2);
-  if (argv.includes("--send-phase")) sendPhase(argv, process.cwd()).then((c) => process.exit(c));
+  if (argv.includes("--fetch-approved")) fetchApproved(argv, process.cwd()).then((c) => process.exit(c));
+  else if (argv.includes("--send-phase")) sendPhase(argv, process.cwd()).then((c) => process.exit(c));
   else process.exit(main(argv));
 }

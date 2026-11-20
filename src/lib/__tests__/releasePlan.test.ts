@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { buildPhaseRequest, buildReport, main, planFromApproved, planNextRelease, readVersions, sendPhase } from "../../../scripts/release-plan.js";
+import { buildPhaseRequest, buildReport, main, planFromApproved, planNextRelease, readVersions, sendPhase, fetchApproved, parseApprovedResponse, buildApprovedRequest } from "../../../scripts/release-plan.js";
 
 const dirs: string[] = [];
 function fixture(code: number, name: string, cfgCode = code, cfgName = name) {
@@ -85,5 +85,45 @@ describe("Admin Publishing Manager link", () => {
     const code = await sendPhase(["--send-phase", "2", "--status", "running"], root, async () => { called = true; return new Response("{}"); }, { VITE_SUPABASE_URL: "https://x.supabase.co", VITE_SUPABASE_PUBLISHABLE_KEY: "anon" });
     expect(code).toBe(1);
     expect(called).toBe(false);
+  });
+});
+
+describe("Admin approved release (GET)", () => {
+  const env = { VITE_SUPABASE_URL: "https://x.supabase.co", VITE_SUPABASE_PUBLISHABLE_KEY: "anon", DIDI_RELEASE_REPORT_KEY: "drk_" + "a".repeat(48) };
+  const ok = (b: unknown) => async () => new Response(JSON.stringify(b), { status: 200 });
+  it("sends a GET with the key only in the header", () => {
+    const r = buildApprovedRequest({ baseUrl: env.VITE_SUPABASE_URL, anonKey: "anon", reportKey: env.DIDI_RELEASE_REPORT_KEY });
+    expect(r.init.method).toBe("GET");
+    expect(r.url).toBe("https://x.supabase.co/functions/v1/app-release-report");
+    expect(r.url).not.toContain("drk_");
+  });
+  it("applies Admin's 10.0.05 (105) exactly with --write", async () => {
+    const root = fixture(104, "10.0.04");
+    expect(await fetchApproved(["--fetch-approved", "--write"], root, ok({ release: { app: "worker", platform: "android", version: "10.0.05", build: 105 } }), env)).toBe(0);
+    expect(readVersions(root)).toMatchObject({ code: 105, name: "10.0.05", consistent: true });
+  });
+  it("dry run without --write changes nothing", async () => {
+    const root = fixture(104, "10.0.04");
+    expect(await fetchApproved(["--fetch-approved"], root, ok({ version: "10.0.05", build: 105 }), env)).toBe(0);
+    expect(readVersions(root).code).toBe(104);
+  });
+  it("refuses an Admin build lower than the source build", async () => {
+    const root = fixture(104, "10.0.04");
+    expect(await fetchApproved(["--fetch-approved", "--write"], root, ok({ version: "10.0.03", build: 103 }), env)).toBe(1);
+    expect(readVersions(root).code).toBe(104);
+  });
+  it("refuses another app's release, malformed answers and errors", () => {
+    expect(parseApprovedResponse({ app: "customer", version: "1.0.1", build: 2 }).ok).toBe(false);
+    expect(parseApprovedResponse({ version: "10.0.05", build: "105" }).ok).toBe(false);
+    expect(parseApprovedResponse("not json").ok).toBe(false);
+    expect(parseApprovedResponse({ error: "Invalid, revoked or expired key" }).ok).toBe(false);
+  });
+  it("calls nothing without a key and fails on HTTP errors", async () => {
+    const root = fixture(104, "10.0.04");
+    let called = false;
+    expect(await fetchApproved(["--fetch-approved"], root, async () => { called = true; return new Response("{}"); }, { ...env, DIDI_RELEASE_REPORT_KEY: "" })).toBe(1);
+    expect(called).toBe(false);
+    expect(await fetchApproved(["--fetch-approved", "--write"], root, async () => new Response('{"error":"x"}', { status: 401 }), env)).toBe(1);
+    expect(readVersions(root).code).toBe(104);
   });
 });

@@ -12,6 +12,11 @@ Nothing published, deployed, uploaded or activated. Source stays 10.0.04 (104). 
 - `DIDI_RELEASE_REPORT_KEY=drk_… node scripts/release-plan.js --send-phase 2|3 --status … --evidence "…"` — key only from the environment (never repo/app); sends source version from the files.
 - Worker App bundle sends nothing new and holds no publishing credentials. 14 planner/report tests.
 
+## Prompt 116 — live endpoint integration (20 Nov)
+- Endpoint confirmed by Admin: `https://paywwbuqycovjopryele.supabase.co/functions/v1/app-release-report` (same backend as the app). Unauthenticated → 401; fake key → "Invalid, revoked or expired key".
+- New: `DIDI_RELEASE_REPORT_KEY=drk_… node scripts/release-plan.js --fetch-approved [--write]` — GET Admin's approved version/build, strict parsing (worker/android only, whole-number build), applied exactly; lower build, errors or malformed answers refused, nothing written. 20 planner tests.
+- **CONNECTION PENDING:** no valid release key is available yet, so no live GET/POST has been made. The exact GET response field names are NOT VERIFIED (parser accepts version/version_name + build/build_number, optionally under `release`); confirm on the first real call.
+
 ## Decision (owner, 20 Nov): use 10.0.05 (105)
 No Admin server change. `ADMIN-PREPARE-REUSE-SOURCE-BUILD.NOT-DEPLOYED.sql` is WITHDRAWN (do not deploy).
 Source stays 10.0.04 (104) until Admin prepares the release, so Admin computes max(102, 104) + 1 = **105**. Do not bump the files first: a recorded source of 105 would make Admin return 106.
