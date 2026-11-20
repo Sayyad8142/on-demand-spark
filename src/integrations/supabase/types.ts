@@ -9512,6 +9512,40 @@ export type Database = {
         Returns: Json
       }
       admin_process_case_reminders: { Args: never; Returns: number }
+      admin_publish_mandatory_update: {
+        Args: {
+          _app: string
+          _build: number
+          _method: string
+          _platform: string
+          _version: string
+        }
+        Returns: {
+          app: string
+          created_at: string
+          id: string
+          is_active: boolean
+          latest_build: number
+          latest_version: string
+          message: string
+          min_build: number
+          mode: string
+          platform: string
+          release_notes: string
+          store_id: string
+          store_verified_at: string | null
+          store_verified_method: string | null
+          store_verified_version: string | null
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "app_update_configs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_push_health_daily_metrics: {
         Args: { p_day?: string }
         Returns: Json
