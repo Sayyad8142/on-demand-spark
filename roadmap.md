@@ -1,8 +1,13 @@
 # Worker language translation
 
+## Admin Publishing Manager connection — 20 Nov
+- [x] Planner applies Admin-approved version; phase 2/3 reports to app-release-report with env-only key; own draft receiver withdrawn. Report docs/publishing-manager-2026-11-20/CONNECTION.md.
+- [ ] Build-number rule: approve reuse-104 SQL or accept 105 — blocked: owner decision.
+- [ ] Admin baselines, report key, live phase reports, real-device tests — blocked: admin actions/device.
+
 ## Publishing Manager integration — 20 Nov (prepared, not connected)
 - [x] Next-version planner + report (8 tests), CI dry-run plan step, mandatory-update path reviewed (policy inactive), staged admin-only status receiver; report docs/publishing-manager-2026-11-20/REPORT.md.
-- [ ] Deploy staged receiver — blocked: owner approval.
+- [x] Staged receiver withdrawn — Admin system replaces it.
 - [ ] Admin Dashboard buttons/workflow trigger, Play API account, upload key, real-phone tests — blocked: other project, credentials, device.
 
 ## Prompt 114 — pilot phone answer
