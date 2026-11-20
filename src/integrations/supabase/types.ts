@@ -10381,6 +10381,7 @@ export type Database = {
         }
         Returns: Json
       }
+      app_release_for_key: { Args: { p_key_hash: string }; Returns: Json }
       app_release_record_store_lookup: {
         Args: {
           p_actor: string
