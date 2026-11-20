@@ -2,7 +2,8 @@
 
 ## Admin Publishing Manager connection — 20 Nov
 - [x] Planner applies Admin-approved version; phase 2/3 reports to app-release-report with env-only key; own draft receiver withdrawn. Report docs/publishing-manager-2026-11-20/CONNECTION.md.
-- [ ] Build-number rule: approve reuse-104 SQL or accept 105 — blocked: owner decision.
+- [x] Build-number rule: owner chose 10.0.05 (105); reuse-104 SQL withdrawn; source stays 104 until Admin prepares 10.0.05.
+- [ ] Apply 10.0.05 (105) with `--approved-version 10.0.05 --approved-build 105 --write` — blocked: Admin must prepare the release first.
 - [ ] Admin baselines, report key, live phase reports, real-device tests — blocked: admin actions/device.
 
 ## Publishing Manager integration — 20 Nov (prepared, not connected)

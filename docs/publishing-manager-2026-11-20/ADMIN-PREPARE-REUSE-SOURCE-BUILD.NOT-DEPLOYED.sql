@@ -1,3 +1,4 @@
+-- WITHDRAWN 20 Nov: owner chose 10.0.05 (105). Do not deploy. Kept for history only.
 -- NOT DEPLOYED. Needs owner approval. Only change vs hosted: the v_next calculation.
 -- Lets Admin adopt the prepared source 10.0.04 (104) instead of forcing 105; otherwise unchanged.
 CREATE OR REPLACE FUNCTION admin_private.admin_prepare_next_release(p_app text, p_platform text, p_version text)
