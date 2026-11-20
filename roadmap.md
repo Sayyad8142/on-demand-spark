@@ -1,5 +1,10 @@
 # Worker language translation
 
+## Publishing Manager integration — 20 Nov (prepared, not connected)
+- [x] Next-version planner + report (8 tests), CI dry-run plan step, mandatory-update path reviewed (policy inactive), staged admin-only status receiver; report docs/publishing-manager-2026-11-20/REPORT.md.
+- [ ] Deploy staged receiver — blocked: owner approval.
+- [ ] Admin Dashboard buttons/workflow trigger, Play API account, upload key, real-phone tests — blocked: other project, credentials, device.
+
 ## Prompt 114 — pilot phone answer
 - [x] Owner chose Sid's same phone; existing client gate already matches Sid, so no app code change. Sid-specific steps added to docs/practice-activation-preparation-2026-11-19.md.
 - [x] Owner approved the validate-only window, to start on "Sid is ready".
