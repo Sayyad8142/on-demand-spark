@@ -633,6 +633,236 @@ export type Database = {
         }
         Relationships: []
       }
+      app_release_audit: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_kind: string
+          app: string
+          created_at: string
+          details: Json
+          id: string
+          platform: string
+          release_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_kind: string
+          app: string
+          created_at?: string
+          details?: Json
+          id?: string
+          platform: string
+          release_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_kind?: string
+          app?: string
+          created_at?: string
+          details?: Json
+          id?: string
+          platform?: string
+          release_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_release_audit_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "app_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_release_baselines: {
+        Row: {
+          app: string
+          created_at: string
+          highest_uploaded_build: number | null
+          highest_uploaded_evidence: string | null
+          highest_uploaded_verified_at: string | null
+          highest_uploaded_verified_by: string | null
+          live_checked_at: string | null
+          live_source: string | null
+          live_store_build: number | null
+          live_store_version: string | null
+          platform: string
+          repo_build: number | null
+          repo_reported_at: string | null
+          repo_source: string | null
+          repo_version: string | null
+          updated_at: string
+        }
+        Insert: {
+          app: string
+          created_at?: string
+          highest_uploaded_build?: number | null
+          highest_uploaded_evidence?: string | null
+          highest_uploaded_verified_at?: string | null
+          highest_uploaded_verified_by?: string | null
+          live_checked_at?: string | null
+          live_source?: string | null
+          live_store_build?: number | null
+          live_store_version?: string | null
+          platform: string
+          repo_build?: number | null
+          repo_reported_at?: string | null
+          repo_source?: string | null
+          repo_version?: string | null
+          updated_at?: string
+        }
+        Update: {
+          app?: string
+          created_at?: string
+          highest_uploaded_build?: number | null
+          highest_uploaded_evidence?: string | null
+          highest_uploaded_verified_at?: string | null
+          highest_uploaded_verified_by?: string | null
+          live_checked_at?: string | null
+          live_source?: string | null
+          live_store_build?: number | null
+          live_store_version?: string | null
+          platform?: string
+          repo_build?: number | null
+          repo_reported_at?: string | null
+          repo_source?: string | null
+          repo_version?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      app_release_phases: {
+        Row: {
+          evidence: string
+          phase: number
+          release_id: string
+          source: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          evidence?: string
+          phase: number
+          release_id: string
+          source?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          evidence?: string
+          phase?: number
+          release_id?: string
+          source?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_release_phases_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "app_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_release_report_keys: {
+        Row: {
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          key_hash: string
+          release_id: string
+          revoked_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expires_at: string
+          id?: string
+          key_hash: string
+          release_id: string
+          revoked_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          key_hash?: string
+          release_id?: string
+          revoked_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_release_report_keys_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "app_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_releases: {
+        Row: {
+          app: string
+          build_number: number
+          cancel_reason: string | null
+          created_at: string
+          created_by: string
+          id: string
+          marketing_version: string
+          notes: string
+          platform: string
+          released_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          app: string
+          build_number: number
+          cancel_reason?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          marketing_version: string
+          notes?: string
+          platform: string
+          released_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          app?: string
+          build_number?: number
+          cancel_reason?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          marketing_version?: string
+          notes?: string
+          platform?: string
+          released_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_releases_app_platform_fkey"
+            columns: ["app", "platform"]
+            isOneToOne: false
+            referencedRelation: "app_release_baselines"
+            referencedColumns: ["app", "platform"]
+          },
+        ]
+      }
       app_update_configs: {
         Row: {
           app: string
@@ -8897,6 +9127,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_cancel_release: {
+        Args: { p_reason: string; p_release: string }
+        Returns: Json
+      }
       admin_capacity_trends: {
         Args: { _days?: number }
         Returns: {
@@ -8969,6 +9203,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      admin_create_release_report_key: {
+        Args: { p_release: string }
+        Returns: Json
       }
       admin_credit_wallet: {
         Args: {
@@ -9260,6 +9498,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      admin_prepare_next_release: {
+        Args: { p_app: string; p_platform: string; p_version: string }
+        Returns: Json
+      }
       admin_preview_min_build_impact: {
         Args: {
           _app: string
@@ -9468,6 +9710,17 @@ export type Database = {
         Args: { _paused: boolean; _worker_id: string }
         Returns: Json
       }
+      admin_set_release_baseline: {
+        Args: {
+          p_app: string
+          p_build: number
+          p_evidence: string
+          p_field: string
+          p_platform: string
+          p_version: string
+        }
+        Returns: Json
+      }
       admin_set_web_version: {
         Args: { force?: boolean; new_version: string }
         Returns: undefined
@@ -9585,6 +9838,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      admin_update_release_phase: {
+        Args: {
+          p_evidence: string
+          p_phase: number
+          p_release: string
+          p_status: string
+        }
+        Returns: Json
       }
       admin_upsert_worker:
         | {
@@ -10107,6 +10369,27 @@ export type Database = {
           last_seen: string
           workers: number
         }[]
+      }
+      app_release_apply_report: {
+        Args: {
+          p_evidence: string
+          p_key_hash: string
+          p_phase: number
+          p_repo_build: number
+          p_repo_version: string
+          p_status: string
+        }
+        Returns: Json
+      }
+      app_release_record_store_lookup: {
+        Args: {
+          p_actor: string
+          p_app: string
+          p_platform: string
+          p_source: string
+          p_version: string
+        }
+        Returns: undefined
       }
       approve_worker_payout: {
         Args: { p_admin_notes?: string; p_payout_id: string }
