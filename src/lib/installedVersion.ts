@@ -35,8 +35,8 @@ export function getInstalledVersionSync(): InstalledVersion {
   return configVersion(platform);
 }
 
-export async function loadInstalledVersion(): Promise<InstalledVersion> {
-  if (cached) return cached;
+export async function loadInstalledVersion(refresh = false): Promise<InstalledVersion> {
+  if (cached && !refresh) return cached;
   try {
     const { Capacitor } = await import("@capacitor/core");
     const platform = Capacitor.getPlatform();

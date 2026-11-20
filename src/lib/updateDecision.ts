@@ -79,6 +79,7 @@ export function isSoftSnoozed(snooze: SoftSnooze | null, latestBuild: number | n
 
 export function decideUpdate(args: {
   answer: UpdateAnswer | null;
+  installedBuild?: number;
   activeBookingStatus?: string | null;
   bookingAlertOpen?: boolean;
   /** False until the active-booking lookup finished; unknown counts as busy. Defaults to true for old callers. */
@@ -90,6 +91,10 @@ export function decideUpdate(args: {
 }): UpdateMode {
   const { answer, activeBookingStatus, bookingAlertOpen = false, bookingLoaded = true, pathname = null, snooze = null, now } = args;
   if (!answer) return "none"; // offline / no answer yet: never block
+  if (args.installedBuild !== undefined) {
+    const required = answer.decision === "force" ? answer.minBuild : answer.latestBuild;
+    if (required === null || args.installedBuild >= required) return "none";
+  }
   const busy = workBlockReason({ bookingLoaded, activeBookingStatus, offerVisible: bookingAlertOpen, pathname }) !== null;
   if (answer.decision === "force") return busy ? "force_deferred" : "force";
   if (answer.decision === "soft" && !busy && !isSoftSnoozed(snooze, answer.latestBuild, now)) return "soft";

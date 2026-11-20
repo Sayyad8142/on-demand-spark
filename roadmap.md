@@ -1,5 +1,10 @@
 # Worker language translation
 
+## Android update screen redesign — 20 Nov
+- [x] Replace optional sheet and mandatory screen with shared pink/white illustration, single CTA and optional close; add native Play listing opener; keep Admin and booking safety.
+- [x] 761 automated tests pass; actual screen isolated in browser at 320/393/412/1280px, illustration loaded, CTA visible, optional Escape dismisses, mandatory remains, correct web Store URL, no editable focus/page errors. Native calls mocked, not device verified.
+- [ ] Installed Android Store/Back/keyboard/upgrade verification — blocked: signed current APK and physical Android phone; no publication or policy activation.
+
 ## Admin Publishing Manager connection — 20 Nov
 - [x] Planner applies Admin-approved version; phase 2/3 reports to app-release-report with env-only key; own draft receiver withdrawn. Report docs/publishing-manager-2026-11-20/CONNECTION.md.
 - [x] Build-number rule: owner chose 10.0.05 (105); reuse-104 SQL withdrawn; source stays 104 until Admin prepares 10.0.05.

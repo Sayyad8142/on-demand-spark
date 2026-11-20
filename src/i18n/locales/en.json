@@ -1,4 +1,10 @@
 {
+  "updateScreen": {
+    "title": "A Better Didi Now Is Here! ✨",
+    "body": "We've made your Worker App faster, smoother, and more reliable. Update now to enjoy a better working experience!",
+    "illustration": "Happy Didi Now worker with a smartphone",
+    "error": "Could not open Google Play. Please try again."
+  },
   "app": {
     "name": "Didi Now Worker"
   },

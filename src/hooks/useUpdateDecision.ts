@@ -14,7 +14,7 @@ function readSnooze(): SoftSnooze | null {
 }
 
 async function installedBuild(): Promise<number> {
-  const v = await loadInstalledVersion();
+  const v = await loadInstalledVersion(true);
   return v.build ?? CURRENT_VERSION_CODE;
 }
 
@@ -52,7 +52,7 @@ export function useUpdateDecision(
   }, [refresh]);
 
   const mode = decideUpdate({
-    answer, activeBookingStatus, bookingAlertOpen, bookingLoaded: work.bookingLoaded, pathname: work.pathname, snooze, now: Date.now(),
+    answer, installedBuild: build, activeBookingStatus, bookingAlertOpen, bookingLoaded: work.bookingLoaded, pathname: work.pathname, snooze, now: Date.now(),
   });
 
   // Local update telemetry: one entry per change of what the worker sees.

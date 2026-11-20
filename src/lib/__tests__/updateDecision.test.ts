@@ -5,6 +5,14 @@ const now = 1_000_000;
 const a = (o: Record<string, unknown>) => parseUpdateAnswer({ contract_version: 1, app: "worker", platform: "android", ...o });
 
 describe("server decision is used directly", () => {
+  it("does not show soft update once the actual installed build reaches the published build", () => {
+    expect(decideUpdate({ answer: a({ decision: "soft", latest_build: 105 }), installedBuild: 105, now })).toBe("none");
+    expect(decideUpdate({ answer: a({ decision: "soft", latest_build: 105 }), installedBuild: 104, now })).toBe("soft");
+  });
+  it("does not force an already updated app even with a stale server force answer", () => {
+    expect(decideUpdate({ answer: a({ decision: "force", min_build: 105 }), installedBuild: 105, now })).toBe("none");
+    expect(decideUpdate({ answer: a({ decision: "force", min_build: 105 }), installedBuild: 104, now })).toBe("force");
+  });
   it("none", () => expect(decideUpdate({ answer: a({ decision: "none" }), now })).toBe("none"));
   it("soft", () => expect(decideUpdate({ answer: a({ decision: "soft", latest_build: 103 }), now })).toBe("soft"));
   it("force", () => expect(decideUpdate({ answer: a({ decision: "force", min_build: 103 }), now })).toBe("force"));
