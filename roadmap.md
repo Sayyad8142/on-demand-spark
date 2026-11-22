@@ -1,5 +1,12 @@
 # Worker language translation
 
+## 22 Nov ranking / dispatch mismatch — no production activation
+- [x] Read-only hosted 10:10 IST offer/event timeline + Admin snapshot reviewed; configured uniform rotation replay reproduces five/three batches; company account received no request, currently missing push token.
+- [x] Worker performance labels/exact decimal score corrected; Admin historical panel staged, no dispatch/score/ranking-order changes; 769 tests pass and isolated mobile/desktop labels checked.
+- [x] Worker-by-worker report: docs/dispatch-mismatch-2026-11-22/REPORT.md; no fake hook/Window fix.
+- [ ] Hosted edge source/hash, historical company token/exclusion, authenticated phone flow and future queue parity — blocked: external source/historical evidence/session/device; Next Booking remains removed/OFF.
+- [ ] Apply staged Admin panel / publish Worker wording — blocked: separate Admin project change and owner production approval.
+
 ## Android update screen redesign — 20 Nov
 - [x] Replace optional sheet and mandatory screen with shared pink/white illustration, single CTA and optional close; add native Play listing opener; keep Admin and booking safety.
 - [x] 761 automated tests pass; actual screen isolated in browser at 320/393/412/1280px, illustration loaded, CTA visible, optional Escape dismisses, mandatory remains, correct web Store URL, no editable focus/page errors. Native calls mocked, not device verified.

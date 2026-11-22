@@ -2,6 +2,10 @@ import i18n from "./config";
 
 const messages = {
   en: {
+    Performance_rank: "Performance rank — #",
+    Earnings_rank: "Earnings rank — #",
+    Performance_score: "Performance score",
+    Score: "Score",
     Not_confirmed_to_match_the_live_booking_order: "Not confirmed to match the live booking order.",
     Estimate_only_not_confirmed_to_match_the_live_booking_order: "Estimate only — not confirmed to match the live booking order.",
     Priority_Score_shows_performance_Booking_offers_follow_the_active_booking_rules_not_this_ranking: "Priority Score shows performance. Booking offers follow the active booking rules, not this ranking.",
@@ -37,6 +41,10 @@ const messages = {
     Your_worker_account_is_inactive: "Your worker account is inactive.",
   },
   hi: {
+    Performance_rank: "प्रदर्शन रैंक — #",
+    Earnings_rank: "कमाई रैंक — #",
+    Performance_score: "प्रदर्शन स्कोर",
+    Score: "स्कोर",
     Not_confirmed_to_match_the_live_booking_order: "यह असली बुकिंग क्रम से मेल खाने की पुष्टि नहीं है।",
     Estimate_only_not_confirmed_to_match_the_live_booking_order: "केवल अनुमान — असली बुकिंग क्रम से मेल की पुष्टि नहीं।",
     Priority_Score_shows_performance_Booking_offers_follow_the_active_booking_rules_not_this_ranking: "प्रायोरिटी स्कोर आपका प्रदर्शन दिखाता है। बुकिंग ऑफ़र चालू बुकिंग नियमों से जाते हैं, इस रैंकिंग से नहीं।",
@@ -72,6 +80,10 @@ const messages = {
     Your_worker_account_is_inactive: "आपका वर्कर खाता सक्रिय नहीं है।",
   },
   te: {
+    Performance_rank: "పనితీరు ర్యాంక్ — #",
+    Earnings_rank: "సంపాదన ర్యాంక్ — #",
+    Performance_score: "పనితీరు స్కోర్",
+    Score: "స్కోర్",
     Not_confirmed_to_match_the_live_booking_order: "ఇది అసలు బుకింగ్ క్రమంతో సరిపోతుందని నిర్ధారించలేదు.",
     Estimate_only_not_confirmed_to_match_the_live_booking_order: "అంచనా మాత్రమే — అసలు బుకింగ్ క్రమంతో సరిపోతుందని నిర్ధారించలేదు.",
     Priority_Score_shows_performance_Booking_offers_follow_the_active_booking_rules_not_this_ranking: "ప్రయారిటీ స్కోర్ మీ పనితీరును చూపిస్తుంది. బుకింగ్ ఆఫర్లు ప్రస్తుత బుకింగ్ నియమాల ప్రకారం వస్తాయి, ఈ ర్యాంకింగ్ ప్రకారం కాదు.",

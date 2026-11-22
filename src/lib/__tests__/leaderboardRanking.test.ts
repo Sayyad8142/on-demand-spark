@@ -1,11 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { rankLeaderboard, summarizeReviews, RANKING_PAGE_TABS } from "../leaderboardRanking";
+import { rankLeaderboard, summarizeReviews, leaderboardScore, RANKING_PAGE_TABS } from "../leaderboardRanking";
 
 const w = (id: string, rank: number, earningsToday: number, jobsToday = 0) =>
   ({ id, rank, rating: 5, priority_score: 50, jobsToday, earningsToday, isMe: false });
 const list = [w("a", 1, 100), w("b", 2, 500), w("c", 3, 300)];
 
 describe("leaderboard ranking", () => {
+  it("preserves the example's exact performance scores without rounding or inventing values", () => {
+    expect([58, 55, 40.5, 40].map(leaderboardScore)).toEqual([58, 55, 40.5, 40]);
+    expect(leaderboardScore(0)).toBe(0);
+    expect(leaderboardScore(NaN)).toBeNull();
+    expect(leaderboardScore(undefined)).toBeNull();
+  });
   it("keeps only worker and earner navigation after Next Booking removal", () => {
     expect(RANKING_PAGE_TABS).toEqual(["top", "earners"]);
   });

@@ -5,6 +5,11 @@ export const LEADERBOARD_TABS: LeaderboardTab[] = ["top", "earners", "rated"];
 export type RankingPageTab = "top" | "earners";
 export const RANKING_PAGE_TABS: RankingPageTab[] = ["top", "earners"];
 
+/** Exact server score for display only; rounding must not change a worker's value. */
+export function leaderboardScore(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
 export interface RankableWorker {
   id: string;
   rank: number; // server priority rank

@@ -1,7 +1,7 @@
 import "@/i18n/nextBookingMessages";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { rankLeaderboard, summarizeReviews, RANKING_PAGE_TABS, type RankingPageTab, type ReviewStats, type RankedWorker } from "@/lib/leaderboardRanking";
+import { rankLeaderboard, summarizeReviews, leaderboardScore, RANKING_PAGE_TABS, type RankingPageTab, type ReviewStats, type RankedWorker } from "@/lib/leaderboardRanking";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trophy, Star, Zap, IndianRupee, TrendingUp, HelpCircle } from "lucide-react";
@@ -54,8 +54,8 @@ export default function BookingLeaderboard() {
       const mine = (result?.leaderboard ?? []).find((l: LeaderboardEntry) => l.isMe);
       if (mine) {
         const { data: own } = await supabase.from("workers").select("priority_score").eq("id", mine.id).maybeSingle();
-        setOwnScore(typeof own?.priority_score === "number" ? Math.round(own.priority_score) : null);
-      }
+        setOwnScore(leaderboardScore(own?.priority_score));
+      } else setOwnScore(null);
       const ids = (result?.leaderboard ?? []).map((l: LeaderboardEntry) => l.id);
       if (ids.length) {
         const { data: rows, error: rErr } = await supabase
@@ -64,6 +64,8 @@ export default function BookingLeaderboard() {
       }
     } catch (err: any) {
       console.error("Error fetching leaderboard:", err);
+      setData(null);
+      setOwnScore(null);
       setError(err.message || "Failed to load leaderboard");
     } finally {
       setLoading(false);
@@ -115,7 +117,7 @@ export default function BookingLeaderboard() {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-primary" />
-                <h3 className="font-bold text-sm">{displayText("Your Rank — #")}{me.displayRank}</h3>
+                <h3 className="font-bold text-sm">{displayText(tab === "top" ? "Performance rank — #" : "Earnings rank — #")}{me.displayRank}</h3>
               </div>
               <LevelBadge level={me.level} />
             </div>
@@ -139,7 +141,7 @@ export default function BookingLeaderboard() {
                   </div>
                   <div className="flex items-center gap-1">
                     <Zap className="w-3 h-3 fill-primary text-primary" />
-                    <span className="text-xs font-bold">{ownScore ?? me.priority_score}</span>
+                    <span className="text-xs font-bold">{displayText("Performance score")} {ownScore ?? leaderboardScore(me.priority_score) ?? "—"}</span>
                   </div>
                 </div>
               </div>
@@ -251,7 +253,7 @@ function WorkerRow({ worker, medal, tab }: { worker: RankedWorker<LeaderboardEnt
             {tab === "top" && (
               <div className="flex items-center gap-0.5">
                 <Zap className="w-2.5 h-2.5 fill-primary text-primary" />
-                <span className="text-[10px] font-bold">Prio {worker.priority_score}</span>
+                <span className="text-[10px] font-bold">{displayText("Score")} {leaderboardScore(worker.priority_score) ?? "—"}</span>
               </div>
             )}
             {tab === "earners" && (
