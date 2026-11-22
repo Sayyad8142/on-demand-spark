@@ -43,37 +43,57 @@ export default function BookingLeaderboard() {
   const [reviews, setReviews] = useState<Map<string, ReviewStats>>(new Map());
   const touchX = useRef<number | null>(null);
   const [ownScore, setOwnScore] = useState<number | null>(null);
+  const fetchInFlight = useRef(false);
+  const mounted = useRef(false);
 
   const fetchLeaderboard = async () => {
+    if (fetchInFlight.current || document.visibilityState === "hidden") return;
+    fetchInFlight.current = true;
     try {
       const { data: result, error: invokeError } = await supabase.functions.invoke("get-worker-leaderboard");
       if (invokeError) throw invokeError;
+      if (!mounted.current) return;
       setData(result);
       setError(null);
       // Own score straight from the worker's own row (a real 0 stays 0).
       const mine = (result?.leaderboard ?? []).find((l: LeaderboardEntry) => l.isMe);
       if (mine) {
         const { data: own } = await supabase.from("workers").select("priority_score").eq("id", mine.id).maybeSingle();
+        if (!mounted.current) return;
         setOwnScore(leaderboardScore(own?.priority_score));
       } else setOwnScore(null);
       const ids = (result?.leaderboard ?? []).map((l: LeaderboardEntry) => l.id);
       if (ids.length) {
         const { data: rows, error: rErr } = await supabase
           .from("worker_ratings").select("worker_id, rating").in("worker_id", ids).limit(5000);
-        if (!rErr && rows) setReviews(summarizeReviews(rows as { worker_id: string | null; rating: number | null }[]));
+        if (!mounted.current) return;
+        setReviews(!rErr && rows ? summarizeReviews(rows as { worker_id: string | null; rating: number | null }[]) : new Map());
       }
     } catch (err: any) {
+      if (!mounted.current) return;
       console.error("Error fetching leaderboard:", err);
       setData(null);
       setOwnScore(null);
       setError(err.message || "Failed to load leaderboard");
     } finally {
-      setLoading(false);
+      fetchInFlight.current = false;
+      if (mounted.current) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchLeaderboard();
+    mounted.current = true;
+    void fetchLeaderboard();
+    const refresh = () => { void fetchLeaderboard(); };
+    const timer = window.setInterval(refresh, 15_000);
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("online", refresh);
+    return () => {
+      mounted.current = false;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("online", refresh);
+    };
   }, []);
 
   const switchTab = (next: RankingPageTab) => {
@@ -110,6 +130,7 @@ export default function BookingLeaderboard() {
 
   return (
     <div className="space-y-4">
+      <h2 className="text-base font-bold break-words">{displayText(tab === "top" ? "Top Workers — Performance Ranking" : "💰 Top Earners")}</h2>
       {/* Your Rank Card */}
       {me && (
         <Card className="overflow-hidden border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-background shadow-md">

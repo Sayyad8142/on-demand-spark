@@ -1,7 +1,9 @@
 // Display-only reader for the existing `worker-next-booking` response. Never computes or invents a position.
+import { parseLiveDispatchView, type LiveDispatchView } from "./liveDispatchView";
 export interface NextArea {
   community: string; service: string; status: string; reason: string | null;
   groupsAhead: number | null; boundaryTie: boolean; starvationGuard: boolean;
+  dispatch?: LiveDispatchView | null;
 }
 export interface WorkerNextBooking { snapshotAt: string; estimateOnly: boolean; rankingMode: string | null; areas: NextArea[] }
 const CODE = /^[a-z0-9][a-z0-9_-]{0,79}$/i;
@@ -21,7 +23,8 @@ export function parseWorkerNextBooking(input: unknown, now = Date.now()): Worker
     if (g !== null && g !== undefined && !(typeof g === "number" && Number.isInteger(g) && g >= 0 && g < 100000)) throw Error("invalid_area");
     return { community: a.community as string, service: a.service as string, status: a.status as string,
       reason: code(a.reason) ? a.reason as string : null, groupsAhead: typeof g === "number" ? g : null,
-      boundaryTie: a.boundary_tie === true, starvationGuard: a.starvation_guard === true };
+      boundaryTie: a.boundary_tie === true, starvationGuard: a.starvation_guard === true,
+      dispatch: parseLiveDispatchView(a.dispatch_view, now) };
   });
   return { snapshotAt, estimateOnly: input.estimate_only, rankingMode, areas };
 }

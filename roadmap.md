@@ -1,5 +1,10 @@
 # Worker language translation
 
+## 22 Nov accurate performance / live dispatch view — preparation only
+- [x] Performance heading/foreground refresh and strict server-supplied batch/status reader prepared; legacy/unverified data shows Position updating; OFF gate retained.
+- [x] 787 tests passed; Sid replay, exclusions, private-field dropping, expiry/receipt and refresh triggers tested; isolated phone/desktop en/hi/te fixtures inspected. No hosted activation.
+- [ ] Activate/connect verified production-rule endpoint and permitted queue names — blocked: exact hosted source/contract and owner approval; no dispatch/backend edits or deployment.
+
 ## 22 Nov ranking / dispatch mismatch — no production activation
 - [x] Flow sweep: Home/Profile exact scores, own-job proof, Admin wording and staged historical grouping corrected; coverage and untouched backend/native boundaries in FLOW-SWEEP.md.
 - [ ] Leaderboard edge SOURCE invents 50 for zero/missing; notifications SOURCE differs from uniform dispatcher — blocked: hosted source verification and separate backend deployment approval; no edge file edited.

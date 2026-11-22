@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { NEXT_BOOKING_LIVE_ENABLED, indiaSlot } from "@/lib/nextBooking";
 import { parseWorkerNextBooking, type WorkerNextBooking as NextSnapshot } from "@/lib/workerNextBooking";
+import { OFFERS_RESYNC_EVENT } from "@/lib/offerFreshness";
 
 export type NextBookingError = "disabled" | "auth" | "unavailable" | "connection" | "invalid";
 export function useNextBooking(account: string | undefined, community: string, service: string, enabled = NEXT_BOOKING_LIVE_ENABLED) {
@@ -79,12 +80,16 @@ export function useNextBooking(account: string | undefined, community: string, s
     window.addEventListener("online", visibility);
     window.addEventListener("availabilityChanged", visibility);
     window.addEventListener("workerAvailabilityChanged", visibility);
+    window.addEventListener(OFFERS_RESYNC_EVENT, visibility);
+    window.addEventListener("bookingAccepted", visibility);
     // Own-worker RLS read only, never broader worker access or schedule loading.
     void supabase.from("workers").select("id").eq("user_id", account).maybeSingle().then(({ data, error }) => {
       if (disposed || error || !data?.id) return;
       const channel = supabase.channel(`next-availability-${Math.random().toString(36).slice(2)}`)
         .on("postgres_changes", { event: "UPDATE", schema: "public", table: "workers", filter: `id=eq.${data.id}` }, visibility)
         .on("postgres_changes", { event: "*", schema: "public", table: "worker_availability", filter: `worker_id=eq.${data.id}` }, visibility)
+        .on("postgres_changes", { event: "*", schema: "public", table: "booking_requests", filter: `worker_id=eq.${data.id}` }, visibility)
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings", filter: `worker_id=eq.${data.id}` }, visibility)
         .subscribe();
       removeRealtime = () => { void supabase.removeChannel(channel); };
     });
@@ -99,6 +104,8 @@ export function useNextBooking(account: string | undefined, community: string, s
       window.removeEventListener("online", visibility);
       window.removeEventListener("availabilityChanged", visibility);
       window.removeEventListener("workerAvailabilityChanged", visibility);
+      window.removeEventListener(OFFERS_RESYNC_EVENT, visibility);
+      window.removeEventListener("bookingAccepted", visibility);
     };
   }, [account, community, service, enabled, scope]);
   return { ...(state.owner === account && state.scope === scope && enabled && account ? state : { data: null, loading: false, error: !enabled ? "disabled" as const : !account ? "auth" as const : null }), retry };

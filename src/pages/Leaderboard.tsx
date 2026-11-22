@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import BookingLeaderboard from "@/components/BookingLeaderboard";
+import NextBookingRanking from "@/components/NextBookingRanking";
+import { NEXT_BOOKING_LIVE_ENABLED } from "@/lib/nextBooking";
 
 export default function Leaderboard() {
   useWorkerLanguage();
@@ -21,6 +23,7 @@ export default function Leaderboard() {
 
       <main className="max-w-2xl mx-auto p-4 space-y-6">
         <BookingLeaderboard />
+        {NEXT_BOOKING_LIVE_ENABLED && <NextBookingRanking />}
       </main>
     </div>
   );

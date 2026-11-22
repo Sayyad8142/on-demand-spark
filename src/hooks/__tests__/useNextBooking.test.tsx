@@ -83,6 +83,11 @@ describe("Next Booking refresh safety", () => {
     act(() => h.native?.({ isActive: true })); await flush(); expect(h.invoke).toHaveBeenCalledTimes(2); hook.unmount();
   });
   it("availability changes refresh immediately", async () => { const hook = renderHook(() => useNextBooking("u1", "", "", true)); await flush(); act(() => window.dispatchEvent(new Event("availabilityChanged"))); await flush(); expect(h.invoke).toHaveBeenCalledTimes(2); hook.unmount(); });
+  it.each(["bookingAccepted", "didi:offers-resync"])("%s refreshes the verified queue without changing booking state", async event => {
+    const hook = renderHook(() => useNextBooking("u1", "", "", true)); await flush();
+    act(() => window.dispatchEvent(new Event(event))); await flush();
+    expect(h.invoke).toHaveBeenCalledTimes(2); hook.unmount();
+  });
   it("refreshes exactly at the new slot", async () => { vi.setSystemTime(Date.parse("2026-11-12T08:59:59Z")); const hook = renderHook(() => useNextBooking("u1", "", "", true)); await flush(); await act(async () => { await vi.advanceTimersByTimeAsync(1000); }); expect(h.invoke).toHaveBeenCalledTimes(2); hook.unmount(); });
   it("clears data on network failure", async () => { const hook = renderHook(() => useNextBooking("u1", "", "", true)); await flush(); expect(hook.result.current.data).not.toBeNull(); h.invoke.mockResolvedValue({ data: null, error: Error("offline") }); await act(async () => { await vi.advanceTimersByTimeAsync(15000); }); expect(hook.result.current.data).toBeNull(); hook.unmount(); });
   it("clears account data and refuses a mismatched login", async () => { const hook = renderHook(({ account }) => useNextBooking(account, "", "", true), { initialProps: { account: "u1" } }); await flush(); hook.rerender({ account: "u2" }); expect(hook.result.current.data).toBeNull(); await flush(); expect(h.invoke).toHaveBeenCalledTimes(1); hook.unmount(); });
