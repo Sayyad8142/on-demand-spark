@@ -99,7 +99,7 @@ export default function AdminPriorityShadow() {
         <div>
           <h1 className="text-2xl font-bold">Priority Score — Shadow (v3)</h1>
           <p className="text-sm text-muted-foreground">
-            v2 still drives live dispatch. v3 runs daily in shadow mode for evaluation.
+            Performance score comparison, not booking order. Live offers follow the active dispatch rules.
           </p>
         </div>
         <div className="flex gap-2">
@@ -118,7 +118,7 @@ export default function AdminPriorityShadow() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
-          <CardHeader><CardTitle className="text-base">v2 distribution (live)</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">v2 performance score distribution</CardTitle></CardHeader>
           <CardContent>
             <BandTable rows={stats.distV2} />
             <p className="text-xs text-muted-foreground mt-2">

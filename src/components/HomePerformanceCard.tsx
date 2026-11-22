@@ -1,4 +1,6 @@
+import "@/i18n/nextBookingMessages";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
+import { leaderboardScore } from "@/lib/leaderboardRanking";
 import { Card } from "@/components/ui/card";
 import { Trophy, Star } from "lucide-react";
 
@@ -22,9 +24,10 @@ function ratingColor(r: number) {
 
 export default function HomePerformanceCard({ priorityScore, rating, totalRatings }: HomePerformanceCardProps) {
   useWorkerLanguage();
-  const score = Math.max(0, Math.min(100, Math.round(priorityScore ?? 0)));
+  const score = leaderboardScore(priorityScore);
+  const scorePct = Math.max(0, Math.min(100, score ?? 0));
   const rate = rating ?? null;
-  const sc = scoreColor(score);
+  const sc = scoreColor(score ?? 0);
   const rc = ratingColor(rate ?? 0);
   const ratePct = Math.max(0, Math.min(100, ((rate ?? 0) / 5) * 100));
 
@@ -36,14 +39,14 @@ export default function HomePerformanceCard({ priorityScore, rating, totalRating
             <Trophy className="w-3 h-3 text-white" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-baseline justify-between gap-1">
-              <p className="text-[11px] font-semibold text-muted-foreground">{displayText("Priority")}</p>
+            <div className="flex flex-col items-start">
+              <p className="text-[11px] font-semibold text-muted-foreground">{displayText("Performance score")}</p>
               <p className={`text-xs font-bold ${sc.text}`}>
-                {score}<span className="text-muted-foreground font-medium">/100</span>
+                {score ?? "—"}<span className="text-muted-foreground font-medium">/100</span>
               </p>
             </div>
             <div className={`mt-0.5 h-[3px] w-full rounded-full ${sc.track} overflow-hidden`}>
-              <div className={`h-full ${sc.bar} rounded-full transition-all`} style={{ width: `${score}%` }} />
+              <div className={`h-full ${sc.bar} rounded-full transition-all`} style={{ width: `${scorePct}%` }} />
             </div>
           </div>
         </div>

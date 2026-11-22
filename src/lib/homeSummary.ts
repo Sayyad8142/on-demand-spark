@@ -53,9 +53,9 @@ export interface UpcomingRow {
   service_type?: string | null;
 }
 
-export function confirmedUpcoming<T extends UpcomingRow>(rows: T[]): T[] {
+export function confirmedUpcoming<T extends UpcomingRow>(rows: T[], ownBookingIds: ReadonlySet<string>): T[] {
   return rows
-    .filter((r) => CONFIRMED.has(String(r.status).toLowerCase()))
+    .filter((r) => ownBookingIds.has(r.booking_id) && CONFIRMED.has(String(r.status).toLowerCase()))
     .sort((a, b) => `${a.scheduled_date ?? "9999"} ${a.scheduled_time ?? "99"}`.localeCompare(`${b.scheduled_date ?? "9999"} ${b.scheduled_time ?? "99"}`));
 }
 

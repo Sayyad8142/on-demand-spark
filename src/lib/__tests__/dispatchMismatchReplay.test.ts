@@ -76,4 +76,12 @@ describe("staged historical Admin panel projection", () => {
     expect(() => recordedDispatch({})).toThrow("unverified_audit");
     expect(() => recordedDispatch({ ...audit, runs: [] })).toThrow("unmatched_request");
   });
+  it("refuses ambiguous and distant request-to-run associations", () => {
+    expect(() => recordedDispatch({ ...audit, runs: [...audit.runs, { ...audit.runs[1], started_at: "2026-11-22T04:40:53.500Z" }] })).toThrow("unmatched_request");
+    expect(() => recordedDispatch({ ...audit, requests: [{ ...requests[0], offered_at: "2026-11-22T04:41:15Z" }] })).toThrow("unmatched_request");
+  });
+  it("refuses count-mismatched or potentially truncated RPC history", () => {
+    expect(() => recordedDispatch({ ...audit, requests: requests.slice(0, 6) })).toThrow("incomplete_audit");
+    expect(() => recordedDispatch({ ...audit, requests: Array(20).fill(requests[0]) })).toThrow("incomplete_audit");
+  });
 });

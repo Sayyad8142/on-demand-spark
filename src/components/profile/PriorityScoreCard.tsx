@@ -5,6 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { Trophy, Star } from "lucide-react";
 import { parsePriorityBreakdown, type PriorityPart } from "@/lib/priorityBreakdown";
 import { priorityBadge } from "@/lib/priorityBadge";
+import { leaderboardScore } from "@/lib/leaderboardRanking";
 
 interface PriorityScoreCardProps {
   worker: {
@@ -40,9 +41,9 @@ function tierLabelFromScore(score: number) {
 
 export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
   useWorkerLanguage();
-  const score = Math.round((worker?.priority_score ?? 0) * 10) / 10;
+  const score = leaderboardScore(worker?.priority_score);
   const effectiveRating = worker?.admin_override_rating ?? worker?.rating ?? 0;
-  const stored = typeof worker?.priority_score === "number" ? worker.priority_score : null;
+  const stored = score;
   const breakdown = parsePriorityBreakdown(worker?.score_reason, stored);
   const partLabel: Record<PriorityPart["key"], string> = {
     completed: displayText("Completed jobs (last 7 days)"), online: displayText("Online hours (last 7 days)"),
@@ -51,8 +52,8 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
     penalties: displayText("Missed or not reached"),
   };
 
-  const rank = rankFromScore(score);
-  const tier = tierLabelFromScore(score);
+  const rank = score === null ? null : rankFromScore(score);
+  const tier = score === null ? null : tierLabelFromScore(score);
 
   return (
     <Card className="border-0 shadow-lg overflow-hidden">
@@ -60,7 +61,7 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
       <CardHeader className="pb-3 bg-gradient-to-br from-primary/10 to-primary/5">
         <CardTitle className="flex items-center gap-2 text-base">
           <Trophy className="w-5 h-5 text-primary" />
-          {displayText("Priority Score")}
+          {displayText("Performance score")}
         </CardTitle>
       </CardHeader>
 
@@ -69,7 +70,7 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
         <div>
           <div className="flex items-end justify-between mb-1">
             <div className="flex items-baseline gap-1">
-              <span className="text-5xl font-extrabold text-primary leading-none">{score}</span>
+              <span className="text-5xl font-extrabold text-primary leading-none">{score ?? "—"}</span>
               <span className="text-sm text-muted-foreground">/ 100</span>
             </div>
             <div className="flex items-center gap-0.5">
@@ -85,12 +86,12 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
               ))}
             </div>
           </div>
-          <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-2">{tier}</p>
-          <Progress value={Math.min(score, 100)} className="h-2" />
-          <div className={`mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${rank.bg} ${rank.color}`}>
+          {tier && <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-2">{tier}</p>}
+          <Progress value={Math.max(0, Math.min(score ?? 0, 100))} className="h-2" />
+          {rank && <div className={`mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${rank.bg} ${rank.color}`}>
             <span>{rank.emoji}</span>
             <span>{displayText("Score Level:")} {rank.label}</span>
-          </div>
+          </div>}
         </div>
         {breakdown ? (
           <ul className="space-y-1 text-xs" aria-label={displayText("How your score is made")}>
@@ -101,7 +102,7 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
               </li>
             ))}
             <li className="flex justify-between gap-2 border-t border-border pt-1 font-bold">
-              <span>{displayText("Your score")}</span><span>{Math.round(breakdown.final * 10) / 10}</span>
+              <span>{displayText("Your score")}</span><span>{breakdown.final}</span>
             </li>
           </ul>
         ) : stored !== null ? (

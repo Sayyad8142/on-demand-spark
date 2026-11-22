@@ -12,6 +12,13 @@ describe("leaderboard ranking", () => {
     expect(leaderboardScore(NaN)).toBeNull();
     expect(leaderboardScore(undefined)).toBeNull();
   });
+  it("uses the exact same Home, Profile and ranking score, including zero and unknown values", () => {
+    expect(leaderboardScore(46.75)).toBe(46.75);
+    expect(leaderboardScore(40.5)).toBe(40.5);
+    expect(leaderboardScore(0)).toBe(0);
+    expect(leaderboardScore(null)).toBeNull();
+    expect(leaderboardScore(Infinity)).toBeNull();
+  });
   it("keeps only worker and earner navigation after Next Booking removal", () => {
     expect(RANKING_PAGE_TABS).toEqual(["top", "earners"]);
   });

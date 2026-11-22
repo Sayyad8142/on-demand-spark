@@ -47,8 +47,16 @@ describe("today's numbers", () => {
       { booking_id: "a", status: "pending", scheduled_date: "2026-11-11", scheduled_time: "09:00" },
       { booking_id: "b", status: "assigned", scheduled_date: "2026-11-12", scheduled_time: "08:00" },
       { booking_id: "c", status: "confirmed", scheduled_date: "2026-11-11", scheduled_time: "15:00" },
-    ]);
+    ], new Set(["b", "c"]));
     expect(r.map((x) => x.booking_id)).toEqual(["c", "b"]);
+  });
+  it("never calls an unassigned/community job the worker's next booking", () => {
+    const rows = [
+      { booking_id: "mine", status: "assigned", scheduled_date: "2026-11-22", scheduled_time: "10:30" },
+      { booking_id: "other", status: "confirmed", scheduled_date: "2026-11-22", scheduled_time: "10:00" },
+    ];
+    expect(confirmedUpcoming(rows, new Set(["mine"])).map(r => r.booking_id)).toEqual(["mine"]);
+    expect(confirmedUpcoming(rows, new Set())).toEqual([]);
   });
 });
 

@@ -1,6 +1,8 @@
 # Worker language translation
 
 ## 22 Nov ranking / dispatch mismatch — no production activation
+- [x] Flow sweep: Home/Profile exact scores, own-job proof, Admin wording and staged historical grouping corrected; coverage and untouched backend/native boundaries in FLOW-SWEEP.md.
+- [ ] Leaderboard edge SOURCE invents 50 for zero/missing; notifications SOURCE differs from uniform dispatcher — blocked: hosted source verification and separate backend deployment approval; no edge file edited.
 - [x] Read-only hosted 10:10 IST offer/event timeline + Admin snapshot reviewed; configured uniform rotation replay reproduces five/three batches; company account received no request, currently missing push token.
 - [x] Worker performance labels/exact decimal score corrected; Admin historical panel staged, no dispatch/score/ranking-order changes; 769 tests pass and isolated mobile/desktop labels checked.
 - [x] Worker-by-worker report: docs/dispatch-mismatch-2026-11-22/REPORT.md; no fake hook/Window fix.

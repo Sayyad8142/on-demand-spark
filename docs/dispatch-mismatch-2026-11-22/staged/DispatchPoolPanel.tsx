@@ -27,11 +27,11 @@ export default function DispatchPoolPanel({ bookingId, offeredIds }: { bookingId
     <h3 className="font-semibold">Recorded dispatch batches</h3>
     {!waves.length && <p>No recorded dispatch yet.</p>}
     {waves.map((wave, index) => <div key={`${wave.attempt}-${index}`}>
-      <h4 className="text-sm font-medium">Batch {wave.attempt} · eligible {wave.eligible ?? "—"} · selected {wave.selected ?? "—"}</h4>
+      <h4 className="text-sm font-medium">Run {wave.attempt} · eligible {wave.eligible ?? "—"} · selected {wave.selected ?? "—"}</h4>
       <ol className="space-y-1">{wave.offers.map(offer => <li key={`${offer.workerId}-${offer.sequence}`} className="text-sm">
         {offer.sequence}. {offer.workerName} · {offer.status} · {new Date(offer.offeredAt).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata" })}
       </li>)}</ol>
     </div>)}
-    <p className="text-sm text-muted-foreground">No future booking position is verified here.</p>
+    <p className="text-sm text-muted-foreground">Offers associated by recorded timestamps. No future booking position is verified here.</p>
   </section>;
 }
