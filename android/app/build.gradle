@@ -38,8 +38,8 @@ android {
         applicationId "app.didisnow.worker"
         minSdk 24
         targetSdk 36
-        versionCode 104
-        versionName "10.0.04"
+        versionCode 105
+        versionName "10.0.05"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'

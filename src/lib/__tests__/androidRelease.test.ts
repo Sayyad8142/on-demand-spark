@@ -9,13 +9,13 @@ import { NEXT_BOOKING_LIVE_ENABLED } from "@/lib/nextBooking";
 const temporary: string[] = [];
 afterEach(() => { for (const dir of temporary.splice(0)) rmSync(dir, { recursive: true, force: true }); });
 
-function check(args: string[], configCode = 104) {
+function check(args: string[], configCode = 105) {
   const root = mkdtempSync(join(tmpdir(), "worker-release-"));
   temporary.push(root);
   for (const folder of ["scripts", "android/app", "src/config"]) mkdirSync(join(root, folder), { recursive: true });
   writeFileSync(join(root, "scripts/android-release-check.sh"), readFileSync("scripts/android-release-check.sh"));
-  writeFileSync(join(root, "android/app/build.gradle"), 'versionCode 104\nversionName "10.0.04"\ntargetSdk 36\n');
-  writeFileSync(join(root, "src/config/version.ts"), `export const CURRENT_VERSION_CODE = ${configCode};\nexport const CURRENT_VERSION_NAME = '10.0.04';\n`);
+  writeFileSync(join(root, "android/app/build.gradle"), 'versionCode 105\nversionName "10.0.05"\ntargetSdk 36\n');
+  writeFileSync(join(root, "src/config/version.ts"), `export const CURRENT_VERSION_CODE = ${configCode};\nexport const CURRENT_VERSION_NAME = '10.0.05';\n`);
   return spawnSync("bash", [join(root, "scripts/android-release-check.sh"), ...args], { cwd: root, encoding: "utf8" });
 }
 
@@ -41,15 +41,15 @@ function bundleCheck({ hasDist = true, differs = false, delayedStyles = true, ex
 }
 
 describe("Android release guards", () => {
-  it("keeps requested version 10.0.04 build 104", () => {
-    expect(CURRENT_VERSION_NAME).toBe("10.0.04");
-    expect(CURRENT_VERSION_CODE).toBe(104);
+  it("keeps requested version 10.0.05 build 105", () => {
+    expect(CURRENT_VERSION_NAME).toBe("10.0.05");
+    expect(CURRENT_VERSION_CODE).toBe(105);
   });
-  it("accepts candidate 104 only when the confirmed highest upload is lower", () => {
+  it("accepts candidate 105 only when the confirmed highest upload is lower", () => {
     expect(check(["103"]).status).toBe(0);
   });
-  it("refuses reused build 104", () => {
-    expect(check(["104"]).status).toBe(1);
+  it("refuses reused build 105", () => {
+    expect(check(["105"]).status).toBe(1);
   });
   it("refuses a candidate below a previously uploaded build", () => {
     expect(check(["105"]).status).toBe(1);
