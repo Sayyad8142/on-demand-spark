@@ -42,3 +42,8 @@
 No additional in-scope orientation violation was found beyond the known missing Admin format information and stale Android output. Both require work outside a Home-player-only change. No settled records, permission settings, examples, production configuration, booking or payment records were modified.
 
 **Carried-forward limits:** the earlier full suite passed 790 tests and placeholder-frame browser layouts passed at 320/393/412/1280px; this follow-up reran the 18 video tests only. Neither establishes real YouTube playback. Signed-in Home, Admin end-to-end updates, real Android pause/sound/fullscreen/letterboxing and phone booking interruptions remain NOT VERIFIED. Nothing published or deployed.
+## Update 2026-11-23 (later): ID-only Shorts detection
+- SOURCE: `useYoutubeFormat` now checks YouTube's full-frame picture (`i.ytimg.com/vi/<id>/oar2.jpg`) for ID-only or normal links. Portrait picture (height > 1.2 × width) → 9:16; wide, failed or >3 s → 16:9. Explicit Shorts links skip the check.
+- VERIFIED (browser): current Admin video `GlfAOlNvRoI` → 720×1280 (portrait); `dQw4w9WgXcQ` → 1920×1080 (landscape). The picture path is undocumented by YouTube; if it stops working the player falls back to 16:9.
+- Flow sweep: the Home player is the only video in the Worker App (no other YouTube embeds or video elements in `src/`). Admin-change refresh, background/resume and booking-interruption paths reuse the same slot and re-check per video ID.
+- NOT VERIFIED: signed-in Home render and Android phone playback.
