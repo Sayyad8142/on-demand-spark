@@ -1,6 +1,7 @@
 # Worker language translation
 
 ## Home YouTube Shorts player — 23 Nov, no publication
+- [x] Flow sweep: Home player/slot/parser, refresh/background/offer guards, routing, academy schema, native packaging and hosted Admin settings/function checked by source/search/tests; full evidence in home-youtube-shorts report. Live Admin rejects URLs; Android verifier fails on stale assets. No out-of-scope fixes.
 - [x] Prepare official Shorts-link detection and centered 9:16 player; normal links/IDs retain 16:9; all visibility and booking rules preserved.
 - [x] 790 tests pass; isolated player geometry/sound-button/fullscreen-permission checks at 320/393/412/1280px, mobile screenshots inspected, preview build OK. Report: docs/home-youtube-shorts-2026-11-23.md.
 - [ ] Existing ID-only Shorts detection — blocked: Admin must preserve original links or authoritative format metadata; separate Admin follow-up approval required.
