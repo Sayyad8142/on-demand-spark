@@ -27,6 +27,8 @@ import serviceFloorCleaning from "@/assets/service-floor-cleaning.webp";
 import serviceBathroomCleaning from "@/assets/service-bathroom-toilet-cleaning.jpg";
 import { announceFlat, buildFlatAnnouncement } from "@/lib/flatVoice";
 import PaymentCollectionModal from "@/components/PaymentCollectionModal";
+import DishwashingTrainingCarousel from "@/components/DishwashingTrainingCarousel";
+import { DISHWASHING_SLIDE_MS, DISHWASHING_TRAINING_PHOTOS, trainingSlides } from "@/lib/dishwashingTraining";
 
 const TASK_CONFIG: Record<string, {label: string; img: string; icon: typeof Utensils}> = {
   dish_washing: { label: "Dish Washing", img: serviceDishWashing, icon: Utensils },
@@ -148,11 +150,14 @@ export default function ActiveJobCard({
   // Auto-slide every 3s
   useEffect(() => {
     if (tasks.length <= 1) return;
-    const interval = setInterval(() => {
+    // Stay on the Dishwashing slide for one full training cycle.
+    const onDish = tasks[currentSlide % tasks.length]?.img === serviceDishWashing;
+    const dwell = onDish ? Math.max(1, trainingSlides(DISHWASHING_TRAINING_PHOTOS).length) * DISHWASHING_SLIDE_MS : 3000;
+    const timer = setTimeout(() => {
       setCurrentSlide((prev) => (prev + 1) % tasks.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [tasks.length]);
+    }, dwell);
+    return () => clearTimeout(timer);
+  }, [tasks, currentSlide]);
 
   // Calculate initial remaining time based on accepted_at timestamp
   const cooldownEndTime = useMemo(() => {
@@ -277,7 +282,10 @@ export default function ActiveJobCard({
                 style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
                 {tasks.map((task) =>
                   <div key={task.label} className="w-full flex-shrink-0 relative">
-                    <img src={task.img} alt={displayText(task.label)} className="w-full h-28 object-cover" />
+                    {task.img === serviceDishWashing ?
+                      <DishwashingTrainingCarousel fallbackSrc={task.img} alt={displayText(task.label)} className="w-full h-28 object-cover" /> :
+                      <img src={task.img} alt={displayText(task.label)} className="w-full h-28 object-cover" />
+                    }
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
                     <div className="absolute bottom-0 right-0 p-3">
                       {task.price != null && task.price > 0 &&
