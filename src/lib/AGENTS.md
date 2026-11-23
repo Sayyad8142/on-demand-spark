@@ -12,3 +12,4 @@
 - Native availability speech waits for engine initialization and settles stopped calls with a bounded completion timeout. Why: the Android dependency discards completion callbacks on stop.
 
 - Next Booking accepts only an activation-gated privacy-safe contract; its verified-session server adapter is staged under docs independently of dispatch. Why: public ranking must never reuse phone/fallback identities or authorize booking actions.- Next Booking preview verification (`nextBookingDiagnostic.ts`) activates only on the id-preview host/localhost in a browser, never published/custom domains or native; the screen reads `worker-next-booking` only through `workerNextBooking.ts` (known fields copied, position only from server groups_ahead). Why: testing must not activate ranking for real workers or invent positions.
+- Dishwashing slideshow: `dishwashingTraining.ts`; a step shows only with its real owner photo, else the existing image. Why: no stock pictures.

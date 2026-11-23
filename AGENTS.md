@@ -41,4 +41,3 @@
 - Alerts: nativeOverlayPayload + AlertPresentationRules + BookingNotifications; expiry/visible-only ACK. Why: no false claims.
 - Native 10-min alert lock: released only on server-confirmed end of that booking (`bookingEndRelease.ts`). Why: finished bookings must not block offers or touch dispatch.
 - Alarm retries require playback ACKs. Why: queued starts may fail.
-- Dishwashing training slideshow: ordered steps and owner photos in `src/lib/dishwashingTraining.ts`; a step shows only with its real photo, otherwise the existing image. Why: never show stock pictures or change booking details.
