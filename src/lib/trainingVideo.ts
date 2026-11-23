@@ -21,7 +21,11 @@ export interface TrainingVideoConfig {
   format?: "shorts" | "landscape";
 }
 
-/** Only an explicit official Shorts link proves portrait format; an ID never does. */
+/**
+ * An explicit official Shorts link proves portrait format. IDs and other links return
+ * "landscape" here; the player then checks YouTube's own picture shape (see
+ * `formatFromPictureSize`) before choosing portrait.
+ */
 export function parseYoutubeVideo(value: unknown): { videoId: string; format: "shorts" | "landscape" } | null {
   if (isValidYoutubeId(value)) return { videoId: value, format: "landscape" };
   if (typeof value !== "string") return null;
@@ -41,6 +45,18 @@ export function parseYoutubeVideo(value: unknown): { videoId: string; format: "s
     }
     return isValidYoutubeId(videoId) ? { videoId, format } : null;
   } catch { return null; }
+}
+
+/** YouTube's full-frame picture for a video; its shape matches the real video (portrait for Shorts). */
+export function youtubeShapePictureUrl(videoId: string): string {
+  return `https://i.ytimg.com/vi/${videoId}/oar2.jpg`;
+}
+
+/** Clearly taller than wide → Shorts; anything else, unknown or broken → landscape. */
+export function formatFromPictureSize(width: unknown, height: unknown): "shorts" | "landscape" {
+  if (typeof width !== "number" || typeof height !== "number") return "landscape";
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return "landscape";
+  return height > width * 1.2 ? "shorts" : "landscape";
 }
 
 /** Parse a raw settings row. Anything malformed → null (hidden). */

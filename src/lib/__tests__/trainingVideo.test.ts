@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   TRAINING_VIDEO_CLIENT_ENABLED, isValidYoutubeId, parseTrainingVideoRow,
   shouldShowTrainingVideo, buildEmbedUrl, parseYoutubeVideo, TRAINING_VIDEO_REFRESH_MS, type VisibilityInput,
+  formatFromPictureSize, youtubeShapePictureUrl,
 } from "../trainingVideo";
 
 const ok: VisibilityInput = {
@@ -59,4 +60,17 @@ describe("training video rules", () => {
     expect(u.searchParams.get("controls")).toBe("1");
     expect(u.searchParams.get("fs")).toBe("1");
   });
+});
+
+describe("Home video shape from YouTube's picture", () => {
+  it("portrait picture (720x1280) → vertical 9:16 player", () => expect(formatFromPictureSize(720, 1280)).toBe("shorts"));
+  it("normal 16:9 picture (1920x1080) → landscape", () => expect(formatFromPictureSize(1920, 1080)).toBe("landscape"));
+  it("old 4:3 picture (320x240) → landscape", () => expect(formatFromPictureSize(320, 240)).toBe("landscape"));
+  it("square-ish or broken sizes never turn portrait", () => {
+    expect(formatFromPictureSize(1000, 1100)).toBe("landscape");
+    expect(formatFromPictureSize(0, 0)).toBe("landscape");
+    expect(formatFromPictureSize(undefined, 1280)).toBe("landscape");
+  });
+  it("checks the official YouTube picture for the saved video", () =>
+    expect(youtubeShapePictureUrl("GlfAOlNvRoI")).toBe("https://i.ytimg.com/vi/GlfAOlNvRoI/oar2.jpg"));
 });

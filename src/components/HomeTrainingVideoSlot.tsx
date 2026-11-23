@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useBookingOfferVisible } from "@/hooks/useBookingOfferVisible";
 import { useHomeTrainingVideo } from "@/hooks/useHomeTrainingVideo";
 import { HomeTrainingVideo } from "@/components/HomeTrainingVideo";
+import { useYoutubeFormat } from "@/hooks/useYoutubeFormat";
 import { TRAINING_VIDEO_CLIENT_ENABLED, shouldShowTrainingVideo } from "@/lib/trainingVideo";
 
 /** Renders nothing (no box, no loader) unless every visibility rule passes. */
@@ -19,5 +20,11 @@ export function HomeTrainingVideoSlot({ isGuest, hasActiveJob, hasWorker }: { is
     playerError: !!config && errorId === config.videoId,
   });
   if (!show || !config) return null;
-  return <HomeTrainingVideo key={`${config.videoId}:${config.format}`} videoId={config.videoId} format={config.format} onError={() => setErrorId(config.videoId)} />;
+  return <ShapedVideo videoId={config.videoId} format={config.format ?? "landscape"} onError={() => setErrorId(config.videoId)} />;
+}
+
+function ShapedVideo({ videoId, format, onError }: { videoId: string; format: "shorts" | "landscape"; onError: () => void }) {
+  const shape = useYoutubeFormat(videoId, format);
+  if (!shape) return null;
+  return <HomeTrainingVideo key={`${videoId}:${shape}`} videoId={videoId} format={shape} onError={onError} />;
 }
