@@ -21,3 +21,10 @@ describe("dishwashing training slideshow", () => {
     expect(swipeTarget(2, 5, 10)).toBe(2);
   });
 });
+
+import { DISHWASHING_TRAINING_PHOTOS as BUNDLED } from "../dishwashingTraining";
+describe("bundled dishwashing photos", () => {
+  it("has all five steps in order", () => {
+    expect(trainingSlides(BUNDLED).map((s) => s.step)).toEqual(["before_washing", "washing_dishes", "arrange_dishes", "clean_granite", "clean_floor"]);
+  });
+});

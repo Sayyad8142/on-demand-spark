@@ -1,9 +1,15 @@
+import beforeWashing from "@/assets/dishwashing-training/before_washing.webp";
+import washingDishes from "@/assets/dishwashing-training/washing_dishes.webp";
+import arrangeDishes from "@/assets/dishwashing-training/arrange_dishes.webp";
+import cleanGranite from "@/assets/dishwashing-training/clean_granite.webp";
+import cleanFloor from "@/assets/dishwashing-training/clean_floor.webp";
+
 /**
  * Dishwashing training slideshow (display-only).
- * Steps are shown in this exact order. A step appears only once its real
- * training photo has been added to `DISHWASHING_TRAINING_PHOTOS`; until then
- * the booking card keeps the existing Dish Washing image. Never substitute
- * stock pictures here.
+ * Steps are shown in this exact order. A step appears only when it has a photo
+ * in `DISHWASHING_TRAINING_PHOTOS`; with none the booking card keeps the
+ * existing Dish Washing image. Current photos are owner-approved generated
+ * pictures (owner had no real photos); replace a file to swap one.
  */
 export const DISHWASHING_TRAINING_STEPS = [
   "before_washing",
@@ -23,8 +29,14 @@ export const DISHWASHING_STEP_LABELS: Record<DishwashingStep, string> = {
   clean_floor: "Clean Floor",
 };
 
-/** Add each owner-supplied photo import here, keyed by its step. */
-export const DISHWASHING_TRAINING_PHOTOS: Partial<Record<DishwashingStep, string>> = {};
+/** One photo per step, keyed by its step. */
+export const DISHWASHING_TRAINING_PHOTOS: Partial<Record<DishwashingStep, string>> = {
+  before_washing: beforeWashing,
+  washing_dishes: washingDishes,
+  arrange_dishes: arrangeDishes,
+  clean_granite: cleanGranite,
+  clean_floor: cleanFloor,
+};
 
 export const DISHWASHING_SLIDE_MS = 3000;
 
