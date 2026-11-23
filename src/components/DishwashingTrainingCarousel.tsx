@@ -24,6 +24,12 @@ export default function DishwashingTrainingCarousel({ fallbackSrc, alt, classNam
   const startX = useRef<number | null>(null);
   const count = slides.length;
 
+  // Preload every slide once so swipes and auto-slides never wait on the network.
+  useEffect(() => {
+    slides.forEach((s) => { const img = new Image(); img.src = s.src; });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [count]);
+
   useEffect(() => {
     const el = rootRef.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
@@ -66,7 +72,7 @@ export default function DishwashingTrainingCarousel({ fallbackSrc, alt, classNam
             src={failed[s.step] ? fallbackSrc : s.src}
             alt={displayText(s.label)}
             className={`${className} flex-shrink-0`}
-            loading={i === 0 ? "eager" : "lazy"}
+            loading="eager"
             decoding="async"
             draggable={false}
             onError={() => setFailed((f) => ({ ...f, [s.step]: true }))}
@@ -74,7 +80,7 @@ export default function DishwashingTrainingCarousel({ fallbackSrc, alt, classNam
         ))}
       </div>
       {count > 1 && (
-        <div className="absolute bottom-1.5 left-0 right-0 flex justify-center gap-1 pointer-events-none">
+        <div className="absolute bottom-2.5 left-3 z-10 flex gap-1 pointer-events-none">
           {slides.map((s, i) => (
             <span
               key={s.step}

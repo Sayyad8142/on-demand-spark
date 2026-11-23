@@ -147,6 +147,9 @@ export default function ActiveJobCard({
     return result;
   }, [booking.maid_tasks, booking.service_type, booking.price_inr, taskPrices]);
 
+  // With the taller Dishwashing slide, every slide shares its 4:3 box.
+  const hasDishSlide = tasks.some((t) => t.img === serviceDishWashing);
+
   // Auto-slide every 3s
   useEffect(() => {
     if (tasks.length <= 1) return;
@@ -231,7 +234,7 @@ export default function ActiveJobCard({
   };
 
   return <Card className="shadow-lg overflow-hidden border-0">
-      <div className="space-y-3 py-0 px-0 my-0 mx-0">
+      <div className="space-y-2.5 py-0 px-0 my-0 mx-0">
         {/* 1. Unit Display - Wooden Door Style (villa-aware) */}
         <div className="flat-door-style p-5">
           {isVilla && booking.community &&
@@ -283,11 +286,11 @@ export default function ActiveJobCard({
                 {tasks.map((task) =>
                   <div key={task.label} className="w-full flex-shrink-0 relative">
                     {task.img === serviceDishWashing ?
-                      <DishwashingTrainingCarousel fallbackSrc={task.img} alt={displayText(task.label)} className="w-full h-28 object-cover" /> :
-                      <img src={task.img} alt={displayText(task.label)} className="w-full h-28 object-cover" />
+                      <DishwashingTrainingCarousel fallbackSrc={task.img} alt={displayText(task.label)} className="w-full aspect-[4/3] object-contain bg-muted" /> :
+                      <img src={task.img} alt={displayText(task.label)} className={`w-full object-cover ${hasDishSlide ? "aspect-[4/3]" : "h-28"}`} />
                     }
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                    <div className="absolute bottom-0 right-0 p-3">
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/50 to-transparent" />
+                    <div className="absolute bottom-0 right-0 p-2.5">
                       {task.price != null && task.price > 0 &&
                         <span className="bg-white/20 backdrop-blur-sm text-white font-bold text-base px-3 py-1 rounded-lg">
                           ₹{task.price}
@@ -300,7 +303,7 @@ export default function ActiveJobCard({
             </div>
           }
           {booking.price_inr != null && booking.price_inr > 0 &&
-            <div className="px-4 py-3 space-y-1.5">
+            <div className="px-3.5 py-2.5 space-y-1.5">
               {/* Breakup chips row */}
               {(() => {
                 const icons = { dishes: Utensils, surge: Zap, surcharge: PlusCircle, glass: Sparkles };
@@ -320,7 +323,7 @@ export default function ActiveJobCard({
                 ) : null;
               })()}
               {/* Earnings — worker net only */}
-              <div className="pt-1">
+              <div>
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-muted-foreground">{displayText("You Earn")}</p>
                   <p className="font-bold text-green-500 text-xl">₹{payoutBreakdown.netPayout}</p>
