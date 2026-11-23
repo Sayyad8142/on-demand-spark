@@ -1131,6 +1131,10 @@
     "Customer_rating": "Customer rating",
     "Waiting_for_Admin_Approval_You_can_start_receiving_bookings_once_your_account_is_approved": "Waiting for Admin Approval. You can start receiving bookings once your account is approved.",
     "Registration_not_approved_Please_contact_support": "Registration not approved. Please contact support.",
-    "Account_approved_Turn_ON_to_start_receiving_bookings": "Account approved. Turn ON to start receiving bookings."
+    "Account_approved_Turn_ON_to_start_receiving_bookings": "Account approved. Turn ON to start receiving bookings.",
+    "Time_Left_to_Start_Booking": "Time Left to Start Booking",
+    "Start_Time_Overdue": "Start Time Overdue",
+    "Start_Booking_Enter_OTP": "Start Booking • Enter OTP",
+    "Overdue_by": "Overdue by"
   }
 }

@@ -27,3 +27,29 @@ export function bookingCharges(b: ChargeBooking): { kind: ChargeKind; label: str
     { kind: "glass" as const, label: "Glass Partition", amount: b.glass_partition_fee },
   ].filter((c): c is { kind: ChargeKind; label: string; amount: number } => typeof c.amount === "number" && Number.isFinite(c.amount) && c.amount > 0);
 }
+export type StartTimerTone = "green" | "orange" | "red";
+export type StartTimer = { overdue: boolean; seconds: number; progress: number; tone: StartTimerTone };
+
+/**
+ * Display-only Start countdown from the server acceptance time (+10 min deadline).
+ * Never restarts on refresh; null once started/cancelled/not a Start OTP booking.
+ */
+export function startOtpTimer(booking: PendingStart, now = Date.now()): StartTimer | null {
+  if (cardIndicator(booking, now) === "none") return null;
+  const accepted = acceptanceMs({ ...booking, worker_id: "self" });
+  if (accepted === null) return null;
+  const total = START_OTP_REMINDER_FIRST_MIN * 60;
+  const left = Math.ceil((accepted + total * 1000 - now) / 1000);
+  if (left <= 0) return { overdue: true, seconds: Math.floor((now - accepted) / 1000) - total, progress: 0, tone: "red" };
+  const seconds = Math.min(total, left);
+  return { overdue: false, seconds, progress: seconds / total, tone: seconds > 300 ? "green" : seconds >= 120 ? "orange" : "red" };
+}
+
+/** MM:SS, growing to H:MM:SS for long overdue times. */
+export function timerLabel(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(s / 3600);
+  const mm = Math.floor((s % 3600) / 60).toString().padStart(2, "0");
+  const ss = (s % 60).toString().padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}

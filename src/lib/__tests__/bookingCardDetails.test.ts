@@ -64,3 +64,25 @@ describe("active booking cache", () => {
     expect(workerVisibleBooking({ ...row, completion_otp: "123", code_hash: "secret", code_salt: "secret" })).toEqual(row);
   });
 });
+import { startOtpTimer, timerLabel } from "../bookingCardDetails";
+describe("start countdown card", () => {
+  const p = { id: "b1", status: "accepted", start_otp_required: true, started_at: null, accepted_at: new Date(now).toISOString() };
+  it("counts 10 minutes from server acceptance", () => {
+    expect(startOtpTimer(p, now)).toMatchObject({ overdue: false, seconds: 600, tone: "green", progress: 1 });
+    expect(timerLabel(startOtpTimer(p, now + 15_000)!.seconds)).toBe("09:45");
+  });
+  it("green above 5 min, orange 2–5 min, red under 2 min", () => {
+    expect(startOtpTimer(p, now + 299_000)!.tone).toBe("green");
+    expect(startOtpTimer(p, now + 300_000)!.tone).toBe("orange");
+    expect(startOtpTimer(p, now + 480_000)!.tone).toBe("orange");
+    expect(startOtpTimer(p, now + 481_000)!.tone).toBe("red");
+  });
+  it("shows elapsed overdue time after 00:00", () => {
+    expect(startOtpTimer(p, now + 600_000)).toMatchObject({ overdue: true, seconds: 0 });
+    expect(startOtpTimer(p, now + 675_000)).toMatchObject({ overdue: true, seconds: 75 });
+  });
+  it("stops when started or cancelled", () => {
+    expect(startOtpTimer({ ...p, status: "started", started_at: new Date(now).toISOString() }, now + 1000)).toBeNull();
+    expect(startOtpTimer({ ...p, status: "cancelled" }, now + 1000)).toBeNull();
+  });
+});

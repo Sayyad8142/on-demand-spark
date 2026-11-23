@@ -18,7 +18,8 @@ import {
   type ResolvedOtpMode,
 } from "@/lib/otpV2";
 import { startOtpCardAction } from "@/lib/startOtp";
-import { bookingCharges, startOtpCountdown } from "@/lib/bookingCardDetails";
+import { bookingCharges, startOtpTimer } from "@/lib/bookingCardDetails";
+import StartOtpCountdownCard from "@/components/StartOtpCountdownCard";
 import { isActiveWorkStatus } from "@/lib/workSafety";
 
 import serviceDishWashing from "@/assets/service-dish-washing.webp";
@@ -60,7 +61,7 @@ export default function ActiveJobCard({
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, [booking.id]);
-  const startSeconds = startOtpCountdown({
+  const startTimer = startOtpTimer({
     id: booking.id, status: booking.status, start_otp_required: booking.start_otp_required ?? null,
     started_at: booking.started_at, accepted_at: booking.accepted_at, assigned_at: booking.assigned_at,
   }, now);
@@ -341,22 +342,11 @@ export default function ActiveJobCard({
               }
             </Button>
           ) : otpAction === "start" ? (
-            <Button
-              size="lg"
-              variant={startSeconds === 0 ? "bookingStartDelayed" : "bookingStart"}
-              className="w-full h-20 px-3 py-3 text-lg leading-snug font-bold rounded-xl whitespace-normal"
-              onClick={() => navigate(`/start-booking/${booking.id}`)}
+            <StartOtpCountdownCard
+              timer={startTimer}
+              onStart={() => navigate(`/start-booking/${booking.id}`)}
               disabled={isWorkCompletedDisabled}
-              aria-busy={updating}>
-              {updating ? displayText("Updating...") :
-                <>
-                  {startSeconds === 0 && <AlertTriangle aria-hidden="true" />}
-                  <span className="min-w-0 break-words text-center">
-                    {displayText(startSeconds === 0 ? "Start OTP Delayed — Enter OTP" : "Start Booking with OTP")}
-                  </span>
-                </>
-              }
-            </Button>
+              updating={updating} />
           ) : otpAction === "resolving" ? (
             <Button size="lg" disabled className="w-full h-14 text-base font-semibold rounded-xl">
               {displayText("Checking booking…")}

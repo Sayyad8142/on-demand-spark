@@ -1131,6 +1131,10 @@
     "Customer_rating": "కస్టమర్ రేటింగ్",
     "Waiting_for_Admin_Approval_You_can_start_receiving_bookings_once_your_account_is_approved": "అడ్మిన్ ఆమోదం కోసం వేచి ఉంది. మీ ఖాతా ఆమోదించబడిన వెంటనే మీరు బుకింగ్‌లు స్వీకరించడం ప్రారంభించవచ్చు.",
     "Registration_not_approved_Please_contact_support": "నమోదు ఆమోదించబడలేదు. దయచేసి సపోర్ట్‌ను సంప్రదించండి.",
-    "Account_approved_Turn_ON_to_start_receiving_bookings": "ఖాతా ఆమోదించబడింది. బుకింగ్‌లు స్వీకరించడానికి ON చేయండి."
+    "Account_approved_Turn_ON_to_start_receiving_bookings": "ఖాతా ఆమోదించబడింది. బుకింగ్‌లు స్వీకరించడానికి ON చేయండి.",
+    "Time_Left_to_Start_Booking": "బుకింగ్ ప్రారంభించడానికి మిగిలిన సమయం",
+    "Start_Time_Overdue": "ప్రారంభ సమయం దాటింది",
+    "Start_Booking_Enter_OTP": "బుకింగ్ ప్రారంభించండి • OTP నమోదు చేయండి",
+    "Overdue_by": "ఆలస్యం"
   }
 }
