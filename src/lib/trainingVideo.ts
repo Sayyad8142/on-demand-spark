@@ -18,6 +18,29 @@ export function isValidYoutubeId(id: unknown): id is string {
 export interface TrainingVideoConfig {
   enabled: boolean;
   videoId: string;
+  format?: "shorts" | "landscape";
+}
+
+/** Only an explicit official Shorts link proves portrait format; an ID never does. */
+export function parseYoutubeVideo(value: unknown): { videoId: string; format: "shorts" | "landscape" } | null {
+  if (isValidYoutubeId(value)) return { videoId: value, format: "landscape" };
+  if (typeof value !== "string") return null;
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== "https:" || url.username || url.password) return null;
+    const host = url.hostname.toLowerCase();
+    let videoId: string | null = null;
+    let format: "shorts" | "landscape" = "landscape";
+    if (host === "youtu.be") {
+      videoId = url.pathname.match(/^\/([A-Za-z0-9_-]{11})\/?$/)?.[1] ?? null;
+    } else if (["youtube.com", "www.youtube.com", "m.youtube.com"].includes(host)) {
+      const shorts = url.pathname.match(/^\/shorts\/([A-Za-z0-9_-]{11})\/?$/);
+      if (shorts) { videoId = shorts[1]; format = "shorts"; }
+      else if (url.pathname === "/watch") videoId = url.searchParams.get("v");
+      else videoId = url.pathname.match(/^\/embed\/([A-Za-z0-9_-]{11})\/?$/)?.[1] ?? null;
+    }
+    return isValidYoutubeId(videoId) ? { videoId, format } : null;
+  } catch { return null; }
 }
 
 /** Parse a raw settings row. Anything malformed → null (hidden). */
@@ -25,8 +48,9 @@ export function parseTrainingVideoRow(row: unknown): TrainingVideoConfig | null 
   if (!row || typeof row !== "object") return null;
   const r = row as Record<string, unknown>;
   if (r.enabled !== true) return null;
-  if (!isValidYoutubeId(r.youtube_video_id)) return null;
-  return { enabled: true, videoId: r.youtube_video_id };
+  const video = parseYoutubeVideo(r.youtube_video_id);
+  if (!video) return null;
+  return { enabled: true, ...video };
 }
 
 export interface VisibilityInput {
@@ -60,6 +84,8 @@ export function buildEmbedUrl(videoId: string, origin: string): string {
     autoplay: "1",
     mute: "1",
     playsinline: "1",
+    controls: "1",
+    fs: "1",
     rel: "0",
     modestbranding: "1",
     enablejsapi: "1",

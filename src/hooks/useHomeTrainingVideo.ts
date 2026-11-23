@@ -25,7 +25,7 @@ export function useHomeTrainingVideo(active: boolean) {
         .limit(1)
         .maybeSingle();
       const next = error ? null : parseTrainingVideoRow(data);
-      setConfig((prev) => (prev?.videoId === next?.videoId && !!prev === !!next ? prev : next));
+      setConfig((prev) => (prev?.videoId === next?.videoId && prev?.format === next?.format && !!prev === !!next ? prev : next));
     } catch {
       setConfig(null);
     }

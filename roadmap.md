@@ -1,5 +1,11 @@
 # Worker language translation
 
+## Home YouTube Shorts player — 23 Nov, no publication
+- [x] Prepare official Shorts-link detection and centered 9:16 player; normal links/IDs retain 16:9; all visibility and booking rules preserved.
+- [x] 790 tests pass; isolated player geometry/sound-button/fullscreen-permission checks at 320/393/412/1280px, mobile screenshots inspected, preview build OK. Report: docs/home-youtube-shorts-2026-11-23.md.
+- [ ] Existing ID-only Shorts detection — blocked: Admin must preserve original links or authoritative format metadata; separate Admin follow-up approval required.
+- [ ] Real Android playback/Home integration — blocked: unmanaged authenticated session and physical phone/current APK unavailable; nothing published.
+
 ## 22 Nov accurate performance / live dispatch view — preparation only
 - [x] Performance heading/foreground refresh and strict server-supplied batch/status reader prepared; legacy/unverified data shows Position updating; OFF gate retained.
 - [x] 787 tests passed; Sid replay, exclusions, private-field dropping, expiry/receipt and refresh triggers tested; isolated phone/desktop en/hi/te fixtures inspected. No hosted activation.

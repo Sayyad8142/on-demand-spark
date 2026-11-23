@@ -19,5 +19,5 @@ export function HomeTrainingVideoSlot({ isGuest, hasActiveJob, hasWorker }: { is
     playerError: !!config && errorId === config.videoId,
   });
   if (!show || !config) return null;
-  return <HomeTrainingVideo key={config.videoId} videoId={config.videoId} onError={() => setErrorId(config.videoId)} />;
+  return <HomeTrainingVideo key={`${config.videoId}:${config.format}`} videoId={config.videoId} format={config.format} onError={() => setErrorId(config.videoId)} />;
 }
