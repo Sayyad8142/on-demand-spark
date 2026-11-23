@@ -12,6 +12,14 @@ public final class StartOtpAlarmRules {
         long age = serverNow - acceptedAt;
         return age >= 1200000L ? 3 : age >= 900000L ? 2 : age >= 600000L ? 1 : 0;
     }
+    /** Missed finite clips are not queued; a failed start may retry within 90 seconds. */
+    public static boolean shouldPlay(long acceptedAt, long serverNow, boolean alreadyPlayed) {
+        int phase = phase(acceptedAt, serverNow);
+        if (phase == 3) return true;
+        if (phase == 0 || alreadyPlayed) return false;
+        long offset = phase == 1 ? 600000L : 900000L;
+        return serverNow - acceptedAt - offset <= 90000L;
+    }
     /** No catch-up for the two finite clips; continuous mode has no upper cutoff. */
     public static long nextAt(long acceptedAt, long serverNow) {
         for (long offset : new long[]{600000L, 900000L, 1200000L})

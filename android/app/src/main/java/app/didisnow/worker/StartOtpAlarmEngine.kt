@@ -19,6 +19,7 @@ object StartOtpAlarmEngine {
     private val main = Handler(Looper.getMainLooper())
     private var reading = false
     private var readAgain = false
+    private val readCompletions = mutableListOf<() -> Unit>()
     private fun prefs(c: Context) = c.getSharedPreferences("start_otp_alarm_v2", Context.MODE_PRIVATE)
     private fun rows(c: Context) = try { JSONArray(prefs(c).getString("rows", "[]")) } catch (_: Exception) { JSONArray() }
     private fun time(s: String): Long = try {
@@ -79,11 +80,12 @@ object StartOtpAlarmEngine {
     fun setConfig(c: Context, url: String, key: String) {
         prefs(c).edit().putString("config", JSONObject().put("url", url).put("key", key).toString()).apply()
     }
-    fun reconcile(c: Context, restoring: Boolean) {
+    @JvmOverloads fun reconcile(c: Context, restoring: Boolean, onComplete: (() -> Unit)? = null) {
         val user = prefs(c).getString("user", "") ?: ""
         val generation = prefs(c).getLong("generation", -1)
-        if (user.isBlank()) return
+        if (user.isBlank()) { onComplete?.invoke(); return }
         synchronized(this) {
+            if (onComplete != null) readCompletions.add(onComplete)
             if (reading) { readAgain = true; return }
             reading = true
         }
@@ -120,12 +122,17 @@ object StartOtpAlarmEngine {
                 }
             } catch (_: Exception) { /* retain known eligibility, never restore blindly */ }
             finally {
-                synchronized(this) {
+                val completions = synchronized(this) {
                     reading = false
                     if (readAgain) { readAgain = false; main.post { reconcile(c, false) } }
+                    readCompletions.toList().also { readCompletions.clear() }
+                }
+                main.post {
+                    try {
+                        if (prefs(c).getString("user", "") == user && prefs(c).getLong("generation", -1) == generation) evaluate(c, restoring && !fresh)
+                    } finally { completions.forEach { it() } }
                 }
             }
-            main.post { if (prefs(c).getString("user", "") == user && prefs(c).getLong("generation", -1) == generation) evaluate(c, restoring && !fresh) }
         }
     }
     private fun timer(c: Context): PendingIntent = PendingIntent.getBroadcast(c, 81421, Intent(c, StartOtpAlarmReceiver::class.java).setAction("TIMER"), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
@@ -151,19 +158,42 @@ object StartOtpAlarmEngine {
         val phase = StartOtpAlarmRules.phase(b.optLong("acceptedMs"), now)
         if (prefs(c).getLong("silenceUntil", 0) > now) { arm(c, prefs(c).getLong("silenceUntil",0)-now); return }
         val marker = "${b.optString("id")}:${b.optLong("acceptedMs")}:$phase"
-        if (phase > 0 && (phase == 3 || prefs(c).getString("played", "") != marker)) {
-            // Never catch up finite clips more than 90 seconds late.
-            val late = now - b.optLong("acceptedMs") - (if (phase == 1) 600000 else if (phase == 2) 900000 else 1200000)
-            if (phase == 3 || late <= 90000) {
-                try {
-                    if (!NotificationManagerCompat.from(c).areNotificationsEnabled()) { fallback(c); return }
-                    val intent = Intent(c, StartOtpAlarmService::class.java).putExtra("booking", b.optString("id")).putExtra("loop", phase == 3)
-                    if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(intent) else c.startService(intent)
-                    prefs(c).edit().putString("played", marker).apply()
-                } catch (_: Exception) { fallback(c) }
-            }
-        }
+        // Arm the next milestone BEFORE any permission/start failure can return.
         if (phase < 3) arm(c, StartOtpAlarmRules.nextAt(b.optLong("acceptedMs"), now)-now) else cancelTimer(c)
+        if (StartOtpAlarmRules.shouldPlay(b.optLong("acceptedMs"), now, prefs(c).getString("played", "") == marker)) {
+            if (StartOtpAlarmService.active?.isPlaying(b.optString("id"), phase == 3) == true) return
+                try {
+                    if (!NotificationManagerCompat.from(c).areNotificationsEnabled()) { playbackFailed(c); return }
+                    // A watchdog retries a refused/killed start; only real playback marks a clip played.
+                    arm(c, 30000)
+                    val intent = Intent(c, StartOtpAlarmService::class.java).putExtra("booking", b.optString("id")).putExtra("loop", phase == 3).putExtra("marker", marker)
+                    if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(intent) else c.startService(intent)
+                } catch (_: Exception) { playbackFailed(c) }
+        }
+    }
+    @Synchronized fun playbackAllowed(c: Context, id: String, marker: String): Boolean {
+        val now = serverNow(c)
+        if (now <= 0 || prefs(c).getLong("silenceUntil", 0) > now) return false
+        val data = rows(c)
+        for (i in 0 until data.length()) {
+            val b = data.getJSONObject(i)
+            if (b.optString("id") == id && marker == "$id:${b.optLong("acceptedMs")}:${StartOtpAlarmRules.phase(b.optLong("acceptedMs"), now)}")
+                return StartOtpAlarmRules.shouldPlay(b.optLong("acceptedMs"), now, prefs(c).getString("played", "") == marker)
+        }
+        return false
+    }
+    @Synchronized fun playbackStarted(c: Context, id: String, marker: String) {
+        if (!playbackAllowed(c, id, marker)) return
+        prefs(c).edit().putString("played", marker).apply()
+        // Replace the retry watchdog with the next milestone (or no timer for a healthy loop).
+        evaluate(c, false)
+    }
+    @JvmOverloads fun playbackFailed(c: Context, marker: String? = null) {
+        if (rows(c).length() == 0) return
+        // An audio error after start is not a successfully finished finite clip.
+        if (marker != null && prefs(c).getString("played", "") == marker) prefs(c).edit().remove("played").apply()
+        fallback(c)
+        if (serverNow(c) > 0) arm(c, 30000)
     }
     fun silence(c: Context) {
         prefs(c).edit().putLong("silenceUntil", serverNow(c) + 300000L).apply()

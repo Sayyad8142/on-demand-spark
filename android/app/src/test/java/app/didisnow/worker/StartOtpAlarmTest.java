@@ -55,4 +55,34 @@ public class StartOtpAlarmTest {
         StartOtpAlarmEngine.INSTANCE.silence(c);
         assertEquals(1300000,p.getLong("silenceUntil",0)); assertEquals("[{\"id\":\"b\"}]",p.getString("rows",""));
     }
+    @Test public void queuedPlaybackCannotRestartAfterCancellation() {
+        p.edit().putLong("server",601000).putLong("elapsed",SystemClock.elapsedRealtime())
+            .putString("rows","[{\"id\":\"b\",\"acceptedMs\":1000}]").commit();
+        assertTrue(StartOtpAlarmEngine.INSTANCE.playbackAllowed(c,"b","b:1000:1"));
+        StartOtpAlarmEngine.INSTANCE.cancel(c,"b");
+        assertFalse(StartOtpAlarmEngine.INSTANCE.playbackAllowed(c,"b","b:1000:1"));
+    }
+    @Test public void signedOutReconcileReleasesReceiverImmediately() {
+        java.util.concurrent.atomic.AtomicInteger released = new java.util.concurrent.atomic.AtomicInteger();
+        StartOtpAlarmEngine.INSTANCE.reconcile(c,false,() -> { released.incrementAndGet(); return kotlin.Unit.INSTANCE; });
+        assertEquals(1,released.get());
+    }
+    @Test public void audioErrorDoesNotRetainSuccessfulPlaybackMarker() {
+        p.edit().putLong("server",601000).putLong("elapsed",SystemClock.elapsedRealtime())
+            .putString("rows","[{\"id\":\"b\",\"acceptedMs\":1000}]").putString("played","b:1000:1").commit();
+        StartOtpAlarmEngine.INSTANCE.playbackFailed(c,"b:1000:1");
+        assertFalse(p.contains("played"));
+        assertTrue(StartOtpAlarmEngine.INSTANCE.playbackAllowed(c,"b","b:1000:1"));
+    }
+    @Test public void normalCancellationPushRetiresAlarmWithoutWebView() throws Exception {
+        p.edit().putString("rows","[{\"id\":\"b1\"},{\"id\":\"b2\"}]").commit();
+        MyFirebaseService service = org.robolectric.Robolectric.buildService(MyFirebaseService.class).create().get();
+        java.lang.reflect.Method ended = MyFirebaseService.class.getDeclaredMethod("releaseEndedBooking",String.class);
+        ended.setAccessible(true);
+        ended.invoke(service,"b1");
+        JSONArray remaining = new JSONArray(p.getString("rows","[]"));
+        assertEquals(1,remaining.length());
+        assertEquals("b2",remaining.getJSONObject(0).getString("id"));
+        assertTrue(p.getStringSet("stopped",java.util.Collections.emptySet()).contains("b1"));
+    }
 }

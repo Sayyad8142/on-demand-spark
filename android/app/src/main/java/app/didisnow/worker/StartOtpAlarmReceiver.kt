@@ -1,11 +1,31 @@
 package app.didisnow.worker
 import android.content.*
+import android.os.Handler
+import android.os.Looper
+import java.util.concurrent.atomic.AtomicBoolean
 
 class StartOtpAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, intent: Intent) {
         when (intent.action) {
             "SILENCE" -> StartOtpAlarmEngine.silence(c)
-            "TIMER" -> StartOtpAlarmEngine.reconcile(c, false)
+            "TIMER" -> {
+                // Keep the receiver's process alive during the asynchronous server read.
+                // A hard bound respects Android's broadcast deadline even if the network stalls.
+                val pending = goAsync()
+                val done = AtomicBoolean(false)
+                val handler = Handler(Looper.getMainLooper())
+                val finish = Runnable { if (done.compareAndSet(false, true)) pending?.finish() }
+                handler.postDelayed(finish, 9000)
+                try {
+                    StartOtpAlarmEngine.reconcile(c.applicationContext, false) {
+                        handler.removeCallbacks(finish)
+                        finish.run()
+                    }
+                } catch (_: Exception) {
+                    handler.removeCallbacks(finish)
+                    finish.run()
+                }
+            }
             else -> {
                 // Purge legacy schedules before dependency restore; new queue never replays finite clips.
                 val store = c.getSharedPreferences("NOTIFICATION_STORE", Context.MODE_PRIVATE)

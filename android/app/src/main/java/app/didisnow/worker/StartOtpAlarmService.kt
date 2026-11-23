@@ -28,20 +28,27 @@ class StartOtpAlarmService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val id = intent?.getStringExtra("booking") ?: return START_NOT_STICKY
         val loop = intent.getBooleanExtra("loop", false)
+        val marker = intent.getStringExtra("marker") ?: return START_NOT_STICKY
         if (player != null && booking == id && continuous == loop) return START_NOT_STICKY
+        // A cancel/account change may have arrived after the service Intent was queued.
+        if (!StartOtpAlarmEngine.playbackAllowed(this, id, marker)) { stopAudio(); stopSelf(); return START_NOT_STICKY }
         stopAudio(); booking = id
         continuous = loop
         try {
             val mp = MediaPlayer()
+            player = mp
             mp.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
             resources.openRawResourceFd(R.raw.start_otp_voice).use { fd -> mp.setDataSource(fd.fileDescriptor, fd.startOffset, fd.length) }
             mp.isLooping = loop
             mp.setWakeMode(this, android.os.PowerManager.PARTIAL_WAKE_LOCK)
-            mp.setOnCompletionListener { stopSelf() }; mp.setOnErrorListener { _,_,_ -> stopSelf(); true }
-            mp.prepare(); player = mp; mp.start()
-        } catch (_: Exception) { stopSelf(); StartOtpAlarmEngine.fallback(this) }
+            mp.setOnCompletionListener { stopAudio(); stopSelf() }
+            mp.setOnErrorListener { _,_,_ -> stopAudio(); stopSelf(); StartOtpAlarmEngine.playbackFailed(this, marker); true }
+            mp.prepare(); mp.start()
+            StartOtpAlarmEngine.playbackStarted(this, id, marker)
+        } catch (_: Exception) { stopAudio(); stopSelf(); StartOtpAlarmEngine.playbackFailed(this, marker) }
         return START_NOT_STICKY
     }
+    fun isPlaying(id: String, loop: Boolean): Boolean = booking == id && continuous == loop && player?.isPlaying == true
     fun stopBooking(id: String) { if (booking == id) { stopAudio(); stopSelf() } }
     fun stopIfDifferent(id: String) { if (booking != id) { stopAudio(); stopSelf() } }
     fun silenceImmediately() { stopAudio(); stopSelf() }

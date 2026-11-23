@@ -581,6 +581,8 @@ public class MyFirebaseService extends FirebaseMessagingService {
 
   private void releaseEndedBooking(String bookingId) {
     if (bookingId == null || bookingId.isEmpty()) return;
+    // Both cancellation and reassignment must silence OTP audio without a live WebView.
+    StartOtpAlarmEngine.INSTANCE.cancel(getApplicationContext(), bookingId);
     OfferQueue.INSTANCE.releaseEndedBooking(getApplicationContext(), bookingId);
     Intent ended = new Intent("DIDI_BOOKING_ENDED");
     ended.putExtra("booking_id", bookingId);

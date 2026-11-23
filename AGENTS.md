@@ -40,3 +40,4 @@
 - Practice bookings: local `practiceBooking.ts`; `PRACTICE_PUSH_ENABLED` stays off until approved. Pilot builds send only via `practiceTestBuild.ts`. Sender rules: `docs/test-booking-training-2026-11-11/sender/AGENTS.md`. Unknown sends retain receipt polling; native practice skips BackendSync/OfferQueue and yields to real offers. Why: never touch real bookings/payments.
 - Alerts: nativeOverlayPayload + AlertPresentationRules + BookingNotifications; expiry/visible-only ACK. Why: no false claims.
 - Native 10-min alert lock: released only on server-confirmed end of that booking (`bookingEndRelease.ts`). Why: finished bookings must not block offers or touch dispatch.
+- Alarm retries require playback ACKs. Why: queued starts may fail.

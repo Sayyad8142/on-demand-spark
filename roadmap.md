@@ -1,5 +1,11 @@
 # Worker language translation
 
+## Start OTP alarm audit — 23 Nov, no publication
+- [x] Audit completed; alarm-only cancellation/reassignment stops, playback-confirmed retry, queued-start guard and bounded asynchronous timer-receiver lifetime prepared; countdown/OTP/dispatch/payouts unchanged. Report: docs/start-otp-alarm-audit-2026-11-23.md.
+- [x] 799 app tests and 7 actual Java alarm-rule tests passed; preview build OK; no hook error reproduced.
+- [ ] Full Android compilation/service regressions — blocked: missing Android SDK; Gradle test attempt stopped before compilation, new Robolectric tests remain unexecuted.
+- [ ] Physical Android verification — blocked: no attached Android device/current signed APK; do not infer device results from automated tests.
+
 ## Home YouTube Shorts player — 23 Nov, no publication
 - [x] Flow sweep: Home player/slot/parser, refresh/background/offer guards, routing, academy schema, native packaging and hosted Admin settings/function checked by source/search/tests; full evidence in home-youtube-shorts report. Live Admin rejects URLs; Android verifier fails on stale assets. No out-of-scope fixes.
 - [x] Prepare official Shorts-link detection and centered 9:16 player; normal links/IDs retain 16:9; all visibility and booking rules preserved.
