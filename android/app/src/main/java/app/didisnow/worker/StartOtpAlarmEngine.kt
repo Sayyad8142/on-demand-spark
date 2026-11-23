@@ -144,8 +144,6 @@ object StartOtpAlarmEngine {
         else am.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, at, timer(c))
     }
     @Synchronized fun evaluate(c: Context, blockedRestore: Boolean) {
-        val now = serverNow(c)
-        if (blockedRestore || now <= 0) { fallback(c); return }
         val data = rows(c)
         var selected: JSONObject? = null
         for (i in 0 until data.length()) {
@@ -153,6 +151,8 @@ object StartOtpAlarmEngine {
             if (selected == null || b.optLong("acceptedMs") < selected.optLong("acceptedMs")) selected = b
         }
         if (selected == null) { cancelTimer(c); StartOtpAlarmService.active?.silenceImmediately(); c.stopService(Intent(c, StartOtpAlarmService::class.java)); NotificationManagerCompat.from(c).cancel(NOTIFICATION); return }
+        val now = serverNow(c)
+        if (blockedRestore || now <= 0) { fallback(c); return }
         val b = selected
         StartOtpAlarmService.active?.stopIfDifferent(b.optString("id"))
         val phase = StartOtpAlarmRules.phase(b.optLong("acceptedMs"), now)

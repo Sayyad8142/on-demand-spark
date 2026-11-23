@@ -32,6 +32,7 @@ class StartOtpAlarmService : Service() {
         if (player != null && booking == id && continuous == loop) return START_NOT_STICKY
         // A cancel/account change may have arrived after the service Intent was queued.
         if (!StartOtpAlarmEngine.playbackAllowed(this, id, marker)) { stopAudio(); stopSelf(); return START_NOT_STICKY }
+        CancellationVoicePlugin.yieldOtpSpeechToStartAlarm()
         stopAudio(); booking = id
         continuous = loop
         try {
@@ -52,7 +53,13 @@ class StartOtpAlarmService : Service() {
     fun stopBooking(id: String) { if (booking == id) { stopAudio(); stopSelf() } }
     fun stopIfDifferent(id: String) { if (booking != id) { stopAudio(); stopSelf() } }
     fun silenceImmediately() { stopAudio(); stopSelf() }
-    private fun stopAudio() { try { player?.stop(); player?.release() } catch (_: Exception) {} finally { player = null } }
+    private fun stopAudio() {
+        val previous = player
+        player = null
+        try { previous?.stop() } catch (_: Exception) {}
+        // stop() can throw after prepare fails; release must still happen.
+        try { previous?.release() } catch (_: Exception) {}
+    }
     override fun onDestroy() {
         stopAudio(); scheduler.shutdownNow()
         network?.let { try { (getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager).unregisterNetworkCallback(it) } catch (_: Exception) {} }

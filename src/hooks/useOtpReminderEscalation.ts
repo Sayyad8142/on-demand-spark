@@ -11,7 +11,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { completionReminderAllowed } from "@/lib/startOtpAlarm";
+import { completionReminderAllowed, hasPendingStartOtp } from "@/lib/startOtpAlarm";
 
 const ACTIVE_STATUSES = [
   "accepted",
@@ -125,7 +125,7 @@ export function useOtpReminderEscalation(userId: string | undefined) {
           .from("bookings")
           .select("id, status, accepted_at, otp_verified_at,start_otp_required,started_at")
           .eq("worker_id", workerId)
-          .in("status", ACTIVE_STATUSES)
+          .in("status", [...ACTIVE_STATUSES, "assigned"])
           .limit(20);
 
         if (error) {
@@ -134,12 +134,21 @@ export function useOtpReminderEscalation(userId: string | undefined) {
         }
         if (cancelled || !data) return;
 
+        // Start takes precedence across ALL the worker's jobs, not just the same row.
+        if (hasPendingStartOtp(data)) {
+          setPendingBookings([]);
+          window.dispatchEvent(new Event("startOtpAlarmPending"));
+          return;
+        }
+
         const now = Date.now();
         const activeIds = new Set<string>();
         const pending: OtpPendingBooking[] = [];
 
         for (const b of data) {
           activeIds.add(b.id);
+          // Assigned rows were read only to check Start priority; retain legacy completion rules.
+          if (!ACTIVE_STATUSES.includes(b.status)) continue;
           if (!completionReminderAllowed(b.start_otp_required, b.started_at)) continue;
           const accepted = b.accepted_at ? new Date(b.accepted_at).getTime() : 0;
           if (!accepted) continue;

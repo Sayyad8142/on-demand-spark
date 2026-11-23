@@ -33,6 +33,7 @@ import java.util.Locale;
  */
 @CapacitorPlugin(name = "CancellationVoice")
 public class CancellationVoicePlugin extends Plugin {
+    private static CancellationVoicePlugin activePlugin;
     private static final String TAG = "CancelVoice";
     private static final String UTTER_ID = "didi_cancel";
 
@@ -52,6 +53,7 @@ public class CancellationVoicePlugin extends Plugin {
     @Override
     public void load() {
         super.load();
+        activePlugin = this;
         Context ctx = getContext().getApplicationContext();
         tts = new TextToSpeech(ctx, status -> {
             if (status == TextToSpeech.SUCCESS) {
@@ -110,7 +112,7 @@ public class CancellationVoicePlugin extends Plugin {
 
         String text = call.getString("text");
         // Completion OTP speech yields to the independent Start alarm player.
-        if (text != null && text.startsWith("OTP") && StartOtpAlarmService.Companion.getActive() != null) {
+        if (StartOtpAlarmRules.shouldYieldSpeech(text) && StartOtpAlarmService.Companion.getActive() != null) {
             JSObject ret = new JSObject();
             ret.put("started", false);
             ret.put("reason", "start_alarm_active");
@@ -148,6 +150,12 @@ public class CancellationVoicePlugin extends Plugin {
     public void stop(PluginCall call) {
         stopInternal();
         call.resolve();
+    }
+
+    /** Start's player must preempt already-running completion OTP speech, not cancellation voice. */
+    public static void yieldOtpSpeechToStartAlarm() {
+        CancellationVoicePlugin plugin = activePlugin;
+        if (plugin != null && plugin.speaking && StartOtpAlarmRules.shouldYieldSpeech(plugin.phrase)) plugin.stopInternal();
     }
 
     private void speakOnce() {
@@ -298,6 +306,7 @@ public class CancellationVoicePlugin extends Plugin {
 
     @Override
     protected void handleOnDestroy() {
+        if (activePlugin == this) activePlugin = null;
         stopInternal();
         try { if (tts != null) { tts.shutdown(); } } catch (Exception ignored) {}
         super.handleOnDestroy();

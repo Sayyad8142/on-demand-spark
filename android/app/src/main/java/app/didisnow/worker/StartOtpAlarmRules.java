@@ -3,6 +3,9 @@ package app.didisnow.worker;
 /** Pure reminder-only rules. Never authorize booking changes or inspect OTP digits. */
 public final class StartOtpAlarmRules {
     private StartOtpAlarmRules() {}
+    public static boolean shouldYieldSpeech(String phrase) {
+        return phrase != null && phrase.startsWith("OTP");
+    }
     public static boolean eligible(String status, boolean required, boolean started, String assigned, String worker) {
         return required && !started && worker != null && worker.equals(assigned)
             && ("assigned".equals(status) || "accepted".equals(status) || "on_the_way".equals(status));

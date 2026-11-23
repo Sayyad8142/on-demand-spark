@@ -2,7 +2,7 @@
 
 ## Result
 
-Alarm-only repairs are prepared in source. **Android phone playback is NOT VERIFIED.** No APK/AAB was generated or published; no production backend, countdown, OTP verification, dispatch, availability, login or payout code was changed.
+Alarm-only repairs are prepared in source. **Android phone playback is NOT VERIFIED.** No release APK/AAB was built or published; no production backend, countdown, OTP verification, dispatch, availability, login or payout code was changed.
 
 ## SOURCE audit
 
@@ -27,17 +27,51 @@ Alarm-only repairs are prepared in source. **Android phone playback is NOT VERIF
 4. Failed audio is released immediately. An audio error removes only its own playback marker, permitting bounded finite retry; one player prevents concurrent OTP clips.
 5. A queued service intent checks the current booking queue/phase/silence state before playback, so cancellation or account changes cannot revive a retired booking.
 6. Timer broadcasts now hold a `goAsync` pending result during reconciliation, release it after evaluation (including failures/account changes), and enforce a nine-second broadcast deadline. Previously the receiver returned while all server reads were still pending, allowing Android to reclaim its process.
+7. Follow-up sweep: empty queues now clear the pending notification even without a valid server clock; failed `stop()` cannot skip player release; completion reminders yield across this worker's jobs, and native Start playback preempts already-running completion OTP speech without stopping cancellation speech.
 
-## TEST — executed this turn
+## Follow-up SOURCE inventory — each listed path was read
+
+Rule: the worker's pending Start OTP uses acceptance-based 10/15/20-minute milestones, one non-overlapping player, and booking-scoped stops on confirmed Start/end; reopening never resets the deadline.
+
+| Screen / flow / job / function | Code read | Verdict |
+|---|---|---|
+| Home active booking / countdown / Start button | `Home.tsx`, `ActiveJobCard.tsx`, `StartOtpCountdownCard.tsx`, `bookingCardDetails.ts`, `startOtpReminder.ts` | Same acceptance timestamp; display-only, no audio scheduling; unchanged. |
+| My Bookings history | `Bookings.tsx` | Only completed/cancelled rows; does not schedule alarms. Settled records and payouts unchanged. |
+| Start OTP entry, success, wrong OTP, legacy/V2 branches | `StartBooking.tsx`, `startOtp.ts`, `startOtpAlarm.ts` | Confirmed success emits booking-scoped stop; wrong OTP does not. Authorization unchanged. |
+| End OTP / completion / return to Home | `CompleteBooking.tsx` guards and completion event paths | Pending flagged Start redirects to Start; confirmed completion events stop by booking ID; unchanged. |
+| Global manager on every signed-in route, realtime, resume/reconnect | `App.tsx` reminder mount/listeners, `StartOtpReminderManager.tsx`, `useActiveJob.ts` | Shared account-scoped manager; stop events and refreshes wired. No screen-specific second Start scheduler. |
+| Completion reminder banner/popup/voice | `useOtpReminderEscalation.ts`, `OtpPendingBanner.tsx`, `otpReminderVoice.ts`, `App.tsx` listeners | Per-row suppression missed a different pending Start; repaired shared poll arbitration. Legacy 60/10-minute cadence unchanged. |
+| Native completion TTS versus Start media | `CancellationVoicePlugin.java`, `StartOtpAlarmService.kt` | Existing speak-time guard did not stop already-running completion speech; repaired proactive OTP-only preemption and failed-player release. Cancellation speech preserved. |
+| Logout / account transition | `AuthContext.tsx` sign-out path; manager cleanup; engine configure/stopAll | Native stop precedes network logout cleanup; queue cleared on account change; unchanged. |
+| Native overlay Accept and separate notification/activity Accept | `BookingOverlayService.kt` confirmed-success block, `BookingAlertActivity.kt` acceptance block | Both wake shared engine only after confirmed acceptance; dispatch/Accept behavior unchanged. |
+| Foreground/tapped cancellation and reassignment; closed-app pushes | `native/push.ts`, `lib/fcm.ts`, `MyFirebaseService.java` handlers, `StartOtpReminderCanceller.java`, `BackendSync.kt` identity resolver, MainActivity registration/broadcast references | Ordinary end pushes now retire native queue; dedicated cancel checks login UID (despite resolver's old worker-ID comment), matching sender UID. No identity/auth change needed. |
+| Native timer, retry, continuous playback, notification silence | `StartOtpAlarmEngine.kt`, `StartOtpAlarmRules.java`, `StartOtpAlarmReceiver.kt`, `StartOtpAlarmPlugin.kt`, `native/startOtpAlarm.ts` | One queue/player; retry/cancel guards repaired. Empty queue no longer posts a pending alarm with an invalid clock. Permissions/silence unchanged. |
+| Reboot/update and token recovery jobs | `StartOtpAlarmReceiver.kt`, `BootReceiver.kt`, `FcmBootSyncWorker.kt` | Alarm clock invalidated on reboot; no automatic boot media service; token recovery does not schedule separate Start audio. |
+| Cancellation screen / browser cancellation voice | `BookingCancellationActivity.java`, `cancellationVoice.ts`, `App.tsx` cancellation listeners | Separate cancellation audio; ordinary native end push now stops that booking's OTP player before cancellation presentation. Unrelated cancellation features unchanged. |
+| Practice Start/End OTP | `TestBooking.tsx`, `practiceBooking.ts`, practice notification references | Local practice state/1234 does not invoke real OTP or Start alarm scheduling; example data unchanged. |
+| DB Start verifier | `20261028130323_...sql` `verify_start_otp` definition | Repo SOURCE updates server `started_at` only after correct code; wrong code does not. Hosted definition not verified; no DB changes. |
+| DB stop trigger and sender | `20261103205645_...sql` `notify_start_otp_reminder_cancel`, `send-fcm/index.ts` reminder payload branch | SOURCE sends booking-scoped stop to old worker on verified Start/end/reassignment; data-only payload with server UID. Hosted deployment/delivery not verified; no edge file edited. |
+| Admin delayed/urgent flag cron | Same migration's `refresh_start_otp_flags`; `adminFlagLevel` helper | SQL uses acceptance **or assignment**; helper/phone are acceptance-only. This is Admin follow-up timing, not the phone audio timer; left untouched because backend/settings changes are outside this request. |
+| Android registration / manifest / packaging | MainActivity plugin-registration block, app manifest, `capacitor.config.ts`; normal Gradle test guard output | Plugin registered, media/wake/exact permissions present and unchanged. Normal packaging remains blocked by stale bundled web assets. |
+
+## PRIOR tests — initial audit
 
 - `bun run test`: **799 tests passed across 72 files** (includes existing countdown, Start OTP and alarm contract coverage).
 - Java 21 compilation + JUnitCore against the **actual native `StartOtpAlarmRules.java`**: **7 tests passed**. These cover the exact 10/15/20-minute boundaries, continuous mode, finite retry versus duplicate success, late reopening, verified versus incorrect OTP state, and cancellation eligibility.
 - Preview build log: **build OK**; `use-mobile.tsx` already imports React hooks explicitly, and the quoted UMD-global diagnostic was not reproduced. No fake hook fix was applied.
 - `git diff --check`: passed.
 
+## TEST — follow-up sweep
+
+- Full app suite: **805 tests passed across 73 files**, including cross-booking completion suppression and restoration after verified Start.
+- Temporarily supplied Java 21 / Android SDK under `/tmp` without project settings changes. Kotlin and Java Android code compiled successfully.
+- Full native unit suite: **81 tests passed across 9 suites**, including **29 alarm tests**. Cancellation without a clock, queued-start retirement, audio-error retry, failed-player release and native completion-speech preemption are covered using JVM/Robolectric state tests.
+- Command: `ANDROID_HOME=/tmp/android-sdk-121 ./gradlew :app:testDebugUnitTest -x :app:verifyWorkerWebAssets` (Java 21 supplied externally). **Only the asset guard was excluded for native unit testing; the release guard itself was not edited, and no release was packaged.** These tests do not verify current web assets inside an APK or physical sound/FCM delivery.
+- The normal, unmodified Gradle test path was attempted first and refused stale Android web assets. A local current web build + Capacitor sync is still required before any usable test/release APK.
+
 ## NOT VERIFIED / remaining blockers
 
-- Full Android test command was attempted with Java 21: `./gradlew :app:testDebugUnitTest --tests 'app.didisnow.worker.StartOtpAlarmTest' --tests 'app.didisnow.worker.StartOtpAlarmRulesTest'`. It stopped before compilation because the **Android SDK is absent**. New service-state/cancellation Robolectric regressions are retained in the project but **have not run**. Full Kotlin/Android compilation is therefore unverified this turn.
+- Initial missing-SDK blocker was resolved for native-only compilation/tests using temporary tools; **normal Android packaging remains blocked by stale web assets**. No release APK/AAB or upgraded installation was verified.
 - No attached Android device, current signed APK or unmanaged signed-in worker session is available. Foreground/background/locked-screen sound, genuine FCM receipt, countdown-to-alarm integration and immediate physical silence are **not device verified**.
 - Android 12+ background foreground-service starts can be refused; denied exact-alarm access/Doze can delay delivery. Notification fallback and retry cannot bypass these restrictions. Exact locked-screen timing is not guaranteed.
 - The receiver-lifetime repair still needs Android lifecycle testing. Its nine-second bound does not guarantee that three slow server requests finish before Android's deadline; poor connectivity/platform background restrictions can still prevent a cold alarm delivery.

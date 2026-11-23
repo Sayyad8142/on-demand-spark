@@ -1,9 +1,11 @@
 # Worker language translation
 
 ## Start OTP alarm audit — 23 Nov, no publication
+- [x] Follow-up flow sweep: screen/voice/native/reboot/server SOURCE inventory recorded; empty-queue notification, failed-player release and cross-job/native OTP-speech overlap repaired; no backend/countdown/OTP/dispatch/payout/permission changes.
 - [x] Audit completed; alarm-only cancellation/reassignment stops, playback-confirmed retry, queued-start guard and bounded asynchronous timer-receiver lifetime prepared; countdown/OTP/dispatch/payouts unchanged. Report: docs/start-otp-alarm-audit-2026-11-23.md.
 - [x] 799 app tests and 7 actual Java alarm-rule tests passed; preview build OK; no hook error reproduced.
-- [ ] Full Android compilation/service regressions — blocked: missing Android SDK; Gradle test attempt stopped before compilation, new Robolectric tests remain unexecuted.
+- [x] Follow-up: 805 app / 81 native tests passed (29 alarm tests); Android Kotlin/Java compiled with temporary SDK. Native tests excluded only the unchanged web-asset guard, never packaged a release.
+- [ ] Normal Android packaging — blocked: guard detects stale bundled web assets; requires current local web build and Capacitor sync.
 - [ ] Physical Android verification — blocked: no attached Android device/current signed APK; do not infer device results from automated tests.
 
 ## Home YouTube Shorts player — 23 Nov, no publication

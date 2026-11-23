@@ -67,6 +67,42 @@ public class StartOtpAlarmTest {
         StartOtpAlarmEngine.INSTANCE.reconcile(c,false,() -> { released.incrementAndGet(); return kotlin.Unit.INSTANCE; });
         assertEquals(1,released.get());
     }
+    @Test public void cancellationWithoutServerClockDoesNotLeavePendingNotification() {
+        p.edit().putString("rows","[{\"id\":\"b\"}]").commit();
+        StartOtpAlarmEngine.INSTANCE.fallback(c);
+        StartOtpAlarmEngine.INSTANCE.cancel(c,"b");
+        org.robolectric.shadows.ShadowLooper.idleMainLooper();
+        android.app.NotificationManager manager = (android.app.NotificationManager)c.getSystemService(Context.NOTIFICATION_SERVICE);
+        assertEquals(0,org.robolectric.Shadows.shadowOf(manager).getAllNotifications().size());
+    }
+    @Test public void failedPlayerIsReleasedEvenWhenStopThrows() throws Exception {
+        android.media.MediaPlayer mp = new android.media.MediaPlayer() {
+            @Override public void stop() { throw new IllegalStateException("prepare failed"); }
+        };
+        StartOtpAlarmService service = new StartOtpAlarmService();
+        java.lang.reflect.Field player = StartOtpAlarmService.class.getDeclaredField("player");
+        player.setAccessible(true); player.set(service,mp);
+        java.lang.reflect.Method stop = StartOtpAlarmService.class.getDeclaredMethod("stopAudio");
+        stop.setAccessible(true); stop.invoke(service);
+        assertNull(player.get(service));
+        assertEquals(org.robolectric.shadows.ShadowMediaPlayer.State.END,org.robolectric.Shadows.shadowOf(mp).getState());
+    }
+    @Test public void alreadyRunningCompletionSpeechYieldsButCancellationSpeechIsPreserved() throws Exception {
+        CancellationVoicePlugin plugin = new CancellationVoicePlugin();
+        java.lang.reflect.Field active = CancellationVoicePlugin.class.getDeclaredField("activePlugin");
+        java.lang.reflect.Field speaking = CancellationVoicePlugin.class.getDeclaredField("speaking");
+        java.lang.reflect.Field phrase = CancellationVoicePlugin.class.getDeclaredField("phrase");
+        active.setAccessible(true); speaking.setAccessible(true); phrase.setAccessible(true);
+        Object previous = active.get(null);
+        try {
+            active.set(null,plugin); speaking.set(plugin,true); phrase.set(plugin,"OTP, OTP, please enter OTP.");
+            CancellationVoicePlugin.yieldOtpSpeechToStartAlarm();
+            assertFalse(speaking.getBoolean(plugin));
+            speaking.set(plugin,true); phrase.set(plugin,"Booking cancelled. Booking cancelled.");
+            CancellationVoicePlugin.yieldOtpSpeechToStartAlarm();
+            assertTrue(speaking.getBoolean(plugin));
+        } finally { active.set(null,previous); }
+    }
     @Test public void audioErrorDoesNotRetainSuccessfulPlaybackMarker() {
         p.edit().putLong("server",601000).putLong("elapsed",SystemClock.elapsedRealtime())
             .putString("rows","[{\"id\":\"b\",\"acceptedMs\":1000}]").putString("played","b:1000:1").commit();

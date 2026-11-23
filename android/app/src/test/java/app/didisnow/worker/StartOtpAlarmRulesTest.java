@@ -6,6 +6,11 @@ import static org.junit.Assert.*;
 /** JVM tests of the actual native rules; not Android audio/device verification. */
 public class StartOtpAlarmRulesTest {
     private static final long ACCEPTED = 1000L;
+    @Test public void onlyCompletionOtpSpeechYieldsNotCancellationVoice() {
+        assertTrue(StartOtpAlarmRules.shouldYieldSpeech("OTP, OTP, please enter OTP."));
+        assertFalse(StartOtpAlarmRules.shouldYieldSpeech("Booking cancelled. Booking cancelled."));
+        assertFalse(StartOtpAlarmRules.shouldYieldSpeech(null));
+    }
     @Test public void firstAlarmAtTenMinutesNotBefore() {
         assertFalse(StartOtpAlarmRules.shouldPlay(ACCEPTED, ACCEPTED + 599999, false));
         assertTrue(StartOtpAlarmRules.shouldPlay(ACCEPTED, ACCEPTED + 600000, false));

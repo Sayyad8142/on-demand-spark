@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { completionReminderAllowed, startAlarmPhase } from "../startOtpAlarm";
+import { completionReminderAllowed, hasPendingStartOtp, startAlarmPhase } from "../startOtpAlarm";
 
 const accepted = Date.parse("2026-11-15T04:00:00Z");
 const b = { id: "booking", worker_id: "worker", status: "accepted", start_otp_required: true, started_at: null, accepted_at: new Date(accepted).toISOString() };
@@ -23,5 +23,18 @@ describe("native Start OTP alarm contract", () => {
     expect(completionReminderAllowed(true, null)).toBe(false);
     expect(completionReminderAllowed(true, b.accepted_at)).toBe(true);
     expect(completionReminderAllowed(false, null)).toBe(true);
+  });
+  it("an older job's completion speech yields to a different pending Start", () => {
+    const newJob = { ...b, id: "new-job" };
+    expect(hasPendingStartOtp([{ ...b, status: "started", started_at: b.accepted_at }, newJob])).toBe(true);
+  });
+  it("assigned Start also wins before a player has started", () => {
+    expect(hasPendingStartOtp([{ ...b, status: "assigned" }])).toBe(true);
+  });
+  it("completion speech may resume after verified Start", () => {
+    expect(hasPendingStartOtp([{ ...b, status: "started", started_at: b.accepted_at }])).toBe(false);
+  });
+  it("cancelled Start does not suppress another job's completion reminder", () => {
+    expect(hasPendingStartOtp([{ ...b, status: "cancelled" }])).toBe(false);
   });
 });
