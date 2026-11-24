@@ -18,6 +18,20 @@ Status: **PREPARED in Worker App source; backend NOT changed; nothing published.
 3. Add `get_my_offer_status` + `_favorite_v1_offer`; then the app flag can be enabled in a later release.
 4. Certify that operating hours, approval, payout, availability, eligibility, favorite reservation and assignment rules are unchanged (they remain in `accept_booking_authoritative`).
 5. Leave `accept_booking` without a worker grant (unused) and resolve the worker UPDATE policy on `booking_requests` (F2).
+6. `atomic_accept_booking` is still executable by logged-in workers and reaches `accept_booking_authoritative` without the strict expiry check. No Worker App build calls it (checked source and 10.0.05). Route it through the hardened checks or remove the worker grant, otherwise a hand-made request can still accept an expired offer.
 
 ## NOT VERIFIED
 Physical phone flows (locked screen, app killed, background, reconnect, two phones racing), authenticated end-to-end acceptance against the hardened backend, Play-installed 10.0.05 behavior (only its source was checked).
+
+## Sweep — every Accept path (SOURCE, read this turn)
+| Path | Endpoint / expiry |
+|---|---|
+| Home offer hook (`useUnifiedBookingAlerts` → `tryAccept`) | try_accept_booking; original deadline + request id |
+| App deep link (`App.tsx` → `tryAccept`) | same |
+| Web FCM / realtime / poller (`fcm.ts`, coordinator → `recoverOfferDeadline`) | no Accept of its own; recovery via the shared reader |
+| Native Activity + Overlay service | `OfferAcceptanceContract.rpc()` after `OwnOfferPreflight` |
+| Native FCM receiver, Activity/Overlay reopen (`OfferTimer.recover`) | shared `OwnOfferPreflight` |
+| Tray notification | opens the Activity; no direct Accept action |
+| Database: `try_accept_booking` | app endpoint; hardening staged |
+| Database: `accept_booking` | not executable by workers; unused |
+| Database: `atomic_accept_booking` | executable by workers, unused by the app, no strict expiry — item 6 |
