@@ -9,6 +9,8 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { offerGenerationKey } from "@/lib/offerGeneration";
+import { recoverOfferDeadline } from '@/lib/authoritativeOffer';
+import { wasOfferPresented, rememberOfferPresentation } from '@/lib/offerReplay';
 import {
   canShowWorkerBookingOffer,
   isBeforeScheduledDispatchWindow,
@@ -92,9 +94,12 @@ export function retireOfferGeneration(bookingId: string, timeoutAt?: string) {
   const currentDeadline = Date.parse(currentAlert?.timeoutAt ?? "");
   const closedDeadline = Date.parse(timeoutAt ?? "");
   if (currentAlert?.bookingId === bookingId && Number.isFinite(closedDeadline) && currentDeadline > closedDeadline) return;
+  try {
+    const plugin = (window as any)?.Capacitor?.Plugins?.OverlayPlugin;
+    plugin?.retireBookingOffer?.({ bookingId, expiresAt: Number.isFinite(closedDeadline) ? Math.floor(closedDeadline / 1000) : 0 })?.catch?.(() => {});
+  } catch { /* native unavailable */ }
   dismissAlert(bookingId);
-  // Native presentation retains its original expiry + server status poll;
-  // cancelBookingOffer would incorrectly mark this whole booking permanently taken.
+  // Retire only this generation; do not permanently mark the booking taken.
 }
 
 /** Offers already invalidated — keeps this idempotent (no repeated toasts). */
@@ -167,6 +172,12 @@ export function invalidateOffer(bookingId: string, bookingRequestId?: string) {
  */
 export async function processIncomingBooking(alert: BookingAlert): Promise<boolean> {
   const { bookingId } = alert;
+  if (alert.requestStatus && !['pending', 'sent', 'queued'].includes(alert.requestStatus)) return false;
+  if (!alert.timeoutAt) {
+    const deadline = await recoverOfferDeadline(bookingId, alert.bookingRequestId);
+    if (!deadline) return false;
+    alert = { ...alert, timeoutAt: deadline };
+  }
   const generation = offerGenerationKey(alert);
   if (invalidatedBookingIds.has(bookingId) || acceptedByMeBookingIds.has(bookingId)) return false;
   if (alert.timeoutAt && (!Number.isFinite(Date.parse(alert.timeoutAt)) || Date.parse(alert.timeoutAt) <= Date.now())) return false;
@@ -202,7 +213,7 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
   }
 
   // Dedup: already shown or currently showing
-  if (shownBookingIds.has(generation)) {
+  if (shownBookingIds.has(generation) || wasOfferPresented(generation)) {
     console.log(`🔕 [Coordinator] Dedup: ${bookingId} already shown (source: ${alert.source})`);
     return false;
   }
@@ -272,6 +283,7 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
   if (alert.timeoutAt && Date.parse(alert.timeoutAt) <= Date.now()) return false;
   if (acceptingBookingIds.size > 0 && !acceptingBookingIds.has(bookingId)) return false;
   shownBookingIds.add(generation);
+  rememberOfferPresentation(generation);
   currentAlert = alert;
 
   console.log(`🔔 [Coordinator] NEW alert: ${bookingId} (source: ${alert.source})`);
@@ -281,17 +293,15 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
   listeners.forEach((l) => l(alert));
 
   // Send delivery "received" acknowledgment (legacy table)
-  sendDeliveryAck(alert, "received");
+  // Polling/realtime recovery is not proof of an FCM receipt.
+  if (alert.source === 'fcm') sendDeliveryAck(alert, "received");
 
   // NOTE: popup_shown is NOT sent here — dispatching an alert is not proof the
   // worker saw it. Presentation paths call markAlertRendered() when the alert
   // is actually on screen (native overlay/activity ack themselves).
 
 
-  // Resolve any pending FCM ack-timeout tracker for this booking.
-  import("@/lib/fcmAckTracker").then(({ resolveFcmOffer }) =>
-    resolveFcmOffer(alert.bookingId, "popup_shown")
-  ).catch(() => {});
+  // Only markAlertRendered / the native visible-popup path resolves popup evidence.
 
   return true;
 }

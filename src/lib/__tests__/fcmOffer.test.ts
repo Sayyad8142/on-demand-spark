@@ -17,8 +17,8 @@ describe('FCM offer wire contract', () => {
   it('preserves ISO expiry aliases', () => {
     expect(fcmOfferDeadline({ timeout_at: new Date(now + 60_000).toISOString() })).toBe(new Date(now + 60_000).toISOString());
   });
-  it('uses original sent time plus TTL, not receipt time', () => {
-    expect(fcmOfferDeadline({ sent_at: now / 1000, ttl_seconds: '60' })).toBe(new Date(now + 60_000).toISOString());
+  it('requires row expiry even when the push has a send timestamp and TTL', () => {
+    expect(fcmOfferDeadline({ sent_at: now / 1000, ttl_seconds: '60' })).toBeUndefined();
   });
   it('never restarts the window on a later tap', () => {
     expect(parseFcmOffer(payload, now + 60_000)).toBeNull();

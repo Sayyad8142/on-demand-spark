@@ -47,6 +47,8 @@ class BookingAlertActivity : AppCompatActivity() {
 
     private val endedReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "DIDI_OFFER_RETIRED" && OfferQueue.isAcceptInFlight(applicationContext, ackBookingId)) return
+            if (intent?.action == "DIDI_OFFER_RETIRED" && !OfferAcceptRules.closureApplies(offerDeadline, intent.getLongExtra("expires_at", 0L))) return
             if (BookingOfferLifecycle.matches(ackBookingId, intent?.getStringExtra("booking_id"))) {
                 countdownHandler?.let { handler ->
                     if (::countdownRunnable.isInitialized) handler.removeCallbacks(countdownRunnable)
@@ -80,7 +82,19 @@ class BookingAlertActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
-            .registerReceiver(endedReceiver, android.content.IntentFilter("DIDI_BOOKING_ENDED"))
+            .registerReceiver(endedReceiver, android.content.IntentFilter("DIDI_BOOKING_ENDED").apply { addAction("DIDI_OFFER_RETIRED") })
+
+        OfferQueue.preserveLiveIntent(applicationContext, intent)
+        if (intent.getLongExtra("expires_at", 0L) <= 0L) {
+            lifecycleScope.launch {
+                val recovered = withContext(Dispatchers.IO) { OfferTimer.recover(applicationContext, intent) }
+                if (isFinishing || isDestroyed) return@launch
+                if (recovered) presentOffer() else finish()
+            }
+        } else presentOffer()
+    }
+
+    private fun presentOffer() {
 
         val bookingId = intent.getStringExtra("booking_id") ?: ""
         val bookingType = intent.getStringExtra("booking_type") ?: "instant"
@@ -193,7 +207,7 @@ class BookingAlertActivity : AppCompatActivity() {
         val btnReject = findViewById<Button>(R.id.btnReject)
 
         // Countdown derived from the authoritative backend offer expiry
-        // (expires_at / sent_at + ttl_seconds), fallback 60s = worker_ttl_seconds.
+        // The recovered/relayed server expiry is the only deadline.
         offerDeadline = OfferTimer.deadlineFrom(intent)
         secondsLeft = OfferTimer.remainingUntil(offerDeadline)
         totalSeconds = maxOf(secondsLeft, OfferTimer.DEFAULT_TTL_SECONDS)
@@ -787,7 +801,7 @@ class BookingAlertActivity : AppCompatActivity() {
                         return@launch
                     }
                     try {
-                        offerDeadline = minOf(offerDeadline, OwnOfferPreflight.deadline(SUPABASE_URL, SUPABASE_ANON_KEY, jwt, bookingId))
+                        offerDeadline = minOf(offerDeadline, OwnOfferPreflight.deadline(SUPABASE_URL, SUPABASE_ANON_KEY, jwt, bookingId, ackRequestId))
                     } catch (e: Exception) {
                         withContext(Dispatchers.Main) {
                             acceptInFlight = false
@@ -798,8 +812,7 @@ class BookingAlertActivity : AppCompatActivity() {
                         }
                         return@launch
                     }
-                    // Call try_accept_booking RPC
-                    val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/try_accept_booking")
+                    val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/${OfferAcceptanceContract.rpc()}")
                     val connection = rpcUrl.openConnection() as HttpURLConnection
                     
                     connection.requestMethod = "POST"

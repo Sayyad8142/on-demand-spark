@@ -5,8 +5,9 @@ public final class AlertPresentationRules {
     private AlertPresentationRules() {}
 
     public static long deadline(long expires, long sent, int ttl, long now) {
-        int safeTtl = ttl >= 1 && ttl <= 600 ? ttl : 60;
-        return expires > 0 ? expires : (sent > 0 ? sent : now) + safeTtl;
+        // Sending/receiving a push is not creation of an offer. Missing expiry
+        // must be recovered from the worker's own server row before presentation.
+        return expires > 0 ? expires : 0;
     }
 
     public static int remaining(long deadline, long now) {

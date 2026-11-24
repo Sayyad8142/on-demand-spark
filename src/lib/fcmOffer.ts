@@ -17,11 +17,6 @@ export function fcmOfferDeadline(data: Record<string, unknown>): string | undefi
   const explicit = data.expires_at ?? data.timeout_at ?? data.timeoutAt;
   let ms = epochMs(explicit);
   if (explicit != null && ms == null) return undefined;
-  if (ms == null) {
-    const sent = epochMs(data.sent_at);
-    const ttl = Number(data.ttl_seconds ?? 60);
-    if (sent != null && Number.isInteger(ttl) && ttl >= 1 && ttl <= 600) ms = sent + ttl * 1000;
-  }
   return ms == null ? undefined : new Date(ms).toISOString();
 }
 

@@ -1,22 +1,28 @@
 package app.didisnow.worker
 
 import android.content.Intent
-import android.util.Log
+import android.content.Context
 
 /**
  * Authoritative offer countdown helper.
  *
- * Backend `worker_ttl_seconds = 60`. The offer lifetime is owned by the backend;
- * the client countdown is purely visual — acceptance is always validated
- * server-side (a late accept is rejected cleanly by the acceptance function).
- *
- * Preferred source of truth (in order):
- *   1. `expires_at`      — epoch seconds of authoritative offer expiry
- *   2. `sent_at` + ttl   — offer creation/send time + ttl_seconds
- *   3. fallback          — DEFAULT_TTL_SECONDS (60)
+ * Only the server row's expiry owns the window. No send-time/local TTL fallback.
+ * Missing expiry is recovered with the verified worker login off the UI thread.
  */
 object OfferTimer {
     const val DEFAULT_TTL_SECONDS = 60
+    /** Must run off the main thread. Failure leaves an undated offer non-actionable. */
+    fun recover(ctx: Context, intent: Intent): Boolean {
+        if (intent.getLongExtra("expires_at", 0L) > 0L) return remainingSecondsFrom(intent) > 0
+        return try {
+            val jwt = BackendSync.sessionJwt(ctx) ?: return false
+            val bookingId = intent.getStringExtra("booking_id")?.takeIf { it.isNotBlank() } ?: return false
+            val deadline = OwnOfferPreflight.deadline("https://paywwbuqycovjopryele.supabase.co",
+                BackendSync.ANON_KEY_PUBLIC, jwt, bookingId, intent.getStringExtra("booking_request_id"))
+            intent.putExtra("expires_at", deadline)
+            remainingSecondsFrom(intent) > 0
+        } catch (_: Exception) { false }
+    }
     fun deadlineFrom(intent: Intent?): Long = AlertPresentationRules.deadline(
         intent?.getLongExtra("expires_at", 0L) ?: 0L,
         intent?.getLongExtra("sent_at", 0L) ?: 0L,
@@ -29,7 +35,7 @@ object OfferTimer {
 
     /** Reads expiry hints from an Intent and returns the seconds to display. */
     fun remainingSecondsFrom(intent: Intent?): Int {
-        if (intent == null) return DEFAULT_TTL_SECONDS
+        if (intent == null) return 0
         val expiresAt = intent.getLongExtra("expires_at", 0L)
         val sentAt = intent.getLongExtra("sent_at", 0L)
         val ttl = intent.getIntExtra("ttl_seconds", DEFAULT_TTL_SECONDS)

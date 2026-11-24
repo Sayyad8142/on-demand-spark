@@ -6,8 +6,10 @@ import { Capacitor } from "@capacitor/core";
 import {
   BookingAlert,
   onNewAlert,
+  onAlertDismissed,
   dismissAlert,
   invalidateOffer,
+  retireOfferGeneration,
   markAcceptedByMe,
   isOwnAcceptance,
   pruneShownBookings,
@@ -73,7 +75,10 @@ export function useUnifiedBookingAlerts(
       toast({ title: "New booking available" });
     });
 
-    return unsub;
+    const offDismiss = onAlertDismissed((bookingId) => {
+      setPending(current => current?.bookingId === bookingId ? null : current);
+    });
+    return () => { unsub(); offDismiss(); };
   }, []);
 
   // Offers arrive through ONE coordinated system: booking_requests realtime
@@ -152,7 +157,7 @@ export function useUnifiedBookingAlerts(
     let outcome: ReturnType<typeof classifyAcceptResult> = "retry";
     let message: string | undefined;
     try {
-      const result = await tryAccept(bookingId, workerId || undefined);
+      const result = await tryAccept(bookingId, workerId || undefined, pending.timeoutAt, pending.bookingRequestId);
       outcome = classifyAcceptResult(result);
       message = result.error;
     } catch {
@@ -212,7 +217,7 @@ export function useUnifiedBookingAlerts(
       return;
     }
 
-    dismissAlert(pending.bookingId);
+    retireOfferGeneration(pending.bookingId, pending.timeoutAt);
     setPending(null);
     } finally {
       rejectingRef.current = null;

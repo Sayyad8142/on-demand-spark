@@ -380,6 +380,21 @@ public class OverlayPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void retireBookingOffer(PluginCall call) {
+        String bookingId = call.getString("bookingId", "");
+        Long deadline = call.getLong("expiresAt", 0L);
+        if (bookingId == null || bookingId.isEmpty() || deadline == null || deadline <= 0L) {
+            call.reject("bookingId and authoritative expiry are required");
+            return;
+        }
+        Context ctx = getContext();
+        OfferQueue.INSTANCE.retireGeneration(ctx, bookingId, deadline);
+        Intent ended = new Intent("DIDI_OFFER_RETIRED").putExtra("booking_id", bookingId).putExtra("expires_at", deadline.longValue());
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(ctx).sendBroadcast(ended);
+        call.resolve();
+    }
+
+    @PluginMethod
     public void openOverlaySettings(PluginCall call) {
         Log.d(TAG, "🟢 openOverlaySettings entered");
         boolean opened = launchOverlaySettings();

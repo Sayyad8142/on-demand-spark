@@ -9,7 +9,7 @@ import java.time.Instant
 
 /** Read-only, using the worker JWT throughout. Never trusts a phone-supplied worker id. */
 object OwnOfferPreflight {
-    fun deadline(base: String, apiKey: String, jwt: String, bookingId: String): Long {
+    fun deadline(base: String, apiKey: String, jwt: String, bookingId: String, requestId: String? = null): Long {
         fun read(path: String): String {
             val connection = URL("$base$path").openConnection() as HttpURLConnection
             try {
@@ -32,7 +32,8 @@ object OwnOfferPreflight {
         if (workers.length() != 1) throw IllegalStateException("not-offered")
         val workerId = workers.getJSONObject(0).optString("id")
         if (workerId.isBlank()) throw IllegalStateException("not-offered")
-        val offers = JSONArray(read("/rest/v1/booking_requests?select=status,timeout_at&booking_id=eq.${encoded(bookingId)}&worker_id=eq.${encoded(workerId)}&limit=2"))
+        val requestFilter = requestId?.takeIf { it.isNotBlank() }?.let { "&id=eq.${encoded(it)}" } ?: ""
+        val offers = JSONArray(read("/rest/v1/booking_requests?select=status,timeout_at&booking_id=eq.${encoded(bookingId)}&worker_id=eq.${encoded(workerId)}$requestFilter&limit=2"))
         if (offers.length() != 1) throw IllegalStateException("not-offered")
         val offer = offers.getJSONObject(0)
         val status = offer.optString("status")

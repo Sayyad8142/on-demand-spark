@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { canShowWorkerBookingOffer, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 import { ackBookingDelivery } from "@/lib/bookingAck";
 import { isAcceptanceClosedError, ACCEPTANCE_CLOSED_MESSAGE } from "@/lib/acceptanceClosed";
+import { offerAcceptanceRpc } from '@/lib/offerAcceptanceContract';
 
 // Helper to ensure session is valid before making API calls
 async function ensureValidSession(): Promise<boolean> {
@@ -36,6 +37,8 @@ async function ensureValidSession(): Promise<boolean> {
 export async function tryAccept(
   bookingId: string,
   _workerId?: string,
+  originalTimeoutAt?: string,
+  originalRequestId?: string,
 ): Promise<{ success: boolean; error?: string; acceptanceClosed?: boolean }> {
   // Ensure valid session before accepting
   const sessionValid = await ensureValidSession();
@@ -61,15 +64,18 @@ export async function tryAccept(
     .select("id").eq("user_id", session.user.id).maybeSingle();
   if (workerError) return { success: false, error: "Unable to check offer. Please try again." };
   if (!worker) return { success: false, error: "not-offered" };
-  const { data: activeRequest, error: requestError } = await supabase
+  let requestQuery = supabase
     .from("booking_requests")
     .select("id, status, timeout_at")
     .eq("booking_id", bookingId)
-    .eq("worker_id", worker.id)
-    .maybeSingle();
+    .eq("worker_id", worker.id);
+  if (originalRequestId) requestQuery = requestQuery.eq('id', originalRequestId);
+  const { data: activeRequest, error: requestError } = await requestQuery.maybeSingle();
   if (requestError) return { success: false, error: "Unable to check offer. Please try again." };
   if (!activeRequest || !["pending", "sent", "queued"].includes(activeRequest.status)) return { success: false, error: "not-offered" };
-  const deadline = Date.parse(activeRequest.timeout_at ?? "");
+  const serverDeadline = Date.parse(activeRequest.timeout_at ?? "");
+  const originalDeadline = originalTimeoutAt ? Date.parse(originalTimeoutAt) : serverDeadline;
+  const deadline = Math.min(serverDeadline, originalDeadline);
   if (!Number.isFinite(deadline)) return { success: false, error: "Unable to check offer. Please try again." };
   if (deadline <= Date.now()) return { success: false, error: "offer-expired" };
 
@@ -78,7 +84,9 @@ export async function tryAccept(
   ackBookingDelivery({ bookingId, event: "worker_seen" }).catch(() => {});
   ackBookingDelivery({ bookingId, event: "accept_tapped" }).catch(() => {});
 
-  const { data, error } = await supabase.rpc("try_accept_booking", { p_booking_id: bookingId });
+  // Recheck after asynchronous preflight; the server remains the final authority.
+  if (deadline <= Date.now()) return { success: false, error: "offer-expired" };
+  const { data, error } = await supabase.rpc(offerAcceptanceRpc(), { p_booking_id: bookingId });
   
   if (error) {
     if (isAcceptanceClosedError(error)) {

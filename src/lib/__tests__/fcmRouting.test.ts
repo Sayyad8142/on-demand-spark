@@ -3,6 +3,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 const state = vi.hoisted(() => ({
   listeners: new Map<string, (value: any) => Promise<void>>(),
   process: vi.fn(), dismiss: vi.fn(), ack: vi.fn(), remember: vi.fn(), reassign: vi.fn(),
+  resync: vi.fn(),
 }));
 vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => true } }));
 vi.mock('@capacitor/push-notifications', () => ({ PushNotifications: {
@@ -12,6 +13,7 @@ vi.mock('@/services/bookingAlertCoordinator', () => ({ processIncomingBooking: s
 vi.mock('@/lib/scheduledBookingGuards', () => ({ logScheduledOfferDecision: vi.fn() }));
 vi.mock('@/lib/bookingAck', () => ({ extractAckToken: (d: any) => d.ack_token, rememberAckToken: state.remember, ackBookingDelivery: state.ack }));
 vi.mock('@/lib/fcmAckTracker', () => ({ trackFcmOffer: vi.fn() }));
+vi.mock('@/lib/offerFreshness', () => ({ requestOffersResync: state.resync }));
 vi.mock('@/lib/bookingReassign', () => ({ handleBookingReassigned: state.reassign }));
 
 afterEach(() => { vi.useRealTimers(); vi.clearAllMocks(); state.listeners.clear(); vi.resetModules(); });
@@ -39,4 +41,17 @@ it('cancellation, reassignment and informational taps never enter the offer coor
   expect(state.process).not.toHaveBeenCalled();
   expect(state.dismiss).toHaveBeenCalledWith('cancel');
   expect(state.reassign).toHaveBeenCalledWith('reassign', 'fcm-tap');
+});
+
+it('missing expiry requests authoritative resync, records only a genuine receipt, never creates a local deadline', async () => {
+  const { initFCM } = await import('../fcm'); await initFCM();
+  const data = { type: 'BOOKING_ALERT', booking_id: 'undated', sent_at: String(Date.now() / 1000), ttl_seconds: '60' };
+  await state.listeners.get('pushNotificationReceived')?.({ data });
+  await vi.dynamicImportSettled();
+  expect(state.resync).toHaveBeenCalledWith('fcm_missing_expiry');
+  expect(state.process).not.toHaveBeenCalled();
+  expect(state.ack).toHaveBeenCalledWith(expect.objectContaining({ bookingId: 'undated', event: 'push_received' }));
+  state.ack.mockClear();
+  await state.listeners.get('pushNotificationActionPerformed')?.({ notification: { data } });
+  expect(state.ack).not.toHaveBeenCalled();
 });

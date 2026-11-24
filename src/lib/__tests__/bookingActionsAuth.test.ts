@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const state: any = {};
+vi.mock('@/lib/offerAcceptanceContract', () => ({ offerAcceptanceRpc: () => state.secure ? 'accept_booking' : 'try_accept_booking' }));
 vi.mock("@/lib/bookingAck", () => ({ ackBookingDelivery: vi.fn(() => Promise.resolve()) }));
 vi.mock("@/lib/scheduledBookingGuards", () => ({
   canShowWorkerBookingOffer: () => true,
@@ -32,11 +33,24 @@ beforeEach(() => {
   state.session = { expires_at: future(), user: { id: "own-login" } };
   state.offer = { id: "own-request", status: "pending", timeout_at: new Date(Date.now() + 60_000).toISOString() };
   state.readError = null;
+  state.secure = false;
   state.refreshResult = undefined;
   state.rpc = async () => ({ data: { success: true, confirmed: true }, error: null });
 });
 
 describe("Worker App accept/reject identity handling", () => {
+  it('newer server read cannot extend the original accepted offer window', async () => {
+    const original = new Date(Date.now() - 1).toISOString();
+    expect((await tryAccept('b1', undefined, original, 'own-request')).error).toBe('offer-expired');
+    expect(state.query.eq).toHaveBeenCalledWith('id', 'own-request');
+    expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+  it('approved secure mode sends only booking id to strict endpoint and never retries through legacy', async () => {
+    state.secure = true;
+    state.rpc = async () => ({ data: null, error: { message: 'permission denied' } });
+    expect((await tryAccept('b1', 'attacker')).success).toBe(false);
+    expect(supabase.rpc).toHaveBeenCalledExactlyOnceWith('accept_booking', { p_booking_id: 'b1' });
+  });
   it("preflight is restricted to the logged-in worker, not the caller worker", async () => {
     await tryAccept("b1", "attacker");
     expect(state.query.eq).toHaveBeenCalledWith("user_id", "own-login");

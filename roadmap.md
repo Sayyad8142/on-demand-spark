@@ -1,5 +1,11 @@
 # Worker language translation
 
+## Favorite offer safety fixes — 24 Nov, preparation only
+- [x] Prepare actual-expiry recovery, persistent original-deadline replay protection, strict endpoint adapters (OFF pending worker grant), immediate generation-specific rejection cleanup and truthful receipt/popup evidence; version 10.0.05 (105) unchanged.
+- [x] 856 app tests / 87 Android tests passed; Kotlin/Java compiled without packaging; preview build OK; mobile Home redirects to auth without errors. Android freshness guard refuses stale assets. Report: docs/favorite-worker-fixes-2026-11-24.md.
+- [ ] Activate secure acceptance and certify reservation release/concurrency/receipt contracts — blocked: Admin project confirmation, strict endpoint worker EXECUTE grant/approval and shared backend fixes; no production change authorized here.
+- [ ] Signed-in flow, current bundled assets and physical phone-state checks — blocked: worker/customer session, separately approved build/sync and real Android device. No APK/AAB or publication.
+
 ## Late Start OTP priority integration — 24 Nov, no publication
 - [x] Hosted contract inspected: Late Start settings/reader absent, generic faults cost 20; reported React hook error not reproduced, preview build OK.
 - [x] Prepare translated setting-driven warning, confirmed deduction and distinct breakdown behind OFF reader; shared exact server score refresh on Home/Profile/Ranking; no local deductions or alarm/OTP/dispatch changes.

@@ -56,8 +56,7 @@ object OfferQueue {
     fun keyOf(offer: JSONObject): String {
         val req = offer.optString("booking_request_id", "")
         val expires = offer.optLong("expires_at", 0L)
-        val sent = offer.optLong("sent_at", 0L)
-        val deadline = if (expires > 0L) expires else if (sent > 0L) sent + offer.optInt("ttl_seconds", 60) else 0L
+        val deadline = expires
         val identity = if (req.isNotBlank()) "req:$req" else "bkg:${offer.optString("booking_id", "")}"
         return "$identity:$deadline"
     }
@@ -107,6 +106,17 @@ object OfferQueue {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
 
+    /** Reopening/duplicate delivery retains the persisted live offer's deadline. */
+    @Synchronized
+    fun preserveLiveIntent(ctx: Context, intent: Intent) {
+        val id = intent.getStringExtra("booking_id") ?: return
+        val original = find(ctx, id) ?: return
+        if (!isExpired(original) && !isRetired(ctx, original)) {
+            intent.removeExtra("ack_token")
+            applyExtras(intent, original)
+        }
+    }
+
     private fun applyExtras(intent: Intent, offer: JSONObject): Intent = intent.apply {
         putExtra("mode", "show")
         putExtra("actionable", "true")
@@ -137,14 +147,7 @@ object OfferQueue {
     fun isExpired(offer: JSONObject): Boolean {
         val now = System.currentTimeMillis() / 1000
         val expiresAt = offer.optLong("expires_at", 0L)
-        val sentAt = offer.optLong("sent_at", 0L)
-        val ttl = offer.optInt("ttl_seconds", OfferTimer.DEFAULT_TTL_SECONDS)
-            .takeIf { it in 1..600 } ?: OfferTimer.DEFAULT_TTL_SECONDS
-        return when {
-            expiresAt > 0L -> now >= expiresAt
-            sentAt > 0L -> now >= sentAt + ttl
-            else -> now >= offer.optLong("queued_at_sec", now) + ttl
-        }
+        return expiresAt <= 0L || now >= expiresAt
     }
 
     // ------------------------------------------------------------------- state
@@ -332,6 +335,19 @@ object OfferQueue {
     @Synchronized
     fun find(ctx: Context, bookingId: String): JSONObject? =
         read(ctx).firstOrNull { bookingIdOf(it) == bookingId }
+
+    /** A request closure may never remove a later server expiry generation. */
+    @Synchronized
+    fun retireGeneration(ctx: Context, bookingId: String, deadline: Long) {
+        if (deadline <= 0L) return
+        val items = read(ctx)
+        val removed = items.filter { bookingIdOf(it) == bookingId && it.optLong("expires_at") <= deadline }
+        val retired = readRetired(ctx)
+        removed.forEach { retired.put(keyOf(it), System.currentTimeMillis()) }
+        prefs(ctx).edit().putString(KEY_RETIRED, retired.toString()).apply()
+        write(ctx, items.filter { it !in removed })
+        if (removed.isNotEmpty() && read(ctx).none { bookingIdOf(it) == bookingId }) cancelNotification(ctx, bookingId)
+    }
 
     // Remember retired OFFER identities, not booking IDs: a later server offer
     // with a different request id remains independent. Bounded replay cache.

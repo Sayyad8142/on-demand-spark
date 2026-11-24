@@ -12,6 +12,8 @@ import { processIncomingBooking } from '@/services/bookingAlertCoordinator';
 import { logScheduledOfferDecision } from '@/lib/scheduledBookingGuards';
 import { parseFcmOffer } from '@/lib/fcmOffer';
 import { extractAckToken, rememberAckToken } from '@/lib/bookingAck';
+import { fcmOfferDeadline } from '@/lib/fcmOffer';
+import { requestOffersResync } from '@/lib/offerFreshness';
 
 let fcmInitialized = false;
 
@@ -47,15 +49,30 @@ export async function initFCM() {
       }
       return;
     }
-    const offer = parseFcmOffer(data);
-    if (!offer) return; // Includes unknown, informational, expired or undated messages.
     const ackToken = extractAckToken(data) ?? undefined;
+    if (!tapped && bookingId && data.type === 'BOOKING_ALERT'
+      && String(data.actionable ?? 'true').toLowerCase() !== 'false') {
+      const bookingRequestId = typeof data.booking_request_id === 'string' ? data.booking_request_id
+        : typeof data.bookingRequestId === 'string' ? data.bookingRequestId : undefined;
+      // Record an actual receipt even when expiry must be recovered. A tap,
+      // poll or successful acceptance is never substituted for push receipt.
+      import('@/lib/bookingAck').then(({ ackBookingDelivery }) =>
+        ackBookingDelivery({ bookingId, bookingRequestId, ackToken, event: 'push_received' })
+      ).catch(() => {});
+    }
+    const offer = parseFcmOffer(data);
+    if (!offer) {
+      if (bookingId && data.type === 'BOOKING_ALERT'
+        && String(data.actionable ?? 'true').toLowerCase() !== 'false' && !fcmOfferDeadline(data)) {
+        // The single polling reader retrieves the actual server request. Never
+        // synthesize an expiry from send time, tap time or the local clock.
+        requestOffersResync('fcm_missing_expiry');
+      }
+      return;
+    }
     if (ackToken) rememberAckToken({ ...offer, ackToken });
     logScheduledOfferDecision(offer, 'fcm', true);
     if (!tapped) {
-      import('@/lib/bookingAck').then(({ ackBookingDelivery }) =>
-        ackBookingDelivery({ ...offer, ackToken, event: 'push_received' })
-      ).catch(() => {});
       import('@/lib/fcmAckTracker').then(({ trackFcmOffer }) =>
         trackFcmOffer(offer.bookingId, offer.bookingRequestId)
       ).catch(() => {});

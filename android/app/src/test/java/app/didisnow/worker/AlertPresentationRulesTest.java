@@ -16,8 +16,12 @@ public class AlertPresentationRulesTest {
     @Test public void sleepingOrDelayedTimerDoesNotDrift() {
         assertEquals(0, AlertPresentationRules.remaining(1060, 1068));
     }
-    @Test public void sentTimeKeepsOriginalDeadline() {
-        assertEquals(1060, AlertPresentationRules.deadline(0, 1000, 60, 1049));
+    @Test public void sentTimeCannotInventOfferExpiry() {
+        assertEquals(0, AlertPresentationRules.deadline(0, 1000, 60, 1049));
+    }
+    @Test public void missingTimestampsNeverRestartWindow() {
+        assertEquals(0, AlertPresentationRules.deadline(0, 0, 60, 1000));
+        assertEquals(0, AlertPresentationRules.deadline(0, 0, 60, 1060));
     }
     @Test public void foregroundWithoutOverlayCanOpenActivity() {
         assertTrue(AlertPresentationRules.mayOpenActivity(true, false));

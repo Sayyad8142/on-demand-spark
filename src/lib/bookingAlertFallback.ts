@@ -18,8 +18,11 @@ export function fallbackNotificationId(bookingId: string): number {
 export async function postBookingAlertFallback(alert: {
   bookingId: string;
   bookingRequestId?: string;
+  timeoutAt?: string;
 }): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) return false;
+  const expiresAt = Date.parse(alert.timeoutAt ?? '');
+  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) return false;
   try {
     const { LocalNotifications } = await import("@capacitor/local-notifications");
     await LocalNotifications.schedule({
@@ -29,7 +32,7 @@ export async function postBookingAlertFallback(alert: {
           title: "New Booking",
           body: "New Booking",
           channelId: BOOKING_FALLBACK_CHANNEL,
-          extra: { kind: "booking_alert_fallback", bookingId: alert.bookingId, bookingRequestId: alert.bookingRequestId ?? null },
+          extra: { kind: "booking_alert_fallback", bookingId: alert.bookingId, bookingRequestId: alert.bookingRequestId ?? null, expires_at: Math.floor(expiresAt / 1000) },
         },
       ],
     });

@@ -15,4 +15,7 @@ public final class OfferAcceptRules {
     public static boolean active(String status, long deadline, long now) {
         return ("pending".equals(status) || "sent".equals(status) || "queued".equals(status)) && deadline > now;
     }
+    public static boolean closureApplies(long visibleDeadline, long closedDeadline) {
+        return closedDeadline > 0 && visibleDeadline > 0 && visibleDeadline <= closedDeadline;
+    }
 }

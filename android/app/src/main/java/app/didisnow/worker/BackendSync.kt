@@ -220,7 +220,7 @@ object BackendSync {
      * CapacitorStorage.didi_session). Returned only if not expiring within 30 s.
      * Cleared on logout, so a logged-out phone never authenticates. Never logged.
      */
-    private fun sessionJwt(ctx: Context): String? {
+    internal fun sessionJwt(ctx: Context): String? {
         return try {
             val cap = ctx.applicationContext.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE)
             // didi_session = AuthContext mirror; didi-worker-session = supabase-js

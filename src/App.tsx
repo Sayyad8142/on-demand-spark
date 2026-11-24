@@ -21,7 +21,7 @@ import { useBookingOfferVisible } from "@/hooks/useBookingOfferVisible";
 import { SoftUpdateSheet, UpdateAfterJobBanner } from "@/components/SoftUpdateSheet";
 import { initNativePush } from "@/native/push";
 import { tryAccept } from "@/lib/bookingActions";
-import { invalidateOffer, markAcceptedByMe } from "@/services/bookingAlertCoordinator";
+import { invalidateOffer, markAcceptedByMe, getCurrentAlert } from "@/services/bookingAlertCoordinator";
 import { classifyAcceptResult } from "@/lib/acceptOutcome";
 import { claimDeviceAcceptance, releaseDeviceAcceptance } from "@/lib/deviceAcceptLock";
 import {
@@ -491,7 +491,9 @@ function AppInner() {
               console.log('🔗 Deep link accept for bookingId:', bookingId);
               // Same single-flight claim as the pop-up and the in-app card.
               if (!(await claimDeviceAcceptance(bookingId))) return;
-              const result = await tryAccept(bookingId).catch(() => ({ success: false, error: 'network' } as const));
+              const current = getCurrentAlert();
+              const original = current?.bookingId === bookingId ? current : null;
+              const result = await tryAccept(bookingId, undefined, original?.timeoutAt, original?.bookingRequestId).catch(() => ({ success: false, error: 'network' } as const));
               const outcome = classifyAcceptResult(result);
               await releaseDeviceAcceptance(bookingId, outcome === 'won');
               if (outcome === 'closed') {

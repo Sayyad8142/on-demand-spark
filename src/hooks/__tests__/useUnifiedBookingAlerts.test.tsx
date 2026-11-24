@@ -3,8 +3,11 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 
 const h = vi.hoisted(() => ({
   listener: null as null | ((a: Record<string, unknown>) => void),
+  dismissListener: null as null | ((id: string) => void),
   accepting: new Set<string>(),
   tryAccept: vi.fn(),
+  rejectBooking: vi.fn(),
+  retireOfferGeneration: vi.fn(),
   invalidateOffer: vi.fn(),
   dismissAlert: vi.fn(),
   markAlertRendered: vi.fn(),
@@ -21,10 +24,12 @@ vi.mock("@/integrations/supabase/client", () => {
   const ch = { on: () => ch, subscribe: () => ch };
   return { supabase: { channel: () => ch, removeChannel: vi.fn() } };
 });
-vi.mock("@/lib/bookingActions", () => ({ tryAccept: h.tryAccept, rejectBooking: vi.fn() }));
+vi.mock("@/lib/bookingActions", () => ({ tryAccept: h.tryAccept, rejectBooking: h.rejectBooking }));
 vi.mock("@/lib/bookingAlertFallback", () => ({ postBookingAlertFallback: h.postFallback }));
 vi.mock("@/services/bookingAlertCoordinator", () => ({
   onNewAlert: (fn: (a: Record<string, unknown>) => void) => { h.listener = fn; return () => { h.listener = null; }; },
+  onAlertDismissed: (fn: (id: string) => void) => { h.dismissListener = fn; return () => { h.dismissListener = null; }; },
+  retireOfferGeneration: h.retireOfferGeneration,
   dismissAlert: h.dismissAlert,
   invalidateOffer: h.invalidateOffer,
   markAlertOpened: h.markAlertOpened,
@@ -55,6 +60,31 @@ beforeEach(() => {
 });
 
 describe("useUnifiedBookingAlerts — Accept", () => {
+  it('server closure immediately clears the pending screen state', () => {
+    const { result } = renderHook(() => useUnifiedBookingAlerts('u1', true, () => true, 'w1'));
+    offer('closed-by-server');
+    act(() => h.dismissListener?.('closed-by-server'));
+    expect(result.current.pending).toBeNull();
+  });
+  it('confirmed rejection retires exact generation immediately without invalidating future offers', async () => {
+    const { result } = renderHook(() => useUnifiedBookingAlerts('u1', true, () => true, 'w1'));
+    const at = future();
+    offer('reject-confirmed', at);
+    h.rejectBooking.mockResolvedValueOnce({ success: true, shouldNotify: false });
+    await act(async () => { await result.current.reject(); });
+    expect(h.retireOfferGeneration).toHaveBeenCalledWith('reject-confirmed', at);
+    expect(h.invalidateOffer).not.toHaveBeenCalled();
+    expect(result.current.pending).toBeNull();
+  });
+  it('unconfirmed rejection keeps the original deadline and retry option', async () => {
+    const { result } = renderHook(() => useUnifiedBookingAlerts('u1', true, () => true, 'w1'));
+    const at = future();
+    offer('reject-network', at);
+    h.rejectBooking.mockResolvedValueOnce({ success: false, error: 'network' });
+    await act(async () => { await result.current.reject(); });
+    expect(result.current.pending?.timeoutAt).toBe(at);
+    expect(h.retireOfferGeneration).not.toHaveBeenCalled();
+  });
   it("temporary network failure keeps the still-valid offer open and allows retry", async () => {
     const { result } = renderHook(() => useUnifiedBookingAlerts("u1", true, () => true, "w1"));
     offer("b1");
@@ -89,13 +119,13 @@ describe("useUnifiedBookingAlerts — Accept", () => {
   it("double tap sends only ONE Accept request", async () => {
     const { result } = renderHook(() => useUnifiedBookingAlerts("u1", true, () => true, "w1"));
     offer("b4");
-    let resolve!: (v: unknown) => void;
+    let resolve: ((v: unknown) => void) | undefined;
     h.tryAccept.mockImplementationOnce(() => new Promise((r) => { resolve = r; }));
     await act(async () => {
       const first = result.current.accept();
       const second = result.current.accept();
       await second;
-      resolve({ success: true });
+      resolve?.({ success: true });
       await first;
     });
     expect(h.tryAccept).toHaveBeenCalledTimes(1);

@@ -247,15 +247,6 @@ public class MyFirebaseService extends FirebaseMessagingService {
         Log.d(TAG, "📨 [ACK] Sending push_received for booking_id=" + bookingId + " req=" + bookingRequestId);
         BackendSync.INSTANCE.ackDeliveryAsync(getApplicationContext(), bookingId, "push_received", bookingRequestId, ackToken);
 
-        // 🐕 Native FCM ack watchdog — fires diagnostic if popup never shows.
-        // Cancelled from BackendSync.ackDelivery on popup_shown / worker_seen.
-        try {
-          AckWatchdogWorker.Companion.schedule(getApplicationContext(), bookingId, bookingRequestId);
-        } catch (Exception e) {
-          Log.w(TAG, "AckWatchdogWorker schedule failed", e);
-        }
-
-
         // The BACKEND decides what is an actionable worker offer. Instant and
         // scheduled offers share one contract: a BOOKING_ALERT with
         // actionable != "false" always opens the native offer UI. Informational
@@ -295,6 +286,16 @@ public class MyFirebaseService extends FirebaseMessagingService {
         serviceIntent.putExtra("sent_at", sentAtSec);
         serviceIntent.putExtra("ttl_seconds", ttlSeconds);
 
+        if (expiresAtSec <= 0L) {
+          // FCM runs off the UI thread. Fetch the own server row, never start a
+          // new 60-second window; reconnect/app polling retries failed recovery.
+          if (!OfferTimer.INSTANCE.recover(getApplicationContext(), serviceIntent)) {
+            showBookingNotification(bookingId, bookingType);
+            return;
+          }
+          expiresAtSec = serviceIntent.getLongExtra("expires_at", 0L);
+        }
+
         // Already assigned to another worker (delayed/duplicate alert):
         // no tray notification, no popup, no countdown.
         if (OfferQueue.INSTANCE.isTaken(getApplicationContext(), bookingId)) {
@@ -321,6 +322,15 @@ public class MyFirebaseService extends FirebaseMessagingService {
         if (alreadyQueued) {
           Log.d(TAG, "↩️ Duplicate BOOKING_ALERT for " + bookingId + " — already queued, no second popup");
           return;
+        }
+
+        // A duplicate/informational receipt must not restart the popup watchdog
+        // after the actual popup already acknowledged. Only a new queued offer
+        // expects presentation; popup_shown / worker_seen cancels this watchdog.
+        try {
+          AckWatchdogWorker.Companion.schedule(getApplicationContext(), bookingId, bookingRequestId);
+        } catch (Exception e) {
+          Log.w(TAG, "AckWatchdogWorker schedule failed", e);
         }
 
         showBookingNotification(bookingId, bookingType, serviceIntent);

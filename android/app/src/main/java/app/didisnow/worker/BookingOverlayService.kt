@@ -72,6 +72,8 @@ class BookingOverlayService : Service() {
 
     private val endedReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "DIDI_OFFER_RETIRED" && OfferQueue.isAcceptInFlight(applicationContext, currentBookingId)) return
+            if (intent?.action == "DIDI_OFFER_RETIRED" && !OfferAcceptRules.closureApplies(offerDeadline, intent.getLongExtra("expires_at", 0L))) return
             val bookingId = intent?.getStringExtra("booking_id")
             if (BookingOfferLifecycle.matches(currentBookingId, bookingId)) {
                 finishAndStop("server_booking_ended")
@@ -82,7 +84,7 @@ class BookingOverlayService : Service() {
     override fun onCreate() {
         super.onCreate()
         LocalBroadcastManager.getInstance(this).registerReceiver(endedReceiver,
-            android.content.IntentFilter("DIDI_BOOKING_ENDED"))
+            android.content.IntentFilter("DIDI_BOOKING_ENDED").apply { addAction("DIDI_OFFER_RETIRED") })
     }
     
     // Track ALL windows we add, so we can remove them all in cleanup
@@ -133,6 +135,16 @@ class BookingOverlayService : Service() {
         startIdForStop = startId
 
         val mode = intent?.getStringExtra("mode") ?: "show"
+        if (mode == "show" && intent != null) OfferQueue.preserveLiveIntent(applicationContext, intent)
+
+        if (mode == "show" && intent != null && intent.getLongExtra("expires_at", 0L) <= 0L) {
+            serviceScope.launch {
+                val recovered = withContext(Dispatchers.IO) { OfferTimer.recover(applicationContext, intent) }
+                if (recovered) onStartCommand(intent, flags, startId)
+                else if (!OverlaySingleton.isShowing) stopSelfResult(startId)
+            }
+            return START_NOT_STICKY
+        }
 
         // ── Offer invalidation (another worker was assigned) ───────────────
         // MUST run before the single-visible-offer guard, otherwise the
@@ -1140,11 +1152,10 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                 if (!AlertPresentationRules.mayAccept(offerDeadline, System.currentTimeMillis() / 1000, isShuttingDown)) {
                     throw IllegalStateException("Server rejected: offer-expired")
                 }
-                val authoritativeDeadline = OwnOfferPreflight.deadline(SUPABASE_URL, SUPABASE_ANON_KEY, jwt, bookingId)
+                val authoritativeDeadline = OwnOfferPreflight.deadline(SUPABASE_URL, SUPABASE_ANON_KEY, jwt, bookingId, currentBookingRequestId)
                 // A read may shorten the timer, never extend the original alert.
                 offerDeadline = minOf(offerDeadline, authoritativeDeadline)
-                // Call try_accept_booking RPC with user JWT
-                val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/try_accept_booking")
+                val rpcUrl = URL("$SUPABASE_URL/rest/v1/rpc/${OfferAcceptanceContract.rpc()}")
                 val connection = rpcUrl.openConnection() as HttpURLConnection
                 
                 try {

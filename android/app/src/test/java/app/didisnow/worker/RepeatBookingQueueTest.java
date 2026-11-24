@@ -15,6 +15,35 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 28, manifest = Config.NONE)
 public class RepeatBookingQueueTest {
+    @Test public void reopeningWithDuplicateCannotExtendPersistedDeadline() {
+        JSONObject first = offer("same", "r", 17);
+        assertTrue(queue.enqueue(ctx, first));
+        long original = first.optLong("expires_at");
+        Intent duplicate = new Intent().putExtra("booking_id", "same")
+            .putExtra("booking_request_id", "r").putExtra("expires_at", original + 60);
+        queue.preserveLiveIntent(ctx, duplicate);
+        assertEquals(original, duplicate.getLongExtra("expires_at", 0L));
+        Intent undatedTap = new Intent().putExtra("booking_id", "same");
+        queue.preserveLiveIntent(ctx, undatedTap);
+        assertEquals(original, undatedTap.getLongExtra("expires_at", 0L));
+    }
+    @Test public void undatedPushNeverUsesQueueArrivalAsExpiry() {
+        JSONObject undated = queue.offerFromIntent(new Intent().putExtra("booking_id", "missing")
+            .putExtra("sent_at", System.currentTimeMillis() / 1000).putExtra("ttl_seconds", 60));
+        assertTrue(queue.isExpired(undated));
+        assertFalse(queue.enqueue(ctx, undated));
+    }
+    @Test public void closureRemovesOnlyOriginalGenerationAndAllowsLaterOffer() {
+        JSONObject first = offer("same", "r", 60);
+        long deadline = first.optLong("expires_at");
+        assertTrue(queue.enqueue(ctx, first));
+        queue.retireGeneration(ctx, "same", deadline);
+        assertFalse(queue.contains(ctx, "same"));
+        assertTrue(queue.enqueue(ctx, offer("same", "r", 120)));
+        queue.retireGeneration(ctx, "same", deadline);
+        assertTrue(queue.contains(ctx, "same"));
+        assertFalse(queue.enqueue(ctx, first));
+    }
     @Test public void oneDeviceClaimAcrossDifferentBookings() {
         assertTrue(queue.beginAcceptance(ctx, "first"));
         assertFalse(queue.beginAcceptance(ctx, "second"));
