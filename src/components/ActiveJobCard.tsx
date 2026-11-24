@@ -29,7 +29,7 @@ import serviceBathroomCleaning from "@/assets/service-bathroom-toilet-cleaning.j
 import { announceFlat, buildFlatAnnouncement } from "@/lib/flatVoice";
 import PaymentCollectionModal from "@/components/PaymentCollectionModal";
 import DishwashingTrainingCarousel from "@/components/DishwashingTrainingCarousel";
-import { DISHWASHING_SLIDE_MS, DISHWASHING_TRAINING_PHOTOS, trainingSlides } from "@/lib/dishwashingTraining";
+import { serviceTrainingSlides, serviceTrainingFallback } from '@/lib/serviceTraining';
 
 const TASK_CONFIG: Record<string, {label: string; img: string; icon: typeof Utensils}> = {
   dish_washing: { label: "Dish Washing", img: serviceDishWashing, icon: Utensils },
@@ -70,7 +70,6 @@ export default function ActiveJobCard({
     id: booking.id, status: booking.status, start_otp_required: booking.start_otp_required ?? null,
     started_at: booking.started_at, accepted_at: booking.accepted_at, assigned_at: booking.assigned_at,
   }, now);
-  const [currentSlide, setCurrentSlide] = useState(0);
   const [taskPrices, setTaskPrices] = useState<Record<string, number>>({});
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   
@@ -150,20 +149,11 @@ export default function ActiveJobCard({
     return result;
   }, [booking.maid_tasks, booking.service_type, booking.price_inr, taskPrices]);
 
-  // With the taller Dishwashing slide, every slide shares its 4:3 box.
-  const hasDishSlide = tasks.some((t) => t.img === serviceDishWashing);
-
-  // Auto-slide every 3s
-  useEffect(() => {
-    if (tasks.length <= 1) return;
-    // Stay on the Dishwashing slide for one full training cycle.
-    const onDish = tasks[currentSlide % tasks.length]?.img === serviceDishWashing;
-    const dwell = onDish ? Math.max(1, trainingSlides(DISHWASHING_TRAINING_PHOTOS).length) * DISHWASHING_SLIDE_MS : 3000;
-    const timer = setTimeout(() => {
-      setCurrentSlide((prev) => (prev + 1) % tasks.length);
-    }, dwell);
-    return () => clearTimeout(timer);
-  }, [tasks, currentSlide]);
+  const training = useMemo(() => serviceTrainingSlides(booking).map(s => ({
+    ...s, price: s.task ? taskPrices[s.task] : booking.price_inr ?? undefined,
+  })), [booking.service_type, booking.maid_tasks, booking.has_glass_partition, booking.price_inr, taskPrices]);
+  const trainingFallback = serviceTrainingFallback(booking);
+  const trainingKey = `${booking.id}:${training.map(s => s.step).join(',')}`;
 
   // Calculate initial remaining time based on accepted_at timestamp
   const cooldownEndTime = useMemo(() => {
@@ -281,29 +271,9 @@ export default function ActiveJobCard({
 
         {/* 2. Work Tasks + Earnings — Combined Card */}
         <div className="mx-3 rounded-2xl overflow-hidden shadow-md border border-border bg-card">
-          {tasks.length > 0 &&
-            <div className="relative">
-              <div
-                className="flex transition-transform duration-500 ease-in-out"
-                style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
-                {tasks.map((task) =>
-                  <div key={task.label} className="w-full flex-shrink-0 relative">
-                    {task.img === serviceDishWashing ?
-                      <DishwashingTrainingCarousel fallbackSrc={task.img} alt={displayText(task.label)} className="w-full aspect-[4/3] object-contain bg-muted" /> :
-                      <img src={task.img} alt={displayText(task.label)} className={`w-full object-cover ${hasDishSlide ? "aspect-[4/3]" : "h-28"}`} />
-                    }
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/50 to-transparent" />
-                    <div className="absolute bottom-0 right-0 p-2.5">
-                      {task.price != null && task.price > 0 &&
-                        <span className="bg-white/20 backdrop-blur-sm text-white font-bold text-base px-3 py-1 rounded-lg">
-                          ₹{task.price}
-                        </span>
-                      }
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+          {trainingFallback &&
+            <DishwashingTrainingCarousel key={trainingKey} slides={training} fallbackSrc={trainingFallback}
+              alt={serviceLabel(booking.service_type)} className="w-full aspect-[4/3] object-contain bg-muted" />
           }
           {booking.price_inr != null && booking.price_inr > 0 &&
             <div className="px-3.5 py-2.5 space-y-1.5">

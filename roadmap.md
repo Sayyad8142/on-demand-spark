@@ -1,5 +1,11 @@
 # Worker language translation
 
+## Service-specific training carousel — 24 Nov, no publication
+- [x] Inspect selected task/add-on fields; reuse approved dishwashing photos and generate consistent floor/bathroom photos.
+- [x] Implement safe task-specific sequences, fallback and booking-change reset; verify five combinations with tests and previews.
+- [x] Record browser versus live/device evidence in docs/service-training-carousel-2026-11-24.md; no publication or booking behavior changes.
+- [ ] Signed-in live booking and Android device verification — blocked: unmanaged worker session and physical Android device; no production booking created.
+
 ## Final favorite-v1 alignment — preparation only
 - [x] Align UUID/null generation, pending-only actionability, final state enums and repeat-winner effects across web/native.
 - [x] Verify committed identity transport, regression tests and full Android asset freshness; keep lookup OFF and version 10.0.05 (105). Prior run: 866 app tests / 89 Android tests passed; final focused recheck: 99 tests passed.
