@@ -41,8 +41,8 @@ describe('own authoritative expiry recovery', () => {
   it('favorite-v1 mode sends only the booking id and uses skew-corrected remaining time', async () => {
     const st = new Date(Date.now() - 600_000).toISOString(); // phone clock 10 min ahead of server
     const ex = new Date(Date.parse(st) + 20_000).toISOString();
-    state.rpcResult = { data: { contract_version: 'favorite-v1', booking_id: 'b', request_id: 'r', offer_generation: 1, status: 'sent', actionable: true, expires_at: ex, server_time: st }, error: null };
-    const out = Date.parse((await recoverOfferDeadline('b', 'r', true))!);
+    state.rpcResult = { data: { contract_version: 'favorite-v1', booking_id: 'b', request_id: '11111111-1111-4111-8111-111111111111', offer_generation: '11111111-1111-4111-8111-111111111111', status: 'pending', favorite_state: 'holding', offer_state: 'holding', actionable: true, expires_at: ex, server_time: st }, error: null };
+    const out = Date.parse((await recoverOfferDeadline('b', '11111111-1111-4111-8111-111111111111', true)) ?? '');
     expect(state.rpcCalls).toEqual([['get_my_offer_status', { p_booking_id: 'b' }]]);
     expect(out - Date.now()).toBeGreaterThan(18_000);
     expect(out - Date.now()).toBeLessThanOrEqual(20_000);

@@ -855,9 +855,10 @@ class BookingAlertActivity : AppCompatActivity() {
 
                                 if (success) {
                                     // Backend confirmed WE won this booking.
-                                    StartOtpAlarmEngine.reconcile(applicationContext, false)
+                                    val newWin = OfferAcceptanceContract.newAcceptanceEffects(success, jsonResponse.opt("already_accepted"))
+                                    if (newWin) StartOtpAlarmEngine.reconcile(applicationContext, false)
                                     OfferQueue.markAcceptedByMe(applicationContext, bookingId)
-                                    Toast.makeText(
+                                    if (newWin) Toast.makeText(
                                         this@BookingAlertActivity,
                                         "✅ Booking accepted successfully!",
                                         Toast.LENGTH_SHORT

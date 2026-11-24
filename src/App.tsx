@@ -508,7 +508,9 @@ function AppInner() {
                 console.warn('Booking accept failed (retryable):', result.error);
               } else {
                 markAcceptedByMe(bookingId);
-                window.dispatchEvent(new CustomEvent('bookingAccepted', { detail: { bookingId } }));
+                if (!('alreadyAccepted' in result && result.alreadyAccepted === true)) {
+                  window.dispatchEvent(new CustomEvent('bookingAccepted', { detail: { bookingId } }));
+                }
               }
             }
           }

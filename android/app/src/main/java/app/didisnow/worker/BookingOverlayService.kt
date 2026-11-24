@@ -1193,6 +1193,8 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                         
                         if (success) {
                             android.util.Log.d("BookingOverlay", "✅ Accept success")
+                            val newWin = OfferAcceptanceContract.newAcceptanceEffects(success, json.opt("already_accepted"))
+                            if (newWin) {
                             StartOtpAlarmEngine.reconcile(applicationContext, false)
                             withContext(Dispatchers.Main) {
                                 ui {
@@ -1209,6 +1211,7 @@ BackendSync.ackFailureAsync(applicationContext, bookingId, "session_missing", cu
                             }
                             LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
                             android.util.Log.d("BookingOverlay", "📡 Broadcast sent: DIDI_BOOKING_ACCEPTED")
+                            }
                         } else {
                             val error = json.optString("error", "Unknown error")
                             android.util.Log.d("BookingOverlay", "❌ Accept failed: $error")

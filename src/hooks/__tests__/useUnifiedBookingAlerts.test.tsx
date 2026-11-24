@@ -41,6 +41,7 @@ vi.mock("@/services/bookingAlertCoordinator", () => ({
   endAcceptance: (id: string) => { h.accepting.delete(id); },
 }));
 
+import { toast } from "@/hooks/use-toast";
 import { useUnifiedBookingAlerts } from "@/hooks/useUnifiedBookingAlerts";
 
 const future = () => new Date(Date.now() + 60_000).toISOString();
@@ -60,6 +61,14 @@ beforeEach(() => {
 });
 
 describe("useUnifiedBookingAlerts — Accept", () => {
+  it('repeated winning acceptance closes the offer without repeating success notification', async () => {
+    const { result } = renderHook(() => useUnifiedBookingAlerts('u1', true, () => true, 'w1'));
+    offer('repeat-win'); vi.mocked(toast).mockClear();
+    h.tryAccept.mockResolvedValueOnce({ success: true, alreadyAccepted: true });
+    await act(async () => { await result.current.accept(); });
+    expect(result.current.pending).toBeNull(); expect(toast).not.toHaveBeenCalled();
+    expect(h.invalidateOffer).not.toHaveBeenCalled();
+  });
   it('server closure immediately clears the pending screen state', () => {
     const { result } = renderHook(() => useUnifiedBookingAlerts('u1', true, () => true, 'w1'));
     offer('closed-by-server');

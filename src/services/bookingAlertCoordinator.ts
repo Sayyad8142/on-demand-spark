@@ -21,6 +21,8 @@ import {
 export interface BookingAlert {
   bookingId: string;
   bookingRequestId?: string;
+  committedOfferId?: string | null;
+  offerGeneration?: string | null;
   custName: string;
   community: string;
   serviceType: string;

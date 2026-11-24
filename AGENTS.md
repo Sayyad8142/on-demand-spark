@@ -2,6 +2,7 @@
 
 <!-- LOVABLE:BEGIN -->
 - Offer presentation uses request + deadline generations; rejection escalation is server-only, native OwnOfferPreflight reads verified-session own rows, and acceptance claims are single-flight across bookings. Why: retries must not steer dispatch, extend deadlines, or use another worker's offer.
+- Final favorite-v1 uses UUID/null generation equal to committed request_id, pending-only actionable status, and explicit favorite_state/offer_state; repeated winner responses suppress new-win effects. Why: delivery states and replayed success must not authorize or replay work.
 <!-- LOVABLE:END -->
 
 - Signup QR/manual selection is presentation-only and shares the existing UPI value, decoder and validation. Why: changing the visible option must not change payout or signup requirements.

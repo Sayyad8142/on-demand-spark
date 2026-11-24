@@ -6,6 +6,20 @@ const now = 1_794_470_400_000;
 const payload = { type: 'BOOKING_ALERT', booking_id: 'booking', booking_request_id: 'request', expires_at: String(now / 1000 + 60) };
 
 describe('FCM offer wire contract', () => {
+  it('copies committed offer UUID and generation through web/native transport', () => {
+    const id = '11111111-1111-4111-8111-111111111111';
+    const offer = parseFcmOffer({ ...payload, offer_id: id, offer_generation: id }, now);
+    expect(offer?.committedOfferId).toBe(id); expect(offer?.offerGeneration).toBe(id);
+    const native = JSON.parse(offer ? buildNativeOverlayPayload(offer, now) ?? '{}' : '{}');
+    expect(native.offer_id).toBe(id); expect(native.offer_generation).toBe(id);
+  });
+  it('never invents a committed ID or generation for legacy data', () => {
+    const offer = parseFcmOffer(payload, now);
+    expect(offer?.committedOfferId).toBeNull(); expect(offer?.offerGeneration).toBeNull();
+  });
+  it.each([1, '1', 'bad', '22222222-2222-4222-8222-222222222222'])('does not copy invalid or mismatched generation %s', offer_generation => {
+    expect(parseFcmOffer({ ...payload, offer_id: '11111111-1111-4111-8111-111111111111', offer_generation }, now)?.offerGeneration).toBeNull();
+  });
   it('preserves epoch-second expiry through native transport', () => {
     const offer = parseFcmOffer(payload, now);
     expect(offer?.timeoutAt).toBe(new Date(now + 60_000).toISOString());

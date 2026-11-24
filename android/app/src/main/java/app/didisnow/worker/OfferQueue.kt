@@ -76,6 +76,9 @@ object OfferQueue {
         return JSONObject().apply {
             put("booking_id", bookingId)
             put("booking_request_id", intent.getStringExtra("booking_request_id") ?: "")
+            OfferAcceptanceContract.uuidOrNull(intent.getStringExtra("offer_id"))?.let { put("offer_id", it) }
+            OfferAcceptanceContract.generationOrNull(intent.getStringExtra("offer_generation"),
+                intent.getStringExtra("offer_id") ?: intent.getStringExtra("booking_request_id"))?.let { put("offer_generation", it) }
             put("booking_type", intent.getStringExtra("booking_type") ?: "instant")
             put("customer_name", intent.getStringExtra("customer_name") ?: "New Customer")
             put("community", intent.getStringExtra("community") ?: "")
@@ -123,6 +126,9 @@ object OfferQueue {
         putExtra("booking_id", offer.optString("booking_id"))
         offer.optString("booking_request_id").takeIf { it.isNotBlank() }
             ?.let { putExtra("booking_request_id", it) }
+        OfferAcceptanceContract.uuidOrNull(offer.opt("offer_id"))?.let { putExtra("offer_id", it) }
+        OfferAcceptanceContract.generationOrNull(offer.opt("offer_generation"),
+            OfferAcceptanceContract.uuidOrNull(offer.opt("offer_id")) ?: offer.optString("booking_request_id"))?.let { putExtra("offer_generation", it) }
         putExtra("booking_type", offer.optString("booking_type", "instant"))
         putExtra("customer_name", offer.optString("customer_name", "New Customer"))
         putExtra("community", offer.optString("community"))

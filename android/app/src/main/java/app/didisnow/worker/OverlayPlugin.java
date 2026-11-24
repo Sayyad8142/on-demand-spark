@@ -250,6 +250,10 @@ public class OverlayPlugin extends Plugin {
             // countdown shows the real time left and ACKs target this offer.
             String reqId = b.optString("booking_request_id", "");
             if (!reqId.isEmpty()) intent.putExtra("booking_request_id", reqId);
+            String committedId = OfferAcceptanceContract.uuidOrNull(b.opt("offer_id"));
+            String generation = OfferAcceptanceContract.generationOrNull(b.opt("offer_generation"), committedId != null ? committedId : reqId);
+            if (committedId != null) intent.putExtra("offer_id", committedId);
+            if (generation != null) intent.putExtra("offer_generation", generation);
             long expiresAt = b.optLong("expires_at", 0L);
             if (expiresAt > 0L) intent.putExtra("expires_at", expiresAt);
             String ackToken = b.optString("ack_token", "");

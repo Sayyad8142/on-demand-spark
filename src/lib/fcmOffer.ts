@@ -1,3 +1,4 @@
+import { isOfferUuid } from '@/lib/favoriteOfferStatus';
 import type { BookingAlert } from '@/services/bookingAlertCoordinator';
 
 const text = (...values: unknown[]): string | undefined =>
@@ -31,6 +32,8 @@ export function parseFcmOffer(data: Record<string, unknown>, now = Date.now()): 
   return {
     bookingId,
     bookingRequestId: text(data.booking_request_id, data.bookingRequestId),
+    committedOfferId: isOfferUuid(data.offer_id) ? data.offer_id : null,
+    offerGeneration: isOfferUuid(data.offer_generation) && data.offer_generation === (data.offer_id ?? data.booking_request_id ?? data.bookingRequestId) ? data.offer_generation : null,
     custName: text(data.cust_name, data.custName, data.customer, data.customer_name) ?? 'Customer',
     community: text(data.community) ?? '',
     serviceType: text(data.service_type, data.serviceType) ?? '',

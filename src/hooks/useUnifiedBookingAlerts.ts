@@ -156,10 +156,12 @@ export function useUnifiedBookingAlerts(
 
     let outcome: ReturnType<typeof classifyAcceptResult> = "retry";
     let message: string | undefined;
+    let alreadyAccepted = false;
     try {
       const result = await tryAccept(bookingId, workerId || undefined, pending.timeoutAt, pending.bookingRequestId);
       outcome = classifyAcceptResult(result);
       message = result.error;
+      alreadyAccepted = result.alreadyAccepted === true;
     } catch {
       outcome = "retry";
     }
@@ -169,7 +171,7 @@ export function useUnifiedBookingAlerts(
       // and the native poller closing our own booking as "taken".
       markAcceptedByMe(bookingId);
       await releaseDeviceAcceptance(bookingId, true);
-      toast({ title: "Booking accepted" });
+      if (!alreadyAccepted) toast({ title: "Booking accepted" });
       dismissAlert(bookingId);
       setPending(null);
       return;

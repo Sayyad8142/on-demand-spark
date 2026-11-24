@@ -37,6 +37,14 @@ beforeEach(() => {
 });
 
 describe("Worker App accept/reject identity handling", () => {
+  it('server-confirmed repeated winner returns success with an explicit no-new-effects marker', async () => {
+    state.rpc = async () => ({ data: { success: true, already_accepted: true }, error: null });
+    expect(await tryAccept('b1')).toEqual({ success: true, alreadyAccepted: true });
+  });
+  it('malformed repeated-winner marker is not trusted', async () => {
+    state.rpc = async () => ({ data: { success: true, already_accepted: 'true' }, error: null });
+    expect(await tryAccept('b1')).toEqual({ success: true });
+  });
   it('newer server read cannot extend the original accepted offer window', async () => {
     const original = new Date(Date.now() - 1).toISOString();
     expect((await tryAccept('b1', undefined, original, 'own-request')).error).toBe('offer-expired');
@@ -50,12 +58,12 @@ describe("Worker App accept/reject identity handling", () => {
   });
   it('favorite-v1 closed offer in the accept answer closes instead of retrying', async () => {
     const now = new Date().toISOString();
-    state.rpc = async () => ({ data: { success: false, error: 'Network hiccup', offer: { contract_version: 'favorite-v1', booking_id: 'b1', request_id: 'own-request', offer_generation: 1, status: 'expired', actionable: false, expires_at: now, server_time: now } }, error: null });
-    expect((await tryAccept('b1', undefined, undefined, 'own-request')).error).toBe('offer-closed');
+    state.rpc = async () => ({ data: { success: false, error: 'Network hiccup', offer: { contract_version: 'favorite-v1', booking_id: 'b1', request_id: '11111111-1111-4111-8111-111111111111', offer_generation: '11111111-1111-4111-8111-111111111111', status: 'expired', favorite_state: 'cancelled', offer_state: 'closed', actionable: false, expires_at: now, server_time: now } }, error: null });
+    expect((await tryAccept('b1', undefined, undefined, '11111111-1111-4111-8111-111111111111')).error).toBe('offer-closed');
   });
   it('favorite-v1 block for another booking is ignored', async () => {
     const now = new Date().toISOString();
-    state.rpc = async () => ({ data: { success: false, error: 'Network hiccup', offer: { contract_version: 'favorite-v1', booking_id: 'other', request_id: 'own-request', offer_generation: 1, status: 'expired', actionable: false, expires_at: now, server_time: now } }, error: null });
+    state.rpc = async () => ({ data: { success: false, error: 'Network hiccup', offer: { contract_version: 'favorite-v1', booking_id: 'other', request_id: '11111111-1111-4111-8111-111111111111', offer_generation: '11111111-1111-4111-8111-111111111111', status: 'expired', favorite_state: 'cancelled', offer_state: 'closed', actionable: false, expires_at: now, server_time: now } }, error: null });
     expect((await tryAccept('b1')).error).toBe('Network hiccup');
   });
   it("preflight is restricted to the logged-in worker, not the caller worker", async () => {

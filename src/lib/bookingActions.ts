@@ -2,8 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { canShowWorkerBookingOffer, logScheduledOfferDecision } from "@/lib/scheduledBookingGuards";
 import { ackBookingDelivery } from "@/lib/bookingAck";
 import { isAcceptanceClosedError, ACCEPTANCE_CLOSED_MESSAGE } from "@/lib/acceptanceClosed";
-import { offerAcceptanceRpc } from '@/lib/offerAcceptanceContract';
-import { parseFavoriteOfferStatus } from '@/lib/favoriteOfferStatus';
+import { offerAcceptanceRpc, FAVORITE_V1_STATUS_ENABLED, OFFER_STATUS_RPC } from '@/lib/offerAcceptanceContract';
+import { parseFavoriteOfferStatus, favoriteLocalDeadline } from '@/lib/favoriteOfferStatus';
 
 // Helper to ensure session is valid before making API calls
 async function ensureValidSession(): Promise<boolean> {
@@ -40,7 +40,7 @@ export async function tryAccept(
   _workerId?: string,
   originalTimeoutAt?: string,
   originalRequestId?: string,
-): Promise<{ success: boolean; error?: string; acceptanceClosed?: boolean }> {
+): Promise<{ success: boolean; error?: string; acceptanceClosed?: boolean; alreadyAccepted?: boolean }> {
   // Ensure valid session before accepting
   const sessionValid = await ensureValidSession();
   if (!sessionValid) {
@@ -65,6 +65,14 @@ export async function tryAccept(
     .select("id").eq("user_id", session.user.id).maybeSingle();
   if (workerError) return { success: false, error: "Unable to check offer. Please try again." };
   if (!worker) return { success: false, error: "not-offered" };
+  let deadline: number;
+  if (FAVORITE_V1_STATUS_ENABLED) {
+    const { data, error } = await (supabase.rpc as any)(OFFER_STATUS_RPC, { p_booking_id: bookingId });
+    const status = !error && parseFavoriteOfferStatus(data, { bookingId, requestId: originalRequestId });
+    const local = status && favoriteLocalDeadline(status, Date.now(), originalTimeoutAt ? Date.parse(originalTimeoutAt) : undefined);
+    if (!local) return { success: false, error: "offer-closed" };
+    deadline = local;
+  } else {
   let requestQuery = supabase
     .from("booking_requests")
     .select("id, status, timeout_at")
@@ -76,9 +84,10 @@ export async function tryAccept(
   if (!activeRequest || !["pending", "sent", "queued"].includes(activeRequest.status)) return { success: false, error: "not-offered" };
   const serverDeadline = Date.parse(activeRequest.timeout_at ?? "");
   const originalDeadline = originalTimeoutAt ? Date.parse(originalTimeoutAt) : serverDeadline;
-  const deadline = Math.min(serverDeadline, originalDeadline);
+  deadline = Math.min(serverDeadline, originalDeadline);
   if (!Number.isFinite(deadline)) return { success: false, error: "Unable to check offer. Please try again." };
   if (deadline <= Date.now()) return { success: false, error: "offer-expired" };
+  }
 
   
   // ACK that the worker tapped Accept (fire-and-forget, never blocks)
@@ -98,7 +107,7 @@ export async function tryAccept(
     return { success: false, error: error.message };
   }
   
-  const result = data as { success?: boolean; error?: string; offer?: unknown } | null;
+  const result = data as { success?: boolean; error?: string; offer?: unknown; already_accepted?: unknown } | null;
   
   if (!result?.success) {
     console.error("❌ Booking accept failed:", result?.error);
@@ -114,7 +123,7 @@ export async function tryAccept(
   // (single source of truth). Do NOT start it from here — duplicate starts
   // tear down the native step-event listener mid-session.
 
-  return { success: true };
+  return result.already_accepted === true ? { success: true, alreadyAccepted: true } : { success: true };
 }
 
 export type RejectResult = {

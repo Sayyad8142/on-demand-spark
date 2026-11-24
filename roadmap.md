@@ -1,5 +1,10 @@
 # Worker language translation
 
+## Final favorite-v1 alignment — preparation only
+- [x] Align UUID/null generation, pending-only actionability, final state enums and repeat-winner effects across web/native.
+- [x] Verify committed identity transport, regression tests and full Android asset freshness; keep lookup OFF and version 10.0.05 (105). Prior run: 866 app tests / 89 Android tests passed; final focused recheck: 99 tests passed.
+- [ ] Live/device verification — blocked: backend deployment approval and real signed-in Android device; no production changes authorized.
+
 ## Favorite offer safety fixes — 24 Nov, preparation only
 - [x] Prepare actual-expiry recovery, persistent original-deadline replay protection, strict endpoint adapters (OFF pending worker grant), immediate generation-specific rejection cleanup and truthful receipt/popup evidence; version 10.0.05 (105) unchanged.
 - [x] 856 app tests / 87 Android tests passed; Kotlin/Java compiled without packaging; preview build OK; mobile Home redirects to auth without errors. Android freshness guard refuses stale assets. Report: docs/favorite-worker-fixes-2026-11-24.md.

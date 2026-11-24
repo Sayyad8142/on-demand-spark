@@ -16,6 +16,8 @@ export function buildNativeOverlayPayload(alert: BookingAlert, nowMs: number = D
   return JSON.stringify({
     id: alert.bookingId,
     booking_request_id: alert.bookingRequestId ?? "",
+    offer_id: alert.committedOfferId ?? null,
+    offer_generation: alert.offerGeneration ?? null,
     cust_name: alert.custName,
     community: alert.community,
     service_type: alert.serviceType,
@@ -27,7 +29,7 @@ export function buildNativeOverlayPayload(alert: BookingAlert, nowMs: number = D
     scheduled_date: alert.scheduledDate,
     scheduled_time: alert.scheduledTime,
     prealert_sent: alert.prealertSent === true,
-    // Epoch seconds; 0 = unknown (native falls back to its own TTL rules).
+    // Epoch seconds; 0 = unknown (native must recover the original server expiry).
     expires_at: Number.isFinite(timeoutMs) ? Math.floor(timeoutMs / 1000) : 0,
     ...(alert.ackToken ? { ack_token: alert.ackToken } : {}),
   });

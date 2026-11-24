@@ -65,10 +65,16 @@ object OwnOfferPreflight {
         val json = try { JSONObject(body) } catch (_: Exception) { throw IllegalStateException("Unable to check offer. Please retry.") }
         fun epoch(key: String) = try { Instant.parse(json.optString(key)).epochSecond } catch (_: Exception) { 0L }
         val actionable = if (json.opt("actionable") is Boolean) json.getBoolean("actionable") else null
-        val generation = if (json.opt("offer_generation") is Int) json.getInt("offer_generation").toLong() else 0L
+        val rawGeneration = json.opt("offer_generation")
+        if (rawGeneration != JSONObject.NULL && OfferAcceptanceContract.uuidOrNull(rawGeneration) == null) throw IllegalStateException("not-offered")
+        val generation = OfferAcceptanceContract.uuidOrNull(rawGeneration)
+        if (!json.has("favorite_state")) throw IllegalStateException("not-offered")
+        val favoriteState = if (json.isNull("favorite_state")) null else json.opt("favorite_state") as? String
+            ?: throw IllegalStateException("not-offered")
+        if (json.has("offer_id") && json.opt("offer_id") != json.opt("request_id")) throw IllegalStateException("not-offered")
         val deadline = OfferAcceptanceContract.favoriteDeadline(
             json.optString("contract_version"), json.optString("booking_id"), bookingId,
-            json.optString("request_id"), requestId, generation, json.optString("status"), actionable,
+            json.optString("request_id"), requestId, generation, json.optString("status"), favoriteState, json.optString("offer_state"), actionable,
             epoch("expires_at"), epoch("server_time"), System.currentTimeMillis() / 1000)
         if (deadline <= 0) throw IllegalStateException(if (actionable == false) "offer-expired" else "not-offered")
         return deadline
