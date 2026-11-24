@@ -29,6 +29,7 @@ import UpiQrUpload from "@/components/UpiQrUpload";
 import { getInstalledVersionSync, loadInstalledVersion, versionLabel } from "@/lib/installedVersion";
 
 import PriorityScoreCard from "@/components/profile/PriorityScoreCard";
+import ServicePricingEntry from '@/components/profile/ServicePricingEntry';
 
 const SERVICES = [{
   value: "maid",
@@ -804,6 +805,9 @@ export default function Profile() {
         {/* Priority Score */}
         <div className="px-4 mt-4">
           <PriorityScoreCard worker={isGuestMode && worker ? { ...worker, id: undefined } : worker} />
+        </div>
+        <div className="px-4 mt-4">
+          <ServicePricingEntry communityNames={isGuestMode ? [] : communities.filter(c=>realWorker?.communities?.includes(c.value)).map(c=>c.name)} />
         </div>
 
 

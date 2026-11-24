@@ -1,5 +1,10 @@
 # Worker language translation
 
+## Service Pricing & Earnings — 24 Nov, no activation
+- [ ] Prepare Profile entry and read-only community pricing screen against the handoff; no duplicate price formulas or invented defaults.
+- [ ] Validate server contract, freshness/failure/account boundaries and preview all states with synthetic inputs.
+- [ ] Record parity/resolver/assignment security and signed-in release blockers; no deployment or publication.
+
 ## Mandatory update screen — 24 Nov, preview only
 - [x] Prompt 131 final verification: all removed content and green controls confirmed in rendered DOM; official web Store popup verified; 911 app tests pass. Android assets check blocked by missing dist; Java/SDK/adb absent. Detailed evidence: docs/mandatory-update-final-verification-2026-11-24.md. No app code/version/publication changes.
 - [x] Simplify mandatory presentation with green download/phone controls; preserve optional screen and all update protections.

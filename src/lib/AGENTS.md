@@ -5,6 +5,8 @@
 
 # Worker card and setup safety
 
+- Service pricing reads only the disabled worker-service-pricing contract via useServicePricing; no local total/commission formulas, raw pricing table fallback or profile creation. Why: unresolved User/booking parity and mutable associations cannot authorize guaranteed quotes or assigned-only data.
+
 - Late Start priority uses a disabled, read-only versioned Admin contract; warnings require settings and deductions require booking-specific server confirmation. Shared useWorkerPriority reads exact score/reason for Home, Profile and Ranking. Why: elapsed time must never deduct points, duplicate penalties or infer a late penalty from aggregate faults.
 
 - Named live-dispatch display uses `liveDispatchView.ts` only behind the OFF-by-default approval gate; legacy group estimates render Position updating. Why: scores and unverified contracts must never claim production order or authorize queue names.
