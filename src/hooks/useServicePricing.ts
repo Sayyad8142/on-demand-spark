@@ -5,12 +5,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { parsePricingCatalogue, SERVICE_PRICING_ENABLED, type PricingCatalogue } from '@/lib/servicePricing';
 
 export function useServicePricing(userId:string|undefined,selected:string) {
-  const [state,setState]=useState<{owner?:string;data:PricingCatalogue|null;loading:boolean;error:boolean}>({data:null,loading:false,error:false});
+  const [state,setState]=useState<{owner?:string;selection:string;data:PricingCatalogue|null;loading:boolean;error:boolean}>({selection:'',data:null,loading:false,error:false});
   const sequence=useRef(0);
   const refresh=useCallback(async()=>{
     const ticket=++sequence.current;
-    if(!userId || !SERVICE_PRICING_ENABLED){setState({owner:userId,data:null,loading:false,error:true});return;}
-    setState(s=>({owner:userId,data:s.owner===userId?s.data:null,loading:true,error:false}));
+    if(!userId || !SERVICE_PRICING_ENABLED){setState({owner:userId,selection:selected,data:null,loading:false,error:true});return;}
+    setState(s=>({owner:userId,selection:selected,data:s.owner===userId&&s.selection===selected?s.data:null,loading:true,error:false}));
+    let retainCached=false;
     try {
       const {data:{user},error:authError}=await supabase.auth.getUser();
       if(authError || user?.id!==userId) throw new Error('session');
@@ -21,13 +22,18 @@ export function useServicePricing(userId:string|undefined,selected:string) {
         if(renewed.error || renewed.data.session?.user.id!==userId) throw new Error('session');
         result=await request();
       }
-      if(result.error) throw result.error;
+      if(result.error) {
+        const status=result.error.context instanceof Response?result.error.context.status:undefined;
+        retainCached=status===undefined || status>=500;
+        throw result.error;
+      }
       const data=parsePricingCatalogue(result.data);
       // The requested assigned-only boundary requires Admin-controlled provenance.
       if(data.communities.some(c=>c.association_verification!=='admin_verified')) throw new Error('association_unverified');
-      if(ticket===sequence.current) setState({owner:userId,data,loading:false,error:false});
+      if(selected && (data.communities.length!==1 || data.communities[0]?.id!==selected)) throw new Error('community_mismatch');
+      if(ticket===sequence.current) setState({owner:userId,selection:selected,data,loading:false,error:false});
     } catch {
-      if(ticket===sequence.current) setState(s=>({owner:userId,data:s.owner===userId?s.data:null,loading:false,error:true}));
+      if(ticket===sequence.current) setState(s=>({owner:userId,selection:selected,data:retainCached&&s.owner===userId&&s.selection===selected?s.data:null,loading:false,error:true}));
     }
   },[userId,selected]);
   useEffect(()=>{
@@ -38,5 +44,5 @@ export function useServicePricing(userId:string|undefined,selected:string) {
     if(Capacitor.isNativePlatform()) void App.addListener('resume',foreground).then(h=>{if(disposed) void h.remove();else remove=()=>{void h.remove();};}).catch(()=>{});
     return()=>{disposed=true;++sequence.current;remove?.();document.removeEventListener('visibilitychange',foreground);window.removeEventListener('online',foreground);};
   },[refresh]);
-  return {...state,data:state.owner===userId?state.data:null,refresh};
+  return {...state,data:state.owner===userId&&state.selection===selected?state.data:null,refresh};
 }

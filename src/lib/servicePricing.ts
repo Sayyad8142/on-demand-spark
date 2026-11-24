@@ -57,3 +57,9 @@ export function pricingCommunity(data:PricingCatalogue|null,id:string):PricingCo
   return data?.communities.find(c=>c.id===id)??null;
 }
 export function readableFlatSize(key:string):string { return key.replace(/_/g,' ').replace(/BHK/g,' BHK').replace(/\s+/g,' ').trim(); }
+
+/** Freshness is display-only; an old snapshot must never look live. */
+export function pricingSnapshotFresh(generatedAt:string, now=Date.now()):boolean {
+  const generated=Date.parse(generatedAt);
+  return Number.isFinite(generated) && generated<=now && now-generated<=300_000;
+}

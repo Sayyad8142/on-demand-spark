@@ -52,6 +52,7 @@ import Bookings from "./pages/Bookings";
 import Leaderboard from "./pages/Leaderboard";
 import TestBooking from "./pages/TestBooking";
 import Profile from "./pages/Profile";
+import ServicePricing from "./pages/ServicePricing";
 import Settings from "./pages/Settings";
 import Troubleshoot from "./pages/Troubleshoot";
 import VerifyPush from "./pages/VerifyPush";
@@ -791,6 +792,7 @@ function AppInner() {
           <Route path="/bookings" element={<ProtectedRoute showNav={true}><Bookings /></ProtectedRoute>} />
           <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute showNav={true}><Profile /></ProtectedRoute>} />
+          <Route path="/service-pricing" element={<ProtectedRoute><ServicePricing /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/troubleshoot" element={<ProtectedRoute><Troubleshoot /></ProtectedRoute>} />
           <Route path="/availability" element={<ProtectedRoute><Availability /></ProtectedRoute>} />

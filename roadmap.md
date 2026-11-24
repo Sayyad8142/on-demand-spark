@@ -1,9 +1,12 @@
 # Worker language translation
 
 ## Service Pricing & Earnings — 24 Nov, no activation
-- [ ] Prepare Profile entry and read-only community pricing screen against the handoff; no duplicate price formulas or invented defaults.
-- [ ] Validate server contract, freshness/failure/account boundaries and preview all states with synthetic inputs.
-- [ ] Record parity/resolver/assignment security and signed-in release blockers; no deployment or publication.
+- [x] Repeated hook diagnostic not reproduced: explicit React imports in hook and its only caller; preview builds OK and breakpoint/listener test passes.
+- [x] Finish selected prepared-screen approach: Profile entry, dedicated translated read-only screen, service sections and retry/pull refresh; live pricing stays OFF, no local price formulas.
+- [x] Validate contract and account/community/cache boundaries; all app tests pass; synthetic unavailable/loading/empty/reference/error states, returned-community switching and en/hi/te at 320/393/1280 inspected; guest Profile entry opens unavailable screen.
+- [x] Record scoped evidence and release blockers in docs/service-pricing-prepared-2026-11-24.md; no deployment or publication.
+- [ ] Activate pricing, certified quantity/net-earnings examples and workload-specific imagery — blocked: approved deployed worker endpoint, User/booking parity and server-returned examples/descriptions not available; no local formulas or guessed item counts/images.
+- [ ] Verify signed-in Admin save → Worker prices and own earnings on Android — blocked: approved endpoint, external unmanaged worker/customer sessions and physical Android device.
 
 ## Mandatory update screen — 24 Nov, preview only
 - [x] Prompt 131 final verification: all removed content and green controls confirmed in rendered DOM; official web Store popup verified; 911 app tests pass. Android assets check blocked by missing dist; Java/SDK/adb absent. Detailed evidence: docs/mandatory-update-final-verification-2026-11-24.md. No app code/version/publication changes.
