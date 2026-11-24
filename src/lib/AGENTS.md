@@ -4,6 +4,8 @@
 
 # Worker card and setup safety
 
+- Late Start priority uses a disabled, read-only versioned Admin contract; warnings require settings and deductions require booking-specific server confirmation. Shared useWorkerPriority reads exact score/reason for Home, Profile and Ranking. Why: elapsed time must never deduct points, duplicate penalties or infer a late penalty from aggregate faults.
+
 - Named live-dispatch display uses `liveDispatchView.ts` only behind the OFF-by-default approval gate; legacy group estimates render Position updating. Why: scores and unverified contracts must never claim production order or authorize queue names.
 
 - Active booking queries use an account-keyed, memory-only React Query cache; realtime rows are restricted to WORKER_BOOKING_COLUMNS and never authorize mutations. Why: instant display must not leak OTPs or another account's booking.

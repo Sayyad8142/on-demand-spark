@@ -21,6 +21,7 @@ import { startOtpCardAction } from "@/lib/startOtp";
 import { bookingCharges, startOtpTimer } from "@/lib/bookingCardDetails";
 import StartOtpCountdownCard from "@/components/StartOtpCountdownCard";
 import { isActiveWorkStatus } from "@/lib/workSafety";
+import type { LateStartPriority } from "@/lib/lateStartPriority";
 
 import serviceDishWashing from "@/assets/service-dish-washing.webp";
 import serviceFloorCleaning from "@/assets/service-floor-cleaning.webp";
@@ -45,6 +46,7 @@ interface ActiveJobCardProps {
   onStatusUpdate: (newStatus: string) => Promise<void>;
   updating: boolean;
   onRefresh?: () => void;
+  lateStartPriority?: LateStartPriority | null;
 }
 
 const MANAGER_PHONE = "8008180018";
@@ -54,7 +56,8 @@ export default function ActiveJobCard({
   booking,
   onStatusUpdate,
   updating,
-  onRefresh
+  onRefresh,
+  lateStartPriority
 }: ActiveJobCardProps) {
   useWorkerLanguage();
   const [remainingSeconds, setRemainingSeconds] = useState<number>(0);
@@ -355,6 +358,7 @@ export default function ActiveJobCard({
           ) : otpAction === "start" ? (
             <StartOtpCountdownCard
               timer={startTimer}
+              priority={lateStartPriority}
               onStart={() => navigate(`/start-booking/${booking.id}`)}
               disabled={isWorkCompletedDisabled}
               updating={updating} />

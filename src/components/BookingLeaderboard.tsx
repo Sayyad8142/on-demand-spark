@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trophy, Star, Zap, IndianRupee, TrendingUp, HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkerPriority } from "@/hooks/useWorkerPriority";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
@@ -42,7 +43,9 @@ export default function BookingLeaderboard() {
   const [slideDir, setSlideDir] = useState<"left" | "right">("left");
   const [reviews, setReviews] = useState<Map<string, ReviewStats>>(new Map());
   const touchX = useRef<number | null>(null);
-  const [ownScore, setOwnScore] = useState<number | null>(null);
+  const ownId = data?.leaderboard.find(l => l.isMe)?.id;
+  const priority = useWorkerPriority(ownId);
+  const ownScore = priority.isError ? null : priority.data?.score ?? null;
   const fetchInFlight = useRef(false);
   const mounted = useRef(false);
 
@@ -55,13 +58,6 @@ export default function BookingLeaderboard() {
       if (!mounted.current) return;
       setData(result);
       setError(null);
-      // Own score straight from the worker's own row (a real 0 stays 0).
-      const mine = (result?.leaderboard ?? []).find((l: LeaderboardEntry) => l.isMe);
-      if (mine) {
-        const { data: own } = await supabase.from("workers").select("priority_score").eq("id", mine.id).maybeSingle();
-        if (!mounted.current) return;
-        setOwnScore(leaderboardScore(own?.priority_score));
-      } else setOwnScore(null);
       const ids = (result?.leaderboard ?? []).map((l: LeaderboardEntry) => l.id);
       if (ids.length) {
         const { data: rows, error: rErr } = await supabase
@@ -73,7 +69,6 @@ export default function BookingLeaderboard() {
       if (!mounted.current) return;
       console.error("Error fetching leaderboard:", err);
       setData(null);
-      setOwnScore(null);
       setError(err.message || "Failed to load leaderboard");
     } finally {
       fetchInFlight.current = false;
@@ -162,7 +157,7 @@ export default function BookingLeaderboard() {
                   </div>
                   <div className="flex items-center gap-1">
                     <Zap className="w-3 h-3 fill-primary text-primary" />
-                    <span className="text-xs font-bold">{displayText("Performance score")} {ownScore ?? leaderboardScore(me.priority_score) ?? "—"}</span>
+                    <span className="text-xs font-bold">{displayText("Performance score")} {ownScore ?? "—"}</span>
                   </div>
                 </div>
               </div>
@@ -225,10 +220,10 @@ export default function BookingLeaderboard() {
         >
           {loading ? <LeaderboardSkeleton /> : error || !data ? <p role="status" className="py-8 text-center text-sm text-muted-foreground">{displayText("Unable to Verify")}</p> : <>
           {top3.map((w, i) => (
-            <WorkerRow key={w.id} worker={w} tab={tab} medal={i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"} />
+            <WorkerRow key={w.id} worker={w} ownScore={ownScore} tab={tab} medal={i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"} />
           ))}
           {others.map((w) => (
-            <WorkerRow key={w.id} worker={w} tab={tab} />
+            <WorkerRow key={w.id} worker={w} ownScore={ownScore} tab={tab} />
           ))}
           </>}
         </div>
@@ -237,7 +232,7 @@ export default function BookingLeaderboard() {
   );
 }
 
-function WorkerRow({ worker, medal, tab }: { worker: RankedWorker<LeaderboardEntry>; medal?: string; tab: "top" | "earners" }) {
+function WorkerRow({ worker, medal, tab, ownScore }: { worker: RankedWorker<LeaderboardEntry>; medal?: string; tab: "top" | "earners"; ownScore: number | null }) {
   useWorkerLanguage();
   return (
     <div className={`flex items-center justify-between p-2.5 rounded-xl border ${worker.isMe ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800' : 'bg-card border-border'} shadow-sm`}>
@@ -274,7 +269,7 @@ function WorkerRow({ worker, medal, tab }: { worker: RankedWorker<LeaderboardEnt
             {tab === "top" && (
               <div className="flex items-center gap-0.5">
                 <Zap className="w-2.5 h-2.5 fill-primary text-primary" />
-                <span className="text-[10px] font-bold">{displayText("Score")} {leaderboardScore(worker.priority_score) ?? "—"}</span>
+                <span className="text-[10px] font-bold">{displayText("Score")} {(worker.isMe ? ownScore : leaderboardScore(worker.priority_score)) ?? "—"}</span>
               </div>
             )}
             {tab === "earners" && (

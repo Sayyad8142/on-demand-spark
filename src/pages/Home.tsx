@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkerRatings } from "@/hooks/useWorkerRatings";
+import { useWorkerPriority } from "@/hooks/useWorkerPriority";
+import { useLateStartPriority } from "@/hooks/useLateStartPriority";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { useUnifiedBookingAlerts } from "@/hooks/useUnifiedBookingAlerts";
 import { useActiveJob } from "@/hooks/useActiveJob";
@@ -62,6 +64,8 @@ export default function Home() {
   const worker = isGuestMode ? DEMO_WORKER : realWorker;
   const activeJob = isGuestMode ? null : realActiveJob;
   const { summary: ratingSummary } = useWorkerRatings(isGuestMode ? null : realWorker?.id);
+  const priority = useWorkerPriority(isGuestMode ? null : realWorker?.id);
+  const lateStart = useLateStartPriority(activeJob?.id ?? "", !!activeJob && activeJob.start_otp_required === true && !activeJob.started_at);
 
   const payoutReady = isGuestMode ? true : workerLoading ? true : !!(worker as any)?.payout_ready;
 
@@ -318,7 +322,7 @@ export default function Home() {
 
       {!isGuestMode && worker && !activeJob && (
         <HomePerformanceCard
-          priorityScore={(worker as any)?.priority_score}
+          priorityScore={priority.isError ? null : priority.data?.score}
           rating={ratingSummary.data?.average}
           totalRatings={ratingSummary.data?.count}
         />
@@ -403,7 +407,7 @@ export default function Home() {
         </Card>}
 
       {!isGuestMode && bookingLoading && !activeJob && <div role="status" className="mt-6 flex min-h-40 items-center justify-center gap-2 rounded-lg bg-muted text-muted-foreground"><RefreshCw className="h-5 w-5 animate-spin" />{displayText("Loading booking…")}</div>}
-      {activeJob && <div className="pt-6 sm:pt-8"><ActiveJobCard booking={activeJob} onStatusUpdate={handleStatusUpdate} updating={updating} onRefresh={refetchActiveJob} /></div>}
+      {activeJob && <div className="pt-6 sm:pt-8"><ActiveJobCard booking={activeJob} onStatusUpdate={handleStatusUpdate} updating={updating} onRefresh={refetchActiveJob} lateStartPriority={lateStart.isError ? null : lateStart.data} /></div>}
       
       {/* Guest Mode Logout Button - Big Red */}
       {isGuestMode && (

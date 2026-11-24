@@ -1,5 +1,11 @@
 # Worker language translation
 
+## Late Start OTP priority integration — 24 Nov, no publication
+- [x] Hosted contract inspected: Late Start settings/reader absent, generic faults cost 20; reported React hook error not reproduced, preview build OK.
+- [x] Prepare translated setting-driven warning, confirmed deduction and distinct breakdown behind OFF reader; shared exact server score refresh on Home/Profile/Ranking; no local deductions or alarm/OTP/dispatch changes.
+- [x] 827 app tests passed; actual countdown component at 320/393/1280 in en/hi/te checked with synthetic receipts; live Home redirects to auth. Evidence: docs/late-start-priority-2026-11-24.md.
+- [ ] Activate and verify actual penalty/score readback — blocked: Admin-owned settings, idempotent penalty enforcement and approved read-only contract absent; external unmanaged worker session/current Android phone unavailable. No production deployment/publication.
+
 ## Start OTP alarm audit — 23 Nov, no publication
 - [x] Follow-up flow sweep: screen/voice/native/reboot/server SOURCE inventory recorded; empty-queue notification, failed-player release and cross-job/native OTP-speech overlap repaired; no backend/countdown/OTP/dispatch/payout/permission changes.
 - [x] Audit completed; alarm-only cancellation/reassignment stops, playback-confirmed retry, queued-start guard and bounded asynchronous timer-receiver lifetime prepared; countdown/OTP/dispatch/payouts unchanged. Report: docs/start-otp-alarm-audit-2026-11-23.md.

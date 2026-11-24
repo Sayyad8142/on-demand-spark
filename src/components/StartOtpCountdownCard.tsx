@@ -2,6 +2,8 @@ import { KeyRound, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { displayText } from "@/i18n/display";
 import { timerLabel, type StartTimer } from "@/lib/bookingCardDetails";
+import "@/i18n/lateStartMessages";
+import { lateStartNotice, type LateStartPriority } from "@/lib/lateStartPriority";
 
 const TONE = {
   green: { text: "text-success", bar: "bg-success" },
@@ -10,10 +12,11 @@ const TONE = {
 } as const;
 
 /** Display-only countdown; the button only opens the existing Start OTP screen. */
-export default function StartOtpCountdownCard({ timer, onStart, disabled, updating }: {
-  timer: StartTimer | null; onStart: () => void; disabled?: boolean; updating?: boolean;
+export default function StartOtpCountdownCard({ timer, onStart, disabled, updating, priority }: {
+  timer: StartTimer | null; onStart: () => void; disabled?: boolean; updating?: boolean; priority?: LateStartPriority | null;
 }) {
   const tone = TONE[timer?.tone ?? "green"];
+  const notice = timer ? lateStartNotice(priority, timer.overdue) : null;
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-md">
       {timer && (
@@ -30,6 +33,9 @@ export default function StartOtpCountdownCard({ timer, onStart, disabled, updati
           </div>
         </div>
       )}
+      {notice && <p role="status" className={`mb-3 text-sm leading-snug ${notice.kind === "confirmed" ? "text-destructive" : "text-warning"}`}>
+        {displayText(notice.kind === "confirmed" ? "−{{points}} Priority Points: Start OTP delayed." : "Start your booking within 10 minutes to avoid losing {{points}} priority points.", { points: notice.points })}
+      </p>}
       <Button
         size="lg"
         variant="bookingStart"

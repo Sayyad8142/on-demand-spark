@@ -803,7 +803,7 @@ export default function Profile() {
 
         {/* Priority Score */}
         <div className="px-4 mt-4">
-          <PriorityScoreCard worker={worker} />
+          <PriorityScoreCard worker={isGuestMode && worker ? { ...worker, id: undefined } : worker} />
         </div>
 
 

@@ -6,6 +6,8 @@ import { Trophy, Star } from "lucide-react";
 import { parsePriorityBreakdown, type PriorityPart } from "@/lib/priorityBreakdown";
 import { priorityBadge } from "@/lib/priorityBadge";
 import { leaderboardScore } from "@/lib/leaderboardRanking";
+import { useWorkerPriority } from "@/hooks/useWorkerPriority";
+import "@/i18n/lateStartMessages";
 
 interface PriorityScoreCardProps {
   worker: {
@@ -41,15 +43,17 @@ function tierLabelFromScore(score: number) {
 
 export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
   useWorkerLanguage();
-  const score = leaderboardScore(worker?.priority_score);
+  const priority = useWorkerPriority(worker?.id);
+  const score = worker?.id ? (priority.isError ? null : priority.data?.score ?? null) : leaderboardScore(worker?.priority_score);
   const effectiveRating = worker?.admin_override_rating ?? worker?.rating ?? 0;
   const stored = score;
-  const breakdown = parsePriorityBreakdown(worker?.score_reason, stored);
+  const breakdown = parsePriorityBreakdown(worker?.id ? priority.data?.reason : worker?.score_reason, stored);
   const partLabel: Record<PriorityPart["key"], string> = {
     completed: displayText("Completed jobs (last 7 days)"), online: displayText("Online hours (last 7 days)"),
     rating: displayText("Customer rating"), recent: displayText("Active in last 24 hours"),
     topRating: displayText("Rating 4.5 or above"), connection: displayText("Connection and alert replies"),
     penalties: displayText("Missed or not reached"),
+    lateStartOtp: displayText("Late Start OTP"),
   };
 
   const rank = score === null ? null : rankFromScore(score);
@@ -97,7 +101,7 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
           <ul className="space-y-1 text-xs" aria-label={displayText("How your score is made")}>
             {breakdown.parts.filter(p => p.points !== 0).map(p => (
               <li key={p.key} className="flex justify-between gap-2">
-                <span className="text-muted-foreground">{partLabel[p.key]}</span>
+                <span className="text-muted-foreground">{partLabel[p.key]}{p.key === "lateStartOtp" && <span className="block text-[11px]">{displayText("Start OTP delayed.")}</span>}</span>
                 <span className={`font-semibold ${p.points < 0 ? "text-destructive" : ""}`}>{p.points > 0 ? "+" : ""}{Math.round(p.points * 10) / 10}</span>
               </li>
             ))}
