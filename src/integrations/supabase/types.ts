@@ -4524,6 +4524,155 @@ export type Database = {
         }
         Relationships: []
       }
+      priority_late_start_exemptions: {
+        Row: {
+          booking_id: string
+          created_at: string
+          evidence_reference: string
+          note: string
+          reason: string
+          updated_at: string
+          verified_by: string
+          worker_id: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          evidence_reference: string
+          note: string
+          reason: string
+          updated_at?: string
+          verified_by: string
+          worker_id: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          evidence_reference?: string
+          note?: string
+          reason?: string
+          updated_at?: string
+          verified_by?: string
+          worker_id?: string
+        }
+        Relationships: []
+      }
+      priority_late_start_history: {
+        Row: {
+          actor_id: string | null
+          booking_id: string
+          created_at: string
+          event_type: string
+          id: number
+          points_change: number
+          reason: string
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          booking_id: string
+          created_at?: string
+          event_type: string
+          id?: never
+          points_change: number
+          reason: string
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          booking_id?: string
+          created_at?: string
+          event_type?: string
+          id?: never
+          points_change?: number
+          reason?: string
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: []
+      }
+      priority_late_start_penalties: {
+        Row: {
+          accepted_at: string
+          booking_id: string
+          created_at: string
+          deadline_at: string
+          expires_at: string
+          points: number
+          settings_id: string
+          updated_at: string
+          verified_at: string | null
+          worker_id: string
+        }
+        Insert: {
+          accepted_at: string
+          booking_id: string
+          created_at?: string
+          deadline_at: string
+          expires_at: string
+          points: number
+          settings_id: string
+          updated_at?: string
+          verified_at?: string | null
+          worker_id: string
+        }
+        Update: {
+          accepted_at?: string
+          booking_id?: string
+          created_at?: string
+          deadline_at?: string
+          expires_at?: string
+          points?: number
+          settings_id?: string
+          updated_at?: string
+          verified_at?: string | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "priority_late_start_penalties_settings_id_fkey"
+            columns: ["settings_id"]
+            isOneToOne: false
+            referencedRelation: "priority_late_start_settings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      priority_late_start_settings: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deadline_minutes: number
+          deduction_points: number
+          enabled: boolean
+          enabled_since: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deadline_minutes?: number
+          deduction_points?: number
+          enabled?: boolean
+          enabled_since?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deadline_minutes?: number
+          deduction_points?: number
+          enabled?: boolean
+          enabled_since?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           blocked_at: string | null
@@ -8912,6 +9061,10 @@ export type Database = {
         Args: { p_booking_id: string; p_worker_id: string }
         Returns: undefined
       }
+      _late_start_active_points: {
+        Args: { p_worker_id: string }
+        Returns: number
+      }
       _log_slot_violation: {
         Args: { p_booking_id: string; p_channel: string; p_worker_id: string }
         Returns: undefined
@@ -8919,6 +9072,7 @@ export type Database = {
       _my_worker_id: { Args: never; Returns: string }
       _payout_label: { Args: { s: string }; Returns: string }
       _payout_retry_safe: { Args: { _payout_id: string }; Returns: boolean }
+      _process_late_start_penalties: { Args: { p_now: string }; Returns: Json }
       _refund_booking_tip: { Args: { p_booking_id: string }; Returns: number }
       _reject_booking_request_core: {
         Args: { p_booking_id: string; p_worker_id: string }
@@ -9316,6 +9470,15 @@ export type Database = {
         Args: { p_admin_id?: string }
         Returns: Json
       }
+      admin_exempt_late_start_booking: {
+        Args: {
+          p_booking_id: string
+          p_evidence_reference: string
+          p_note: string
+          p_reason: string
+        }
+        Returns: undefined
+      }
       admin_find_worker_duplicates: {
         Args: { p_worker_id: string }
         Returns: {
@@ -9353,6 +9516,7 @@ export type Database = {
         Args: { p_booking_id: string }
         Returns: Json
       }
+      admin_late_start_state: { Args: { p_before?: number }; Returns: Json }
       admin_list_admins_for_assignment: {
         Args: never
         Returns: {
@@ -9641,6 +9805,10 @@ export type Database = {
       admin_restart_dispatch_engine: { Args: never; Returns: Json }
       admin_restore_worker: { Args: { p_worker_id: string }; Returns: Json }
       admin_retry_failed_dispatch: { Args: never; Returns: Json }
+      admin_reverse_late_start_penalty: {
+        Args: { p_booking_id: string; p_reason: string }
+        Returns: undefined
+      }
       admin_revoke_worker_payout_ready: {
         Args: { p_reason?: string; p_worker_id: string }
         Returns: Json
@@ -9683,6 +9851,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      admin_save_late_start_settings: {
+        Args: {
+          p_deadline_minutes: number
+          p_deduction_points: number
+          p_enabled: boolean
+        }
+        Returns: Json
       }
       admin_save_worker_payout_details: {
         Args: {
@@ -11142,6 +11318,10 @@ export type Database = {
         Args: { p_cursor?: string; p_limit?: number; p_status?: string }
         Returns: Json
       }
+      get_my_late_start_status: {
+        Args: { p_before?: number; p_booking_id?: string }
+        Returns: Json
+      }
       get_my_payout_breakdown: { Args: { p_booking_id: string }; Returns: Json }
       get_my_payout_detail: { Args: { p_payout_id: string }; Returns: Json }
       get_my_payout_history: {
@@ -11917,6 +12097,7 @@ export type Database = {
           unknown_version_workers: number
         }[]
       }
+      process_late_start_penalties: { Args: never; Returns: Json }
       prune_dispatch_reachability_audit: { Args: never; Returns: number }
       pushcut_notify_support:
         | {
