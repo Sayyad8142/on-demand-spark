@@ -14,9 +14,9 @@ i18n
   .use(initReactI18next)
   .init({
     resources: {
-      en: { translation: { ...en, worker: { ...en.worker, ...serviceTrainingMessages.en } } },
-      hi: { translation: { ...hi, worker: { ...hi.worker, ...serviceTrainingMessages.hi } } },
-      te: { translation: { ...te, worker: { ...te.worker, ...serviceTrainingMessages.te } } }
+      en: { translation: { ...en, worker: { ...en.worker, ...serviceTrainingMessages.en, App_Update_Required: 'App Update Required', Call_Support: 'Call Support' } } },
+      hi: { translation: { ...hi, worker: { ...hi.worker, ...serviceTrainingMessages.hi, App_Update_Required: 'ऐप अपडेट ज़रूरी है', Call_Support: 'सहायता के लिए कॉल करें' } } },
+      te: { translation: { ...te, worker: { ...te.worker, ...serviceTrainingMessages.te, App_Update_Required: 'యాప్ అప్‌డేట్ అవసరం', Call_Support: 'సహాయం కోసం కాల్ చేయండి' } } }
     },
     lng: saved && supported.includes(saved) ? saved : 'en',
     supportedLngs: supported,

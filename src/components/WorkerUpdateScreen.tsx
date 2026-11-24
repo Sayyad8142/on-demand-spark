@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import * as Dialog from "@radix-ui/react-dialog";
 import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
-import { Download, Loader2, X } from "lucide-react";
+import { Download, Loader2, Phone, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { displayText, useWorkerLanguage } from "@/i18n/display";
 import { logAppHealth } from "@/lib/appHealthLog";
@@ -49,31 +49,35 @@ export function WorkerUpdateScreen({ mandatory, onDismiss }: { mandatory: boolea
   return (
     <Dialog.Root open onOpenChange={open => { if (!open && !mandatory) onDismiss?.(); }}>
       <Dialog.Portal>
-        <Dialog.Content ref={surface} className="worker-update-screen" onOpenAutoFocus={e => { e.preventDefault(); surface.current?.focus({ preventScroll: true }); }}
+        <Dialog.Content ref={surface} className={`worker-update-screen${mandatory ? ' worker-update-mandatory' : ''}`} aria-describedby={undefined} onOpenAutoFocus={e => { e.preventDefault(); surface.current?.focus({ preventScroll: true }); }}
           onEscapeKeyDown={e => { if (mandatory) e.preventDefault(); }}
           onPointerDownOutside={e => e.preventDefault()}>
-          <header className="worker-update-header">
+          {!mandatory && <header className="worker-update-header">
             <span className="text-base font-bold text-primary">Didi Now Partner</span>
             {!mandatory && <Button type="button" size="icon" variant="ghost" className="rounded-full text-muted-foreground"
               aria-label={displayText("Close")} title={displayText("Close")} onClick={onDismiss}><X /></Button>}
-          </header>
+          </header>}
           <div className="worker-update-content">
-            <img src={Capacitor.isNativePlatform() ? new URL(illustration.url, "https://partner.didisnow.com").href : illustration.url} alt={t("updateScreen.illustration")}
-              className="worker-update-illustration" loading="eager" />
+            {mandatory ? <div className="worker-update-download" aria-hidden="true"><Download strokeWidth={1.8} /></div> :
+              <img src={Capacitor.isNativePlatform() ? new URL(illustration.url, "https://partner.didisnow.com").href : illustration.url} alt={t("updateScreen.illustration")}
+                className="worker-update-illustration" loading="eager" />}
             <div className="worker-update-copy">
-              <Dialog.Title className="worker-update-title">{t("updateScreen.title")}</Dialog.Title>
-              <Dialog.Description className="worker-update-description">
+              <Dialog.Title className="worker-update-title">{mandatory ? displayText('App Update Required') : t("updateScreen.title")}</Dialog.Title>
+              {!mandatory && <Dialog.Description id="worker-update-description" className="worker-update-description">
                 {t("updateScreen.body")}
-              </Dialog.Description>
+              </Dialog.Description>}
             </div>
           </div>
           <footer className="worker-update-footer">
             {failed && <p role="alert" className="mb-3 text-center text-sm text-destructive">{t("updateScreen.error")}</p>}
-            <Button type="button" size="lg" className="worker-update-button w-full rounded-2xl text-base font-bold" disabled={opening}
+            <Button type="button" size="lg" variant={mandatory ? 'bookingStart' : 'default'} className="worker-update-button w-full rounded-2xl text-base font-bold" disabled={opening}
               aria-busy={opening} onClick={() => void openStore()}>
               {opening ? <Loader2 className="motion-safe:animate-spin" /> : <Download />}
               {displayText("Update Now")}
             </Button>
+            {mandatory && <Button asChild size="icon" variant="bookingStart" className="worker-update-phone rounded-full">
+              <a href="tel:8008180018" aria-label={displayText('Call Support')} title={displayText('Call Support')}><Phone aria-hidden="true" /></a>
+            </Button>}
           </footer>
         </Dialog.Content>
       </Dialog.Portal>

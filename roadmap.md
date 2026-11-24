@@ -1,5 +1,10 @@
 # Worker language translation
 
+## Mandatory update screen — 24 Nov, preview only
+- [x] Simplify mandatory presentation with green download/phone controls; preserve optional screen and all update protections.
+- [x] 65 update tests pass; dialer target 8008180018, web Store popup, mandatory Escape and six viewport sizes checked; English/Hindi/Telugu screenshots inspected, preview build OK. No publication.
+- [ ] Installed Android dialer/Store and real mandatory-gate verification — blocked: physical phone/current signed APK and unmanaged worker session; only isolated UI and automated safety checks verified.
+
 ## Service-specific training carousel — 24 Nov, no publication
 - [x] Inspect selected task/add-on fields; reuse approved dishwashing photos and generate consistent floor/bathroom photos.
 - [x] Implement safe task-specific sequences, fallback and booking-change reset; verify five combinations with tests and previews.

@@ -8,6 +8,10 @@ import "@/i18n/config";
 import { WorkerUpdateScreen } from "./WorkerUpdateScreen";
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 describe("update screen actions", () => {
+  it('mandatory support opens the requested dialer target', () => {
+    render(<WorkerUpdateScreen mandatory />);
+    expect(screen.getByRole('link', { name: 'Call Support' })).toHaveAttribute('href', 'tel:8008180018');
+  });
   it("optional Android Back dismisses through the existing snooze callback", async () => {
     const dismiss = vi.fn();
     render(<WorkerUpdateScreen mandatory={false} onDismiss={dismiss} />);

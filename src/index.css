@@ -39,6 +39,7 @@ All colors MUST be HSL.
 
     --success: 142 70% 45%;
     --success-foreground: 0 0% 100%;
+    --update-icon-background: 142 65% 94%;
 
     --booking-start: 142 76% 36%;
     --booking-start-hover: 142 72% 29%;
@@ -334,6 +335,34 @@ html.alert-overlay-active body {
   padding: 16px 24px max(28px, env(safe-area-inset-bottom));
 }
 .worker-update-button { height: 58px; box-shadow: var(--shadow-pink); }
+.worker-update-mandatory {
+  justify-content: center; overflow-y: auto;
+  padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+  background-image: none;
+}
+.worker-update-mandatory .worker-update-content { flex: none; overflow: visible; padding: 0; }
+.worker-update-download {
+  width: 112px; height: 112px; border-radius: 50%; display: grid; place-items: center;
+  background: hsl(var(--update-icon-background)); color: hsl(var(--booking-start)); flex-shrink: 0;
+}
+.worker-update-download svg { width: 52px; height: 52px; }
+.worker-update-mandatory .worker-update-copy { margin-top: 28px; }
+.worker-update-mandatory .worker-update-title { font-size: 28px; line-height: 1.3; }
+.worker-update-mandatory .worker-update-footer {
+  padding: 32px 0 0; margin: 0 auto; max-width: 360px;
+  display: flex; flex-direction: column; align-items: center;
+}
+.worker-update-mandatory .worker-update-button { height: 56px; border-radius: 12px; box-shadow: none; }
+.worker-update-phone { width: 52px; height: 52px; margin-top: 24px; }
+.worker-update-phone svg { width: 22px; height: 22px; }
+@media (max-height: 480px) {
+  .worker-update-mandatory { padding-top: max(12px, env(safe-area-inset-top)); padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+  .worker-update-mandatory .worker-update-download { width: 64px; height: 64px; }
+  .worker-update-mandatory .worker-update-download svg { width: 36px; height: 36px; }
+  .worker-update-mandatory .worker-update-copy { margin-top: 16px; }
+  .worker-update-mandatory .worker-update-footer { padding-top: 20px; }
+  .worker-update-mandatory .worker-update-phone { margin-top: 16px; }
+}
 @keyframes update-enter { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes update-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 @media (prefers-reduced-motion: no-preference) {
