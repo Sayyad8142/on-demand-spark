@@ -1,5 +1,27 @@
 # Favorite Worker offer-safety preparation — 24 November 2026
 
+## Final flow sweep
+
+**Rule:** a real booking offer must keep its original server expiry everywhere; reopening, duplicate alerts and reconnection must not buy extra time, and only the server may confirm acceptance or rejection.
+
+| Place reviewed | Source outcome |
+|---|---|
+| Home offer hook, shared web coordinator, realtime request listener and polling fallback | Use request/deadline generations; undated recovery and original expiry are retained. Confirmed rejection clears the pending state. |
+| Web FCM foreground/tap handlers, parser and native payload builder | Absolute expiry only; undated FCM asks the existing poller to recover; taps do not fabricate receipt. |
+| Web Accept/Reject helper and App deep-link acceptance | Session-derived own request preflight; original request/deadline cap; shared prepared endpoint adapter. Strict activation still blocked by the Admin grant. |
+| Native FCM receiver, Overlay plugin, Overlay Service and Activity (including onNewIntent) | Missing expiry recovers the own row; live persisted intent retains original expiry; duplicates queue rather than restart; real rendering acknowledges separately. |
+| Native OfferTimer, AlertPresentationRules, OwnOfferPreflight and persisted OfferQueue | No send-time/queue-time expiry; original-deadline acceptance; generation retirement preserves later offers; cross-booking single-flight/FIFO tested. |
+| Native BookingNotifications and web bookingAlertFallback | Native tray carries the original intent and timeout; local fallback carries absolute expiry. Undated generic native notification opens the app only. |
+| Native AckWatchdogWorker, BackendSync and web bookingAck/fcmAckTracker | Separate receipt, visible-popup and tap events. New native queued offers start the watchdog, duplicates do not restart it. Shared server logging certification remains pending. |
+| Native push registration module and NativePushService | Registration/cancellation forwarding/listener wrappers only; neither independently accepts offers or starts a countdown. |
+| App window-message handler | BOOKING_ALERT only logs; it does not create a second offer or acceptance path. Cancellation/reassignment stay on their existing handlers. |
+| useBookingOfferVisible / offerAlertActive | Read-only update-interruption guard; its short display-safety cap does not authorize acceptance or set the offer countdown. Left unchanged. |
+| Test Booking local state and PracticePushReceiver | Explicitly isolated practice lifetime, not a favorite/real offer. Kept unchanged, including example data and disabled production send switches. |
+| Connected DB try_accept_booking / accept_booking / accept_booking_authoritative / reject_booking_offer / booking_offer_open and own-row policies | Definitions/privileges inspected read-only; strict grant, targeting race, worker concurrency, reservation release and truthful server logging dependencies remain as documented below. No backend changes. |
+| Android bundled assets and shared packaging verifier | Verifier was executed and rejected stale assets. No synchronization, release packaging or publication was performed. |
+
+This sweep found no additional independent real-offer countdown or acceptance implementation beyond those corrected/prepared above. Source inspection is not physical-device or authenticated end-to-end evidence. Existing settled records, permissions, settings, practice examples, Start OTP alarms, payouts and availability were left untouched. All earlier blockers remain in force.
+
 ## Result: prepared, not production-certified
 
 The Worker App corrections below are prepared in source. Version **10.0.05 / 105** and package **app.didisnow.worker** are unchanged. No shared backend, dispatch, score formula, payout, availability, Start OTP alarm, signing or Firebase configuration was changed. No APK/AAB was packaged and nothing was deployed or published.
