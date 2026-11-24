@@ -1,6 +1,7 @@
 # Worker language translation
 
 ## Mandatory update screen — 24 Nov, preview only
+- [x] Prompt 131 final verification: all removed content and green controls confirmed in rendered DOM; official web Store popup verified; 911 app tests pass. Android assets check blocked by missing dist; Java/SDK/adb absent. Detailed evidence: docs/mandatory-update-final-verification-2026-11-24.md. No app code/version/publication changes.
 - [x] Simplify mandatory presentation with green download/phone controls; preserve optional screen and all update protections.
 - [x] 65 update tests pass; dialer target 8008180018, web Store popup, mandatory Escape and six viewport sizes checked; English/Hindi/Telugu screenshots inspected, preview build OK. No publication.
 - [ ] Installed Android dialer/Store and real mandatory-gate verification — blocked: physical phone/current signed APK and unmanaged worker session; only isolated UI and automated safety checks verified.
