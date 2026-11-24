@@ -1,6 +1,7 @@
 # Notification transport safety
 
 - FCM receive/tap normalize through `fcmOffer.ts` with an absolute deadline; native Accept/retry checks that original deadline via AlertPresentationRules after refresh and before sending. Why: delayed taps and refreshes must never extend an offer.
+- Every web/native/overlay/deep-link Accept calls only `try_accept_booking` (offerAcceptanceContract); favorite-v1 status is parsed only by favoriteOfferStatus / OfferAcceptanceContract.favoriteDeadline, behind an OFF flag, with no legacy fallback when ON. Why: one server-hardened endpoint stays compatible with released builds and an invalid status must never create an actionable offer.
 
 # Worker card and setup safety
 

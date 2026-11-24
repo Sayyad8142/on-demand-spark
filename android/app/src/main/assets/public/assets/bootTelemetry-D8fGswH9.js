@@ -1,0 +1,1 @@
+import{i as o,l as e,a as t,r as s}from"./installedVersion-8dJ8TNhq.js";import"./index-CDl1dBO-.js";async function c(){try{o();const r=await e();t("app_start",r.source);const a=s(window.localStorage,r,Date.now());a.changed&&!a.firstLaunch&&a.previous&&t("first_launch_after_update",`${a.previous.version}→${r.version}`)}catch{}}export{c as startBootTelemetry};

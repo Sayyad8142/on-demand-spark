@@ -3,6 +3,7 @@ import { canShowWorkerBookingOffer, logScheduledOfferDecision } from "@/lib/sche
 import { ackBookingDelivery } from "@/lib/bookingAck";
 import { isAcceptanceClosedError, ACCEPTANCE_CLOSED_MESSAGE } from "@/lib/acceptanceClosed";
 import { offerAcceptanceRpc } from '@/lib/offerAcceptanceContract';
+import { parseFavoriteOfferStatus } from '@/lib/favoriteOfferStatus';
 
 // Helper to ensure session is valid before making API calls
 async function ensureValidSession(): Promise<boolean> {
@@ -97,10 +98,13 @@ export async function tryAccept(
     return { success: false, error: error.message };
   }
   
-  const result = data as { success?: boolean; error?: string } | null;
+  const result = data as { success?: boolean; error?: string; offer?: unknown } | null;
   
   if (!result?.success) {
     console.error("❌ Booking accept failed:", result?.error);
+    // favorite-v1 (additive): a server-confirmed non-actionable offer is closed, not retried.
+    const offer = parseFavoriteOfferStatus(result?.offer, { bookingId, requestId: originalRequestId });
+    if (offer && !offer.actionable) return { success: false, error: "offer-closed" };
     return { success: false, error: result?.error || "Failed to accept booking" };
   }
   

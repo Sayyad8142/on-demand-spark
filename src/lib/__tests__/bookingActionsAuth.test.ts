@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const state: any = {};
-vi.mock('@/lib/offerAcceptanceContract', () => ({ offerAcceptanceRpc: () => state.secure ? 'accept_booking' : 'try_accept_booking' }));
 vi.mock("@/lib/bookingAck", () => ({ ackBookingDelivery: vi.fn(() => Promise.resolve()) }));
 vi.mock("@/lib/scheduledBookingGuards", () => ({
   canShowWorkerBookingOffer: () => true,
@@ -33,7 +32,6 @@ beforeEach(() => {
   state.session = { expires_at: future(), user: { id: "own-login" } };
   state.offer = { id: "own-request", status: "pending", timeout_at: new Date(Date.now() + 60_000).toISOString() };
   state.readError = null;
-  state.secure = false;
   state.refreshResult = undefined;
   state.rpc = async () => ({ data: { success: true, confirmed: true }, error: null });
 });
@@ -45,11 +43,20 @@ describe("Worker App accept/reject identity handling", () => {
     expect(state.query.eq).toHaveBeenCalledWith('id', 'own-request');
     expect(supabase.rpc).not.toHaveBeenCalled();
   });
-  it('approved secure mode sends only booking id to strict endpoint and never retries through legacy', async () => {
-    state.secure = true;
+  it('every Accept uses only try_accept_booking with the booking id, never a worker id or second endpoint', async () => {
     state.rpc = async () => ({ data: null, error: { message: 'permission denied' } });
     expect((await tryAccept('b1', 'attacker')).success).toBe(false);
-    expect(supabase.rpc).toHaveBeenCalledExactlyOnceWith('accept_booking', { p_booking_id: 'b1' });
+    expect(supabase.rpc).toHaveBeenCalledExactlyOnceWith('try_accept_booking', { p_booking_id: 'b1' });
+  });
+  it('favorite-v1 closed offer in the accept answer closes instead of retrying', async () => {
+    const now = new Date().toISOString();
+    state.rpc = async () => ({ data: { success: false, error: 'Network hiccup', offer: { contract_version: 'favorite-v1', booking_id: 'b1', request_id: 'own-request', offer_generation: 1, status: 'expired', actionable: false, expires_at: now, server_time: now } }, error: null });
+    expect((await tryAccept('b1', undefined, undefined, 'own-request')).error).toBe('offer-closed');
+  });
+  it('favorite-v1 block for another booking is ignored', async () => {
+    const now = new Date().toISOString();
+    state.rpc = async () => ({ data: { success: false, error: 'Network hiccup', offer: { contract_version: 'favorite-v1', booking_id: 'other', request_id: 'own-request', offer_generation: 1, status: 'expired', actionable: false, expires_at: now, server_time: now } }, error: null });
+    expect((await tryAccept('b1')).error).toBe('Network hiccup');
   });
   it("preflight is restricted to the logged-in worker, not the caller worker", async () => {
     await tryAccept("b1", "attacker");

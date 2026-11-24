@@ -28,6 +28,7 @@ object OwnOfferPreflight {
         // Auth server verifies the JWT; no decode-only identity or cached-worker fallback.
         val userId = JSONObject(read("/auth/v1/user")).optString("id")
         if (userId.isBlank()) throw IllegalStateException("Session unavailable")
+        if (OfferAcceptanceContract.FAVORITE_V1_STATUS_ENABLED) return favoriteV1(base, apiKey, jwt, bookingId, requestId)
         val workers = JSONArray(read("/rest/v1/workers?select=id&user_id=eq.${encoded(userId)}&limit=2"))
         if (workers.length() != 1) throw IllegalStateException("not-offered")
         val workerId = workers.getJSONObject(0).optString("id")
@@ -42,5 +43,34 @@ object OwnOfferPreflight {
             catch (_: Exception) { throw IllegalStateException("Unable to check offer. Please retry.") }
         if (!OfferAcceptRules.active(status, at, System.currentTimeMillis() / 1000)) throw IllegalStateException("offer-expired")
         return at
+    }
+
+    /** favorite-v1 status read: only the booking id is sent; identity comes from the JWT. No legacy fallback. */
+    private fun favoriteV1(base: String, apiKey: String, jwt: String, bookingId: String, requestId: String?): Long {
+        val connection = URL("$base/rest/v1/rpc/${OfferAcceptanceContract.STATUS_RPC}").openConnection() as HttpURLConnection
+        val body = try {
+            connection.requestMethod = "POST"
+            connection.connectTimeout = 4000
+            connection.readTimeout = 4000
+            connection.doOutput = true
+            connection.setRequestProperty("apikey", apiKey)
+            connection.setRequestProperty("Authorization", "Bearer $jwt")
+            connection.setRequestProperty("Content-Type", "application/json")
+            connection.outputStream.use { it.write(JSONObject().put("p_booking_id", bookingId).toString().toByteArray()) }
+            val code = connection.responseCode
+            if (code == 401 || code == 403) throw IllegalStateException("Session expired. Please log in again.")
+            if (code !in 200..299) throw IllegalStateException("Network problem checking offer")
+            connection.inputStream.bufferedReader().use { it.readText() }
+        } finally { connection.disconnect() }
+        val json = try { JSONObject(body) } catch (_: Exception) { throw IllegalStateException("Unable to check offer. Please retry.") }
+        fun epoch(key: String) = try { Instant.parse(json.optString(key)).epochSecond } catch (_: Exception) { 0L }
+        val actionable = if (json.opt("actionable") is Boolean) json.getBoolean("actionable") else null
+        val generation = if (json.opt("offer_generation") is Int) json.getInt("offer_generation").toLong() else 0L
+        val deadline = OfferAcceptanceContract.favoriteDeadline(
+            json.optString("contract_version"), json.optString("booking_id"), bookingId,
+            json.optString("request_id"), requestId, generation, json.optString("status"), actionable,
+            epoch("expires_at"), epoch("server_time"), System.currentTimeMillis() / 1000)
+        if (deadline <= 0) throw IllegalStateException(if (actionable == false) "offer-expired" else "not-offered")
+        return deadline
     }
 }
