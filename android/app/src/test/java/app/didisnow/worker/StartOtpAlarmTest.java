@@ -22,8 +22,8 @@ public class StartOtpAlarmTest {
         p = c.getSharedPreferences("start_otp_alarm_v2", Context.MODE_PRIVATE);
     }
     @Test public void tenMinuteFirstClip() { assertEquals(0, StartOtpAlarmRules.phase(1000,600999)); assertEquals(1,StartOtpAlarmRules.phase(1000,601000)); }
-    @Test public void fifteenMinuteSecondClip() { assertEquals(2,StartOtpAlarmRules.phase(1000,901000)); }
-    @Test public void twentyMinuteContinuous() { assertEquals(3,StartOtpAlarmRules.phase(1000,1201000)); }
+    @Test public void fifteenMinuteContinuous() { assertEquals(1,StartOtpAlarmRules.phase(1000,900999)); assertEquals(3,StartOtpAlarmRules.phase(1000,901000)); }
+    @Test public void staysContinuousAfterTwentyMinutes() { assertEquals(3,StartOtpAlarmRules.phase(1000,1201000)); }
     @Test public void noTwoHourCutoff() { assertEquals(3,StartOtpAlarmRules.phase(1000,8*3600000L)); }
     @Test public void serverStartStops() { assertFalse(StartOtpAlarmRules.eligible("accepted",true,true,"w","w")); }
     @Test public void wrongOtpDoesNotStop() { assertTrue(StartOtpAlarmRules.eligible("accepted",true,false,"w","w")); }

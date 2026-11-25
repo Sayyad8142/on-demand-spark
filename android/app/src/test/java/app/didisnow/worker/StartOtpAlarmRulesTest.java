@@ -15,15 +15,15 @@ public class StartOtpAlarmRulesTest {
         assertFalse(StartOtpAlarmRules.shouldPlay(ACCEPTED, ACCEPTED + 599999, false));
         assertTrue(StartOtpAlarmRules.shouldPlay(ACCEPTED, ACCEPTED + 600000, false));
     }
-    @Test public void secondAlarmAtFifteenMinutes() {
+    @Test public void continuousAtFifteenMinutes() {
         assertEquals(1, StartOtpAlarmRules.phase(ACCEPTED, ACCEPTED + 899999));
-        assertEquals(2, StartOtpAlarmRules.phase(ACCEPTED, ACCEPTED + 900000));
-        assertTrue(StartOtpAlarmRules.shouldPlay(ACCEPTED, ACCEPTED + 900000, false));
+        assertEquals(3, StartOtpAlarmRules.phase(ACCEPTED, ACCEPTED + 900000));
+        assertTrue(StartOtpAlarmRules.shouldPlay(ACCEPTED, ACCEPTED + 900000, true));
     }
-    @Test public void twentyMinutesLoopsEvenAfterEarlierPlayback() {
-        assertEquals(2, StartOtpAlarmRules.phase(ACCEPTED, ACCEPTED + 1199999));
+    @Test public void noTwentyMinuteTrigger() {
+        assertEquals(ACCEPTED + 900000, StartOtpAlarmRules.nextAt(ACCEPTED, ACCEPTED + 600001));
+        assertEquals(ACCEPTED + 1200000, StartOtpAlarmRules.nextAt(ACCEPTED, ACCEPTED + 1200000));
         assertEquals(3, StartOtpAlarmRules.phase(ACCEPTED, ACCEPTED + 1200000));
-        assertTrue(StartOtpAlarmRules.shouldPlay(ACCEPTED, ACCEPTED + 1200000, true));
     }
     @Test public void failedFinitePlaybackCanRetryWithoutDuplicatingSuccess() {
         assertTrue(StartOtpAlarmRules.shouldPlay(ACCEPTED, ACCEPTED + 630000, false));
@@ -32,7 +32,7 @@ public class StartOtpAlarmRulesTest {
     @Test public void lateReopenDoesNotReplayMissedFiniteAlarms() {
         assertTrue(StartOtpAlarmRules.shouldPlay(ACCEPTED, ACCEPTED + 690000, false));
         assertFalse(StartOtpAlarmRules.shouldPlay(ACCEPTED, ACCEPTED + 690001, false));
-        assertFalse(StartOtpAlarmRules.shouldPlay(ACCEPTED, ACCEPTED + 990001, false));
+        assertTrue(StartOtpAlarmRules.shouldPlay(ACCEPTED, ACCEPTED + 990001, false)); // past 15 min: continuous, not a replayed clip
         assertTrue(StartOtpAlarmRules.shouldPlay(ACCEPTED, ACCEPTED + 3600000, true));
     }
     @Test public void serverVerificationStopsButWrongOtpDoesNot() {

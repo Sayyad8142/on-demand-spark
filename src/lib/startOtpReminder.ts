@@ -1,7 +1,7 @@
 /**
  * Start OTP voice reminder — pure rules (no side effects).
  *
- * Native alarm milestones: 10 and 15 minutes, continuous from 20 minutes.
+ * Native alarm milestones: one clip at 10 minutes, continuous from 15 minutes.
  * Only the server's `started_at` (set by verify_start_otp) counts as verified;
  * typed-but-unverified codes never stop reminders. Display/notification only —
  * never changes booking, OTP, dispatch, payment or availability data.
@@ -10,7 +10,7 @@ import { START_ALLOWED_STATUSES } from "@/lib/startOtp";
 
 export const START_OTP_REMINDER_FIRST_MIN = 10;
 export const START_OTP_REMINDER_INTERVAL_MIN = 5;
-export const START_OTP_CONTINUOUS_MIN = 20;
+export const START_OTP_CONTINUOUS_MIN = 15;
 export const START_OTP_ADMIN_FOLLOW_UP_MIN = 20;
 export const START_OTP_ADMIN_URGENT_MIN = 120;
 export const START_OTP_REMINDER_CHANNEL = "start_otp_reminder_v1";
@@ -47,7 +47,7 @@ export function isReminderEligible(b: StartOtpReminderBooking, workerId: string 
 
 /** One-shot milestones, not a repeated notification schedule. */
 export function reminderOffsetsMin(): number[] {
-  return [10, 15, 20];
+  return [10, 15];
 }
 
 export type PlannedReminder = { id: number; index: number; at: number };

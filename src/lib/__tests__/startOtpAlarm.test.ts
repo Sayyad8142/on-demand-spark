@@ -8,8 +8,8 @@ describe("native Start OTP alarm contract", () => {
     expect(startAlarmPhase(b, "worker", accepted + 599999)).toBe("waiting");
     expect(startAlarmPhase(b, "worker", accepted + 600000)).toBe("first");
   });
-  it("second clip begins at 15 minutes", () => expect(startAlarmPhase(b, "worker", accepted + 900000)).toBe("second"));
-  it("continuous begins at 20 minutes", () => expect(startAlarmPhase(b, "worker", accepted + 1200000)).toBe("continuous"));
+  it("10–15 minutes stays on the single clip", () => expect(startAlarmPhase(b, "worker", accepted + 899999)).toBe("first"));
+  it("continuous begins at 15 minutes", () => expect(startAlarmPhase(b, "worker", accepted + 900000)).toBe("continuous"));
   it("continuous has no 2-hour cutoff", () => expect(startAlarmPhase(b, "worker", accepted + 8 * 3600000)).toBe("continuous"));
   it("server verified Start stops", () => expect(startAlarmPhase({ ...b, started_at: new Date(accepted).toISOString() }, "worker", accepted + 1200000)).toBe("stopped"));
   it("wrong code with unchanged server state never stops", () => expect(startAlarmPhase(b, "worker", accepted + 1200000)).toBe("continuous"));
