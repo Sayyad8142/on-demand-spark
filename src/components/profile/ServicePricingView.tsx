@@ -46,7 +46,7 @@ export default function ServicePricingView({ data, loading, error, selected, cho
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
       {choices.length > 1 ? <div className="space-y-2"><label id="pricing-community-label" className="text-sm text-muted-foreground">{d('Assigned community')}</label>
         <Select value={selected} onValueChange={onSelect}><SelectTrigger aria-labelledby="pricing-community-label" className="h-auto min-h-12 text-base [&>span]:line-clamp-none [&>span]:break-words"><SelectValue /></SelectTrigger><SelectContent>{choices.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select>
-      </div> : <p className="text-lg font-semibold break-words">{community?.name ?? choices[0]?.name ?? d('No assigned community')}</p>}
+      </div> : <p className="text-lg font-semibold break-words">{community?.name ?? choices[0]?.name ?? (data?.communities.length === 0 ? d('No assigned community') : '')}</p>}
       {loading && !community ? <div role="status" className="py-10 text-center text-muted-foreground">{d('Loading...')}</div> : !community ?
         <section className="py-8 text-center" aria-live="polite">
           <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-success/10 text-success"><IndianRupee className="h-9 w-9" /></div>
