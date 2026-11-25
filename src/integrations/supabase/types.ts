@@ -11619,6 +11619,18 @@ export type Database = {
           total_ratings: number
         }[]
       }
+      get_worker_ranking_board: {
+        Args: { p_community_id?: string }
+        Returns: {
+          avg_rating: number
+          full_name: string
+          is_me: boolean
+          photo_url: string
+          rank: number
+          ratings_count: number
+          worker_id: string
+        }[]
+      }
       get_worker_rating_distribution: {
         Args: never
         Returns: {
