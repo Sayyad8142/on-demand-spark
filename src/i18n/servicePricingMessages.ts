@@ -1,5 +1,6 @@
 export const servicePricingMessages = {
   en: {
+    Service_Prices: 'Service Prices', Jhadoo_Pocha: 'Jhadoo Pocha', Jhadoo_Pocha_Dishwashing: 'Jhadoo Pocha + Dishwashing', Extra_for_more_dishes: 'Extra for more dishes', Per_bathroom: 'Per bathroom', Glass_Cleaning: 'Glass Cleaning', Extra_by_time: 'Extra by time',
     Current_booking_charge: 'Current booking charge', Configured_price: 'Configured price', Not_set: 'Not set', Default_price: 'Default price', '30_minute_slots': '30-minute slots', Scheduled_bookings_only: 'Scheduled bookings only', Price_notices_from_Admin: 'Price notices from Admin', Estimated_earnings_are_not_guaranteed_Your_actual_amount_is_fixed_per_booking: 'Estimated earnings are not guaranteed. Your actual amount is fixed per booking.',
     Price_example: 'Price example', Standard_price: 'Standard price', Community_price: 'Community price', Estimated_Earnings: 'Estimated Earnings',
     Estimate_for_new_bookings_Your_actual_amount_appears_in_earnings_history: 'Estimate for new bookings. Your actual amount appears in earnings history.',
@@ -24,6 +25,7 @@ export const servicePricingMessages = {
     Pricing_could_not_be_refreshed: 'Pricing could not be refreshed.',
   },
   hi: {
+    Service_Prices: 'सेवा की कीमतें', Jhadoo_Pocha: 'झाड़ू पोछा', Jhadoo_Pocha_Dishwashing: 'झाड़ू पोछा + बर्तन', Extra_for_more_dishes: 'ज़्यादा बर्तन पर अतिरिक्त', Per_bathroom: 'प्रति बाथरूम', Glass_Cleaning: 'काँच की सफ़ाई', Extra_by_time: 'समय के अनुसार अतिरिक्त',
     Current_booking_charge: 'अभी बुकिंग पर शुल्क', Configured_price: 'तय की गई कीमत', Not_set: 'तय नहीं', Default_price: 'डिफ़ॉल्ट कीमत', '30_minute_slots': '30 मिनट के स्लॉट', Scheduled_bookings_only: 'सिर्फ़ शेड्यूल बुकिंग', Price_notices_from_Admin: 'एडमिन की कीमत सूचना', Estimated_earnings_are_not_guaranteed_Your_actual_amount_is_fixed_per_booking: 'अनुमानित कमाई पक्की नहीं है। असली राशि हर बुकिंग पर तय होती है।',
     Price_example: 'कीमत का उदाहरण', Standard_price: 'सामान्य कीमत', Community_price: 'सोसाइटी की कीमत', Estimated_Earnings: 'अनुमानित कमाई',
     Estimate_for_new_bookings_Your_actual_amount_appears_in_earnings_history: 'नई बुकिंग का अनुमान। आपकी असली रकम कमाई के इतिहास में दिखेगी।',
@@ -47,6 +49,7 @@ export const servicePricingMessages = {
     Pricing_could_not_be_refreshed: 'नई कीमतें नहीं मिल सकीं।',
   },
   te: {
+    Service_Prices: 'సేవ ధరలు', Jhadoo_Pocha: 'ఝాడూ పోచా', Jhadoo_Pocha_Dishwashing: 'ఝాడూ పోచా + గిన్నెలు', Extra_for_more_dishes: 'ఎక్కువ గిన్నెలకు అదనం', Per_bathroom: 'ఒక్కో బాత్రూమ్‌కు', Glass_Cleaning: 'గ్లాస్ క్లీనింగ్', Extra_by_time: 'సమయం బట్టి అదనం',
     Current_booking_charge: 'ప్రస్తుత బుకింగ్ ఛార్జ్', Configured_price: 'సెట్ చేసిన ధర', Not_set: 'సెట్ కాలేదు', Default_price: 'డిఫాల్ట్ ధర', '30_minute_slots': '30 నిమిషాల స్లాట్లు', Scheduled_bookings_only: 'షెడ్యూల్ బుకింగ్‌లకు మాత్రమే', Price_notices_from_Admin: 'అడ్మిన్ ధర సూచనలు', Estimated_earnings_are_not_guaranteed_Your_actual_amount_is_fixed_per_booking: 'అంచనా ఆదాయం హామీ కాదు. అసలు మొత్తం ప్రతి బుకింగ్‌కు నిర్ణయించబడుతుంది.',
     Price_example: 'ధర ఉదాహరణ', Standard_price: 'సాధారణ ధర', Community_price: 'కమ్యూనిటీ ధర', Estimated_Earnings: 'అంచనా ఆదాయం',
     Estimate_for_new_bookings_Your_actual_amount_appears_in_earnings_history: 'కొత్త బుకింగ్‌ల అంచనా. మీ అసలు మొత్తం ఆదాయ చరిత్రలో కనిపిస్తుంది.',
