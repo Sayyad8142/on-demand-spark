@@ -17,12 +17,16 @@ import { computePayoutTotals, mapPayoutStatus } from "@/lib/payoutDisplay";
 import { PayoutStatusBadge } from "@/components/payouts/PayoutStatusBadge";
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
+import { fetchBookingRatings, RATING_TAG_LABELS, type RatingTag } from "@/lib/bookingRatings";
 
 type Booking = BookingWithAddress & {
   payout_status?: string | null;
   payout_amount?: number | null;
   payout_paid_at?: string | null;
   rating?: number | null;
+  rating_tags?: RatingTag[];
+  /** true when the rating could not be loaded (never shown as "Not rated yet"). */
+  rating_error?: boolean;
 };
 
 const PAGE_SIZE = 15;
@@ -100,16 +104,18 @@ export default function Bookings() {
     if (ids.length) {
       const [payoutsRes, ratingsRes] = await Promise.all([
         supabase.from('worker_payouts').select('booking_id, status, payout_amount, paid_at').in('booking_id', ids),
-        supabase.from('worker_ratings').select('booking_id, rating, bookings!inner(status)').in('booking_id', rows.filter(b => b.status === 'completed').map(b => b.id)).eq('bookings.status', 'completed'),
+        fetchBookingRatings(wId, rows.filter(b => b.status === 'completed').map(b => b.id)).then(m => ({ map: m, ok: true }), () => ({ map: new Map(), ok: false })),
       ]);
       const payoutsMap = new Map(payoutsRes.data?.map(p => [p.booking_id, { status: p.status, amount: p.payout_amount, paidAt: p.paid_at }]) || []);
-      const ratingsMap = new Map(ratingsRes.data?.map(r => [r.booking_id, r.rating]) || []);
+      const ratingsMap = ratingsRes.map;
       enriched = rows.map(b => ({
         ...b,
         payout_status: payoutsMap.get(b.id)?.status ?? null,
         payout_amount: payoutsMap.get(b.id)?.amount ?? null,
         payout_paid_at: payoutsMap.get(b.id)?.paidAt ?? null,
-        rating: ratingsMap.get(b.id) ?? null,
+        rating: ratingsMap.get(b.id)?.rating ?? null,
+        rating_tags: ratingsMap.get(b.id)?.tags ?? [],
+        rating_error: b.status === 'completed' && !ratingsRes.ok,
       })) as any;
     }
     return enriched;
@@ -167,13 +173,16 @@ export default function Bookings() {
     // Refresh feedback without resetting leaderboard/ranking or paginated booking history.
     let disposed = false;
     const refreshRatings = async () => {
-      const { data, error } = await supabase.from('worker_ratings')
-        .select('booking_id,rating,bookings!inner(status)')
-        .eq('worker_id', workerId).eq('bookings.status', 'completed')
-        .in('booking_id', bookings.filter(b => b.status === 'completed').map(b => b.id));
-      if (disposed || error || !data) return;
-      const ratings = new Map(data.map(r => [r.booking_id, r.rating]));
-      setBookings(previous => previous.map(b => ({ ...b, rating: b.status === 'completed' ? ratings.get(b.id) ?? null : null })));
+      let ratings;
+      try {
+        ratings = await fetchBookingRatings(workerId, bookings.filter(b => b.status === 'completed').map(b => b.id));
+      } catch {
+        return; // keep what is already shown; a failed refresh never erases a rating
+      }
+      if (disposed) return;
+      setBookings(previous => previous.map(b => b.status !== 'completed' ? b : ({
+        ...b, rating: ratings.get(b.id)?.rating ?? null, rating_tags: ratings.get(b.id)?.tags ?? [], rating_error: false,
+      })));
     };
     const visible = () => { if (document.visibilityState === 'visible') void refreshRatings(); };
     window.addEventListener('bookingCompleted', visible);
@@ -387,9 +396,20 @@ function BookingCard({ booking }: { booking: Booking }) {
                 ))}
                 <span className="ml-1 text-sm font-bold text-foreground">{rating.toFixed(1)}</span>
               </div>
+            ) : booking.rating_error ? (
+              <span className="text-xs text-muted-foreground italic">{displayText("Rating could not load")}</span>
             ) : (
               <span className="text-xs text-muted-foreground italic">{displayText("Not rated yet")}</span>
             )}
+          </div>
+        )}
+        {isCompleted && rating != null && rating > 0 && (booking.rating_tags?.length ?? 0) > 0 && (
+          <div className="flex flex-wrap justify-end gap-1.5 mt-2">
+            {booking.rating_tags!.map(tag => (
+              <span key={tag} className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                {displayText(RATING_TAG_LABELS[tag])}
+              </span>
+            ))}
           </div>
         )}
       </div>

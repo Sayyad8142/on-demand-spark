@@ -1135,6 +1135,11 @@
     "Time_Left_to_Start_Booking": "Time Left to Start Booking",
     "Start_Time_Overdue": "Start Time Overdue",
     "Start_Booking_Enter_OTP": "Start Booking • Enter OTP",
-    "Overdue_by": "Overdue by"
+    "Overdue_by": "Overdue by",
+    "Rating_could_not_load": "Couldn't load rating",
+    "Cleaning_quality": "Cleaning quality",
+    "Arrived_late": "Arrived late",
+    "Behaviour": "Behaviour",
+    "Work_incomplete": "Work incomplete"
   }
 }

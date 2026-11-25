@@ -1135,6 +1135,11 @@
     "Time_Left_to_Start_Booking": "బుకింగ్ ప్రారంభించడానికి మిగిలిన సమయం",
     "Start_Time_Overdue": "ప్రారంభ సమయం దాటింది",
     "Start_Booking_Enter_OTP": "బుకింగ్ ప్రారంభించండి • OTP నమోదు చేయండి",
-    "Overdue_by": "ఆలస్యం"
+    "Overdue_by": "ఆలస్యం",
+    "Rating_could_not_load": "రేటింగ్ లోడ్ కాలేదు",
+    "Cleaning_quality": "శుభ్రత నాణ్యత",
+    "Arrived_late": "ఆలస్యంగా వచ్చారు",
+    "Behaviour": "ప్రవర్తన",
+    "Work_incomplete": "పని అసంపూర్ణం"
   }
 }

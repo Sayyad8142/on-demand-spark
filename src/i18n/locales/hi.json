@@ -1135,6 +1135,11 @@
     "Time_Left_to_Start_Booking": "बुकिंग शुरू करने के लिए बचा समय",
     "Start_Time_Overdue": "शुरू करने का समय निकल गया",
     "Start_Booking_Enter_OTP": "बुकिंग शुरू करें • ओटीपी डालें",
-    "Overdue_by": "देरी"
+    "Overdue_by": "देरी",
+    "Rating_could_not_load": "रेटिंग लोड नहीं हुई",
+    "Cleaning_quality": "सफ़ाई की गुणवत्ता",
+    "Arrived_late": "देर से पहुँचीं",
+    "Behaviour": "व्यवहार",
+    "Work_incomplete": "काम अधूरा"
   }
 }
