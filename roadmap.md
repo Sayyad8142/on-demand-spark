@@ -1,9 +1,10 @@
 # Worker language translation
 
 ## Compact Start OTP card — 25 Nov, preview only
+- [x] Prompt 142: 984 app tests and 8 native alarm-rule tests passed; ticking perimeter, overdue/reopen and whole-card taps checked in isolated browser screens at 320/360/393 and landscape, including Hindi/Telugu. Evidence: docs/start-otp-final-verification-2026-11-25.md. No app/version/publication changes.
 - [x] Combine the Start button and small countdown with a shrinking perimeter; preserve timer, navigation, alarms and penalty settings.
 - [x] Full app regression suite passed (977 tests before two navigation tests); compact states inspected at 320/393/1280 with overdue click verified; approval screenshot provided, no publication/version change.
-- [ ] Signed-in Home → real Start OTP and physical Android checks — blocked: externally managed worker sign-in unavailable and no physical device; isolated card preview is not a live-booking verification.
+- [ ] Signed-in Home → real Start OTP, native engine/Robolectric and physical Android checks — blocked: externally managed worker sign-in unavailable, Android SDK not configured and no physical device; isolated card preview is not a live-booking verification.
 
 ## Draft pricing RPC and earnings audit — 25 Nov, no activation
 - [ ] Audit completion endpoints, hosted payout/earning triggers, commission rounding and duplicate guards without mutations.
