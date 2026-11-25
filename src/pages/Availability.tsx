@@ -362,9 +362,6 @@ export default function Availability() {
           </h1>
           <GuideSpeakerButton state={guide.state} onPress={guide.toggle} />
         </div>
-        <p className="text-[12px] text-muted-foreground mt-1 font-medium">
-          {""}
-        </p>
       </header>
 
       {fromSignup && (
@@ -448,7 +445,6 @@ export default function Availability() {
 
       {showSurge && (
         <div className="px-4 pt-3 space-y-1.5">
-          <p className="text-[12px] font-semibold text-foreground flex items-center gap-1">{""}</p>
           {(surgeCommunities.length > 1 || surgeServiceList.length > 1) && (
             <div className="flex gap-1.5 overflow-x-auto">
               {surgeCommunities.length > 1 && surgeCommunities.map(c => (
@@ -507,9 +503,6 @@ export default function Availability() {
           ))}
         </div>
       </div>
-      {showSurge && (
-        <p className="px-4 pb-2 text-[11px] text-muted-foreground text-center">{""}</p>
-      )}
 
       {/* Save Button — sticky above bottom nav */}
       <div
