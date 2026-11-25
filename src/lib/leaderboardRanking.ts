@@ -50,6 +50,35 @@ export function parseRankingBoardRatings(rows: unknown): Map<string, ReviewStats
   return out;
 }
 
+export type BoardRow = { rank: number; worker_id: string; full_name: string; photo_url: string | null; avg_rating: number | null; ratings_count: number; is_me: boolean };
+
+/** Admin's get_worker_ranking_board rows, in the exact server order; invalid rows are dropped, never re-sorted. */
+export function parseRankingBoard(rows: unknown): BoardRow[] {
+  if (!Array.isArray(rows)) throw new Error("Invalid ranking board response");
+  const out: BoardRow[] = [];
+  for (const r of rows as Record<string, unknown>[]) {
+    const rank = Number(r?.rank), count = Number(r?.ratings_count);
+    const avg = r?.avg_rating == null ? null : Number(r.avg_rating);
+    if (typeof r?.worker_id !== "string" || !Number.isInteger(rank) || rank < 1 || !Number.isInteger(count) || count < 0) continue;
+    if (avg !== null && (!Number.isFinite(avg) || avg < 0 || avg > 5)) continue;
+    out.push({ rank, worker_id: r.worker_id, full_name: String(r.full_name ?? ""), photo_url: typeof r.photo_url === "string" ? r.photo_url : null,
+      avg_rating: count > 0 ? avg : null, ratings_count: count, is_me: r.is_me === true });
+  }
+  return out;
+}
+
+/** Top tab: server order, server rank and server is_me; today's jobs/earnings/level are only decoration from the matching entry. */
+export function boardFromServer<T extends RankableWorker & { isMe: boolean; full_name: string; photo_url: string | null }>(
+  rows: BoardRow[], entries: T[], fallback: (row: BoardRow) => T,
+): RankedWorker<T>[] {
+  const byId = new Map(entries.map(e => [e.id, e]));
+  return rows.map(r => {
+    const base = byId.get(r.worker_id) ?? fallback(r);
+    return { ...base, id: r.worker_id, rank: r.rank, full_name: r.full_name || base.full_name, photo_url: r.photo_url ?? base.photo_url,
+      isMe: r.is_me, displayRank: r.rank, reviewCount: r.ratings_count, reviewAverage: r.avg_rating };
+  });
+}
+
 export function rankLeaderboard<T extends RankableWorker>(
   workers: T[], tab: LeaderboardTab, reviews: Map<string, ReviewStats>,
 ): RankedWorker<T>[] {

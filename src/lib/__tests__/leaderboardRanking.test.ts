@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rankLeaderboard, summarizeReviews, parseRankingBoardRatings, leaderboardScore, RANKING_PAGE_TABS } from "../leaderboardRanking";
+import { rankLeaderboard, summarizeReviews, parseRankingBoardRatings, parseRankingBoard, boardFromServer, leaderboardScore, RANKING_PAGE_TABS } from "../leaderboardRanking";
 
 const w = (id: string, rank: number, earningsToday: number, jobsToday = 0) =>
   ({ id, rank, rating: 5, priority_score: 50, jobsToday, earningsToday, isMe: false });
@@ -70,5 +70,16 @@ describe("Priority score breakdown (server parts only)", () => {
     expect(m.get("w1")).toEqual({ count: 13, average: 4.85 });
     expect(m.get("w2")).toEqual({ count: 0, average: null });
     expect(m.has("w3")).toBe(false);
+  });
+  it("keeps Admin's exact order, rank and is_me without re-sorting", () => {
+    const rows = parseRankingBoard([
+      { rank: 1, worker_id: "b", full_name: "B", avg_rating: 4.2, ratings_count: 3, is_me: false },
+      { rank: 2, worker_id: "a", full_name: "A", avg_rating: 5, ratings_count: 20, is_me: true },
+      { rank: 3, worker_id: "c", full_name: "C", avg_rating: null, ratings_count: 0, is_me: false },
+    ]);
+    const entries = [{ id: "a", rank: 1, full_name: "A", photo_url: null, isMe: false, priority_score: 99, jobsToday: 9, earningsToday: 900 }];
+    const out = boardFromServer(rows, entries as any, (r) => ({ id: r.worker_id, rank: r.rank, full_name: r.full_name, photo_url: null, isMe: r.is_me, priority_score: 0, jobsToday: 0, earningsToday: 0 }) as any);
+    expect(out.map(w => [w.id, w.displayRank, w.isMe])).toEqual([["b", 1, false], ["a", 2, true], ["c", 3, false]]);
+    expect(out[1].jobsToday).toBe(9);
   });
 });

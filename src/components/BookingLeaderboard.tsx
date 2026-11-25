@@ -1,10 +1,10 @@
 import "@/i18n/nextBookingMessages";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { rankLeaderboard, parseRankingBoardRatings, leaderboardScore, RANKING_PAGE_TABS, type RankingPageTab, type ReviewStats, type RankedWorker } from "@/lib/leaderboardRanking";
+import { rankLeaderboard, parseRankingBoardRatings, parseRankingBoard, boardFromServer, type BoardRow, RANKING_PAGE_TABS, type RankingPageTab, type ReviewStats, type RankedWorker } from "@/lib/leaderboardRanking";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trophy, Star, Zap, IndianRupee, TrendingUp, HelpCircle } from "lucide-react";
+import { Trophy, Star, IndianRupee, TrendingUp, HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkerPriority } from "@/hooks/useWorkerPriority";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -42,6 +42,7 @@ export default function BookingLeaderboard() {
   const [tab, setTab] = useState<RankingPageTab>("top");
   const [slideDir, setSlideDir] = useState<"left" | "right">("left");
   const [reviews, setReviews] = useState<Map<string, ReviewStats>>(new Map());
+  const [board, setBoard] = useState<BoardRow[] | null>(null);
   const touchX = useRef<number | null>(null);
   const ownId = data?.leaderboard.find(l => l.isMe)?.id;
   const priority = useWorkerPriority(ownId);
@@ -63,7 +64,7 @@ export default function BookingLeaderboard() {
         // Ratings come only from Admin's secure ranking board; on failure keep the last good values.
         const { data: rows, error: rErr } = await supabase.rpc("get_worker_ranking_board" as never);
         if (!mounted.current) return;
-        if (!rErr) { try { setReviews(parseRankingBoardRatings(rows)); } catch { /* keep last good */ } }
+        if (!rErr) { try { setReviews(parseRankingBoardRatings(rows)); setBoard(parseRankingBoard(rows)); } catch { /* keep last good */ } }
       }
     } catch (err: any) {
       if (!mounted.current) return;
@@ -99,8 +100,15 @@ export default function BookingLeaderboard() {
   };
 
   const ranked = useMemo(
-    () => (data ? rankLeaderboard(data.leaderboard, tab, reviews) : []),
-    [data, tab, reviews],
+    () => {
+      if (!data) return [];
+      // Top tab shows Admin's order and ranks exactly as returned; no client sorting.
+      if (tab === "top" && board) return boardFromServer(board, data.leaderboard, (r): LeaderboardEntry => ({
+        id: r.worker_id, rank: r.rank, full_name: r.full_name, photo_url: r.photo_url, rating: 0, priority_score: 0,
+        level: "Standard", jobsToday: 0, earningsToday: 0, isMe: r.is_me }));
+      return rankLeaderboard(data.leaderboard, tab, reviews);
+    },
+    [data, tab, reviews, board],
   );
 
   const me = ranked.find(l => l.isMe);
@@ -153,11 +161,7 @@ export default function BookingLeaderboard() {
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1">
                     <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    <span className="text-xs font-bold">{me.reviewCount > 0 ? me.rating.toFixed(1) : "—"}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Zap className="w-3 h-3 fill-primary text-primary" />
-                    <span className="text-xs font-bold">{displayText("Performance score")} {ownScore ?? "—"}</span>
+                    <span className="text-xs font-bold">{me.reviewCount > 0 && me.reviewAverage != null ? me.reviewAverage.toFixed(1) : "—"}</span>
                   </div>
                 </div>
               </div>
@@ -264,14 +268,8 @@ function WorkerRow({ worker, medal, tab, ownScore }: { worker: RankedWorker<Lead
           <div className="flex items-center gap-2 mt-0.5 opacity-80">
             <div className="flex items-center gap-0.5">
               <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-              <span className="text-[10px] font-bold">{worker.reviewCount > 0 ? worker.rating.toFixed(1) : "—"}</span>
+              <span className="text-[10px] font-bold">{worker.reviewCount > 0 && worker.reviewAverage != null ? worker.reviewAverage.toFixed(1) : "—"}</span>
             </div>
-            {tab === "top" && (
-              <div className="flex items-center gap-0.5">
-                <Zap className="w-2.5 h-2.5 fill-primary text-primary" />
-                <span className="text-[10px] font-bold">{displayText("Score")} {(worker.isMe ? ownScore : leaderboardScore(worker.priority_score)) ?? "—"}</span>
-              </div>
-            )}
             {tab === "earners" && (
               <span className="text-[10px] font-bold">{worker.jobsToday} {displayText("Jobs")}</span>
             )}
