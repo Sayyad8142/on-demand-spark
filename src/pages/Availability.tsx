@@ -363,9 +363,7 @@ export default function Availability() {
           <GuideSpeakerButton state={guide.state} onPress={guide.toggle} />
         </div>
         <p className="text-[12px] text-muted-foreground mt-1 font-medium">
-          <span style={{ color: GREEN }} className="font-semibold">{t('availability.timesSelected', { count: selectedCount })}</span>
-          <span className="mx-1.5 text-muted-foreground/50">·</span>
-          {getDayName(activeDay)}
+          {""}
         </p>
       </header>
 
@@ -450,11 +448,7 @@ export default function Availability() {
 
       {showSurge && (
         <div className="px-4 pt-3 space-y-1.5">
-          <p className="text-[12px] font-semibold text-foreground flex items-center gap-1">
-            <Zap className="h-3.5 w-3.5 text-orange-500 fill-orange-500" />
-            {displayText("Earn more during surge hours")}
-            {surgeCommunities.length === 1 && <span className="ml-1 font-medium text-muted-foreground truncate">· {surgeCommunity?.name}</span>}
-          </p>
+          <p className="text-[12px] font-semibold text-foreground flex items-center gap-1">{""}</p>
           {(surgeCommunities.length > 1 || surgeServiceList.length > 1) && (
             <div className="flex gap-1.5 overflow-x-auto">
               {surgeCommunities.length > 1 && surgeCommunities.map(c => (
@@ -514,12 +508,7 @@ export default function Availability() {
         </div>
       </div>
       {showSurge && (
-        <p className="px-4 pb-2 text-[11px] text-muted-foreground text-center">
-          {surgeApply.instant && surgeApply.scheduled
-            ? displayText("Extra earnings apply to all bookings.")
-            : surgeApply.instant ? displayText("Extra earnings currently apply to instant bookings.")
-            : displayText("Extra earnings currently apply to scheduled bookings.")}
-        </p>
+        <p className="px-4 pb-2 text-[11px] text-muted-foreground text-center">{""}</p>
       )}
 
       {/* Save Button — sticky above bottom nav */}
