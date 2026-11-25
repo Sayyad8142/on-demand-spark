@@ -61,7 +61,7 @@ export function parseServicePricingDraft(raw: unknown): PricingCatalogue {
         ...(c.maid.some(r => r.task === 'combined') ? [] : (c.combined ?? []).map(r => ({ flat_size: r.flat_size, task: 'combined' as const, price_inr: r.price_inr, source: 'combined', worker_estimate_inr: r.worker_estimate_inr })))],
       live: { dish: c.dish_extras.map(w => ({ intensity: w.intensity, label: w.label ?? w.intensity, description: w.description ?? '', configured: w.extra_inr, charged: w.charged_today_inr ?? null })),
         glass: c.bathroom ? { configured: c.bathroom.glass_partition_price_inr, charged: c.bathroom.glass_charged_today_inr ?? null } : null,
-        discrepancies: c.discrepancies ?? [], slotsApplyTo: c.slot_adjustments_apply_to ?? null } };
+        discrepancies: (c.discrepancies ?? []).map(x => ({ item: String(x.item), issue: String(x.issue) })), slotsApplyTo: c.slot_adjustments_apply_to ?? null } };
   });
   return { schema_version: 'worker-pricing-catalogue-v1', currency: 'INR', time_zone: 'Asia/Kolkata',
     generated_at: data.generated_at, last_updated_at: data.last_updated_at, config_revision: data.revision,
