@@ -14,29 +14,28 @@ export const RATING_TAG_LABELS: Record<RatingTag, string> = {
 
 export type BookingRating = { rating: number; tags: RatingTag[] };
 
-/** Keep only valid server rows for this worker; unknown tags are dropped, never guessed. */
-export function parseBookingRatings(rows: unknown, workerId: string): Map<string, BookingRating> {
+/** Keep only valid server rows; unknown tags are dropped, never guessed. The server scopes rows to the signed-in worker. */
+export function parseBookingRatings(rows: unknown): Map<string, BookingRating> {
   const map = new Map<string, BookingRating>();
   if (!Array.isArray(rows)) return map;
   for (const row of rows as Record<string, unknown>[]) {
     const rating = Number(row?.rating);
-    if (typeof row?.booking_id !== 'string' || row.worker_id !== workerId) continue;
+    if (typeof row?.booking_id !== 'string') continue;
     if (!Number.isInteger(rating) || rating < 1 || rating > 5) continue;
     const tags = Array.isArray(row.feedback_tags)
       ? (row.feedback_tags as unknown[]).filter((t): t is RatingTag => RATING_TAGS.includes(t as RatingTag))
       : [];
-    map.set(row.booking_id, { rating, tags });
+    if (!map.has(row.booking_id)) map.set(row.booking_id, { rating, tags }); // newest first from server
   }
   return map;
 }
 
-/** Reads ratings for this worker's own completed bookings. Throws on load failure so callers can tell it apart from "not rated". */
-export async function fetchBookingRatings(workerId: string, bookingIds: string[]): Promise<Map<string, BookingRating>> {
+/** Reads the signed-in worker's own ratings via get_my_customer_reviews (worker identity comes from the session). Throws on failure so callers can tell it apart from "not rated". */
+export async function fetchBookingRatings(_workerId: string, bookingIds: string[]): Promise<Map<string, BookingRating>> {
   if (!bookingIds.length) return new Map();
-  const { data, error } = await supabase.from('worker_ratings')
-    .select('booking_id,worker_id,rating,feedback_tags')
-    .eq('worker_id', workerId)
-    .in('booking_id', bookingIds);
+  const { data, error } = await supabase.rpc('get_my_customer_reviews' as never);
   if (error) throw error;
-  return parseBookingRatings(data, workerId);
+  const wanted = new Set(bookingIds);
+  const all = parseBookingRatings(data);
+  return new Map([...all].filter(([id]) => wanted.has(id)));
 }

@@ -17,13 +17,14 @@ export function parseRatingSummary(row: { rating: unknown; total_ratings: unknow
   return { average: count === 0 ? 5 : average, count };
 }
 
-/** Server-maintained customer average, never an admin ranking override. */
-export async function fetchRatingSummary(workerId: string): Promise<RatingSummary> {
-  const { data, error } = await supabase.from('workers')
-    .select('rating,total_ratings').eq('id', workerId).single();
+/** Customer average from get_my_customer_rating_summary (session-scoped), never an admin ranking override. */
+export async function fetchRatingSummary(_workerId: string): Promise<RatingSummary> {
+  const { data, error } = await supabase.rpc('get_my_customer_rating_summary' as never);
   if (error) throw error;
-  if (!data) throw new Error('Rating summary unavailable');
-  return parseRatingSummary(data);
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) throw new Error('Rating summary unavailable');
+  const r = row as { avg_rating: unknown; ratings_count: unknown };
+  return parseRatingSummary({ rating: r.avg_rating ?? 0, total_ratings: r.ratings_count });
 }
 
 export async function collectCompletedReviews(
