@@ -58,7 +58,7 @@ export default function CustomerReviews() {
           <div>
             <h1 className="text-xl font-semibold">{t('profile.reviews', 'Customer Reviews')}</h1>
             <p className="text-sm text-muted-foreground">
-              {ratingsCount ?? '—'} {displayText("review")}{ratingsCount !== 1 ? 's' : ''} • {workerRating?.toFixed(1) ?? "—"} {displayText("avg rating")}
+              {ratingsCount ?? '—'} {displayText("review")}{ratingsCount !== 1 ? 's' : ''} • {ratingsCount === 0 ? displayText("New Worker") : <>{workerRating?.toFixed(1) ?? "—"} {displayText("avg rating")}</>}
             </p>
           </div>
         </div>

@@ -754,7 +754,7 @@ export default function Profile() {
                     <Star className="w-5 h-5 text-white fill-white" />
                   </div>
                   <p className="text-xl font-extrabold text-amber-600 dark:text-amber-400 text-center mb-1">
-                    {workerRating?.toFixed(1) ?? "—"}
+                    {ratingsCount === 0 ? <span className="text-base">{displayText("New Worker")}</span> : workerRating?.toFixed(1) ?? "—"}
                   </p>
                   <p className="text-[9px] text-muted-foreground font-semibold text-center uppercase tracking-tight leading-tight">
                     {t('profile.rating')} · {ratingsCount ?? '—'}

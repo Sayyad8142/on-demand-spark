@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
-export type RatingSummary = { average: number; count: number };
+/** average is null when the worker has no customer ratings yet (shown as "New Worker", never a default 5.0). */
+export type RatingSummary = { average: number | null; count: number };
 export type WorkerReview = {
   id: string; booking_id: string; worker_id: string; rating: number;
   comment: string | null; created_at: string;
@@ -13,8 +14,8 @@ export function parseRatingSummary(row: { rating: unknown; total_ratings: unknow
   if (!Number.isInteger(count) || count < 0 || !Number.isFinite(average) || average < 0 || average > 5) {
     throw new Error('Invalid rating summary');
   }
-  // A new worker retains the existing five-star default, with zero customer ratings.
-  return { average: count === 0 ? 5 : average, count };
+  // No customer ratings yet: no average at all, so no screen can show a fake 5.0.
+  return { average: count === 0 ? null : average, count };
 }
 
 /** Customer average from get_my_customer_rating_summary (session-scoped), never an admin ranking override. */

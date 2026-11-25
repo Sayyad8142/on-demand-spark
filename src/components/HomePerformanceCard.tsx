@@ -1,4 +1,5 @@
 import "@/i18n/nextBookingMessages";
+import "@/i18n/priorityScoreV2Messages";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { leaderboardScore } from "@/lib/leaderboardRanking";
 import { Card } from "@/components/ui/card";
@@ -58,7 +59,11 @@ export default function HomePerformanceCard({ priorityScore, rating, totalRating
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between gap-1">
               <p className="text-[11px] font-semibold text-muted-foreground">{displayText("Rating")}</p>
-              <p className={`text-xs font-bold ${rc.text}`}>{rate?.toFixed(1) ?? "—"} ★ · {totalRatings ?? "—"}</p>
+              {totalRatings === 0 ? (
+                <p className="text-xs font-bold text-muted-foreground">{displayText("New Worker")}</p>
+              ) : (
+                <p className={`text-xs font-bold ${rc.text}`}>{rate?.toFixed(1) ?? "—"} ★ · {totalRatings ?? "—"}</p>
+              )}
             </div>
             <div className={`mt-0.5 h-[3px] w-full rounded-full ${rc.track} overflow-hidden`}>
               <div className={`h-full ${rc.bar} rounded-full transition-all`} style={{ width: `${ratePct}%` }} />

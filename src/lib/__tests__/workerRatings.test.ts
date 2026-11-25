@@ -10,7 +10,7 @@ describe('Customer rating display rules', () => {
     expect(parseRatingSummary({ rating: '1.25', total_ratings: 1201 })).toEqual({ average: 1.25, count: 1201 });
   });
   it('retains five-star default only for zero customer ratings', () => {
-    expect(parseRatingSummary({ rating: 0, total_ratings: 0 })).toEqual({ average: 5, count: 0 });
+    expect(parseRatingSummary({ rating: 0, total_ratings: 0 })).toEqual({ average: null, count: 0 });
   });
   it('rejects invalid averages and counts instead of fabricating values', () => {
     expect(() => parseRatingSummary({ rating: 6, total_ratings: 1 })).toThrow();

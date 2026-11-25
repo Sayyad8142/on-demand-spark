@@ -1,3 +1,4 @@
+import "@/i18n/priorityScoreV2Messages";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { Star } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
@@ -18,13 +19,8 @@ export default function RatingBreakdown({ ratings, totalRatings }: RatingBreakdo
   if (totalRatings === 0) {
     return (
       <div className="text-center py-4">
-        <div className="flex items-center justify-center gap-1 mb-1">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Star key={i} className="w-5 h-5 fill-amber-400 text-amber-400" />
-          ))}
-        </div>
-        <p className="text-sm font-semibold">5.0</p>
-        <p className="text-xs text-muted-foreground">{displayText("Default rating for new workers")}</p>
+        <p className="text-sm font-semibold">{displayText("New Worker")}</p>
+        <p className="text-xs text-muted-foreground">{displayText("No reviews yet")}</p>
       </div>
     );
   }
