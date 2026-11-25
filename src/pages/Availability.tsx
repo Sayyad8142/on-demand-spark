@@ -1,7 +1,9 @@
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Clock, Check } from "lucide-react";
+import { ArrowLeft, Clock, Check, Zap } from "lucide-react";
+import { useServicePricing } from "@/hooks/useServicePricing";
+import { surgeBySlot, surgeServices, surgeApplicability, type SurgeService } from "@/lib/availabilitySurge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -66,6 +68,17 @@ export default function Availability() {
     user
   } = useAuth();
   const { t } = useTranslation();
+  // Informational only: surge hints never affect selection or saving.
+  const pricing = useServicePricing(user?.id, "");
+  const [surgeCommunityId, setSurgeCommunityId] = useState("");
+  const [surgeServiceKey, setSurgeServiceKey] = useState<SurgeService | null>(null);
+  const surgeCommunities = (pricing.data?.communities ?? []).filter(c => surgeServices(c).length > 0);
+  const surgeCommunity = surgeCommunities.find(c => c.id === surgeCommunityId) ?? surgeCommunities[0] ?? null;
+  const surgeServiceList = surgeServices(surgeCommunity);
+  const surgeService = surgeServiceKey && surgeServiceList.includes(surgeServiceKey) ? surgeServiceKey : surgeServiceList[0] ?? null;
+  const surgeMap = surgeBySlot(surgeCommunity, surgeService);
+  const surgeApply = surgeApplicability(surgeCommunity?.live?.slotsApplyTo);
+  const showSurge = !pricing.error && surgeMap.size > 0;
   const guide = useAvailabilityGuide({
     onResult: (r) => {
       if (r === "unavailable") toast({ description: t("availability.voiceUnavailable") });
@@ -435,8 +448,34 @@ export default function Availability() {
         </div>
       </div>
 
+      {showSurge && (
+        <div className="px-4 pt-3 space-y-1.5">
+          <p className="text-[12px] font-semibold text-foreground flex items-center gap-1">
+            <Zap className="h-3.5 w-3.5 text-orange-500 fill-orange-500" />
+            {displayText("Earn more during surge hours")}
+            {surgeCommunities.length === 1 && <span className="ml-1 font-medium text-muted-foreground truncate">· {surgeCommunity?.name}</span>}
+          </p>
+          {(surgeCommunities.length > 1 || surgeServiceList.length > 1) && (
+            <div className="flex gap-1.5 overflow-x-auto">
+              {surgeCommunities.length > 1 && surgeCommunities.map(c => (
+                <button key={c.id} onClick={() => setSurgeCommunityId(c.id)}
+                  className={`shrink-0 h-7 px-2.5 rounded-full text-[11px] font-semibold border ${c.id === surgeCommunity?.id ? "bg-foreground text-background border-foreground" : "bg-background text-muted-foreground border-border"}`}>
+                  {c.name}
+                </button>
+              ))}
+              {surgeServiceList.length > 1 && surgeServiceList.map(sv => (
+                <button key={sv} onClick={() => setSurgeServiceKey(sv)}
+                  className={`shrink-0 h-7 px-2.5 rounded-full text-[11px] font-semibold border ${sv === surgeService ? "bg-orange-500/10 text-orange-600 border-orange-500/40" : "bg-background text-muted-foreground border-border"}`}>
+                  {serviceLabel(sv === "maid" ? "maid" : "bathroom_cleaning")}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Time Slots */}
-      <div className="flex-1 px-4 pt-4 pb-3 min-h-0">
+      <div className="flex-1 px-4 pt-3 pb-1 min-h-0">
         <div
           className="grid grid-cols-4 gap-2 h-full"
           style={{ gridTemplateRows: "repeat(6, minmax(0, 1fr))" }}
@@ -445,7 +484,7 @@ export default function Availability() {
             <button
               key={i}
               onClick={() => toggleSlot(activeDay, i)}
-              className="rounded-xl text-[11px] transition-all duration-200 active:scale-95 px-1 py-1 border flex items-center justify-center"
+              className="rounded-xl text-[11px] transition-all duration-200 active:scale-95 px-1 py-1 border flex flex-col items-center justify-center leading-tight"
               style={
                 slot.selected
                   ? {
@@ -464,10 +503,24 @@ export default function Availability() {
               }
             >
               {slot.label.replace('AM', displayText('AM')).replace('PM', displayText('PM'))}
+              {showSurge && surgeMap.has(slot.start) && (() => {
+                const amt = surgeMap.get(slot.start)!;
+                return amt > 0
+                  ? <span className="mt-0.5 text-[10px] font-bold text-orange-500 flex items-center gap-0.5"><Zap className="h-2.5 w-2.5 fill-orange-500" />+₹{amt}</span>
+                  : <span className="mt-0.5 text-[10px] font-medium text-red-400">−₹{Math.abs(amt)}</span>;
+              })()}
             </button>
           ))}
         </div>
       </div>
+      {showSurge && (
+        <p className="px-4 pb-2 text-[11px] text-muted-foreground text-center">
+          {surgeApply.instant && surgeApply.scheduled
+            ? displayText("Extra earnings apply to all bookings.")
+            : surgeApply.instant ? displayText("Extra earnings currently apply to instant bookings.")
+            : displayText("Extra earnings currently apply to scheduled bookings.")}
+        </p>
+      )}
 
       {/* Save Button — sticky above bottom nav */}
       <div
