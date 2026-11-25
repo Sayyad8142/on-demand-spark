@@ -11329,6 +11329,7 @@ export type Database = {
         Returns: Json
       }
       get_my_payout_summary: { Args: never; Returns: Json }
+      get_my_service_pricing: { Args: never; Returns: Json }
       get_my_start_otp: { Args: { p_booking_id: string }; Returns: Json }
       get_my_wallet_balance: {
         Args: never
