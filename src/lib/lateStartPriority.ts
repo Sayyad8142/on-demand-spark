@@ -31,7 +31,7 @@ export function lateStartNotice(data: LateStartPriority | null | undefined, over
  * Deadline, points and "enabled" are taken only from the server; no deduction is calculated here.
  * Returns null when the response is malformed or does not contain this booking.
  */
-export type LateStartStatus = LateStartPriority & { deadline_at: string; deadline_minutes: number; deadline_rule_version: number | null };
+export type LateStartStatus = LateStartPriority & { deadline_at: string | null; deadline_minutes: number; deadline_rule_version: number | null; unmeasurable: boolean };
 export function parseLateStartStatus(input: unknown, bookingId: string): LateStartStatus | null {
   if (!input || typeof input !== "object") return null;
   const r = input as Record<string, unknown>;
@@ -41,10 +41,13 @@ export function parseLateStartStatus(input: unknown, bookingId: string): LateSta
   const b = (r.bookings as unknown[]).find((x): x is Record<string, unknown> => !!x && typeof x === "object" && (x as Record<string, unknown>).booking_id === bookingId);
   if (!b) return null;
   const minutes = b.deadline_minutes, points = b.deduction_points;
-  if (typeof b.deadline_at !== "string" || !Number.isFinite(Date.parse(b.deadline_at))) return null;
+  const basis = typeof b.deadline_basis === "string" ? b.deadline_basis : "";
+  // Server says it cannot measure (e.g. scheduled booking without a start time): no countdown, alarm or warning.
+  const unmeasurable = b.deadline_at === null || basis.startsWith("unmeasurable");
+  if (!unmeasurable && (typeof b.deadline_at !== "string" || !Number.isFinite(Date.parse(b.deadline_at)))) return null;
   if (typeof minutes !== "number" || !Number.isFinite(minutes) || minutes <= 0) return null;
   if (typeof points !== "number" || !Number.isFinite(points) || points < 0) return null;
-  const enabled = s.enabled === true && b.penalty_enabled === true && b.exempted !== true;
+  const enabled = !unmeasurable && s.enabled === true && b.penalty_enabled === true && b.exempted !== true;
   let penalty: LateStartPriority["penalty"] = null;
   if (Array.isArray(r.history)) {
     const h = (r.history as unknown[]).find((x): x is Record<string, unknown> => {
@@ -57,5 +60,5 @@ export function parseLateStartStatus(input: unknown, bookingId: string): LateSta
   }
   const rv = b.deadline_rule_version ?? r.deadline_rule_version;
   const ruleVersion = typeof rv === "number" && Number.isInteger(rv) && rv > 0 ? rv : null;
-  return { settings: { enabled, points }, penalty, deadline_at: b.deadline_at, deadline_minutes: minutes, deadline_rule_version: ruleVersion };
+  return { settings: { enabled, points }, penalty, deadline_at: unmeasurable ? null : (b.deadline_at as string), deadline_minutes: minutes, deadline_rule_version: ruleVersion, unmeasurable };
 }

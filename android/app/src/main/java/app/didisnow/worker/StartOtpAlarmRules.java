@@ -29,4 +29,39 @@ public final class StartOtpAlarmRules {
             if (acceptedAt + offset > serverNow) return acceptedAt + offset;
         return serverNow;
     }
+    /**
+     * Reads get_my_late_start_status and returns booking id → alarm anchor (deadline_at − deadline_minutes).
+     * Requires deadline_rule_version >= 2; null/unparseable deadlines and unmeasurable rows are omitted.
+     * Throws on a malformed or old-rule response so the engine keeps its last known rows.
+     */
+    public static java.util.Map<String, Long> parseDeadlines(String json) throws org.json.JSONException {
+        org.json.JSONObject r = new org.json.JSONObject(json);
+        if (r.optInt("deadline_rule_version", 0) < 2) throw new org.json.JSONException("Old deadline rule");
+        org.json.JSONArray rows = r.getJSONArray("bookings");
+        java.util.Map<String, Long> out = new java.util.HashMap<>();
+        for (int i = 0; i < rows.length(); i++) {
+            org.json.JSONObject b = rows.getJSONObject(i);
+            String id = b.optString("booking_id", "");
+            String basis = b.optString("deadline_basis", "");
+            int minutes = b.optInt("deadline_minutes", 0);
+            if (id.isEmpty() || b.isNull("deadline_at") || basis.startsWith("unmeasurable") || minutes <= 0) continue;
+            long deadline = parseInstant(b.optString("deadline_at", ""));
+            if (deadline > 0) out.put(id, deadline - minutes * 60000L);
+        }
+        return out;
+    }
+    /** API 24-safe ISO parse (optional fraction, Z or ±HH:MM / ±HH offset). */
+    static long parseInstant(String raw) {
+        try {
+            String v = raw.trim().replace(' ', 'T').replace("Z", "+00:00");
+            v = v.replaceAll("([+-]\\d{2})$", "$1:00").replaceAll("([+-]\\d{2}):(\\d{2})$", "$1$2");
+            if (!v.contains(".")) v = v.replaceAll("(T\\d{2}:\\d{2}:\\d{2})", "$1.000");
+            v = v.replaceAll("\\.(\\d{1,3})\\d*", ".$1");
+            v = v.replaceAll("\\.(\\d)([+-])", ".$100$2").replaceAll("\\.(\\d{2})([+-])", ".$10$2");
+            java.text.SimpleDateFormat f = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ", java.util.Locale.US);
+            f.setLenient(false);
+            java.util.Date d = f.parse(v);
+            return d == null ? 0L : d.getTime();
+        } catch (Exception e) { return 0L; }
+    }
 }

@@ -49,3 +49,29 @@ describe("Priority Score V2 contract 2 (Admin is the only scoring authority)", (
     expect(parsePriorityScoreV2({ ...base, rating_display: { average: 5, count: 0 } })!.rating_display).toEqual({ kind: "new_worker" });
   });
 });
+
+describe("live Admin shape (psv2_my_score)", () => {
+  const live = {
+    contract_version: 2, v2_active: false, config_version: 1,
+    weights: { completed: 40, rating: 30, acceptance: 20, otp: 10 },
+    is_new_worker: true, rating_display: "New Worker", new_worker_protected: true,
+    components: {
+      completed: { points: 12, max: 40, count: 3, period_days: 30 },
+      rating: { points: 15, max: 30, average: null, count: 0 },
+      acceptance: { points: 18, max: 20, period_days: 14 },
+      otp: { points: 5, max: 10, neutral: true },
+    },
+    raw_score: 50, penalty_deductions: 0, performance_score: 50, protection_adjustment: 10, protected_dispatch_score: 60,
+    protection_ends_at: "2026-12-10T00:00:00Z", computed_at: "2026-11-25T15:50:00Z",
+    penalties: [{ id: "x", type: "late_start", points: 5, reason: "Late Start OTP", created_at: "2026-11-24T00:00:00Z", expires_at: "2026-12-01T00:00:00Z", reversed: true, active: false }],
+  };
+  it("maps live keys, maxima, neutral OTP and New Worker rating", () => {
+    const v = parsePriorityScoreV2(live)!;
+    expect(v.components.map(c => [c.key, c.max_points, c.state])).toEqual([
+      ["completed_bookings", 40, "measured"], ["customer_ratings", 30, "new_worker"], ["booking_acceptance", 20, "measured"], ["start_otp_on_time", 10, "neutral"]]);
+    expect(v.rating_display).toEqual({ kind: "new_worker" });
+    expect(v.penalties).toEqual([]);
+    expect(v.new_worker_protection?.ends_at).toBe("2026-12-10T00:00:00Z");
+    expect(headlineScore(41, v)).toEqual({ score: 41, source: "live", showPreview: true });
+  });
+});

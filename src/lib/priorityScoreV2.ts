@@ -34,13 +34,17 @@ export type PriorityScoreV2 = {
 const num = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 const date = (v: unknown): string | null => (typeof v === "string" && Number.isFinite(Date.parse(v)) ? v : null);
 const text = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
+/** Live Admin keys (completed/rating/acceptance/otp) → display keys. */
+const KEY_ALIAS: Record<string, V2ComponentKey> = { completed: "completed_bookings", rating: "customer_ratings", acceptance: "booking_acceptance", otp: "start_otp_on_time" };
+const canonical = (k: unknown): V2ComponentKey | null => typeof k !== "string" ? null : V2_COMPONENT_ORDER.includes(k as V2ComponentKey) ? (k as V2ComponentKey) : KEY_ALIAS[k] ?? null;
 const obj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 /** null/undefined → null, finite number → number, anything else → undefined (malformed). */
 const optNum = (v: unknown): number | null | undefined => (v === null || v === undefined ? null : num(v) ? v : undefined);
 
 function parseRatingDisplay(v: unknown): V2RatingDisplay | undefined {
   if (v === null || v === undefined) return null;
-  if (v === "new_worker") return { kind: "new_worker" };
+  if (v === "new_worker" || v === "New Worker") return { kind: "new_worker" };
+  if (typeof v === "string") { const n = Number(v); return Number.isFinite(n) && v.trim() !== "" ? { kind: "rating", average: n, count: 0 } : undefined; }
   if (!obj(v)) return undefined;
   if (v.kind === "new_worker" || v.state === "new_worker" || v.new_worker === true) return { kind: "new_worker" };
   const avg = v.average ?? v.value, count = v.count;
@@ -73,14 +77,18 @@ export function parsePriorityScoreV2(input: unknown): PriorityScoreV2 | null {
   const components: V2Component[] = [];
   for (const x of rows) {
     if (x.invalid) return null;
-    if (!V2_COMPONENT_ORDER.includes(x.key as V2ComponentKey)) continue; // future parts: ignore, don't invent
-    const key = x.key as V2ComponentKey;
-    const max = num(x.max_points) ? x.max_points : num(weights[key]) ? (weights[key] as number) : null;
+    const key = canonical(x.key);
+    if (!key) continue; // future parts: ignore, don't invent
+    const short = Object.keys(KEY_ALIAS).find(k => KEY_ALIAS[k] === key)!;
+    const max = num(x.max_points) ? x.max_points : num(x.max) ? x.max : num(weights[key]) ? (weights[key] as number) : num(weights[short]) ? (weights[short] as number) : null;
     if (max === null || max < 0) return null;
     const points = optNum(x.points ?? x.score);
     if (points === undefined) return null;
     const state: V2ComponentState | null = x.state === "neutral" || x.state === "new_worker" || x.state === "measured" ? x.state
-      : x.state === undefined ? (points === null ? "neutral" : "measured") : null;
+      : x.state !== undefined ? null
+      : key === "start_otp_on_time" && x.neutral === true ? "neutral"
+      : key === "customer_ratings" && r.is_new_worker === true ? "new_worker"
+      : points === null ? "neutral" : "measured";
     if (!state || (state === "measured" && points === null)) return null;
     components.push({ key, points, max_points: max, state, period_days: num(x.period_days) && x.period_days > 0 ? x.period_days : null, detail: text(x.detail) });
   }
@@ -94,13 +102,15 @@ export function parsePriorityScoreV2(input: unknown): PriorityScoreV2 | null {
       const id = text(p.id) ?? (num(p.id) ? String(p.id) : null);
       const reason = text(p.reason) ?? text(p.type);
       if (!id || !reason || !num(p.points)) return null;
+      if (p.reversed === true || p.active === false) continue; // server says not running: never shown as active
       penalties.push({ id, reason, points: Math.abs(p.points), created_at: date(p.created_at),
         expires_at: date(p.expires_at) ?? date(p.recovers_at), recovery: text(p.recovery) });
     }
   }
 
   const endsAt = date(r.protection_ends_at);
-  const protection: V2Protection | null = endsAt || (adj !== null && adj !== 0) ? { active: true, ends_at: endsAt, detail: null } : null;
+  const protectedFlag = typeof r.new_worker_protected === "boolean" ? r.new_worker_protected : !!endsAt || (adj !== null && adj !== 0);
+  const protection: V2Protection | null = protectedFlag ? { active: true, ends_at: endsAt, detail: null } : null;
   const rating = parseRatingDisplay(r.rating_display);
   if (rating === undefined) return null;
 
@@ -112,7 +122,7 @@ export function parsePriorityScoreV2(input: unknown): PriorityScoreV2 | null {
     weighted_dispatch_active: r.v2_active,
     components, penalties, new_worker_protection: protection, rating_display: rating,
     config_version: text(r.config_version) ?? (num(r.config_version) ? String(r.config_version) : null),
-    server_now: date(r.server_now), updated_at: date(r.updated_at),
+    server_now: date(r.server_now) ?? date(r.computed_at), updated_at: date(r.updated_at) ?? date(r.computed_at),
   };
 }
 

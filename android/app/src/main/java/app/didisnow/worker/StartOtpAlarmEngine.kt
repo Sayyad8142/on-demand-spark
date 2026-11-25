@@ -60,7 +60,8 @@ object StartOtpAlarmEngine {
         if (prefs(c).getString("user", "") != user || prefs(c).getLong("generation", -1) != generation) return
         reconcile(c, false)
     }
-    private fun read(c: Context, path: String): Pair<String, Long> {
+    private fun read(c: Context, path: String): Pair<String, Long> = request(c, path, null)
+    private fun request(c: Context, path: String, body: String?): Pair<String, Long> {
         val config = JSONObject(c.getSharedPreferences("start_otp_alarm_v2", Context.MODE_PRIVATE).getString("config", "{}") ?: "{}")
         val cap = c.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE)
         val session = JSONObject(cap.getString("didi_session", null) ?: cap.getString("didi-worker-session", "{}") ?: "{}")
@@ -73,6 +74,11 @@ object StartOtpAlarmEngine {
             connection.connectTimeout = 5000; connection.readTimeout = 5000
             connection.setRequestProperty("apikey", config.optString("key"))
             connection.setRequestProperty("Authorization", "Bearer $jwt")
+            if (body != null) {
+                connection.requestMethod = "POST"; connection.doOutput = true
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.outputStream.use { it.write(body.toByteArray()) }
+            }
             if (connection.responseCode !in 200..299) throw IllegalStateException("Read unavailable")
             return connection.inputStream.bufferedReader().use { it.readText() } to connection.getHeaderFieldDate("Date", 0)
         } finally { connection.disconnect() }
@@ -102,11 +108,14 @@ object StartOtpAlarmEngine {
                 val worker = workers.getJSONObject(0).getString("id")
                 val result = read(c, "/rest/v1/bookings?select=id,status,worker_id,start_otp_required,started_at,accepted_at&worker_id=eq.${URLEncoder.encode(worker,"UTF-8")}&status=in.(assigned,accepted,on_the_way)&limit=100")
                 val data = JSONArray(result.first)
+                // Server-confirmed Start deadlines (deadline_rule_version 2). Any failure keeps known rows.
+                val deadlines = StartOtpAlarmRules.parseDeadlines(request(c, "/rest/v1/rpc/get_my_late_start_status", "{}").first)
                 val out = JSONArray()
                 for (i in 0 until data.length()) {
                     val b = data.getJSONObject(i)
                     val started = !b.isNull("started_at") && b.optString("started_at").isNotBlank()
-                    val accepted = time(b.optString("accepted_at"))
+                    // Alarm anchor = server deadline − deadline minutes; no deadline (unmeasurable) → no alarm, no acceptance fallback.
+                    val accepted = deadlines[b.optString("id")] ?: 0L
                     if (accepted > 0 && !prefs(c).getStringSet("stopped", emptySet()).orEmpty().contains(b.optString("id")) && StartOtpAlarmRules.eligible(b.optString("status"), b.optBoolean("start_otp_required"), started, b.optString("worker_id"), worker)) {
                         b.put("acceptedMs", accepted); out.put(b)
                     }

@@ -4,9 +4,15 @@ import { START_ALLOWED_STATUSES } from "./startOtp";
 export const START_OTP_ALARM_OFFSETS = [10, 15] as const;
 export type StartAlarmPhase = "waiting" | "first" | "continuous" | "stopped";
 
-export function startAlarmPhase(b: StartOtpReminderBooking, workerId: string | null, serverNow: number): StartAlarmPhase {
+/**
+ * Mirrors native StartOtpAlarmRules. With a server deadline (rule v2) the anchor is deadline − 10 min;
+ * `deadlineAt === null` means the server marked the booking unmeasurable → no alarm.
+ */
+export function startAlarmPhase(b: StartOtpReminderBooking, workerId: string | null, serverNow: number, deadlineAt?: string | null): StartAlarmPhase {
   if (!isReminderEligible(b, workerId)) return "stopped";
-  const accepted = acceptanceMs(b);
+  if (deadlineAt === null) return "stopped";
+  const d = deadlineAt ? Date.parse(deadlineAt) : NaN;
+  const accepted = deadlineAt !== undefined ? (Number.isFinite(d) ? d - 10 * 60_000 : null) : acceptanceMs(b);
   if (accepted === null) return "stopped";
   const elapsed = serverNow - accepted;
   if (elapsed >= 15 * 60_000) return "continuous";
