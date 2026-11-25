@@ -4803,6 +4803,263 @@ export type Database = {
         }
         Relationships: []
       }
+      psv2_audit: {
+        Row: {
+          action: string
+          actor: string | null
+          created_at: string
+          detail: Json | null
+          id: number
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          created_at?: string
+          detail?: Json | null
+          id?: never
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          created_at?: string
+          detail?: Json | null
+          id?: never
+        }
+        Relationships: []
+      }
+      psv2_config_versions: {
+        Row: {
+          config: Json
+          created_at: string
+          created_by: string | null
+          note: string | null
+          version: number
+        }
+        Insert: {
+          config: Json
+          created_at?: string
+          created_by?: string | null
+          note?: string | null
+          version?: never
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          note?: string | null
+          version?: never
+        }
+        Relationships: []
+      }
+      psv2_eligible_skips: {
+        Row: {
+          skipped_eligible_rounds: number
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          skipped_eligible_rounds?: number
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          skipped_eligible_rounds?: number
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: []
+      }
+      psv2_penalties: {
+        Row: {
+          booking_id: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          incident_key: string
+          points: number
+          reason: string | null
+          reverse_reason: string | null
+          reversed_at: string | null
+          reversed_by: string | null
+          source_id: string
+          source_type: string
+          verified_by: string | null
+          worker_id: string
+        }
+        Insert: {
+          booking_id?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          incident_key: string
+          points: number
+          reason?: string | null
+          reverse_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+          source_id: string
+          source_type: string
+          verified_by?: string | null
+          worker_id: string
+        }
+        Update: {
+          booking_id?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          incident_key?: string
+          points?: number
+          reason?: string | null
+          reverse_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+          source_id?: string
+          source_type?: string
+          verified_by?: string | null
+          worker_id?: string
+        }
+        Relationships: []
+      }
+      psv2_snapshots: {
+        Row: {
+          accepted_count: number | null
+          completed_count: number | null
+          computed_at: string
+          config_version: number
+          current_score: number | null
+          id: number
+          ignored_count: number | null
+          is_new_worker_label: boolean | null
+          neutral_offer_count: number | null
+          new_worker_protected: boolean | null
+          otp_measured: number | null
+          otp_neutral: boolean | null
+          otp_on_time: number | null
+          p_acceptance: number | null
+          p_completed: number | null
+          p_otp: number | null
+          p_rating: number | null
+          penalties: number | null
+          performance_score: number | null
+          protection_adjustment: number | null
+          rating_avg: number | null
+          rating_count: number | null
+          raw_score: number | null
+          rejected_count: number | null
+          run_id: string
+          total: number | null
+          worker_id: string
+        }
+        Insert: {
+          accepted_count?: number | null
+          completed_count?: number | null
+          computed_at?: string
+          config_version: number
+          current_score?: number | null
+          id?: never
+          ignored_count?: number | null
+          is_new_worker_label?: boolean | null
+          neutral_offer_count?: number | null
+          new_worker_protected?: boolean | null
+          otp_measured?: number | null
+          otp_neutral?: boolean | null
+          otp_on_time?: number | null
+          p_acceptance?: number | null
+          p_completed?: number | null
+          p_otp?: number | null
+          p_rating?: number | null
+          penalties?: number | null
+          performance_score?: number | null
+          protection_adjustment?: number | null
+          rating_avg?: number | null
+          rating_count?: number | null
+          raw_score?: number | null
+          rejected_count?: number | null
+          run_id: string
+          total?: number | null
+          worker_id: string
+        }
+        Update: {
+          accepted_count?: number | null
+          completed_count?: number | null
+          computed_at?: string
+          config_version?: number
+          current_score?: number | null
+          id?: never
+          ignored_count?: number | null
+          is_new_worker_label?: boolean | null
+          neutral_offer_count?: number | null
+          new_worker_protected?: boolean | null
+          otp_measured?: number | null
+          otp_neutral?: boolean | null
+          otp_on_time?: number | null
+          p_acceptance?: number | null
+          p_completed?: number | null
+          p_otp?: number | null
+          p_rating?: number | null
+          penalties?: number | null
+          performance_score?: number | null
+          protection_adjustment?: number | null
+          rating_avg?: number | null
+          rating_count?: number | null
+          raw_score?: number | null
+          rejected_count?: number | null
+          run_id?: string
+          total?: number | null
+          worker_id?: string
+        }
+        Relationships: []
+      }
+      psv2_state: {
+        Row: {
+          active_version: number
+          dispatch_mode: string
+          id: boolean
+          integration_ready: boolean
+          late_start_mode: string
+          otp_component_live: boolean
+          score_mode: string
+          shadow_enabled: boolean
+          shadow_until: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active_version: number
+          dispatch_mode?: string
+          id?: boolean
+          integration_ready?: boolean
+          late_start_mode?: string
+          otp_component_live?: boolean
+          score_mode?: string
+          shadow_enabled?: boolean
+          shadow_until?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active_version?: number
+          dispatch_mode?: string
+          id?: boolean
+          integration_ready?: boolean
+          late_start_mode?: string
+          otp_component_live?: boolean
+          score_mode?: string
+          shadow_enabled?: boolean
+          shadow_until?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "psv2_state_active_version_fkey"
+            columns: ["active_version"]
+            isOneToOne: false
+            referencedRelation: "psv2_config_versions"
+            referencedColumns: ["version"]
+          },
+        ]
+      }
       pushcut_debug_log: {
         Row: {
           created_at: string
@@ -9065,6 +9322,25 @@ export type Database = {
         Args: { p_worker_id: string }
         Returns: number
       }
+      _late_start_deadline: {
+        Args: {
+          p_accepted: string
+          p_booking_type: string
+          p_date: string
+          p_minutes: number
+          p_time: string
+        }
+        Returns: string
+      }
+      _late_start_deadline_basis: {
+        Args: {
+          p_accepted: string
+          p_booking_type: string
+          p_date: string
+          p_time: string
+        }
+        Returns: string
+      }
       _log_slot_violation: {
         Args: { p_booking_id: string; p_channel: string; p_worker_id: string }
         Returns: undefined
@@ -9676,6 +9952,36 @@ export type Database = {
         Returns: Json
       }
       admin_process_case_reminders: { Args: never; Returns: number }
+      admin_psv2_emergency_rollback: {
+        Args: { p_reason: string }
+        Returns: Json
+      }
+      admin_psv2_overview: { Args: never; Returns: Json }
+      admin_psv2_reverse_penalty: {
+        Args: { p_penalty: string; p_reason: string }
+        Returns: undefined
+      }
+      admin_psv2_run_shadow: { Args: never; Returns: string }
+      admin_psv2_save_config: {
+        Args: { p_config: Json; p_note: string }
+        Returns: number
+      }
+      admin_psv2_set_modes: {
+        Args: {
+          p_dispatch_mode: string
+          p_late_start_mode: string
+          p_otp_live: boolean
+          p_reason: string
+          p_score_mode: string
+        }
+        Returns: Json
+      }
+      admin_psv2_shadow_report: { Args: never; Returns: Json }
+      admin_psv2_verify_complaint: {
+        Args: { p_issue_id: string; p_note: string }
+        Returns: string
+      }
+      admin_psv2_worker_detail: { Args: { p_worker: string }; Returns: Json }
       admin_publish_mandatory_update: {
         Args: {
           _app: string
@@ -11329,6 +11635,7 @@ export type Database = {
         Returns: Json
       }
       get_my_payout_summary: { Args: never; Returns: Json }
+      get_my_priority_score: { Args: never; Returns: Json }
       get_my_service_pricing: { Args: never; Returns: Json }
       get_my_start_otp: { Args: { p_booking_id: string }; Returns: Json }
       get_my_wallet_balance: {
