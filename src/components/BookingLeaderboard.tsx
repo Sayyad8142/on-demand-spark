@@ -1,7 +1,7 @@
 import "@/i18n/nextBookingMessages";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { rankLeaderboard, summarizeReviews, leaderboardScore, RANKING_PAGE_TABS, type RankingPageTab, type ReviewStats, type RankedWorker } from "@/lib/leaderboardRanking";
+import { rankLeaderboard, parseRankingBoardRatings, leaderboardScore, RANKING_PAGE_TABS, type RankingPageTab, type ReviewStats, type RankedWorker } from "@/lib/leaderboardRanking";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trophy, Star, Zap, IndianRupee, TrendingUp, HelpCircle } from "lucide-react";
@@ -60,10 +60,10 @@ export default function BookingLeaderboard() {
       setError(null);
       const ids = (result?.leaderboard ?? []).map((l: LeaderboardEntry) => l.id);
       if (ids.length) {
-        const { data: rows, error: rErr } = await supabase
-          .from("worker_ratings").select("worker_id, rating").in("worker_id", ids).limit(5000);
+        // Ratings come only from Admin's secure ranking board; on failure keep the last good values.
+        const { data: rows, error: rErr } = await supabase.rpc("get_worker_ranking_board" as never);
         if (!mounted.current) return;
-        setReviews(!rErr && rows ? summarizeReviews(rows as { worker_id: string | null; rating: number | null }[]) : new Map());
+        if (!rErr) { try { setReviews(parseRankingBoardRatings(rows)); } catch { /* keep last good */ } }
       }
     } catch (err: any) {
       if (!mounted.current) return;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rankLeaderboard, summarizeReviews, leaderboardScore, RANKING_PAGE_TABS } from "../leaderboardRanking";
+import { rankLeaderboard, summarizeReviews, parseRankingBoardRatings, leaderboardScore, RANKING_PAGE_TABS } from "../leaderboardRanking";
 
 const w = (id: string, rank: number, earningsToday: number, jobsToday = 0) =>
   ({ id, rank, rating: 5, priority_score: 50, jobsToday, earningsToday, isMe: false });
@@ -60,5 +60,15 @@ describe("Priority score breakdown (server parts only)", () => {
   });
   it("a stored score of 0 keeps 0", () => {
     expect(parsePriorityBreakdown("pts(c/o/r/rec/b/reach/pen)=0/0/0/0/0/0/40 final=0", 0)!.final).toBe(0);
+  });
+  it("uses Admin's ranking board average and count (4.85 from 13)", () => {
+    const m = parseRankingBoardRatings([
+      { rank: 1, worker_id: "w1", avg_rating: "4.85", ratings_count: 13, is_me: true },
+      { rank: 2, worker_id: "w2", avg_rating: null, ratings_count: 0, is_me: false },
+      { rank: 3, worker_id: "w3", avg_rating: 7, ratings_count: 2, is_me: false },
+    ]);
+    expect(m.get("w1")).toEqual({ count: 13, average: 4.85 });
+    expect(m.get("w2")).toEqual({ count: 0, average: null });
+    expect(m.has("w3")).toBe(false);
   });
 });

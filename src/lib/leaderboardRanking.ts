@@ -37,6 +37,19 @@ export function summarizeReviews(rows: { worker_id: string | null; rating: numbe
   return out;
 }
 
+/** Rating stats from Admin's get_worker_ranking_board (server-computed average/count); invalid rows are dropped. Throws on a non-array response. */
+export function parseRankingBoardRatings(rows: unknown): Map<string, ReviewStats> {
+  if (!Array.isArray(rows)) throw new Error("Invalid ranking board response");
+  const out = new Map<string, ReviewStats>();
+  for (const r of rows as Record<string, unknown>[]) {
+    const id = r?.worker_id; const count = Number(r?.ratings_count); const avg = r?.avg_rating == null ? null : Number(r.avg_rating);
+    if (typeof id !== "string" || !Number.isInteger(count) || count < 0) continue;
+    if (avg !== null && (!Number.isFinite(avg) || avg < 0 || avg > 5)) continue;
+    out.set(id, { count, average: count > 0 ? avg : null });
+  }
+  return out;
+}
+
 export function rankLeaderboard<T extends RankableWorker>(
   workers: T[], tab: LeaderboardTab, reviews: Map<string, ReviewStats>,
 ): RankedWorker<T>[] {
