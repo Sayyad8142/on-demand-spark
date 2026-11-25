@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-/** Not activated: the Admin handoff is a proposal, not a deployed worker API. */
-export const SERVICE_PRICING_ENABLED = false;
+/** Live: hosted read-only `get_my_service_pricing` RPC (session-scoped, parameterless). */
+export const SERVICE_PRICING_ENABLED = true;
 const money = z.number().finite().int().nonnegative();
 const text = z.string().trim().min(1).max(200);
 const source = z.enum(['community', 'global']);
@@ -39,7 +39,12 @@ export interface DraftMaidRow {
   flat_size: string; task: 'floor_cleaning' | 'dish_washing' | 'combined';
   price_inr: number; source: string; worker_estimate_inr: number;
 }
-export type PricingCommunity = z.infer<typeof community> & { draft_maid?: DraftMaidRow[]; loyalty_note?: string };
+export interface LivePricingExtras {
+  dish: Array<{ intensity: string; label: string; description: string; configured: number | null; charged: number | null }>;
+  glass: { configured: number | null; charged: number | null } | null;
+  discrepancies: Array<{ item: string; issue: string }>; slotsApplyTo: string | null;
+}
+export type PricingCommunity = z.infer<typeof community> & { draft_maid?: DraftMaidRow[]; loyalty_note?: string; earnings_note?: string; live?: LivePricingExtras };
 export type PricingCatalogue = Omit<z.infer<typeof catalogue>, 'communities'> & { communities: PricingCommunity[]; last_updated_at?: string };
 export function parsePricingCatalogue(raw: unknown): PricingCatalogue {
   const data=catalogue.parse(raw);

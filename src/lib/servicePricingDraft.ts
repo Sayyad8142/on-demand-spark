@@ -13,18 +13,24 @@ const draft = z.object({
   last_updated_at: timestamp, generated_at: timestamp,
   loyalty_tiers: z.array(z.object({ id: text, min_completed: money, max_completed: money.nullable(), surcharge_inr: money })).max(100),
   loyalty_note: text,
+  earnings_note: text.optional(),
   communities: z.array(z.object({
     community: communityKey, community_name: text,
     commission_percent: z.number().finite().min(0).max(100),
     maid: z.array(row).max(300),
-    dish_extras: z.array(z.object({ intensity: z.enum(['light', 'medium', 'heavy']), extra_inr: money, label: text, description: text })).max(3),
-    bathroom: z.object({ unit_price_inr: money.positive(), glass_partition_price_inr: money, source: text }).nullable(),
+    combined: z.array(z.object({ flat_size: z.string().trim().min(1).max(50), price_inr: money, worker_estimate_inr: money })).max(100).optional(),
+    dish_extras: z.array(z.object({ intensity: z.enum(['light', 'medium', 'heavy']), extra_inr: money.nullable(), label: text.nullable(), description: text.nullable(),
+      charged_today_inr: money.optional(), matches: z.boolean().optional() })).max(3),
+    bathroom: z.object({ unit_price_inr: money.positive(), glass_partition_price_inr: money.nullable(), source: text,
+      glass_charged_today_inr: money.optional(), glass_matches: z.boolean().optional() }).nullable(),
+    slot_adjustments_apply_to: text.optional(),
+    discrepancies: z.array(z.object({ item: text, issue: text })).max(100).optional(),
     slot_adjustments: z.array(z.object({ service: z.enum(['maid', 'bathroom_cleaning']),
       slot_time: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/), adjustment_inr: z.number().finite().int().min(-10_000_000).max(10_000_000) })).max(1000),
   })).max(100),
 });
 
-/** Admin draft contract (25 Nov 2026). Not deployed: never enable until the hosted RPC is certified. */
+/** Hosted `get_my_service_pricing` (worker-service-pricing-v1), deployed 25 Nov 2026. */
 export function parseServicePricingDraft(raw: unknown): PricingCatalogue {
   const data = draft.parse(raw);
   const unique = (values: string[]) => new Set(values).size === values.length;
@@ -36,10 +42,13 @@ export function parseServicePricingDraft(raw: unknown): PricingCatalogue {
     if (!unique(c.maid.map(r => `${r.flat_size}:${r.task}`)) || !unique(c.dish_extras.map(r => r.intensity)) ||
       !unique(c.slot_adjustments.map(r => `${r.service}:${r.slot_time.slice(0, 5)}`))) throw new Error('ambiguous_rates');
     const services: PricingCommunity['services'] = [];
-    if (c.maid.length || c.dish_extras.length) services.push({ service_key: 'maid', flat_sizes: [],
-      dish_workloads: c.dish_extras.map(w => ({ ...w, source: 'global' as const })) });
-    if (c.bathroom) services.push({ service_key: 'bathroom_cleaning', unit_price_inr: c.bathroom.unit_price_inr,
-      glass_partition_price_inr: c.bathroom.glass_partition_price_inr, glass_quantity_rule: 'all_selected_bathrooms',
+    // Examples use what bookings charge today (server-reported); configured values are shown separately.
+    const workloads = c.dish_extras.flatMap(w => { const charge = w.charged_today_inr ?? w.extra_inr; return charge === null ? [] :
+      [{ intensity: w.intensity, label: w.label ?? w.intensity, description: w.description ?? '', extra_inr: charge, source: 'global' as const }]; });
+    const glassCharge = c.bathroom ? c.bathroom.glass_charged_today_inr ?? c.bathroom.glass_partition_price_inr : null;
+    if (c.maid.length || c.dish_extras.length) services.push({ service_key: 'maid', flat_sizes: [], dish_workloads: workloads });
+    if (c.bathroom && glassCharge !== null) services.push({ service_key: 'bathroom_cleaning', unit_price_inr: c.bathroom.unit_price_inr,
+      glass_partition_price_inr: glassCharge, glass_quantity_rule: 'all_selected_bathrooms',
       source: c.bathroom.source === 'community' ? 'community' : 'global', customer_client_quantity_range: { min: 1, max: 1 } });
     // Returned identities are display-only. The draft does not attest assignment provenance or quantity limits.
     return { id: c.community, value: c.community, name: c.community_name, association_verification: 'current_worker_row',
@@ -47,7 +56,12 @@ export function parseServicePricingDraft(raw: unknown): PricingCatalogue {
       services, slots: c.slot_adjustments.map(s => ({ service_key: s.service, slot_time: s.slot_time, adjustment_inr: s.adjustment_inr })),
       loyalty: { depends_on_customer: true, personalised_amount_inr: null, parity_verified: false,
         admin_tiers: tiers.map(t => ({ min_completed: t.min_completed, max_completed: t.max_completed, surcharge_inr: t.surcharge_inr })) },
-      warnings: [], draft_maid: c.maid.map(r => ({ flat_size: r.flat_size, task: r.task, price_inr: r.price_inr, source: r.source, worker_estimate_inr: r.worker_estimate_inr })), loyalty_note: data.loyalty_note };
+      warnings: [], loyalty_note: data.loyalty_note, earnings_note: data.earnings_note,
+      draft_maid: [...c.maid.map(r => ({ flat_size: r.flat_size, task: r.task, price_inr: r.price_inr, source: r.source, worker_estimate_inr: r.worker_estimate_inr })),
+        ...(c.maid.some(r => r.task === 'combined') ? [] : (c.combined ?? []).map(r => ({ flat_size: r.flat_size, task: 'combined' as const, price_inr: r.price_inr, source: 'combined', worker_estimate_inr: r.worker_estimate_inr })))],
+      live: { dish: c.dish_extras.map(w => ({ intensity: w.intensity, label: w.label ?? w.intensity, description: w.description ?? '', configured: w.extra_inr, charged: w.charged_today_inr ?? null })),
+        glass: c.bathroom ? { configured: c.bathroom.glass_partition_price_inr, charged: c.bathroom.glass_charged_today_inr ?? null } : null,
+        discrepancies: c.discrepancies ?? [], slotsApplyTo: c.slot_adjustments_apply_to ?? null } };
   });
   return { schema_version: 'worker-pricing-catalogue-v1', currency: 'INR', time_zone: 'Asia/Kolkata',
     generated_at: data.generated_at, last_updated_at: data.last_updated_at, config_revision: data.revision,

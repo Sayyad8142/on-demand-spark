@@ -3,7 +3,7 @@ import { parsePricingCatalogue, pricingCommunity, pricingSnapshotFresh, SERVICE_
 import { pricingFixture } from './servicePricingFixture';
 
 describe('Prepared service pricing contract', () => {
-  it('keeps production pricing disabled', () => expect(SERVICE_PRICING_ENABLED).toBe(false));
+  it('enables live pricing now that the hosted RPC is deployed', () => expect(SERVICE_PRICING_ENABLED).toBe(true));
   it('preserves server combined discount instead of summing task prices', () => {
     const service = parsePricingCatalogue(pricingFixture()).communities[0]?.services[0];
     expect(service?.service_key).toBe('maid');

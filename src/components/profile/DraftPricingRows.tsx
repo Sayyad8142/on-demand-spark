@@ -6,7 +6,7 @@ import { draftFlatGroups, pricingExample } from '@/lib/servicePricingDraft';
 
 const money = (n: number) => new Intl.NumberFormat(displayLocale(), { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
 const taskLabels = { floor_cleaning: 'Floor Cleaning', dish_washing: 'Dishwashing', combined: 'Both Services' } as const;
-const sourceLabel = (s: string) => s === 'community' ? d('Community price') : s === 'global' ? d('Standard price') : null;
+const sourceLabel = (s: string) => s === 'community' ? d('Community price') : s === 'global' ? d('Standard price') : s === 'fallback' ? d('Default price') : null;
 
 /** Server rows only; the example uses server parts and the hosted floor-fee rule, for new bookings. */
 export default function DraftPricingRows({ community }: { community: PricingCommunity }) {

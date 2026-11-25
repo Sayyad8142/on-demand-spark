@@ -5,7 +5,7 @@
 
 # Worker card and setup safety
 
-- Service pricing reads only the disabled parameterless get_my_service_pricing (Admin draft shape, community slugs) via useServicePricing; no raw table fallback or profile creation. Estimates use server task totals and the read-only hosted core's floor-fee rule on the whole applicable total, excluding loyalty/tips; draft shape must be certified before activation. Why: estimates must never authorize earnings or invent prices.
+- Service pricing reads only the live parameterless get_my_service_pricing (worker-service-pricing-v1, community slugs) via useServicePricing; no raw table fallback or profile creation. Examples use the server's current booking charges, configured prices are shown separately; estimates use the read-only hosted core's floor-fee rule on the whole total, excluding loyalty/tips. Why: estimates must never authorize earnings or invent prices.
 
 - Late Start priority uses a disabled, read-only versioned Admin contract; warnings require settings and deductions require booking-specific server confirmation. Shared useWorkerPriority reads exact score/reason for Home, Profile and Ranking. Why: elapsed time must never deduct points, duplicate penalties or infer a late penalty from aggregate faults.
 
