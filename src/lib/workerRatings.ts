@@ -48,14 +48,42 @@ export async function collectCompletedReviews(
   throw new Error('Review pagination limit exceeded');
 }
 
-export function fetchCompletedReviews(workerId: string): Promise<WorkerReview[]> {
-  return collectCompletedReviews(workerId, async (from, to) => {
-    const { data, error } = await supabase.from('worker_ratings')
-      .select('id,booking_id,worker_id,rating,comment,created_at,bookings!inner(status,cust_name,service_type,flat_no,community)')
-      .eq('worker_id', workerId).eq('bookings.status', 'completed')
-      .order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to);
-    return { data: data as WorkerReview[] | null, error };
-  });
+type ReviewRow = { id: string; booking_id: string; rating: number; comment: string | null; feedback_tags: string[] | null; created_at: string };
+type ReviewBooking = WorkerReview['bookings'] & { id: string; worker_id: string };
+
+/** Pure join of session-scoped review rows with the worker's own completed bookings. Rows without a matching completed own booking are dropped. */
+export function joinReviews(workerId: string, rows: unknown, bookings: ReviewBooking[]): WorkerReview[] {
+  if (!Array.isArray(rows)) throw new Error('Invalid reviews response');
+  const byId = new Map(bookings.map(b => [b.id, b]));
+  const out: WorkerReview[] = [];
+  const seen = new Set<string>();
+  for (const r of rows as ReviewRow[]) {
+    const rating = Number(r?.rating);
+    const b = byId.get(r?.booking_id);
+    if (!r?.id || seen.has(r.id) || !Number.isInteger(rating) || rating < 1 || rating > 5) continue;
+    if (!b || b.status !== 'completed' || b.worker_id !== workerId) continue;
+    seen.add(r.id);
+    const { id: _id, worker_id: _w, ...details } = b;
+    out.push({ id: r.id, booking_id: r.booking_id, worker_id: workerId, rating, comment: r.comment ?? null, created_at: r.created_at, bookings: details });
+  }
+  return out;
+}
+
+/** All reviews from get_my_customer_reviews (session-scoped, newest first); booking details come only from this worker's own bookings. */
+export async function fetchCompletedReviews(workerId: string): Promise<WorkerReview[]> {
+  const { data, error } = await supabase.rpc('get_my_customer_reviews' as never);
+  if (error) throw error;
+  const rows = Array.isArray(data) ? (data as ReviewRow[]) : [];
+  const ids = [...new Set(rows.map(r => r.booking_id).filter(Boolean))];
+  const bookings: ReviewBooking[] = [];
+  for (let k = 0; k < ids.length; k += 200) {
+    const { data: b, error: be } = await supabase.from('bookings')
+      .select('id,worker_id,status,cust_name,service_type,flat_no,community')
+      .eq('worker_id', workerId).in('id', ids.slice(k, k + 200));
+    if (be) throw be;
+    bookings.push(...((b ?? []) as unknown as ReviewBooking[]));
+  }
+  return joinReviews(workerId, data, bookings);
 }
 
 export function reviewBreakdown(reviews: Pick<WorkerReview, 'rating'>[]) {

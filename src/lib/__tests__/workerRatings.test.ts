@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 vi.mock('@/integrations/supabase/client', () => ({ supabase: {} }));
-import { collectCompletedReviews, parseRatingSummary, reviewBreakdown, type WorkerReview } from '../workerRatings';
+import { joinReviews, collectCompletedReviews, parseRatingSummary, reviewBreakdown, type WorkerReview } from '../workerRatings';
 const review = (id: string, status = 'completed', worker = 'w'): WorkerReview => ({
   id, booking_id: `b-${id}`, worker_id: worker, rating: 1, comment: 'Feedback', created_at: '2026-11-15',
   bookings: { status, cust_name: 'Customer', service_type: 'maid', flat_no: '1', community: 'c' },
@@ -37,5 +37,15 @@ describe('Customer rating display rules', () => {
   });
   it('breakdown counts completed feedback independently of the overall rating total', () => {
     expect(reviewBreakdown([{ rating: 1 }, { rating: 5 }, { rating: 5 }])).toEqual({ 1: 1, 2: 0, 3: 0, 4: 0, 5: 2 });
+  });
+  it('joins server reviews to own completed bookings only (Flat 9198: 3 stars)', () => {
+    const b = (id: string, status = 'completed', worker_id = 'w') => ({ id, worker_id, status, cust_name: 'C', service_type: 'maid', flat_no: '9198', community: 'PHF' });
+    const rows = [
+      { id: 'r1', booking_id: 'b1', rating: 3, comment: null, feedback_tags: ['arrived_late', 'behaviour'], created_at: '2026-11-22' },
+      { id: 'r2', booking_id: 'b2', rating: 5, comment: null, feedback_tags: [], created_at: '2026-11-21' },
+      { id: 'r3', booking_id: 'b3', rating: 4, comment: null, feedback_tags: [], created_at: '2026-11-20' },
+    ];
+    const out = joinReviews('w', rows, [b('b1'), b('b2', 'cancelled'), b('b3', 'completed', 'other')]);
+    expect(out.map(r => [r.id, r.rating, r.bookings.flat_no])).toEqual([['r1', 3, '9198']]);
   });
 });
