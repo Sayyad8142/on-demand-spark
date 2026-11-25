@@ -1,5 +1,7 @@
 export const servicePricingMessages = {
   en: {
+    Price_example: 'Price example', Standard_price: 'Standard price', Community_price: 'Community price', Estimated_Earnings: 'Estimated Earnings',
+    Estimate_for_new_bookings_Your_actual_amount_appears_in_earnings_history: 'Estimate for new bookings. Your actual amount appears in earnings history.',
     Combined_service_examples: 'Combined service examples', Dish_workload: 'Dish workload', Base_price: 'Base price',
     Customer_specific_charges_are_excluded_from_these_estimates: 'Customer-specific charges are excluded from these estimates.',
     Service_Pricing_Earnings: 'Service Pricing & Earnings', Know_how_much_you_can_earn: 'Know how much you can earn',
@@ -21,6 +23,8 @@ export const servicePricingMessages = {
     Pricing_could_not_be_refreshed: 'Pricing could not be refreshed.',
   },
   hi: {
+    Price_example: 'कीमत का उदाहरण', Standard_price: 'सामान्य कीमत', Community_price: 'सोसाइटी की कीमत', Estimated_Earnings: 'अनुमानित कमाई',
+    Estimate_for_new_bookings_Your_actual_amount_appears_in_earnings_history: 'नई बुकिंग का अनुमान। आपकी असली रकम कमाई के इतिहास में दिखेगी।',
     Combined_service_examples: 'दोनों सेवाओं के उदाहरण', Dish_workload: 'बर्तनों की मात्रा', Base_price: 'मूल कीमत',
     Customer_specific_charges_are_excluded_from_these_estimates: 'इन अनुमानों में ग्राहक के अनुसार शुल्क शामिल नहीं हैं।',
     Service_Pricing_Earnings: 'सेवा की कीमतें और कमाई', Know_how_much_you_can_earn: 'जानें आपकी कमाई कितनी हो सकती है',
@@ -41,6 +45,8 @@ export const servicePricingMessages = {
     Pricing_could_not_be_refreshed: 'नई कीमतें नहीं मिल सकीं।',
   },
   te: {
+    Price_example: 'ధర ఉదాహరణ', Standard_price: 'సాధారణ ధర', Community_price: 'కమ్యూనిటీ ధర', Estimated_Earnings: 'అంచనా ఆదాయం',
+    Estimate_for_new_bookings_Your_actual_amount_appears_in_earnings_history: 'కొత్త బుకింగ్‌ల అంచనా. మీ అసలు మొత్తం ఆదాయ చరిత్రలో కనిపిస్తుంది.',
     Combined_service_examples: 'రెండు సేవల ఉదాహరణలు', Dish_workload: 'గిన్నెల పరిమాణం', Base_price: 'మూల ధర',
     Customer_specific_charges_are_excluded_from_these_estimates: 'ఈ అంచనాల్లో కస్టమర్‌కు ప్రత్యేక ఛార్జీలు కలపలేదు.',
     Service_Pricing_Earnings: 'సేవల ధరలు మరియు ఆదాయం', Know_how_much_you_can_earn: 'మీకు ఎంత ఆదాయం రావచ్చో తెలుసుకోండి',

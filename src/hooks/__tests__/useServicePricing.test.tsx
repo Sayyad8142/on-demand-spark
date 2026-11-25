@@ -6,7 +6,7 @@ vi.mock('@/lib/servicePricing', async importOriginal => ({ ...await importOrigin
 vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => false } }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: { auth: { getUser: h.getUser, refreshSession: h.renew }, rpc: h.invoke } }));
 import { useServicePricing } from '../useServicePricing';
-const id = '11111111-1111-4111-8111-111111111111';
+const id = 'prestige-high-fields';
 beforeEach(() => {
   vi.clearAllMocks(); h.enabled = true;
   h.getUser.mockResolvedValue({ data: { user: { id: 'own' } }, error: null });
@@ -84,10 +84,6 @@ describe('Read-only pricing session boundaries', () => {
     expect(hook.result.current.data).toBeNull(); hook.unmount();
   });
   it('retains every returned community without additional request parameters', async () => {
-    const fixture = pricingFixture(); const first = fixture.communities[0];
-    if (!first) throw new Error('missing fixture');
-    fixture.communities.push({ ...first, community_id: '22222222-2222-4222-8222-222222222222', community_name: 'Second Preview Community' });
-    h.invoke.mockResolvedValue({ data: fixture, error: null });
     const hook = renderHook(() => useServicePricing('own', id));
     await waitFor(() => expect(hook.result.current.data?.communities.length).toBe(2));
     expect(h.invoke).toHaveBeenCalledWith('get_my_service_pricing'); hook.unmount();
