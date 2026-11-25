@@ -69,7 +69,7 @@ export default function ActiveJobCard({
   const startTimer = startOtpTimer({
     id: booking.id, status: booking.status, start_otp_required: booking.start_otp_required ?? null,
     started_at: booking.started_at, accepted_at: booking.accepted_at, assigned_at: booking.assigned_at,
-  }, now);
+  }, now, lateStartPriority && "deadline_at" in lateStartPriority ? (lateStartPriority as { deadline_at?: string }).deadline_at : null);
   const [taskPrices, setTaskPrices] = useState<Record<string, number>>({});
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   

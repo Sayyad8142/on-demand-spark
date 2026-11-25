@@ -40,5 +40,5 @@ describe("Late Start server-only display", () => {
     expect(parsePriorityBreakdown("pts(c/o/r/rec/b/reach/pen)=15/0/25/5/10/13/5 final=63", 63)?.parts.some(p => p.key === "lateStartOtp")).toBe(false);
     expect(parsePriorityBreakdown("pts(c/o/r/rec/b/reach/pen/late)=15/0/25/5/10/13/0/5 final=63", 68)).toBeNull();
   });
-  it("keeps the unverified server integration inactive", () => expect(LATE_START_PRIORITY_ENABLED).toBe(false));
+  it("reads the verified live Late Start status service", () => expect(LATE_START_PRIORITY_ENABLED).toBe(true));
 });

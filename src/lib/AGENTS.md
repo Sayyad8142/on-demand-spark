@@ -7,7 +7,7 @@
 
 - Service pricing reads only the live parameterless get_my_service_pricing (worker-service-pricing-v1, community slugs) via useServicePricing; no raw table fallback or profile creation. Examples use the server's current booking charges, configured prices are shown separately; estimates use the read-only hosted core's floor-fee rule on the whole total, excluding loyalty/tips. Why: estimates must never authorize earnings or invent prices.
 
-- Late Start priority uses a disabled, read-only versioned Admin contract; warnings require settings and deductions require booking-specific server confirmation. Shared useWorkerPriority reads exact score/reason for Home, Profile and Ranking. Why: elapsed time must never deduct points, duplicate penalties or infer a late penalty from aggregate faults.
+- Late Start reads Admin's live `get_my_late_start_status` (open/refocus, no polling); the Start countdown uses its server `deadline_at`, falling back to acceptance + 10 min; warnings need server enabled+penalty_enabled, deductions only from server history. Priority Score V2 reads only `get_my_priority_score` via `priorityScoreV2.ts` (open/manual refresh); only server status `active` replaces the live score, preview is labelled, any failure keeps the existing card. Shared useWorkerPriority reads exact score/reason for Home, Profile and Ranking. Why: the Admin Panel is the only scoring and deadline authority; the app never calculates or deducts points.
 
 - Named live-dispatch display uses `liveDispatchView.ts` only behind the OFF-by-default approval gate; legacy group estimates render Position updating. Why: scores and unverified contracts must never claim production order or authorize queue names.
 

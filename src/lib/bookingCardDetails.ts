@@ -34,15 +34,25 @@ export type StartTimer = { overdue: boolean; seconds: number; progress: number; 
  * Display-only Start countdown from the server acceptance time (+10 min deadline).
  * Never restarts on refresh; null once started/cancelled/not a Start OTP booking.
  */
-export function startOtpTimer(booking: PendingStart, now = Date.now()): StartTimer | null {
+export function startOtpTimer(booking: PendingStart, now = Date.now(), serverDeadlineAt?: string | null): StartTimer | null {
   if (cardIndicator(booking, now) === "none") return null;
   const accepted = acceptanceMs({ ...booking, worker_id: "self" });
   if (accepted === null) return null;
   const total = START_OTP_REMINDER_FIRST_MIN * 60;
-  const left = Math.ceil((accepted + total * 1000 - now) / 1000);
-  if (left <= 0) return { overdue: true, seconds: Math.floor((now - accepted) / 1000) - total, progress: 0, tone: "red" };
+  const deadline = startDeadlineMs(accepted, serverDeadlineAt);
+  const left = Math.ceil((deadline - now) / 1000);
+  if (left <= 0) return { overdue: true, seconds: Math.floor((now - deadline) / 1000), progress: 0, tone: "red" };
   const seconds = Math.min(total, left);
   return { overdue: false, seconds, progress: seconds / total, tone: seconds > 300 ? "green" : seconds >= 120 ? "orange" : "red" };
+}
+
+/**
+ * Server-confirmed Start deadline (`get_my_late_start_status.deadline_at`) when available,
+ * otherwise acceptance + 10 min (the same anchor the 10/15/20-minute alarms use).
+ */
+export function startDeadlineMs(acceptedMs: number, serverDeadlineAt?: string | null): number {
+  const server = serverDeadlineAt ? Date.parse(serverDeadlineAt) : NaN;
+  return Number.isFinite(server) && server > 0 ? server : acceptedMs + START_OTP_REMINDER_FIRST_MIN * 60_000;
 }
 
 /** MM:SS, growing to H:MM:SS for long overdue times. */

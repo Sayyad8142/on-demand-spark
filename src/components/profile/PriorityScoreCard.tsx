@@ -8,6 +8,10 @@ import { priorityBadge } from "@/lib/priorityBadge";
 import { leaderboardScore } from "@/lib/leaderboardRanking";
 import { useWorkerPriority } from "@/hooks/useWorkerPriority";
 import "@/i18n/lateStartMessages";
+import "@/i18n/priorityScoreV2Messages";
+import { usePriorityScoreV2 } from "@/hooks/usePriorityScoreV2";
+import { headlineScore } from "@/lib/priorityScoreV2";
+import PriorityScoreV2Breakdown from "./PriorityScoreV2Breakdown";
 
 interface PriorityScoreCardProps {
   worker: {
@@ -44,10 +48,17 @@ function tierLabelFromScore(score: number) {
 export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
   useWorkerLanguage();
   const priority = useWorkerPriority(worker?.id);
-  const score = worker?.id ? (priority.isError ? null : priority.data?.score ?? null) : leaderboardScore(worker?.priority_score);
+  const liveScore = worker?.id ? (priority.isError ? null : priority.data?.score ?? null) : leaderboardScore(worker?.priority_score);
+  // V2 replaces the live score only when Admin confirms V2 is active; otherwise it is a labelled preview.
+  const v2 = usePriorityScoreV2(worker?.id);
+  const v2Data = v2.data ?? null;
+  const headline = headlineScore(liveScore, v2Data);
+  const score = headline.score;
   const effectiveRating = worker?.admin_override_rating ?? worker?.rating ?? 0;
+  // No customer ratings yet: never show the stored default as stars.
+  const unrated = worker?.admin_override_rating == null && !(typeof worker?.total_ratings === "number" && worker.total_ratings > 0);
   const stored = score;
-  const breakdown = parsePriorityBreakdown(worker?.id ? priority.data?.reason : worker?.score_reason, stored);
+  const breakdown = headline.source === "v2" ? null : parsePriorityBreakdown(worker?.id ? priority.data?.reason : worker?.score_reason, stored);
   const partLabel: Record<PriorityPart["key"], string> = {
     completed: displayText("Completed jobs (last 7 days)"), online: displayText("Online hours (last 7 days)"),
     rating: displayText("Customer rating"), recent: displayText("Active in last 24 hours"),
@@ -77,7 +88,9 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
               <span className="text-5xl font-extrabold text-primary leading-none">{score ?? "—"}</span>
               <span className="text-sm text-muted-foreground">/ 100</span>
             </div>
-            <div className="flex items-center gap-0.5">
+            {unrated ? (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">{displayText("New Worker")}</span>
+            ) : <div className="flex items-center gap-0.5">
               {[1, 2, 3, 4, 5].map((i) => (
                 <Star
                   key={i}
@@ -88,7 +101,7 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
                   }`}
                 />
               ))}
-            </div>
+            </div>}
           </div>
           {tier && <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-2">{tier}</p>}
           <Progress value={Math.max(0, Math.min(score ?? 0, 100))} className="h-2" />
@@ -97,7 +110,10 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
             <span>{displayText("Score Level:")} {rank.label}</span>
           </div>}
         </div>
-        {breakdown ? (
+        {v2Data && (headline.source === "v2" || headline.showPreview) && (
+          <PriorityScoreV2Breakdown data={v2Data} preview={headline.source !== "v2"} refreshing={v2.isFetching} onRefresh={() => { void v2.refetch(); void priority.refetch(); }} />
+        )}
+        {headline.source === "v2" ? null : breakdown ? (
           <ul className="space-y-1 text-xs" aria-label={displayText("How your score is made")}>
             {breakdown.parts.filter(p => p.points !== 0).map(p => (
               <li key={p.key} className="flex justify-between gap-2">
@@ -112,7 +128,7 @@ export default function PriorityScoreCard({ worker }: PriorityScoreCardProps) {
         ) : stored !== null ? (
           <p className="text-xs text-muted-foreground">{displayText("Score details are not available right now.")}</p>
         ) : null}
-        <p className="text-[11px] text-muted-foreground">{displayText("Your score shows your recent performance. It does not decide the order in which booking offers are sent.")}</p>
+        <p className="text-[11px] text-muted-foreground">{headline.source === "v2" && v2Data?.weighted_dispatch_active ? displayText("A higher score can bring you booking offers sooner.") : displayText("Your score shows your recent performance. It does not decide the order in which booking offers are sent.")}</p>
 
       </CardContent>
     </Card>

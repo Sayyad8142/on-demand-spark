@@ -400,3 +400,9 @@
 ## Priority score display fixes (15 Nov) — frontend only
 - [x] Profile breakdown reads server score parts; Home community card honest pointer; Leaderboard own score from own row, "—" for no reviews; wording no longer claims score decides bookings; Next Booking marked unconfirmed estimate. 675 tests pass.
 - [ ] Leaderboard server 0→50 / rating→5.0 fallback — staged in docs/priority-score-fixes-2026-11-15/BACKEND-PENDING.md, awaiting deploy approval.
+
+## Priority Score V2 + Late Start status — 25 Nov, no publication
+- [x] Read Admin's `get_my_priority_score` safely (open/refresh only) with preview/active handling and the existing card as fallback; "New Worker" and "Not measured yet" states.
+- [x] Connect the Start Booking card to live `get_my_late_start_status` server deadline; alarms and deductions unchanged/off. 1000 tests passed.
+- [ ] Real V2 data — blocked: Admin has not deployed `get_my_priority_score`.
+- [ ] Scheduled-booking deadline (later of acceptance or start) and matching Android alarm anchor — blocked: Admin server rule change, then a new Android build.
