@@ -34,12 +34,12 @@ export type StartTimer = { overdue: boolean; seconds: number; progress: number; 
  * Display-only Start countdown from the server acceptance time (+10 min deadline).
  * Never restarts on refresh; null once started/cancelled/not a Start OTP booking.
  */
-export function startOtpTimer(booking: PendingStart, now = Date.now(), serverDeadlineAt?: string | null): StartTimer | null {
+export function startOtpTimer(booking: PendingStart, now = Date.now(), serverDeadlineAt?: string | null, rule?: DeadlineRule): StartTimer | null {
   if (cardIndicator(booking, now) === "none") return null;
   const accepted = acceptanceMs({ ...booking, worker_id: "self" });
   if (accepted === null) return null;
   const total = START_OTP_REMINDER_FIRST_MIN * 60;
-  const deadline = startDeadlineMs(accepted, serverDeadlineAt);
+  const deadline = startDeadlineMs(accepted, trustedServerDeadline(serverDeadlineAt, rule));
   const left = Math.ceil((deadline - now) / 1000);
   if (left <= 0) return { overdue: true, seconds: Math.floor((now - deadline) / 1000), progress: 0, tone: "red" };
   const seconds = Math.min(total, left);
@@ -62,4 +62,28 @@ export function timerLabel(seconds: number): string {
   const mm = Math.floor((s % 3600) / 60).toString().padStart(2, "0");
   const ss = (s % 60).toString().padStart(2, "0");
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+/** First server rule version whose deadline_at follows "later of acceptance or scheduled start, + 10 min" for scheduled bookings. */
+export const SCHEDULED_DEADLINE_RULE_VERSION = 2;
+export type DeadlineRule = { bookingType?: string | null; ruleVersion?: number | null };
+/**
+ * Whether the server's deadline_at may drive the countdown. Instant: always (acceptance + 10 min).
+ * Scheduled: only once Admin returns the corrected deadline_rule_version; until then the existing
+ * behaviour is kept unchanged instead of trusting the old acceptance-only rule.
+ */
+export function trustedServerDeadline(serverDeadlineAt: string | null | undefined, rule?: DeadlineRule): string | null {
+  if (!serverDeadlineAt) return null;
+  if (rule?.bookingType === "scheduled" && !((rule.ruleVersion ?? 0) >= SCHEDULED_DEADLINE_RULE_VERSION)) return null;
+  return serverDeadlineAt;
+}
+
+export type DeadlineAlarmPhase = "waiting" | "first" | "second" | "continuous";
+/** Milestones relative to a server deadline: first at deadline, second +5 min, continuous from +10 min. */
+export function alarmPhaseFromDeadline(deadlineMs: number, serverNow: number): DeadlineAlarmPhase {
+  const late = serverNow - deadlineMs;
+  if (late >= 10 * 60_000) return "continuous";
+  if (late >= 5 * 60_000) return "second";
+  if (late >= 0) return "first";
+  return "waiting";
 }

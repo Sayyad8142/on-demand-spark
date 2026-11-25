@@ -26,9 +26,27 @@ export default function PriorityScoreV2Breakdown({ data, preview, onRefresh, ref
     <section className="space-y-3" aria-label={displayText("Score breakdown")}>
       {preview && (
         <div className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-border bg-muted/50 px-3 py-2">
-          <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><Eye className="h-3.5 w-3.5" />{displayText("Preview — not your official score")}</span>
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><Eye className="h-3.5 w-3.5" />{displayText("Preview — not used for booking offers")}</span>
           {data.v2_score !== null && <span className="text-xs text-muted-foreground">{displayText("Preview score")}: <b>{data.v2_score}</b>/{data.max_score}</span>}
         </div>
+      )}
+
+      <dl className="grid grid-cols-2 gap-2 text-xs">
+        {([
+          ["Performance score", data.v2_score, ""],
+          ["Before penalties", data.raw_score, ""],
+          ["Penalty deductions", data.penalty_deductions, "−"],
+          ["New-worker protection", data.protection_adjustment, "+"],
+          ["Score used for offers", data.protected_dispatch_score, ""],
+        ] as const).filter(([, v]) => v !== null).map(([label, v, sign]) => (
+          <div key={label} className="rounded-lg bg-muted/50 px-2.5 py-1.5">
+            <dt className="text-muted-foreground">{displayText(label)}</dt>
+            <dd className="font-bold tabular-nums">{sign && v !== 0 ? sign : ""}{Math.abs(v as number)}</dd>
+          </div>
+        ))}
+      </dl>
+      {data.rating_display?.kind === "new_worker" && (
+        <p className="text-xs text-muted-foreground">{displayText("Customer rating")}: <b>{displayText("New Worker")}</b></p>
       )}
 
       <ul className="space-y-2.5">
@@ -74,7 +92,7 @@ export default function PriorityScoreV2Breakdown({ data, preview, onRefresh, ref
                 </div>
                 {(p.expires_at || p.recovery) && (
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    {p.expires_at ? displayText("Ends {{date}}", { date: day(p.expires_at) ?? "" }) : null}
+                    {p.expires_at ? displayText("Recovers {{date}}", { date: day(p.expires_at) ?? "" }) : null}
                     {p.expires_at && p.recovery ? " · " : null}{p.recovery}
                   </p>
                 )}

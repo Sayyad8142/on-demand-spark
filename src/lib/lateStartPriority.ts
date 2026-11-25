@@ -31,11 +31,11 @@ export function lateStartNotice(data: LateStartPriority | null | undefined, over
  * Deadline, points and "enabled" are taken only from the server; no deduction is calculated here.
  * Returns null when the response is malformed or does not contain this booking.
  */
-export type LateStartStatus = LateStartPriority & { deadline_at: string; deadline_minutes: number };
+export type LateStartStatus = LateStartPriority & { deadline_at: string; deadline_minutes: number; deadline_rule_version: number | null };
 export function parseLateStartStatus(input: unknown, bookingId: string): LateStartStatus | null {
   if (!input || typeof input !== "object") return null;
   const r = input as Record<string, unknown>;
-  if (r.contract_version !== 1 || !r.settings || typeof r.settings !== "object" || !Array.isArray(r.bookings)) return null;
+  if ((r.contract_version !== 1 && r.contract_version !== 2) || !r.settings || typeof r.settings !== "object" || !Array.isArray(r.bookings)) return null;
   const s = r.settings as Record<string, unknown>;
   if (typeof s.enabled !== "boolean") return null;
   const b = (r.bookings as unknown[]).find((x): x is Record<string, unknown> => !!x && typeof x === "object" && (x as Record<string, unknown>).booking_id === bookingId);
@@ -55,5 +55,7 @@ export function parseLateStartStatus(input: unknown, bookingId: string): LateSta
     });
     if (h) penalty = { booking_id: bookingId, points: Math.abs(h.points_change as number), confirmed_at: h.created_at as string };
   }
-  return { settings: { enabled, points }, penalty, deadline_at: b.deadline_at, deadline_minutes: minutes };
+  const rv = b.deadline_rule_version ?? r.deadline_rule_version;
+  const ruleVersion = typeof rv === "number" && Number.isInteger(rv) && rv > 0 ? rv : null;
+  return { settings: { enabled, points }, penalty, deadline_at: b.deadline_at, deadline_minutes: minutes, deadline_rule_version: ruleVersion };
 }

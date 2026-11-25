@@ -46,7 +46,7 @@ describe("Late Start status (server deadline, no local deduction)", () => {
     expect(s.settings.enabled).toBe(false);
   });
   it("unavailable, malformed or other-booking responses → null (existing timer keeps running)", () => {
-    for (const x of [null, {}, live({ contract_version: 2 }), live({ bookings: null }), live({}, { deadline_at: "nope" })]) expect(parseLateStartStatus(x, "b1")).toBeNull();
+    for (const x of [null, {}, live({ contract_version: 3 }), live({ bookings: null }), live({}, { deadline_at: "nope" })]) expect(parseLateStartStatus(x, "b1")).toBeNull();
     expect(parseLateStartStatus(live(), "other")).toBeNull();
     expect(startOtpTimer(booking, Date.parse("2026-11-25T10:00:00Z"), null)!.seconds).toBe(300);
   });
