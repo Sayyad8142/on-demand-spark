@@ -44,6 +44,13 @@ All colors MUST be HSL.
     --booking-start: 142 76% 36%;
     --booking-start-hover: 142 72% 29%;
     --booking-start-foreground: 0 0% 100%;
+    --start-otp-track: 240 6% 90%;
+    --start-otp-green: 142 76% 65%;
+    --start-otp-orange: 30 100% 65%;
+    --start-otp-red: 0 90% 72%;
+    --start-otp-time-green: 142 76% 26%;
+    --start-otp-time-orange: 26 95% 32%;
+    --start-otp-time-red: 0 78% 38%;
     --booking-start-alert: 0 78% 47%;
     --booking-start-alert-deep: 0 74% 35%;
     --shadow-booking-start: 0 3px 8px hsl(142 76% 36% / 0.18);
@@ -283,6 +290,23 @@ html.alert-overlay-active body {
 
 .booking-start-button:hover {
   background-color: hsl(var(--booking-start-hover));
+}
+
+.start-otp-tone-green { --start-otp-stroke: var(--start-otp-green); --start-otp-text: var(--start-otp-time-green); }
+.start-otp-tone-orange { --start-otp-stroke: var(--start-otp-orange); --start-otp-text: var(--start-otp-time-orange); }
+.start-otp-tone-red { --start-otp-stroke: var(--start-otp-red); --start-otp-text: var(--start-otp-time-red); }
+.start-otp-card { letter-spacing: 0; }
+.start-otp-card .start-otp-perimeter { width: 100%; height: 88px; }
+.start-otp-track, .start-otp-progress { fill: none; stroke-width: 3; }
+.start-otp-track { stroke: hsl(var(--start-otp-track)); }
+.start-otp-progress { stroke: hsl(var(--start-otp-stroke)); transition: stroke-dasharray 1s linear, stroke 0.3s ease; }
+.start-otp-time { color: hsl(var(--start-otp-text)); background-color: hsl(var(--booking-start-foreground)); }
+@keyframes start-otp-border-blink { 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: no-preference) {
+  .start-otp-overdue { animation: start-otp-border-blink 2s ease-in-out infinite; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .start-otp-progress { transition: none; }
 }
 
 .booking-start-button-delayed,

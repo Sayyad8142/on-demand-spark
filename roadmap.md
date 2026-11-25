@@ -1,5 +1,10 @@
 # Worker language translation
 
+## Compact Start OTP card — 25 Nov, preview only
+- [x] Combine the Start button and small countdown with a shrinking perimeter; preserve timer, navigation, alarms and penalty settings.
+- [x] Full app regression suite passed (977 tests before two navigation tests); compact states inspected at 320/393/1280 with overdue click verified; approval screenshot provided, no publication/version change.
+- [ ] Signed-in Home → real Start OTP and physical Android checks — blocked: externally managed worker sign-in unavailable and no physical device; isolated card preview is not a live-booking verification.
+
 ## Draft pricing RPC and earnings audit — 25 Nov, no activation
 - [ ] Audit completion endpoints, hosted payout/earning triggers, commission rounding and duplicate guards without mutations.
 - [ ] Adapt the prepared pricing view to isolated worker-service-pricing-v1 fixtures and parameterless get_my_service_pricing; keep live pricing OFF.

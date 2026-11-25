@@ -69,13 +69,25 @@ describe("start countdown card", () => {
   const p = { id: "b1", status: "accepted", start_otp_required: true, started_at: null, accepted_at: new Date(now).toISOString() };
   it("counts 10 minutes from server acceptance", () => {
     expect(startOtpTimer(p, now)).toMatchObject({ overdue: false, seconds: 600, tone: "green", progress: 1 });
-    expect(timerLabel(startOtpTimer(p, now + 15_000)!.seconds)).toBe("09:45");
+    expect(timerLabel(startOtpTimer(p, now + 15_000)?.seconds ?? -1)).toBe("09:45");
   });
   it("green above 5 min, orange 2–5 min, red under 2 min", () => {
-    expect(startOtpTimer(p, now + 299_000)!.tone).toBe("green");
-    expect(startOtpTimer(p, now + 300_000)!.tone).toBe("orange");
-    expect(startOtpTimer(p, now + 480_000)!.tone).toBe("orange");
-    expect(startOtpTimer(p, now + 481_000)!.tone).toBe("red");
+    expect(startOtpTimer(p, now + 299_000)?.tone).toBe("green");
+    expect(startOtpTimer(p, now + 300_000)?.tone).toBe("orange");
+    expect(startOtpTimer(p, now + 480_000)?.tone).toBe("orange");
+    expect(startOtpTimer(p, now + 481_000)?.tone).toBe("red");
+  });
+  it("shrinks the full perimeter in proportion to the original ten-minute deadline", () => {
+    expect(startOtpTimer(p, now)?.progress).toBe(1);
+    expect(startOtpTimer(p, now + 300_000)?.progress).toBe(0.5);
+    expect(startOtpTimer(p, now + 599_000)?.progress).toBe(1 / 600);
+    expect(startOtpTimer(p, now + 600_000)?.progress).toBe(0);
+  });
+  it("reopening at 09:39 and overdue +01:15 keeps the server deadline", () => {
+    expect(startOtpTimer({ ...p }, now + 21_000)).toMatchObject({ seconds: 579, overdue: false });
+    const overdue = startOtpTimer({ ...p }, now + 675_000);
+    expect(overdue).toMatchObject({ seconds: 75, overdue: true, tone: "red", progress: 0 });
+    expect(timerLabel(overdue?.seconds ?? -1)).toBe("01:15");
   });
   it("shows elapsed overdue time after 00:00", () => {
     expect(startOtpTimer(p, now + 600_000)).toMatchObject({ overdue: true, seconds: 0 });
