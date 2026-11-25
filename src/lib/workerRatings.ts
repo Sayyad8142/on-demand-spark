@@ -21,7 +21,7 @@ export function parseRatingSummary(row: { rating: unknown; total_ratings: unknow
 export async function fetchRatingSummary(_workerId: string): Promise<RatingSummary> {
   const { data, error } = await supabase.rpc('get_my_customer_rating_summary' as never);
   if (error) throw error;
-  const row = Array.isArray(data) ? data[0] : data;
+  const row: unknown = Array.isArray(data) ? (data as unknown[])[0] : data;
   if (!row) throw new Error('Rating summary unavailable');
   const r = row as { avg_rating: unknown; ratings_count: unknown };
   return parseRatingSummary({ rating: r.avg_rating ?? 0, total_ratings: r.ratings_count });
