@@ -1,5 +1,10 @@
 # Worker language translation
 
+## Draft pricing RPC and earnings audit — 25 Nov, no activation
+- [ ] Audit completion endpoints, hosted payout/earning triggers, commission rounding and duplicate guards without mutations.
+- [ ] Adapt the prepared pricing view to isolated worker-service-pricing-v1 fixtures and parameterless get_my_service_pricing; keep live pricing OFF.
+- [ ] Run regression tests and inspect mobile/desktop fixture states; record endpoint audit and readiness blockers without publication/version changes.
+
 ## Service Pricing & Earnings — 24 Nov, no activation
 - [x] Repeated hook diagnostic not reproduced: explicit React imports in hook and its only caller; preview builds OK and breakpoint/listener test passes.
 - [x] Finish selected prepared-screen approach: Profile entry, dedicated translated read-only screen, service sections and retry/pull refresh; live pricing stays OFF, no local price formulas.

@@ -2,10 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useServicePricing } from '@/hooks/useServicePricing';
 import ServicePricingView from '@/components/profile/ServicePricingView';
+import { usePricingEarnings } from '@/hooks/usePricingEarnings';
+import PricingEarningsReadback from '@/components/profile/PricingEarningsReadback';
 
 export default function ServicePricing() {
   const { session } = useAuth();
   const userId = session?.user.id;
+  const earnings = usePricingEarnings(userId);
   const [selection, setSelection] = useState<{ owner?: string; id: string }>({ id: '' });
   const selected = selection.owner === userId ? selection.id : '';
   const result = useServicePricing(userId, selected);
@@ -19,7 +22,7 @@ export default function ServicePricing() {
     }
   }, [userId, selected, result.data]);
   const choices = !selected && returned ? returned : known.current.owner === userId ? known.current.choices : [];
-  return <ServicePricingView {...result} selected={selected} choices={choices}
+  return <ServicePricingView {...result} selected={selected} choices={choices} actualEarnings={<PricingEarningsReadback result={earnings} />}
     onSelect={id => { if (choices.some(c => c.id === id)) setSelection({ owner: userId, id }); }}
-    onRefresh={() => { void result.refresh(); }} />;
+    onRefresh={() => { void result.refresh(); void earnings.refresh(); }} />;
 }

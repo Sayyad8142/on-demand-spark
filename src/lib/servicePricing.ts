@@ -35,8 +35,12 @@ const catalogue = z.object({schema_version:z.literal('worker-pricing-catalogue-v
   quote_status:z.enum(['reference_only','parity_unverified']),customer_specific_quote_available:z.literal(false),
   communities:z.array(community).max(100),
 });
-export type PricingCatalogue = z.infer<typeof catalogue>;
-export type PricingCommunity = PricingCatalogue['communities'][number];
+export interface DraftMaidRow {
+  flat_size: string; task: 'floor_cleaning' | 'dish_washing' | 'combined';
+  price_inr: number; source: string; worker_estimate_inr: number;
+}
+export type PricingCommunity = z.infer<typeof community> & { draft_maid?: DraftMaidRow[]; loyalty_note?: string };
+export type PricingCatalogue = Omit<z.infer<typeof catalogue>, 'communities'> & { communities: PricingCommunity[]; last_updated_at?: string };
 export function parsePricingCatalogue(raw: unknown): PricingCatalogue {
   const data=catalogue.parse(raw);
   const unique=(values:string[])=>new Set(values).size===values.length;
@@ -49,7 +53,7 @@ export function parsePricingCatalogue(raw: unknown): PricingCatalogue {
       if(s.service_key==='bathroom_cleaning' && s.customer_client_quantity_range.max<s.customer_client_quantity_range.min) throw new Error('invalid_quantity');
     }
   }
-  return data;
+  return { ...data, communities: data.communities };
 }
 
 /** Select only a returned associated community; never fall back to a different one. */

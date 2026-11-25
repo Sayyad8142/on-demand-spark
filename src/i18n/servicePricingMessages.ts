@@ -1,5 +1,7 @@
 export const servicePricingMessages = {
   en: {
+    Combined_service_examples: 'Combined service examples', Dish_workload: 'Dish workload', Base_price: 'Base price',
+    Customer_specific_charges_are_excluded_from_these_estimates: 'Customer-specific charges are excluded from these estimates.',
     Service_Pricing_Earnings: 'Service Pricing & Earnings', Know_how_much_you_can_earn: 'Know how much you can earn',
     No_assigned_community: 'No assigned community', Pricing_unavailable: 'Pricing unavailable',
     Verified_pricing_is_not_available_yet: 'Verified pricing is not available yet.',
@@ -19,6 +21,8 @@ export const servicePricingMessages = {
     Pricing_could_not_be_refreshed: 'Pricing could not be refreshed.',
   },
   hi: {
+    Combined_service_examples: 'दोनों सेवाओं के उदाहरण', Dish_workload: 'बर्तनों की मात्रा', Base_price: 'मूल कीमत',
+    Customer_specific_charges_are_excluded_from_these_estimates: 'इन अनुमानों में ग्राहक के अनुसार शुल्क शामिल नहीं हैं।',
     Service_Pricing_Earnings: 'सेवा की कीमतें और कमाई', Know_how_much_you_can_earn: 'जानें आपकी कमाई कितनी हो सकती है',
     No_assigned_community: 'कोई सोसायटी नहीं सौंपी गई', Pricing_unavailable: 'कीमतें उपलब्ध नहीं हैं',
     Verified_pricing_is_not_available_yet: 'सत्यापित कीमतें अभी उपलब्ध नहीं हैं।', Assigned_community: 'सौंपी गई सोसायटी',
@@ -37,6 +41,8 @@ export const servicePricingMessages = {
     Pricing_could_not_be_refreshed: 'नई कीमतें नहीं मिल सकीं।',
   },
   te: {
+    Combined_service_examples: 'రెండు సేవల ఉదాహరణలు', Dish_workload: 'గిన్నెల పరిమాణం', Base_price: 'మూల ధర',
+    Customer_specific_charges_are_excluded_from_these_estimates: 'ఈ అంచనాల్లో కస్టమర్‌కు ప్రత్యేక ఛార్జీలు కలపలేదు.',
     Service_Pricing_Earnings: 'సేవల ధరలు మరియు ఆదాయం', Know_how_much_you_can_earn: 'మీకు ఎంత ఆదాయం రావచ్చో తెలుసుకోండి',
     No_assigned_community: 'కమ్యూనిటీ కేటాయించలేదు', Pricing_unavailable: 'ధరలు అందుబాటులో లేవు',
     Verified_pricing_is_not_available_yet: 'ధృవీకరించిన ధరలు ఇంకా అందుబాటులో లేవు.', Assigned_community: 'కేటాయించిన కమ్యూనిటీ',
