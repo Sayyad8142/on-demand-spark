@@ -13,6 +13,7 @@
 import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
 import { loadInstalledVersion } from "@/lib/installedVersion";
+import { heartbeatAppState } from "@/lib/heartbeatAppState";
 
 // @ts-ignore - native bridge
 const AuthBridge = window.Capacitor?.Plugins?.AuthBridge;
@@ -96,7 +97,8 @@ export async function sendWorkerHeartbeat(
     const body = {
         worker_id: workerIdOrUserId,
         fcm_token: fcmToken ?? undefined,
-        app_state: reason,
+        app_state: heartbeatAppState(reason, typeof document === "undefined" || document.visibilityState !== "hidden"),
+        heartbeat_reason: reason,
         app_version: installed.version,
         build_number: installed.build ?? undefined,
         app_platform: installed.platform,

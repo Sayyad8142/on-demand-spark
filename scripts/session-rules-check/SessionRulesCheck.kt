@@ -1,4 +1,5 @@
 import app.didisnow.worker.SessionRefreshRules as R
+import app.didisnow.worker.HeartbeatRules as H
 
 private fun check(name: String, ok: Boolean) { if (!ok) { println("FAIL $name"); kotlin.system.exitProcess(1) } else println("ok   $name") }
 
@@ -14,5 +15,8 @@ fun main() {
     check("403 retried once", R.retryAfterAuthFailure(403, false))
     check("500 not an auth retry", !R.retryAfterAuthFailure(500, false))
     check("refused grant needs sign-in", R.loginNeedsReauth(400) && !R.loginNeedsReauth(503))
+    check("interval heartbeat sends background", H.appStateFor("interval") == "background")
+    check("fcm/boot heartbeat sends background", H.appStateFor("fcm_received") == "background" && H.appStateFor("BOOT_COMPLETED") == "background")
+    check("app open heartbeat sends foreground", H.appStateFor("foreground") == "foreground" && H.appStateFor("open") == "foreground")
     println("session rules: all passed")
 }

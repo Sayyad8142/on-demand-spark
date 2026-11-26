@@ -673,7 +673,7 @@ object BackendSync {
 
     /**
      * Fire a heartbeat. Returns true on HTTP 2xx.
-     * `appState` ∈ "foreground" | "background" | "interval" | "open" | "login".
+     * `appState` is the trigger reason; it is mapped to foreground/background by HeartbeatRules.
      */
     fun sendHeartbeat(ctx: Context, appState: String): Boolean {
         val prefs = ctx.applicationContext
@@ -701,7 +701,8 @@ object BackendSync {
             // until the staged identity guard is deployed. The login JWT is still sent when fresh.
             put("worker_id", workerId)
             put("auth_mode", if (jwt != null) "session" else "legacy_worker_id")
-            put("app_state", appState)
+            put("app_state", HeartbeatRules.appStateFor(appState))
+            put("heartbeat_reason", appState)
             put("battery_level", batteryLevel(ctx))
             put("network_type", networkType(ctx))
             put("app_version", appVersion(ctx))
