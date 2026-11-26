@@ -1,9 +1,13 @@
 # Worker language translation
 
 ## Prompt 147 — approved Cashfree IMPS onboarding, no publication
-- [ ] Finish available bank-first signup, Admin UPI setting, safe bank submission boundaries and deleted-account cleanup.
-- [ ] Prepare server-only payout progress/history and verify current Admin contracts; do not activate incompatible counters.
-- [ ] Run app tests and release safeguards; document remaining Admin and real-device release blockers.
+- [x] Finish available bank-first signup, authenticated Admin UPI setting (OFF), safe bank submission boundaries and deleted-account cleanup; no client bank/readiness/identity writes.
+- [x] Connect server-only payout history/detail; prepare successful-payment progress and server-supplied remaining/settlement fields, leaving incompatible summary OFF.
+- [x] Run app tests (1,024 passed), mobile/desktop en/hi/te signup checks and release safeguards; document evidence and dependencies in docs/worker-onboarding-imps-2026-11-26/ADMIN-DEPENDENCIES.md.
+- [x] Recheck 26 Nov repeated use-mobile UMD diagnostic: named React imports present; 40 focused tests pass; no speculative hook change.
+- [ ] Complete fresh registration and bank corrections — blocked: approved secure Admin registration/bank writer, masked bank status, removal of phone relinking and verified bank-only readiness/dispatch enforcement.
+- [ ] Activate first-ten/daily payout summary — blocked: Admin successful-IMPS counter/fresh-ten reset, corrected scheduler and approved provider activation.
+- [ ] Certify next Play release — blocked: highest uploaded version code, current bundled assets, signed AAB and authenticated real-Android verification; no publication.
 
 ## Worker payout / Cashfree IMPS audit — 26 Nov, read-only
 - [x] Audit collection, validation, live settings/RPCs/permissions, first-ten classification, daily scheduling, worker impact and payout displays; 39 existing mocked tests passed. Report: docs/payout-imps-audit-2026-11-26/REPORT.md.
