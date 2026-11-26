@@ -7080,6 +7080,30 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_auth_reset_receipts: {
+        Row: {
+          created_at: string
+          phone_released_at: string
+          sessions_revoked_at: string
+          user_id: string
+          verified_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          phone_released_at: string
+          sessions_revoked_at: string
+          user_id: string
+          verified_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          phone_released_at?: string
+          sessions_revoked_at?: string
+          user_id?: string
+          verified_by?: string | null
+        }
+        Relationships: []
+      }
       worker_availability: {
         Row: {
           day_of_week: number
@@ -13318,6 +13342,10 @@ export type Database = {
         Args: { p_booking_id: string; p_reason: string }
         Returns: undefined
       }
+      verified_worker_phone_matches: {
+        Args: { _phone: string }
+        Returns: boolean
+      }
       verify_dispatch_internal_key: {
         Args: { p_token: string }
         Returns: boolean
@@ -13356,6 +13384,10 @@ export type Database = {
         Args: { p_requires: boolean; p_status: string }
         Returns: boolean
       }
+      worker_auth_reset_complete: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       worker_bank_fields_valid: {
         Args: {
           _account: string
@@ -13363,6 +13395,10 @@ export type Database = {
           _holder: string
           _ifsc: string
         }
+        Returns: boolean
+      }
+      worker_booking_bank_allowed: {
+        Args: { _worker_id: string }
         Returns: boolean
       }
       worker_collect_payment: {
