@@ -58,7 +58,8 @@ class FcmBootSyncWorker(
         // Telemetry — heartbeat right after boot so the device shows reachable
         // even if the user never opens the app.
         try { BackendSync.sendHeartbeat(ctx, event) } catch (_: Exception) {}
-        return if (ok) Result.success() else Result.retry()
+        // Not ok without a login is queued in PendingAuthCalls; retries stay bounded.
+        return if (ok || runAttemptCount + 1 >= BackgroundAuthRules.WORKER_MAX_RUNS) Result.success() else Result.retry()
     }
 
     companion object {

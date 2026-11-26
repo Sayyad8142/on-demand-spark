@@ -43,3 +43,4 @@
 - Native 10-min alert lock: released only on server-confirmed end of that booking (`bookingEndRelease.ts`). Why: finished bookings must not block offers or touch dispatch.
 - Alarm retries require playback ACKs. Why: queued starts may fail.
 - `worker_phone_exists` only after phone-code verification. Why: server answers only for the verified phone.
+- Only functions listed in `supabase/deploy-allowlist.json` may live under `supabase/functions/` (checked by `deployAllowlist.test.ts`); Admin-owned functions such as `check-scheduled-bookings` never do. Why: a Worker App save must not overwrite Admin backend code.

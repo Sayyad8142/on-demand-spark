@@ -41,6 +41,10 @@ public class MyFirebaseService extends FirebaseMessagingService {
       PracticePushReceiver.receive(getApplicationContext(), message.getData());
       return;
     }
+    // Admin test notifications exit before booking routing, OfferQueue, booking ACKs and practice preemption.
+    if (TelemetryProbe.handle(getApplicationContext(), message.getData())) {
+      return;
+    }
     // Any real booking-related message makes an open practice alert yield immediately
     // (keep-alive pings excluded; never throws, never changes the real message handling).
     String practiceCheckType = message.getData().get("type");

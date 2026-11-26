@@ -9,8 +9,6 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
 
 /**
  * Phase 2 — Keepalive ACK.
@@ -22,7 +20,7 @@ class KeepaliveAckWorker(ctx: Context, params: WorkerParameters) : CoroutineWork
     override suspend fun doWork(): Result {
         val ctx = applicationContext
         val prefs = ctx.getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
-        val userId = prefs.getString("user_id", null)
+        val userId = BackendSync.resolveWorkerId(ctx)
         if (userId.isNullOrBlank()) {
             WorkerLog.add(ctx, "KEEPALIVE", "skip — no user_id")
             return Result.success()
@@ -44,25 +42,12 @@ class KeepaliveAckWorker(ctx: Context, params: WorkerParameters) : CoroutineWork
             put("oem", "${Build.MANUFACTURER}/${Build.MODEL}")
         }
 
-        return try {
-            val url = URL("https://paywwbuqycovjopryele.supabase.co/functions/v1/worker-keepalive-ack")
-            val conn = (url.openConnection() as HttpURLConnection).apply {
-                requestMethod = "POST"
-                connectTimeout = 10_000
-                readTimeout = 10_000
-                doOutput = true
-                setRequestProperty("Content-Type", "application/json")
-                setRequestProperty("apikey", BackendSync.ANON_KEY_PUBLIC)
-                setRequestProperty("Authorization", "Bearer ${BackendSync.ANON_KEY_PUBLIC}")
-            }
-            conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-            val code = conn.responseCode
-            conn.disconnect()
-            WorkerLog.add(ctx, "KEEPALIVE", "ack http=$code battOpt=${!ignoringBatt} notif=$notifEnabled bucket=$standby")
-            if (code in 200..299) Result.success() else Result.retry()
-        } catch (e: Exception) {
-            WorkerLog.add(ctx, "KEEPALIVE", "ack FAILED: ${e.message}")
-            Result.retry()
+        val r = BackendSync.authedPost(ctx, "https://paywwbuqycovjopryele.supabase.co/functions/v1/worker-keepalive-ack", body)
+        WorkerLog.add(ctx, "KEEPALIVE", "ack $r battOpt=${!ignoringBatt} notif=$notifEnabled bucket=$standby")
+        return when (r) {
+            BackgroundAuthRules.Outcome.OK, BackgroundAuthRules.Outcome.DROP -> Result.success()
+            // Login missing/expired or network trouble: bounded WorkManager retries, then stop.
+            else -> if (runAttemptCount + 1 < BackgroundAuthRules.WORKER_MAX_RUNS) Result.retry() else Result.success()
         }
     }
 

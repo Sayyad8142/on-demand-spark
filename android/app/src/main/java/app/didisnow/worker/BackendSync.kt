@@ -16,8 +16,8 @@ import java.net.URL
 
 /**
  * Background-safe HTTP helper to ping the Supabase `worker-boot-ping` edge
- * function. Uses the public anon key (same one shipped in the JS bundle) and
- * the user_id stored in `worker_prefs` at login.
+ * function with the worker's own login (BackendSync.freshSessionJwt); the
+ * public key is only the gateway apikey, never the identity.
  *
  * Safe to call from BroadcastReceiver / WorkManager / Service contexts.
  */
@@ -38,15 +38,12 @@ object BackendSync {
         event: String,
         fcmToken: String?,
     ): Boolean {
-        val prefs = ctx.applicationContext
-            .getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
-        val userId = prefs.getString("user_id", null)
-
+        val userId = resolveWorkerId(ctx)
         if (userId.isNullOrBlank()) {
-            WorkerLog.add(ctx, "BACKEND", "skip $event — no user_id stored")
+            WorkerLog.add(ctx, "BACKEND", "skip $event — no stored login")
             return false
         }
-
+        // user_id stays for the current live receiver; the server must take identity from the login.
         val body = JSONObject().apply {
             put("user_id", userId)
             put("event", event)
@@ -54,31 +51,26 @@ object BackendSync {
             put("oem", "${Build.MANUFACTURER}/${Build.MODEL}")
             put("android_version", Build.VERSION.RELEASE)
         }
-
-        return try {
-            val conn = (URL(ENDPOINT).openConnection() as HttpURLConnection).apply {
-                requestMethod = "POST"
-                connectTimeout = 10_000
-                readTimeout = 10_000
-                doOutput = true
-                setRequestProperty("Content-Type", "application/json")
-                setRequestProperty("apikey", ANON_KEY)
-                setRequestProperty("Authorization", "Bearer $ANON_KEY")
-            }
-            conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-            val code = conn.responseCode
-            conn.disconnect()
-            val ok = code in 200..299
-            WorkerLog.add(
-                ctx,
-                "BACKEND",
-                "boot-ping event=$event token=${fcmToken != null} → http=$code"
-            )
-            ok
-        } catch (e: Exception) {
-            WorkerLog.add(ctx, "BACKEND", "boot-ping event=$event FAILED: ${e.message}")
-            false
+        val r = authedPost(ctx, ENDPOINT, body)
+        WorkerLog.add(ctx, "BACKEND", "boot-ping event=$event token=${fcmToken != null} → $r")
+        if (r == BackgroundAuthRules.Outcome.WAIT_FOR_LOGIN && event != "fcm_received") {
+            PendingAuthCalls.enqueue(ctx, ENDPOINT, body, "boot-ping:$event")
         }
+        return r == BackgroundAuthRules.Outcome.OK
+    }
+
+    /**
+     * POST with the worker's OWN login only (never the public key as identity).
+     * No login → WAIT_FOR_LOGIN (caller may queue). 401/403 → one forced refresh.
+     */
+    fun authedPost(ctx: Context, url: String, body: JSONObject): BackgroundAuthRules.Outcome {
+        var jwt = freshSessionJwt(ctx) ?: return BackgroundAuthRules.Outcome.WAIT_FOR_LOGIN
+        var code = try { postAck(url, jwt, body) } catch (_: Exception) { -1 }
+        if (SessionRefreshRules.retryAfterAuthFailure(code, false)) {
+            jwt = freshSessionJwt(ctx, forceRefresh = true) ?: return BackgroundAuthRules.Outcome.WAIT_FOR_LOGIN
+            code = try { postAck(url, jwt, body) } catch (_: Exception) { -1 }
+        }
+        return BackgroundAuthRules.classify(code, true)
     }
 
     /**
@@ -375,18 +367,19 @@ object BackendSync {
                 setRequestProperty("Content-Type", "application/json")
                 setRequestProperty("apikey", ANON_KEY)
                 // No signed token: the verified worker login is the proof of identity.
-                val primaryAuth = if (ackToken.isNullOrBlank()) freshSessionJwt(ctx) ?: ANON_KEY else ANON_KEY
+                val primaryAuth = freshSessionJwt(ctx) ?: if (ackToken.isNullOrBlank()) null else ANON_KEY
+                    ?: run { disconnect(); return AckResult.RETRY } // no login, no token: wait for sign-in
                 setRequestProperty("Authorization", "Bearer $primaryAuth")
             }
             conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             var code = conn.responseCode
             conn.disconnect()
             // Token refused (invalid/expired/unknown to server): retry ONCE with
-            // the worker login — no ack_token, no worker_id (server derives it).
+            // the worker login, still carrying the same ack_token (never dropped).
             if (sessionFallbackAllowed(event, code, !ackToken.isNullOrBlank())) {
                 val jwt = freshSessionJwt(ctx)
                 if (jwt != null) {
-                    val fbBody = JSONObject(body.toString()).apply { remove("ack_token"); remove("worker_id") }
+                    val fbBody = JSONObject(body.toString()) // keeps ack_token; the login is added as proof
                     code = postAck(url, jwt, fbBody)
                     WorkerLog.add(ctx, "ACK", "$event session-fallback → http=$code")
                 } else {
@@ -399,32 +392,7 @@ object BackendSync {
                 WorkerLog.add(ctx, "ACK", "$event no current login — queued for next open")
                 return AckResult.RETRY
             }
-            // Legacy receiver compatibility: the production build answers 400
-            // to every current event name and only accepts "received"/"opened"
-            // with booking_id + worker_id. Retry ONCE with the legacy name.
-            val legacyEvent = LEGACY_ACK_EVENT[event]
-            if (code == 400 && legacyEvent != null && !bookingId.isNullOrBlank() && !workerId.isNullOrBlank()) {
-                val legacyBody = JSONObject().apply {
-                    put("booking_id", bookingId)
-                    put("worker_id", workerId)
-                    put("event_type", legacyEvent)
-                    put("app_version", appVersion(ctx))
-                }
-                val lc = (URL(url).openConnection() as HttpURLConnection).apply {
-                    requestMethod = "POST"
-                    connectTimeout = 8_000
-                    readTimeout = 8_000
-                    doOutput = true
-                    setRequestProperty("Content-Type", "application/json")
-                    setRequestProperty("apikey", ANON_KEY)
-                    setRequestProperty("Authorization", "Bearer $ANON_KEY")
-                }
-                lc.outputStream.use { it.write(legacyBody.toString().toByteArray(Charsets.UTF_8)) }
-                val legacyCode = lc.responseCode
-                lc.disconnect()
-                WorkerLog.add(ctx, "ACK", "$event legacy=$legacyEvent → http=$legacyCode")
-                code = legacyCode
-            }
+            // A 400 is final: no retry without ack_token or with the public key.
             val result = classifyAckHttp(code, !ackToken.isNullOrBlank())
             val ok = result == AckResult.OK
             WorkerLog.add(
@@ -463,9 +431,7 @@ object BackendSync {
         reason: String,
         extra: JSONObject? = null,
     ): Boolean {
-        val prefs = ctx.applicationContext
-            .getSharedPreferences("worker_prefs", Context.MODE_PRIVATE)
-        val userId = prefs.getString("user_id", null)
+        val userId = resolveWorkerId(ctx)
         if (userId.isNullOrBlank()) {
             WorkerLog.add(ctx, "MISSED", "skip $reason — no user_id in prefs")
             return false
@@ -488,26 +454,12 @@ object BackendSync {
             if (extra != null) put("extra", extra)
         }
 
-        return try {
-            val conn = (URL(MISSED_ENDPOINT).openConnection() as HttpURLConnection).apply {
-                requestMethod = "POST"
-                connectTimeout = 8_000
-                readTimeout = 8_000
-                doOutput = true
-                setRequestProperty("Content-Type", "application/json")
-                setRequestProperty("apikey", ANON_KEY)
-                setRequestProperty("Authorization", "Bearer $ANON_KEY")
-            }
-            conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-            val code = conn.responseCode
-            conn.disconnect()
-            val ok = code in 200..299
-            WorkerLog.add(ctx, "MISSED", "$reason booking=$bookingId → http=$code")
-            ok
-        } catch (e: Exception) {
-            WorkerLog.add(ctx, "MISSED", "$reason booking=$bookingId FAILED: ${e.message}")
-            false
+        val r = authedPost(ctx, MISSED_ENDPOINT, body)
+        WorkerLog.add(ctx, "MISSED", "$reason booking=$bookingId → $r")
+        if (r == BackgroundAuthRules.Outcome.WAIT_FOR_LOGIN || r == BackgroundAuthRules.Outcome.RETRY_LATER) {
+            PendingAuthCalls.enqueue(ctx, MISSED_ENDPOINT, body, "missed:$reason:${bookingId ?: bookingRequestId}")
         }
+        return r == BackgroundAuthRules.Outcome.OK
     }
 
     fun reportMissedBookingAsync(
@@ -740,7 +692,7 @@ object BackendSync {
         }
 
         return try {
-            var code = post(jwt ?: ANON_KEY)
+            var code = post(jwt ?: return false)
             // Login refused (revoked/expired server-side): re-authenticate ONCE, never loop.
             if (jwt != null && SessionRefreshRules.retryAfterAuthFailure(code, alreadyRetried = false)) {
                 val again = freshSessionJwt(ctx, forceRefresh = true)
@@ -748,6 +700,7 @@ object BackendSync {
                 if (code == 401 || code == 403) WorkerLog.add(ctx, "HEARTBEAT", "login refused — sign-in needed in app")
             }
             val ok = code in 200..299
+            if (ok) try { PendingAuthCalls.flush(ctx) } catch (_: Exception) {}
             WorkerLog.add(ctx, "HEARTBEAT", "state=$appState auth=${if (jwt != null) "session" else "legacy"} token=${fcmToken != null} → http=$code")
             ok
         } catch (e: Exception) {

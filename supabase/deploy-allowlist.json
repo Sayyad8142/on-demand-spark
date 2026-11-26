@@ -1,0 +1,36 @@
+{
+  "_note": "Only these functions may be deployed from the Worker App. Admin-owned functions must never be added here or under supabase/functions.",
+  "worker_app_functions": [
+    "ack-booking-delivery",
+    "admin-token-health",
+    "admin-upload-qr",
+    "booking-notifications",
+    "complete-booking-with-otp",
+    "create-worker-payout-account",
+    "dispatch-pending-bookings",
+    "extract-bank-details",
+    "fcm-keepalive",
+    "get-pending-worker-bookings",
+    "get-worker-leaderboard",
+    "notify-next-tier",
+    "report-missed-booking",
+    "send-fcm",
+    "send-practice-notification",
+    "send-webpush",
+    "send-worker-fallback-alert",
+    "update-availability",
+    "worker-boot-ping",
+    "worker-health-watchdog",
+    "worker-heartbeat",
+    "worker-keepalive-ack",
+    "worker-movement-update",
+    "worker-passive-movement"
+  ],
+  "admin_owned_never_deploy": [
+    "check-scheduled-bookings",
+    "popup-ack",
+    "device-ack",
+    "register_worker_v2",
+    "create-cashfree-beneficiary"
+  ]
+}
