@@ -22,3 +22,7 @@
 # Worker profile data
 
 - Worker reads use explicit columns from `workerProfileColumns.ts`; updates go through `sanitizeWorkerUpdate`. Why: no unneeded secrets; survives Admin column locks.
+
+# Payout booking gate
+
+- Bank readiness blocks bookings in the app only when `get_my_payout_readiness` says enforced and not ready (`payoutBookingGate.ts`); unknown reads and the legacy `payout_ready` flag never block or label bank-ready. Why: the database enforces Admin's switch; the app must not invent blocks.
