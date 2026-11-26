@@ -8,39 +8,54 @@
 - Totals: 139 allocated, 97 settled, 221 historical paid payouts counted by the backfill.
 - 8 workers already have real post-switch allocations above their history count — those real allocations must be kept.
 
-## Proposed rule
-For each worker, only slots used **after** the switch count:
-`new_allocated = max(instant_slots_allocated - history_slots, 0)`, where `history_slots = least(initialized_from_history, 10)`. Same for `instant_slots_settled`. Then set `initialized_from_history = 0` so the backfill is never re-applied.
+## Every place that decides or shows "instant payouts left" (read 2026-11-26)
+| Place | Follows "fresh ten"? |
+|---|---|
+| `admin_private.hybrid_backfill` | **No.** Pre-fills `allocated = settled = least(10, past paid payouts)`. Re-running it would pre-fill any worker without a row again. |
+| `public.worker_payout_milestones` data | **No.** 17 rows pre-filled from history; 9 workers at 10/10. |
+| `public._hybrid_record_earning` (classifier) | Yes — gives instant while `allocated < 10`; it just reads the wrong counters today. |
+| `public._hybrid_sync_payout_status` | Yes — only adds settled slots for real post-switch instant payments. |
+| `public.get_my_payout_summary` (worker screen data) | Yes — mode/remaining computed from the counters. |
+| `admin_private.hybrid_worker_detail / hybrid_worker_list / hybrid_overview` | Yes — read the counters. |
+| Worker App (`hybridPayoutApi.ts`, `HybridPayoutSection`) | Yes — shows server counts only; UI currently off. |
 
-## Step 1 — preview (read-only, run first)
+## Verified: real post-switch use equals counters minus history
+For all 23 rows, `instant_slots_allocated - least(initialized_from_history,10)` equals the worker's count of `worker_earnings` with `payout_path='instant'`, and 0 of those are paid yet. So the reset should count real instant earnings directly (Step 2).
+
+## Step 1 — preview (read-only)
 ```sql
-select worker_id, initialized_from_history, instant_slots_allocated, instant_slots_settled,
-       greatest(instant_slots_allocated - least(initialized_from_history,10), 0) as new_allocated,
-       greatest(instant_slots_settled  - least(initialized_from_history,10), 0) as new_settled
-from public.worker_payout_milestones
-where initialized_from_history > 0
-order by worker_id;
+select m.worker_id, m.initialized_from_history, m.instant_slots_allocated, m.instant_slots_settled,
+  (select count(*) from worker_earnings e where e.worker_id=m.worker_id and e.payout_path='instant') as new_allocated,
+  (select count(*) from worker_earnings e where e.worker_id=m.worker_id and e.payout_path='instant' and e.status='paid') as new_settled
+from public.worker_payout_milestones m order by m.initialized_from_history desc;
 ```
-Admin must confirm the preview against each worker's real post-switch instant earnings (`hybrid` earning records with slot numbers) before Step 2. If any worker's post-switch slot numbers don't line up with `new_allocated`, use the real post-switch count instead.
 
-## Step 2 — reset (Admin applies, one transaction)
+## Step 2 — reset counters + stop the backfill pre-filling (Admin applies, one transaction)
 ```sql
 begin;
-update public.worker_payout_milestones
-set instant_slots_allocated = greatest(instant_slots_allocated - least(initialized_from_history,10), 0),
-    instant_slots_settled   = greatest(instant_slots_settled  - least(initialized_from_history,10), 0),
+update public.worker_payout_milestones m
+set instant_slots_allocated = least(10,(select count(*) from worker_earnings e where e.worker_id=m.worker_id and e.payout_path='instant')),
+    instant_slots_settled   = least(10,(select count(*) from worker_earnings e where e.worker_id=m.worker_id and e.payout_path='instant' and e.status='paid')),
     initialized_from_history = 0,
     updated_at = now()
-where initialized_from_history > 0;
--- check: no row above 10, settled never above allocated
+where m.initialized_from_history > 0;
+
+-- Backfill must never count past payouts again: change its milestone insert to
+--   select worker_id, 0, 0, 0 ... on conflict (worker_id) do nothing;
+-- (or revoke/retire admin_private.hybrid_backfill entirely).
+
 select count(*) from public.worker_payout_milestones
 where instant_slots_allocated > 10 or instant_slots_settled > instant_slots_allocated;  -- must be 0
 commit;
 ```
+Expected result: 7 workers at 10/10 drop to 0 used (full ten); others keep only their real post-switch use.
+
+## Open owner question — unpaid daily earnings already held
+5 pre-filled workers already have 42 unpaid daily earnings (held for 7 PM settlement) that would have been instant under "fresh ten": up to 34 of them fit inside their fresh ten. None are paid. Reclassifying them is NOT included above and needs owner approval.
 
 ## Must stay unchanged
 - No existing payout, earning, transfer or settlement record is edited, reversed or re-sent.
-- Already-held daily earnings are not reclassified to instant (separate decision if wanted).
+- Already-held daily earnings are not reclassified to instant unless the owner approves (see open question).
 - `_hybrid_record_earning` logic is unchanged; it simply sees fewer used slots.
 - Instant transfers still only move when Admin turns automatic execution on.
 
