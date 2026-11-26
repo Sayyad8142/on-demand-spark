@@ -222,7 +222,7 @@ export default function OtpVerify() {
               bank,
             })
           : { ok: false as const, error: "bank_details_missing" as const };
-        if (!result.ok && result.error !== "login_already_linked") {
+        if ("error" in result && result.error !== "login_already_linked") {
           // Leave no half-registered session behind; the worker retries from sign-up.
           await supabase.auth.signOut().catch(() => undefined);
           try { sessionStorage.removeItem(OTP_STATE_KEY); } catch {}
