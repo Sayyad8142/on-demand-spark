@@ -6831,6 +6831,36 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_booking_requests: {
+        Row: {
+          amount_inr: number
+          booking_payload: Json
+          created_at: string
+          customer_id: string
+          request_id: string
+          result: Json | null
+          updated_at: string
+        }
+        Insert: {
+          amount_inr: number
+          booking_payload: Json
+          created_at?: string
+          customer_id: string
+          request_id: string
+          result?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          amount_inr?: number
+          booking_payload?: Json
+          created_at?: string
+          customer_id?: string
+          request_id?: string
+          result?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       wallet_transactions: {
         Row: {
           amount_inr: number
@@ -7077,6 +7107,83 @@ export type Database = {
           razorpay_vpa_fund_account_id?: string | null
           snapshot?: Json | null
           upi_id?: string | null
+        }
+        Relationships: []
+      }
+      worker_auth_reset_events: {
+        Row: {
+          actor_id: string
+          created_at: string
+          details: Json
+          event_type: string
+          id: string
+          operation_id: string
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          details?: Json
+          event_type: string
+          id?: string
+          operation_id: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          details?: Json
+          event_type?: string
+          id?: string
+          operation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_auth_reset_events_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "worker_auth_reset_operations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_auth_reset_operations: {
+        Row: {
+          actor_id: string
+          created_at: string
+          id: string
+          original_phone: string
+          previous_active: boolean | null
+          previous_available: boolean | null
+          reason: string
+          state: string
+          updated_at: string
+          user_id: string | null
+          worker_id: string
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          id?: string
+          original_phone: string
+          previous_active?: boolean | null
+          previous_available?: boolean | null
+          reason: string
+          state?: string
+          updated_at?: string
+          user_id?: string | null
+          worker_id: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          id?: string
+          original_phone?: string
+          previous_active?: boolean | null
+          previous_available?: boolean | null
+          reason?: string
+          state?: string
+          updated_at?: string
+          user_id?: string | null
+          worker_id?: string
         }
         Relationships: []
       }
@@ -10279,6 +10386,15 @@ export type Database = {
         Args: { p_app: string; p_platform: string; p_version: string }
         Returns: Json
       }
+      admin_prepare_worker_auth_reset: {
+        Args: {
+          p_commit?: boolean
+          p_confirm_phone?: string
+          p_reason?: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
       admin_preview_min_build_impact: {
         Args: {
           _app: string
@@ -13042,6 +13158,10 @@ export type Database = {
         }
         Returns: Json
       }
+      service_finish_worker_auth_reset: {
+        Args: { p_operation_id: string }
+        Returns: Json
+      }
       service_get_start_otp: {
         Args: { p_booking_id: string; p_profile_id: string }
         Returns: Json
@@ -13382,6 +13502,10 @@ export type Database = {
       }
       worker_approval_allows_online: {
         Args: { p_requires: boolean; p_status: string }
+        Returns: boolean
+      }
+      worker_auth_cleanup_shared: {
+        Args: { p_worker_id: string }
         Returns: boolean
       }
       worker_auth_reset_complete: {
