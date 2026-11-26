@@ -58,7 +58,12 @@ describe("hybrid payout adapter", () => {
 
   it("daily batch next settlement parsed from server, not calculated", () => {
     const s = parseSummary(summary({ payout_mode: "daily", next_settlement: { batch_date_ist: "2026-11-10", cutoff_at: "2026-11-10T13:30:00Z", label: "Today 7:00 PM", estimated_amount_inr: 900 } }));
-    expect(s.nextSettlement).toEqual({ batchDateIst: "2026-11-10", cutoffAt: "2026-11-10T13:30:00Z", label: "Today 7:00 PM", estimatedAmountInr: 900 });
+    expect(s.nextSettlement).toEqual({ batchDateIst: "2026-11-10", cutoffAt: "2026-11-10T13:30:00Z", label: "Today 7:00 PM", estimatedAmountInr: 900, timeIst: null });
+  });
+
+  it("daily batch settlement time comes from the server", () => {
+    const s = parseSummary(summary({ payout_mode: "daily", next_settlement: { batch_date_ist: "2026-11-10", cutoff_at: "2026-11-10T13:30:00Z", label: "Today 7:00 PM", estimated_amount_inr: 900, time_ist: "19:00" } }));
+    expect(s.nextSettlement?.timeIst).toBe("19:00");
   });
 
   it("rejects malformed money (decimal, negative, string) and bad mode", () => {
