@@ -1,5 +1,9 @@
 # Worker language translation
 
+## Worker payout / Cashfree IMPS audit — 26 Nov, read-only
+- [x] Audit collection, validation, live settings/RPCs/permissions, first-ten classification, daily scheduling, worker impact and payout displays; 39 existing mocked tests passed. Report: docs/payout-imps-audit-2026-11-26/REPORT.md.
+- [ ] Implement or activate proposed changes — blocked: owner approval, cohort/cutoff/backlog decisions, Admin-owned provider/scheduler corrections and authenticated/device verification; no app or production changes authorized.
+
 ## Compact Start OTP card — 25 Nov, preview only
 - [x] Prompt 142: 984 app tests and 8 native alarm-rule tests passed; ticking perimeter, overdue/reopen and whole-card taps checked in isolated browser screens at 320/360/393 and landscape, including Hindi/Telugu. Evidence: docs/start-otp-final-verification-2026-11-25.md. No app/version/publication changes.
 - [x] Combine the Start button and small countdown with a shrinking perimeter; preserve timer, navigation, alarms and penalty settings.
