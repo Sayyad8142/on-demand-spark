@@ -5,12 +5,13 @@ import { displayText, useWorkerLanguage } from "@/i18n/display";
 import type { PayoutReadiness } from "@/lib/payoutBookingGate";
 
 /** Server-reported next step only; never decides readiness itself. */
-export function readinessMessages(readiness: PayoutReadiness | null): string[] {
+/** `bookingsAllowed`: the app's booking decision (Admin switch aware); when true, never claim bookings are blocked. */
+export function readinessMessages(readiness: PayoutReadiness | null, bookingsAllowed = false): string[] {
   if (!readiness) return ["We could not check your bank status. Please try again."];
   const out: string[] = [];
-  if (!readiness.hasBankDetails) out.push("Add your bank account to start getting bookings.");
-  else if (!readiness.beneficiaryRegistered) out.push("Didi Now is verifying your bank account. Bookings start after verification.");
-  if (!readiness.adminApproved) out.push("Waiting for Didi Now approval.");
+  if (!readiness.hasBankDetails) out.push(bookingsAllowed ? "Add your bank account so Didi Now can pay you." : "Add your bank account to start getting bookings.");
+  else if (!readiness.beneficiaryRegistered) out.push(bookingsAllowed ? "Didi Now is verifying your bank account." : "Didi Now is verifying your bank account. Bookings start after verification.");
+  if (!readiness.adminApproved && !bookingsAllowed) out.push("Waiting for Didi Now approval.");
   return out;
 }
 

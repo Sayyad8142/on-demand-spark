@@ -1,5 +1,8 @@
 export const bankOnboardingMessages = {
   en: {
+    Add_your_bank_account_so_Didi_Now_can_pay_you: "Add your bank account so Didi Now can pay you.",
+    Didi_Now_is_verifying_your_bank_account: "Didi Now is verifying your bank account.",
+    Didi_Now_verifies_your_bank_details_before_paying_you: "Didi Now verifies your bank details before paying you.",
     Bank_account: "Bank account",
     This_number_is_already_registered_Please_sign_in: "This number is already registered. Please sign in.",
     Registration_not_completed: "Registration not completed",
@@ -29,6 +32,9 @@ export const bankOnboardingMessages = {
     Check_bank_details: "Check bank details",
   },
   hi: {
+    Add_your_bank_account_so_Didi_Now_can_pay_you: "भुगतान पाने के लिए अपना बैंक खाता जोड़ें।",
+    Didi_Now_is_verifying_your_bank_account: "दीदी नाउ आपके बैंक खाते की जाँच कर रहा है।",
+    Didi_Now_verifies_your_bank_details_before_paying_you: "भुगतान से पहले दीदी नाउ आपके बैंक विवरण की पुष्टि करता है।",
     Bank_account: "बैंक खाता",
     This_number_is_already_registered_Please_sign_in: "यह नंबर पहले से रजिस्टर है। कृपया साइन इन करें।",
     Registration_not_completed: "रजिस्ट्रेशन पूरा नहीं हुआ",
@@ -58,6 +64,9 @@ export const bankOnboardingMessages = {
     Check_bank_details: "बैंक विवरण जाँचें",
   },
   te: {
+    Add_your_bank_account_so_Didi_Now_can_pay_you: "చెల్లింపులు పొందడానికి మీ బ్యాంకు ఖాతాను జోడించండి.",
+    Didi_Now_is_verifying_your_bank_account: "దీదీ నౌ మీ బ్యాంకు ఖాతాను ధృవీకరిస్తోంది.",
+    Didi_Now_verifies_your_bank_details_before_paying_you: "చెల్లించే ముందు దీదీ నౌ మీ బ్యాంకు వివరాలను ధృవీకరిస్తుంది.",
     Bank_account: "బ్యాంకు ఖాతా",
     This_number_is_already_registered_Please_sign_in: "ఈ నంబర్ ఇప్పటికే నమోదైంది. దయచేసి సైన్ ఇన్ చేయండి.",
     Registration_not_completed: "నమోదు పూర్తి కాలేదు",

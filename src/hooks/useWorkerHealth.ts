@@ -10,6 +10,7 @@
  * Also returns the top 1–3 human-readable reasons for the current state.
  */
 
+import { readPayoutReadinessFromServer, readinessAllowsBookings } from "@/lib/payoutBookingGate";
 import { useEffect, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
@@ -139,6 +140,8 @@ export function useWorkerHealth(
           .select("notification_health, fcm_token_status, is_available, is_busy, is_blocked, payout_ready, last_heartbeat_at")
           .eq("id", workerId)
           .maybeSingle();
+        // Same booking decision as Home/ON: strict check only when Admin's switch is on.
+        const readiness = await readPayoutReadinessFromServer();
         const slotRes = await supabase
           .from("worker_availability")
           .select("day_of_week, slots")
@@ -156,7 +159,7 @@ export function useWorkerHealth(
           isAvailable: (data as any)?.is_available ?? null,
           isBusy: (data as any)?.is_busy ?? null,
           isBlocked: (data as any)?.is_blocked ?? null,
-          payoutReady: (data as any)?.payout_ready ?? null,
+          payoutReady: readiness ? readinessAllowsBookings(readiness, (data as any)?.payout_ready) : null,
           lastHeartbeatAt: (data as any)?.last_heartbeat_at ?? null,
         }));
       } catch {

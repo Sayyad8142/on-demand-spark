@@ -20,8 +20,8 @@ export default function AccountDetails() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { worker } = useWorkerProfile(user?.id);
-  const { readiness, loading } = usePayoutReadiness(user?.id, (worker as any)?.payout_ready);
-  const messages = readiness ? readinessMessages(readiness) : [];
+  const { readiness, loading, allowsBookings } = usePayoutReadiness(user?.id, (worker as any)?.payout_ready);
+  const messages = readiness ? readinessMessages(readiness, allowsBookings) : [];
   return (
     <div className="min-h-screen bg-background pb-24">
       <header className="bg-card border-b">
@@ -31,10 +31,10 @@ export default function AccountDetails() {
         </div>
       </header>
       <main className="max-w-2xl mx-auto px-4 py-5 space-y-5">
-        <div className="flex items-start gap-3"><Landmark className="h-6 w-6 shrink-0 text-primary" /><div><h2 className="font-semibold">{displayText("Bank account required for bookings")}</h2><p className="text-sm text-muted-foreground">{displayText("Bank details are verified by Didi Now before bookings")}</p></div></div>
+        <div className="flex items-start gap-3"><Landmark className="h-6 w-6 shrink-0 text-primary" /><div><h2 className="font-semibold">{displayText(allowsBookings ? "Bank account" : "Bank account required for bookings")}</h2><p className="text-sm text-muted-foreground">{displayText(allowsBookings ? "Didi Now verifies your bank details before paying you." : "Bank details are verified by Didi Now before bookings")}</p></div></div>
         {!loading && readiness && (
           <Card className="p-4 space-y-2" data-testid="bank-status">
-            {readiness.ready
+            {readiness.ready || (allowsBookings && messages.length === 0)
               ? <p className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="h-4 w-4 text-success" />{displayText("Your bank account is verified.")}</p>
               : messages.map((m) => <p key={m} className="flex items-start gap-2 text-sm"><Clock className="h-4 w-4 mt-0.5 shrink-0 text-warning" />{displayText(m)}</p>)}
           </Card>

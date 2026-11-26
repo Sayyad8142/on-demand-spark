@@ -141,7 +141,7 @@ export default function Earnings() {
       <main className="max-w-2xl mx-auto p-4 space-y-4">
         {error && <PayoutLoadError onRetry={refresh} hasData={payouts.length > 0} />}
 
-        {user && workerId && payoutReadiness.readiness && !payoutReadiness.readiness.ready && (
+        {user && workerId && !payoutReadiness.loading && !payoutReadiness.allowsBookings && (
           <PayoutReadinessNotice readiness={payoutReadiness.readiness} onBankDetails={() => navigate("/account-details")} />
         )}
 
