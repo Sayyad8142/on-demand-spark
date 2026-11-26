@@ -112,11 +112,11 @@ export default function Home() {
   const isOnline = !!worker?.is_available;
 
   // Layer 2: Realtime subscription on booking_requests
-  useBookingRequestsRealtime(isGuestMode ? undefined : worker?.id, isOnline && payoutReady);
+  useBookingRequestsRealtime(isGuestMode ? undefined : worker?.id, isOnline);
 
   // Layer 3: Server-side polling fallback (10s foreground / 30s background,
   // plus immediate checks on open / resume / reconnect)
-  useBookingPollingFallback(isGuestMode ? undefined : worker?.id, isOnline && payoutReady);
+  useBookingPollingFallback(isGuestMode ? undefined : worker?.id, isOnline);
   
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -187,7 +187,7 @@ export default function Home() {
     accept,
     reject,
     clearAlert
-  } = useUnifiedBookingAlerts(user?.id, isOnline && payoutReady, matches, worker?.id);
+  } = useUnifiedBookingAlerts(user?.id, isOnline, matches, worker?.id);
 
   // Movement tracking lifecycle is owned globally by App.tsx (useActiveJob-driven)
   // so it keeps running when the worker navigates to Profile/Bookings/Availability.
@@ -291,7 +291,7 @@ export default function Home() {
               }}
               hasAvailabilitySlots={onboarding.hasAvailabilitySlots}
               onNoSlots={() => navigate('/availability')}
-              bookingReady={payoutReady}
+              bookingReady={true}
             />
           </div>
         </div>
@@ -338,10 +338,10 @@ export default function Home() {
               <AlertTriangle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div className="space-y-1">
                 <h2 className="font-semibold text-base text-foreground">
-                  {displayText("Complete payout details to start getting bookings")}
+                  {displayText("Add payout details to get paid")}
                 </h2>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  {displayText("You won’t receive bookings until payout details are added.")}
+                  {displayText("You can receive bookings now. Add payout details so your earnings can be paid.")}
                 </p>
               </div>
             </div>

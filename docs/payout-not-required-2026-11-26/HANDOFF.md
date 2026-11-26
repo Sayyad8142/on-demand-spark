@@ -13,3 +13,7 @@ Owner decision (2026-11-26): workers who have not entered payout details must st
 
 Payouts themselves are unchanged: Cashfree transfers still need a valid UPI/beneficiary; earnings simply wait until the worker adds details.
 Edge functions were NOT edited from this project (saving them auto-deploys to production).
+
+## Worker App follow-ups (SOURCE, done)
+- `Home.tsx`: offer listeners, backup poller and alerts no longer wait for payout_ready; ON switch no longer shown as "not ready"; payout card now says bookings work, details are needed only to get paid.
+- `src/lib/workerReachability.ts` still lists `payout_not_ready` because it mirrors today's server; remove after items 1-4 are deployed.
