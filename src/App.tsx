@@ -44,6 +44,7 @@ import { logAppHealth } from "@/lib/appHealthLog";
 import { startCancellationVoice, stopCancellationVoice } from "@/lib/cancellationVoice";
 import { startOtpReminderVoice, stopOtpReminderVoice } from "@/lib/otpReminderVoice";
 import { useOtpReminderEscalation, logOtpReminderEvent } from "@/hooks/useOtpReminderEscalation";
+import { useDeletedWorkerSession } from "@/hooks/useDeletedWorkerSession";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import Auth from "./pages/Auth";
 import OtpVerify from "./pages/OtpVerify";
@@ -106,6 +107,7 @@ function StartupSplash({ label = "Loading..." }: { label?: string }) {
 }
 
 function ProtectedRoute({ children, showNav = false }: { children: React.ReactNode; showNav?: boolean }) {
+  useDeletedWorkerSession();
   const { user, session, loading } = useAuth();
   const isGuestMode = localStorage.getItem('guest_mode') === 'true';
 

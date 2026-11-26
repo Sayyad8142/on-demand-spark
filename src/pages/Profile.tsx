@@ -30,6 +30,7 @@ import { getInstalledVersionSync, loadInstalledVersion, versionLabel } from "@/l
 
 import PriorityScoreCard from "@/components/profile/PriorityScoreCard";
 import ServicePricingEntry from '@/components/profile/ServicePricingEntry';
+import { readCollectWorkerUpi } from '@/lib/bankOnboarding';
 
 const SERVICES = [{
   value: "maid",
@@ -84,6 +85,12 @@ export default function Profile() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [phone, setPhone] = useState("");
   const [upiId, setUpiId] = useState("");
+  const [collectUpi, setCollectUpi] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void readCollectWorkerUpi().then(value => { if (!cancelled) setCollectUpi(value); });
+    return () => { cancelled = true; };
+  }, [user?.id, editDialogOpen]);
   const [upiQrUrl, setUpiQrUrl] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -335,7 +342,7 @@ export default function Profile() {
       });
       return;
     }
-    if (!upiId.trim() || !upiId.includes("@")) {
+    if (collectUpi && upiId.trim() && !upiId.includes("@")) {
       toast({
         title: displayText("UPI ID Required"),
         description: "Please enter a valid UPI ID (must contain '@'). Example: name@paytm",
@@ -348,8 +355,7 @@ export default function Profile() {
       const validServices = selectedServices.filter(service => SERVICE_VALUES.has(service));
       await updateWorker({
         full_name: fullName,
-        phone: phone,
-        upi_id: upiId,
+        ...(collectUpi ? { upi_id: upiId.trim() || null } : {}),
         service_types: validServices,
         communities: selectedCommunities,
       } as any);
@@ -593,11 +599,11 @@ export default function Profile() {
 
                   <div className="space-y-2">
                     <Label htmlFor="edit-phone">{t('profile.phone')}</Label>
-                    <Input id="edit-phone" value={phone} onChange={e => setPhone(e.target.value)} placeholder={displayText("Your mobile number")} />
+                    <Input id="edit-phone" value={phone} readOnly disabled placeholder={displayText("Your mobile number")} />
                   </div>
 
                   {/* Payment Details Section */}
-                  <div className="space-y-3">
+                  {collectUpi && <div className="space-y-3">
                     <Label className="flex items-center gap-2">
                       <CreditCard className="w-4 h-4" />
                       {displayText("Payment Details")}
@@ -605,7 +611,7 @@ export default function Profile() {
                     
                     {/* Manual UPI ID Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="edit-upi">{t('auth.upiIdLabel', 'UPI ID')} *</Label>
+                      <Label htmlFor="edit-upi">{t('auth.upiIdLabel', 'UPI ID')} · {displayText("Optional")}</Label>
                       <Input 
                         id="edit-upi" 
                         type="text" 
@@ -613,12 +619,10 @@ export default function Profile() {
                         value={upiId} 
                         onChange={e => setUpiId(e.target.value)} 
                       />
-                      <p className="text-xs text-muted-foreground">
-                        {displayText("Required for receiving payouts")}
-                      </p>
                     </div>
+                  </div>}
 
-                    </div>
+                  <Button variant="outline" className="w-full" onClick={() => { setEditDialogOpen(false); navigate('/account-details'); }}>{displayText("Bank Details")}</Button>
 
 
                   <div className="space-y-2">

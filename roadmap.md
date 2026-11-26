@@ -1,5 +1,10 @@
 # Worker language translation
 
+## Prompt 147 — approved Cashfree IMPS onboarding, no publication
+- [ ] Finish available bank-first signup, Admin UPI setting, safe bank submission boundaries and deleted-account cleanup.
+- [ ] Prepare server-only payout progress/history and verify current Admin contracts; do not activate incompatible counters.
+- [ ] Run app tests and release safeguards; document remaining Admin and real-device release blockers.
+
 ## Worker payout / Cashfree IMPS audit — 26 Nov, read-only
 - [x] Audit collection, validation, live settings/RPCs/permissions, first-ten classification, daily scheduling, worker impact and payout displays; 39 existing mocked tests passed. Report: docs/payout-imps-audit-2026-11-26/REPORT.md.
 - [ ] Implement or activate proposed changes — blocked: owner approval, cohort/cutoff/backlog decisions, Admin-owned provider/scheduler corrections and authenticated/device verification; no app or production changes authorized.

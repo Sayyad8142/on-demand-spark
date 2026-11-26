@@ -1,4 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
+import { clearAccountBrowserData, ACCOUNT_STORAGE_KEYS } from "@/lib/accountDataCleanup";
+import { useQueryClient } from "@tanstack/react-query";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Capacitor } from '@capacitor/core';
@@ -23,6 +25,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -297,7 +300,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try { await (await import('@/lib/practiceNotification')).clearPracticeSession(); } catch { /* ignore */ }
     try { await supabase.auth.signOut(); } catch (error) { console.error('❌ Sign out error:', error); }
     await clearSessionCompletely();
-  }, [clearSessionCompletely, session]);
+    queryClient.clear();
+    clearAccountBrowserData();
+    await Promise.all(ACCOUNT_STORAGE_KEYS.map(key => capacitorStorage.removeItem(key)));
+  }, [clearSessionCompletely, session, queryClient]);
 
   return (
     <AuthContext.Provider value={{ user, session, loading, signOut, refreshSession }}>

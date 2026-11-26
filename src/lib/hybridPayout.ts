@@ -14,6 +14,7 @@ export interface InstantProgressView {
   slotsTotal: number;      // e.g. 10, supplied by server
   slotsAllocated: number;  // supplied by server
   slotsSettled: number;    // confirmed paid, supplied by server
+  slotsRemaining?: number; // supplied by server; never total minus allocated locally
 }
 
 export interface DailyScheduleView {
@@ -21,11 +22,12 @@ export interface DailyScheduleView {
   nextPayoutAt: string | null;
   /** Whether automatic bank transfer is currently active, supplied by server. */
   transfersActive: boolean;
+  settlementAmount?: number;
 }
 
 export interface ConsolidatedPayoutView {
   id: string;
-  kind: "instant" | "daily";
+  kind: "instant" | "daily" | "legacy" | "manual";
   amount: number;
   status: string;            // raw server status
   statusLabel?: string;      // server label (contract v1); shown verbatim when present
@@ -48,12 +50,12 @@ export function normalizeInstantProgress(v: InstantProgressView): InstantProgres
   const total = Math.max(0, Math.floor(Number(v.slotsTotal) || 0));
   const allocated = Math.min(total, Math.max(0, Math.floor(Number(v.slotsAllocated) || 0)));
   const settled = Math.min(allocated, Math.max(0, Math.floor(Number(v.slotsSettled) || 0)));
-  return { slotsTotal: total, slotsAllocated: allocated, slotsSettled: settled };
+  return { slotsTotal: total, slotsAllocated: allocated, slotsSettled: settled, ...(v.slotsRemaining === undefined ? {} : { slotsRemaining: v.slotsRemaining }) };
 }
 
 export function instantSlotsExhausted(v: InstantProgressView): boolean {
   const n = normalizeInstantProgress(v);
-  return n.slotsTotal > 0 && n.slotsAllocated >= n.slotsTotal;
+  return n.slotsTotal > 0 && n.slotsSettled >= n.slotsTotal;
 }
 
 /** Sum of included bookings — used to flag a mismatch with the payout amount. */

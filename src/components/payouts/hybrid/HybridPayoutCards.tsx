@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { ChevronDown, Zap, CalendarClock, Clock, ShieldCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { displayText, displayLocale, useWorkerLanguage } from "@/i18n/display";
 import { contractStatusState } from "@/lib/hybridPayoutApi";
@@ -26,21 +27,22 @@ export function InstantPayoutProgress(props: InstantProgressView) {
     <Card data-testid="instant-progress">
       <CardContent className="p-4 space-y-2">
         <div className="flex items-center gap-2 font-semibold"><Zap className="h-4 w-4 text-primary" />{displayText("Instant payout")}</div>
-        <Progress value={v.slotsTotal ? (v.slotsAllocated / v.slotsTotal) * 100 : 0} />
-        <p className="text-sm">{displayText("{{used}} of {{total}} instant payouts used", { used: v.slotsAllocated, total: v.slotsTotal })}</p>
-        <p className="text-xs text-muted-foreground">{displayText("{{paid}} paid successfully", { paid: v.slotsSettled })}</p>
+        <Progress value={v.slotsTotal ? (v.slotsSettled / v.slotsTotal) * 100 : 0} />
+        <p className="text-sm">{displayText("{{used}} of {{total}} IMPS payouts completed", { used: v.slotsSettled, total: v.slotsTotal })}</p>
+        {v.slotsRemaining !== undefined && <p className="text-xs text-muted-foreground">{displayText("{{remaining}} instant payouts remaining", { remaining: v.slotsRemaining })}</p>}
       </CardContent>
     </Card>
   );
 }
 
-export function DailyPayoutSchedule({ nextPayoutAt, transfersActive }: DailyScheduleView) {
+export function DailyPayoutSchedule({ nextPayoutAt, transfersActive, settlementAmount }: DailyScheduleView) {
   useWorkerLanguage();
   return (
     <Card data-testid="daily-schedule">
       <CardContent className="p-4 space-y-1">
         <div className="flex items-center gap-2 font-semibold"><CalendarClock className="h-4 w-4 text-primary" />{displayText("Daily Payout — 7:00 PM IST")}</div>
         {nextPayoutAt && <p className="text-sm">{displayText("Next payout:")} {istTime(nextPayoutAt)}</p>}
+        {settlementAmount !== undefined && <p className="text-sm">{displayText("Upcoming settlement")}: ₹{settlementAmount}</p>}
         {!transfersActive && (
           <p className="text-xs text-muted-foreground">{displayText("Bank transfers are paused. Didi Now will pay you; status shows Paid only after it is confirmed.")}</p>
         )}
@@ -64,7 +66,7 @@ export function PendingEarningsCard({ today, awaiting, processing, paid }: { tod
   );
 }
 
-export function ConsolidatedPayoutItem({ payout, onOpen }: { payout: ConsolidatedPayoutView; onOpen?: () => void }) {
+export function ConsolidatedPayoutItem({ payout, onOpen, detailLoading, detailError, onRetry }: { payout: ConsolidatedPayoutView; onOpen?: () => void; detailLoading?: boolean; detailError?: boolean; onRetry?: () => void }) {
   useWorkerLanguage();
   const [open, setOpen] = useState(false);
   const state = contractStatusState(payout.status, payout.paidAt);
@@ -72,20 +74,22 @@ export function ConsolidatedPayoutItem({ payout, onOpen }: { payout: Consolidate
   return (
     <Card>
       <CardContent className="p-3 space-y-2">
-        <button type="button" className="flex w-full items-center justify-between" onClick={() => { if (!open) onOpen?.(); setOpen((o) => !o); }} aria-expanded={open}>
+        <Button type="button" variant="ghost" className="h-auto whitespace-normal p-0 flex w-full items-center justify-between gap-2" onClick={() => { if (!open) onOpen?.(); setOpen((o) => !o); }} aria-expanded={open}>
           <span className="text-left">
             <span className="block text-lg font-bold">₹{payout.amount}</span>
             <span className="text-xs text-muted-foreground">
-              {payout.kind === "daily" ? displayText("Daily payout") : displayText("Instant payout")} · {displayText("{{count}} bookings", { count })}
+              {displayText(payout.kind === "daily" ? "Daily payout" : payout.kind === "legacy" ? "Legacy payout" : payout.kind === "manual" ? "Paid by Didi Now team" : "Instant payout")} · {displayText("{{count}} bookings", { count })}
             </span>
           </span>
-          <span className="flex items-center gap-1"><PayoutStatusBadge state={state} label={payout.statusLabel} /><ChevronDown className={`h-4 w-4 transition ${open ? "rotate-180" : ""}`} /></span>
-        </button>
+          <span className="flex items-center gap-1"><PayoutStatusBadge state={state} label={payout.status === "paid" && !payout.paidAt ? undefined : payout.statusLabel} /><ChevronDown className={`h-4 w-4 transition ${open ? "rotate-180" : ""}`} /></span>
+        </Button>
         {state === "paid" && payout.reference && <p className="text-xs text-muted-foreground">{displayText("Reference No.")} {payout.reference}</p>}
         {(state === "failed" || state === "reversed") && payout.failureReason && <p className="text-xs text-destructive">{displayText("Reason:")} {payout.failureReason}</p>}
         {payout.bookings.length > 0 && !consolidatedMatches(payout) && <p className="text-xs text-warning">{displayText("Amounts are being checked by Didi Now")}</p>}
         {open && (
           <ul className="space-y-1 border-t pt-2 text-xs">
+            {detailLoading && <li>{displayText("Loading...")}</li>}
+            {detailError && <li><Button variant="outline" size="sm" onClick={onRetry}>{displayText("Retry")}</Button></li>}
             {payout.bookings.map((b) => (
               <li key={b.bookingId} className="flex justify-between"><span className="font-mono">#{b.bookingId.slice(0, 8)}</span><span>₹{b.amount}</span></li>
             ))}

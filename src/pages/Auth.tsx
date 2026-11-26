@@ -18,8 +18,8 @@ import jsQR from "jsqr";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import maidServiceIcon from "@/assets/service-maid.png";
 import bathroomServiceIcon from "@/assets/service-bathroom.png";
-import { extractBankDetailsFromFile } from "@/lib/bankDetailsExtraction";
 import { CommunityPicker } from "@/components/CommunityPicker";
+import { BANK_SERVICE_UNAVAILABLE, SECURE_BANK_ONBOARDING_ENABLED, readCollectWorkerUpi, validateBankInput } from "@/lib/bankOnboarding";
 
 
 // @ts-ignore - Capacitor bridge
@@ -106,38 +106,10 @@ export default function Auth() {
   const [payoutMethod, setPayoutMethod] = useState<'upi' | 'bank'>('upi');
   // Collapsible bank fallback section on Step 2.
   const [showBankFallback, setShowBankFallback] = useState(false);
-  // Admin-controlled flag: when false, signup payout step shows ONLY UPI input.
-  // Default true to preserve existing behavior until config loads.
-  const [bankPayoutEnabled, setBankPayoutEnabled] = useState(true);
-
+  const [collectUpi, setCollectUpi] = useState(false);
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      try {
-        const { data, error } = await (supabase as any)
-          .from('app_config')
-          .select('enable_bank_payout_details')
-          .limit(1)
-          .maybeSingle();
-        console.log('[PAYOUT_CONFIG_RAW]', data, 'error:', error?.message);
-        console.log('[PAYOUT_CONFIG_VALUE]', data?.enable_bank_payout_details);
-        if (error) {
-          console.warn('[PAYOUT_CONFIG_LOADED] failed, defaulting to bank ENABLED', error.message);
-          return;
-        }
-        // Strict: only true (or null/undefined fallback) keeps bank visible. false hides it.
-        const raw = data?.enable_bank_payout_details;
-        const enabled = raw === false ? false : true;
-        if (cancelled) return;
-        setBankPayoutEnabled(enabled);
-        console.log('[BANK_PAYOUT_STATE]', enabled);
-        console.log('[PAYOUT_CONFIG_LOADED]', { enable_bank_payout_details: enabled });
-        if (enabled) console.log('[BANK_DETAILS_VISIBLE]');
-        else console.log('[UPI_ONLY_MODE]');
-      } catch (e: any) {
-        console.warn('[PAYOUT_CONFIG_LOADED] error', e?.message);
-      }
-    })();
+    void readCollectWorkerUpi().then(value => { if (!cancelled) setCollectUpi(value); });
     return () => { cancelled = true; };
   }, []);
   const [draftRestored, setDraftRestored] = useState(false);
@@ -218,11 +190,6 @@ export default function Auth() {
       if (typeof draft.signUpUpiId === "string") setSignUpUpiId(draft.signUpUpiId);
       if (typeof draft.signUpCommunity === "string") setSignUpCommunity(draft.signUpCommunity);
       if (Array.isArray(draft.signUpServices)) setSignUpServices(draft.signUpServices.filter((service: unknown) => typeof service === "string"));
-      if (typeof draft.signUpAccountHolderName === "string") setSignUpAccountHolderName(draft.signUpAccountHolderName);
-      if (typeof draft.signUpBankAccountNumber === "string") setSignUpBankAccountNumber(draft.signUpBankAccountNumber);
-      if (typeof draft.signUpConfirmAccountNumber === "string") setSignUpConfirmAccountNumber(draft.signUpConfirmAccountNumber);
-      if (typeof draft.signUpIfscCode === "string") setSignUpIfscCode(draft.signUpIfscCode);
-      if (typeof draft.signUpBankName === "string") setSignUpBankName(draft.signUpBankName);
     } catch (error) {
       console.error("Could not restore auth draft:", error);
       localStorage.removeItem(AUTH_DRAFT_KEY);
@@ -242,11 +209,6 @@ export default function Auth() {
       signUpUpiId,
       signUpCommunity,
       signUpServices,
-      signUpAccountHolderName,
-      signUpBankAccountNumber,
-      signUpConfirmAccountNumber,
-      signUpIfscCode,
-      signUpBankName,
     }));
   }, [
     activeTab,
@@ -257,11 +219,6 @@ export default function Auth() {
     signUpUpiId,
     signUpCommunity,
     signUpServices,
-    signUpAccountHolderName,
-    signUpBankAccountNumber,
-    signUpConfirmAccountNumber,
-    signUpIfscCode,
-    signUpBankName,
   ]);
 
   const normalizePhone = (phone: string) => {
@@ -278,47 +235,6 @@ export default function Auth() {
     return cleaned.startsWith('91') ? `+${cleaned}` : `+91${cleaned}`;
   };
 
-  const handlePassbookSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!PASSBOOK_ACCEPTED_TYPES.includes(file.type)) {
-      toast({ title: displayText("Invalid file"), description: displayText("Upload JPG, PNG, WEBP, or PDF"), variant: "destructive" });
-      event.target.value = "";
-      return;
-    }
-
-    if (file.size > PASSBOOK_MAX_SIZE) {
-      toast({ title: displayText("File too large"), description: displayText("Max size is 8MB"), variant: "destructive" });
-      event.target.value = "";
-      return;
-    }
-
-    setSignUpPassbookFile(file);
-    setExtractingPassbook(true);
-
-    try {
-      const details = await extractBankDetailsFromFile(file);
-      if (details?.account_holder_name) setSignUpAccountHolderName(details.account_holder_name);
-      if (details?.bank_account_number) {
-        setSignUpBankAccountNumber(details.bank_account_number);
-        setSignUpConfirmAccountNumber(details.bank_account_number);
-      }
-      if (details?.ifsc_code) setSignUpIfscCode(details.ifsc_code.toUpperCase());
-      if (details?.bank_name) setSignUpBankName(details.bank_name);
-
-      if (details?.account_holder_name || details?.bank_account_number || details?.ifsc_code) {
-        toast({ title: displayText("Account details filled"), description: displayText("Please verify the extracted details before continuing") });
-      } else {
-        toast({ title: displayText("Could not find details"), description: displayText("Please enter the bank details manually"), variant: "destructive" });
-      }
-    } catch (err: any) {
-      toast({ title: displayText("Could not read image"), description: err?.message || "Please enter the bank details manually", variant: "destructive" });
-    } finally {
-      setExtractingPassbook(false);
-    }
-  };
-
   const selectedCommunityName = communities.find(community => community.value === signUpCommunity)?.name || "Not selected";
   const selectedServiceLabels = signUpServices.map(serviceValue => {
     const service = SERVICES.find(item => item.value === serviceValue);
@@ -327,74 +243,15 @@ export default function Auth() {
   const hasPayoutDetails = !!(signUpAccountHolderName.trim() || signUpBankAccountNumber.trim() || signUpConfirmAccountNumber.trim() || signUpIfscCode.trim() || signUpBankName.trim() || signUpPassbookFile || signUpUpiId.trim());
   const canContinueSignup = !!signUpFullName && !!signUpPhone && !!signUpCommunity && signUpServices.length > 0;
 
-  const skipSignupPayoutDetails = () => {
-    setShowBankDetails(false);
-    setSignUpAccountHolderName("");
-    setSignUpBankAccountNumber("");
-    setSignUpConfirmAccountNumber("");
-    setSignUpIfscCode("");
-    setSignUpBankName("");
-    setSignUpUpiId("");
-    setSignUpPassbookFile(null);
-    if (passbookInputRef.current) passbookInputRef.current.value = "";
-    setSignUpStep(3);
-  };
-
+  const signupBankError = () => validateBankInput({ holder: signUpAccountHolderName, account: signUpBankAccountNumber, confirmation: signUpConfirmAccountNumber, ifsc: signUpIfscCode });
   const goToSignupStepThree = () => {
-    const upi = signUpUpiId.trim();
-    const hasUpi = !!upi;
-
-    // UPI is ALWAYS required for payouts (instant settlement).
-    if (!hasUpi) {
-      toast({
-        title: displayText("UPI ID is required"),
-        description: displayText("Please enter your UPI ID or scan a UPI QR code to receive payouts."),
-        variant: "destructive",
-      });
-      return;
-    }
-    const upiValidation = upiSchema.safeParse(upi);
-    if (!upiValidation.success) {
-      toast({
-        title: displayText("Invalid UPI ID"),
-        description: upiValidation.error.errors[0].message,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Bank fields are optional. Only validate if the fallback is open AND any field filled.
-    const anyBankFilled = bankPayoutEnabled && showBankFallback && !!(
-      signUpAccountHolderName.trim() ||
-      signUpBankAccountNumber.trim() ||
-      signUpConfirmAccountNumber.trim() ||
-      signUpIfscCode.trim()
-    );
-    if (!anyBankFilled) {
-      setSignUpStep(3);
-      return;
-    }
-
-    if (!signUpAccountHolderName.trim()) {
-      toast({ title: displayText("Account holder name required"), variant: "destructive" });
-      return;
-    }
-    if (!accountNumberSchema.safeParse(signUpBankAccountNumber.trim()).success) {
-      toast({ title: displayText("Invalid bank account number"), description: displayText("Must be 9–18 digits."), variant: "destructive" });
-      return;
-    }
-    if (signUpBankAccountNumber.trim() !== signUpConfirmAccountNumber.trim()) {
-      toast({ title: displayText("Account numbers do not match"), variant: "destructive" });
-      return;
-    }
-    if (!ifscSchema.safeParse(signUpIfscCode.trim().toUpperCase()).success) {
-      toast({ title: displayText("Invalid IFSC code"), description: displayText("Format: 4 letters + 0 + 6 alphanumeric."), variant: "destructive" });
-      return;
+    const error = signupBankError();
+    if (error) { toast({ title: displayText("Check your details"), description: displayText(error), variant: "destructive" }); return; }
+    if (collectUpi && signUpUpiId.trim() && !upiSchema.safeParse(signUpUpiId.trim()).success) {
+      toast({ title: displayText("Invalid UPI ID"), variant: "destructive" }); return;
     }
     setSignUpStep(3);
   };
-
-
 
   const goToSignupStepTwo = () => {
     if (!canContinueSignup) {
@@ -529,145 +386,13 @@ export default function Auth() {
     }
   };
   const handleSignUpSendOtp = async () => {
-    if (!signUpFullName || !signUpPhone || !signUpCommunity || signUpServices.length === 0) {
-      toast({
-        title: displayText("Please fill all required fields"),
-        description: signUpServices.length === 0 ? "Select at least one service type" : undefined,
-        variant: "destructive"
-      });
-      return;
+    if (!canContinueSignup || !nameSchema.safeParse(signUpFullName).success || !phoneSchema.safeParse(signUpPhone).success) {
+      toast({ title: displayText("Please fill all required fields"), variant: "destructive" }); return;
     }
-
-    // SECURITY: Validate all inputs
-    const nameValidation = nameSchema.safeParse(signUpFullName);
-    if (!nameValidation.success) {
-      toast({
-        title: displayText("Invalid name"),
-        description: nameValidation.error.errors[0].message,
-        variant: "destructive"
-      });
-      return;
-    }
-    const phoneValidation = phoneSchema.safeParse(signUpPhone);
-    if (!phoneValidation.success) {
-      toast({
-        title: displayText("Invalid phone number"),
-        description: phoneValidation.error.errors[0].message,
-        variant: "destructive"
-      });
-      return;
-    }
-    // UPI is mandatory during signup.
-    if (!signUpUpiId.trim()) {
-      toast({
-        title: displayText("UPI ID is required"),
-        description: displayText("Please enter your UPI ID to receive payouts."),
-        variant: "destructive"
-      });
-      return;
-    }
-    const upiValidation = upiSchema.safeParse(signUpUpiId.trim());
-    if (!upiValidation.success) {
-      toast({
-        title: displayText("Invalid UPI ID"),
-        description: upiValidation.error.errors[0].message,
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Bank details are optional. If ANY bank field is filled, validate ALL required bank fields.
-    // When admin flag `enable_bank_payout_details=false`, bank section is hidden — skip entirely.
-    const bankAccountNumber = bankPayoutEnabled ? signUpBankAccountNumber.trim() : "";
-    const confirmAccountNumber = bankPayoutEnabled ? signUpConfirmAccountNumber.trim() : "";
-    const accountHolderNameBank = bankPayoutEnabled ? signUpAccountHolderName.trim() : "";
-    const ifscCode = bankPayoutEnabled ? signUpIfscCode.trim().toUpperCase() : "";
-    const bankName = bankPayoutEnabled ? signUpBankName.trim() : "";
-    const anyBankFieldFilled = bankPayoutEnabled && !!(bankAccountNumber || confirmAccountNumber || accountHolderNameBank || ifscCode || bankName);
-    let bankPayload: {
-      account_holder_name: string;
-      bank_account_number: string;
-      ifsc_code: string;
-      bank_name: string | null;
-    } | null = null;
-
-    if (anyBankFieldFilled) {
-      if (!accountHolderNameBank) {
-        toast({ title: displayText("Account holder name is required"), description: displayText("Please complete bank details or clear them all."), variant: "destructive" });
-        return;
-      }
-      const acctValidation = accountNumberSchema.safeParse(bankAccountNumber);
-      if (!acctValidation.success) {
-        toast({ title: displayText("Invalid bank account number"), description: acctValidation.error.errors[0].message, variant: "destructive" });
-        return;
-      }
-      if (bankAccountNumber !== confirmAccountNumber) {
-        toast({ title: displayText("Account numbers do not match"), description: displayText("Please re-enter the same account number in both fields."), variant: "destructive" });
-        return;
-      }
-      const ifscValidation = ifscSchema.safeParse(ifscCode);
-      if (!ifscValidation.success) {
-        toast({ title: displayText("Invalid IFSC code"), description: ifscValidation.error.errors[0].message, variant: "destructive" });
-        return;
-      }
-      bankPayload = {
-        account_holder_name: accountHolderNameBank,
-        bank_account_number: bankAccountNumber,
-        ifsc_code: ifscCode,
-        bank_name: bankName || null,
-      };
-    }
-    try {
-      setLoading(true);
-      const phone = normalizePhone(signUpPhone);
-      const validSignupServices = signUpServices.filter(service => SERVICES.some(item => item.value === service));
-      const {
-        error
-      } = await supabase.auth.signInWithOtp({
-        phone,
-        options: {
-          data: {
-            full_name: signUpFullName.trim(),
-            upi_id: signUpUpiId?.trim() || null,
-            service_types: validSignupServices,
-            communities: [signUpCommunity]
-          }
-        }
-      });
-      if (error) throw error;
-      localStorage.removeItem(AUTH_DRAFT_KEY);
-
-      // Navigate to OTP verification page with signup data
-      navigate("/otp-verify", {
-        state: {
-          phone: signUpPhone,
-          mode: 'signup',
-          signUpData: {
-            fullName: signUpFullName,
-            upiId: signUpUpiId,
-            community: signUpCommunity,
-            services: validSignupServices,
-            cuisineTags: [],
-            qrData: null,
-            bankDetails: bankPayload,
-            payoutReady: !!(signUpUpiId.trim() || bankPayload),
-            passbookFile: signUpPassbookFile,
-          }
-        }
-      });
-      toast({
-        title: displayText("OTP sent!"),
-        description: displayText("Check your phone for the verification code")
-      });
-    } catch (error: any) {
-      toast({
-        title: displayText("Error"),
-        description: displayText(error.message),
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
+    if (signupBankError()) { goToSignupStepThree(); return; }
+    // Do not verify OTP and then write bank details directly into workers.
+    // The approved secure registration contract is still an Admin dependency.
+    toast({ title: displayText(BANK_SERVICE_UNAVAILABLE), variant: "destructive" });
   };
   // OTP verification is now handled in OtpVerify page
   return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 p-4">
@@ -728,7 +453,7 @@ export default function Auth() {
                         onClick={() => {
                           if (stepNumber === 1) setSignUpStep(1);
                           if (stepNumber === 2) goToSignupStepTwo();
-                          if (stepNumber === 3 && canContinueSignup) setSignUpStep(3);
+                          if (stepNumber === 3 && canContinueSignup) goToSignupStepThree();
                         }}
                         className={`rounded-xl px-2 py-2 transition-all ${
                           active || complete ? "bg-background text-primary shadow-sm" : "text-muted-foreground"
@@ -846,11 +571,17 @@ export default function Auth() {
                 const upiShowError = trimmedUpi.length > 0 && !upiValid;
                 return (
                 <div className="space-y-5">
-                  <div className="space-y-1 px-1">
-                    <p className="text-xs font-semibold text-primary">{displayText("Step 2")}</p>
-                    <h2 className="text-2xl font-bold">{displayText("UPI Details")}</h2>
+                  <div className="space-y-1">
+                    <h2 className="text-xl font-bold">{displayText("Bank Details")}</h2>
+                    <p className="text-sm text-muted-foreground">{displayText("Bank account required for bookings")}</p>
                   </div>
-
+                  <div className="space-y-4">
+                    <div className="space-y-2"><Label htmlFor="signup-acct-name">{displayText("Account Holder Name")}</Label><Input id="signup-acct-name" value={signUpAccountHolderName} onChange={e => setSignUpAccountHolderName(e.target.value)} autoComplete="off" /></div>
+                    <div className="space-y-2"><Label htmlFor="signup-acct-no">{displayText("Account Number")}</Label><Input id="signup-acct-no" inputMode="numeric" maxLength={18} value={signUpBankAccountNumber} onChange={e => setSignUpBankAccountNumber(e.target.value.replace(/\D/g, ""))} autoComplete="off" /></div>
+                    <div className="space-y-2"><Label htmlFor="signup-acct-no-confirm">{displayText("Confirm Account Number")}</Label><Input id="signup-acct-no-confirm" inputMode="numeric" maxLength={18} value={signUpConfirmAccountNumber} onChange={e => setSignUpConfirmAccountNumber(e.target.value.replace(/\D/g, ""))} autoComplete="off" /></div>
+                    <div className="space-y-2"><Label htmlFor="signup-ifsc">IFSC</Label><Input id="signup-ifsc" maxLength={11} value={signUpIfscCode} onChange={e => setSignUpIfscCode(e.target.value.toUpperCase())} autoComplete="off" /></div>
+                  </div>
+                  {collectUpi && <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-3" role="group" aria-label={displayText("UPI Details")}>
                     {(['qr', 'manual'] as const).map(mode => (
                       <Button
@@ -921,98 +652,8 @@ export default function Auth() {
                   )}
                   <input ref={upiQrInputRef} type="file" accept="image/*" onChange={handleUpiQrSelect} aria-label={displayText("Upload QR code")} className="hidden" />
 
-                  {/* Bank fallback (collapsed) */}
-                  {bankPayoutEnabled && (
-                    <div className="rounded-2xl border bg-card">
-                      {!showBankFallback ? (
-                        <button
-                          type="button"
-                          onClick={() => setShowBankFallback(true)}
-                          className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                              <Landmark className="h-3 w-3" />
-                            </div>
-                            <p className="text-xs font-medium">
-                              {displayText("Can't receive UPI?")} <span className="text-muted-foreground">{displayText("Add bank account")}</span>
-                            </p>
-                          </div>
-                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                        </button>
-
-                      ) : (
-                        <div className="space-y-4 p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-bold">{displayText("Bank Account (Optional)")}</p>
-                              <p className="text-[11px] text-muted-foreground">{displayText("Used only if UPI payouts are unavailable.")}</p>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 rounded-full"
-                              onClick={() => setShowBankFallback(false)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="signup-acct-name" className="text-sm">{displayText("Account Holder Name")}</Label>
-                            <Input id="signup-acct-name" type="text" placeholder={displayText("Name as on bank account")} value={signUpAccountHolderName} onChange={e => setSignUpAccountHolderName(e.target.value)} disabled={loading} className="h-12 rounded-2xl text-base" />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="signup-acct-no" className="text-sm">{displayText("Account Number")}</Label>
-                            <Input id="signup-acct-no" inputMode="numeric" placeholder={displayText("9 to 18 digits")} value={signUpBankAccountNumber} onChange={e => setSignUpBankAccountNumber(e.target.value.replace(/\D/g, ""))} maxLength={18} disabled={loading} className="h-12 rounded-2xl text-base" />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="signup-acct-no-confirm" className="text-sm">{displayText("Confirm Account Number")}</Label>
-                            <Input id="signup-acct-no-confirm" inputMode="numeric" placeholder={displayText("Re-enter account number")} value={signUpConfirmAccountNumber} onChange={e => setSignUpConfirmAccountNumber(e.target.value.replace(/\D/g, ""))} maxLength={18} disabled={loading} className="h-12 rounded-2xl text-base" />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="signup-ifsc" className="text-sm">IFSC Code</Label>
-                            <Input id="signup-ifsc" type="text" placeholder="e.g., HDFC0001234" value={signUpIfscCode} onChange={e => setSignUpIfscCode(e.target.value.toUpperCase())} maxLength={11} disabled={loading} className="h-12 rounded-2xl text-base uppercase" />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label className="text-sm">{displayText("Passbook / Cancelled Cheque (optional)")}</Label>
-                            {signUpPassbookFile ? (
-                              <div className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3">
-                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted">
-                                  <FileText className="h-5 w-5 text-muted-foreground" />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-sm font-medium">{signUpPassbookFile.name}</p>
-                                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                                    <Check className="h-3 w-3" /> {extractingPassbook ? displayText("Reading details...") : displayText("Details auto-filled — verify above")}
-                                  </p>
-                                </div>
-                                <Button type="button" variant="ghost" size="icon" onClick={() => {
-                                  setSignUpPassbookFile(null);
-                                  if (passbookInputRef.current) passbookInputRef.current.value = "";
-                                }} disabled={loading || extractingPassbook} className="h-9 w-9 rounded-full">
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <button type="button" onClick={() => passbookInputRef.current?.click()} disabled={loading || extractingPassbook} className="flex w-full flex-col items-center gap-1 rounded-2xl border-2 border-dashed border-border bg-background p-4 text-center transition-colors hover:bg-muted/50 disabled:opacity-50">
-                                <Upload className="h-5 w-5 text-muted-foreground" />
-                                <span className="text-sm font-semibold">{displayText("Upload passbook or cheque")}</span>
-                                <span className="text-[11px] text-muted-foreground">{displayText("Auto-fills bank details")}</span>
-                              </button>
-                            )}
-                            <input ref={passbookInputRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={handlePassbookSelect} className="hidden" />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
+                  </div>}
+                  <p role="status" className="text-sm text-muted-foreground">{displayText(BANK_SERVICE_UNAVAILABLE)}</p>
                   {/* Actions */}
                   <div className="grid grid-cols-[auto_1fr] gap-3 pt-1">
                     <Button type="button" variant="outline" onClick={() => setSignUpStep(1)} className="h-14 rounded-2xl px-5">
@@ -1021,7 +662,7 @@ export default function Auth() {
                     <Button
                       type="button"
                       onClick={goToSignupStepThree}
-                      disabled={extractingPassbook || !upiValid}
+                      disabled={loading}
                       className="h-14 rounded-2xl text-base font-semibold"
                     >
                       {displayText("Continue")}
@@ -1057,7 +698,7 @@ export default function Auth() {
                     <Button type="button" variant="outline" onClick={() => setSignUpStep(2)} className="h-12 rounded-2xl">
                       <ChevronLeft className="mr-1 h-4 w-4" /> {displayText("Back")}
                     </Button>
-                    <Button onClick={handleSignUpSendOtp} disabled={loading || extractingPassbook || !signUpFullName || !signUpPhone || !signUpCommunity || signUpServices.length === 0} className="h-12 rounded-2xl font-semibold">
+                    <Button onClick={handleSignUpSendOtp} disabled={loading || !SECURE_BANK_ONBOARDING_ENABLED || !canContinueSignup} className="h-12 rounded-2xl font-semibold">
                       {loading ? t('auth.sending') : extractingPassbook ? displayText("Reading image...") : t('auth.sendOtp')}
                     </Button>
                   </div>

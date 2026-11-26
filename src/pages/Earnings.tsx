@@ -15,6 +15,8 @@ import { PayoutStatusBadge } from "@/components/payouts/PayoutStatusBadge";
 import { PayoutLoadError } from "@/components/payouts/PayoutLoadError";
 import { HybridPayoutSection } from "@/components/payouts/hybrid/HybridPayoutSection";
 import { HYBRID_PAYOUT_UI_ENABLED } from "@/lib/hybridPayout";
+import { PayoutHistorySection } from "@/components/payouts/hybrid/PayoutHistorySection";
+import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 
 const HISTORY_PAGE = 20;
 
@@ -47,6 +49,7 @@ export default function Earnings() {
   useWorkerLanguage();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { worker } = useWorkerProfile(user?.id);
   const [workerId, setWorkerId] = useState<string | null>(null);
   const [workerUpi, setWorkerUpi] = useState<string | null>(null);
   const [workerResolved, setWorkerResolved] = useState(false);
@@ -134,20 +137,21 @@ export default function Earnings() {
       <main className="max-w-2xl mx-auto p-4 space-y-4">
         {error && <PayoutLoadError onRetry={refresh} hasData={payouts.length > 0} />}
 
-        {!hasUpi && (
+        {worker && worker.payout_ready !== true && (
           <Card className="border-2 border-warning/40 bg-warning/10">
             <CardContent className="p-3 flex items-center gap-3">
               <AlertCircle className="w-5 h-5 text-warning flex-shrink-0" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">{displayText("UPI not set up")}</p>
-                <p className="text-xs text-muted-foreground">{displayText("Add your UPI ID so payouts can be sent to you")}</p>
+                <p className="text-sm font-medium text-foreground">{displayText("Bank account required for bookings")}</p>
+                <p className="text-xs text-muted-foreground">{displayText("Bank details are verified by Didi Now before bookings")}</p>
               </div>
-              <Button size="sm" variant="outline" onClick={() => navigate("/profile")}>{displayText("Add UPI")}</Button>
+              <Button size="sm" variant="outline" onClick={() => navigate("/account-details")}>{displayText("Bank Details")}</Button>
             </CardContent>
           </Card>
         )}
 
         {HYBRID_PAYOUT_UI_ENABLED && workerId && <HybridPayoutSection />}
+        {user && workerId && <PayoutHistorySection key={user.id} accountId={user.id} />}
 
         <div className="grid grid-cols-3 gap-3">
           <SummaryCard label={displayText("Today")} amount={totals.today} icon={IndianRupee} />
@@ -184,7 +188,7 @@ export default function Earnings() {
           ) : (
             <div className="space-y-3">
               {history.slice(0, visible).map((p) => (
-                <PayoutRow key={p.id} p={p} justPaid={recentlyPaidIds.has(p.id)} onFixUpi={() => navigate("/profile")} />
+                <PayoutRow key={p.id} p={p} justPaid={recentlyPaidIds.has(p.id)} onFixUpi={() => navigate("/account-details")} />
               ))}
               {history.length > visible && (
                 <Button variant="outline" className="w-full" onClick={() => setVisible((v) => v + HISTORY_PAGE)}>
@@ -232,7 +236,7 @@ function PayoutRow({ p, justPaid, onFixUpi }: { p: HistoryRow; justPaid: boolean
         {isFailed && p.failure_reason && <p className="text-xs text-destructive">{displayText("Reason:")} {p.failure_reason}</p>}
         {isFailed && (
           <div className="flex gap-2 pt-1">
-            <Button size="sm" variant="outline" className="text-xs h-7" onClick={onFixUpi}>{displayText("Update UPI")}</Button>
+            <Button size="sm" variant="outline" className="text-xs h-7" onClick={onFixUpi}>{displayText("Check bank details")}</Button>
           </div>
         )}
       </CardContent>

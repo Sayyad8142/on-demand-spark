@@ -1,372 +1,52 @@
-import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
+import { displayText, useWorkerLanguage } from "@/i18n/display";
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { useWorkerProfile } from "@/hooks/useWorkerProfile";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, Landmark, CreditCard, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Landmark } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { toast as sonnerToast } from "sonner";
-import PassbookUpload from "@/components/PassbookUpload";
-import { extractBankDetailsFromPassbook } from "@/lib/bankDetailsExtraction";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { WORKER_PAYOUT_DETAIL_COLUMNS, type WorkerPayoutDetails } from "@/lib/workerProfileColumns";
-
-const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
-const UPI_REGEX = /^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/;
-
-const hasValidBankDetails = (name: string, accountNumber: string, ifsc: string) => (
-  name.trim().length >= 2
-  && /^\d{9,18}$/.test(accountNumber.trim())
-  && IFSC_REGEX.test(ifsc.trim().toUpperCase())
-);
+import { BANK_SERVICE_UNAVAILABLE, SECURE_BANK_ONBOARDING_ENABLED, readCollectWorkerUpi, submitSecureBankDetails, validateBankInput } from "@/lib/bankOnboarding";
 
 export default function AccountDetails() {
   useWorkerLanguage();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const fromSignup = searchParams.get("from") === "signup";
-  const { user } = useAuth();
-  const { worker, loading: profileLoading, updateWorker } = useWorkerProfile(user?.id);
-  // Bank/UPI fields load only on this screen, for the worker's own row.
-  const { data: payoutDetails = null, isLoading: payoutLoading } = useQuery({
-    queryKey: ["worker-payout-details", worker?.id],
-    enabled: !!worker?.id,
-    staleTime: 0,
-    gcTime: 0,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("workers")
-        .select(WORKER_PAYOUT_DETAIL_COLUMNS)
-        .eq("id", worker!.id)
-        .maybeSingle();
-      if (error) throw error;
-      return data as unknown as WorkerPayoutDetails | null;
-    },
-  });
-  const workerLoading = profileLoading || (!!worker?.id && payoutLoading);
   const { toast } = useToast();
-
-  const [accountHolderName, setAccountHolderName] = useState("");
-  const [bankAccountNumber, setBankAccountNumber] = useState("");
-  const [confirmAccountNumber, setConfirmAccountNumber] = useState("");
-  const [ifscCode, setIfscCode] = useState("");
-  const [bankName, setBankName] = useState("");
-  const [upiId, setUpiId] = useState("");
-  const [passbookUrl, setPassbookUrl] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [extracting, setExtracting] = useState(false);
-
+  const [holder, setHolder] = useState("");
+  const [account, setAccount] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [ifsc, setIfsc] = useState("");
+  const [upi, setUpi] = useState("");
+  const [collectUpi, setCollectUpi] = useState(false);
   useEffect(() => {
-    if (payoutDetails) {
-      const w = payoutDetails;
-      setAccountHolderName(w.account_holder_name || "");
-      setBankAccountNumber(w.bank_account_number || "");
-      setConfirmAccountNumber(w.bank_account_number || "");
-      setIfscCode(w.ifsc_code || "");
-      setBankName(w.bank_name || "");
-      setUpiId(w.upi_id || "");
-      setPassbookUrl(w.passbook_url || null);
-    }
-  }, [payoutDetails]);
-
-  const validate = (): string | null => {
-    // UPI is required
-    if (!upiId.trim()) return displayText("UPI ID is required for payouts");
-    if (!UPI_REGEX.test(upiId.trim()))
-      return displayText("Invalid UPI ID format (e.g., name@bank)");
-
-    // Bank details are optional. Only validate if any bank field was filled.
-    const anyBankFieldFilled = !!(
-      accountHolderName.trim()
-      || bankAccountNumber.trim()
-      || confirmAccountNumber.trim()
-      || ifscCode.trim()
-      || bankName.trim()
-    );
-
-    if (!anyBankFieldFilled) return null;
-
-    if (!accountHolderName.trim()) return displayText("Account holder name is required when bank details are provided");
-    if (accountHolderName.trim().length < 2) return displayText("Account holder name is too short");
-
-    if (!bankAccountNumber.trim()) return displayText("Bank account number is required when bank details are provided");
-    if (!/^\d{9,18}$/.test(bankAccountNumber.trim()))
-      return displayText("Account number must be 9–18 digits");
-
-    if (bankAccountNumber.trim() !== confirmAccountNumber.trim())
-      return displayText("Account numbers do not match");
-
-    if (!ifscCode.trim()) return displayText("IFSC code is required when bank details are provided");
-    if (!IFSC_REGEX.test(ifscCode.trim().toUpperCase()))
-      return displayText("Invalid IFSC code (e.g., HDFC0001234)");
-
-    return null;
+    let cancelled = false;
+    void readCollectWorkerUpi().then(value => { if (!cancelled) setCollectUpi(value); });
+    return () => { cancelled = true; };
+  }, []);
+  const save = async () => {
+    const error = validateBankInput({ holder, account, confirmation, ifsc });
+    if (error) { toast({ title: displayText("Check your details"), description: displayText(error), variant: "destructive" }); return; }
+    try { await submitSecureBankDetails(); }
+    catch { toast({ title: displayText(BANK_SERVICE_UNAVAILABLE), variant: "destructive" }); }
   };
-
-  const handleSave = async () => {
-    const err = validate();
-    if (err) {
-      toast({ title: displayText("Check your details"), description: err, variant: "destructive" });
-      return;
-    }
-
-    try {
-      setSaving(true);
-
-      const ifsc = ifscCode.trim().toUpperCase();
-      const acct = bankAccountNumber.trim();
-      const bankFilled = hasValidBankDetails(accountHolderName, acct, ifsc);
-      const source = passbookUrl ? "passbook" : "manual";
-
-      // payout_ready is now driven by the DB trigger (UPI OR valid bank details).
-      // We still send our best-known value for safety.
-      await updateWorker({
-        account_holder_name: accountHolderName.trim() || null,
-        bank_account_number: acct || null,
-        ifsc_code: ifsc || null,
-        bank_name: bankName.trim() || null,
-        upi_id: upiId.trim(),
-        passbook_url: passbookUrl,
-        bank_details_source: source,
-        payout_ready: true,
-      } as any);
-
-      sonnerToast.success(displayText("Payout details saved"));
-
-      if (fromSignup) {
-        navigate("/availability", { replace: true });
-      }
-    } catch (err: any) {
-      toast({
-        title: displayText("Save failed"),
-        description: err?.message || "Could not save payout details",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handlePassbookUploaded = async (path: string) => {
-    try {
-      setExtracting(true);
-      const details = await extractBankDetailsFromPassbook(path, worker?.id);
-      if (!details) return;
-
-      if (details.account_holder_name) setAccountHolderName(details.account_holder_name);
-      if (details.bank_account_number) {
-        setBankAccountNumber(details.bank_account_number);
-        setConfirmAccountNumber(details.bank_account_number);
-      }
-      if (details.ifsc_code) setIfscCode(details.ifsc_code.toUpperCase());
-      if (details.bank_name) setBankName(details.bank_name);
-
-      sonnerToast.success("Bank details filled from image");
-    } catch (err: any) {
-      toast({
-        title: displayText("Could not read image"),
-        description: err?.message || "Please enter the bank details manually",
-        variant: "destructive",
-      });
-    } finally {
-      setExtracting(false);
-    }
-  };
-
-  if (workerLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background pb-24">
-      <header className="bg-card border-b sticky top-0 z-10">
+      <header className="bg-card border-b">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
-          {!fromSignup && (
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          )}
-          <div>
-            <h1 className="text-xl font-semibold">{displayText("UPI Details")}</h1>
-            <p className="text-xs text-muted-foreground">
-              {displayText("Enter UPI ID for payouts. Bank details are optional.")}
-            </p>
-          </div>
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label={displayText("Back")}><ArrowLeft className="h-5 w-5" /></Button>
+          <h1 className="text-xl font-semibold">{displayText("Bank Details")}</h1>
         </div>
       </header>
-
-      <main className="max-w-2xl mx-auto px-4 py-4 space-y-4">
-        {fromSignup && (
-          <Card className="border-primary/30 bg-primary/5">
-            <CardContent className="py-3">
-              <p className="text-sm">
-                <strong>{displayText("One last step!")}</strong> {displayText("Enter your UPI ID so we can send your earnings. Bank details are optional and can be added later.")}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* UPI - REQUIRED */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <CreditCard className="w-5 h-5" />
-              UPI ID
-              <span className="ml-auto text-xs font-normal text-destructive">
-                {displayText("Required")}
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Label htmlFor="upi">UPI ID *</Label>
-            <Input
-              id="upi"
-              value={upiId}
-              onChange={(e) => setUpiId(e.target.value)}
-              placeholder="e.g., name@paytm"
-              disabled={saving}
-              autoCapitalize="none"
-              autoCorrect="off"
-            />
-            <p className="text-xs text-muted-foreground">
-              {displayText("Your earnings will be sent to this UPI ID.")}
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Bank Details - OPTIONAL */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Landmark className="w-5 h-5" />
-              {displayText("Bank Details")}
-              <span className="ml-auto text-xs font-normal text-muted-foreground">
-                {displayText("Optional")}
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="acct-name">{displayText("Account Holder Name")}</Label>
-              <Input
-                id="acct-name"
-                value={accountHolderName}
-                onChange={(e) => setAccountHolderName(e.target.value)}
-                placeholder={displayText("Name as on bank account")}
-                disabled={saving}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="acct-no">{displayText("Bank Account Number")}</Label>
-              <Input
-                id="acct-no"
-                inputMode="numeric"
-                value={bankAccountNumber}
-                onChange={(e) =>
-                  setBankAccountNumber(e.target.value.replace(/\D/g, ""))
-                }
-                placeholder={displayText("9 to 18 digits")}
-                maxLength={18}
-                disabled={saving}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="acct-no-confirm">{displayText("Confirm Account Number")}</Label>
-              <Input
-                id="acct-no-confirm"
-                inputMode="numeric"
-                value={confirmAccountNumber}
-                onChange={(e) =>
-                  setConfirmAccountNumber(e.target.value.replace(/\D/g, ""))
-                }
-                placeholder={displayText("Re-enter account number")}
-                maxLength={18}
-                disabled={saving}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="ifsc">IFSC Code</Label>
-              <Input
-                id="ifsc"
-                value={ifscCode}
-                onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
-                placeholder="e.g., HDFC0001234"
-                maxLength={11}
-                disabled={saving}
-                className="uppercase"
-              />
-              <p className="text-xs text-muted-foreground">
-                {displayText("11 characters. Format: 4 letters + 0 + 6 alphanumeric.")}
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="bank-name">{displayText("Bank Name")}</Label>
-              <Input
-                id="bank-name"
-                value={bankName}
-                onChange={(e) => setBankName(e.target.value)}
-                placeholder="e.g., HDFC Bank"
-                disabled={saving}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Passbook - OPTIONAL */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ShieldCheck className="w-5 h-5" />
-              {displayText("Passbook Photo")}
-              <span className="ml-auto text-xs font-normal text-muted-foreground">
-                {displayText("Optional")}
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <PassbookUpload
-              workerId={worker?.id}
-              currentUrl={passbookUrl}
-              onUrlChange={setPassbookUrl}
-              onUploaded={handlePassbookUploaded}
-            />
-            <p className="text-xs text-muted-foreground mt-2">
-              {extracting
-                ? displayText("Reading bank details from the uploaded image...")
-                : displayText("Upload a clear photo of your bank passbook or cancelled cheque. We'll fill the fields when details can be read.")}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full h-12 text-base font-semibold"
-        >
-          {saving ? (
-            <>
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              {displayText("Saving...")}
-            </>
-          ) : fromSignup ? (
-            "Save & Continue"
-          ) : (
-            "Save Details"
-          )}
-        </Button>
+      <main className="max-w-2xl mx-auto px-4 py-5 space-y-5">
+        <div className="flex items-start gap-3"><Landmark className="h-6 w-6 shrink-0 text-primary" /><div><h2 className="font-semibold">{displayText("Bank account required for bookings")}</h2><p className="text-sm text-muted-foreground">{displayText("Bank details are verified by Didi Now before bookings")}</p></div></div>
+        <div className="space-y-2"><Label htmlFor="acct-name">{displayText("Account Holder Name")}</Label><Input id="acct-name" value={holder} onChange={e => setHolder(e.target.value)} autoComplete="off" /></div>
+        <div className="space-y-2"><Label htmlFor="acct-no">{displayText("Bank Account Number")}</Label><Input id="acct-no" inputMode="numeric" maxLength={18} value={account} onChange={e => setAccount(e.target.value.replace(/\D/g, ""))} autoComplete="off" /></div>
+        <div className="space-y-2"><Label htmlFor="acct-no-confirm">{displayText("Confirm Account Number")}</Label><Input id="acct-no-confirm" inputMode="numeric" maxLength={18} value={confirmation} onChange={e => setConfirmation(e.target.value.replace(/\D/g, ""))} autoComplete="off" /></div>
+        <div className="space-y-2"><Label htmlFor="ifsc">IFSC</Label><Input id="ifsc" maxLength={11} value={ifsc} onChange={e => setIfsc(e.target.value.toUpperCase())} autoComplete="off" /></div>
+        {collectUpi && <div className="space-y-2"><Label htmlFor="upi">UPI ID · {displayText("Optional")}</Label><Input id="upi" value={upi} onChange={e => setUpi(e.target.value)} autoCapitalize="none" /></div>}
+        <p role="status" className="text-sm text-muted-foreground">{displayText(BANK_SERVICE_UNAVAILABLE)}</p>
+        <Button className="w-full h-12" disabled={!SECURE_BANK_ONBOARDING_ENABLED} onClick={save}>{displayText("Save Details")}</Button>
+        <Button variant="outline" className="w-full" asChild><a href="tel:8008180018">{displayText("Call manager")}</a></Button>
       </main>
     </div>
   );

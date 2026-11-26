@@ -88,8 +88,12 @@ describe("hybrid payout placeholders", () => {
   });
   it("never shows more settled or allocated than the total", () => {
     expect(normalizeInstantProgress({ slotsTotal: 10, slotsAllocated: 12, slotsSettled: 15 })).toEqual({ slotsTotal: 10, slotsAllocated: 10, slotsSettled: 10 });
-    expect(instantSlotsExhausted({ slotsTotal: 10, slotsAllocated: 10, slotsSettled: 3 })).toBe(true);
+    expect(instantSlotsExhausted({ slotsTotal: 10, slotsAllocated: 10, slotsSettled: 3 })).toBe(false);
     expect(instantSlotsExhausted({ slotsTotal: 10, slotsAllocated: 3, slotsSettled: 3 })).toBe(false);
+  });
+  it("switches only after ten successfully paid IMPS transactions", () => {
+    expect(instantSlotsExhausted({ slotsTotal: 10, slotsAllocated: 10, slotsSettled: 9 })).toBe(false);
+    expect(instantSlotsExhausted({ slotsTotal: 10, slotsAllocated: 10, slotsSettled: 10 })).toBe(true);
   });
   it("flags a daily payout whose bookings don't add up", () => {
     const p = { id: "1", kind: "daily" as const, amount: 400, status: "paid", paidAt: null, reference: null, failureReason: null, bookings: [{ bookingId: "a", amount: 200 }, { bookingId: "b", amount: 150 }] };

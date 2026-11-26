@@ -36,33 +36,8 @@ async function fetchWorkerData(userId: string): Promise<Worker | null> {
     // Account linking (user_id) is server-only; the app never writes it.
   }
 
-  // Auto-create via RPC (one-time per userId)
-  if (!data && !error && ensuredForUser !== userId) {
-    ensuredForUser = userId;
-    console.log('🛠️ No worker row found; attempting to auto-create via ensure_worker_profile()');
-    const { data: ensured, error: ensureError } = await supabase.rpc('ensure_worker_profile');
-    if (!ensureError && isAccountRecoveryRequired(ensured)) {
-      throw new Error(displayText(ACCOUNT_RECOVERY_MESSAGE));
-    }
-    if (!ensureError) {
-      const retry = await supabase
-        .from('workers')
-        .select(WORKER_PROFILE_COLUMNS)
-        .eq('user_id', userId)
-        .maybeSingle();
-      data = retry.data;
-      error = retry.error;
-      if (!data && !error) {
-        const retryLegacy = await supabase
-          .from('workers')
-          .select(WORKER_PROFILE_COLUMNS)
-          .eq('id', userId)
-          .maybeSingle();
-        data = retryLegacy.data;
-        error = retryLegacy.error;
-      }
-    }
-  }
+  // A missing worker must go through fresh secure signup, never phone re-linking.
+  // Deleted-session cleanup is owned by useDeletedWorkerSession.
 
   if (error) throw error;
   const profile = (data ?? null) as unknown as Worker | null;
@@ -90,7 +65,7 @@ export function useWorkerProfile(userId: string | undefined) {
 
   const { data: worker = null, isLoading: loading } = useQuery({
     queryKey: ['worker-profile', userId],
-    queryFn: () => fetchWorkerData(userId!),
+    queryFn: () => userId ? fetchWorkerData(userId) : Promise.resolve(null),
     enabled: !!userId,
     staleTime: 2 * 60 * 1000, // Consider fresh for 2 minutes
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes

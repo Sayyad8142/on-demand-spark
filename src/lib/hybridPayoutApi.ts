@@ -198,16 +198,16 @@ export function contractStatusState(status: string, paidAt: string | null): Payo
 }
 
 export const summaryToInstantView = (s: PayoutSummary): InstantProgressView =>
-  ({ slotsTotal: s.instantSlots.limit, slotsAllocated: s.instantSlots.allocated, slotsSettled: s.instantSlots.settled });
+  ({ slotsTotal: s.instantSlots.limit, slotsAllocated: s.instantSlots.allocated, slotsSettled: s.instantSlots.settled, slotsRemaining: s.instantSlots.remaining });
 
 export const summaryToDailyView = (s: PayoutSummary): DailyScheduleView =>
-  ({ nextPayoutAt: s.nextSettlement?.cutoffAt ?? null, transfersActive: s.bankPayoutsActive });
+  ({ nextPayoutAt: s.nextSettlement?.cutoffAt ?? null, transfersActive: s.bankPayoutsActive, settlementAmount: s.nextSettlement?.estimatedAmountInr });
 
 export const isKnownPayoutType = (t: string): t is PayoutType => (PAYOUT_TYPES as string[]).includes(t);
 
 export function historyToConsolidated(h: PayoutHistoryItem, detail?: PayoutDetail | null): ConsolidatedPayoutView {
   return {
-    id: h.payoutId, kind: h.payoutType === "daily_batch" ? "daily" : "instant", amount: h.amountInr,
+    id: h.payoutId, kind: h.payoutType === "daily_batch" ? "daily" : h.payoutType === "instant" ? "instant" : h.payoutType === "manual" ? "manual" : "legacy", amount: h.amountInr,
     status: h.status, statusLabel: h.statusLabel, paidAt: h.paidAt, reference: h.reference,
     failureReason: detail?.failure?.reason ?? h.failureReason, bookingCount: h.bookingCount,
     bookings: detail ? detail.bookings.map((b) => ({ bookingId: b.bookingId, amount: b.earningInr })) : [],

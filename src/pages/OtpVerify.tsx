@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft, Phone, Shield, CheckCircle2 } from "lucide-react";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { extractBankDetailsFromPassbook } from "@/lib/bankDetailsExtraction";
+import { BANK_SERVICE_UNAVAILABLE } from "@/lib/bankOnboarding";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = window.Capacitor?.Plugins?.AuthBridge;
@@ -78,7 +78,7 @@ export default function OtpVerify() {
           phone: navState.phone,
           mode: navState.mode,
           signUpData: navState.signUpData
-            ? { ...navState.signUpData, qrData: null, passbookFile: null }
+            ? { ...navState.signUpData, qrData: null, passbookFile: null, bankDetails: null }
             : undefined,
         };
         sessionStorage.setItem(OTP_STATE_KEY, JSON.stringify(safe));
@@ -207,170 +207,9 @@ export default function OtpVerify() {
         // Sign In flow: the server alone links this login to a worker record.
         // Never re-point a worker record from the phone (account takeover risk).
       } else if (state.mode === 'signup' && state.signUpData) {
-        // Sign Up flow
-        const { fullName, upiId, community, services, qrData, bankDetails, passbookFile } = state.signUpData;
-        const hasValidBankDetails = !!(
-          bankDetails?.account_holder_name?.trim()
-          && /^\d{9,18}$/.test(bankDetails.bank_account_number || "")
-          && /^[A-Z]{4}0[A-Z0-9]{6}$/.test((bankDetails.ifsc_code || "").toUpperCase())
-        );
-
-        // Fetch the community ID
-        const { data: communityData, error: communityError } = await supabase
-          .from('communities')
-          .select('id')
-          .eq('value', community)
-          .single();
-
-        if (communityError) {
-          console.error('Error fetching community ID:', communityError);
-          throw new Error('Failed to fetch community information');
-        }
-
-        // Check if worker exists
-        // Identity check only: never load another login's profile fields.
-        // TODO(admin): replace with the confirmed phone-registration RPC.
-        const { data: phoneOwner } = await supabase
-          .from('workers')
-          .select('id, user_id')
-          .eq('phone', phone)
-          .maybeSingle();
-
-        if (phoneOwner && !signupMayUpdateExisting(phoneOwner, data.user.id)) {
-          // Phone already belongs to another login: recovery needs Didi Now support.
-          throw new Error(displayText(ACCOUNT_RECOVERY_MESSAGE));
-        }
-
-        // Only now (own row confirmed) read the fallback payout fields.
-        const existingWorker = phoneOwner
-          ? (await supabase
-              .from('workers')
-              .select('id, upi_id, upi_qr_url, upi_qr_payload, upi_qr_uploaded_at, passbook_url')
-              .eq('id', phoneOwner.id)
-              .maybeSingle()).data
-          : null;
-        if (phoneOwner && !existingWorker) throw new Error(displayText("Couldn't load your profile. Please try again."));
-
-        const validServices = services;
-        
-        // Prepare QR data fields
-        let upiQrUrl: string | null = null;
-        let upiQrPayload: string | null = null;
-        let upiQrUploadedAt: string | null = null;
-        let passbookPath: string | null = null;
-
-        // Upload QR if provided
-        if (qrData?.file) {
-          const filePath = `${data.user.id}/${Date.now()}.png`;
-
-          const { error: uploadError } = await supabase.storage
-            .from('worker-upi-qr')
-            .upload(filePath, qrData.file, {
-              cacheControl: '3600',
-              upsert: false,
-            });
-
-          if (uploadError) {
-            throw uploadError;
-          }
-
-          const { data: { publicUrl } } = supabase.storage
-            .from('worker-upi-qr')
-            .getPublicUrl(filePath);
-
-          upiQrUrl = publicUrl;
-          upiQrPayload = qrData.payload;
-          upiQrUploadedAt = new Date().toISOString();
-        }
-
-        if (passbookFile) {
-          const ext = passbookFile.type === "application/pdf" ? "pdf" : passbookFile.type.split("/")[1] || "jpg";
-          passbookPath = `${data.user.id}/passbook-${Date.now()}.${ext}`;
-          const { error: passbookUploadError } = await supabase.storage
-            .from('worker-passbook')
-            .upload(passbookPath, passbookFile, {
-              cacheControl: '3600',
-              upsert: true,
-              contentType: passbookFile.type,
-            });
-          if (passbookUploadError) throw passbookUploadError;
-        }
-
-        // Bank details captured during signup (optional)
-        const bankFieldsForInsert = bankDetails
-          ? {
-              account_holder_name: bankDetails.account_holder_name,
-              bank_account_number: bankDetails.bank_account_number,
-              ifsc_code: bankDetails.ifsc_code,
-              bank_name: bankDetails.bank_name,
-              bank_details_source: 'manual' as const,
-              passbook_url: passbookPath,
-              payout_ready: hasValidBankDetails,
-            }
-          : passbookPath
-            ? { passbook_url: passbookPath, bank_details_source: 'passbook' as const }
-            : {};
-
-        if (existingWorker) {
-          // Returning worker: update their own row only. id/user_id/phone are
-          // server-owned and never rewritten from the phone.
-          const { error: workerError } = await supabase.from('workers').update({
-            full_name: fullName.trim(),
-            upi_id: upiId?.trim() || existingWorker.upi_id,
-            upi_qr_url: upiQrUrl || existingWorker.upi_qr_url,
-            upi_qr_payload: upiQrPayload || existingWorker.upi_qr_payload,
-            upi_qr_uploaded_at: upiQrUploadedAt || existingWorker.upi_qr_uploaded_at,
-            service_types: validServices,
-            communities: [community],
-            selected_community_id: communityData.id,
-            is_active: true,
-            // Returning worker: keep their own Available ON/OFF and Busy state.
-            payout_ready: hasValidBankDetails,
-            // Only overwrite bank fields if newly provided during signup
-            ...(bankDetails
-              ? {
-                  account_holder_name: bankDetails.account_holder_name,
-                  bank_account_number: bankDetails.bank_account_number,
-                  ifsc_code: bankDetails.ifsc_code,
-                  bank_name: bankDetails.bank_name,
-                  bank_details_source: 'manual',
-                  passbook_url: passbookPath || existingWorker.passbook_url,
-                  payout_ready: hasValidBankDetails,
-                }
-              : passbookPath
-                ? { passbook_url: passbookPath, bank_details_source: 'passbook' }
-                : {}),
-          }).eq('id', existingWorker.id);
-          if (workerError) throw workerError;
-        } else {
-          const { error: workerError } = await supabase.from('workers').insert({
-            id: data.user.id,
-            user_id: data.user.id,
-            full_name: fullName.trim(),
-            phone,
-            upi_id: upiId?.trim() || null,
-            upi_qr_url: upiQrUrl,
-            upi_qr_payload: upiQrPayload,
-            upi_qr_uploaded_at: upiQrUploadedAt,
-            service_types: validServices,
-            communities: [community],
-            selected_community_id: communityData.id,
-            is_active: true,
-            is_available: false,
-            is_busy: false,
-            payout_ready: hasValidBankDetails,
-            ...bankFieldsForInsert,
-          });
-          if (workerError) throw workerError;
-        }
-
-        if (passbookPath && !bankDetails) {
-          try {
-            await extractBankDetailsFromPassbook(passbookPath, data.user.id);
-          } catch (extractError) {
-            console.warn('Passbook extraction after signup failed:', extractError);
-          }
-        }
+        // Secure registration has no deployed worker-facing Admin writer yet.
+        // Never insert/link a worker or mark bank readiness from this phone.
+        throw new Error(displayText(BANK_SERVICE_UNAVAILABLE));
       }
 
       // Save JWT to native storage
