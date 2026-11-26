@@ -28,8 +28,16 @@ describe("worker account linkage (app side)", () => {
     const src = read("pages/OtpVerify.tsx");
     expect(src).not.toMatch(/update\(\{\s*id:\s*data\.user\.id\s*\}\)/);
   });
-  it("profile self-link only when the row id is this login", () => {
-    expect(read("hooks/useWorkerProfile.ts")).toMatch(/!data\.user_id && data\.id === userId/);
+  it("app never self-links: no user_id write anywhere in the profile hook", () => {
+    const src = read("hooks/useWorkerProfile.ts");
+    expect(src).not.toMatch(/update\(\{\s*user_id/);
+    expect(src).not.toMatch(/user_id:\s*user\?\.id/);
+    expect(src).toMatch(/sanitizeWorkerUpdate\(updates\)/);
+  });
+  it("signup never upserts or rewrites id/user_id for a returning worker", () => {
+    const src = read("pages/OtpVerify.tsx");
+    expect(src).not.toMatch(/from\('workers'\)\.upsert/);
+    expect(src).not.toMatch(/\.select\('\*'\)\s*\.eq\('phone'/);
   });
   it("app never writes id/user_id/phone in plain updates", () => {
     const files = ["pages/Profile.tsx", "contexts/AuthContext.tsx", "lib/pushToken.ts", "components/UpiQrUpload.tsx", "hooks/useFCMTokenSync.ts"];

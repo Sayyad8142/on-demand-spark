@@ -228,16 +228,28 @@ export default function OtpVerify() {
         }
 
         // Check if worker exists
-        const { data: existingWorker } = await supabase
+        // Identity check only: never load another login's profile fields.
+        // TODO(admin): replace with the confirmed phone-registration RPC.
+        const { data: phoneOwner } = await supabase
           .from('workers')
-          .select('*')
+          .select('id, user_id')
           .eq('phone', phone)
           .maybeSingle();
 
-        if (existingWorker && !signupMayUpdateExisting(existingWorker, data.user.id)) {
+        if (phoneOwner && !signupMayUpdateExisting(phoneOwner, data.user.id)) {
           // Phone already belongs to another login: recovery needs Didi Now support.
           throw new Error(displayText(ACCOUNT_RECOVERY_MESSAGE));
         }
+
+        // Only now (own row confirmed) read the fallback payout fields.
+        const existingWorker = phoneOwner
+          ? (await supabase
+              .from('workers')
+              .select('id, upi_id, upi_qr_url, upi_qr_payload, upi_qr_uploaded_at, passbook_url')
+              .eq('id', phoneOwner.id)
+              .maybeSingle()).data
+          : null;
+        if (phoneOwner && !existingWorker) throw new Error(displayText("Couldn't load your profile. Please try again."));
 
         const validServices = services;
         
@@ -300,11 +312,10 @@ export default function OtpVerify() {
             : {};
 
         if (existingWorker) {
-          const { error: workerError } = await supabase.from('workers').upsert({
-            id: data.user.id,
-            user_id: data.user.id,
+          // Returning worker: update their own row only. id/user_id/phone are
+          // server-owned and never rewritten from the phone.
+          const { error: workerError } = await supabase.from('workers').update({
             full_name: fullName.trim(),
-            phone,
             upi_id: upiId?.trim() || existingWorker.upi_id,
             upi_qr_url: upiQrUrl || existingWorker.upi_qr_url,
             upi_qr_payload: upiQrPayload || existingWorker.upi_qr_payload,
@@ -329,7 +340,7 @@ export default function OtpVerify() {
               : passbookPath
                 ? { passbook_url: passbookPath, bank_details_source: 'passbook' }
                 : {}),
-          }, { onConflict: 'id' });
+          }).eq('id', existingWorker.id);
           if (workerError) throw workerError;
         } else {
           const { error: workerError } = await supabase.from('workers').insert({

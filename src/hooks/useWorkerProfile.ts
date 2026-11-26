@@ -5,8 +5,10 @@ import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
+import { WORKER_PROFILE_COLUMNS, sanitizeWorkerUpdate, type WorkerProfile } from "@/lib/workerProfileColumns";
 
-type Worker = Database["public"]["Tables"]["workers"]["Row"];
+type Worker = WorkerProfile;
+type WorkerUpdate = Partial<Database["public"]["Tables"]["workers"]["Update"]>;
 
 let ensuredForUser: string | null = null;
 
@@ -16,7 +18,7 @@ async function fetchWorkerData(userId: string): Promise<Worker | null> {
   // First, try by user_id
   let { data, error } = await supabase
     .from('workers')
-    .select('*')
+    .select(WORKER_PROFILE_COLUMNS)
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -25,23 +27,13 @@ async function fetchWorkerData(userId: string): Promise<Worker | null> {
     console.log('⚠️ No worker found by user_id, trying by id');
     const legacyResult = await supabase
       .from('workers')
-      .select('*')
+      .select(WORKER_PROFILE_COLUMNS)
       .eq('id', userId)
       .maybeSingle();
 
     data = legacyResult.data;
     error = legacyResult.error;
-
-    if (data && !data.user_id && data.id === userId) {
-      // Same login (id === uid) — only case the server allows self-linking.
-      await supabase.from('workers').update({ user_id: userId }).eq('id', data.id);
-      const { data: updatedData } = await supabase
-        .from('workers')
-        .select('*')
-        .eq('id', data.id)
-        .single();
-      data = updatedData;
-    }
+    // Account linking (user_id) is server-only; the app never writes it.
   }
 
   // Auto-create via RPC (one-time per userId)
@@ -55,7 +47,7 @@ async function fetchWorkerData(userId: string): Promise<Worker | null> {
     if (!ensureError) {
       const retry = await supabase
         .from('workers')
-        .select('*')
+        .select(WORKER_PROFILE_COLUMNS)
         .eq('user_id', userId)
         .maybeSingle();
       data = retry.data;
@@ -63,7 +55,7 @@ async function fetchWorkerData(userId: string): Promise<Worker | null> {
       if (!data && !error) {
         const retryLegacy = await supabase
           .from('workers')
-          .select('*')
+          .select(WORKER_PROFILE_COLUMNS)
           .eq('id', userId)
           .maybeSingle();
         data = retryLegacy.data;
@@ -73,14 +65,15 @@ async function fetchWorkerData(userId: string): Promise<Worker | null> {
   }
 
   if (error) throw error;
+  const profile = (data ?? null) as unknown as Worker | null;
 
-  if (data) {
-    console.log('✅ Worker fetched:', data.full_name, '| user_id:', data.user_id);
+  if (profile) {
+    console.log('✅ Worker fetched:', profile.full_name, '| user_id:', profile.user_id);
     // Heartbeat: update last_active_at
     supabase
       .from('workers')
       .update({ last_active_at: new Date().toISOString() })
-      .eq('id', data.id)
+      .eq('id', profile.id)
       .then(({ error: hbErr }) => {
         if (hbErr) console.warn('⚠️ Heartbeat update failed:', hbErr.message);
         else console.log('💓 Heartbeat: last_active_at updated');
@@ -89,7 +82,7 @@ async function fetchWorkerData(userId: string): Promise<Worker | null> {
     console.log('⚠️ No worker found for user:', userId);
   }
 
-  return data;
+  return profile;
 }
 
 export function useWorkerProfile(userId: string | undefined) {
@@ -120,12 +113,11 @@ export function useWorkerProfile(userId: string | undefined) {
     refetch();
   }, [userId, refetch]);
 
-  const updateWorker = useCallback(async (updates: Partial<Worker>) => {
+  const updateWorker = useCallback(async (updates: WorkerUpdate) => {
     if (!worker?.id) throw new Error('Worker profile not loaded');
-    const { data: { user } } = await supabase.auth.getUser();
+    // id/user_id are server-owned and are stripped from every update.
     const updatePayload = {
-      ...updates,
-      user_id: user?.id || worker.user_id,
+      ...sanitizeWorkerUpdate(updates),
       updated_at: new Date().toISOString()
     };
     const { error } = await supabase

@@ -12,6 +12,9 @@ import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import PassbookUpload from "@/components/PassbookUpload";
 import { extractBankDetailsFromPassbook } from "@/lib/bankDetailsExtraction";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { WORKER_PAYOUT_DETAIL_COLUMNS, type WorkerPayoutDetails } from "@/lib/workerProfileColumns";
 
 const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 const UPI_REGEX = /^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/;
@@ -28,7 +31,24 @@ export default function AccountDetails() {
   const [searchParams] = useSearchParams();
   const fromSignup = searchParams.get("from") === "signup";
   const { user } = useAuth();
-  const { worker, loading: workerLoading, updateWorker } = useWorkerProfile(user?.id);
+  const { worker, loading: profileLoading, updateWorker } = useWorkerProfile(user?.id);
+  // Bank/UPI fields load only on this screen, for the worker's own row.
+  const { data: payoutDetails = null, isLoading: payoutLoading } = useQuery({
+    queryKey: ["worker-payout-details", worker?.id],
+    enabled: !!worker?.id,
+    staleTime: 0,
+    gcTime: 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("workers")
+        .select(WORKER_PAYOUT_DETAIL_COLUMNS)
+        .eq("id", worker!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data as unknown as WorkerPayoutDetails | null;
+    },
+  });
+  const workerLoading = profileLoading || (!!worker?.id && payoutLoading);
   const { toast } = useToast();
 
   const [accountHolderName, setAccountHolderName] = useState("");
@@ -42,8 +62,8 @@ export default function AccountDetails() {
   const [extracting, setExtracting] = useState(false);
 
   useEffect(() => {
-    if (worker) {
-      const w = worker as any;
+    if (payoutDetails) {
+      const w = payoutDetails;
       setAccountHolderName(w.account_holder_name || "");
       setBankAccountNumber(w.bank_account_number || "");
       setConfirmAccountNumber(w.bank_account_number || "");
@@ -52,7 +72,7 @@ export default function AccountDetails() {
       setUpiId(w.upi_id || "");
       setPassbookUrl(w.passbook_url || null);
     }
-  }, [worker]);
+  }, [payoutDetails]);
 
   const validate = (): string | null => {
     // UPI is required

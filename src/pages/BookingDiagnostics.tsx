@@ -42,7 +42,8 @@ export default function BookingDiagnostics() {
     // Worker row
     const { data: worker } = await supabase
       .from("workers")
-      .select("*")
+      // Own-row diagnostics: explicit columns only (no bank/provider fields).
+      .select("id, full_name, phone, community, service_types, is_available, is_active, is_blocked, blocked_reason, is_busy, fcm_token, fcm_token_status, fcm_token_updated_at, fcm_last_send_at, fcm_last_fail_at, fcm_last_fail_reason, consecutive_delivery_failures, push_health_status, notification_health, push_block_reason, no_ack_count, stale_device, app_platform, app_version, build_number, device_manufacturer, last_acknowledged_booking_at, last_active_at, last_app_opened_at, last_booking_completed_at, last_heartbeat_at, last_notification_received_at, last_offer_at, last_seen_at, battery_optimization_disabled")
       .or(`user_id.eq.${user.id},id.eq.${user.id}`)
       .maybeSingle();
     setRawWorker(worker);

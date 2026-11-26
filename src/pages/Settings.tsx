@@ -368,7 +368,7 @@ export default function Settings() {
                 <div><strong>{displayText("Worker ID:")}</strong> {worker?.id?.slice(0, 8)}...</div>
                 <div><strong>{displayText("Community:")}</strong> {worker?.community || 'N/A'}</div>
                 <div><strong>{displayText("Services:")}</strong> {worker?.service_types?.map(serviceLabel).join(', ') || 'N/A'}</div>
-                <div><strong>FCM Token:</strong> {worker?.fcm_token ? displayText("✅ Set") : displayText("❌ Not set")}</div>
+                <div><strong>FCM Token:</strong> {worker?.fcm_token_status === 'active' ? displayText("✅ Set") : displayText("❌ Not set")}</div>
               </div>
 
               <Button 
