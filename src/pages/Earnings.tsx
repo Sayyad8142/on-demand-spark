@@ -17,6 +17,9 @@ import { HybridPayoutSection } from "@/components/payouts/hybrid/HybridPayoutSec
 import { HYBRID_PAYOUT_UI_ENABLED } from "@/lib/hybridPayout";
 import { PayoutHistorySection } from "@/components/payouts/hybrid/PayoutHistorySection";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
+import { usePayoutReadiness } from "@/hooks/usePayoutReadiness";
+import { PayoutReadinessNotice } from "@/components/payouts/PayoutReadinessNotice";
+import { PayoutProgrammeSummary } from "@/components/payouts/hybrid/PayoutProgrammeSummary";
 
 const HISTORY_PAGE = 20;
 
@@ -50,6 +53,7 @@ export default function Earnings() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { worker } = useWorkerProfile(user?.id);
+  const payoutReadiness = usePayoutReadiness(user?.id, (worker as any)?.payout_ready);
   const [workerId, setWorkerId] = useState<string | null>(null);
   const [workerUpi, setWorkerUpi] = useState<string | null>(null);
   const [workerResolved, setWorkerResolved] = useState(false);
@@ -137,19 +141,11 @@ export default function Earnings() {
       <main className="max-w-2xl mx-auto p-4 space-y-4">
         {error && <PayoutLoadError onRetry={refresh} hasData={payouts.length > 0} />}
 
-        {worker && worker.payout_ready !== true && (
-          <Card className="border-2 border-warning/40 bg-warning/10">
-            <CardContent className="p-3 flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-warning flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">{displayText("Bank account required for bookings")}</p>
-                <p className="text-xs text-muted-foreground">{displayText("Bank details are verified by Didi Now before bookings")}</p>
-              </div>
-              <Button size="sm" variant="outline" onClick={() => navigate("/account-details")}>{displayText("Bank Details")}</Button>
-            </CardContent>
-          </Card>
+        {user && workerId && payoutReadiness.readiness && !payoutReadiness.readiness.ready && (
+          <PayoutReadinessNotice readiness={payoutReadiness.readiness} onBankDetails={() => navigate("/account-details")} />
         )}
 
+        {user && workerId && <PayoutProgrammeSummary key={`s-${user.id}`} accountId={user.id} />}
         {HYBRID_PAYOUT_UI_ENABLED && workerId && <HybridPayoutSection />}
         {user && workerId && <PayoutHistorySection key={user.id} accountId={user.id} />}
 

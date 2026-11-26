@@ -19,7 +19,7 @@ import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import maidServiceIcon from "@/assets/service-maid.png";
 import bathroomServiceIcon from "@/assets/service-bathroom.png";
 import { CommunityPicker } from "@/components/CommunityPicker";
-import { BANK_SERVICE_UNAVAILABLE, SECURE_BANK_ONBOARDING_ENABLED, readCollectWorkerUpi, validateBankInput } from "@/lib/bankOnboarding";
+import { SECURE_BANK_ONBOARDING_ENABLED, holdSignupBank, readCollectWorkerUpi, validateBankInput } from "@/lib/bankOnboarding";
 
 
 // @ts-ignore - Capacitor bridge
@@ -243,7 +243,7 @@ export default function Auth() {
   const hasPayoutDetails = !!(signUpAccountHolderName.trim() || signUpBankAccountNumber.trim() || signUpConfirmAccountNumber.trim() || signUpIfscCode.trim() || signUpBankName.trim() || signUpPassbookFile || signUpUpiId.trim());
   const canContinueSignup = !!signUpFullName && !!signUpPhone && !!signUpCommunity && signUpServices.length > 0;
 
-  const signupBankError = () => validateBankInput({ holder: signUpAccountHolderName, account: signUpBankAccountNumber, confirmation: signUpConfirmAccountNumber, ifsc: signUpIfscCode });
+  const signupBankError = () => validateBankInput({ holder: signUpAccountHolderName, account: signUpBankAccountNumber, confirmation: signUpConfirmAccountNumber, ifsc: signUpIfscCode, bankName: signUpBankName });
   const goToSignupStepThree = () => {
     const error = signupBankError();
     if (error) { toast({ title: displayText("Check your details"), description: displayText(error), variant: "destructive" }); return; }
@@ -390,9 +390,39 @@ export default function Auth() {
       toast({ title: displayText("Please fill all required fields"), variant: "destructive" }); return;
     }
     if (signupBankError()) { goToSignupStepThree(); return; }
-    // Do not verify OTP and then write bank details directly into workers.
-    // The approved secure registration contract is still an Admin dependency.
-    toast({ title: displayText(BANK_SERVICE_UNAVAILABLE), variant: "destructive" });
+    try {
+      setLoading(true);
+      const phone = normalizePhone(signUpPhone);
+      const { data: phoneExists } = await supabase.rpc('worker_phone_exists', { _phone: phone });
+      if (phoneExists === true) {
+        toast({ title: displayText("This number is already registered. Please sign in."), variant: "destructive" });
+        setSignInPhone(signUpPhone); setActiveTab("signin"); return;
+      }
+      const validSignupServices = signUpServices.filter(service => SERVICES.some(item => item.value === service));
+      const { error } = await supabase.auth.signInWithOtp({ phone });
+      if (error) throw error;
+      // Bank details stay in memory only; register_worker_v2 runs after OTP.
+      holdSignupBank({ holder: signUpAccountHolderName, account: signUpBankAccountNumber, confirmation: signUpConfirmAccountNumber, ifsc: signUpIfscCode, bankName: signUpBankName });
+      localStorage.removeItem(AUTH_DRAFT_KEY);
+      navigate("/otp-verify", {
+        state: {
+          phone: signUpPhone,
+          mode: 'signup',
+          signUpData: {
+            fullName: signUpFullName.trim(),
+            upiId: collectUpi ? signUpUpiId.trim() : "",
+            community: signUpCommunity,
+            services: validSignupServices,
+            cuisineTags: [],
+          }
+        }
+      });
+      toast({ title: displayText("OTP sent!"), description: displayText("Check your phone for the verification code") });
+    } catch (error: any) {
+      toast({ title: displayText("Error"), description: displayText(error?.message ?? "Error"), variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
   // OTP verification is now handled in OtpVerify page
   return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 p-4">
@@ -580,6 +610,7 @@ export default function Auth() {
                     <div className="space-y-2"><Label htmlFor="signup-acct-no">{displayText("Account Number")}</Label><Input id="signup-acct-no" inputMode="numeric" maxLength={18} value={signUpBankAccountNumber} onChange={e => setSignUpBankAccountNumber(e.target.value.replace(/\D/g, ""))} autoComplete="off" /></div>
                     <div className="space-y-2"><Label htmlFor="signup-acct-no-confirm">{displayText("Confirm Account Number")}</Label><Input id="signup-acct-no-confirm" inputMode="numeric" maxLength={18} value={signUpConfirmAccountNumber} onChange={e => setSignUpConfirmAccountNumber(e.target.value.replace(/\D/g, ""))} autoComplete="off" /></div>
                     <div className="space-y-2"><Label htmlFor="signup-ifsc">IFSC</Label><Input id="signup-ifsc" maxLength={11} value={signUpIfscCode} onChange={e => setSignUpIfscCode(e.target.value.toUpperCase())} autoComplete="off" /></div>
+                    <div className="space-y-2"><Label htmlFor="signup-bank-name">{displayText("Bank Name")}</Label><Input id="signup-bank-name" maxLength={80} value={signUpBankName} onChange={e => setSignUpBankName(e.target.value)} autoComplete="off" /></div>
                   </div>
                   {collectUpi && <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-3" role="group" aria-label={displayText("UPI Details")}>
@@ -653,7 +684,6 @@ export default function Auth() {
                   <input ref={upiQrInputRef} type="file" accept="image/*" onChange={handleUpiQrSelect} aria-label={displayText("Upload QR code")} className="hidden" />
 
                   </div>}
-                  <p role="status" className="text-sm text-muted-foreground">{displayText(BANK_SERVICE_UNAVAILABLE)}</p>
                   {/* Actions */}
                   <div className="grid grid-cols-[auto_1fr] gap-3 pt-1">
                     <Button type="button" variant="outline" onClick={() => setSignUpStep(1)} className="h-14 rounded-2xl px-5">
@@ -691,7 +721,7 @@ export default function Auth() {
                     <div className="flex justify-between gap-3"><span className="text-muted-foreground">{displayText("Phone")}</span><span className="text-right font-semibold">{signUpPhone || displayText("Not entered")}</span></div>
                     <div className="flex justify-between gap-3"><span className="text-muted-foreground">{displayText("Community")}</span><span className="text-right font-semibold">{selectedCommunityName}</span></div>
                     <div className="flex justify-between gap-3"><span className="text-muted-foreground">{displayText("Service")}</span><span className="text-right font-semibold">{selectedServiceLabels.length ? selectedServiceLabels.join(", ") : displayText("Not selected")}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">{displayText("Payout")}</span><span className="text-right font-semibold">{hasPayoutDetails ? displayText("Added") : displayText("Skipped for now")}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">{displayText("Payout")}</span><span className="text-right font-semibold">{signUpBankAccountNumber.length >= 4 ? `${displayText("Bank account")} ••••${signUpBankAccountNumber.slice(-4)}` : displayText("Not entered")}</span></div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">

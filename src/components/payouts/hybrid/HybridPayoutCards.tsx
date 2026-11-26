@@ -1,7 +1,6 @@
 /**
- * Hybrid payout UI building blocks. NOT CONNECTED to production data:
- * nothing imports these into a screen while HYBRID_PAYOUT_UI_ENABLED is false.
- * They render only the props they are given.
+ * Hybrid payout UI building blocks. They render only the server values given
+ * (PayoutProgrammeSummary feeds them from get_my_payout_summary).
  */
 import { useState } from "react";
 import { ChevronDown, Zap, CalendarClock, Clock, ShieldCheck } from "lucide-react";
@@ -35,12 +34,20 @@ export function InstantPayoutProgress(props: InstantProgressView) {
   );
 }
 
-export function DailyPayoutSchedule({ nextPayoutAt, transfersActive, settlementAmount }: DailyScheduleView) {
+/** "19:00:00" → "7:00 PM" (display only, from the server value). */
+export function formatSettlementTime(timeIst: string | null | undefined): string | null {
+  const m = /^(\d{1,2}):(\d{2})/.exec(timeIst ?? "");
+  if (!m) return null;
+  const h = Number(m[1]); if (h > 23) return null;
+  return `${h % 12 === 0 ? 12 : h % 12}:${m[2]} ${h < 12 ? "AM" : "PM"}`;
+}
+
+export function DailyPayoutSchedule({ nextPayoutAt, transfersActive, settlementAmount, settlementTimeIst }: DailyScheduleView) {
   useWorkerLanguage();
   return (
     <Card data-testid="daily-schedule">
       <CardContent className="p-4 space-y-1">
-        <div className="flex items-center gap-2 font-semibold"><CalendarClock className="h-4 w-4 text-primary" />{displayText("Daily Payout — 7:00 PM IST")}</div>
+        <div className="flex items-center gap-2 font-semibold"><CalendarClock className="h-4 w-4 text-primary" />{formatSettlementTime(settlementTimeIst) ? `${displayText("Daily payout")} — ${formatSettlementTime(settlementTimeIst)} IST` : displayText("Daily Payout — 7:00 PM IST")}</div>
         {nextPayoutAt && <p className="text-sm">{displayText("Next payout:")} {istTime(nextPayoutAt)}</p>}
         {settlementAmount !== undefined && <p className="text-sm">{displayText("Upcoming settlement")}: ₹{settlementAmount}</p>}
         {!transfersActive && (

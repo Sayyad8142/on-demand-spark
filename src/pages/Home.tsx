@@ -1,4 +1,5 @@
-import { payoutAllowsBookings } from "@/lib/payoutBookingGate";
+import { usePayoutReadiness } from "@/hooks/usePayoutReadiness";
+import { PayoutReadinessNotice } from "@/components/payouts/PayoutReadinessNotice";
 import { shouldRedirectToSetup } from "@/lib/availabilityGate";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect } from "react";
@@ -68,7 +69,8 @@ export default function Home() {
   const priority = useWorkerPriority(isGuestMode ? null : realWorker?.id);
   const lateStart = useLateStartPriority(activeJob?.id ?? "", !!activeJob && activeJob.start_otp_required === true && !activeJob.started_at);
 
-  const payoutReady = isGuestMode ? true : payoutAllowsBookings((worker as any)?.payout_ready);
+  const payoutReadiness = usePayoutReadiness(isGuestMode ? null : user?.id, (realWorker as any)?.payout_ready);
+  const payoutReady = isGuestMode ? true : payoutReadiness.allowsBookings;
 
   // Onboarding status: checks service_types, community, availability slots
   const onboarding = useOnboardingStatus(
@@ -332,25 +334,8 @@ export default function Home() {
 
       <HomeTrainingVideoSlot isGuest={isGuestMode} hasActiveJob={!!activeJob} hasWorker={!!worker} />
 
-      {!isGuestMode && worker && !activeJob && !payoutReady && (
-        <Card className="p-5 border-2 border-primary/30 bg-primary/5 shadow-sm">
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <h2 className="font-semibold text-base text-foreground">
-                  {displayText("Complete payout details to start getting bookings")}
-                </h2>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {displayText("You won’t receive bookings until payout details are added.")}
-                </p>
-              </div>
-            </div>
-            <Button className="w-full h-11" onClick={() => navigate('/account-details')}>
-              {displayText("Add payout details")}
-            </Button>
-          </div>
-        </Card>
+      {!isGuestMode && worker && !activeJob && !payoutReady && !payoutReadiness.loading && (
+        <PayoutReadinessNotice readiness={payoutReadiness.readiness} onBankDetails={() => navigate('/account-details')} />
       )}
 
       {!isGuestMode && worker && !activeJob && <BatteryReminderCard />}

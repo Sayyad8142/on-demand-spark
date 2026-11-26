@@ -11,7 +11,8 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft, Phone, Shield, CheckCircle2 } from "lucide-react";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { BANK_SERVICE_UNAVAILABLE } from "@/lib/bankOnboarding";
+import { REGISTRATION_ERROR_TEXT, peekSignupBank, registerWorkerV2, takeSignupBank } from "@/lib/bankOnboarding";
+import { clearAccountBrowserData } from "@/lib/accountDataCleanup";
 
 // @ts-ignore - Capacitor bridge
 const AuthBridge = window.Capacitor?.Plugins?.AuthBridge;
@@ -207,9 +208,30 @@ export default function OtpVerify() {
         // Sign In flow: the server alone links this login to a worker record.
         // Never re-point a worker record from the phone (account takeover risk).
       } else if (state.mode === 'signup' && state.signUpData) {
-        // Secure registration has no deployed worker-facing Admin writer yet.
-        // Never insert/link a worker or mark bank readiness from this phone.
-        throw new Error(displayText(BANK_SERVICE_UNAVAILABLE));
+        // Admin-owned registration: the server checks the verified phone,
+        // validates bank details, creates the worker (OFF, pending approval)
+        // and registers the Cashfree beneficiary. No direct workers writes.
+        const bank = peekSignupBank();
+        const result = bank
+          ? await registerWorkerV2({
+              fullName: state.signUpData.fullName,
+              phone: state.phone,
+              services: state.signUpData.services,
+              community: state.signUpData.community,
+              upiId: state.signUpData.upiId || null,
+              bank,
+            })
+          : { ok: false as const, error: "bank_details_missing" as const };
+        if (!result.ok && result.error !== "login_already_linked") {
+          // Leave no half-registered session behind; the worker retries from sign-up.
+          await supabase.auth.signOut().catch(() => undefined);
+          try { sessionStorage.removeItem(OTP_STATE_KEY); } catch {}
+          clearAccountBrowserData();
+          toast({ title: displayText("Registration not completed"), description: displayText(REGISTRATION_ERROR_TEXT[result.error]), variant: "destructive" });
+          navigate("/auth", { replace: true });
+          return;
+        }
+        takeSignupBank();
       }
 
       // Save JWT to native storage

@@ -23,6 +23,8 @@ export interface DailyScheduleView {
   /** Whether automatic bank transfer is currently active, supplied by server. */
   transfersActive: boolean;
   settlementAmount?: number;
+  /** Server settlement time, e.g. "19:00:00" (IST). */
+  settlementTimeIst?: string | null;
 }
 
 export interface ConsolidatedPayoutView {
