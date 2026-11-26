@@ -22,3 +22,5 @@ Edge functions were NOT edited from this project (saving them auto-deploys to pr
 ## REVERSED by owner (2026-11-26, later the same day): bank details ARE required for bookings
 Do **not** remove the four server checks above — they must stay. The Worker App again hides offers, stops listening and refuses ON when `payout_ready` is not `true` (re-read from the server at tap time).
 Admin follow-up: `set_worker_payout_ready` still marks a worker ready with only a UPI ID. Under the new onboarding (Cashfree IMPS, bank only), `payout_ready` should mean "bank beneficiary ready" — see `docs/worker-onboarding-imps-2026-11-26/ADMIN-DEPENDENCIES.md`.
+
+Checked 2026-11-26 (after reversal): `try_accept_booking` → `accept_booking_authoritative` blocks accept when not payout-ready; `send-fcm`, `notify-next-tier`, `get-pending-worker-bookings` skip not-ready workers. **Gap:** `notify_workers_fcm` (creates offer rows) does not check `payout_ready`, so a not-ready worker can still be picked and hold an offer slot until it times out (no alert is sent and they can't accept). Fixing it changes dispatch — needs owner/Admin approval.
