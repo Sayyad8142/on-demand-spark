@@ -2408,6 +2408,30 @@ export type Database = {
         }
         Relationships: []
       }
+      cashfree_balance_snapshots: {
+        Row: {
+          available_paise: number
+          created_at: string
+          id: number
+          in_flight_paise: number
+          source: string
+        }
+        Insert: {
+          available_paise: number
+          created_at?: string
+          id?: number
+          in_flight_paise: number
+          source: string
+        }
+        Update: {
+          available_paise?: number
+          created_at?: string
+          id?: number
+          in_flight_paise?: number
+          source?: string
+        }
+        Relationships: []
+      }
       communities: {
         Row: {
           center_lat: number | null
@@ -3366,6 +3390,41 @@ export type Database = {
           },
         ]
       }
+      historical_offline_settlements: {
+        Row: {
+          amount_inr: number
+          created_at: string
+          note: string
+          payout_id: string
+          prior_status: string
+          settled_by: string
+        }
+        Insert: {
+          amount_inr: number
+          created_at?: string
+          note: string
+          payout_id: string
+          prior_status: string
+          settled_by: string
+        }
+        Update: {
+          amount_inr?: number
+          created_at?: string
+          note?: string
+          payout_id?: string
+          prior_status?: string
+          settled_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historical_offline_settlements_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: true
+            referencedRelation: "worker_payouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hybrid_payout_settings: {
         Row: {
           auto_retry_enabled: boolean
@@ -3405,6 +3464,30 @@ export type Database = {
           settlement_cutoff_time?: string
           updated_at?: string
           updated_by?: string | null
+        }
+        Relationships: []
+      }
+      imps_counted_transfers: {
+        Row: {
+          counted_at: string
+          payout_id: string
+          reversed_at: string | null
+          transfer_ref: string
+          worker_id: string
+        }
+        Insert: {
+          counted_at?: string
+          payout_id: string
+          reversed_at?: string | null
+          transfer_ref: string
+          worker_id: string
+        }
+        Update: {
+          counted_at?: string
+          payout_id?: string
+          reversed_at?: string | null
+          transfer_ref?: string
+          worker_id?: string
         }
         Relationships: []
       }
@@ -4226,6 +4309,82 @@ export type Database = {
         }
         Relationships: []
       }
+      payout_charge_records: {
+        Row: {
+          actual_fee_paise: number | null
+          actual_gst_paise: number | null
+          created_at: string
+          est_fee_paise: number
+          est_gst_paise: number
+          payout_id: string
+          reconciled_at: string | null
+          worker_paise: number
+        }
+        Insert: {
+          actual_fee_paise?: number | null
+          actual_gst_paise?: number | null
+          created_at?: string
+          est_fee_paise: number
+          est_gst_paise: number
+          payout_id: string
+          reconciled_at?: string | null
+          worker_paise: number
+        }
+        Update: {
+          actual_fee_paise?: number | null
+          actual_gst_paise?: number | null
+          created_at?: string
+          est_fee_paise?: number
+          est_gst_paise?: number
+          payout_id?: string
+          reconciled_at?: string | null
+          worker_paise?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payout_charge_records_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: true
+            referencedRelation: "worker_payouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payout_holds: {
+        Row: {
+          created_at: string
+          earning_id: string
+          id: string
+          reason: string
+          released_at: string | null
+          released_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          earning_id: string
+          id?: string
+          reason: string
+          released_at?: string | null
+          released_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          earning_id?: string
+          id?: string
+          reason?: string
+          released_at?: string | null
+          released_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payout_holds_earning_id_fkey"
+            columns: ["earning_id"]
+            isOneToOne: false
+            referencedRelation: "worker_earnings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payout_ledger_events: {
         Row: {
           actor: string | null
@@ -4253,6 +4412,90 @@ export type Database = {
           entity_type?: string
           event_type?: string
           id?: number
+        }
+        Relationships: []
+      }
+      payout_programme_audit: {
+        Row: {
+          admin_id: string
+          created_at: string
+          id: number
+          new_value: Json | null
+          old_value: Json | null
+          reason: string
+          setting: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          id?: number
+          new_value?: Json | null
+          old_value?: Json | null
+          reason: string
+          setting: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          id?: number
+          new_value?: Json | null
+          old_value?: Json | null
+          reason?: string
+          setting?: string
+        }
+        Relationships: []
+      }
+      payout_programme_settings: {
+        Row: {
+          cashfree_imps_enabled: boolean
+          collect_worker_upi: boolean
+          cutoff_at: string
+          gst_bps: number
+          id: number
+          imps_fee_paise: number
+          instant_limit: number
+          low_balance_alert_paise: number
+          max_transfer_paise: number
+          min_transfer_paise: number
+          razorpayx_enabled: boolean
+          require_bank_beneficiary_for_dispatch: boolean
+          settlement_time_ist: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          cashfree_imps_enabled?: boolean
+          collect_worker_upi?: boolean
+          cutoff_at?: string
+          gst_bps?: number
+          id?: number
+          imps_fee_paise?: number
+          instant_limit?: number
+          low_balance_alert_paise?: number
+          max_transfer_paise?: number
+          min_transfer_paise?: number
+          razorpayx_enabled?: boolean
+          require_bank_beneficiary_for_dispatch?: boolean
+          settlement_time_ist?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          cashfree_imps_enabled?: boolean
+          collect_worker_upi?: boolean
+          cutoff_at?: string
+          gst_bps?: number
+          id?: number
+          imps_fee_paise?: number
+          instant_limit?: number
+          low_balance_alert_paise?: number
+          max_transfer_paise?: number
+          min_transfer_paise?: number
+          razorpayx_enabled?: boolean
+          require_bank_beneficiary_for_dispatch?: boolean
+          settlement_time_ist?: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -7410,6 +7653,45 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_imps_progress: {
+        Row: {
+          graduated_at: string | null
+          reserved_count: number
+          success_count: number
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          graduated_at?: string | null
+          reserved_count?: number
+          success_count?: number
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          graduated_at?: string | null
+          reserved_count?: number
+          success_count?: number
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_imps_progress_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: true
+            referencedRelation: "worker_reliability_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_imps_progress_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: true
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_issue_contacts: {
         Row: {
           contacted_at: string
@@ -9348,6 +9630,7 @@ export type Database = {
       _my_worker_id: { Args: never; Returns: string }
       _payout_label: { Args: { s: string }; Returns: string }
       _payout_retry_safe: { Args: { _payout_id: string }; Returns: boolean }
+      _payout_trusted_caller: { Args: never; Returns: boolean }
       _process_late_start_penalties: { Args: { p_now: string }; Returns: Json }
       _refund_booking_tip: { Args: { p_booking_id: string }; Returns: number }
       _reject_booking_request_core: {
@@ -9772,6 +10055,7 @@ export type Database = {
           terms_url: string
         }[]
       }
+      admin_get_payout_programme: { Args: never; Returns: Json }
       admin_get_web_version: {
         Args: never
         Returns: {
@@ -10221,6 +10505,10 @@ export type Database = {
       admin_set_legal_pdf: {
         Args: { kind: string; url: string }
         Returns: undefined
+      }
+      admin_set_payout_programme: {
+        Args: { _reason: string; _setting: string; _value: Json }
+        Returns: Json
       }
       admin_set_reconnect_pause: {
         Args: { _paused: boolean; _worker_id: string }
@@ -11903,6 +12191,7 @@ export type Database = {
           online_workers_count: number
         }[]
       }
+      get_worker_payout_onboarding_config: { Args: never; Returns: Json }
       get_worker_performance_summary: {
         Args: never
         Returns: {
@@ -12476,6 +12765,15 @@ export type Database = {
         Args: { p_worker_id: string }
         Returns: undefined
       }
+      record_imps_instant_outcome: {
+        Args: {
+          _outcome: string
+          _payout_id: string
+          _transfer_ref: string
+          _worker_id: string
+        }
+        Returns: Json
+      }
       record_offer_ack: {
         Args: {
           p_event: string
@@ -12541,6 +12839,10 @@ export type Database = {
       repair_worker_push_health: {
         Args: { p_new_token: string; p_worker_id: string }
         Returns: undefined
+      }
+      reserve_imps_instant_slot: {
+        Args: { _worker_id: string }
+        Returns: string
       }
       respond_to_booking_assignment: {
         Args: { p_assignment_id: string; p_response: string }
