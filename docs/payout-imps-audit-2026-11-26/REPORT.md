@@ -226,7 +226,7 @@ Existing controls should be reused where safe; no new production settings were a
 
 ### Questions requiring your clarification
 
-1. Does the first-ten allowance apply only to workers joining after the switch, or also to existing workers? The current server has no new-worker-only classifier.
+1. ~~Does the first-ten allowance apply only to workers joining after the switch, or also to existing workers?~~ **ANSWERED (owner, 2026-11-26): Existing workers too.** This matches the current server classifier, which has no new-worker-only restriction — no cohort change needed.
 2. Should it count the first ten chronological completed services, allocated eligible earnings, or successful payouts? Current logic counts allocations after payout-record creation.
 3. If bank details arrive after a worker has completed several jobs, should owed first-ten earnings be sent individually or as one approved backlog payout?
 4. Should bookings completed at/after 7 PM be paid next day, as the current strict cutoff indicates? Is 7 PM the preparation/start time or a promised time of bank credit? Credit time cannot be guaranteed solely by a cron schedule.
