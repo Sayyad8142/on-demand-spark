@@ -18,3 +18,7 @@
 
 - Next Booking accepts only an activation-gated privacy-safe contract; its verified-session server adapter is staged under docs independently of dispatch. Why: public ranking must never reuse phone/fallback identities or authorize booking actions.- Next Booking preview verification (`nextBookingDiagnostic.ts`) activates only on the id-preview host/localhost in a browser, never published/custom domains or native; the screen reads `worker-next-booking` only through `workerNextBooking.ts` (known fields copied, position only from server groups_ahead). Why: testing must not activate ranking for real workers or invent positions.
 - Service slides use `serviceTraining.ts` with explicit task IDs and glass boolean; approved Dishwashing photos remain in `dishwashingTraining.ts`. Why: unbooked/unknown tasks must never get guessed training steps.
+
+# Worker profile data
+
+- Worker reads use explicit columns from `workerProfileColumns.ts`; updates go through `sanitizeWorkerUpdate`. Why: no unneeded secrets; survives Admin column locks.
