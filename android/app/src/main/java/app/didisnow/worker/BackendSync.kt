@@ -240,6 +240,86 @@ object BackendSync {
         } catch (_: Exception) { null }
     }
 
+    private val refreshLock = Any()
+    @Volatile private var lastRefreshFailAt = 0L
+
+    private fun sessionUserId(o: JSONObject?): String? =
+        o?.optJSONObject("user")?.optString("id")?.ifBlank { null }
+
+    /**
+     * Worker's OWN login for background calls: the stored login when still fresh,
+     * otherwise ONE refresh-token exchange (single-flight, 5-min backoff on failure)
+     * written back to both login stores so the app and native code stay in sync.
+     * The refreshed login is used only if it belongs to the same stored account.
+     * Returns null when the worker must sign in again. Tokens are never logged.
+     */
+    internal fun freshSessionJwt(ctx: Context, forceRefresh: Boolean = false): String? {
+        if (!forceRefresh) sessionJwt(ctx)?.let { return it }
+        synchronized(refreshLock) {
+            if (!forceRefresh) sessionJwt(ctx)?.let { return it }
+            val now = System.currentTimeMillis()
+            if (!SessionRefreshRules.mayAttemptRefresh(now, lastRefreshFailAt)) return null
+            val jwt = refreshStoredSession(ctx)
+            lastRefreshFailAt = if (jwt == null) now else 0L
+            return jwt
+        }
+    }
+
+    private fun refreshStoredSession(ctx: Context): String? {
+        return try {
+            val cap = ctx.applicationContext.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE)
+            val web = cap.getString("didi-worker-session", null)?.let { try { JSONObject(it) } catch (_: Exception) { null } }
+            val native = cap.getString("didi_session", null)?.let { try { JSONObject(it) } catch (_: Exception) { null } }
+            // Prefer the supabase-js copy (auto-refreshed while the app runs).
+            val refreshToken = web?.optString("refresh_token")?.ifBlank { null }
+                ?: native?.optString("refreshToken")?.ifBlank { null }
+                ?: run { WorkerLog.add(ctx, "AUTH", "refresh skipped — no stored login"); return null }
+            val storedUser = sessionUserId(web) ?: sessionUserId(native)
+            val c = (URL("$SUPABASE_URL/auth/v1/token?grant_type=refresh_token").openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = 8_000
+                readTimeout = 8_000
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json")
+                setRequestProperty("apikey", ANON_KEY)
+            }
+            c.outputStream.use { it.write(JSONObject().put("refresh_token", refreshToken).toString().toByteArray(Charsets.UTF_8)) }
+            val code = c.responseCode
+            if (code !in 200..299) {
+                c.disconnect()
+                WorkerLog.add(ctx, "AUTH", if (SessionRefreshRules.loginNeedsReauth(code)) "refresh refused http=$code — sign-in needed in app" else "refresh failed http=$code")
+                return null
+            }
+            val resp = JSONObject(c.inputStream.bufferedReader().use { it.readText() })
+            c.disconnect()
+            val access = resp.optString("access_token").ifBlank { null }
+            val user = resp.optJSONObject("user")
+            if (!SessionRefreshRules.acceptRefreshed(storedUser, user?.optString("id"), access)) {
+                WorkerLog.add(ctx, "AUTH", "refresh discarded — account mismatch or empty")
+                return null
+            }
+            val newRefresh = resp.optString("refresh_token").ifBlank { refreshToken }
+            val expiresIn = resp.optInt("expires_in", 3600)
+            val expiresAt = resp.optLong("expires_at", System.currentTimeMillis() / 1000 + expiresIn)
+            val webOut = (web ?: JSONObject()).apply {
+                put("access_token", access); put("refresh_token", newRefresh)
+                put("expires_in", expiresIn); put("expires_at", expiresAt); put("token_type", "bearer")
+                if (user != null) put("user", user)
+            }
+            val nativeOut = (native ?: JSONObject()).apply {
+                put("accessToken", access); put("refreshToken", newRefresh); put("expiresIn", expiresIn)
+                if (user != null) put("user", user)
+            }
+            cap.edit().putString("didi-worker-session", webOut.toString()).putString("didi_session", nativeOut.toString()).commit()
+            ctx.applicationContext.getSharedPreferences("worker_prefs", Context.MODE_PRIVATE).edit().putString("supabase_jwt", access).apply()
+            WorkerLog.add(ctx, "AUTH", "login refreshed for background call")
+            access
+        } catch (e: Exception) {
+            WorkerLog.add(ctx, "AUTH", "refresh error: ${e.javaClass.simpleName}")
+            null
+        }
+    }
+
     private fun postAck(url: String, auth: String, body: JSONObject): Int {
         val c = (URL(url).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
@@ -295,7 +375,7 @@ object BackendSync {
                 setRequestProperty("Content-Type", "application/json")
                 setRequestProperty("apikey", ANON_KEY)
                 // No signed token: the verified worker login is the proof of identity.
-                val primaryAuth = if (ackToken.isNullOrBlank()) sessionJwt(ctx) ?: ANON_KEY else ANON_KEY
+                val primaryAuth = if (ackToken.isNullOrBlank()) freshSessionJwt(ctx) ?: ANON_KEY else ANON_KEY
                 setRequestProperty("Authorization", "Bearer $primaryAuth")
             }
             conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
@@ -304,7 +384,7 @@ object BackendSync {
             // Token refused (invalid/expired/unknown to server): retry ONCE with
             // the worker login — no ack_token, no worker_id (server derives it).
             if (sessionFallbackAllowed(event, code, !ackToken.isNullOrBlank())) {
-                val jwt = sessionJwt(ctx)
+                val jwt = freshSessionJwt(ctx)
                 if (jwt != null) {
                     val fbBody = JSONObject(body.toString()).apply { remove("ack_token"); remove("worker_id") }
                     code = postAck(url, jwt, fbBody)
@@ -313,7 +393,7 @@ object BackendSync {
                     WorkerLog.add(ctx, "ACK", "$event token refused, no current login — queued for next open")
                     return AckResult.RETRY
                 }
-            } else if (ackToken.isNullOrBlank() && (code == 401 || code == 403) && event in SESSION_FALLBACK_EVENTS && sessionJwt(ctx) == null) {
+            } else if (ackToken.isNullOrBlank() && (code == 401 || code == 403) && event in SESSION_FALLBACK_EVENTS && freshSessionJwt(ctx) == null) {
                 // Login expired in background: keep it (bounded) in the queue; the app
                 // refreshes the login on open/resume and the queue is flushed then.
                 WorkerLog.add(ctx, "ACK", "$event no current login — queued for next open")
@@ -539,7 +619,7 @@ object BackendSync {
      * docs/security-fixes-2026-11-11/update-system/), otherwise phones whose login
      * expired in the background would stop reporting and look unreachable.
      */
-    private const val HEARTBEAT_LEGACY_ID_FALLBACK = true
+    private const val HEARTBEAT_LEGACY_ID_FALLBACK = false // server now requires the own-worker login (contract 2026-11-26)
 
     private fun batteryLevel(ctx: Context): Int {
         return try {
@@ -611,9 +691,9 @@ object BackendSync {
         // Only when no fresh login exists (app closed > 1 h, screen-off) do we fall back to
         // the legacy anon + worker_id form, so background heartbeats and dispatch
         // reachability keep working until the staged server guard is approved.
-        val jwt = sessionJwt(ctx)
+        val jwt = freshSessionJwt(ctx)
         if (jwt == null && !HEARTBEAT_LEGACY_ID_FALLBACK) {
-            WorkerLog.add(ctx, "HEARTBEAT", "skip — no fresh login")
+            WorkerLog.add(ctx, "HEARTBEAT", "skip — login expired; worker must open the app to sign in again")
             return false
         }
         val body = JSONObject().apply {
@@ -642,7 +722,7 @@ object BackendSync {
             })
         }
 
-        return try {
+        fun post(auth: String): Int {
             val conn = (URL(HEARTBEAT_ENDPOINT).openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 connectTimeout = 8_000
@@ -650,11 +730,22 @@ object BackendSync {
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json")
                 setRequestProperty("apikey", ANON_KEY)
-                setRequestProperty("Authorization", "Bearer ${jwt ?: ANON_KEY}")
+                setRequestProperty("Authorization", "Bearer $auth")
             }
             conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             val code = conn.responseCode
             conn.disconnect()
+            return code
+        }
+
+        return try {
+            var code = post(jwt ?: ANON_KEY)
+            // Login refused (revoked/expired server-side): re-authenticate ONCE, never loop.
+            if (jwt != null && SessionRefreshRules.retryAfterAuthFailure(code, alreadyRetried = false)) {
+                val again = freshSessionJwt(ctx, forceRefresh = true)
+                code = if (again != null) post(again) else code
+                if (code == 401 || code == 403) WorkerLog.add(ctx, "HEARTBEAT", "login refused — sign-in needed in app")
+            }
             val ok = code in 200..299
             WorkerLog.add(ctx, "HEARTBEAT", "state=$appState auth=${if (jwt != null) "session" else "legacy"} token=${fcmToken != null} → http=$code")
             ok

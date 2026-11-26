@@ -29,6 +29,7 @@ export function InstantPayoutProgress(props: InstantProgressView) {
         <Progress value={v.slotsTotal ? (v.slotsSettled / v.slotsTotal) * 100 : 0} />
         <p className="text-sm">{displayText("{{used}} of {{total}} IMPS payouts completed", { used: v.slotsSettled, total: v.slotsTotal })}</p>
         {v.slotsRemaining !== undefined && <p className="text-xs text-muted-foreground">{displayText("{{remaining}} instant payouts remaining", { remaining: v.slotsRemaining })}</p>}
+        {!!v.slotsReserved && <p className="text-xs text-muted-foreground" data-testid="instant-reserved">{displayText("{{reserved}} instant payout processing", { reserved: v.slotsReserved })}</p>}
       </CardContent>
     </Card>
   );
@@ -42,14 +43,14 @@ export function formatSettlementTime(timeIst: string | null | undefined): string
   return `${h % 12 === 0 ? 12 : h % 12}:${m[2]} ${h < 12 ? "AM" : "PM"}`;
 }
 
-export function DailyPayoutSchedule({ nextPayoutAt, transfersActive, settlementAmount, settlementTimeIst }: DailyScheduleView) {
+export function DailyPayoutSchedule({ nextPayoutAt, transfersActive, settlementAmount, settlementTimeIst, settlementEstimated }: DailyScheduleView) {
   useWorkerLanguage();
   return (
     <Card data-testid="daily-schedule">
       <CardContent className="p-4 space-y-1">
         <div className="flex items-center gap-2 font-semibold"><CalendarClock className="h-4 w-4 text-primary" />{formatSettlementTime(settlementTimeIst) ? `${displayText("Daily payout")} — ${formatSettlementTime(settlementTimeIst)} IST` : displayText("Daily Payout — 7:00 PM IST")}</div>
         {nextPayoutAt && <p className="text-sm">{displayText("Next payout:")} {istTime(nextPayoutAt)}</p>}
-        {settlementAmount !== undefined && <p className="text-sm">{displayText("Upcoming settlement")}: ₹{settlementAmount}</p>}
+        {settlementAmount !== undefined && <p className="text-sm">{displayText(settlementEstimated === false ? "Upcoming settlement" : "Estimated next payout")}: ₹{settlementAmount}</p>}
         {!transfersActive && (
           <p className="text-xs text-muted-foreground">{displayText("Bank transfers are paused. Didi Now will pay you; status shows Paid only after it is confirmed.")}</p>
         )}

@@ -1,5 +1,14 @@
 # Worker language translation
 
+## Cashfree IMPS contract 26 Nov — audit and fixes, no publication
+- [x] Sign-in no longer asks "is this number registered?" before the code (server now refuses it); check moved after verification.
+- [x] Bookings blocked for bank only when Admin's switch is on and server says not ready.
+- [x] Android heartbeat/confirmations: own login with secure refresh; no public-key heartbeat.
+- [x] Summary uses successful/remaining/reserved counts + estimate label; earnings history from get_my_earnings; beneficiary request after sign-up + retry.
+- [ ] Released Play/OTA builds still use the old sign-in check and public-key heartbeat — blocked: needs a new release (Play version code from Play Console).
+- [ ] Fresh registration of deleted workers' numbers — blocked: Admin Auth cleanup workflow not implemented.
+- [ ] Physical-device test of background heartbeat, lock-screen alert, overlay — blocked: needs a phone and Android build environment.
+
 ## Prompt 147 — approved Cashfree IMPS onboarding, no publication
 - [x] Finish available bank-first signup, authenticated Admin UPI setting (OFF), safe bank submission boundaries and deleted-account cleanup; no client bank/readiness/identity writes.
 - [x] Connect server-only payout history/detail; prepare successful-payment progress and server-supplied remaining/settlement fields, leaving incompatible summary OFF.

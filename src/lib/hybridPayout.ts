@@ -15,6 +15,7 @@ export interface InstantProgressView {
   slotsAllocated: number;  // supplied by server
   slotsSettled: number;    // confirmed paid, supplied by server
   slotsRemaining?: number; // supplied by server; never total minus allocated locally
+  slotsReserved?: number;  // server reserved_count: pending/processing instant transfers, not successes
 }
 
 export interface DailyScheduleView {
@@ -25,6 +26,8 @@ export interface DailyScheduleView {
   settlementAmount?: number;
   /** Server settlement time, e.g. "19:00:00" (IST). */
   settlementTimeIst?: string | null;
+  /** Server says the amount is a schedule estimate (not a promise of bank receipt). */
+  settlementEstimated?: boolean;
 }
 
 export interface ConsolidatedPayoutView {
@@ -52,7 +55,11 @@ export function normalizeInstantProgress(v: InstantProgressView): InstantProgres
   const total = Math.max(0, Math.floor(Number(v.slotsTotal) || 0));
   const allocated = Math.min(total, Math.max(0, Math.floor(Number(v.slotsAllocated) || 0)));
   const settled = Math.min(allocated, Math.max(0, Math.floor(Number(v.slotsSettled) || 0)));
-  return { slotsTotal: total, slotsAllocated: allocated, slotsSettled: settled, ...(v.slotsRemaining === undefined ? {} : { slotsRemaining: v.slotsRemaining }) };
+  return {
+    slotsTotal: total, slotsAllocated: allocated, slotsSettled: settled,
+    ...(v.slotsRemaining === undefined ? {} : { slotsRemaining: v.slotsRemaining }),
+    ...(v.slotsReserved === undefined ? {} : { slotsReserved: Math.max(0, Math.floor(Number(v.slotsReserved) || 0)) }),
+  };
 }
 
 export function instantSlotsExhausted(v: InstantProgressView): boolean {

@@ -124,3 +124,40 @@ export async function registerWorkerV2(input: RegistrationInput, call: LooseRpc 
     return parseRegistrationResponse(data);
   } catch { return { ok: false, error: "unknown" }; }
 }
+
+/** Outcome of `create-cashfree-beneficiary`; only the outcome is kept (the response holds private bank/contact data). */
+export type BeneficiaryOutcome = "created" | "reused" | "repaired" | "simulated" | "signed_out" | "forbidden" | "not_found" | "incomplete" | "provider_failed" | "unavailable";
+
+type InvokeFn = (name: string, opts: { body: Record<string, unknown> }) => Promise<{ data: unknown; error: unknown }>;
+
+export function classifyBeneficiaryResponse(data: unknown, status: number | null): BeneficiaryOutcome {
+  if (status === null) {
+    const o = data && typeof data === "object" && !Array.isArray(data) ? (data as Record<string, unknown>) : {};
+    if (o.success !== true) return "unavailable";
+    if (o.simulated === true) return "simulated"; // never production readiness
+    return o.outcome === "created" || o.outcome === "reused" || o.outcome === "repaired" ? o.outcome : "unavailable";
+  }
+  if (status === 401) return "signed_out";
+  if (status === 403) return "forbidden";
+  if (status === 404) return "not_found";
+  if (status === 422) return "incomplete";
+  if (status === 502) return "provider_failed";
+  return "unavailable";
+}
+
+/**
+ * Ask Admin's server to register (or reuse) the signed-in worker's OWN bank
+ * beneficiary. Moves no money; readiness is always re-read from the server
+ * afterwards. Never logs or stores the response body.
+ */
+export async function requestOwnBeneficiary(workerId: string, invoke: InvokeFn = (n, o) => supabase.functions.invoke(n, o)): Promise<BeneficiaryOutcome> {
+  if (!workerId) return "not_found";
+  try {
+    const { data, error } = await invoke("create-cashfree-beneficiary", { body: { worker_id: workerId, force_repair: false } });
+    if (error) {
+      const status = (error as { context?: { status?: unknown } })?.context?.status;
+      return classifyBeneficiaryResponse(null, typeof status === "number" ? status : 0);
+    }
+    return classifyBeneficiaryResponse(data, null);
+  } catch { return "unavailable"; }
+}

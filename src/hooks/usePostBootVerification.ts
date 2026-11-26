@@ -1,3 +1,4 @@
+import { sendWorkerHeartbeat } from "@/lib/workerHeartbeat";
 /**
  * usePostBootVerification — after Android reboots and worker-boot-ping runs,
  * JS-side must independently verify recovery succeeded before we treat the
@@ -102,7 +103,8 @@ export function usePostBootVerification(userId: string | undefined | null, worke
         console.warn("[PostBootVerify] push repair failed:", e);
       }
       try {
-        await supabase.functions.invoke("worker-heartbeat", { body: { app_state: "post_boot_verify" } });
+        // Same signed-in path and payload shape as every other heartbeat (own login + own worker id).
+        await sendWorkerHeartbeat(workerId, "post_boot_verify");
       } catch (e) {
         console.warn("[PostBootVerify] heartbeat retry failed:", e);
       }

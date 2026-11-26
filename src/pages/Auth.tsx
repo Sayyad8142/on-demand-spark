@@ -335,27 +335,9 @@ export default function Auth() {
       setLoading(true);
       const phone = normalizePhone(signInPhone);
 
-      // Check if worker with this phone exists via SECURITY DEFINER RPC
-      // (anon role cannot SELECT workers directly due to RLS).
-      const {
-        data: phoneExists,
-        error: workerCheckError
-      } = await supabase.rpc('worker_phone_exists', { _phone: phone });
-      if (workerCheckError) {
-        console.error('Error checking worker:', workerCheckError);
-      }
-      if (!phoneExists) {
-        toast({
-          title: t('auth.accountNotRegistered', 'Account not registered'),
-          description: t('auth.signUpFirst', 'Please sign up first to create your account'),
-          variant: "destructive"
-        });
-        // Pre-fill phone in sign up and switch tab
-        setSignUpPhone(signInPhone);
-        setActiveTab("signup");
-        setLoading(false);
-        return;
-      }
+      // The server answers "is this number registered?" only for the caller's
+      // own VERIFIED phone (contract 2026-11-26), so the check runs after the
+      // code is entered (OtpVerify), never before.
       const {
         error
       } = await supabase.auth.signInWithOtp({
@@ -393,11 +375,8 @@ export default function Auth() {
     try {
       setLoading(true);
       const phone = normalizePhone(signUpPhone);
-      const { data: phoneExists } = await supabase.rpc('worker_phone_exists', { _phone: phone });
-      if (phoneExists === true) {
-        toast({ title: displayText("This number is already registered. Please sign in."), variant: "destructive" });
-        setSignInPhone(signUpPhone); setActiveTab("signin"); return;
-      }
+      // Already-registered numbers are refused by register_worker_v2 after the code
+      // is verified (phone_already_registered); no signed-out number lookup.
       const validSignupServices = signUpServices.filter(service => SERVICES.some(item => item.value === service));
       const { error } = await supabase.auth.signInWithOtp({ phone });
       if (error) throw error;

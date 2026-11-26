@@ -20,6 +20,7 @@ import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { usePayoutReadiness } from "@/hooks/usePayoutReadiness";
 import { PayoutReadinessNotice } from "@/components/payouts/PayoutReadinessNotice";
 import { PayoutProgrammeSummary } from "@/components/payouts/hybrid/PayoutProgrammeSummary";
+import { EarningsHistorySection } from "@/components/payouts/hybrid/EarningsHistorySection";
 
 const HISTORY_PAGE = 20;
 
@@ -53,7 +54,7 @@ export default function Earnings() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { worker } = useWorkerProfile(user?.id);
-  const payoutReadiness = usePayoutReadiness(user?.id, (worker as any)?.payout_ready);
+  const payoutReadiness = usePayoutReadiness(user?.id);
   const [workerId, setWorkerId] = useState<string | null>(null);
   const [workerUpi, setWorkerUpi] = useState<string | null>(null);
   const [workerResolved, setWorkerResolved] = useState(false);
@@ -148,6 +149,7 @@ export default function Earnings() {
         {user && workerId && <PayoutProgrammeSummary key={`s-${user.id}`} accountId={user.id} />}
         {HYBRID_PAYOUT_UI_ENABLED && workerId && <HybridPayoutSection />}
         {user && workerId && <PayoutHistorySection key={user.id} accountId={user.id} />}
+        {user && workerId && <EarningsHistorySection key={`e-${user.id}`} accountId={user.id} />}
 
         <div className="grid grid-cols-3 gap-3">
           <SummaryCard label={displayText("Today")} amount={totals.today} icon={IndianRupee} />

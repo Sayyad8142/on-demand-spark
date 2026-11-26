@@ -69,7 +69,7 @@ export default function Home() {
   const priority = useWorkerPriority(isGuestMode ? null : realWorker?.id);
   const lateStart = useLateStartPriority(activeJob?.id ?? "", !!activeJob && activeJob.start_otp_required === true && !activeJob.started_at);
 
-  const payoutReadiness = usePayoutReadiness(isGuestMode ? null : user?.id, (realWorker as any)?.payout_ready);
+  const payoutReadiness = usePayoutReadiness(isGuestMode ? null : user?.id);
   const payoutReady = isGuestMode ? true : payoutReadiness.allowsBookings;
 
   // Onboarding status: checks service_types, community, availability slots

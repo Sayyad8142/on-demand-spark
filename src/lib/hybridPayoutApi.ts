@@ -32,8 +32,10 @@ export interface PayoutSummary {
   /** Successful (paid) IMPS instant payouts and remaining instant payouts — server counts. */
   successfulCount: number;
   remainingCount: number;
+  /** Pending/processing instant slots — separate from successes. */
+  reservedCount: number;
   pendingEarningsInr: number | null;
-  nextSettlement: { batchDateIst: string; cutoffAt: string; label: string | null; timeIst: string | null; estimatedAmountInr: number } | null;
+  nextSettlement: { batchDateIst: string; cutoffAt: string; label: string | null; timeIst: string | null; estimatedAmountInr: number; estimated: boolean } | null;
   bankPayoutsActive: boolean;
   generatedAt: string;
 }
@@ -82,8 +84,10 @@ export function parseSummary(raw: unknown): PayoutSummary {
   if (typeof o.bank_payouts_active !== "boolean") bad("bank_payouts_active");
   const settled = inr(s, "settled"), remaining = inr(s, "remaining");
   return {
-    successfulCount: o.successful_count == null ? settled : inr(o, "successful_count"),
-    remainingCount: o.remaining_count == null ? remaining : inr(o, "remaining_count"),
+    // Contract 2026-11-26: explicit top-level counters only; legacy instant_slots is compatibility data.
+    successfulCount: inr(o, "successful_count"),
+    remainingCount: inr(o, "remaining_count"),
+    reservedCount: inr(o, "reserved_count"),
     pendingEarningsInr: o.pending_earnings_inr == null ? null : inr(o, "pending_earnings_inr"),
     payoutMode: mode,
     instantSlots: { limit: inr(s, "limit"), allocated: inr(s, "allocated"), settled, remaining },
@@ -92,7 +96,7 @@ export function parseSummary(raw: unknown): PayoutSummary {
       awaiting_payout: inr(tot, "awaiting_payout"), prepared: inr(tot, "prepared"), processing: inr(tot, "processing"),
       paid: inr(tot, "paid"), failed: inr(tot, "failed"), held: inr(tot, "held"),
     },
-    nextSettlement: ns && { batchDateIst: str(ns, "batch_date_ist"), cutoffAt: iso(ns, "cutoff_at"), label: strOrNull(ns, "label"), timeIst: strOrNull(ns, "time_ist"), estimatedAmountInr: inr(ns, "estimated_amount_inr") },
+    nextSettlement: ns && { batchDateIst: str(ns, "batch_date_ist"), cutoffAt: iso(ns, "cutoff_at"), label: strOrNull(ns, "label"), timeIst: strOrNull(ns, "time_ist"), estimatedAmountInr: inr(ns, "estimated_amount_inr"), estimated: ns.estimated !== false },
     bankPayoutsActive: o.bank_payouts_active as boolean,
     generatedAt: iso(o, "generated_at"),
   };
@@ -206,10 +210,10 @@ export function contractStatusState(status: string, paidAt: string | null): Payo
 }
 
 export const summaryToInstantView = (s: PayoutSummary): InstantProgressView =>
-  ({ slotsTotal: s.instantSlots.limit, slotsAllocated: Math.max(s.instantSlots.allocated, s.successfulCount), slotsSettled: s.successfulCount, slotsRemaining: s.remainingCount });
+  ({ slotsTotal: s.instantSlots.limit, slotsAllocated: s.successfulCount + s.reservedCount, slotsSettled: s.successfulCount, slotsRemaining: s.remainingCount, slotsReserved: s.reservedCount });
 
 export const summaryToDailyView = (s: PayoutSummary): DailyScheduleView =>
-  ({ nextPayoutAt: s.nextSettlement?.cutoffAt ?? null, transfersActive: s.bankPayoutsActive, settlementAmount: s.nextSettlement?.estimatedAmountInr, settlementTimeIst: s.nextSettlement?.timeIst ?? null });
+  ({ nextPayoutAt: s.nextSettlement?.cutoffAt ?? null, transfersActive: s.bankPayoutsActive, settlementAmount: s.nextSettlement?.estimatedAmountInr, settlementTimeIst: s.nextSettlement?.timeIst ?? null, settlementEstimated: s.nextSettlement?.estimated ?? true });
 
 export const isKnownPayoutType = (t: string): t is PayoutType => (PAYOUT_TYPES as string[]).includes(t);
 

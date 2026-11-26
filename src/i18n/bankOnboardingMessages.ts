@@ -1,5 +1,10 @@
 export const bankOnboardingMessages = {
   en: {
+    Check_bank_verification_again: "Check bank verification again",
+    Earnings_history: "Earnings history",
+    Expected_payout_date: "Expected payout date",
+    reserved_instant_payout_processing: "{{reserved}} instant payout processing",
+    Estimated_next_payout: "Estimated next payout",
     Add_your_bank_account_so_Didi_Now_can_pay_you: "Add your bank account so Didi Now can pay you.",
     Didi_Now_is_verifying_your_bank_account: "Didi Now is verifying your bank account.",
     Didi_Now_verifies_your_bank_details_before_paying_you: "Didi Now verifies your bank details before paying you.",
@@ -32,6 +37,11 @@ export const bankOnboardingMessages = {
     Check_bank_details: "Check bank details",
   },
   hi: {
+    Check_bank_verification_again: "बैंक जाँच फिर से करें",
+    Earnings_history: "कमाई का इतिहास",
+    Expected_payout_date: "भुगतान की अनुमानित तारीख",
+    reserved_instant_payout_processing: "{{reserved}} तुरंत भुगतान प्रक्रिया में",
+    Estimated_next_payout: "अगला अनुमानित भुगतान",
     Add_your_bank_account_so_Didi_Now_can_pay_you: "भुगतान पाने के लिए अपना बैंक खाता जोड़ें।",
     Didi_Now_is_verifying_your_bank_account: "दीदी नाउ आपके बैंक खाते की जाँच कर रहा है।",
     Didi_Now_verifies_your_bank_details_before_paying_you: "भुगतान से पहले दीदी नाउ आपके बैंक विवरण की पुष्टि करता है।",
@@ -64,6 +74,11 @@ export const bankOnboardingMessages = {
     Check_bank_details: "बैंक विवरण जाँचें",
   },
   te: {
+    Check_bank_verification_again: "బ్యాంకు ధృవీకరణను మళ్లీ తనిఖీ చేయండి",
+    Earnings_history: "సంపాదన చరిత్ర",
+    Expected_payout_date: "చెల్లింపు అంచనా తేదీ",
+    reserved_instant_payout_processing: "{{reserved}} తక్షణ చెల్లింపు ప్రాసెస్ అవుతోంది",
+    Estimated_next_payout: "తదుపరి అంచనా చెల్లింపు",
     Add_your_bank_account_so_Didi_Now_can_pay_you: "చెల్లింపులు పొందడానికి మీ బ్యాంకు ఖాతాను జోడించండి.",
     Didi_Now_is_verifying_your_bank_account: "దీదీ నౌ మీ బ్యాంకు ఖాతాను ధృవీకరిస్తోంది.",
     Didi_Now_verifies_your_bank_details_before_paying_you: "చెల్లించే ముందు దీదీ నౌ మీ బ్యాంకు వివరాలను ధృవీకరిస్తుంది.",

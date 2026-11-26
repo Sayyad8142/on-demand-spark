@@ -144,9 +144,30 @@ export const forcePersistSession = async (): Promise<void> => {
   }
 };
 
+/**
+ * Login keys the Android background code may refresh while the app sleeps.
+ * The login library awaits getItem, so on native we read these fresh from
+ * phone storage; a stale copy would reuse a spent refresh token and log the
+ * worker out. Anything else (or any read failure) uses the memory cache.
+ */
+const NATIVE_REFRESHED_KEYS = new Set([SESSION_KEY, LEGACY_SESSION_KEY]);
+/** Keys with an app write still in flight: the memory copy is newer than phone storage. */
+const pendingWrites: Record<string, number> = {};
+const beginWrite = (key: string) => { pendingWrites[key] = (pendingWrites[key] ?? 0) + 1; };
+const endWrite = (key: string) => { pendingWrites[key] = Math.max(0, (pendingWrites[key] ?? 1) - 1); };
+
 export const capacitorStorage = {
-  // Supabase calls this synchronously, so we MUST return synchronously from cache
-  getItem(key: string): string | null {
+  getItem(key: string): string | null | Promise<string | null> {
+    if (Capacitor.isNativePlatform() && initialized && NATIVE_REFRESHED_KEYS.has(key) && !pendingWrites[key]) {
+      return Preferences.get({ key })
+        .then(({ value }) => {
+          if (pendingWrites[key]) return getItemSync(key); // an app write started meanwhile
+          if (value) memoryCache[key] = value;
+          else delete memoryCache[key];
+          return value ?? null;
+        })
+        .catch(() => getItemSync(key));
+    }
     const value = getItemSync(key);
     if (Capacitor.isNativePlatform()) {
       console.log(`📖 Storage GET [${key}]: ${value ? `found (${value.length} chars)` : 'not found'} (init: ${initialized})`);
@@ -155,8 +176,10 @@ export const capacitorStorage = {
   },
   
   async setItem(key: string, value: string): Promise<void> {
+    const native = Capacitor.isNativePlatform();
+    if (native) beginWrite(key);
     try {
-      if (Capacitor.isNativePlatform()) {
+      if (native) {
         // Update memory cache immediately for sync access
         memoryCache[key] = value;
         
@@ -189,12 +212,16 @@ export const capacitorStorage = {
     } catch (error) {
       console.error(`❌ Storage SET error [${key}]:`, error);
       throw error;
+    } finally {
+      if (native) endWrite(key);
     }
   },
   
   async removeItem(key: string): Promise<void> {
+    const native = Capacitor.isNativePlatform();
+    if (native) beginWrite(key);
     try {
-      if (Capacitor.isNativePlatform()) {
+      if (native) {
         // Clear from memory cache immediately
         delete memoryCache[key];
         
@@ -205,6 +232,8 @@ export const capacitorStorage = {
       }
     } catch (error) {
       console.error(`❌ Storage REMOVE error [${key}]:`, error);
+    } finally {
+      if (native) endWrite(key);
     }
   },
 };

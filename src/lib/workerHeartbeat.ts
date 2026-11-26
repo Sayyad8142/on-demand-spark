@@ -17,7 +17,7 @@ import { loadInstalledVersion } from "@/lib/installedVersion";
 // @ts-ignore - native bridge
 const AuthBridge = window.Capacitor?.Plugins?.AuthBridge;
 
-export type HeartbeatReason = "open" | "login" | "foreground" | "interval";
+export type HeartbeatReason = "open" | "login" | "foreground" | "interval" | "post_boot_verify";
 
 let inFlight = false;
 
@@ -93,8 +93,7 @@ export async function sendWorkerHeartbeat(
     // worker_id and answers 400 without it, so we send the signed-in worker's OWN id
     // until the staged identity guard (docs/security-fixes-2026-11-11/update-system/03)
     // is deployed. Dropping it early made every web check-in fail.
-    const { data, error } = await supabase.functions.invoke("worker-heartbeat", {
-      body: {
+    const body = {
         worker_id: workerIdOrUserId,
         fcm_token: fcmToken ?? undefined,
         app_state: reason,
@@ -103,8 +102,14 @@ export async function sendWorkerHeartbeat(
         app_platform: installed.platform,
         version_source: installed.source,
         device_info: deviceInfo,
-      },
-    });
+    };
+    let { data, error } = await supabase.functions.invoke("worker-heartbeat", { body });
+    // The receiver requires the worker's own login: on 401 refresh the login once and
+    // retry once; if that fails the worker is asked to sign in by the normal auth flow.
+    if (error && (error as { context?: { status?: number } })?.context?.status === 401) {
+      const { data: refreshed } = await supabase.auth.refreshSession();
+      if (refreshed?.session?.access_token) ({ data, error } = await supabase.functions.invoke("worker-heartbeat", { body }));
+    }
 
     if (error) {
       console.warn(`💓 [heartbeat:${reason}] failed`, error.message);

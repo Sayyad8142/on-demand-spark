@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { readPayoutReadinessFromServer, readinessAllowsBookings, type PayoutReadiness } from "@/lib/payoutBookingGate";
 
 /** Server payout readiness for the signed-in worker; account-keyed, refreshed on focus. */
-export function usePayoutReadiness(accountId: string | null | undefined, legacyPayoutReady: unknown) {
+export function usePayoutReadiness(accountId: string | null | undefined) {
   const query = useQuery<PayoutReadiness | null>({
     queryKey: ["payout-readiness", accountId ?? "none"],
     queryFn: readPayoutReadinessFromServer,
@@ -16,7 +16,7 @@ export function usePayoutReadiness(accountId: string | null | undefined, legacyP
   return {
     readiness,
     loading: query.isLoading,
-    allowsBookings: readinessAllowsBookings(readiness, legacyPayoutReady),
+    allowsBookings: readinessAllowsBookings(readiness),
     refetch: query.refetch,
   };
 }

@@ -52,18 +52,16 @@ describe("Admin-controlled UPI", () => {
 describe("payout readiness gate", () => {
   const r = (o: Record<string, unknown>) => parsePayoutReadiness({ worker_id: "w", has_bank_details: true, beneficiary_registered: true, admin_approved: true, ready: true, missing: [], enforced: true, ...o });
   it("allows bookings when Admin says ready", () => {
-    expect(readinessAllowsBookings(r({}), false)).toBe(true);
+    expect(readinessAllowsBookings(r({}))).toBe(true);
   });
-  it("blocks when enforced and not ready, even if the old flag is true", () => {
-    expect(readinessAllowsBookings(r({ ready: false, beneficiary_registered: false }), true)).toBe(false);
+  it("blocks only when Admin's switch is on and the server says not ready", () => {
+    expect(readinessAllowsBookings(r({ ready: false, beneficiary_registered: false }))).toBe(false);
   });
-  it("follows the old server flag only while Admin enforcement is off", () => {
-    expect(readinessAllowsBookings(r({ ready: false, enforced: false }), true)).toBe(true);
-    expect(readinessAllowsBookings(r({ ready: false, enforced: false }), false)).toBe(false);
-    expect(readinessAllowsBookings(r({ ready: false, enforced: false }), true, false)).toBe(false);
+  it("switch off: existing workers keep bookings, even with no bank yet", () => {
+    expect(readinessAllowsBookings(r({ ready: false, enforced: false, has_bank_details: false, beneficiary_registered: false }))).toBe(true);
   });
-  it("fails closed on missing or malformed readiness", () => {
-    expect(readinessAllowsBookings(null, true)).toBe(false);
+  it("unknown or malformed readiness never invents a block (server still enforces)", () => {
+    expect(readinessAllowsBookings(null)).toBe(true);
     expect(parsePayoutReadiness({ ready: "true" })).toBeNull();
   });
 });

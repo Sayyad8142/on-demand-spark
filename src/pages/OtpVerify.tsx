@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft, Phone, Shield, CheckCircle2 } from "lucide-react";
 import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { REGISTRATION_ERROR_TEXT, peekSignupBank, registerWorkerV2, takeSignupBank } from "@/lib/bankOnboarding";
+import { REGISTRATION_ERROR_TEXT, peekSignupBank, registerWorkerV2, takeSignupBank, requestOwnBeneficiary } from "@/lib/bankOnboarding";
 import { clearAccountBrowserData } from "@/lib/accountDataCleanup";
 
 // @ts-ignore - Capacitor bridge
@@ -207,6 +207,19 @@ export default function OtpVerify() {
       if (state.mode === 'signin') {
         // Sign In flow: the server alone links this login to a worker record.
         // Never re-point a worker record from the phone (account takeover risk).
+        // Now that the phone is verified, the server may say whether it is registered.
+        const { data: registered, error: lookupError } = await supabase.rpc('worker_phone_exists', { _phone: phone });
+        if (!lookupError && registered === false) {
+          await supabase.auth.signOut().catch(() => undefined);
+          try { sessionStorage.removeItem(OTP_STATE_KEY); } catch {}
+          clearAccountBrowserData();
+          try {
+            localStorage.setItem("didi-worker-auth-draft-v1", JSON.stringify({ activeTab: "signup", signUpPhone: phone.replace(/^\+91/, "") }));
+          } catch {}
+          toast({ title: t('auth.accountNotRegistered', 'Account not registered'), description: t('auth.signUpFirst', 'Please sign up first to create your account'), variant: "destructive" });
+          navigate("/auth", { replace: true });
+          return;
+        }
       } else if (state.mode === 'signup' && state.signUpData) {
         // Admin-owned registration: the server checks the verified phone,
         // validates bank details, creates the worker (OFF, pending approval)
@@ -232,6 +245,9 @@ export default function OtpVerify() {
           return;
         }
         takeSignupBank();
+        // Bank beneficiary registration for the new worker (fire-and-forget; the
+        // server also syncs on its own). Readiness is read back from the server later.
+        if ("workerId" in result && result.workerId) void requestOwnBeneficiary(result.workerId);
       }
 
       // Save JWT to native storage

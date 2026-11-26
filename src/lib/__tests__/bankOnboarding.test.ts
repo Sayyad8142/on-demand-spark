@@ -32,7 +32,7 @@ describe("approved bank-first onboarding", () => {
     expect(confirmedMissingWorker({ data: null, error: null }, { data: null, error: null })).toBe(true);
   });
   it("copies remaining counts and settlement amounts from the server unchanged", () => {
-    const summary = parseSummary({ payout_mode: "instant", instant_slots: { limit: 10, allocated: 8, settled: 3, remaining: 7 }, today: { date_ist: "2026-11-26", earned_inr: 500, bookings: 2 }, totals_inr: { awaiting_payout: 700, prepared: 0, processing: 0, paid: 100, failed: 0, held: 0 }, next_settlement: { batch_date_ist: "2026-11-26", cutoff_at: "2026-11-26T13:30:00Z", label: "Today 7 PM", estimated_amount_inr: 700 }, bank_payouts_active: false, generated_at: "2026-11-26T08:00:00Z" });
+    const summary = parseSummary({ payout_mode: "instant", successful_count: 3, remaining_count: 7, reserved_count: 0, instant_slots: { limit: 10, allocated: 3, settled: 3, remaining: 7 }, today: { date_ist: "2026-11-26", earned_inr: 500, bookings: 2 }, totals_inr: { awaiting_payout: 700, prepared: 0, processing: 0, paid: 100, failed: 0, held: 0 }, next_settlement: { batch_date_ist: "2026-11-26", cutoff_at: "2026-11-26T13:30:00Z", label: "Today 7 PM", estimated_amount_inr: 700 }, bank_payouts_active: false, generated_at: "2026-11-26T08:00:00Z" });
     expect(summaryToInstantView(summary).slotsRemaining).toBe(7);
     expect(summaryToDailyView(summary)).toMatchObject({ settlementAmount: 700, nextPayoutAt: "2026-11-26T13:30:00Z" });
   });

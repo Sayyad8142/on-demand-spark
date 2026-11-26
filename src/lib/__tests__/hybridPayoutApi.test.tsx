@@ -6,13 +6,13 @@ import path from "path";
 import i18n from "@/i18n/config";
 import {
   createHybridPayoutClient, contractStatusState, fetchAllCursorPages, historyToConsolidated, historyToManual,
-  parseSummary, clampLimit, HybridPayoutError, type RpcFn,
+  parseSummary, clampLimit, HybridPayoutError, summaryToInstantView, type RpcFn,
 } from "../hybridPayoutApi";
 import { HYBRID_PAYOUT_UI_ENABLED } from "../hybridPayout";
 import { HybridPayoutSection } from "@/components/payouts/hybrid/HybridPayoutSection";
 
 const summary = (o: Record<string, unknown> = {}) => ({
-  worker_id: "w1", payout_mode: "instant",
+  worker_id: "w1", payout_mode: "instant", successful_count: 3, remaining_count: 6, reserved_count: 1,
   instant_slots: { limit: 10, allocated: 4, settled: 3, remaining: 6 },
   today: { date_ist: "2026-11-10", earned_inr: 450, bookings: 2 },
   totals_inr: { awaiting_payout: 900, prepared: 300, processing: 0, paid: 12000, failed: 0, held: 0 },
@@ -58,7 +58,14 @@ describe("hybrid payout adapter", () => {
 
   it("daily batch next settlement parsed from server, not calculated", () => {
     const s = parseSummary(summary({ payout_mode: "daily", next_settlement: { batch_date_ist: "2026-11-10", cutoff_at: "2026-11-10T13:30:00Z", label: "Today 7:00 PM", estimated_amount_inr: 900 } }));
-    expect(s.nextSettlement).toEqual({ batchDateIst: "2026-11-10", cutoffAt: "2026-11-10T13:30:00Z", label: "Today 7:00 PM", estimatedAmountInr: 900, timeIst: null });
+    expect(s.nextSettlement).toEqual({ batchDateIst: "2026-11-10", cutoffAt: "2026-11-10T13:30:00Z", label: "Today 7:00 PM", estimatedAmountInr: 900, timeIst: null, estimated: true });
+  });
+
+  it("first-ten counters come from explicit top-level server fields", () => {
+    const s = parseSummary(summary({ successful_count: 9, remaining_count: 1, reserved_count: 1, instant_slots: { limit: 10, allocated: 10, settled: 9, remaining: 0 } }));
+    expect([s.successfulCount, s.remainingCount, s.reservedCount]).toEqual([9, 1, 1]);
+    expect(summaryToInstantView(s)).toMatchObject({ slotsSettled: 9, slotsRemaining: 1, slotsReserved: 1, slotsAllocated: 10 });
+    expect(() => parseSummary(summary({ successful_count: undefined }))).toThrow(HybridPayoutError);
   });
 
   it("daily batch settlement time comes from the server", () => {

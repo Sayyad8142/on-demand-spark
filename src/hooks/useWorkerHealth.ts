@@ -159,7 +159,7 @@ export function useWorkerHealth(
           isAvailable: (data as any)?.is_available ?? null,
           isBusy: (data as any)?.is_busy ?? null,
           isBlocked: (data as any)?.is_blocked ?? null,
-          payoutReady: readiness ? readinessAllowsBookings(readiness, (data as any)?.payout_ready) : null,
+          payoutReady: readinessAllowsBookings(readiness),
           lastHeartbeatAt: (data as any)?.last_heartbeat_at ?? null,
         }));
       } catch {

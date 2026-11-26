@@ -42,3 +42,6 @@
 - Alerts: nativeOverlayPayload + AlertPresentationRules + BookingNotifications; expiry/visible-only ACK. Why: no false claims.
 - Native 10-min alert lock: released only on server-confirmed end of that booking (`bookingEndRelease.ts`). Why: finished bookings must not block offers or touch dispatch.
 - Alarm retries require playback ACKs. Why: queued starts may fail.
+- Bank readiness blocks bookings in the app only when `get_my_payout_readiness` says enforced and not ready (`payoutBookingGate.ts`); unknown reads and the legacy `payout_ready` flag never block or label bank-ready. Why: the database enforces Admin's switch; the app must not invent blocks.
+- Native background calls (heartbeat, delivery confirmations) use only the worker's own login via `BackendSync.freshSessionJwt` (single-flight refresh, same-account check, written to both login stores; rules in `SessionRefreshRules.kt`), and the app reads login keys fresh from phone storage unless its own write is in flight. Why: the server refuses public-key calls and a stale refresh token would log workers out.
+- "Is this number registered?" (`worker_phone_exists`) runs only after phone-code verification. Why: the server answers only for the caller's verified phone.

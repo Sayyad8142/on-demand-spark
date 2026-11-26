@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Landmark, CheckCircle2, Clock, Phone } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { usePayoutReadiness } from "@/hooks/usePayoutReadiness";
 import { readinessMessages } from "@/components/payouts/PayoutReadinessNotice";
-import { BANK_UPDATE_CONTACT } from "@/lib/bankOnboarding";
+import { useState } from "react";
+import { BANK_UPDATE_CONTACT, requestOwnBeneficiary } from "@/lib/bankOnboarding";
 
 /**
  * Bank status for registered workers, read only from Admin
@@ -19,8 +19,14 @@ export default function AccountDetails() {
   useWorkerLanguage();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { worker } = useWorkerProfile(user?.id);
-  const { readiness, loading, allowsBookings } = usePayoutReadiness(user?.id, (worker as any)?.payout_ready);
+  const { readiness, loading, allowsBookings, refetch } = usePayoutReadiness(user?.id);
+  const [checking, setChecking] = useState(false);
+  const canRetryBank = !!readiness?.workerId && readiness.hasBankDetails && !readiness.beneficiaryRegistered;
+  const retryBank = async () => {
+    if (!readiness?.workerId) return;
+    setChecking(true);
+    try { await requestOwnBeneficiary(readiness.workerId); await refetch(); } finally { setChecking(false); }
+  };
   const messages = readiness ? readinessMessages(readiness, allowsBookings) : [];
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -37,6 +43,11 @@ export default function AccountDetails() {
             {readiness.ready || (allowsBookings && messages.length === 0)
               ? <p className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="h-4 w-4 text-success" />{displayText("Your bank account is verified.")}</p>
               : messages.map((m) => <p key={m} className="flex items-start gap-2 text-sm"><Clock className="h-4 w-4 mt-0.5 shrink-0 text-warning" />{displayText(m)}</p>)}
+            {canRetryBank && (
+              <Button variant="outline" className="w-full" disabled={checking} onClick={() => void retryBank()} data-testid="bank-recheck">
+                {displayText(checking ? "Checking..." : "Check bank verification again")}
+              </Button>
+            )}
           </Card>
         )}
         {!loading && !readiness && <p role="status" className="text-sm text-muted-foreground">{displayText("We could not check your bank status. Please try again.")}</p>}
