@@ -4601,6 +4601,7 @@ export type Database = {
         Row: {
           created_at: string
           error_message: string | null
+          event_key: string | null
           event_type: string | null
           external_payout_id: string | null
           http_status: number | null
@@ -4615,6 +4616,7 @@ export type Database = {
         Insert: {
           created_at?: string
           error_message?: string | null
+          event_key?: string | null
           event_type?: string | null
           external_payout_id?: string | null
           http_status?: number | null
@@ -4629,6 +4631,7 @@ export type Database = {
         Update: {
           created_at?: string
           error_message?: string | null
+          event_key?: string | null
           event_type?: string | null
           external_payout_id?: string | null
           http_status?: number | null
@@ -8974,6 +8977,7 @@ export type Database = {
           cashfree_beneficiary_address: string | null
           cashfree_beneficiary_email: string | null
           cashfree_beneficiary_id: string | null
+          cashfree_beneficiary_instrument: string | null
           cashfree_beneficiary_last_attempt_at: string | null
           cashfree_beneficiary_last_error: string | null
           cashfree_beneficiary_next_retry_at: string | null
@@ -9138,6 +9142,7 @@ export type Database = {
           cashfree_beneficiary_address?: string | null
           cashfree_beneficiary_email?: string | null
           cashfree_beneficiary_id?: string | null
+          cashfree_beneficiary_instrument?: string | null
           cashfree_beneficiary_last_attempt_at?: string | null
           cashfree_beneficiary_last_error?: string | null
           cashfree_beneficiary_next_retry_at?: string | null
@@ -9302,6 +9307,7 @@ export type Database = {
           cashfree_beneficiary_address?: string | null
           cashfree_beneficiary_email?: string | null
           cashfree_beneficiary_id?: string | null
+          cashfree_beneficiary_instrument?: string | null
           cashfree_beneficiary_last_attempt_at?: string | null
           cashfree_beneficiary_last_error?: string | null
           cashfree_beneficiary_next_retry_at?: string | null
@@ -9586,6 +9592,7 @@ export type Database = {
       }
     }
     Functions: {
+      _bank_gate_on: { Args: never; Returns: boolean }
       _create_worker_payout_core: {
         Args: { p_booking_id: string; p_note: string }
         Returns: undefined
@@ -9593,6 +9600,10 @@ export type Database = {
       _earning_label: { Args: { s: string }; Returns: string }
       _get_int_setting: {
         Args: { default_val: number; k: string }
+        Returns: number
+      }
+      _imps_release_slot_holds: {
+        Args: { _worker_id: string }
         Returns: number
       }
       _is_admin_message: { Args: { rec: unknown }; Returns: boolean }
@@ -9653,6 +9664,7 @@ export type Database = {
       }
       _tip_booking_open: { Args: { p_booking_id: string }; Returns: boolean }
       _woc_sla_minutes: { Args: { p_esc: string }; Returns: number }
+      _worker_bank_ready: { Args: { p_worker_id: string }; Returns: boolean }
       _worker_guard_log: {
         Args: {
           p_fields: string[]
@@ -10063,6 +10075,10 @@ export type Database = {
           web_version: string
         }[]
       }
+      admin_get_worker_payout_readiness: {
+        Args: { p_worker_id: string }
+        Returns: Json
+      }
       admin_hybrid_audit: { Args: { _limit?: number }; Returns: Json }
       admin_hybrid_batches: { Args: { _limit?: number }; Returns: Json }
       admin_hybrid_overview: { Args: never; Returns: Json }
@@ -10072,6 +10088,7 @@ export type Database = {
         Returns: Json
       }
       admin_hybrid_workers: { Args: { _mode?: string }; Returns: Json }
+      admin_imps_overview: { Args: never; Returns: Json }
       admin_instant_dispatch_funnel: {
         Args: { p_booking_id: string }
         Returns: Json
@@ -10350,6 +10367,10 @@ export type Database = {
       admin_reject_worker_registration: {
         Args: { p_rejection_reason: string; p_request_id: string }
         Returns: undefined
+      }
+      admin_release_payout_holds: {
+        Args: { _note: string; _reason_filter: string }
+        Returns: Json
       }
       admin_release_start_otp: {
         Args: { p_booking_id: string; p_reason?: string }
@@ -10706,6 +10727,7 @@ export type Database = {
               cashfree_beneficiary_address: string | null
               cashfree_beneficiary_email: string | null
               cashfree_beneficiary_id: string | null
+              cashfree_beneficiary_instrument: string | null
               cashfree_beneficiary_last_attempt_at: string | null
               cashfree_beneficiary_last_error: string | null
               cashfree_beneficiary_next_retry_at: string | null
@@ -10879,6 +10901,7 @@ export type Database = {
               cashfree_beneficiary_address: string | null
               cashfree_beneficiary_email: string | null
               cashfree_beneficiary_id: string | null
+              cashfree_beneficiary_instrument: string | null
               cashfree_beneficiary_last_attempt_at: string | null
               cashfree_beneficiary_last_error: string | null
               cashfree_beneficiary_next_retry_at: string | null
@@ -11922,6 +11945,7 @@ export type Database = {
         Args: { p_cursor?: string; p_limit?: number }
         Returns: Json
       }
+      get_my_payout_readiness: { Args: never; Returns: Json }
       get_my_payout_summary: { Args: never; Returns: Json }
       get_my_priority_score: { Args: never; Returns: Json }
       get_my_service_pricing: { Args: never; Returns: Json }
@@ -12517,6 +12541,23 @@ export type Database = {
       hybrid_handle_booking_refund: {
         Args: { _booking_id: string; _reason: string }
         Returns: string
+      }
+      imps_hold_payout: {
+        Args: { _detail?: Json; _payout_id: string; _reason: string }
+        Returns: Json
+      }
+      imps_prepare_send: { Args: { _payout_id: string }; Returns: Json }
+      imps_record_sent: {
+        Args: {
+          _cf_ref: string
+          _cf_status: string
+          _fee_paise: number
+          _gst_paise: number
+          _payout_id: string
+          _response: Json
+          _transfer_id: string
+        }
+        Returns: Json
       }
       increment_worker_failure: {
         Args: { _cooldown_until: string; _worker_id: string }
@@ -13222,6 +13263,10 @@ export type Database = {
         Args: { p_token: string }
         Returns: boolean
       }
+      verify_payout_internal_key: {
+        Args: { p_token: string }
+        Returns: boolean
+      }
       verify_start_otp: {
         Args: { p_booking_id: string; p_otp: string }
         Returns: Json
@@ -13276,6 +13321,10 @@ export type Database = {
           _ifsc_code: string
         }
         Returns: boolean
+      }
+      worker_payout_readiness_core: {
+        Args: { p_worker_id: string }
+        Returns: Json
       }
       worker_phone_exists: { Args: { _phone: string }; Returns: boolean }
       worker_protected_columns: { Args: never; Returns: string[] }
