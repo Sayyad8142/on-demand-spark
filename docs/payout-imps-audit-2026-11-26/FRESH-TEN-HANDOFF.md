@@ -50,12 +50,12 @@ commit;
 ```
 Expected result: 7 workers at 10/10 drop to 0 used (full ten); others keep only their real post-switch use.
 
-## Open owner question — unpaid daily earnings already held
-5 pre-filled workers already have 42 unpaid daily earnings (held for 7 PM settlement) that would have been instant under "fresh ten": up to 34 of them fit inside their fresh ten. None are paid. Reclassifying them is NOT included above and needs owner approval.
+## Owner decision — unpaid daily earnings already held
+5 pre-filled workers already have 42 unpaid daily earnings (held for 7 PM settlement) that would have been instant under "fresh ten": up to 34 of them fit inside their fresh ten. None are paid. **ANSWERED (owner, 2026-11-26): Keep them in the 7 PM payout.** Do not reclassify them; the fresh ten starts with each worker's next job.
 
 ## Must stay unchanged
 - No existing payout, earning, transfer or settlement record is edited, reversed or re-sent.
-- Already-held daily earnings are not reclassified to instant unless the owner approves (see open question).
+- Already-held daily earnings stay in the 7 PM payout (owner decision).
 - `_hybrid_record_earning` logic is unchanged; it simply sees fewer used slots.
 - Instant transfers still only move when Admin turns automatic execution on.
 
