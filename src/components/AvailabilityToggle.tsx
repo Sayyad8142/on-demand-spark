@@ -1,3 +1,4 @@
+import { readPayoutReadyFromServer } from "@/lib/payoutBookingGate";
 import { canTurnOn } from "@/lib/availabilityGate";
 import { ToastAction } from "@/components/ui/toast";
 import { buildAvailabilityRequest } from "@/lib/availabilityRequest";
@@ -208,12 +209,15 @@ export function AvailabilityToggle({
       onOnboardingIncomplete?.();
     }
 
-    // Soft warning: payout not ready (allow going online)
-    if (newValue && !payoutReady) {
+    // Owner rule (2026-11-26): going ON needs payout details ready.
+    // Re-read the server at tap time; a cached or failed value never counts as ready.
+    if (newValue && !(await readPayoutReadyFromServer())) {
       toast({
-        title: displayText("Payout setup pending"),
-        description: displayText("You can receive bookings, but complete payout setup to get paid."),
+        title: displayText("Complete payout details to start getting bookings"),
+        description: displayText("You won’t receive bookings until payout details are added."),
+        variant: "destructive",
       });
+      return;
     }
 
     setPressed(true);

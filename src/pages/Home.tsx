@@ -1,3 +1,4 @@
+import { payoutAllowsBookings } from "@/lib/payoutBookingGate";
 import { shouldRedirectToSetup } from "@/lib/availabilityGate";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect } from "react";
@@ -67,7 +68,7 @@ export default function Home() {
   const priority = useWorkerPriority(isGuestMode ? null : realWorker?.id);
   const lateStart = useLateStartPriority(activeJob?.id ?? "", !!activeJob && activeJob.start_otp_required === true && !activeJob.started_at);
 
-  const payoutReady = isGuestMode ? true : workerLoading ? true : !!(worker as any)?.payout_ready;
+  const payoutReady = isGuestMode ? true : payoutAllowsBookings((worker as any)?.payout_ready);
 
   // Onboarding status: checks service_types, community, availability slots
   const onboarding = useOnboardingStatus(
@@ -112,11 +113,11 @@ export default function Home() {
   const isOnline = !!worker?.is_available;
 
   // Layer 2: Realtime subscription on booking_requests
-  useBookingRequestsRealtime(isGuestMode ? undefined : worker?.id, isOnline);
+  useBookingRequestsRealtime(isGuestMode ? undefined : worker?.id, isOnline && payoutReady);
 
   // Layer 3: Server-side polling fallback (10s foreground / 30s background,
   // plus immediate checks on open / resume / reconnect)
-  useBookingPollingFallback(isGuestMode ? undefined : worker?.id, isOnline);
+  useBookingPollingFallback(isGuestMode ? undefined : worker?.id, isOnline && payoutReady);
   
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -187,7 +188,7 @@ export default function Home() {
     accept,
     reject,
     clearAlert
-  } = useUnifiedBookingAlerts(user?.id, isOnline, matches, worker?.id);
+  } = useUnifiedBookingAlerts(user?.id, isOnline && payoutReady, matches, worker?.id);
 
   // Movement tracking lifecycle is owned globally by App.tsx (useActiveJob-driven)
   // so it keeps running when the worker navigates to Profile/Bookings/Availability.
@@ -291,7 +292,7 @@ export default function Home() {
               }}
               hasAvailabilitySlots={onboarding.hasAvailabilitySlots}
               onNoSlots={() => navigate('/availability')}
-              bookingReady={true}
+              bookingReady={payoutReady}
             />
           </div>
         </div>
@@ -338,10 +339,10 @@ export default function Home() {
               <AlertTriangle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div className="space-y-1">
                 <h2 className="font-semibold text-base text-foreground">
-                  {displayText("Add payout details to get paid")}
+                  {displayText("Complete payout details to start getting bookings")}
                 </h2>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  {displayText("You can receive bookings now. Add payout details so your earnings can be paid.")}
+                  {displayText("You won’t receive bookings until payout details are added.")}
                 </p>
               </div>
             </div>

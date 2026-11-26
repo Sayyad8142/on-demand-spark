@@ -200,7 +200,14 @@ export async function processIncomingBooking(alert: BookingAlert): Promise<boole
   }
 
 
-  // Payout details are NOT required to receive offers (owner decision 2026-11-26).
+  // Owner rule (2026-11-26): no offers until the server says payout details are ready.
+  {
+    const { readPayoutReadyFromServer } = await import("@/lib/payoutBookingGate");
+    if (!(await readPayoutReadyFromServer())) {
+      console.log(`🔕 [Coordinator] Booking hidden because payout_not_ready: ${bookingId}`);
+      return false;
+    }
+  }
 
   // Dedup: already shown or currently showing
   if (shownBookingIds.has(generation) || wasOfferPresented(generation)) {

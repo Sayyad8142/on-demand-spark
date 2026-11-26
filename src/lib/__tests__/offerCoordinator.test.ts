@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 const recovery = vi.hoisted(() => vi.fn());
 const popup = vi.hoisted(() => vi.fn());
+const payoutReady = vi.hoisted(() => vi.fn(async () => true));
+vi.mock("@/lib/payoutBookingGate", () => ({ readPayoutReadyFromServer: payoutReady, payoutAllowsBookings: (v: unknown) => v === true }));
 vi.mock('@/lib/authoritativeOffer', () => ({ recoverOfferDeadline: recovery }));
 vi.mock("@/integrations/supabase/client", () => {
   const q = { select: () => q, eq: () => q, maybeSingle: async () => ({ data: { status: "pending", worker_id: null } }) };
@@ -12,8 +14,13 @@ vi.mock("@/lib/bookingAlertFallback", () => ({ clearBookingAlertFallback: vi.fn(
 vi.mock("@/lib/scheduledBookingGuards", () => ({ canShowWorkerBookingOffer: () => true, isBeforeScheduledDispatchWindow: () => false, logScheduledOfferDecision: vi.fn() }));
 import { processIncomingBooking, getCurrentAlert, dismissAlert, clearAlertState, onNewAlert, retireOfferGeneration } from "@/services/bookingAlertCoordinator";
 const offer = (id: string, timeoutAt: string) => ({ bookingId: id, bookingRequestId: `r-${id}`, custName: "C", community: "x", serviceType: "maid", flatNo: "1", priceInr: 1, source: "fcm" as const, timeoutAt });
-beforeEach(() => { clearAlertState(); localStorage.clear(); recovery.mockReset(); popup.mockClear(); vi.useRealTimers(); });
+beforeEach(() => { clearAlertState(); localStorage.clear(); recovery.mockReset(); popup.mockClear(); payoutReady.mockReset(); payoutReady.mockResolvedValue(true); vi.useRealTimers(); });
 describe("coordinator generation dedupe", () => {
+  it('hides the offer when the server says payout details are not ready', async () => {
+    payoutReady.mockResolvedValue(false);
+    expect(await processIncomingBooking(offer('no-payout', new Date(Date.now() + 30_000).toISOString()))).toBe(false);
+    expect(getCurrentAlert()).toBeNull();
+  });
   it('undated realtime offer recovers exact server expiry without inventing a TTL', async () => {
     const deadline = new Date(Date.now() + 23_000).toISOString();
     recovery.mockResolvedValue(deadline);

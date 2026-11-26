@@ -11,7 +11,7 @@ export const WORKER_PROFILE_FIELDS = [
   "community", "communities", "selected_community_id", "service_types",
   "is_active", "is_available", "is_busy", "is_blocked", "blocked_reason",
   "approval_status", "availability_requires_approval",
-  "upi_id", "upi_qr_url", "fcm_token_status",
+  "upi_id", "upi_qr_url", "fcm_token_status", "payout_ready",
   "rating", "total_ratings", "updated_at",
 ] as const satisfies readonly (keyof WorkerRow)[];
 
