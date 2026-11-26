@@ -8371,6 +8371,8 @@ export type Database = {
           hold_reason: string | null
           id: string
           idempotency_key: string | null
+          imps_status_checked_at: string | null
+          imps_status_not_before: string | null
           last_error: string | null
           last_retry_at: string | null
           manual_utr: string | null
@@ -8415,6 +8417,8 @@ export type Database = {
           hold_reason?: string | null
           id?: string
           idempotency_key?: string | null
+          imps_status_checked_at?: string | null
+          imps_status_not_before?: string | null
           last_error?: string | null
           last_retry_at?: string | null
           manual_utr?: string | null
@@ -8459,6 +8463,8 @@ export type Database = {
           hold_reason?: string | null
           id?: string
           idempotency_key?: string | null
+          imps_status_checked_at?: string | null
+          imps_status_not_before?: string | null
           last_error?: string | null
           last_retry_at?: string | null
           manual_utr?: string | null
@@ -9676,6 +9682,12 @@ export type Database = {
         Returns: undefined
       }
       _worker_guard_mode: { Args: never; Returns: string }
+      _worker_reset_blocked: { Args: { p_worker_id: string }; Returns: boolean }
+      _worker_reset_blockers: { Args: { p_worker_id: string }; Returns: Json }
+      _worker_reset_one: {
+        Args: { p_reason: string; p_worker_id: string }
+        Returns: undefined
+      }
       abandon_booking_tip: { Args: { p_tip_payment_id: string }; Returns: Json }
       academy_dashboard_stats: { Args: never; Returns: Json }
       accept_booking: { Args: { p_booking_id: string }; Returns: Json }
@@ -10403,7 +10415,20 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_reset_all_workers: {
+        Args: { p_commit?: boolean; p_confirm_phrase: string; p_reason: string }
+        Returns: Json
+      }
       admin_reset_start_otp: { Args: { p_booking_id: string }; Returns: Json }
+      admin_reset_worker: {
+        Args: {
+          p_commit?: boolean
+          p_confirm_phone: string
+          p_reason: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
       admin_resolve_case: {
         Args: {
           p_case: string
@@ -12542,6 +12567,24 @@ export type Database = {
         Args: { _booking_id: string; _reason: string }
         Returns: string
       }
+      imps_apply_provider_status: {
+        Args: {
+          _detail?: Json
+          _event_key?: string
+          _reason?: string
+          _status: string
+          _transfer_ref: string
+          _utr?: string
+        }
+        Returns: Json
+      }
+      imps_claim_status_checks: {
+        Args: { _limit?: number }
+        Returns: {
+          id: string
+          transfer_id: string
+        }[]
+      }
       imps_hold_payout: {
         Args: { _detail?: Json; _payout_id: string; _reason: string }
         Returns: Json
@@ -12559,6 +12602,7 @@ export type Database = {
         }
         Returns: Json
       }
+      imps_status_backoff: { Args: { _seconds: number }; Returns: undefined }
       increment_worker_failure: {
         Args: { _cooldown_until: string; _worker_id: string }
         Returns: undefined
@@ -12860,6 +12904,21 @@ export type Database = {
           p_phone: string
           p_service_types: string[]
           p_upi_id: string
+        }
+        Returns: Json
+      }
+      register_worker_v2: {
+        Args: {
+          p_account_holder: string
+          p_account_number: string
+          p_bank_name: string
+          p_community: string
+          p_confirm_account_number: string
+          p_full_name: string
+          p_ifsc: string
+          p_phone: string
+          p_service_types: string[]
+          p_upi_id?: string
         }
         Returns: Json
       }
@@ -13295,6 +13354,15 @@ export type Database = {
       }
       worker_approval_allows_online: {
         Args: { p_requires: boolean; p_status: string }
+        Returns: boolean
+      }
+      worker_bank_fields_valid: {
+        Args: {
+          _account: string
+          _bank: string
+          _holder: string
+          _ifsc: string
+        }
         Returns: boolean
       }
       worker_collect_payment: {
