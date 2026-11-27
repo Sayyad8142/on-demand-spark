@@ -4449,6 +4449,7 @@ export type Database = {
         Row: {
           cashfree_imps_enabled: boolean
           collect_worker_upi: boolean
+          controlled_sends_remaining: number
           cutoff_at: string
           gst_bps: number
           id: number
@@ -4459,6 +4460,7 @@ export type Database = {
           min_transfer_paise: number
           razorpayx_enabled: boolean
           require_bank_beneficiary_for_dispatch: boolean
+          rollout_mode: string
           settlement_time_ist: string
           updated_at: string
           updated_by: string | null
@@ -4466,6 +4468,7 @@ export type Database = {
         Insert: {
           cashfree_imps_enabled?: boolean
           collect_worker_upi?: boolean
+          controlled_sends_remaining?: number
           cutoff_at?: string
           gst_bps?: number
           id?: number
@@ -4476,6 +4479,7 @@ export type Database = {
           min_transfer_paise?: number
           razorpayx_enabled?: boolean
           require_bank_beneficiary_for_dispatch?: boolean
+          rollout_mode?: string
           settlement_time_ist?: string
           updated_at?: string
           updated_by?: string | null
@@ -4483,6 +4487,7 @@ export type Database = {
         Update: {
           cashfree_imps_enabled?: boolean
           collect_worker_upi?: boolean
+          controlled_sends_remaining?: number
           cutoff_at?: string
           gst_bps?: number
           id?: number
@@ -4493,6 +4498,7 @@ export type Database = {
           min_transfer_paise?: number
           razorpayx_enabled?: boolean
           require_bank_beneficiary_for_dispatch?: boolean
+          rollout_mode?: string
           settlement_time_ist?: string
           updated_at?: string
           updated_by?: string | null
@@ -9739,6 +9745,7 @@ export type Database = {
         Args: { default_val: number; k: string }
         Returns: number
       }
+      _imps_controlled_stats: { Args: never; Returns: Json }
       _imps_release_slot_holds: {
         Args: { _worker_id: string }
         Returns: number
@@ -10232,6 +10239,39 @@ export type Database = {
       }
       admin_hybrid_workers: { Args: { _mode?: string }; Returns: Json }
       admin_imps_overview: { Args: never; Returns: Json }
+      admin_imps_recent_transfers: {
+        Args: { _limit?: number }
+        Returns: {
+          amount_paise: number
+          cashfree_reference: string
+          controlled_test: boolean
+          failure_reason: string
+          payout_id: string
+          payout_type: string
+          status: string
+          transfer_id: string
+          updated_at: string
+          utr: string
+          worker_name: string
+        }[]
+      }
+      admin_imps_rollout_status: { Args: never; Returns: Json }
+      admin_imps_test_candidates: {
+        Args: { _limit?: number }
+        Returns: {
+          amount_paise: number
+          created_at: string
+          fee_paise: number
+          gst_paise: number
+          ifsc: string
+          masked_account: string
+          payout_id: string
+          payout_type: string
+          total_paise: number
+          worker_id: string
+          worker_name: string
+        }[]
+      }
       admin_instant_dispatch_funnel: {
         Args: { p_booking_id: string }
         Returns: Json
@@ -10686,6 +10726,10 @@ export type Database = {
       }
       admin_set_dispatch_nudge: {
         Args: { p_enabled: boolean; p_nudge: string; p_reason: string }
+        Returns: Json
+      }
+      admin_set_imps_rollout_mode: {
+        Args: { _confirm?: string; _mode: string; _reason: string }
         Returns: Json
       }
       admin_set_legal_pdf: {
@@ -12718,6 +12762,10 @@ export type Database = {
         }
         Returns: Json
       }
+      imps_authorize_send: {
+        Args: { _admin_explicit: boolean; _payout_id: string }
+        Returns: Json
+      }
       imps_claim_status_checks: {
         Args: { _limit?: number }
         Returns: {
@@ -12741,6 +12789,13 @@ export type Database = {
           _transfer_id: string
         }
         Returns: Json
+      }
+      imps_recoverable_payouts: {
+        Args: { _limit?: number }
+        Returns: {
+          payout_id: string
+          payout_type: string
+        }[]
       }
       imps_status_backoff: { Args: { _seconds: number }; Returns: undefined }
       increment_worker_failure: {
