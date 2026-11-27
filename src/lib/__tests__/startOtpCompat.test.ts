@@ -30,8 +30,8 @@ describe("Start OTP / Completion OTP compatibility", () => {
     expect(startOtpCardAction("cancelled")).toBe("none");
   });
 
-  it("release candidate is 10.0.05 / 105", () => {
-    expect(CURRENT_VERSION_CODE).toBe(105);
-    expect(CURRENT_VERSION_NAME).toBe("10.0.05");
+  it("release candidate is 10.0.06 / 106", () => {
+    expect(CURRENT_VERSION_CODE).toBe(106);
+    expect(CURRENT_VERSION_NAME).toBe("10.0.06");
   });
 });
