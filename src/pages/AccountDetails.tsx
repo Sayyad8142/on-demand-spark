@@ -57,7 +57,7 @@ export default function AccountDetails() {
         {status === "failed" && <p role="alert" className="text-sm text-destructive">{displayText("We could not verify your bank account. Please check and submit again.")}</p>}
 
         {canSubmitBank(status) && (
-          <Card className="p-4 rounded-2xl"><BankDetailsForm onSubmitted={() => void onSubmitted()} /></Card>
+          <BankDetailsForm onSubmitted={() => void onSubmitted()} />
         )}
 
         {(status === "pending" || status === "verified") && readiness && (

@@ -433,3 +433,8 @@
 - [x] Bank form, status, Profile card, full-screen Edit Profile (en/hi/te)
 - [ ] Admin deploys `submit_my_bank_details` + optional readiness fields (docs/bank-self-service-2026-11-27/HANDOFF.md)
 - [ ] Signed-in/phone check of the flow (sign-in not available in sandbox)
+
+## Passbook scanning (2026-11-27)
+- [x] Add private Android/browser OCR and editable bank form results with manual confirmation (en/hi/te); no backend/booking/payout changes.
+- [x] Test extraction and submission safety; real browser OCR on a synthetic passbook, editable review, mandatory manual confirmation, mocked Admin unavailable answer and mobile/desktop translations checked without publishing.
+- [ ] Real Android scan and signed-in submission — blocked: phone/build and Admin bank RPC availability.

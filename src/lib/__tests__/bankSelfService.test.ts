@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { rpc: vi.fn() } }));
 import { bankStatusFor, canSubmitBank, parseSubmitBankResponse, submitMyBankDetails } from "../bankSelfService";
 import { parsePayoutReadiness, readinessAllowsBookings } from "../payoutBookingGate";
+import { supabase } from "@/integrations/supabase/client";
 
 const r = (o: Record<string, unknown>) => parsePayoutReadiness({ worker_id: "w", has_bank_details: false, beneficiary_registered: false, admin_approved: true, ready: false, missing: [], enforced: false, ...o });
 const bank = { holder: "Asha", account: "123456789", confirmation: "123456789", ifsc: "hdfc0001234", bankName: "HDFC" };
@@ -23,5 +24,12 @@ describe("bank self-service", () => {
     expect(call).toHaveBeenCalledTimes(1);
     expect(call.mock.calls[0][1]).not.toHaveProperty("p_worker_id");
     expect(call.mock.calls[0][1].p_ifsc).toBe("HDFC0001234");
+  });
+  it("keeps the Supabase receiver when connecting reviewed bank details to Admin", async () => {
+    vi.mocked(supabase.rpc).mockImplementationOnce(function (this: typeof supabase) {
+      expect(this).toBe(supabase);
+      return Promise.resolve({ data: { ok: true }, error: null }) as never;
+    });
+    expect(await submitMyBankDetails(bank)).toEqual({ ok: true });
   });
 });

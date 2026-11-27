@@ -61,7 +61,7 @@ type LooseRpc = (name: string, args?: Record<string, unknown>) => Promise<{ data
 let inFlight: Promise<SubmitBankOutcome> | null = null;
 
 /** Single-flight: a double tap never sends two submissions. */
-export function submitMyBankDetails(bank: BankInput & { bankName: string }, call: LooseRpc = supabase.rpc as unknown as LooseRpc): Promise<SubmitBankOutcome> {
+export function submitMyBankDetails(bank: BankInput & { bankName: string }, call: LooseRpc = supabase.rpc.bind(supabase) as unknown as LooseRpc): Promise<SubmitBankOutcome> {
   if (inFlight) return inFlight;
   inFlight = (async () => {
     try {

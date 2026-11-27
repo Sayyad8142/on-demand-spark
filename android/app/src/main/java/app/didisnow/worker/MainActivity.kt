@@ -77,6 +77,7 @@ class MainActivity : BridgeActivity() {
         registerPlugin(CancellationVoicePlugin::class.java)
         registerPlugin(StartOtpAlarmPlugin::class.java)
         registerPlugin(WorkerStorePlugin::class.java)
+        registerPlugin(PassbookScannerPlugin::class.java)
         
         super.onCreate(savedInstanceState)
         
