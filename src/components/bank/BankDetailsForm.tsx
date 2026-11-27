@@ -60,7 +60,7 @@ export function BankDetailsForm({ onSubmitted, onBankChanged }: { onSubmitted: (
 
   return (
     <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void submit(); }} data-testid="bank-form" autoComplete="off">
-      <PassbookScanCard onDetected={applyScan} onScanningChange={setScanning} />
+      <PassbookScanCard onDetected={applyScan} onScanningChange={setScanning} disabled={saving} />
       {field("bank-holder", "Account holder name", <User className="h-4 w-4" />, <Input id="bank-holder" className={cls} value={holder} onChange={(e) => setHolder(e.target.value)} maxLength={100} />)}
       {field("bank-account", "Bank account number", <Hash className="h-4 w-4" />, <Input id="bank-account" className={cls} inputMode="numeric" value={account} onChange={(e) => setAccount(e.target.value.replace(/\D/g, ""))} maxLength={18} />)}
       {field("bank-confirm", "Confirm account number", <Hash className="h-4 w-4" />, <Input id="bank-confirm" className={cls} inputMode="numeric" value={confirmation} onChange={(e) => setConfirmation(e.target.value.replace(/\D/g, ""))} maxLength={18} onPaste={(e) => e.preventDefault()} />)}

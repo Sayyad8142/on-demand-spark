@@ -6,9 +6,10 @@ import { displayText, useWorkerLanguage } from "@/i18n/display";
 import { hasNativePassbookScanner, scanPassbook, type PassbookSource } from "@/lib/passbookScan";
 import type { PassbookFields } from "@/lib/passbookText";
 
-export function PassbookScanCard({ onDetected, onScanningChange }: {
+export function PassbookScanCard({ onDetected, onScanningChange, disabled = false }: {
   onDetected: (fields: PassbookFields) => void;
   onScanningChange: (scanning: boolean) => void;
+  disabled?: boolean;
 }) {
   useWorkerLanguage();
   const camera = useRef<HTMLInputElement>(null);
@@ -20,7 +21,7 @@ export function PassbookScanCard({ onDetected, onScanningChange }: {
   useEffect(() => () => controller.current?.abort(), []);
 
   const scan = async (source: PassbookSource, file?: File) => {
-    if (busy.current) return;
+    if (busy.current || disabled) return;
     busy.current = true;
     const task = new AbortController();
     controller.current = task;
@@ -45,6 +46,7 @@ export function PassbookScanCard({ onDetected, onScanningChange }: {
     }
   };
   const choose = (source: PassbookSource) => {
+    if (disabled || busy.current) return;
     if (hasNativePassbookScanner()) void scan(source);
     else (source === "camera" ? camera : gallery).current?.click();
   };
@@ -62,8 +64,8 @@ export function PassbookScanCard({ onDetected, onScanningChange }: {
       </div>
       <p className="text-sm text-muted-foreground">{displayText("Use a clear photo of the account details page.")}</p>
       <div className="grid grid-cols-2 gap-2">
-        <Button type="button" variant="outline" className="min-h-12 h-auto py-2 whitespace-normal" disabled={scanning} onClick={() => choose("camera")}><Camera className="mr-2 h-4 w-4 shrink-0" />{displayText("Take Photo")}</Button>
-        <Button type="button" variant="outline" className="min-h-12 h-auto py-2 whitespace-normal" disabled={scanning} onClick={() => choose("gallery")}><ImagePlus className="mr-2 h-4 w-4 shrink-0" />{displayText("Upload from Gallery")}</Button>
+        <Button type="button" variant="outline" className="min-h-12 h-auto py-2 whitespace-normal" disabled={scanning || disabled} onClick={() => choose("camera")}><Camera className="mr-2 h-4 w-4 shrink-0" />{displayText("Take Photo")}</Button>
+        <Button type="button" variant="outline" className="min-h-12 h-auto py-2 whitespace-normal" disabled={scanning || disabled} onClick={() => choose("gallery")}><ImagePlus className="mr-2 h-4 w-4 shrink-0" />{displayText("Upload from Gallery")}</Button>
       </div>
       <input ref={camera} type="file" accept="image/*" capture="environment" className="hidden" aria-label={displayText("Take Photo")} onChange={(e) => picked(e.currentTarget, "camera")} />
       <input ref={gallery} type="file" accept="image/*" className="hidden" aria-label={displayText("Upload from Gallery")} onChange={(e) => picked(e.currentTarget, "gallery")} />

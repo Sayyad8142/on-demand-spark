@@ -59,4 +59,19 @@ describe("scan review and bank submission", () => {
     expect(screen.getByLabelText("Bank account number")).toHaveValue(fields.account);
     expect(mocks.submit).not.toHaveBeenCalled();
   });
+  it("cannot scan or submit again while reviewed details are being saved", async () => {
+    let finish: (value: unknown) => void = () => {};
+    mocks.submit.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+    render(<BankDetailsForm onSubmitted={vi.fn()} />);
+    await scan();
+    fireEvent.change(screen.getByLabelText("Confirm account number"), { target: { value: fields.account } });
+    fireEvent.click(screen.getByRole("button", { name: "Submit bank details" }));
+    expect(screen.getByRole("button", { name: "Take Photo" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Upload from Gallery" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Take Photo" }));
+    expect(mocks.scan).toHaveBeenCalledOnce();
+    expect(mocks.submit).toHaveBeenCalledOnce();
+    finish({ ok: false, error: "unavailable" });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Take Photo" })).not.toBeDisabled());
+  });
 });

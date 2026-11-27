@@ -1,5 +1,11 @@
 # Worker language translation
 
+## Prompt 152 — complete bank flow, no publication
+- [x] Add missing signup passbook scanner and prevent scanning during bank save; preserve manual confirmation and existing registration contract.
+- [x] 1,099 tests passed; real browser OCR on signup and isolated Bank Details, shared status refresh, bank-independent work and mobile-hook regression checked; preview build OK.
+- [ ] Real existing/new worker authenticated submission and physical Android camera/gallery — blocked: user-managed session unavailable and no phone/build.
+- [x] Record completed checks and precise Android/live limitations in docs/bank-self-service-2026-11-27/PROMPT-152-VERIFICATION.md.
+
 ## Cashfree IMPS contract 26 Nov — audit and fixes, no publication
 - [x] Sign-in no longer asks "is this number registered?" before the code (server now refuses it); check moved after verification.
 - [x] Bookings blocked for bank only when Admin's switch is on and server says not ready.

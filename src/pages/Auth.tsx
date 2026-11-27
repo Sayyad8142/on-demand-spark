@@ -20,6 +20,8 @@ import maidServiceIcon from "@/assets/service-maid.png";
 import bathroomServiceIcon from "@/assets/service-bathroom.png";
 import { CommunityPicker } from "@/components/CommunityPicker";
 import { SECURE_BANK_ONBOARDING_ENABLED, holdSignupBank, readCollectWorkerUpi, validateBankInput } from "@/lib/bankOnboarding";
+import { PassbookScanCard } from "@/components/bank/PassbookScanCard";
+import { scanToForm, type PassbookFields } from "@/lib/passbookText";
 
 
 // @ts-ignore - Capacitor bridge
@@ -244,7 +246,16 @@ export default function Auth() {
   const canContinueSignup = !!signUpFullName && !!signUpPhone && !!signUpCommunity && signUpServices.length > 0;
 
   const signupBankError = () => validateBankInput({ holder: signUpAccountHolderName, account: signUpBankAccountNumber, confirmation: signUpConfirmAccountNumber, ifsc: signUpIfscCode, bankName: signUpBankName });
+  const applySignupScan = (fields: PassbookFields) => {
+    const result = scanToForm(fields);
+    if (result.holder) setSignUpAccountHolderName(current => current || result.holder);
+    if (result.account) setSignUpBankAccountNumber(current => current || result.account);
+    if (result.ifsc) setSignUpIfscCode(current => current || result.ifsc);
+    if (result.bankName) setSignUpBankName(current => current || result.bankName);
+    setSignUpConfirmAccountNumber(result.confirmation);
+  };
   const goToSignupStepThree = () => {
+    if (extractingPassbook || loading) return;
     const error = signupBankError();
     if (error) { toast({ title: displayText("Check your details"), description: displayText(error), variant: "destructive" }); return; }
     if (collectUpi && signUpUpiId.trim() && !upiSchema.safeParse(signUpUpiId.trim()).success) {
@@ -368,6 +379,7 @@ export default function Auth() {
     }
   };
   const handleSignUpSendOtp = async () => {
+    if (extractingPassbook || loading) return;
     if (!canContinueSignup || !nameSchema.safeParse(signUpFullName).success || !phoneSchema.safeParse(signUpPhone).success) {
       toast({ title: displayText("Please fill all required fields"), variant: "destructive" }); return;
     }
@@ -429,7 +441,7 @@ export default function Auth() {
           
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs value={activeTab} onValueChange={(value) => { if (!extractingPassbook) setActiveTab(value); }} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">{t('auth.signIn')}</TabsTrigger>
               <TabsTrigger value="signup">{t('auth.signUp')}</TabsTrigger>
@@ -460,6 +472,7 @@ export default function Auth() {
                         key={label}
                         type="button"
                         onClick={() => {
+                          if (extractingPassbook || loading) return;
                           if (stepNumber === 1) setSignUpStep(1);
                           if (stepNumber === 2) goToSignupStepTwo();
                           if (stepNumber === 3 && canContinueSignup) goToSignupStepThree();
@@ -582,12 +595,13 @@ export default function Auth() {
                 <div className="space-y-5">
                   <div className="space-y-1">
                     <h2 className="text-xl font-bold">{displayText("Bank Details")}</h2>
-                    <p className="text-sm text-muted-foreground">{displayText("Bank account required for bookings")}</p>
+                    <p className="text-sm text-muted-foreground">{displayText("Add your bank account so Didi Now can pay you.")}</p>
                   </div>
+                  <PassbookScanCard onDetected={applySignupScan} onScanningChange={setExtractingPassbook} disabled={loading} />
                   <div className="space-y-4">
                     <div className="space-y-2"><Label htmlFor="signup-acct-name">{displayText("Account Holder Name")}</Label><Input id="signup-acct-name" value={signUpAccountHolderName} onChange={e => setSignUpAccountHolderName(e.target.value)} autoComplete="off" /></div>
                     <div className="space-y-2"><Label htmlFor="signup-acct-no">{displayText("Account Number")}</Label><Input id="signup-acct-no" inputMode="numeric" maxLength={18} value={signUpBankAccountNumber} onChange={e => setSignUpBankAccountNumber(e.target.value.replace(/\D/g, ""))} autoComplete="off" /></div>
-                    <div className="space-y-2"><Label htmlFor="signup-acct-no-confirm">{displayText("Confirm Account Number")}</Label><Input id="signup-acct-no-confirm" inputMode="numeric" maxLength={18} value={signUpConfirmAccountNumber} onChange={e => setSignUpConfirmAccountNumber(e.target.value.replace(/\D/g, ""))} autoComplete="off" /></div>
+                    <div className="space-y-2"><Label htmlFor="signup-acct-no-confirm">{displayText("Confirm Account Number")}</Label><Input id="signup-acct-no-confirm" inputMode="numeric" maxLength={18} value={signUpConfirmAccountNumber} onChange={e => setSignUpConfirmAccountNumber(e.target.value.replace(/\D/g, ""))} onPaste={e => e.preventDefault()} autoComplete="off" /></div>
                     <div className="space-y-2"><Label htmlFor="signup-ifsc">IFSC</Label><Input id="signup-ifsc" maxLength={11} value={signUpIfscCode} onChange={e => setSignUpIfscCode(e.target.value.toUpperCase())} autoComplete="off" /></div>
                     <div className="space-y-2"><Label htmlFor="signup-bank-name">{displayText("Bank Name")}</Label><Input id="signup-bank-name" maxLength={80} value={signUpBankName} onChange={e => setSignUpBankName(e.target.value)} autoComplete="off" /></div>
                   </div>
@@ -665,13 +679,13 @@ export default function Auth() {
                   </div>}
                   {/* Actions */}
                   <div className="grid grid-cols-[auto_1fr] gap-3 pt-1">
-                    <Button type="button" variant="outline" onClick={() => setSignUpStep(1)} className="h-14 rounded-2xl px-5">
+                    <Button type="button" variant="outline" onClick={() => setSignUpStep(1)} disabled={extractingPassbook || loading} className="h-14 rounded-2xl px-5">
                       <ChevronLeft className="h-5 w-5" />
                     </Button>
                     <Button
                       type="button"
                       onClick={goToSignupStepThree}
-                      disabled={loading}
+                      disabled={loading || extractingPassbook}
                       className="h-14 rounded-2xl text-base font-semibold"
                     >
                       {displayText("Continue")}
