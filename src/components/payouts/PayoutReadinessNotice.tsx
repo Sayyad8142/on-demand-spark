@@ -10,7 +10,6 @@ export function readinessMessages(readiness: PayoutReadiness | null, _bookingsAl
   if (!readiness) return ["We could not check your bank status. Please try again."];
   const out: string[] = [];
   if (!readiness.hasBankDetails) out.push("Add your bank account so Didi Now can pay you.");
-  else if (!readiness.beneficiaryRegistered) out.push("Didi Now is verifying your bank account.");
   return out;
 }
 

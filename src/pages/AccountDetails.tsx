@@ -9,7 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { canSubmitBank, failureReasonText, type BankDetails } from "@/lib/bankSelfService";
 import { BankDetailsForm } from "@/components/bank/BankDetailsForm";
-import { BankStatusBadge } from "@/components/bank/BankStatusBadge";
+import { BankStatusBadge, REVIEW_MESSAGE } from "@/components/bank/BankStatusBadge";
 
 /**
  * Bank details from Admin's `get_my_bank_details`; form only when the server's
@@ -22,8 +22,9 @@ export default function AccountDetails() {
   const queryClient = useQueryClient();
   const { bank, loading, refetch } = useBankDetails(user?.id);
   const status = bank?.status ?? null;
+  const setup = bank?.setup ?? null;
   const onSubmitted = async (next: BankDetails | null) => {
-    toast.success(displayText("Bank details submitted. Didi Now will verify them."));
+    toast.success(displayText("Bank details saved."));
     if (next) queryClient.setQueryData(["my-bank-details", user?.id ?? "none"], next);
     await Promise.all([refetch(), queryClient.invalidateQueries({ queryKey: ["payout-readiness"] })]);
   };
@@ -39,14 +40,14 @@ export default function AccountDetails() {
         <div className="flex items-start gap-3">
           <div className="h-12 w-12 shrink-0 rounded-2xl bg-primary/15 text-primary flex items-center justify-center"><Landmark className="h-6 w-6" /></div>
           <div className="space-y-1">
-            <div className="flex items-center gap-2 flex-wrap"><h2 className="font-semibold">{displayText("Bank account")}</h2>{status && <BankStatusBadge status={status} />}</div>
-            <p className="text-sm text-muted-foreground">{displayText("Didi Now verifies your bank details before paying you.")}</p>
+            <div className="flex items-center gap-2 flex-wrap"><h2 className="font-semibold">{displayText("Bank account")}</h2>{setup && <BankStatusBadge setup={setup} />}</div>
+            <p className="text-sm text-muted-foreground">{displayText("Didi Now sends your payouts to this bank account.")}</p>
           </div>
         </div>
 
         {!loading && !bank && <div className="space-y-3"><p role="status" className="text-sm text-muted-foreground">{displayText("We could not check your bank status. Please try again.")}</p><Button variant="outline" onClick={() => void refetch()}>{displayText("Try again")}</Button></div>}
 
-        {status === "failed" && <p role="alert" className="text-sm text-destructive" data-testid="bank-failure-reason">{displayText(failureReasonText(bank?.failureReason ?? null))}</p>}
+        {setup === "correction" && <p role="alert" className="text-sm text-destructive" data-testid="bank-failure-reason">{displayText(failureReasonText(bank?.failureReason ?? null))}</p>}
 
         {canSubmitBank(bank) && (
           <BankDetailsForm onSubmitted={(next) => void onSubmitted(next)} onBankChanged={(next) => queryClient.setQueryData(["my-bank-details", user?.id ?? "none"], next)} />
@@ -58,7 +59,7 @@ export default function AccountDetails() {
             {bank.bankName && <div className="flex justify-between gap-3 text-sm"><span className="text-muted-foreground">{displayText("Bank name")}</span><span className="font-medium text-right break-words">{bank.bankName}</span></div>}
             {bank.accountNumberMasked && <div className="flex justify-between gap-3 text-sm"><span className="text-muted-foreground">{displayText("Account")}</span><span className="font-medium tracking-wider" data-testid="bank-masked">•••• {bank.accountNumberMasked.slice(-4)}</span></div>}
             {bank.ifsc && <div className="flex justify-between gap-3 text-sm"><span className="text-muted-foreground">{displayText("IFSC code")}</span><span className="font-medium">{bank.ifsc}</span></div>}
-            {status !== "failed" && <p className="text-sm">{displayText(status === "verified" ? "Your bank account is verified." : "Didi Now is verifying your bank account.")}</p>}
+            {setup !== "correction" && <p className="text-sm" data-testid="bank-setup-message">{displayText(setup === "registered" ? "Your bank account is registered for payouts." : setup === "review" ? REVIEW_MESSAGE : "Bank details saved.")}</p>}
           </Card>
         )}
 

@@ -8,7 +8,7 @@ describe("bank messages follow the Admin switch", () => {
   it("switch off and still getting bookings: never says bookings are blocked", () => {
     const msgs = readinessMessages(r({ ready: false, has_bank_details: false, admin_approved: false }), true);
     expect(msgs).toEqual(["Add your bank account so Didi Now can pay you."]);
-    expect(readinessMessages(r({ ready: false, beneficiary_registered: false }), true)).toEqual(["Didi Now is verifying your bank account."]);
+    expect(readinessMessages(r({ ready: false, beneficiary_registered: false }), true)).toEqual([]);
   });
   it("bank reminder stays neutral even if Admin's bank switch is on", () => {
     expect(readinessMessages(r({ ready: false, has_bank_details: false, admin_approved: false, enforced: true }), false))

@@ -330,8 +330,8 @@ export default function Home() {
 
       <HomeTrainingVideoSlot isGuest={isGuestMode} hasActiveJob={!!activeJob} hasWorker={!!worker} />
 
-      {!isGuestMode && worker && !activeJob && bank && bank.status !== "verified" && (
-        <AddBankDetailsCard status={bank?.status ?? null} onOpen={() => navigate('/account-details')} />
+      {!isGuestMode && worker && !activeJob && bank && bank.setup !== "registered" && (
+        <AddBankDetailsCard bank={bank} onOpen={() => navigate('/account-details')} />
       )}
 
       {!isGuestMode && worker && !activeJob && <BatteryReminderCard />}

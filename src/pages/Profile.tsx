@@ -32,7 +32,7 @@ import PriorityScoreCard from "@/components/profile/PriorityScoreCard";
 import ServicePricingEntry from '@/components/profile/ServicePricingEntry';
 import { readCollectWorkerUpi } from '@/lib/bankOnboarding';
 import { useBankDetails } from '@/hooks/useBankDetails';
-import { bankStatusFor } from '@/lib/bankSelfService';
+import { bankSetupFor } from '@/lib/bankSelfService';
 import { AddBankDetailsCard } from '@/components/bank/AddBankDetailsCard';
 import { BankStatusBadge } from '@/components/bank/BankStatusBadge';
 
@@ -88,7 +88,7 @@ export default function Profile() {
   const [deleting, setDeleting] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const { bank: bankDetails, refetch: refetchBank } = useBankDetails(isGuestMode ? null : user?.id);
-  const bankStatus = bankStatusFor(bankDetails);
+  const bankSetup = bankSetupFor(bankDetails);
   useEffect(() => { if (editDialogOpen && user?.id && !isGuestMode) void refetchBank(); }, [editDialogOpen, user?.id, isGuestMode, refetchBank]);
   const [phone, setPhone] = useState("");
   const [upiId, setUpiId] = useState("");
@@ -633,8 +633,8 @@ export default function Profile() {
 
                   <button type="button" className="w-full rounded-2xl bg-card p-4 shadow-sm flex items-center gap-3 text-left min-h-[64px]" onClick={() => { setEditDialogOpen(false); navigate('/account-details'); }} data-testid="edit-bank-row">
                     <span className="h-10 w-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0"><CreditCard className="w-5 h-5" /></span>
-                    <span className="flex-1 min-w-0"><span className="block font-semibold text-sm">{displayText("Bank Details")}</span>{bankStatus === "none" && <span className="block text-xs text-muted-foreground">{displayText("Add your bank account so Didi Now can pay you.")}</span>}</span>
-                    {bankStatus && <BankStatusBadge status={bankStatus} />}
+                    <span className="flex-1 min-w-0"><span className="block font-semibold text-sm">{displayText("Bank Details")}</span>{bankSetup === "none" && <span className="block text-xs text-muted-foreground">{displayText("Add your bank account so Didi Now can pay you.")}</span>}</span>
+                    {bankSetup && <BankStatusBadge setup={bankSetup} />}
                     <ChevronRight className="w-5 h-5 text-muted-foreground" />
                   </button>
 
@@ -783,8 +783,8 @@ export default function Profile() {
           </Card>
         </div>
 
-        {bankStatus && bankStatus !== "verified" && (
-          <div className="px-4 mt-4"><AddBankDetailsCard status={bankStatus} onOpen={() => navigate('/account-details')} /></div>
+        {bankSetup && bankSetup !== "registered" && (
+          <div className="px-4 mt-4"><AddBankDetailsCard bank={bankDetails} onOpen={() => navigate('/account-details')} /></div>
         )}
 
         {/* Language Selection */}

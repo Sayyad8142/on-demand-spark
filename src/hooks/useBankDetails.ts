@@ -14,6 +14,8 @@ export function useBankDetails(accountId: string | null | undefined) {
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
+    // While Cashfree registration is still running, re-check so "Registered" appears without reopening.
+    refetchInterval: (q) => (q.state.data?.setup === "saved" || q.state.data?.setup === "review" ? 60_000 : false),
   });
   const { refetch } = query;
   useEffect(() => {

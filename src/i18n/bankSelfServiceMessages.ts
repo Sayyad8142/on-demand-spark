@@ -32,6 +32,10 @@ export const bankSelfServiceMessages = {
     Could_not_save_bank_details_Please_try_again: "बैंक विवरण सेव नहीं हो सके। कृपया फिर से कोशिश करें।",
     Save_Changes: "बदलाव सेव करें", Phone_number_cannot_be_changed: "फ़ोन नंबर बदला नहीं जा सकता", Call_manager: "मैनेजर को कॉल करें",
     To_change_bank_details_please_call_Didi_Now: "बैंक विवरण बदलने के लिए Didi Now को कॉल करें।",
+    Bank_details_saved: "बैंक विवरण सेव हो गए", Correction_required: "सुधार ज़रूरी", Under_review: "जाँच चल रही है", Registered: "पंजीकृत",
+    Didi_Now_is_doing_a_safety_check_on_this_bank_account_Please_call_manager_if_you_need_help: "Didi Now इस बैंक खाते की सुरक्षा जाँच कर रहा है। मदद चाहिए तो मैनेजर को कॉल करें।",
+    Your_bank_account_is_registered_for_payouts: "आपका बैंक खाता भुगतान के लिए पंजीकृत है।",
+    Didi_Now_sends_your_payouts_to_this_bank_account: "Didi Now आपका भुगतान इसी बैंक खाते में भेजता है।",
   },
   te: {
     Upload_Bank_Passbook: "బ్యాంక్ పాస్‌బుక్ ఫోటో జోడించండి",
@@ -65,5 +69,9 @@ export const bankSelfServiceMessages = {
     Could_not_save_bank_details_Please_try_again: "బ్యాంక్ వివరాలు సేవ్ కాలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
     Save_Changes: "మార్పులు సేవ్ చేయండి", Phone_number_cannot_be_changed: "ఫోన్ నంబర్ మార్చలేరు", Call_manager: "మేనేజర్‌కు కాల్ చేయండి",
     To_change_bank_details_please_call_Didi_Now: "బ్యాంక్ వివరాలు మార్చడానికి Didi Now కు కాల్ చేయండి.",
+    Bank_details_saved: "బ్యాంక్ వివరాలు సేవ్ అయ్యాయి", Correction_required: "సవరణ అవసరం", Under_review: "పరిశీలనలో ఉంది", Registered: "రిజిస్టర్ చేయబడింది",
+    Didi_Now_is_doing_a_safety_check_on_this_bank_account_Please_call_manager_if_you_need_help: "Didi Now ఈ బ్యాంక్ ఖాతాకు భద్రతా తనిఖీ చేస్తోంది. సహాయం కావాలంటే మేనేజర్‌కు కాల్ చేయండి.",
+    Your_bank_account_is_registered_for_payouts: "మీ బ్యాంక్ ఖాతా చెల్లింపుల కోసం రిజిస్టర్ చేయబడింది.",
+    Didi_Now_sends_your_payouts_to_this_bank_account: "Didi Now మీ చెల్లింపులను ఈ బ్యాంక్ ఖాతాకే పంపుతుంది.",
   },
 };

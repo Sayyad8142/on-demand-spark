@@ -8,9 +8,16 @@ import type { BankInput } from "@/lib/bankOnboarding";
  * Bank status is display-only and never decides any booking step.
  */
 export type BankStatus = "none" | "pending" | "verified" | "failed";
+/**
+ * What the worker sees, from Admin's `bank_setup_status` (Cashfree beneficiary
+ * registration). `status` stays the edit/lock authority; it says "pending"
+ * even after Cashfree registration, so it must never drive the label.
+ */
+export type BankSetup = "none" | "saved" | "registered" | "correction" | "review";
 
 export interface BankDetails {
   status: BankStatus;
+  setup: BankSetup;
   canEdit: boolean;
   failureReason: string | null;
   accountHolderName: string | null;
@@ -20,6 +27,14 @@ export interface BankDetails {
 }
 
 const STATUS: Record<string, BankStatus> = { not_submitted: "none", pending: "pending", verified: "verified", verification_failed: "failed" };
+const SETUP: Record<string, BankSetup> = { not_submitted: "none", registering: "saved", retrying: "saved", registered: "registered", needs_correction: "correction", review_required: "review" };
+/** Older answers without `bank_setup_status`: derive from the legacy fields, never from guesses. */
+function legacySetup(status: BankStatus, registration: unknown): BankSetup {
+  if (status === "none") return "none";
+  if (status === "failed") return "correction";
+  if (status === "verified" || registration === "registered") return "registered";
+  return registration === "review_required" ? "review" : "saved";
+}
 const text = (v: unknown, max = 100) => typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null;
 
 /** Strict parser for get_my_bank_details(); unknown/malformed → null. */
@@ -28,9 +43,14 @@ export function parseBankDetails(raw: unknown): BankDetails | null {
   const o = raw as Record<string, unknown>;
   const status = typeof o.status === "string" ? STATUS[o.status] : undefined;
   if (!status || typeof o.can_edit !== "boolean") return null;
+  let setup: BankSetup | undefined;
+  if (o.bank_setup_status === undefined || o.bank_setup_status === null) setup = legacySetup(status, o.payout_registration);
+  else setup = typeof o.bank_setup_status === "string" ? SETUP[o.bank_setup_status] : undefined;
+  if (!setup) return null;
   const masked = typeof o.account_number_masked === "string" && /^X{4}\d{4}$/.test(o.account_number_masked) ? o.account_number_masked : null;
   return {
     status,
+    setup,
     canEdit: o.can_edit,
     failureReason: text(o.failure_reason, 300),
     accountHolderName: text(o.account_holder_name),
@@ -41,12 +61,15 @@ export function parseBankDetails(raw: unknown): BankDetails | null {
 }
 
 export function bankStatusFor(d: BankDetails | null): BankStatus | null { return d?.status ?? null; }
+export function bankSetupFor(d: BankDetails | null): BankSetup | null { return d?.setup ?? null; }
 
 /** The server permits pending corrections too; verified accounts always remain locked. */
 export const canSubmitBank = (d: BankDetails | null) => !!d && d.canEdit && d.status !== "verified";
 
 /** Display text for server failure reasons; free-text Admin notes are shown as received. */
 export function failureReasonText(reason: string | null): string {
+  // Cashfree errors arrive as "[permanent] message"; show only the message.
+  reason = reason ? reason.replace(/^\[[a-z_ -]+\]\s*/i, "").trim() || null : null;
   switch (reason) {
     case "blocked_by_admin": return "Bank changes are locked. Please call manager.";
     case "rejected_by_admin": return "Didi Now could not accept these bank details. Please check and submit again.";
