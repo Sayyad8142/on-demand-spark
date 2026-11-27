@@ -15,7 +15,7 @@ describe("register_worker_v2", () => {
       p_full_name: "Sita Devi", p_phone: "+919876543210", p_account_holder: "Sita Devi", p_account_number: "123456789012",
       p_confirm_account_number: "123456789012", p_ifsc: "HDFC0001234", p_bank_name: "HDFC Bank", p_service_types: ["maid"], p_community: "phf", p_upi_id: null,
     });
-    expect(r).toEqual({ ok: true, workerId: "w1", approvalStatus: "pending_approval", payoutReadiness: { ready: false } });
+    expect(r).toEqual({ ok: true, workerId: "w1", approvalStatus: "pending_approval", bankDetailsProvided: false, payoutReadiness: { ready: false } });
   });
   it("maps every server validation error to a worker message", () => {
     for (const code of ["invalid_phone", "invalid_account", "account_mismatch", "invalid_ifsc", "phone_already_registered", "name_required", "bank_name_required", "community_required", "service_required", "verified_phone_mismatch"]) {

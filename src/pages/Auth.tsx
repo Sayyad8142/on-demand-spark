@@ -19,7 +19,7 @@ import didiPartnerLogo from "@/assets/didi-partner-logo.png";
 import maidServiceIcon from "@/assets/service-maid.png";
 import bathroomServiceIcon from "@/assets/service-bathroom.png";
 import { CommunityPicker } from "@/components/CommunityPicker";
-import { SECURE_BANK_ONBOARDING_ENABLED, holdSignupBank, readCollectWorkerUpi, validateBankInput } from "@/lib/bankOnboarding";
+import { SECURE_BANK_ONBOARDING_ENABLED, holdSignupBank, isBankInputEmpty, readCollectWorkerUpi, validateOptionalSignupBank } from "@/lib/bankOnboarding";
 import { PassbookScanCard } from "@/components/bank/PassbookScanCard";
 import { scanToForm, type PassbookFields } from "@/lib/passbookText";
 
@@ -245,7 +245,15 @@ export default function Auth() {
   const hasPayoutDetails = !!(signUpAccountHolderName.trim() || signUpBankAccountNumber.trim() || signUpConfirmAccountNumber.trim() || signUpIfscCode.trim() || signUpBankName.trim() || signUpPassbookFile || signUpUpiId.trim());
   const canContinueSignup = !!signUpFullName && !!signUpPhone && !!signUpCommunity && signUpServices.length > 0;
 
-  const signupBankError = () => validateBankInput({ holder: signUpAccountHolderName, account: signUpBankAccountNumber, confirmation: signUpConfirmAccountNumber, ifsc: signUpIfscCode, bankName: signUpBankName });
+  const signupBankInput = () => ({ holder: signUpAccountHolderName, account: signUpBankAccountNumber, confirmation: signUpConfirmAccountNumber, ifsc: signUpIfscCode, bankName: signUpBankName });
+  const signupBankError = () => validateOptionalSignupBank(signupBankInput());
+  const skipSignupBank = () => {
+    if (extractingPassbook || loading) return;
+    setSignUpAccountHolderName(""); setSignUpBankAccountNumber(""); setSignUpConfirmAccountNumber("");
+    setSignUpIfscCode(""); setSignUpBankName("");
+    if (collectUpi && signUpUpiId.trim() && !upiSchema.safeParse(signUpUpiId.trim()).success) setSignUpUpiId("");
+    setSignUpStep(3);
+  };
   const applySignupScan = (fields: PassbookFields) => {
     const result = scanToForm(fields);
     if (result.holder) setSignUpAccountHolderName(current => current || result.holder);
@@ -393,7 +401,7 @@ export default function Auth() {
       const { error } = await supabase.auth.signInWithOtp({ phone });
       if (error) throw error;
       // Bank details stay in memory only; register_worker_v2 runs after OTP.
-      holdSignupBank({ holder: signUpAccountHolderName, account: signUpBankAccountNumber, confirmation: signUpConfirmAccountNumber, ifsc: signUpIfscCode, bankName: signUpBankName });
+      { const bank = signupBankInput(); if (isBankInputEmpty(bank)) holdSignupBank(null); else holdSignupBank(bank); }
       localStorage.removeItem(AUTH_DRAFT_KEY);
       navigate("/otp-verify", {
         state: {
@@ -690,6 +698,12 @@ export default function Auth() {
                     >
                       {displayText("Continue")}
                     </Button>
+                  </div>
+                  <div className="space-y-2 rounded-2xl border border-dashed border-border bg-muted/40 p-4 text-center">
+                    <Button type="button" variant="secondary" onClick={skipSignupBank} disabled={loading || extractingPassbook} className="h-14 w-full rounded-2xl text-base font-semibold">
+                      {displayText("Skip for now")}
+                    </Button>
+                    <p className="text-sm text-muted-foreground">{displayText("You can add bank details later. They are only needed to receive payouts.")}</p>
                   </div>
                 </div>
                 );

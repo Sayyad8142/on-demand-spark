@@ -225,16 +225,15 @@ export default function OtpVerify() {
         // validates bank details, creates the worker (OFF, pending approval)
         // and registers the Cashfree beneficiary. No direct workers writes.
         const bank = peekSignupBank();
-        const result = bank
-          ? await registerWorkerV2({
+        // No held bank = worker skipped bank details (optional at signup).
+        const result = await registerWorkerV2({
               fullName: state.signUpData.fullName,
               phone: state.phone,
               services: state.signUpData.services,
               community: state.signUpData.community,
               upiId: state.signUpData.upiId || null,
               bank,
-            })
-          : { ok: false as const, error: "bank_details_missing" as const };
+            });
         if ("error" in result && result.error !== "login_already_linked") {
           // Leave no half-registered session behind; the worker retries from sign-up.
           await supabase.auth.signOut().catch(() => undefined);
@@ -247,7 +246,7 @@ export default function OtpVerify() {
         takeSignupBank();
         // Bank beneficiary registration for the new worker (fire-and-forget; the
         // server also syncs on its own). Readiness is read back from the server later.
-        if ("workerId" in result && result.workerId) void requestOwnBeneficiary(result.workerId);
+        if ("workerId" in result && result.workerId && result.bankDetailsProvided) void requestOwnBeneficiary(result.workerId);
       }
 
       // Save JWT to native storage

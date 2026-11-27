@@ -1,5 +1,7 @@
 export const bankOnboardingMessages = {
   en: {
+    Skip_for_now: "Skip for now",
+    You_can_add_bank_details_later_They_are_only_needed_to_receive_payouts: "You can add bank details later. They are only needed to receive payouts.",
     Check_bank_verification_again: "Check bank verification again",
     Earnings_history: "Earnings history",
     Expected_payout_date: "Expected payout date",
@@ -37,6 +39,8 @@ export const bankOnboardingMessages = {
     Check_bank_details: "Check bank details",
   },
   hi: {
+    Skip_for_now: "अभी छोड़ें",
+    You_can_add_bank_details_later_They_are_only_needed_to_receive_payouts: "आप बैंक विवरण बाद में जोड़ सकते हैं। ये केवल भुगतान पाने के लिए ज़रूरी हैं।",
     Check_bank_verification_again: "बैंक जाँच फिर से करें",
     Earnings_history: "कमाई का इतिहास",
     Expected_payout_date: "भुगतान की अनुमानित तारीख",
@@ -74,6 +78,8 @@ export const bankOnboardingMessages = {
     Check_bank_details: "बैंक विवरण जाँचें",
   },
   te: {
+    Skip_for_now: "ఇప్పటికి దాటవేయండి",
+    You_can_add_bank_details_later_They_are_only_needed_to_receive_payouts: "మీరు బ్యాంకు వివరాలను తర్వాత జోడించవచ్చు. చెల్లింపులు పొందడానికి మాత్రమే ఇవి అవసరం.",
     Check_bank_verification_again: "బ్యాంకు ధృవీకరణను మళ్లీ తనిఖీ చేయండి",
     Earnings_history: "సంపాదన చరిత్ర",
     Expected_payout_date: "చెల్లింపు అంచనా తేదీ",

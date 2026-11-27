@@ -15,6 +15,17 @@ export interface BankInput {
   holder: string; account: string; confirmation: string; ifsc: string; bankName?: string;
 }
 
+/** True when the worker left every bank field blank (signup "Skip for now"). */
+export function isBankInputEmpty(bank: BankInput | null | undefined): boolean {
+  if (!bank) return true;
+  return [bank.holder, bank.account, bank.confirmation, bank.ifsc, bank.bankName ?? ""].every(v => !v.trim());
+}
+
+/** Signup: bank is optional; all-empty is allowed, otherwise all five fields must be valid. */
+export function validateOptionalSignupBank(bank: BankInput): string | null {
+  return isBankInputEmpty(bank) ? null : validateBankInput(bank);
+}
+
 export function validateBankInput(bank: BankInput): string | null {
   if (bank.holder.trim().length < 2) return "Account holder name is required";
   if (!/^\d{9,18}$/.test(bank.account.trim())) return "Account number must be 9–18 digits";
@@ -49,7 +60,7 @@ export async function submitSecureBankDetails(): Promise<never> {
 
 /** In-memory only: bank details never touch localStorage/sessionStorage/navigation state. */
 let pendingBank: (BankInput & { bankName: string }) | null = null;
-export function holdSignupBank(bank: BankInput & { bankName: string }) { pendingBank = { ...bank }; }
+export function holdSignupBank(bank: (BankInput & { bankName: string }) | null) { pendingBank = bank ? { ...bank } : null; }
 export function takeSignupBank(): (BankInput & { bankName: string }) | null { const b = pendingBank; pendingBank = null; return b; }
 export function peekSignupBank() { return pendingBank; }
 
@@ -81,10 +92,11 @@ export const REGISTRATION_ERROR_TEXT: Record<RegistrationError, string> = {
 
 export interface RegistrationInput {
   fullName: string; phone: string; services: string[]; community: string; upiId?: string | null;
-  bank: BankInput & { bankName: string };
+  /** null or all-empty = worker skipped bank details (sent as nulls). */
+  bank: (BankInput & { bankName: string }) | null;
 }
 export type RegistrationResult =
-  | { ok: true; workerId: string; approvalStatus: string; payoutReadiness: unknown }
+  | { ok: true; workerId: string; approvalStatus: string; bankDetailsProvided: boolean; payoutReadiness: unknown }
   | { ok: false; error: RegistrationError };
 
 /** +91XXXXXXXXXX from any 10-digit / 91-prefixed input. */
@@ -97,22 +109,24 @@ export function parseRegistrationResponse(data: unknown): RegistrationResult {
   if (!data || typeof data !== "object" || Array.isArray(data)) return { ok: false, error: "unknown" };
   const o = data as Record<string, unknown>;
   if (o.ok === true && typeof o.worker_id === "string" && o.worker_id) {
-    return { ok: true, workerId: o.worker_id, approvalStatus: typeof o.approval_status === "string" ? o.approval_status : "pending_approval", payoutReadiness: o.payout_readiness ?? null };
+    return { ok: true, workerId: o.worker_id, approvalStatus: typeof o.approval_status === "string" ? o.approval_status : "pending_approval", bankDetailsProvided: o.bank_details_provided === true, payoutReadiness: o.payout_readiness ?? null };
   }
   const code = typeof o.error === "string" ? o.error : "";
   return { ok: false, error: (REGISTRATION_ERRORS as readonly string[]).includes(code) ? (code as RegistrationError) : "unknown" };
 }
 
 export async function registerWorkerV2(input: RegistrationInput, call: LooseRpc = rpc()): Promise<RegistrationResult> {
+  const bank = isBankInputEmpty(input.bank) ? null : input.bank;
+  const field = (v: string | undefined) => (bank && v !== undefined ? v.trim() : null);
   try {
     const { data, error } = await call("register_worker_v2", {
       p_full_name: input.fullName.trim(),
       p_phone: toE164India(input.phone),
-      p_account_holder: input.bank.holder.trim(),
-      p_account_number: input.bank.account.trim(),
-      p_confirm_account_number: input.bank.confirmation.trim(),
-      p_ifsc: input.bank.ifsc.trim().toUpperCase(),
-      p_bank_name: input.bank.bankName.trim(),
+      p_account_holder: field(bank?.holder),
+      p_account_number: field(bank?.account),
+      p_confirm_account_number: field(bank?.confirmation),
+      p_ifsc: bank ? bank.ifsc.trim().toUpperCase() : null,
+      p_bank_name: field(bank?.bankName),
       p_service_types: input.services,
       p_community: input.community,
       p_upi_id: input.upiId?.trim() ? input.upiId.trim() : null,
