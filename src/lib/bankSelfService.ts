@@ -92,7 +92,7 @@ export type SubmitBankOutcome =
   | { ok: true; outcome: "submitted" | "corrected" | "unchanged"; bank: BankDetails | null }
   | { ok: false; error: SubmitBankError; bank?: BankDetails | null };
 
-const KNOWN = ["account_holder_required", "invalid_account", "account_mismatch", "invalid_ifsc", "bank_name_required", "verified_account_locked", "bank_blocked", "same_details_as_failed", "too_many_attempts", "worker_not_found", "not_signed_in"] as const;
+const KNOWN = ["account_holder_required", "invalid_account", "account_mismatch", "invalid_ifsc", "bank_name_required", "verified_account_locked", "registered_account_locked", "bank_blocked", "same_details_as_failed", "too_many_attempts", "worker_not_found", "not_signed_in"] as const;
 export type SubmitBankError = typeof KNOWN[number] | "unavailable" | "unknown";
 
 export function parseSubmitBankResponse(data: unknown, error: { message?: string; code?: string } | null): SubmitBankOutcome {
@@ -122,6 +122,7 @@ export const SUBMIT_BANK_ERRORS: Record<SubmitBankError, string> = {
   account_holder_required: "Account holder name is required",
   bank_name_required: "Bank name is required",
   verified_account_locked: "Your bank account is verified. To change it, please call manager.",
+  registered_account_locked: "Your bank account is registered for payouts. To change it, please call manager.",
   bank_blocked: "Bank changes are locked. Please call manager.",
   same_details_as_failed: "These details failed verification. Please correct them before submitting.",
   too_many_attempts: "Too many attempts. Please try again after 24 hours or call manager.",

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { rpc: vi.fn() } }));
-import { parseBankDetails, bankSetupFor, canSubmitBank, failureReasonText } from "../bankSelfService";
+import { parseBankDetails, bankSetupFor, canSubmitBank, failureReasonText, parseSubmitBankResponse } from "../bankSelfService";
 
 // Shapes copied from the live Admin worker_bank_status_core answer.
 const base = { status: "pending", can_edit: true, restricts_work: false, account_number_masked: "XXXX1782" };
@@ -32,5 +32,8 @@ describe("bank_setup_status drives the visible label", () => {
     expect(bankSetupFor(parseBankDetails({ ...base, payout_registration: "registered" }))).toBe("registered");
     expect(bankSetupFor(parseBankDetails(base))).toBe("saved");
     expect(bankSetupFor(parseBankDetails({ ...base, status: "verification_failed" }))).toBe("correction");
+  });
+  it("submitting over a registered account reports the registered lock, not a generic failure", () => {
+    expect(parseSubmitBankResponse({ error: "registered_account_locked", bank: { ...base, can_edit: false, bank_setup_status: "registered" } }, null)).toMatchObject({ ok: false, error: "registered_account_locked", bank: { setup: "registered" } });
   });
 });
