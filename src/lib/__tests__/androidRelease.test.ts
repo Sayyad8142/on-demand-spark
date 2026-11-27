@@ -41,15 +41,15 @@ function bundleCheck({ hasDist = true, differs = false, delayedStyles = true, ex
 }
 
 describe("Android release guards", () => {
-  it("keeps requested version 10.0.05 build 105", () => {
-    expect(CURRENT_VERSION_NAME).toBe("10.0.05");
-    expect(CURRENT_VERSION_CODE).toBe(105);
+  it("keeps requested version 10.0.06 build 106", () => {
+    expect(CURRENT_VERSION_NAME).toBe("10.0.06");
+    expect(CURRENT_VERSION_CODE).toBe(106);
   });
-  it("accepts candidate 105 only when the confirmed highest upload is lower", () => {
+  it("accepts candidate 106 only when the confirmed highest upload is lower", () => {
     expect(check(["103"]).status).toBe(0);
   });
-  it("refuses reused build 105", () => {
-    expect(check(["105"]).status).toBe(1);
+  it("refuses reused build 106", () => {
+    expect(check(["106"]).status).toBe(1);
   });
   it("refuses a candidate below a previously uploaded build", () => {
     expect(check(["105"]).status).toBe(1);
