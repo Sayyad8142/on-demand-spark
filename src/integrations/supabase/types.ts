@@ -10225,6 +10225,10 @@ export type Database = {
           web_version: string
         }[]
       }
+      admin_get_worker_bank_status: {
+        Args: { p_worker_id: string }
+        Returns: Json
+      }
       admin_get_worker_payout_readiness: {
         Args: { p_worker_id: string }
         Returns: Json
@@ -12122,6 +12126,7 @@ export type Database = {
           request_count: number
         }[]
       }
+      get_my_bank_details: { Args: never; Returns: Json }
       get_my_customer_rating_summary: {
         Args: never
         Returns: {
@@ -13262,6 +13267,16 @@ export type Database = {
           started_at: string
           streak: number
         }[]
+      }
+      submit_my_bank_details: {
+        Args: {
+          p_account_holder_name: string
+          p_account_number: string
+          p_account_number_confirm: string
+          p_bank_name: string
+          p_ifsc: string
+        }
+        Returns: Json
       }
       submit_worker_rating_verified: {
         Args: {
