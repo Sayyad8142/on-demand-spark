@@ -2,6 +2,11 @@ export const bankSelfServiceMessages = {
   en: {} as Record<string, string>,
   hi: {
     Upload_Bank_Passbook: "बैंक पासबुक की फोटो जोड़ें",
+    Scan_Passbook_Cheque: "पासबुक / चेक स्कैन करें",
+    Use_a_clear_photo_of_your_passbook_account_page_or_a_cheque: "पासबुक के खाते वाले पन्ने या चेक की साफ फोटो लें।",
+    All_4_bank_details_detected_Please_check_them_and_type_the_account_number_again: "चारों बैंक विवरण मिल गए। इन्हें जाँचें और खाता संख्या दोबारा लिखें।",
+    found_of_4_bank_details_detected_Please_complete_the_remaining_details: "4 में से {{found}} बैंक विवरण मिले। बाकी विवरण खुद भरें।",
+    No_bank_details_could_be_read_Retake_a_clear_photo_or_enter_the_details_manually: "कोई बैंक विवरण पढ़ा नहीं जा सका। फिर से साफ फोटो लें या विवरण खुद भरें।",
     Take_Photo: "फोटो लें", Upload_from_Gallery: "गैलरी से चुनें", Scanning_photo: "फोटो पढ़ी जा रही है...",
     Use_a_clear_photo_of_the_account_details_page: "खाते के विवरण वाले पन्ने की साफ फोटो लें।",
     Your_photo_stays_on_this_device_and_is_not_uploaded: "आपकी फोटो इसी फ़ोन पर रहती है, कहीं भेजी नहीं जाती।",
@@ -30,6 +35,11 @@ export const bankSelfServiceMessages = {
   },
   te: {
     Upload_Bank_Passbook: "బ్యాంక్ పాస్‌బుక్ ఫోటో జోడించండి",
+    Scan_Passbook_Cheque: "పాస్‌బుక్ / చెక్ స్కాన్ చేయండి",
+    Use_a_clear_photo_of_your_passbook_account_page_or_a_cheque: "పాస్‌బుక్ ఖాతా పేజీ లేదా చెక్ యొక్క స్పష్టమైన ఫోటో తీయండి.",
+    All_4_bank_details_detected_Please_check_them_and_type_the_account_number_again: "4 బ్యాంక్ వివరాలు దొరికాయి. వాటిని తనిఖీ చేసి ఖాతా నంబర్ మళ్లీ టైప్ చేయండి.",
+    found_of_4_bank_details_detected_Please_complete_the_remaining_details: "4 లో {{found}} బ్యాంక్ వివరాలు దొరికాయి. మిగిలిన వివరాలు స్వయంగా నమోదు చేయండి.",
+    No_bank_details_could_be_read_Retake_a_clear_photo_or_enter_the_details_manually: "ఏ బ్యాంక్ వివరాలూ చదవలేకపోయాం. మళ్లీ స్పష్టమైన ఫోటో తీయండి లేదా వివరాలు స్వయంగా నమోదు చేయండి.",
     Take_Photo: "ఫోటో తీయండి", Upload_from_Gallery: "గ్యాలరీ నుండి ఎంచుకోండి", Scanning_photo: "ఫోటో చదువుతోంది...",
     Use_a_clear_photo_of_the_account_details_page: "ఖాతా వివరాలు ఉన్న పేజీని స్పష్టంగా ఫోటో తీయండి.",
     Your_photo_stays_on_this_device_and_is_not_uploaded: "మీ ఫోటో ఈ ఫోన్‌లోనే ఉంటుంది, ఎక్కడికీ పంపబడదు.",

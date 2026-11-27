@@ -450,3 +450,8 @@
 - [x] Remove bank-only ON/offer/readiness restrictions; preserve approval/slots/OTP safeguards and Home reminder; live server bank gate already returns false.
 - [x] 1,092 tests pass; isolated actual bank screen + real browser OCR, manual submission, failed/locked/verified states and en/hi/te checked without publication/version changes. Report: docs/bank-self-service-2026-11-27/LIVE-INTEGRATION.md.
 - [ ] Real authenticated existing/new worker submit/readback and Android camera/gallery verification — blocked: externally managed worker session and physical phone/local build.
+
+## Cheque scanning fix (2026-11-27)
+- [x] Read HDFC-style cheques: mid-line RTGS/NEFT IFSC, A/c No. variants, signature-area name, visible bank name; each field fills on its own.
+- [x] Photo clean-up (crop, sideways turn, contrast, sharpening, pattern removal) in browser and Android; green "N of 4 detected" message; failure only when nothing is read.
+- [ ] Try camera and gallery scanning on a physical Android phone (needs a device build) — blocked on device testing.

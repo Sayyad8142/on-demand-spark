@@ -18,7 +18,8 @@
     "android:release-check": "bash scripts/android-release-check.sh",
     "android:aab": "bash scripts/android-build-aab.sh",
     "release:plan": "node scripts/release-plan.js",
-    "ota:check-native": "bash scripts/check-ota-rules.sh"
+    "ota:check-native": "bash scripts/check-ota-rules.sh",
+    "passbook:rules": "bash scripts/check-passbook-rules.sh"
   },
   "dependencies": {
     "@capacitor-community/text-to-speech": "6.1.0",
