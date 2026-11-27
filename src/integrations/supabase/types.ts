@@ -9127,6 +9127,11 @@ export type Database = {
           cashfree_beneficiary_retry_count: number
           cashfree_beneficiary_status: string
           cashfree_beneficiary_synced_at: string | null
+          cashfree_review_flagged_at: string | null
+          cashfree_review_reason: string | null
+          cashfree_review_related_worker_id: string | null
+          cashfree_shared_bank_approved_at: string | null
+          cashfree_shared_bank_approved_by: string | null
           communities: string[] | null
           community: string | null
           consecutive_delivery_failures: number
@@ -9292,6 +9297,11 @@ export type Database = {
           cashfree_beneficiary_retry_count?: number
           cashfree_beneficiary_status?: string
           cashfree_beneficiary_synced_at?: string | null
+          cashfree_review_flagged_at?: string | null
+          cashfree_review_reason?: string | null
+          cashfree_review_related_worker_id?: string | null
+          cashfree_shared_bank_approved_at?: string | null
+          cashfree_shared_bank_approved_by?: string | null
           communities?: string[] | null
           community?: string | null
           consecutive_delivery_failures?: number
@@ -9457,6 +9467,11 @@ export type Database = {
           cashfree_beneficiary_retry_count?: number
           cashfree_beneficiary_status?: string
           cashfree_beneficiary_synced_at?: string | null
+          cashfree_review_flagged_at?: string | null
+          cashfree_review_reason?: string | null
+          cashfree_review_related_worker_id?: string | null
+          cashfree_shared_bank_approved_at?: string | null
+          cashfree_shared_bank_approved_by?: string | null
           communities?: string[] | null
           community?: string | null
           consecutive_delivery_failures?: number
@@ -10613,6 +10628,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_resolve_beneficiary_review: {
+        Args: { p_approve: boolean; p_note: string; p_worker_id: string }
+        Returns: Json
+      }
       admin_resolve_case: {
         Args: {
           p_case: string
@@ -10625,6 +10644,10 @@ export type Database = {
       admin_restart_dispatch_engine: { Args: never; Returns: Json }
       admin_restore_worker: { Args: { p_worker_id: string }; Returns: Json }
       admin_retry_failed_dispatch: { Args: never; Returns: Json }
+      admin_retry_worker_beneficiary: {
+        Args: { p_worker_id: string }
+        Returns: Json
+      }
       admin_reverse_late_start_penalty: {
         Args: { p_booking_id: string; p_reason: string }
         Returns: undefined
@@ -10947,6 +10970,11 @@ export type Database = {
               cashfree_beneficiary_retry_count: number
               cashfree_beneficiary_status: string
               cashfree_beneficiary_synced_at: string | null
+              cashfree_review_flagged_at: string | null
+              cashfree_review_reason: string | null
+              cashfree_review_related_worker_id: string | null
+              cashfree_shared_bank_approved_at: string | null
+              cashfree_shared_bank_approved_by: string | null
               communities: string[] | null
               community: string | null
               consecutive_delivery_failures: number
@@ -11121,6 +11149,11 @@ export type Database = {
               cashfree_beneficiary_retry_count: number
               cashfree_beneficiary_status: string
               cashfree_beneficiary_synced_at: string | null
+              cashfree_review_flagged_at: string | null
+              cashfree_review_reason: string | null
+              cashfree_review_related_worker_id: string | null
+              cashfree_shared_bank_approved_at: string | null
+              cashfree_shared_bank_approved_by: string | null
               communities: string[] | null
               community: string | null
               consecutive_delivery_failures: number
@@ -11603,6 +11636,10 @@ export type Database = {
       bath_total_price: {
         Args: { p_community?: string; p_count: number }
         Returns: number
+      }
+      beneficiary_sync_candidates: {
+        Args: { p_limit?: number }
+        Returns: string[]
       }
       booking_effective_slot: {
         Args: { p_booking_id: string }
