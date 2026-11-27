@@ -428,3 +428,8 @@
 - [x] Connect the Start Booking card to live `get_my_late_start_status` server deadline; alarms and deductions unchanged/off. 1000 tests passed.
 - [ ] Real V2 data — blocked: Admin has not deployed `get_my_priority_score`.
 - [ ] Scheduled-booking deadline (later of acceptance or start) and matching Android alarm anchor — blocked: Admin server rule change, then a new Android build.
+
+## Bank self-service (2026-11-27)
+- [x] Bank form, status, Profile card, full-screen Edit Profile (en/hi/te)
+- [ ] Admin deploys `submit_my_bank_details` + optional readiness fields (docs/bank-self-service-2026-11-27/HANDOFF.md)
+- [ ] Signed-in/phone check of the flow (sign-in not available in sandbox)

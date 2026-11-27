@@ -1,0 +1,27 @@
+export const bankSelfServiceMessages = {
+  en: {} as Record<string, string>,
+  hi: {
+    Add_Bank_Details: "बैंक विवरण जोड़ें", Fix_bank_details: "बैंक विवरण ठीक करें", Pending: "जाँच जारी", Verified: "सत्यापित", Verification_Failed: "सत्यापन विफल",
+    We_could_not_verify_your_bank_account_Please_check_and_submit_again: "हम आपका बैंक खाता सत्यापित नहीं कर सके। कृपया जाँचें और फिर से भेजें।",
+    Account_holder_name: "खाताधारक का नाम", Bank_account_number: "बैंक खाता संख्या", Confirm_account_number: "खाता संख्या दोबारा लिखें", IFSC_code: "IFSC कोड", Bank_name: "बैंक का नाम",
+    Submit_bank_details: "बैंक विवरण भेजें", Saving: "सेव हो रहा है...", Account: "खाता",
+    Bank_details_submitted_Didi_Now_will_verify_them: "बैंक विवरण भेज दिए गए। Didi Now इन्हें सत्यापित करेगा।",
+    Your_bank_details_are_already_submitted_To_change_them_please_call_manager: "आपके बैंक विवरण पहले से भेजे गए हैं। बदलने के लिए मैनेजर को कॉल करें।",
+    Adding_bank_details_in_the_app_opens_soon_Please_call_manager_for_now: "ऐप में बैंक विवरण जोड़ना जल्द शुरू होगा। अभी के लिए मैनेजर को कॉल करें।",
+    Could_not_save_bank_details_Please_try_again: "बैंक विवरण सेव नहीं हो सके। कृपया फिर से कोशिश करें।",
+    Save_Changes: "बदलाव सेव करें", Phone_number_cannot_be_changed: "फ़ोन नंबर बदला नहीं जा सकता", Call_manager: "मैनेजर को कॉल करें",
+    To_change_bank_details_please_call_Didi_Now: "बैंक विवरण बदलने के लिए Didi Now को कॉल करें।",
+  },
+  te: {
+    Add_Bank_Details: "బ్యాంక్ వివరాలు జోడించండి", Fix_bank_details: "బ్యాంక్ వివరాలు సరిచేయండి", Pending: "పరిశీలనలో ఉంది", Verified: "ధృవీకరించబడింది", Verification_Failed: "ధృవీకరణ విఫలమైంది",
+    We_could_not_verify_your_bank_account_Please_check_and_submit_again: "మీ బ్యాంక్ ఖాతాను ధృవీకరించలేకపోయాం. దయచేసి తనిఖీ చేసి మళ్లీ పంపండి.",
+    Account_holder_name: "ఖాతాదారుని పేరు", Bank_account_number: "బ్యాంక్ ఖాతా నంబర్", Confirm_account_number: "ఖాతా నంబర్ మళ్లీ నమోదు చేయండి", IFSC_code: "IFSC కోడ్", Bank_name: "బ్యాంక్ పేరు",
+    Submit_bank_details: "బ్యాంక్ వివరాలు పంపండి", Saving: "సేవ్ అవుతోంది...", Account: "ఖాతా",
+    Bank_details_submitted_Didi_Now_will_verify_them: "బ్యాంక్ వివరాలు పంపబడ్డాయి. Didi Now వాటిని ధృవీకరిస్తుంది.",
+    Your_bank_details_are_already_submitted_To_change_them_please_call_manager: "మీ బ్యాంక్ వివరాలు ఇప్పటికే పంపబడ్డాయి. మార్చడానికి మేనేజర్‌కు కాల్ చేయండి.",
+    Adding_bank_details_in_the_app_opens_soon_Please_call_manager_for_now: "యాప్‌లో బ్యాంక్ వివరాలు జోడించడం త్వరలో ప్రారంభమవుతుంది. ప్రస్తుతానికి మేనేజర్‌కు కాల్ చేయండి.",
+    Could_not_save_bank_details_Please_try_again: "బ్యాంక్ వివరాలు సేవ్ కాలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
+    Save_Changes: "మార్పులు సేవ్ చేయండి", Phone_number_cannot_be_changed: "ఫోన్ నంబర్ మార్చలేరు", Call_manager: "మేనేజర్‌కు కాల్ చేయండి",
+    To_change_bank_details_please_call_Didi_Now: "బ్యాంక్ వివరాలు మార్చడానికి Didi Now కు కాల్ చేయండి.",
+  },
+};

@@ -21,6 +21,10 @@ export interface PayoutReadiness {
   beneficiaryRegistered: boolean;
   adminApproved: boolean;
   missing: ReadinessMissing[];
+  /** Optional Admin fields (staged contract): display only, never decide bookings. */
+  verificationStatus: "pending" | "verified" | "failed" | null;
+  accountLast4: string | null;
+  bankName: string | null;
 }
 
 export function payoutAllowsBookings(payoutReady: unknown): boolean {
@@ -42,6 +46,9 @@ export function parsePayoutReadiness(raw: unknown): PayoutReadiness | null {
     beneficiaryRegistered: o.beneficiary_registered === true,
     adminApproved: o.admin_approved === true,
     missing,
+    verificationStatus: o.bank_verification_status === "pending" || o.bank_verification_status === "verified" || o.bank_verification_status === "failed" ? o.bank_verification_status : null,
+    accountLast4: typeof o.bank_account_last4 === "string" && /^\d{4}$/.test(o.bank_account_last4) ? o.bank_account_last4 : null,
+    bankName: typeof o.bank_name === "string" && o.bank_name.trim() ? o.bank_name.trim().slice(0, 60) : null,
   };
 }
 

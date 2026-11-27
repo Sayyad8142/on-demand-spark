@@ -31,6 +31,10 @@ import { getInstalledVersionSync, loadInstalledVersion, versionLabel } from "@/l
 import PriorityScoreCard from "@/components/profile/PriorityScoreCard";
 import ServicePricingEntry from '@/components/profile/ServicePricingEntry';
 import { readCollectWorkerUpi } from '@/lib/bankOnboarding';
+import { usePayoutReadiness } from '@/hooks/usePayoutReadiness';
+import { bankStatusFor } from '@/lib/bankSelfService';
+import { AddBankDetailsCard } from '@/components/bank/AddBankDetailsCard';
+import { BankStatusBadge } from '@/components/bank/BankStatusBadge';
 
 const SERVICES = [{
   value: "maid",
@@ -83,6 +87,8 @@ export default function Profile() {
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const { readiness: bankReadiness } = usePayoutReadiness(user?.id);
+  const bankStatus = bankStatusFor(bankReadiness);
   const [phone, setPhone] = useState("");
   const [upiId, setUpiId] = useState("");
   const [collectUpi, setCollectUpi] = useState(false);
@@ -552,19 +558,19 @@ export default function Profile() {
                   <Pencil className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
+              <DialogContent className="max-w-none w-screen h-[100dvh] sm:max-w-lg sm:h-[100dvh] p-0 gap-0 rounded-none flex flex-col overflow-hidden">
+                <DialogHeader className="px-5 pt-5 pb-3 border-b text-left">
                   <DialogTitle>{t('profile.edit')}</DialogTitle>
                   <DialogDescription>
                     {t('profile.profileInfo')}
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
+                <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5 bg-muted/30">
                   {/* Profile Photo Upload */}
-                  <div className="space-y-2">
-                    <Label>{displayText("Profile Photo")}</Label>
+                  <section className="rounded-2xl bg-card p-4 shadow-sm space-y-3">
+                    <Label className="flex items-center gap-2 text-sm font-semibold"><Camera className="w-4 h-4 text-primary" />{displayText("Profile Photo")}</Label>
                     <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center border-2 border-border">
+                      <div className="w-20 h-20 rounded-full overflow-hidden bg-muted flex items-center justify-center border-2 border-border">
                         {photoUrl ? (
                           <img src={photoUrl} alt={displayText("Profile")} className="w-full h-full object-cover" />
                         ) : (
@@ -572,7 +578,7 @@ export default function Profile() {
                         )}
                       </div>
                       <div className="flex-1">
-                        <label htmlFor="edit-photo-upload" className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all ${uploadingPhoto ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}>
+                        <label htmlFor="edit-photo-upload" className={`inline-flex items-center gap-2 px-4 h-11 rounded-xl text-sm font-medium cursor-pointer transition-all ${uploadingPhoto ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}>
                           {uploadingPhoto ? (
                             <><Loader2 className="w-4 h-4 animate-spin" />{displayText("Uploading...")}</>
                           ) : (
@@ -590,17 +596,19 @@ export default function Profile() {
                         <p className="text-xs text-muted-foreground mt-1">{displayText("JPG or PNG, max 5MB")}</p>
                       </div>
                     </div>
-                  </div>
+                  </section>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-name">{t('profile.name')}</Label>
-                    <Input id="edit-name" value={fullName} onChange={e => setFullName(e.target.value)} placeholder={t('auth.namePlaceholder')} />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-phone">{t('profile.phone')}</Label>
-                    <Input id="edit-phone" value={phone} readOnly disabled placeholder={displayText("Your mobile number")} />
-                  </div>
+                  <section className="rounded-2xl bg-card p-4 shadow-sm space-y-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-name" className="flex items-center gap-2 text-sm font-semibold"><User className="w-4 h-4 text-primary" />{t('profile.name')}</Label>
+                      <Input id="edit-name" className="h-12 rounded-xl text-base" value={fullName} onChange={e => setFullName(e.target.value)} placeholder={t('auth.namePlaceholder')} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-phone" className="flex items-center gap-2 text-sm font-semibold"><Phone className="w-4 h-4 text-primary" />{t('profile.phone')}</Label>
+                      <Input id="edit-phone" className="h-12 rounded-xl text-base" value={phone} readOnly disabled placeholder={displayText("Your mobile number")} />
+                      <p className="text-xs text-muted-foreground">{displayText("Phone number cannot be changed")}</p>
+                    </div>
+                  </section>
 
                   {/* Payment Details Section */}
                   {collectUpi && <div className="space-y-3">
@@ -622,14 +630,19 @@ export default function Profile() {
                     </div>
                   </div>}
 
-                  <Button variant="outline" className="w-full" onClick={() => { setEditDialogOpen(false); navigate('/account-details'); }}>{displayText("Bank Details")}</Button>
+                  <button type="button" className="w-full rounded-2xl bg-card p-4 shadow-sm flex items-center gap-3 text-left min-h-[64px]" onClick={() => { setEditDialogOpen(false); navigate('/account-details'); }} data-testid="edit-bank-row">
+                    <span className="h-10 w-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0"><CreditCard className="w-5 h-5" /></span>
+                    <span className="flex-1 min-w-0"><span className="block font-semibold text-sm">{displayText("Bank Details")}</span>{bankStatus === "none" && <span className="block text-xs text-muted-foreground">{displayText("Add your bank account so Didi Now can pay you.")}</span>}</span>
+                    {bankStatus && <BankStatusBadge status={bankStatus} />}
+                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                  </button>
 
 
-                  <div className="space-y-2">
-                    <Label>{t('profile.services')}</Label>
+                  <section className="rounded-2xl bg-card p-4 shadow-sm space-y-2">
+                    <Label className="flex items-center gap-2 text-sm font-semibold"><Briefcase className="w-4 h-4 text-primary" />{t('profile.services')}</Label>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between">
+                        <Button variant="outline" className="w-full h-12 rounded-xl justify-between">
                           <span className="text-muted-foreground">
                             {selectedServices.length > 0 ? displayText('{{count}} selected', { count: selectedServices.length }) : displayText("Select services")}
                           </span>
@@ -659,13 +672,13 @@ export default function Profile() {
                             </Badge>;
                     })}
                       </div>}
-                  </div>
+                  </section>
 
-                  <div className="space-y-2">
-                    <Label>{t('profile.communities')}</Label>
+                  <section className="rounded-2xl bg-card p-4 shadow-sm space-y-2">
+                    <Label className="flex items-center gap-2 text-sm font-semibold"><Shield className="w-4 h-4 text-primary" />{t('profile.communities')}</Label>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between">
+                        <Button variant="outline" className="w-full h-12 rounded-xl justify-between">
                           <span className="text-muted-foreground">
                             {selectedCommunities.length > 0 ? displayText('{{count}} selected', { count: selectedCommunities.length }) : displayText("Select communities")}
                           </span>
@@ -695,11 +708,11 @@ export default function Profile() {
                             </Badge>;
                     })}
                       </div>}
-                  </div>
-
-
-                  <Button onClick={handleUpdate} disabled={updating} className="w-full">
-                    {updating ? t('common.loading') : t('profile.updateProfile')}
+                  </section>
+                </div>
+                <div className="border-t bg-card px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                  <Button onClick={handleUpdate} disabled={updating} className="w-full h-12 rounded-xl text-base" data-testid="save-profile">
+                    {updating ? t('common.loading') : displayText("Save Changes")}
                   </Button>
                 </div>
               </DialogContent>
@@ -768,6 +781,10 @@ export default function Profile() {
             </CardContent>
           </Card>
         </div>
+
+        {bankStatus && bankStatus !== "verified" && (
+          <div className="px-4 mt-4"><AddBankDetailsCard status={bankStatus} onOpen={() => navigate('/account-details')} /></div>
+        )}
 
         {/* Language Selection */}
         <div className="px-4 mt-4">
