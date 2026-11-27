@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 const mocks = vi.hoisted(() => ({ scan: vi.fn(), submit: vi.fn() }));
 vi.mock("@/lib/passbookScan", () => ({ hasNativePassbookScanner: () => true, scanPassbook: mocks.scan }));
-vi.mock("@/lib/bankSelfService", () => ({ submitMyBankDetails: mocks.submit, SUBMIT_BANK_ERRORS: { unavailable: "Adding bank details in the app opens soon. Please call manager for now." } }));
+vi.mock("@/lib/bankSelfService", () => ({ submitMyBankDetails: mocks.submit, SUBMIT_BANK_ERRORS: { unavailable: "Could not reach Didi Now. Please try again." } }));
 import { BankDetailsForm } from "@/components/bank/BankDetailsForm";
 
 const fields = { holder: "Asha Rao", account: "123456789012", ifsc: "HDFC0001234", bankName: "HDFC Bank" };

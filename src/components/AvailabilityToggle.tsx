@@ -1,4 +1,3 @@
-import { readPayoutReadyFromServer } from "@/lib/payoutBookingGate";
 import { canTurnOn } from "@/lib/availabilityGate";
 import { ToastAction } from "@/components/ui/toast";
 import { buildAvailabilityRequest } from "@/lib/availabilityRequest";
@@ -209,17 +208,6 @@ export function AvailabilityToggle({
       onOnboardingIncomplete?.();
     }
 
-    // Owner rule (2026-11-26): going ON needs payout details ready.
-    // Re-read the server at tap time; a cached or failed value never counts as ready.
-    if (newValue && !(await readPayoutReadyFromServer())) {
-      toast({
-        title: displayText("Complete payout details to start getting bookings"),
-        description: displayText("You won’t receive bookings until payout details are added."),
-        variant: "destructive",
-      });
-      return;
-    }
-
     setPressed(true);
     setTimeout(() => setPressed(false), 200);
     setLoading(true);
@@ -267,7 +255,7 @@ export function AvailabilityToggle({
   const approvalLocked = approval !== "approved" && approval !== "legacy_pending_review";
   const view = availabilityView({
     isAvailable,
-    payoutReady: bookingReady,
+    payoutReady: true,
     pushHealthy,
     hasSlots: hasAvailabilitySlots,
   });

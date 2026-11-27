@@ -1,5 +1,5 @@
-import { usePayoutReadiness } from "@/hooks/usePayoutReadiness";
-import { PayoutReadinessNotice } from "@/components/payouts/PayoutReadinessNotice";
+import { useBankDetails } from "@/hooks/useBankDetails";
+import { AddBankDetailsCard } from "@/components/bank/AddBankDetailsCard";
 import { shouldRedirectToSetup } from "@/lib/availabilityGate";
 import { displayText, useWorkerLanguage, serviceLabel, bookingStatusLabel, displayLocale } from "@/i18n/display";
 import { useState, useEffect } from "react";
@@ -69,8 +69,7 @@ export default function Home() {
   const priority = useWorkerPriority(isGuestMode ? null : realWorker?.id);
   const lateStart = useLateStartPriority(activeJob?.id ?? "", !!activeJob && activeJob.start_otp_required === true && !activeJob.started_at);
 
-  const payoutReadiness = usePayoutReadiness(isGuestMode ? null : user?.id);
-  const payoutReady = isGuestMode ? true : payoutReadiness.allowsBookings;
+  const { bank } = useBankDetails(isGuestMode ? null : user?.id);
 
   // Onboarding status: checks service_types, community, availability slots
   const onboarding = useOnboardingStatus(
@@ -115,11 +114,11 @@ export default function Home() {
   const isOnline = !!worker?.is_available;
 
   // Layer 2: Realtime subscription on booking_requests
-  useBookingRequestsRealtime(isGuestMode ? undefined : worker?.id, isOnline && payoutReady);
+  useBookingRequestsRealtime(isGuestMode ? undefined : worker?.id, isOnline);
 
   // Layer 3: Server-side polling fallback (10s foreground / 30s background,
   // plus immediate checks on open / resume / reconnect)
-  useBookingPollingFallback(isGuestMode ? undefined : worker?.id, isOnline && payoutReady);
+  useBookingPollingFallback(isGuestMode ? undefined : worker?.id, isOnline);
   
   const [toggling, setToggling] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -190,7 +189,7 @@ export default function Home() {
     accept,
     reject,
     clearAlert
-  } = useUnifiedBookingAlerts(user?.id, isOnline && payoutReady, matches, worker?.id);
+  } = useUnifiedBookingAlerts(user?.id, isOnline, matches, worker?.id);
 
   // Movement tracking lifecycle is owned globally by App.tsx (useActiveJob-driven)
   // so it keeps running when the worker navigates to Profile/Bookings/Availability.
@@ -263,8 +262,6 @@ export default function Home() {
           <div className="p-2 px-4">
             <AvailabilityToggle
               workerId={worker?.id || user?.id || 'demo-worker-id'}
-              payoutReady={payoutReady}
-              onPayoutRequired={() => navigate('/account-details')}
               pushHealthy={pushHealth.isHealthy}
               onPushUnhealthy={async () => {
                 if (pushHealth.isChecking) {
@@ -294,7 +291,6 @@ export default function Home() {
               }}
               hasAvailabilitySlots={onboarding.hasAvailabilitySlots}
               onNoSlots={() => navigate('/availability')}
-              bookingReady={payoutReady}
             />
           </div>
         </div>
@@ -334,8 +330,8 @@ export default function Home() {
 
       <HomeTrainingVideoSlot isGuest={isGuestMode} hasActiveJob={!!activeJob} hasWorker={!!worker} />
 
-      {!isGuestMode && worker && !activeJob && !payoutReady && !payoutReadiness.loading && (
-        <PayoutReadinessNotice readiness={payoutReadiness.readiness} onBankDetails={() => navigate('/account-details')} />
+      {!isGuestMode && worker && !activeJob && bank && bank.status !== "verified" && (
+        <AddBankDetailsCard status={bank?.status ?? null} onOpen={() => navigate('/account-details')} />
       )}
 
       {!isGuestMode && worker && !activeJob && <BatteryReminderCard />}

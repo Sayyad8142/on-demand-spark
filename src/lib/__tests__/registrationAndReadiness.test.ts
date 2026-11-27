@@ -54,8 +54,8 @@ describe("payout readiness gate", () => {
   it("allows bookings when Admin says ready", () => {
     expect(readinessAllowsBookings(r({}))).toBe(true);
   });
-  it("blocks only when Admin's switch is on and the server says not ready", () => {
-    expect(readinessAllowsBookings(r({ ready: false, beneficiary_registered: false }))).toBe(false);
+  it("bank never blocks even when Admin's switch is on and the server says not ready", () => {
+    expect(readinessAllowsBookings(r({ ready: false, beneficiary_registered: false }))).toBe(true);
   });
   it("switch off: existing workers keep bookings, even with no bank yet", () => {
     expect(readinessAllowsBookings(r({ ready: false, enforced: false, has_bank_details: false, beneficiary_registered: false }))).toBe(true);

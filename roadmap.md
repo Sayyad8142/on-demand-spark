@@ -431,10 +431,16 @@
 
 ## Bank self-service (2026-11-27)
 - [x] Bank form, status, Profile card, full-screen Edit Profile (en/hi/te)
-- [ ] Admin deploys `submit_my_bank_details` + optional readiness fields (docs/bank-self-service-2026-11-27/HANDOFF.md)
+- [x] Admin deployed `get_my_bank_details` + `submit_my_bank_details`; exact live contract inspected and connected.
 - [ ] Signed-in/phone check of the flow (sign-in not available in sandbox)
 
 ## Passbook scanning (2026-11-27)
 - [x] Add private Android/browser OCR and editable bank form results with manual confirmation (en/hi/te); no backend/booking/payout changes.
 - [x] Test extraction and submission safety; real browser OCR on a synthetic passbook, editable review, mandatory manual confirmation, mocked Admin unavailable answer and mobile/desktop translations checked without publishing.
-- [ ] Real Android scan and signed-in submission — blocked: phone/build and Admin bank RPC availability.
+- [ ] Real Android scan and signed-in submission — blocked: phone/build and unavailable authenticated worker session (Admin RPC now deployed).
+
+## Live bank backend integration (2026-11-27)
+- [x] Connect get_my_bank_details and exact submit parameters, can_edit, validation/duplicate/rate-limit errors and shared Profile/Edit/Home refresh.
+- [x] Remove bank-only ON/offer/readiness restrictions; preserve approval/slots/OTP safeguards and Home reminder; live server bank gate already returns false.
+- [x] 1,092 tests pass; isolated actual bank screen + real browser OCR, manual submission, failed/locked/verified states and en/hi/te checked without publication/version changes. Report: docs/bank-self-service-2026-11-27/LIVE-INTEGRATION.md.
+- [ ] Real authenticated existing/new worker submit/readback and Android camera/gallery verification — blocked: externally managed worker session and physical phone/local build.

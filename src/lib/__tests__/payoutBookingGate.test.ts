@@ -1,11 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { payoutAllowsBookings } from "@/lib/payoutBookingGate";
+import { parsePayoutReadiness, readinessAllowsBookings } from "@/lib/payoutBookingGate";
 
-describe("bookings require payout details ready (owner 2026-11-26)", () => {
-  it("allows bookings only when the server says payout_ready is true", () => {
-    expect(payoutAllowsBookings(true)).toBe(true);
+describe("bank never restricts work (owner 2026-11-27)", () => {
+  it.each([true, false])("missing bank never blocks with Admin enforced=%s", (enforced) => {
+    const r = parsePayoutReadiness({ ready: false, has_bank_details: false, beneficiary_registered: false, admin_approved: true, enforced });
+    expect(readinessAllowsBookings(r)).toBe(true);
   });
-  it("blocks bookings when payout_ready is false, missing or unknown", () => {
-    for (const v of [false, null, undefined, "true", 1]) expect(payoutAllowsBookings(v)).toBe(false);
-  });
+  it("unknown bank status never restricts work", () => expect(readinessAllowsBookings(null)).toBe(true));
 });

@@ -16,10 +16,11 @@ import { processIncomingBooking, getCurrentAlert, dismissAlert, clearAlertState,
 const offer = (id: string, timeoutAt: string) => ({ bookingId: id, bookingRequestId: `r-${id}`, custName: "C", community: "x", serviceType: "maid", flatNo: "1", priceInr: 1, source: "fcm" as const, timeoutAt });
 beforeEach(() => { clearAlertState(); localStorage.clear(); recovery.mockReset(); popup.mockClear(); payoutReady.mockReset(); payoutReady.mockResolvedValue(true); vi.useRealTimers(); });
 describe("coordinator generation dedupe", () => {
-  it('hides the offer when the server says payout details are not ready', async () => {
+  it('shows a valid offer without consulting bank readiness', async () => {
     payoutReady.mockResolvedValue(false);
-    expect(await processIncomingBooking(offer('no-payout', new Date(Date.now() + 30_000).toISOString()))).toBe(false);
-    expect(getCurrentAlert()).toBeNull();
+    expect(await processIncomingBooking(offer('no-payout', new Date(Date.now() + 30_000).toISOString()))).toBe(true);
+    expect(getCurrentAlert()?.bookingId).toBe('no-payout');
+    expect(payoutReady).not.toHaveBeenCalled();
   });
   it('undated realtime offer recovers exact server expiry without inventing a TTL', async () => {
     const deadline = new Date(Date.now() + 23_000).toISOString();

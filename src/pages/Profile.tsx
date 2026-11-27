@@ -31,7 +31,7 @@ import { getInstalledVersionSync, loadInstalledVersion, versionLabel } from "@/l
 import PriorityScoreCard from "@/components/profile/PriorityScoreCard";
 import ServicePricingEntry from '@/components/profile/ServicePricingEntry';
 import { readCollectWorkerUpi } from '@/lib/bankOnboarding';
-import { usePayoutReadiness } from '@/hooks/usePayoutReadiness';
+import { useBankDetails } from '@/hooks/useBankDetails';
 import { bankStatusFor } from '@/lib/bankSelfService';
 import { AddBankDetailsCard } from '@/components/bank/AddBankDetailsCard';
 import { BankStatusBadge } from '@/components/bank/BankStatusBadge';
@@ -87,8 +87,9 @@ export default function Profile() {
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const { readiness: bankReadiness } = usePayoutReadiness(user?.id);
-  const bankStatus = bankStatusFor(bankReadiness);
+  const { bank: bankDetails, refetch: refetchBank } = useBankDetails(isGuestMode ? null : user?.id);
+  const bankStatus = bankStatusFor(bankDetails);
+  useEffect(() => { if (editDialogOpen && user?.id && !isGuestMode) void refetchBank(); }, [editDialogOpen, user?.id, isGuestMode, refetchBank]);
   const [phone, setPhone] = useState("");
   const [upiId, setUpiId] = useState("");
   const [collectUpi, setCollectUpi] = useState(false);

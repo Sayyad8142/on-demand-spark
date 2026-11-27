@@ -5,12 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Loader2, User, Hash, Building2, KeyRound } from "lucide-react";
 import { displayText, useWorkerLanguage } from "@/i18n/display";
 import { validateBankInput } from "@/lib/bankOnboarding";
-import { submitMyBankDetails, SUBMIT_BANK_ERRORS } from "@/lib/bankSelfService";
+import { submitMyBankDetails, SUBMIT_BANK_ERRORS, type BankDetails } from "@/lib/bankSelfService";
 import { PassbookScanCard } from "./PassbookScanCard";
 import { scanToForm, type PassbookFields } from "@/lib/passbookText";
 
 /** Values live only in this component's state; never stored or logged. */
-export function BankDetailsForm({ onSubmitted }: { onSubmitted: () => void }) {
+export function BankDetailsForm({ onSubmitted, onBankChanged }: { onSubmitted: (bank: BankDetails | null) => void; onBankChanged?: (bank: BankDetails) => void }) {
   useWorkerLanguage();
   const [holder, setHolder] = useState("");
   const [account, setAccount] = useState("");
@@ -39,8 +39,12 @@ export function BankDetailsForm({ onSubmitted }: { onSubmitted: () => void }) {
     setError(null); setSaving(true);
     const res = await submitMyBankDetails(input);
     setSaving(false);
-    if ("error" in res) { setError(SUBMIT_BANK_ERRORS[res.error]); return; }
-    setAccount(""); setConfirmation(""); onSubmitted();
+    if ("error" in res) {
+      setError(SUBMIT_BANK_ERRORS[res.error]);
+      if (res.bank) onBankChanged?.(res.bank);
+      return;
+    }
+    setAccount(""); setConfirmation(""); onSubmitted(res.bank);
   };
 
   const field = (id: string, label: string, icon: JSX.Element, input: JSX.Element) => (

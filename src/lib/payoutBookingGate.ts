@@ -1,16 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Owner rule + Cashfree IMPS contract (2026-11-26): bank readiness decides
- * bookings only when Admin's mandatory-bank switch is ON. The canonical answer
- * is `get_my_payout_readiness()` (bank details + Cashfree bank beneficiary +
- * Admin approval); the database itself enforces it on availability, offers and
- * acceptance when the switch is on. The app never invents a block: it stops
- * bookings only when the server explicitly says `enforced:true, ready:false`.
- * The legacy `workers.payout_ready` flag is never used to decide or to label
- * a worker bank-ready.
+ * Payout readiness is display-only. Bank details never restrict work in the
+ * app (owner 2026-11-27); independent approval and booking safeguards remain.
  */
-export const STRICT_READINESS_FOLLOWS_ADMIN_SWITCH = true;
 
 export type ReadinessMissing = "bank_details" | "cashfree_bank_beneficiary" | "admin_approval" | string;
 export interface PayoutReadiness {
@@ -25,10 +18,6 @@ export interface PayoutReadiness {
   verificationStatus: "pending" | "verified" | "failed" | null;
   accountLast4: string | null;
   bankName: string | null;
-}
-
-export function payoutAllowsBookings(payoutReady: unknown): boolean {
-  return payoutReady === true;
 }
 
 /** Strict parser for get_my_payout_readiness(); malformed → null (not ready). */
@@ -53,26 +42,20 @@ export function parsePayoutReadiness(raw: unknown): PayoutReadiness | null {
 }
 
 /**
- * Booking decision from the server's canonical readiness only. Unknown/failed
- * reads do not block: the server still refuses unready workers when enforcing.
+ * Owner rule 2026-11-27: bank details never restrict work in the app,
+ * regardless of Admin settings. Readiness stays display-only.
  */
-export function readinessAllowsBookings(readiness: PayoutReadiness | null, followSwitch = STRICT_READINESS_FOLLOWS_ADMIN_SWITCH): boolean {
-  if (!readiness || readiness.ready) return true;
-  if (followSwitch && !readiness.enforced) return true;
-  return false;
+export function readinessAllowsBookings(_readiness?: PayoutReadiness | null): boolean {
+  return true;
 }
 
 type LooseRpc = (name: string) => Promise<{ data: unknown; error: unknown }>;
 
 export async function readPayoutReadinessFromServer(): Promise<PayoutReadiness | null> {
   try {
-    const { data, error } = await (supabase.rpc as unknown as LooseRpc)("get_my_payout_readiness");
+    const { data, error } = await (supabase.rpc.bind(supabase) as unknown as LooseRpc)("get_my_payout_readiness");
     if (error) return null;
     return parsePayoutReadiness(data);
   } catch { return null; }
 }
 
-/** Fresh server read: false only when Admin enforces and the server says not ready. */
-export async function readPayoutReadyFromServer(): Promise<boolean> {
-  return readinessAllowsBookings(await readPayoutReadinessFromServer());
-}

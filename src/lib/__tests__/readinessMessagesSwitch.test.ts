@@ -10,8 +10,8 @@ describe("bank messages follow the Admin switch", () => {
     expect(msgs).toEqual(["Add your bank account so Didi Now can pay you."]);
     expect(readinessMessages(r({ ready: false, beneficiary_registered: false }), true)).toEqual(["Didi Now is verifying your bank account."]);
   });
-  it("bookings blocked: explains what blocks them", () => {
+  it("bank reminder stays neutral even if Admin's bank switch is on", () => {
     expect(readinessMessages(r({ ready: false, has_bank_details: false, admin_approved: false, enforced: true }), false))
-      .toEqual(["Add your bank account to start getting bookings.", "Waiting for Didi Now approval."]);
+      .toEqual(["Add your bank account so Didi Now can pay you."]);
   });
 });

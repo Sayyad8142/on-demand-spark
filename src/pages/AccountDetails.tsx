@@ -4,36 +4,28 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Landmark, Phone } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { usePayoutReadiness } from "@/hooks/usePayoutReadiness";
-import { useState } from "react";
+import { useBankDetails } from "@/hooks/useBankDetails";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { requestOwnBeneficiary } from "@/lib/bankOnboarding";
-import { bankStatusFor, canSubmitBank } from "@/lib/bankSelfService";
+import { canSubmitBank, failureReasonText, type BankDetails } from "@/lib/bankSelfService";
 import { BankDetailsForm } from "@/components/bank/BankDetailsForm";
 import { BankStatusBadge } from "@/components/bank/BankStatusBadge";
 
 /**
- * Bank details: form for workers with none (or failed verification) via the
- * Admin-owned `submit_my_bank_details`; status and masked details otherwise.
- * Display only — never blocks availability, offers, acceptance or completion.
+ * Bank details from Admin's `get_my_bank_details`; form only when the server's
+ * `can_edit` allows it. Display only — never blocks any booking step.
  */
 export default function AccountDetails() {
   useWorkerLanguage();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { readiness, loading, refetch } = usePayoutReadiness(user?.id);
-  const [checking, setChecking] = useState(false);
-  const status = bankStatusFor(readiness);
-  const canRetryBank = !!readiness?.workerId && status === "pending";
-  const retryBank = async () => {
-    if (!readiness?.workerId) return;
-    setChecking(true);
-    try { await requestOwnBeneficiary(readiness.workerId); await refetch(); } finally { setChecking(false); }
-  };
-  const onSubmitted = async () => {
+  const queryClient = useQueryClient();
+  const { bank, loading, refetch } = useBankDetails(user?.id);
+  const status = bank?.status ?? null;
+  const onSubmitted = async (next: BankDetails | null) => {
     toast.success(displayText("Bank details submitted. Didi Now will verify them."));
-    if (readiness?.workerId) void requestOwnBeneficiary(readiness.workerId).finally(() => void refetch());
-    await refetch();
+    if (next) queryClient.setQueryData(["my-bank-details", user?.id ?? "none"], next);
+    await Promise.all([refetch(), queryClient.invalidateQueries({ queryKey: ["payout-readiness"] })]);
   };
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -52,28 +44,25 @@ export default function AccountDetails() {
           </div>
         </div>
 
-        {!loading && !readiness && <p role="status" className="text-sm text-muted-foreground">{displayText("We could not check your bank status. Please try again.")}</p>}
+        {!loading && !bank && <div className="space-y-3"><p role="status" className="text-sm text-muted-foreground">{displayText("We could not check your bank status. Please try again.")}</p><Button variant="outline" onClick={() => void refetch()}>{displayText("Try again")}</Button></div>}
 
-        {status === "failed" && <p role="alert" className="text-sm text-destructive">{displayText("We could not verify your bank account. Please check and submit again.")}</p>}
+        {status === "failed" && <p role="alert" className="text-sm text-destructive" data-testid="bank-failure-reason">{displayText(failureReasonText(bank?.failureReason ?? null))}</p>}
 
-        {canSubmitBank(status) && (
-          <BankDetailsForm onSubmitted={() => void onSubmitted()} />
+        {canSubmitBank(bank) && (
+          <BankDetailsForm onSubmitted={(next) => void onSubmitted(next)} onBankChanged={(next) => queryClient.setQueryData(["my-bank-details", user?.id ?? "none"], next)} />
         )}
 
-        {(status === "pending" || status === "verified") && readiness && (
+        {bank && status !== "none" && (
           <Card className="p-4 rounded-2xl space-y-3" data-testid="bank-status">
-            {readiness.bankName && <div className="flex justify-between text-sm"><span className="text-muted-foreground">{displayText("Bank name")}</span><span className="font-medium">{readiness.bankName}</span></div>}
-            {readiness.accountLast4 && <div className="flex justify-between text-sm"><span className="text-muted-foreground">{displayText("Account")}</span><span className="font-medium tracking-wider" data-testid="bank-masked">•••• {readiness.accountLast4}</span></div>}
-            <p className="text-sm">{displayText(status === "verified" ? "Your bank account is verified." : "Didi Now is verifying your bank account.")}</p>
-            {canRetryBank && (
-              <Button variant="outline" className="w-full h-11" disabled={checking} onClick={() => void retryBank()} data-testid="bank-recheck">
-                {displayText(checking ? "Checking..." : "Check bank verification again")}
-              </Button>
-            )}
+            {bank.accountHolderName && <div className="flex justify-between gap-3 text-sm"><span className="text-muted-foreground">{displayText("Account holder name")}</span><span className="font-medium text-right break-words">{bank.accountHolderName}</span></div>}
+            {bank.bankName && <div className="flex justify-between gap-3 text-sm"><span className="text-muted-foreground">{displayText("Bank name")}</span><span className="font-medium text-right break-words">{bank.bankName}</span></div>}
+            {bank.accountNumberMasked && <div className="flex justify-between gap-3 text-sm"><span className="text-muted-foreground">{displayText("Account")}</span><span className="font-medium tracking-wider" data-testid="bank-masked">•••• {bank.accountNumberMasked.slice(-4)}</span></div>}
+            {bank.ifsc && <div className="flex justify-between gap-3 text-sm"><span className="text-muted-foreground">{displayText("IFSC code")}</span><span className="font-medium">{bank.ifsc}</span></div>}
+            {status !== "failed" && <p className="text-sm">{displayText(status === "verified" ? "Your bank account is verified." : "Didi Now is verifying your bank account.")}</p>}
           </Card>
         )}
 
-        {(status === "pending" || status === "verified") && <>
+        {bank && !canSubmitBank(bank) && status !== "none" && <>
           <p className="text-sm text-muted-foreground">{displayText("To change bank details, please call Didi Now.")}</p>
           <Button className="w-full h-12 rounded-xl" asChild><a href="tel:8008180018"><Phone className="mr-2 h-4 w-4" />{displayText("Call manager")}</a></Button>
         </>}

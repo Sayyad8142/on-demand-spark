@@ -25,6 +25,6 @@
 
 # Payout booking gate
 
-- Bank readiness blocks bookings in the app only when `get_my_payout_readiness` says enforced and not ready (`payoutBookingGate.ts`); unknown reads and the legacy `payout_ready` flag never block or label bank-ready. Why: the database enforces Admin's switch; the app must not invent blocks.
+- Bank display reads use `useBankDetails` with account-keyed, in-memory `get_my_bank_details` responses refreshed on mount/focus; Home, ON and offers have no bank gate. Why: status display and work access must be independent.
 
-- Worker bank self-service goes only through Admin's `submit_my_bank_details` via `bankSelfService.ts` (session identity, single-flight, missing function → "call manager"); bank status is display-only. Why: the database blocks client bank writes and bank state must never gate bookings in the app.
+- Worker bank submission uses the deployed `submit_my_bank_details` exact parameter names through `bankSelfService.ts`; parser requires `success`/`outcome`, respects `can_edit`, and never calls Cashfree. Why: Admin owns validation, duplicate handling, throttling and verification.
